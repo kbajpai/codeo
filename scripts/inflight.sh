@@ -56,7 +56,7 @@ last_step() {
     echo "${done:-none}"
 }
 
-main=$(git rev-parse "origin/$base")
+base_sha=$(git rev-parse "origin/$base")
 found=0 rows=
 while IFS= read -r ref; do
     branch=${ref#origin/}
@@ -70,7 +70,7 @@ while IFS= read -r ref; do
         n=${dir##*/}
         [[ $n == "$except" ]] && continue
         if [[ $dir == "$state_rel"/done/* ]]; then
-            git cat-file -e "$main:$dir" 2>/dev/null && continue
+            git cat-file -e "$base_sha:$dir" 2>/dev/null && continue
             state="PR open" state_token=pr-open
         else
             state=working state_token=working
@@ -100,7 +100,7 @@ while IFS= read -r ref; do
             /^### Footprint/ { f = 1; next }
             /^##/ { f = 0 }
             f && /^ *(files|wiki|exclusive|sequenced):/ { sub(/^ */, ""); print "  " $0 }'
-        changed=$(git diff --name-only "$main...$sha" -- . ":!$state_rel" 2>/dev/null | paste -sd, - | sed 's/,/, /g')
+        changed=$(git diff --name-only "$base_sha...$sha" -- . ":!$state_rel" 2>/dev/null | paste -sd, - | sed 's/,/, /g')
         echo "  changed:    ${changed:-none}"
         echo
     done

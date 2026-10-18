@@ -17,8 +17,8 @@ since=
 
 sid=${CLAUDE_CODE_SESSION_ID:-}
 [[ -n $sid ]] || die "CLAUDE_CODE_SESSION_ID is unset — run this from inside Claude Code"
-main=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" -maxdepth 2 -name "$sid.jsonl" -print -quit)
-[[ -n $main ]] || die "no transcript found for session $sid"
+transcript=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" -maxdepth 2 -name "$sid.jsonl" -print -quit)
+[[ -n $transcript ]] || die "no transcript found for session $sid"
 
 if [[ -z $since ]]; then
     since=$(jq -rs --arg cmd "<command-name>/codeo:$skill</command-name>" \
@@ -27,12 +27,12 @@ if [[ -z $since ]]; then
             (.type == "user" and ((.message.content | tostring) | contains($cmd))) or
             (.type == "assistant" and any(.message.content[]?;
                 .type == "tool_use" and .name == "Skill" and .input.skill == $skill)))
-          | .timestamp ] | max // empty' "$main")
+          | .timestamp ] | max // empty' "$transcript")
     [[ -n $since ]] || die "/codeo:$skill was not invoked in this session; pass --since"
 fi
 
 shopt -s nullglob
-files=("$main" "${main%.jsonl}"/subagents/*.jsonl)
+files=("$transcript" "${transcript%.jsonl}"/subagents/*.jsonl)
 
 cat "${files[@]}" | jq -rs --arg since "$since" '
     def n: if . >= 1e6 then "\(. / 1e5 | round / 10)M"
