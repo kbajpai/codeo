@@ -15,13 +15,13 @@ a hosted session write the same dossier files at the same paths.
   .gitignore          # two lines: `active` and `intake/`
   active              # the lock — see handoff.md
   intake/             # /codeo:issue's working copies — see *Intake* below
-    new-clip-sweeper/
+    new-order-export/
       issue.md        # being drafted; no number yet
-    41/
+    13/
       issue.md        # filed, waiting for /codeo:init
     triage/           # /codeo:triage's ledger.md and one file per run
     leases/           # one <resource>.md per held lock; waiting/<resource>-<N>.md per issue queued
-  38/
+  12/
     issue.md          # only when /codeo:issue ran
     init.md
     plan.md
@@ -29,7 +29,7 @@ a hosted session write the same dossier files at the same paths.
     qc.md
     close.md
   done/
-    31/               # a finished issue, archived by /codeo:close
+    9/                # a finished issue, archived by /codeo:close
 ```
 
 The first skill to touch `.codeo/` creates the directory and writes a `.gitignore` holding the
@@ -190,7 +190,7 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-03-04 — Q1-Q2 raised · 14m · fable-5-1 96k in + 1.2M cached / 18k out · sonnet-5 41k in + 380k cached / 4k out
+- 2026-03-04 — Q1-Q2 raised · cost: 14m · fable-5-1 96k in + 1.2M cached / 18k out · sonnet-5 41k in + 380k cached / 4k out
 ```
 
 - `## Where this stands` is rewritten each round; it is the skill's own summary of what it has
@@ -201,9 +201,9 @@ _Pending — written at the hand-off._
   a later round after a send-back adds a dated `### Round <n>` beneath the first rather than
   rewriting it: how many rounds a change took is worth more to that reader than a tidy result.
 - `## Log` gets one line per invocation, appended and never edited: the date, what the invocation
-  did, then the cost exactly as `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" <skill>` prints it
+  did, then ` · cost: ` and the output of `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" <skill>`
   — elapsed minutes, then one `<model> <fresh> in + <cached> cached / <out> out` group per model,
-  all separated by ` · `. `handoff.md` has the rule.
+  all separated by ` · ` — or `cost: unavailable` when the script cannot run. `handoff.md` has the rule.
 
 ## The footprint
 
@@ -219,7 +219,7 @@ line, values comma-separated, inside a fence:
 files:      src/export/**, src/orders/**, docs/export.md
 wiki:       Order-export, Home
 exclusive:  migrations:Orders
-sequenced:  after #57 — both add an Orders migration (Q6)
+sequenced:  after #7 — both add an Orders migration (Q6)
 ```
 ````
 
@@ -227,7 +227,8 @@ sequenced:  after #57 — both add an Orders migration (Q6)
 - `wiki` — the page names the plan's documentation tasks change; read only when the project's
   `modules` include `wiki`, and inert otherwise.
 - `exclusive` — names from the config's `resources[]` (a parameterised resource is written
-  `<name>:<suffix>`), plus `environment.resource` where the project has one. Each is something two
+  `<name>:<suffix>`). The shared environment resource is not declared here: the later steps lease
+  it from the first environment task. Each is something two
   branches cannot both change and merge cleanly, and each is a lock `intake.sh lease` takes, one
   file per resource (`:` spelled `_`).
 - `sequenced` — only when an overlap question was answered that way: which issue this waits for,

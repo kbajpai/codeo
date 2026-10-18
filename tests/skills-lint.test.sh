@@ -100,7 +100,7 @@ for ok in good crlf folded; do refute "FAIL $ok "; done
 expect 'good check 6 skipped for a dynamic filter: $KEY'
 expect 'FAIL wrongdir check 1 frontmatter: name'
 expect 'FAIL noprec check 2 precedence'
-expect 'FAIL baddoc check 3 script-calls: docs/gone.md does not exist'
+expect 'FAIL baddoc check 3 script-calls: document reference docs/gone.md does not exist'
 refute 'docs/skills-inventory.md does not exist'
 expect 'FAIL deadcall check 3 script-calls: scripts/gone.sh does not exist'
 expect 'FAIL agentcall check 3 script-calls: other script form: '"$old"

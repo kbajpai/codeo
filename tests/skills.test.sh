@@ -59,10 +59,11 @@ lint_scripts() {
         [[ -f "$root/scripts/$call" ]] || lint_fail "$skill" 3 script-calls "scripts/$call does not exist"
     done < <(grep -oE 'bash "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/[A-Za-z0-9_.-]+\.sh"' "$file" |
         sed -E 's#.*/scripts/([^"]+)"#\1#' || true)
-    # A document the skill cites by its plugin path must be shipped.
+    # A document the skill cites by its plugin path must be shipped. Only the flat form
+    # ${CLAUDE_PLUGIN_ROOT}/docs/<name>.md is checked: nested paths and bare-name citations are not.
     while IFS= read -r call; do
         [[ -n "$call" ]] || continue
-        [[ -f "$root/docs/$call" ]] || lint_fail "$skill" 3 script-calls "docs/$call does not exist"
+        [[ -f "$root/docs/$call" ]] || lint_fail "$skill" 3 script-calls "document reference docs/$call does not exist"
     done < <(grep -oE '\$\{CLAUDE_PLUGIN_ROOT\}/docs/[A-Za-z0-9_.-]+\.md' "$file" |
         sed -E 's#.*/docs/##' | sort -u || true)
     # What is left once the one allowed call form is removed must name no script at all.
