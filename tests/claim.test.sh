@@ -681,6 +681,30 @@ assert_contains "prose none" "has no stash" "$out"
 case_desc="resume-line on a missing branch is exit 1"
 run_claim --resume-line 42 feat/nope "$a" a-login; assert_eq "exit" 1 "$status"
 
+case_desc="a develop base branch: the first push claims, the second is refused"
+od=$(fresh_origin)
+git -C "$od" branch -m main develop
+cd1=$(clone_of "$od"); cd2=$(clone_of "$od")
+dev_worktree() { # <clone> <name> <email>: a worktree on feat/d off origin/develop with #44's dossier
+    local wt
+    wt=$(mktemp -d "$scratch_root/wt.XXXXXX"); rmdir "$wt"
+    git -C "$1" worktree add -q --no-track "$wt" -b feat/d origin/develop
+    mkdir -p "$wt/.codeo/44"
+    printf '| | |\n|---|---|\n| Issue | https://example.com/issues/44 — title |\n' > "$wt/.codeo/44/init.md"
+    git -C "$wt" add .codeo
+    GIT_AUTHOR_NAME=$2 GIT_AUTHOR_EMAIL=$3 git -C "$wt" commit -q -m "docs: dossier for #44"
+    printf '%s' "$wt"
+}
+d1=$(dev_worktree "$cd1" "Engineer D" d@example.com)
+d2=$(dev_worktree "$cd2" "Engineer E" e@example.com)
+sed -i 's/"baseBranch":"main"/"baseBranch":"develop"/' "$project/.codeo/config.json"
+run_claim 44 feat/d "$d1"
+assert_eq "first exit" 0 "$status"
+run_claim 44 feat/d "$d2"
+assert_eq "second exit" 2 "$status"
+assert_contains "names the first pusher" "pushed by Engineer D <d@example.com>" "$err"
+sed -i 's/"baseBranch":"develop"/"baseBranch":"main"/' "$project/.codeo/config.json"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

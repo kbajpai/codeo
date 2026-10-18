@@ -183,6 +183,26 @@ out=$(run_lock "$repo/sub/deep" "$marker" container)
 assert_contains "took the lock" "took the lock for #38 on feat/x" "$out"
 assert_eq "active written at the root" yes "$(active_exists "$repo")"
 
+# --- container, archived fallback with a develop base branch ---------------------------------------
+case_desc="container, archived fallback reads the configured base branch (develop)"
+origin=$(fresh_repo)
+git -C "$origin" branch -m main develop
+repo=$(fresh_repo)
+git -C "$repo" branch -m main develop
+sed -i 's/"baseBranch":"main"/"baseBranch":"develop"/' "$repo/.codeo/config.json"
+git -C "$repo" commit -q -am "base develop"
+git -C "$repo" remote add origin "$origin"
+git -C "$repo" checkout -q -b feat/y
+write_init "$repo/.codeo/done/41/init.md" feat/y
+marker=$(fresh_marker)
+out=$(run_lock "$repo" "$marker" container)
+assert_contains "took the lock" "took the lock for #41 on feat/y" "$out"
+marker=$(fresh_marker)
+git -C "$repo" checkout -q develop
+rm -f "$repo/.codeo/active"
+out=$(run_lock "$repo" "$marker" container)
+assert_contains "on develop, no lock" "on develop: no workflow lock" "$out"
+
 # --- web, branch already matches ------------------------------------------------------------------
 case_desc="web, branch already matches"
 repo=$(fresh_repo)
