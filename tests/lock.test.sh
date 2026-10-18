@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Exercises scripts/lock.sh's take() against real scratch git repos: both hosts'
-# shared logic (on-main, matching branch, already-locked, the done/ archive fallback) plus the
-# web-only branch checkout and the guarantee that a container never attempts one, even when the
-# checked-out branch does not match the dossier it finds. Touches no real git config (identity is
+# Exercises scripts/lock.sh's take() against real scratch git repos: the hosts' shared logic
+# (on-main, matching branch, already-locked, the done/ archive fallback) plus the web-only branch
+# checkout and the guarantee that a container or a plain local checkout never attempts one, even
+# when the checked-out branch does not match the dossier it finds. Touches no real git config (identity is
 # exported, not written) and makes no network call — "origin" is a second scratch repo reached by
 # a local path.
 #
@@ -377,6 +377,44 @@ out=$(run_lock "$repo" "$marker" container)
 assert_eq "no checkout" no "$(checked_out "$marker")"
 assert_eq "no active written" no "$(active_exists "$repo")"
 assert_contains "todo names the branch" "no single init.md names branch feat/other" "$out"
+
+# --- local: a plain checkout, with no container volume and no session to identify ---------------
+case_desc="local_host_writes_no_volume_line_and_no_todo"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+marker=$(fresh_marker)
+out=$(run_lock "$repo" "$marker" local)
+assert_contains "took the lock" "took the lock for #38 on feat/x" "$out"
+active=$(cat "$repo/.codeo/active")
+assert_contains "host" "host:    local" "$active"
+assert_not_contains "no volume line" "volume:" "$active"
+assert_not_contains "no session line" "session:" "$active"
+assert_not_contains "no TODO" "TODO" "$out"
+
+case_desc="local_host_never_attempts_a_branch_checkout"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/other
+write_init "$repo/.codeo/38/init.md" feat/x
+marker=$(fresh_marker)
+out=$(run_lock "$repo" "$marker" local)
+assert_eq "no checkout" no "$(checked_out "$marker")"
+assert_eq "no active written" no "$(active_exists "$repo")"
+assert_contains "todo names the branch" "no single init.md names branch feat/other" "$out"
+
+case_desc="local_host_lock_matches_container_otherwise"
+local_repo=$(fresh_repo)
+container_repo=$(fresh_repo)
+for r in "$local_repo" "$container_repo"; do
+    git -C "$r" checkout -q -b feat/x
+    write_init "$r/.codeo/38/init.md" feat/x
+done
+run_lock "$local_repo" "$(fresh_marker)" local >/dev/null
+run_lock "$container_repo" "$(fresh_marker)" container >/dev/null
+assert_eq "issue, branch and started lines" \
+    "$(grep -E '^(issue|branch|started):' "$container_repo/.codeo/active")" \
+    "$(grep -E '^(issue|branch|started):' "$local_repo/.codeo/active")"
+assert_eq "dossier untouched" "$(cat "$container_repo/.codeo/38/init.md")" "$(cat "$local_repo/.codeo/38/init.md")"
 
 # --- web, lock written while the session id was unset -----------------------------------------------
 locked_repo() {
