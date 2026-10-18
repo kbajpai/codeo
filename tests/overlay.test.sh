@@ -107,7 +107,7 @@ duplicate_section_exits_4_naming_lines() {
     write_overlay "$repo" plan '## plan-shape\na\n\n## wiki-rules\nb\n## plan-shape\nc\n'
     run_overlay "$repo" plan plan-shape
     [[ "$rc" -eq 4 && -z "$out" ]] || fail "rc=$rc out=$out"
-    [[ "$err" == codeo:* && "$(printf '%s\n' "$err" | wc -l)" -eq 1 && "$err" == *1* && "$err" == *6* ]] || fail "unexpected: $err"
+    [[ "$err" == codeo:* && "$(printf '%s\n' "$err" | wc -l)" -eq 1 && "$err" == *"lines 1 and 6"* ]] || fail "unexpected: $err"
 }
 
 section_ends_at_next_heading() {
@@ -119,7 +119,46 @@ section_ends_at_next_heading() {
     [[ "$rc" -eq 0 && "$out" == "body" ]] || fail "shape: rc=$rc out=$out"
 }
 
-for c in present_section_is_printed_trimmed absent_file_exits_3_silently empty_section_exits_3 \
+unreadable_overlay_exits_1_one_line() {
+    if [[ "$(id -u)" -eq 0 ]]; then echo "note: running as root, skipping unreadable_overlay_exits_1_one_line"; return 0; fi
+    local repo; repo=$(make_repo)
+    write_overlay "$repo" plan '## plan-shape\ntext\n'
+    chmod 000 "$repo/.codeo/overlays/plan.md"
+    run_overlay "$repo" plan plan-shape
+    chmod 644 "$repo/.codeo/overlays/plan.md"
+    [[ "$rc" -eq 1 && -z "$out" && "$err" == codeo:*"not readable" && "$(printf '%s\n' "$err" | wc -l)" -eq 1 && "$err" != *awk* ]] || fail "rc=$rc out=$out err=$err"
+}
+
+unreadable_registry_exits_1_one_line() {
+    local repo; repo=$(make_repo)
+    rc=0
+    err=$(cd "$repo" && CODEO_EXTENSION_POINTS="$scratch_root/nope.tsv" bash "$overlay_sh" plan plan-shape 2>&1 >/dev/null) || rc=$?
+    [[ "$rc" -eq 1 && "$err" == "codeo: extension-point registry not readable: $scratch_root/nope.tsv" ]] || fail "rc=$rc err=$err"
+}
+
+heading_at_eof_without_newline_is_found() {
+    local repo; repo=$(make_repo)
+    write_overlay "$repo" plan '## plan-shape\nlast line'
+    run_overlay "$repo" plan plan-shape
+    [[ "$rc" -eq 0 && "$out" == "last line" ]] || fail "rc=$rc out=$out"
+}
+
+heading_with_extra_words_does_not_match() {
+    local repo; repo=$(make_repo)
+    write_overlay "$repo" plan '## plan-shape extra\ntext\n'
+    run_overlay "$repo" plan plan-shape
+    [[ "$rc" -eq 3 && -z "$out" ]] || fail "rc=$rc out=$out"
+}
+
+heading_inside_a_code_fence_ends_the_section() {
+    local repo; repo=$(make_repo)
+    write_overlay "$repo" plan '## plan-shape\nbefore\n```\n## not a point\nafter\n```\n'
+    run_overlay "$repo" plan plan-shape
+    [[ "$rc" -eq 0 && "$out" == $'before\n```' ]] || fail "rc=$rc out=$out"
+}
+
+for c in unreadable_overlay_exits_1_one_line unreadable_registry_exits_1_one_line heading_at_eof_without_newline_is_found heading_with_extra_words_does_not_match heading_inside_a_code_fence_ends_the_section \
+    present_section_is_printed_trimmed absent_file_exits_3_silently empty_section_exits_3 \
     missing_section_exits_3 unknown_pair_exits_2_one_line regex_characters_in_a_point_are_literal \
     crlf_file_is_normalised duplicate_section_exits_4_naming_lines section_ends_at_next_heading; do
     "$c"

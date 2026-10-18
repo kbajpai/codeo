@@ -22,6 +22,10 @@ skill=$1
 point=$2
 registry=${CODEO_EXTENSION_POINTS:-$CODEO_PLUGIN_ROOT/lib/extension-points.tsv}
 
+# An unreadable registry is an environment fault, not an unknown point: exit 2 is reserved for the
+# latter, and no awk text may leak.
+[[ -f "$registry" && -r "$registry" ]] || codeo_die "extension-point registry not readable: $registry"
+
 # Both comparisons go through ENVIRON, not awk -v: -v interprets backslash escapes, so a point
 # containing one would not match itself. Equality, not a regex, so "a.b*c" means exactly that.
 if ! SKILL=$skill POINT=$point awk -F'\t' '$1 == ENVIRON["SKILL"] && $2 == ENVIRON["POINT"] { found = 1 } END { exit !found }' "$registry"; then
@@ -31,8 +35,12 @@ fi
 
 [[ -n "$CODEO_PROJECT_ROOT" ]] || codeo_die "not inside a git repository"
 file="$CODEO_STATE_DIR/overlays/$skill.md"
-[[ -f "$file" ]] || exit 3
+[[ -e "$file" ]] || exit 3
+# Exit 2 belongs to the registry check, so a file that exists but cannot be read must not reach awk.
+[[ -f "$file" && -r "$file" ]] || codeo_die "$file is not readable"
 
+# Sections are delimited by "## " headings only, so a "## " line inside a fenced code block ends the
+# section too; an overlay that needs one in a code sample must indent it.
 # One pass: record where each matching heading is, keep only the first section's lines, and decide
 # at the end so a duplicate prints nothing.
 rc=0
