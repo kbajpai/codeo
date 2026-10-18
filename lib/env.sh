@@ -30,7 +30,10 @@
 #                           logical names (ready, inProgress, inReview, done, backlog) mapping to the
 #                           board's own option names; a name that is not a key passes through.
 #   labelTypes{}            issue label -> branch type
-#   suites[]{name,paths[],build,test,filter}          test suites and the paths that trigger them
+#   suites[]{name,paths[],build,test,filter}          test suites and the paths that trigger them.
+#                           filter is a command template that runs ONE test, {} standing for the
+#                           test's name (e.g. pytest -k {}); absent means the suite has no
+#                           single-test form and its whole test command is the proof
 #   skipGlobs[]             paths that never trigger a suite
 #   resources[]{name,paths[],parameterised}           exclusive resources (locks) and their footprints
 #   environment{resource,hooks{activate,revoke,preflight,start,deployed}}   optional shared environment

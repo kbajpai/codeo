@@ -11,6 +11,10 @@
 #         2  refused because the branch exists: one stderr line naming who pushed it and what it
 #            carries (this issue's init.md, another issue's dossier, or no dossier)
 #         1  any other push failure, with git's own stderr
+#       Re-running it from the SAME worktree with an identical tip exits 0: git answers "Everything
+#       up-to-date" for an unchanged ref before it evaluates --force-with-lease. The create-only
+#       invariant still holds across checkouts, because a second init makes a different commit and
+#       is refused.
 #
 #   claim.sh --carries <issue> <branch> <repo>
 #       Reads origin/<branch> in <repo> (the caller fetches first) and says what the branch adds
