@@ -537,8 +537,14 @@ lease() {
             # would roll the environment back and test against a base that no longer exists.
             if is_env "$resource"; then
                 base_branch=$(codeo_base_branch) || exit 1
-                git fetch -q origin "$base_branch" ||
+                if ! git fetch -q origin "$base_branch" 2>/dev/null; then
+                    # A failed fetch is an outage only when origin answers nothing at all (the
+                    # probe tip() uses); otherwise the configured base branch is the thing at fault.
+                    if git ls-remote -q --heads origin >/dev/null 2>&1; then
+                        die "branch $base_branch does not exist on origin — check baseBranch in config.json"
+                    fi
                     die "origin is unreachable — could not fetch $base_branch, which $resource must be checked against"
+                fi
                 git merge-base --is-ancestor "origin/$base_branch" HEAD ||
                     die "this branch does not contain origin/$base_branch — merge it in first, then take $resource"
             fi

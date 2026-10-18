@@ -586,6 +586,23 @@ assert_contains "the message" "this branch does not contain origin/main — merg
 assert_eq "no lease" "" "$(leases_on "$o")"
 assert_eq "no hook ran" "" "$(cat "$HOOK_LOG")"
 
+case_desc="the environment resource names a base branch origin does not have, not a dead network"
+cfg_before=$(cat "$c/.codeo/config.json")
+jq '.baseBranch = "mian"' <<<"$cfg_before" > "$c/.codeo/config.json"
+run_full "$c" lease take dev 7 deploy
+assert_eq "exit" 1 "$status"
+assert_contains "names the branch" "branch mian does not exist on origin" "$err"
+assert_not_contains "not unreachable" "unreachable" "$err"
+printf '%s\n' "$cfg_before" > "$c/.codeo/config.json"
+
+case_desc="the environment resource reports an unreachable origin as such"
+origin_url=$(git -C "$c" remote get-url origin)
+git -C "$c" remote set-url origin "$scratch_root/no-such-origin"
+run_full "$c" lease take dev 7 deploy
+assert_eq "exit" 1 "$status"
+assert_contains "says unreachable" "origin is unreachable" "$err"
+git -C "$c" remote set-url origin "$origin_url"
+
 o=$(origin_with)
 c=$(clone_of "$o")
 case_desc="parameterised_resource_accepts_a_suffix"
