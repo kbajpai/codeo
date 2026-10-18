@@ -170,7 +170,8 @@ implement_points_are_registered_and_absent() {
 
 env_header_documents_parallel_and_deploy() {
     local header; header=$(grep '^#' "$plugin_root/lib/env.sh")
-    [[ "$header" == *parallel* && "$header" == *deploy* ]] || fail "env.sh header lacks parallel or deploy"
+    grep -Eq '(^|[^a-z])parallel([^a-z]|$)' <<<"$header" || fail "env.sh header lacks parallel"
+    grep -Eq '(^|[^a-z])deploy([^a-z]|$)' <<<"$header" || fail "env.sh header lacks deploy"
 }
 
 for c in implement_points_are_registered_and_absent env_header_documents_parallel_and_deploy unreadable_overlay_exits_1_one_line unreadable_registry_exits_1_one_line heading_at_eof_without_newline_is_found heading_with_extra_words_does_not_match heading_inside_a_code_fence_ends_the_section \
