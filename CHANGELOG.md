@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1
+Shared state: unchanged
+Safe to bump mid-workflow: yes
+
+- The repository names no project that uses it: design documents about a specific project live in that
+  project's repository. `tests/agnostic.test.sh` fails if a tracked file mentions one.
+- `docs/skills-inventory.md`: the generic rules each pipeline skill must keep.
+
 ## v0.1.0 — 2026-10-18
 
 Config schema: 1

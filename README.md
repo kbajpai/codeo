@@ -14,4 +14,4 @@ bash 4.3 or later, jq, git and gh. Board access uses `gh project`, which needs G
 
 ## Status
 
-v0.1.0 is a testing tag, not for projects to adopt. The design is in [docs/plans/2026-10-18-workflow-plugin-extraction-design.md](docs/plans/2026-10-18-workflow-plugin-extraction-design.md).
+v0.1.0 is a testing tag, not for projects to adopt.
