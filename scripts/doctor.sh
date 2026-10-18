@@ -4,8 +4,8 @@
 #
 #   doctor.sh
 #
-# Checks: config, schema, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays, superpowers. Every GitHub read is
-# `gh api` except the board check's `gh project view`, which is GraphQL-backed; nothing uses the
+# Checks: config, schema, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays, superpowers.
+# Every GitHub read is `gh api` except the board check's `gh project view`, which is GraphQL-backed; nothing uses the
 # GraphQL-backed `gh issue|pr|run`.
 # The ruleset check reads the effective rules for the base branch from
 # `gh api repos/<owner>/<repo>/rules/branches/<base>`, which covers rulesets and branch
@@ -190,13 +190,23 @@ else
             bad+=("$(basename "$f"): no extension points for skill $skill")
             continue
         fi
-        while IFS= read -r line; do
-            name=${line#\#\# }
-            name=${name%$'\r'}
+        # A heading is normalised exactly as overlay.sh does it (CR stripped, trailing blanks trimmed,
+        # "## " prefix of three characters) so a section overlay.sh can fetch is never reported as
+        # dead here; keep the two in step.
+        names=$(awk '{ sub(/\r$/, ""); if (substr($0, 1, 3) == "## ") { h = $0; sub(/[ \t]+$/, "", h); print substr(h, 4) } }' "$f")
+        [[ -n "$names" ]] || continue
+        dups=$(sort <<<"$names" | uniq -d)
+        while IFS= read -r name; do
+            [[ -n "$name" ]] || continue
+            bad+=("$(basename "$f"): duplicate section ## $name")
+        done <<<"$dups"
+        while IFS= read -r name; do
             sections=$((sections + 1))
-            [[ ",$(sed 's/, /,/g' <<<"$known")," == *",$name,"* ]] ||
-                bad+=("$(basename "$f"): ## $name is not an extension point of $skill (known: $known)")
-        done < <(grep '^## ' "$f" || true)
+            [[ ",$(sed 's/, /,/g' <<<"$known")," == *",$name,"* ]] && continue
+            hint=""
+            [[ "$name" == " "* ]] && hint="; a heading is exactly '## <point>' with one space"
+            bad+=("$(basename "$f"): ## $name is not an extension point of $skill (known: $known$hint)")
+        done <<<"$names"
     done
     if [[ ${#bad[@]} -eq 0 ]]; then
         report ok overlays "$sections section(s) in $files file(s)"

@@ -213,7 +213,44 @@ doctor_superpowers_undetectable_is_not_a_fail() {
     grep -q '^ok superpowers: cannot verify$' <<<"$out" || fail "bad json: $out"
 }
 
-for c in doctor_overlays_ok_when_none doctor_overlays_ok_counts_sections \
+doctor_overlays_ok_with_trailing_whitespace_and_crlf() {
+    echo "$healthy" > .codeo/config.json
+    mkdir -p .codeo/overlays
+    printf '## plan-shape  \r\nx\r\n' > .codeo/overlays/plan.md
+    CODEO_EXTENSION_POINTS="$reg" run
+    rm -rf .codeo/overlays
+    grep -q '^ok overlays: 1 section(s) in 1 file(s)$' <<<"$out" || fail "false fail: $out"
+}
+
+doctor_overlays_fail_on_a_duplicate_section() {
+    echo "$healthy" > .codeo/config.json
+    mkdir -p .codeo/overlays
+    printf '## plan-shape\nx\n## plan-shape\ny\n' > .codeo/overlays/plan.md
+    CODEO_EXTENSION_POINTS="$reg" run
+    rm -rf .codeo/overlays
+    grep -q '^fail overlays: plan.md: duplicate section ## plan-shape' <<<"$out" || fail "no duplicate failure: $out"
+    [[ $(wc -l <<<"$out") -eq 10 ]] || fail "overlays must stay one line: $out"
+}
+
+doctor_overlays_hint_at_a_double_space_heading() {
+    echo "$healthy" > .codeo/config.json
+    mkdir -p .codeo/overlays
+    printf '##  wiki-rules\nx\n' > .codeo/overlays/plan.md
+    CODEO_EXTENSION_POINTS="$reg" run
+    rm -rf .codeo/overlays
+    grep -q "exactly '## <point>' with one space" <<<"$out" || fail "no hint: $out"
+}
+
+doctor_superpowers_json_without_plugins_key_is_not_a_fail() {
+    echo "$healthy" > .codeo/config.json
+    echo '{"version":2}' > "$work/plugins.json"
+    CODEO_PLUGINS_FILE="$work/plugins.json" run
+    grep -q '^ok superpowers: cannot verify$' <<<"$out" || fail "no-plugins-key: $out"
+}
+
+for c in doctor_overlays_ok_with_trailing_whitespace_and_crlf doctor_overlays_fail_on_a_duplicate_section \
+    doctor_overlays_hint_at_a_double_space_heading doctor_superpowers_json_without_plugins_key_is_not_a_fail \
+    doctor_overlays_ok_when_none doctor_overlays_ok_counts_sections \
     doctor_overlays_fail_names_file_section_and_known_points doctor_superpowers_fail_with_install_command \
     doctor_superpowers_ok_when_present doctor_superpowers_undetectable_is_not_a_fail \
     doctor_reports_an_unauthenticated_gh_without_hanging \
