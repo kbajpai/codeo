@@ -234,4 +234,12 @@ GH_STUB_ROWS="$P2" run set 7 inProgress
 [[ $rc -eq 0 && $out == *"Ready → In progress on #2"* ]] || fail "a logical status resolves to the configured name: rc=$rc out=$out err=$err"
 printf '%s\n' "$with_board" > "$config"
 
+# A board without board.projects is just its gate project, and says nothing about the absent key.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","gateProject":2,"statuses":{}}}' > "$config"
+GH_STUB_ROWS="$P2" run set 7 "In progress"
+[[ $rc -eq 0 && -z $err ]] || fail "gate-project-only board: rc=$rc err=$err"
+GH_STUB_ROWS="$P2" run status 7
+[[ $rc -eq 0 && -z $err && $out == Ready ]] || fail "gate-project-only status: rc=$rc err=$err out=$out"
+printf '%s\n' "$with_board" > "$config"
+
 echo "board.test.sh: all cases passed"

@@ -41,7 +41,7 @@ if ! codeo_cfg .board >/dev/null; then
 fi
 owner=$(codeo_cfg_required .board.owner) || exit 1
 project=$(codeo_cfg_required .board.gateProject) || exit 1
-if projects=$(codeo_cfg '.board.projects[]'); then
+if projects=$(codeo_cfg '.board.projects[]?'); then
     projects=${projects//$'\n'/ }
 else
     projects=$project
