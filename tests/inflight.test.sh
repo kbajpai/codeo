@@ -86,7 +86,7 @@ assert_contains() {
 fresh_repo() {
     local dir
     dir=$(mktemp -d "$scratch_root/repo.XXXXXX")
-    git -C "$dir" -c init.defaultBranch=main init -q
+    git -C "$dir" -c init.defaultBranch="${FR_BASE:-main}" init -q
     # No background maintenance after a push or a commit: it would race a later clone — see
     # claim.test.sh's fresh_origin.
     git -C "$dir" config gc.auto 0
@@ -115,14 +115,14 @@ clone_of() {
     dir=$(mktemp -d "$scratch_root/clone.XXXXXX")
     git clone -q "$1" "$dir"
     mkdir -p "$dir/.codeo"
-    printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}\n' > "$dir/.codeo/config.json"
+    printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"%s"}\n' "${FR_BASE:-main}" > "$dir/.codeo/config.json"
     printf '%s' "$dir"
 }
 
 run_inflight() {
     local clone=$1
     shift
-    (cd "$clone" && PATH="$stub_bin:$PATH" bash "$plugin/scripts/inflight.sh" "$@" 2>&1)
+    (cd "$clone" && PATH="$stub_bin:$PATH" bash "$plugin/scripts/inflight.sh" "$@" 2>/dev/null)
 }
 
 printf '{"number":7,"labels":[],"assignees":[{"login":"alice"}]}' > "$stub_dir/GET_repos_o_n_issues_7.json"
@@ -203,6 +203,20 @@ rc=0
 (cd "$clone" && PATH="$stub_bin:$PATH" bash "$plugin/scripts/inflight.sh" --branches --tsv >/dev/null 2>"$scratch_root/err") || rc=$?
 assert_eq "exit" 1 "$rc"
 assert_contains "usage" "usage: inflight.sh" "$(cat "$scratch_root/err")"
+
+case_desc="inflight_follows_a_non_main_base_branch"
+FR_BASE=trunk
+tr_origin=$(fresh_repo)
+git -C "$tr_origin" checkout -q -b feat/t
+write_dossier "$tr_origin" 7 plan "Planned."
+git -C "$tr_origin" checkout -q trunk
+tr_clone=$(clone_of "$tr_origin")
+FR_BASE=
+assert_eq "no main branch anywhere" "" "$(git -C "$tr_clone" branch -a --list '*main')"
+out=$(run_inflight "$tr_clone" --tsv)
+assert_eq "rows" "7${tab}feat/t${tab}working${tab}plan${tab}alice" "$out"
+out=$(run_inflight "$tr_clone" --branches)
+assert_eq "branches" "7${tab}feat/t${tab}.codeo/7" "$out"
 
 empty_clone=$(clone_of "$(fresh_repo)")
 

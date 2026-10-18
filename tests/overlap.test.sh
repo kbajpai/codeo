@@ -58,20 +58,20 @@ plan() {
 # write_config <clone> — .codeo/config.json, untracked; modules come from SC_MODULES (default: wiki on).
 write_config() {
     mkdir -p "$1/.codeo"
-    printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main","modules":%s}\n' \
-        "${SC_MODULES:-[\"wiki\"]}" > "$1/.codeo/config.json"
+    printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"%s","modules":%s}\n' \
+        "${SC_BASE:-main}" "${SC_MODULES:-[\"wiki\"]}" > "$1/.codeo/config.json"
 }
 
 # scenario <b_files> [a_extra_file] [a_question] — prints the clone, on feat/a (issue 7), with feat/b
 # (issue 9) pushed to origin. b changes Clips/Endpoints/Health.cs and Docs/x.md; a changes
 # Clips/Endpoints/Health.cs and Terraform/a.tf. Optional environment, unset in every older case:
 # SC_A_FILES (a's footprint files, default Terraform/**), SC_A_WIKI and SC_B_WIKI (their wiki: lines),
-# SC_BULK=<n> (n extra files under Clips/Zbulk/ on main), SC_APART=1 (the diffs share nothing:
+# SC_BASE=<name> (the origin's base branch and the config's baseBranch, default main), SC_BULK=<n> (n extra files under Clips/Zbulk/ on main), SC_APART=1 (the diffs share nothing:
 # Health.cs is already on main and neither branch changes it).
 scenario() {
     local origin clone
     origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
-    git -C "$origin" -c init.defaultBranch=main init -q
+    git -C "$origin" -c init.defaultBranch="${SC_BASE:-main}" init -q
     # No background maintenance after a push or a commit: it would race a later clone — see
     # claim.test.sh's fresh_origin.
     git -C "$origin" config gc.auto 0
@@ -89,12 +89,12 @@ scenario() {
     [[ -n ${SC_APART:-} ]] || commit_file "$origin" Clips/Endpoints/Health.cs
     commit_file "$origin" Docs/x.md
     plan "$origin" 9 "$1" terraform '' "${SC_B_WIKI:-none}"
-    git -C "$origin" checkout -q main
+    git -C "$origin" checkout -q "${SC_BASE:-main}"
     git -C "$origin" checkout -q -b feat/a
     clone=$(mktemp -d "$scratch_root/clone.XXXXXX")
     git clone -q "$origin" "$clone"
     git -C "$clone" checkout -q feat/a
-    git -C "$clone" checkout -q -b work origin/main
+    git -C "$clone" checkout -q -b work "origin/${SC_BASE:-main}"
     [[ -n ${SC_APART:-} ]] || commit_file "$clone" Clips/Endpoints/Health.cs
     commit_file "$clone" Terraform/a.tf
     [[ -z ${2:-} ]] || commit_file "$clone" "$2"
@@ -226,6 +226,13 @@ wiki_plan "$clone" Foo
 want="Clips/Endpoints/Health.cs
 wiki/Foo.md"
 assert_eq "--outside no longer treats a page as covered" "$want" "$(run "$clone" --outside 7)"
+
+case_desc="overlap_follows_a_non_main_base_branch"
+clone=$(SC_BASE=trunk scenario 'Clips/Endpoints/**')
+assert_eq "no main branch anywhere" "" "$(git -C "$clone" branch -a --list '*main')"
+want="9${tab}Clips/Endpoints/Health.cs
+9${tab}exclusive:terraform"
+assert_eq "lines" "$want" "$(run "$clone" 7)"
 
 case_desc="a raised glob pair is dropped"
 clone=$(SC_APART=1 SC_A_FILES='Clips/**' scenario 'Clips/Endpoints/**' '' $'\n### Q3 — Overlap\n\nIssue #9 also names glob:Clips/Endpoints/**.\n')
