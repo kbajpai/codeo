@@ -125,13 +125,13 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
         `state == "open"`), for the same reason. For each,
         `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`: one whose Status is already the
         Ready status (the option `board.statuses.ready` names, else `Ready`) is waiting
-        on `/codeo:init`, not on a decision, and is listed as such rather than asked about. When
+        on `/codeo:init`, not on a decision, and is listed as such rather than asked about.
         <!-- rule: triage-07 -->
-        the board is not configured, or in a hosted web session where this read is `unavailable`
-        (a source that is unavailable there is reported, never skipped silently): list the issue without that classification — as an ordinary item to ask about, since there
-        is no board Status to tell it apart from one still undecided — and note in the run's
-        `## Outcome` that board-status enrichment was unavailable, the same way source 1.3 reports
-        itself skipped.
+        A source that is unavailable in a hosted web session is reported, never skipped silently:
+        when the board is not configured, or the read is `unavailable` there, list the issue
+        without that classification — as an ordinary item to ask about, since there is no board
+        Status to tell it apart from one still undecided — and note in the run's `## Outcome` that
+        board-status enrichment was unavailable, the same way source 1.3 reports itself skipped.
    3. **Unresolved review threads on merged PRs** — merged since the ledger's last run, or the last
       twenty on a first run.
       This one has no REST form: the session's proxy refuses GraphQL outside a pinned set of PR
@@ -217,7 +217,7 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
      a time, in the order the engineer ranked them. Then ask, as a follow-up question, whether the
      new issue is ready to work on (with a board); yes is a *mark Ready*.
    - **Mark Ready** → `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`, which adds the
-     issue to the board if it is not on it. Record `ready` and quote the script's output line (`board.sh: #N <old> → <option> on #P <title>`) in
+     issue to the board if it is not on it. Record `ready` and quote the line the script prints (it reports the old status, the new option and the project) in
      the run's `## Outcome`.
      <!-- rule: triage-06 -->
      A script failure — the `project` token scope is the likely one, and the script names the
@@ -227,8 +227,8 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
    - **Defer** → record it; it comes back next run.
    - **Leave in the backlog** → with no board configured, only record it in the ledger (no
      `board.sh` call). With a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog`.
-     Record it, quoting the script's output line in the run's `## Outcome` and `board: Backlog
-     on #<n>…` (or `board: failed — <reason>`) in the `## Log` line; it does not come back. A
+     Record it, quoting the script's output line in the run's `## Outcome`, and note the backlog move (or its failure and the reason) in the
+     `## Log` line; it does not come back. A
      script failure is reported, and the decision is still recorded — the issue is on the tracker
      either way.
    - **Resume** → with a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready` — the stash already
