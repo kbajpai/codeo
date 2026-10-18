@@ -8,7 +8,7 @@
 #       there was any; prints "all cases passed" otherwise. A check that has nothing to compare
 #       against yet prints a "skipped" line instead.
 #
-# Checks: (1) frontmatter  (2) precedence sentence  (3) script calls  (4) points  (5) rules
+# Checks: (1) frontmatter  (2) precedence sentence  (3) script calls and document references  (4) points  (5) rules
 #         (6) config keys
 set -euo pipefail
 
@@ -59,6 +59,12 @@ lint_scripts() {
         [[ -f "$root/scripts/$call" ]] || lint_fail "$skill" 3 script-calls "scripts/$call does not exist"
     done < <(grep -oE 'bash "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/[A-Za-z0-9_.-]+\.sh"' "$file" |
         sed -E 's#.*/scripts/([^"]+)"#\1#' || true)
+    # A document the skill cites by its plugin path must be shipped.
+    while IFS= read -r call; do
+        [[ -n "$call" ]] || continue
+        [[ -f "$root/docs/$call" ]] || lint_fail "$skill" 3 script-calls "docs/$call does not exist"
+    done < <(grep -oE '\$\{CLAUDE_PLUGIN_ROOT\}/docs/[A-Za-z0-9_.-]+\.md' "$file" |
+        sed -E 's#.*/docs/##' | sort -u || true)
     # What is left once the one allowed call form is removed must name no script at all.
     stripped=$(sed -E 's#bash "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/[A-Za-z0-9_.-]+\.sh"##g' "$file")
     leftovers=$(grep -oE "$old_dir"'[^[:space:]]*|[^[:space:]]*scripts/[^[:space:]]*\.sh[^[:space:]]*|\$\{CLAUDE_PLUGIN_ROOT\}/scripts[^[:space:]]*' <<<"$stripped" || true)

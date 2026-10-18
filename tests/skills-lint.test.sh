@@ -62,6 +62,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get -r .baseBranch
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '"'"'.baseBranch, .suites[].name'"'"'
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '"'"'.suites[] | select(.name=="qqq") | .paths // "zzz"'"'"'
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get "$KEY"'
+make_skill baddoc 'See ${CLAUDE_PLUGIN_ROOT}/docs/gone.md and ${CLAUDE_PLUGIN_ROOT}/docs/skills-inventory.md.'
 make_skill wrongdir "x" "other-name"
 make_skill noprec "x" "" noprec
 make_skill deadcall 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/gone.sh"'
@@ -99,6 +100,8 @@ for ok in good crlf folded; do refute "FAIL $ok "; done
 expect 'good check 6 skipped for a dynamic filter: $KEY'
 expect 'FAIL wrongdir check 1 frontmatter: name'
 expect 'FAIL noprec check 2 precedence'
+expect 'FAIL baddoc check 3 script-calls: docs/gone.md does not exist'
+refute 'docs/skills-inventory.md does not exist'
 expect 'FAIL deadcall check 3 script-calls: scripts/gone.sh does not exist'
 expect 'FAIL agentcall check 3 script-calls: other script form: '"$old"
 expect 'FAIL agentprose check 3 script-calls: other script form: '"$old"
