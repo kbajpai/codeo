@@ -87,6 +87,10 @@ read_globs() {
     done <<<"$regexes"
 }
 
+# A command substitution below would swallow an unusable config's exit and skip every suite
+# silently, so the config is checked here, at the top level, where its exit ends the script.
+codeo_cfg_required .schema >/dev/null
+
 suite_names=()
 if names=$(codeo_cfg '.suites[]?.name'); then
     while IFS= read -r line; do suite_names+=("$line"); done <<<"$names"
@@ -105,20 +109,24 @@ done < <(git diff --name-only -z --no-renames "$1...$2")
 read_globs skip_res '.skipGlobs[]?'
 
 remaining=()
-for path in "${changed[@]}"; do
-    if ! matches_any "$path" "${skip_res[@]}"; then
+for path in ${changed[@]+"${changed[@]}"}; do
+    if ! matches_any "$path" ${skip_res[@]+"${skip_res[@]}"}; then
         remaining+=("$path")
     fi
 done
 
-# One array of regexes per suite, by index; bash has no nested arrays.
+# One array of regexes per suite (suite_res_<index>; bash has no nested arrays), loaded once:
+# reading them inside the path loop spawns a jq per suite per path.
+for i in "${!suite_names[@]}"; do
+    read_globs "suite_res_$i" ".suites[$i].paths[]?"
+done
 declare -A suite_deciding=()   # suite index -> newline list of deciding paths
 unknown=()
-for path in "${remaining[@]}"; do
+for path in ${remaining[@]+"${remaining[@]}"}; do
     known=false
     for i in "${!suite_names[@]}"; do
-        read_globs suite_res ".suites[$i].paths[]?"
-        if matches_any "$path" "${suite_res[@]}"; then
+        declare -n suite_res="suite_res_$i"
+        if matches_any "$path" ${suite_res[@]+"${suite_res[@]}"}; then
             known=true
             suite_deciding[$i]+="$path"$'\n'
         fi
@@ -151,8 +159,8 @@ if resource=$(codeo_cfg '.environment.resource'); then
         if [[ -n $line ]]; then deploy_res+=("$(glob_to_regex "$line")"); fi
     done <<<"$deploy_paths"
     deploy=false
-    for path in "${changed[@]}"; do
-        if matches_any "$path" "${deploy_res[@]}"; then
+    for path in ${changed[@]+"${changed[@]}"}; do
+        if matches_any "$path" ${deploy_res[@]+"${deploy_res[@]}"}; then
             deploy=true
             echo "scope: deploy needed for: $path" >&2
         fi

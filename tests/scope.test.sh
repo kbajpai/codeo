@@ -135,10 +135,45 @@ no_suites_configured_prints_nothing_and_exits_0() {
     [[ -z "$out" ]] || fail "printed: $out"
 }
 
+unusable_config_fails_loudly_and_prints_nothing() {
+    local repo out rc
+    repo=$(make_repo "{not json")
+    rc=0; out=$(cd "$repo" && bash "$scope_sh" main work 2>/dev/null) || rc=$?
+    [[ $rc -ne 0 ]] || fail "invalid JSON exited 0"
+    [[ -z "$out" ]] || fail "invalid JSON printed: $out"
+    repo=$(make_repo "{$base}")
+    rm "$repo/.codeo/config.json"
+    git -C "$repo" add -A; git -C "$repo" commit -q -m rm
+    rc=0; out=$(cd "$repo" && bash "$scope_sh" main work 2>/dev/null) || rc=$?
+    [[ $rc -ne 0 ]] || fail "missing config exited 0"
+    [[ -z "$out" ]] || fail "missing config printed: $out"
+}
+
+metacharacters_and_spaces_in_paths_match_literally() {
+    local repo; repo=$(make_repo "{$base,"'"skipGlobs":["**/*.md"],"suites":[{"name":"a","paths":["a b/**"]},{"name":"z","paths":["z/**"]}]}')
+    mkdir -p "$repo/a b" "$repo/sub"
+    echo x > "$repo/a b/[x].cs"
+    echo x > "$repo/sub/weird*name.md"
+    commit_change "$repo"
+    local out; out=$(run_scope "$repo")
+    [[ "$out" == $'suite.a=true\nsuite.z=false' ]] || fail "unexpected: $out"
+}
+
+a_400_file_diff_with_three_suites_is_fast() {
+    local repo; repo=$(make_repo "{$base,"'"suites":[{"name":"api","paths":["src/api/**"]},{"name":"web","paths":["web/**"]},{"name":"x","paths":["x/**"]}]}')
+    local i
+    for i in $(seq 1 400); do echo "$i" > "$repo/src/api/f$i.txt"; done
+    commit_change "$repo"
+    local start=$SECONDS out; out=$(run_scope "$repo")
+    [[ "$out" == $'suite.api=true\nsuite.web=false\nsuite.x=false' ]] || fail "unexpected: $out"
+    (( SECONDS - start < 5 )) || fail "took $((SECONDS - start))s"
+}
+
 for case in docs_only_change_runs_no_suite path_in_one_suite_runs_only_that_suite \
     unknown_path_runs_every_suite rename_counts_old_and_new_path \
     deploy_true_only_for_environment_paths glob_star_stays_inside_a_segment \
-    no_suites_configured_prints_nothing_and_exits_0; do
+    no_suites_configured_prints_nothing_and_exits_0 unusable_config_fails_loudly_and_prints_nothing \
+    metacharacters_and_spaces_in_paths_match_literally a_400_file_diff_with_three_suites_is_fast; do
     "$case" || fail "$case"
     echo "ok $case" >&2
 done
