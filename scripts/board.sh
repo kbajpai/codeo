@@ -31,7 +31,7 @@ set -euo pipefail
 # issue to every project in board.projects it is missing from, then writes those and every other
 # project it is on. A board with no projects list is just its gate project.
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
-# Read in the main shell (not inside $(...)) so an unusable config ends the script.
+# Read in the top-level shell (not inside $(...)) so an unusable config ends the script.
 repo_owner=$(codeo_cfg_required .repo.owner) || exit 1
 repo_name=$(codeo_cfg_required .repo.name) || exit 1
 repo=$repo_owner/$repo_name

@@ -19,7 +19,7 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
-# Read in the main shell (not inside $(...)) so an unusable config ends the script; the || exit
+# Read in the calling shell (not inside $(...)) so an unusable config ends the script; the || exit
 # covers a key that is merely absent, since codeo_cfg_required's exit would only end the subshell.
 owner=$(codeo_cfg_required .repo.owner) || exit 1
 name=$(codeo_cfg_required .repo.name) || exit 1

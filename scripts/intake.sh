@@ -467,7 +467,7 @@ lease_name() {
 lease() {
     local head op=${1:-} resource= issue= purpose path waiting attempt parent held new file found= override= checked= ls_status activated_new= row n end drop base_branch
     local -a expired=()
-    # An unusable config ends the script here, in the main shell, in one line: every lease verb
+    # An unusable config ends the script here, in the top-level shell, in one line: every lease verb
     # reads the resource list from it.
     codeo_cfg .schema >/dev/null || true
     env_resource=$(codeo_cfg .environment.resource 2>/dev/null || true)
@@ -618,7 +618,7 @@ lease() {
                     # lease it does not hold. The revoke hook must therefore be safe to run when
                     # activation never finished. Until the lease is published, INT and TERM
                     # become exits so the EXIT trap runs and the status is still signal-style.
-                    # This runs in the main shell (the dispatch below calls `lease` directly), so
+                    # This runs in the top-level shell (the dispatch below calls `lease` directly), so
                     # the traps are the process's.
                     activated_new=1
                     trap revoke EXIT

@@ -7,3 +7,11 @@ codeo is an agent-workflow plugin for Claude Code: it carries a piece of work fr
 ```bash
 bash tests/run.sh [pattern]   # runs tests/*.test.sh whose name contains the pattern
 ```
+
+## Requirements
+
+bash 4 or later, jq, git and gh. Board access uses `gh project`, which needs GraphQL access to GitHub.
+
+## Status
+
+v0.1.0 is a testing tag, not for projects to adopt. The design is in [docs/plans/2026-10-18-workflow-plugin-extraction-design.md](docs/plans/2026-10-18-workflow-plugin-extraction-design.md).
