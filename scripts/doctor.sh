@@ -4,7 +4,7 @@
 #
 #   doctor.sh
 #
-# Checks: config, schema, gh-auth, gh-scopes, board, ruleset, suites, deps. Every GitHub read is
+# Checks: config, schema, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays, superpowers. Every GitHub read is
 # `gh api` except the board check's `gh project view`, which is GraphQL-backed; nothing uses the
 # GraphQL-backed `gh issue|pr|run`.
 # The ruleset check reads the effective rules for the base branch from
@@ -168,6 +168,56 @@ if [[ ${#missing[@]} -eq 0 ]]; then
     report ok deps "jq, git, bash $BASH_VERSION"
 else
     report fail deps "missing: ${missing[*]}"
+fi
+
+# overlays: every "## <name>" in $CODEO_STATE_DIR/overlays/<skill>.md must be a registered
+# <skill>/<name>, else overlay.sh would never fetch it and the section would be dead text. Offenders
+# are joined on one line so the check stays one line of output. CODEO_EXTENSION_POINTS is tests only.
+registry=${CODEO_EXTENSION_POINTS:-$CODEO_PLUGIN_ROOT/lib/extension-points.tsv}
+overlay_dir="$CODEO_STATE_DIR/overlays"
+if [[ ! -d "$overlay_dir" ]]; then
+    report ok overlays "none"
+elif [[ ! -r "$registry" ]]; then
+    report fail overlays "extension-point registry not readable: $registry"
+else
+    bad=() sections=0 files=0
+    for f in "$overlay_dir"/*.md; do
+        [[ -f "$f" ]] || continue
+        files=$((files + 1))
+        skill=$(basename "$f" .md)
+        known=$(awk -F'\t' -v s="$skill" '$1 == s { print $2 }' "$registry" | paste -sd, - | sed 's/,/, /g')
+        if [[ -z "$known" ]]; then
+            bad+=("$(basename "$f"): no extension points for skill $skill")
+            continue
+        fi
+        while IFS= read -r line; do
+            name=${line#\#\# }
+            name=${name%$'\r'}
+            sections=$((sections + 1))
+            [[ ",$(sed 's/, /,/g' <<<"$known")," == *",$name,"* ]] ||
+                bad+=("$(basename "$f"): ## $name is not an extension point of $skill (known: $known)")
+        done < <(grep '^## ' "$f" || true)
+    done
+    if [[ ${#bad[@]} -eq 0 ]]; then
+        report ok overlays "$sections section(s) in $files file(s)"
+    else
+        joined=$(printf '%s; ' "${bad[@]}")
+        report fail overlays "${joined%; }"
+    fi
+fi
+
+# superpowers: plan and implement call its skills. The source of truth is the installed-plugins file
+# the claude CLI keeps; claude itself is never run (slow, may prompt). CODEO_PLUGINS_FILE overrides
+# the path and exists for the tests only. A file we cannot read or parse is "cannot verify", never a fail.
+plugins_file=${CODEO_PLUGINS_FILE:-$HOME/.claude/plugins/installed_plugins.json}
+if [[ -r "$plugins_file" ]] && jq -e '.plugins | type == "object"' "$plugins_file" >/dev/null 2>&1; then
+    if jq -e '.plugins | keys | any(startswith("superpowers@"))' "$plugins_file" >/dev/null 2>&1; then
+        report ok superpowers "installed"
+    else
+        report fail superpowers "not installed; install it with: claude plugin install superpowers@superpowers-marketplace"
+    fi
+else
+    report ok superpowers "cannot verify"
 fi
 
 exit "$failed"
