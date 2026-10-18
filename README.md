@@ -19,6 +19,9 @@ The pipeline skills run in this order, each owning one dossier file under `.code
 | `/codeo:plan` | Explore, ask, and document a change as a reference doc or implementation plan, and check its footprint against every other workflow in flight | `plan-shape`, `proof-of-done`, `environment-lease-notes`, `wiki-rules` |
 | `/codeo:triage` | Find the loose ends development left behind and route them to issues | `todo-excludes` |
 
+This release stops at `/codeo:plan`: `implement`, `qc` and `close` are not yet included, and the
+plan skill hands off to `/codeo:implement`, which is not shipped here.
+
 `/codeo:setup` writes the project's `.codeo/config.json`, and `/codeo:doctor` checks the setup,
 including the project's overlay files.
 

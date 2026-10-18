@@ -13,7 +13,7 @@ at the project's root, one file per skill. It is committed with the project.
 ### The heading grammar
 
 A section starts with a line that is exactly `## ` followed by the point's name, with one space
-between them and nothing after the name:
+between them and nothing after the name (trailing blanks and a carriage return are ignored):
 
 ```markdown
 ## todo-excludes
@@ -53,6 +53,9 @@ run at the project's root. The exit code decides what the skill does:
 | 2 | `<skill>/<point>` is not a registered point | Reports the one `codeo:` line and uses the default |
 | 4 | The section appears twice | Reports the one `codeo:` line and uses the default |
 | 1 | The overlay or the registry cannot be read | Reports the one `codeo:` line and uses the default |
+
+"Reports" means: `/codeo:triage` puts the line in the run's `## Outcome`, `/codeo:plan` tells the
+engineer in the turn.
 
 The registered points are the rows of `lib/extension-points.tsv`: skill, point, and the default,
 tab-separated. Exit 2 means a skill names a point that is not registered, which is why it fails
@@ -112,7 +115,7 @@ cases the project cares about. The skill uses it for every task in the plan.
 **Default when absent.** The suite's filter with {} replaced by the name of the test the task
 writes; a suite without filter has no single-test form and its whole test command is the proof.
 A task with no test is proved by the suite's `build`, and a documentation-only task by a check it
-names.
+names. With no suites configured, the task names its proof command in full.
 
 **Example.**
 
@@ -206,7 +209,7 @@ files it will search.
 **Expected back.** Glob patterns, one per line. The skill adds each as `':!<glob>'` to the
 pathspec of the scan.
 
-**Default when absent.** No exclusions beyond .gitignore; the skill scans tracked files only.
+**Default when absent.** Scan tracked files only, with no exclusions.
 
 **Example.**
 

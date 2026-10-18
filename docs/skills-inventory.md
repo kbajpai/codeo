@@ -8,6 +8,12 @@ repository, never here.
 "Hard rule" below means a rule a project overlay may not override; the skill states this once, at
 the top. Each skill's rewrite is checked against its list: a rule that disappears is a regression.
 
+What the lint and the pin do not cover: the sentence under a `rule` marker (a skill can keep the
+marker and gut the sentence; the task-scoped rules review in each commit message is the guard),
+that an extension point's defaults agree across the registry, the doc and the skill, that
+`→ Heading` citations into the protocol docs still resolve, and that script verbs and flags named
+in prose exist (only the script's existence is checked).
+
 ## issue
 
 - [issue-01] A bare invocation asks; it never infers what to file.
