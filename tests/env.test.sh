@@ -124,7 +124,17 @@ setup_then_validate_refuses_a_repo_without_origin() {
     [[ "$err" == "codeo: config.json: repo.owner is still TODO-set-me" ]] || fail "unexpected: $err"
 }
 
-for c in todo_marker_is_refused_for_each_required_key setup_then_validate_refuses_a_repo_without_origin failures_print_exactly_one_line resolves_project_root_from_a_subdirectory missing_config_names_the_file \
+docs_and_plans_dirs_default_and_override() {
+    local repo out
+    repo=$(make_repo "$good")
+    out=$(cd "$repo" && bash -c "source '$plugin_root/lib/env.sh'; echo \"\$(codeo_docs_dir)|\$(codeo_plans_dir)\"")
+    [[ "$out" == "docs|docs/plans" ]] || fail "defaults: $out"
+    repo=$(make_repo '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main","docsDir":"Docs","plansDir":"Docs/p"}')
+    out=$(cd "$repo" && bash -c "source '$plugin_root/lib/env.sh'; echo \"\$(codeo_docs_dir)|\$(codeo_plans_dir)\"")
+    [[ "$out" == "Docs|Docs/p" ]] || fail "override: $out"
+}
+
+for c in docs_and_plans_dirs_default_and_override todo_marker_is_refused_for_each_required_key setup_then_validate_refuses_a_repo_without_origin failures_print_exactly_one_line resolves_project_root_from_a_subdirectory missing_config_names_the_file \
     invalid_json_names_the_file newer_schema_is_refused_naming_both_numbers \
     missing_base_branch_names_the_key optional_key_is_empty_with_exit_1_and_get_works \
     no_write_outside_project_or_secrets_dir; do
