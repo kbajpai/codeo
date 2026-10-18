@@ -45,11 +45,11 @@ The repository is read from the project's config, never typed into a command:
    existing issues (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue search "<words>"`) to
    check this isn't a duplicate. Skim the relevant code only to confirm the problem is real and
    correctly located — don't sketch a fix.
+   <!-- rule: issue-02 -->
    **For a bug report**, invoke `superpowers:systematic-debugging` and run *Phase 1: Root Cause
    Investigation* only — reproduce it, read the error, note what changed — so the issue carries
    real steps to reproduce and the observed-versus-expected behaviour rather than a description of
    a symptom.
-   <!-- rule: issue-02 -->
    Stop at the end of Phase 1: a hypothesis or a fix is `/codeo:plan`'s job, and a root cause you
    suspect but have not shown goes in the draft as an open question, not a claim.
 
@@ -70,13 +70,13 @@ The repository is read from the project's config, never typed into a command:
 
    Ask in small batches rather than one interrogation, and only about things whose answer would
    change the issue. Commit the file to the intake branch —
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit new-<slug> "docs: issue dossier for new-<slug>"`
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit new-<slug> "docs(codeo): issue dossier for new-<slug>"`
    — then print the path and the numbers still open, end the turn, and resume from the file when
    re-invoked; ask follow-ups as new numbers until the issue's shape stops moving. Every turn that
    writes the file ends with that commit, which is how a question left open survives the machine.
 
-   Distinguish the two kinds of unknown.
    <!-- rule: issue-03 -->
+   Distinguish the two kinds of unknown.
    A question the engineer *can* answer blocks this skill and lives in the dossier. One nobody can
    answer yet is content — it goes verbatim into the draft's own open-questions text and blocks
    nothing. Silently picking an answer is neither.
@@ -112,8 +112,10 @@ The repository is read from the project's config, never typed into a command:
 
 5. **Propose Issue Type and labels** as part of the draft, not a separate question. Look up what's
    available (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue-types`, and
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" label list`) and pick `Bug` / `Feature` /
-   `Task` based on content; propose only labels that already exist and fit.
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" label list`) and pick the type from the names
+   `issue-types` printed, based on content (the names are whatever the organisation defines). When
+   it prints nothing — a user-owned repository has no Issue Types — propose no type at all. Propose
+   only labels that already exist and fit.
    <!-- rule: issue-07 -->
    Do not set `Priority` or `Effort` custom fields — that's human triage judgment this skill has
    no basis to make.
@@ -140,7 +142,14 @@ The repository is read from the project's config, never typed into a command:
    OWNER=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .repo.owner)
    NAME=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .repo.name)
    gh api "repos/$OWNER/$NAME/issues" -f title='<title>' -F body=@<body file> \
-     -f type=<Bug|Feature|Task> -f 'labels[]=<label>' -f 'labels[]=<label>'
+     -f type='<type from issue-types>' -f 'labels[]=<label>' -f 'labels[]=<label>'
+   ```
+
+   When `issue-types` printed nothing, leave `-f type=…` out of the call entirely:
+
+   ```bash
+   gh api "repos/$OWNER/$NAME/issues" -f title='<title>' -F body=@<body file> \
+     -f 'labels[]=<label>' -f 'labels[]=<label>'
    ```
 
    This needs nothing but `gh`'s login, so it works the same on any machine; no GitHub MCP server
@@ -150,7 +159,7 @@ The repository is read from the project's config, never typed into a command:
    becomes `.codeo/intake/<N>/` now that the number exists — that is what lets
    `/codeo:init` adopt it and what keeps the reasoning that produced the issue attached to the
    issue. Commit the rename in one step:
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit <N> "docs: issue dossier for #<N> — filed" --drop new-<slug>`.
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit <N> "docs(codeo): issue dossier for #<N> — filed" --drop new-<slug>`.
    Then report the created issue's URL and number. No next step, no suggested skill, no branch. If
    another skill delegated here, hand the number back to it and let it resume what it was doing.
 
@@ -168,7 +177,7 @@ lifecycle — it runs before an issue number or a branch exists, and it hands of
 - **Never touches** the project's docs, code, the branch, the lock, or another skill's dossier
   file. When another skill calls it, that caller records the new number in its own outcome and
   log line; this skill does not.
-- **Spins out subagents** on Sonnet only, passed explicitly, and prefers a direct
+- **Spins out subagents** on the configured subagent model (`models.subagent`, `sonnet` when unset), passed explicitly, and prefers a direct
   `grep`/`Read` over an agent when the target is already known — see
   `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Spinning out subagents`.
 
