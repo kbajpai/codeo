@@ -106,7 +106,25 @@ failures_print_exactly_one_line() {
     one_line_failures nogit "$nogit" "not inside a git repository"
 }
 
-for c in failures_print_exactly_one_line resolves_project_root_from_a_subdirectory missing_config_names_the_file \
+todo_marker_is_refused_for_each_required_key() {
+    local key repo err filter
+    for key in repo.owner repo.name baseBranch; do
+        repo=$(make_repo "$(jq --arg k "$key" 'setpath(($k|split(".")); "TODO-set-me")' <<<"$good")")
+        if err=$(cd "$repo" && bash "$config_sh" validate 2>&1); then fail "$key: expected refusal"; fi
+        [[ "$err" == "codeo: config.json: $key is still TODO-set-me" ]] || fail "$key: unexpected: $err"
+    done
+}
+
+setup_then_validate_refuses_a_repo_without_origin() {
+    local dir; dir=$(mktemp -d "$scratch_root/setup.XXXXXX")
+    git -C "$dir" init -q
+    (cd "$dir" && bash "$plugin_root/scripts/setup.sh" >/dev/null 2>&1) || fail "setup failed"
+    local err
+    if err=$(cd "$dir" && bash "$config_sh" validate 2>&1); then fail "expected refusal"; fi
+    [[ "$err" == "codeo: config.json: repo.owner is still TODO-set-me" ]] || fail "unexpected: $err"
+}
+
+for c in todo_marker_is_refused_for_each_required_key setup_then_validate_refuses_a_repo_without_origin failures_print_exactly_one_line resolves_project_root_from_a_subdirectory missing_config_names_the_file \
     invalid_json_names_the_file newer_schema_is_refused_naming_both_numbers \
     missing_base_branch_names_the_key optional_key_is_empty_with_exit_1_and_get_works \
     no_write_outside_project_or_secrets_dir; do

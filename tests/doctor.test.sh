@@ -91,7 +91,15 @@ doctor_survives_an_unusable_config() {
     [[ $(wc -l <<<"$out") -eq 8 ]] || fail "later checks did not run"
 }
 
-for c in doctor_passes_a_healthy_project doctor_fails_when_the_board_scope_is_missing \
+doctor_reports_a_todo_marker_as_a_config_failure_and_skips_the_ruleset() {
+    jq '.baseBranch = "TODO-set-me"' <<<"$healthy" > .codeo/config.json
+    run
+    [[ $rc -ne 0 ]] || fail "expected non-zero"
+    grep -q '^fail config: .*baseBranch is still TODO-set-me' <<<"$out" || fail "no config failure"
+    grep -q '^fail ruleset: skipped: baseBranch is not set' <<<"$out" || fail "ruleset not skipped"
+}
+
+for c in doctor_reports_a_todo_marker_as_a_config_failure_and_skips_the_ruleset doctor_passes_a_healthy_project doctor_fails_when_the_board_scope_is_missing \
     doctor_ignores_the_project_scope_without_a_board doctor_fails_when_a_suite_command_is_not_installed \
     doctor_fails_when_the_ruleset_lacks_a_required_check doctor_reports_every_failure_not_only_the_first \
     doctor_survives_an_unusable_config; do

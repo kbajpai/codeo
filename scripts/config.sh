@@ -19,9 +19,11 @@ case "${1:-}" in
         if [[ "$schema" -gt "$CODEO_SCHEMA" ]]; then
             codeo_die "config.json: schema $schema is newer than this plugin supports ($CODEO_SCHEMA); update the plugin"
         fi
-        codeo_cfg_required .repo.owner >/dev/null
-        codeo_cfg_required .repo.name >/dev/null
-        codeo_cfg_required .baseBranch >/dev/null
+        # setup.sh writes the TODO-set-me marker for what it could not resolve; it must not pass.
+        for key in .repo.owner .repo.name .baseBranch; do
+            value=$(codeo_cfg_required "$key")
+            [[ "$value" != TODO-set-me ]] || codeo_die "config.json: ${key#.} is still TODO-set-me"
+        done
         ;;
     *)
         codeo_die "usage: config.sh get <jq-filter> | validate"

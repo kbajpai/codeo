@@ -89,7 +89,9 @@ else
     fi
 fi
 
-if [[ $config_ok -eq 0 ]]; then
+if [[ $config_ok -eq 0 && "$(cfg .baseBranch)" == TODO-set-me ]]; then
+    report fail ruleset "skipped: baseBranch is not set"
+elif [[ $config_ok -eq 0 ]]; then
     report fail ruleset "skipped: config is unusable"
 elif ! command -v gh >/dev/null 2>&1; then
     report fail ruleset "gh is not installed"
