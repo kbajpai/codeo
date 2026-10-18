@@ -75,8 +75,9 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
 ## Workflow
 
 0. **Resume or start.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" restore triage` brings the
-   folder to a clone that lacks it. A run file with an open question is a run in progress: resume
-   it at step 5 rather than starting another. Otherwise start a new run.
+   folder to a clone that lacks it; an error saying there is no intake branch, or that it has no
+   `triage` directory, means a first run: start a new run. A run file with an open question is a
+   run in progress: resume it at step 5 rather than starting another. Otherwise start a new run.
 
 1. **Collect**, from what is pushed rather than what happens to be checked out:
    <!-- rule: triage-03 -->
@@ -163,7 +164,7 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
       <!-- point: triage/todo-excludes -->
       Fetch them with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" triage todo-excludes`: on
       exit 0, add the printed pathspecs (each as `':!<glob>'`) to the command; on exit 3, use the
-      default and add none (scan tracked files only). On exit 1, 2 or 4 the script prints one `codeo:`
+      default: scan tracked files only, with no exclusions. On exit 1, 2 or 4 the script prints one `codeo:`
       line: report it to the engineer in the run's `## Outcome` and use the default.
 
    Collecting is lookup work — delegate a source to a subagent only when it is too large to read

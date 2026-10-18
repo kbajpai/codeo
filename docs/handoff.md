@@ -120,7 +120,8 @@ it.
   key in `board.statuses` (below), which maps it to the board's own option name; a name that is not
   a key passes through. Every transition moves the card, each write part of its step and never a
   gate on it — a failure is reported with what to do by hand, in the skill's `## Log` line as
-  `board: failed — <reason>`, and the step carries on. Where the GraphQL it needs is refused (a
+  `board: failed — <reason>` (except `init`, whose dossier is already pushed when the card moves;
+  it reports the failure in the turn), and the step carries on. Where the GraphQL it needs is refused (a
   hosted web session), `set` fails saying to move the card by hand. With no `board` configured,
   every verb prints `board: not configured` and exits 3: the board steps are skipped, and the skill
   says so once.

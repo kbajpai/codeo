@@ -207,7 +207,8 @@ answer too: each task then names its own proof command in full (step 8).
    (`files:`), its wiki tasks (`wiki:`, the page names — `none` without the `wiki` module), and the
    exclusive resources it changes (`exclusive:`, names from
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.resources[]? | .name'` — nothing printed
-   means none are configured — whose `paths` the plan's files fall under; a parameterised one is written `<name>:<suffix>`). `exclusive:` never
+   means none are configured — whose `paths` the plan's files fall under; a parameterised one is
+   written `<name>:<suffix>`). `exclusive:` never
    lists `$ENV_RESOURCE`: the later steps lease the environment from its first task, not the plan.
    A key with nothing under it says `none`. Then run
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --except <N>` — one block per other workflow:
@@ -216,8 +217,9 @@ answer too: each task then names its own proof command in full (step 8).
    `plan.md`: shared files, a shared page, or above all a shared `exclusive` resource. The
    question names the other issue as `#M`, its branch, its assignee, its step and exactly what
    overlaps — a path, a page, or `exclusive:<name>` — and offers *proceed and coordinate* ·
-   *sequence after #M* · *re-scope*. Writing `#M` and the overlapping item that way is what lets
-   `overlap.sh` recognise the pair as already raised at step 10.
+   *sequence after #M* · *re-scope*. Quote `#M` and the printed token verbatim (`wiki:<Page>`,
+   `glob:<glob>`, `exclusive:<name>`, or the path), as at step 10 sub-step 2: that is what lets
+   `overlap.sh` recognise the pair as already raised.
    <!-- rule: plan-05 -->
    For an `exclusive` overlap, recommend sequencing: two changes to one exclusive resource on
    parallel branches do not merge cleanly, whatever the diff looks like. The gate below waits on
@@ -266,8 +268,8 @@ answer too: each task then names its own proof command in full (step 8).
        `inflight.sh`, and the options *proceed and coordinate* · *sequence after #M* ·
        *re-scope*; for `exclusive:` a lock replaces *sequence after*. With any question raised,
        commit and push the dossier as at step 4 and stop, `## Outcome` still pending. Re-invoked
-       once they are answered, amend the footprint in `## Notes`, commit and push it, and run this
-       step again from sub-step 1.
+       once they are answered, amend the footprint in `## Notes` and run this step again from
+       sub-step 1, which commits it (skip the commit when the footprint is unchanged).
     3. **Take the locks the footprint names.** For each `exclusive` entry,
        `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take <resource> <N> "<plan slug>"`. A
        refusal names the holder: record the wait
@@ -279,8 +281,8 @@ answer too: each task then names its own proof command in full (step 8).
     4. **Write the outcome — only when nothing was raised and every lock is held.** Nothing in
        `.codeo/<N>/plan.md` may still be open. The outcome is the plan file's path, the shape
        chosen in step 5, the decisions made and the options rejected, the documentation pages the
-       plan will change, any intake question this skill resolved, and — last, because
-       `inflight.sh` reads it from there — the `### Footprint`, moved out of `## Notes` to end it
+       plan will change, any intake question this skill resolved, and — last, by the
+       dossier convention — the `### Footprint`, moved out of `## Notes` to end it
        (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The footprint`). Append one `## Log` line —
        `- <date> — planned: <plan path> · cost: <output of bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" plan>`
        (or `cost: unavailable` and why, when it cannot run), naming any `/codeo:issue` number
@@ -307,7 +309,8 @@ answer too: each task then names its own proof command in full (step 8).
   `intake.sh lease`. The plan doc itself stays unstaged — it is awaiting the engineer's approval;
   the dossier is not.
 - **Never touches** the issue's text, the documentation pages other than the reference doc step 5
-  chose (it names them; `/codeo:implement` writes them), code, the branch, the lease on `$ENV_RESOURCE`, or another skill's dossier file.
+  chose (it names them; `/codeo:implement` writes them), code, the branch, the lease on
+  `$ENV_RESOURCE`, or another skill's dossier file.
   An intake question this skill resolves is recorded in its own `## Outcome`, never struck from
   `init.md`.
 - **May call** `/codeo:issue` for out-of-scope findings — a call, not a hand-off: control

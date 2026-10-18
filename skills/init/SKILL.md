@@ -43,9 +43,9 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
 1. **Read the project's host workflow, then check where this is running.**
    <!-- point: init/host-workflow -->
    Fetch it with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" init host-workflow`. On exit 0
-   the printed text says how the project's container or machine workflow wraps the claim — where
+   the printed text says how the project's host workflow wraps the claim — where
    this skill runs, whether this checkout switches to the branch, where the lock is taken and how
-   the hand-off is opened — and it adds to or narrows the steps below marked *default*. On exit 3
+   the hand-off is opened — and it adds to or narrows the steps below, chiefly those marked *default*. On exit 3
    there is none: the default flow runs — this skill validates the issue and the Ready gate, claims
    the branch with the create-only push, writes and pushes the dossier, checks the branch out here,
    takes the lock and hands off to `/codeo:plan` in this same session. On exit 1, 2 or 4 the script
@@ -195,9 +195,10 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
 
    <!-- rule: init-07 -->
    Never merge, rebase or reset a checkout's unpushed commits; they are the engineer's to
-   reconcile. So first, a local `<branch>` in this checkout that holds commits origin lacks
-   (`git log --oneline origin/<branch>..<branch>` prints any) is work a checkout never pushed:
-   stop and name them — the worktree below would move the branch off them. When `<branch>`
+   reconcile. So first, when a local `<branch>` exists in this checkout
+   (`git rev-parse -q --verify refs/heads/<branch>`; the check is skipped otherwise), one that
+   holds commits origin lacks (`git log --oneline origin/<branch>..<branch>` prints any) is work a
+   checkout never pushed: stop and name them — the worktree below would move the branch off them. When `<branch>`
    is what this checkout has checked out, git refuses a second worktree of it: detach this
    checkout first (`git switch --detach origin/<base>`; step 5 made sure nothing uncommitted
    travels). Then:
@@ -243,8 +244,8 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
    `## Outcome` (below), the exact branch name, and the base SHA.
    **Adopt the issue's dossier** if `/codeo:issue` wrote one:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" restore <N>` brings it from the `codeo/intake`
-   branch when this clone lacks it (an error saying the branch has no such directory just means
-   the issue was filed without the skill), then copy `.codeo/intake/<N>/issue.md` to
+   branch when this clone lacks it (an error saying there is no intake branch, or that it has no
+   such directory, just means the issue was filed without the skill and is harmless here), then copy `.codeo/intake/<N>/issue.md` to
    `.codeo/<N>/issue.md`. `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md` is the format, and
    `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Intake` says why the two paths differ.
 
