@@ -12,6 +12,8 @@
 #         (6) config keys
 set -euo pipefail
 
+# The retired plugin directory, assembled from parts so the repository-wide guard does not match this file.
+old_dir='\.agent''skills'
 PRECEDENCE='Project overlay text adds to or narrows a step; it never overrides a rule marked with a "rule" comment in this file.'
 
 # Prints a failure line. $1 skill, $2 check number, $3 check name, $4 offender.
@@ -26,7 +28,10 @@ lint_frontmatter() {
     fi
     fm=$(sed -n '2,$p' "$file" | awk '/^---$/{exit} {print}')
     name=$(sed -n 's/^name:[[:space:]]*//p' <<<"$fm" | head -1)
-    desc=$(sed -n 's/^description:[[:space:]]*//p' <<<"$fm" | head -1)
+    # A folded or literal block ("description: >") keeps its text on the indented lines below.
+    desc=$(awk '/^description:/{sub(/^description:[[:space:]]*/,""); v=$0; d=1; next}
+        d && /^[[:space:]]+[^[:space:]]/{gsub(/^[[:space:]]+/,""); v=v $0; next}
+        d{d=0} END{gsub(/^[>|][-+]?$/,"",v); print v}' <<<"$fm")
     model=$(sed -n 's/^model:[[:space:]]*//p' <<<"$fm" | head -1)
     [[ "$name" == "$skill" ]] || lint_fail "$skill" 1 frontmatter "name '$name' is not the directory name '$skill'"
     [[ -n "$desc" ]] || lint_fail "$skill" 1 frontmatter "description is empty"
@@ -56,7 +61,7 @@ lint_scripts() {
         sed -E 's#.*/scripts/([^"]+)"#\1#' || true)
     # What is left once the one allowed call form is removed must name no script at all.
     stripped=$(sed -E 's#bash "\$\{CLAUDE_PLUGIN_ROOT\}/scripts/[A-Za-z0-9_.-]+\.sh"##g' "$file")
-    leftovers=$(grep -oE '\.agentskills[^[:space:]]*|[^[:space:]]*scripts/[^[:space:]]*\.sh[^[:space:]]*|\$\{CLAUDE_PLUGIN_ROOT\}/scripts[^[:space:]]*' <<<"$stripped" || true)
+    leftovers=$(grep -oE "$old_dir"'[^[:space:]]*|[^[:space:]]*scripts/[^[:space:]]*\.sh[^[:space:]]*|\$\{CLAUDE_PLUGIN_ROOT\}/scripts[^[:space:]]*' <<<"$stripped" || true)
     while IFS= read -r call; do
         [[ -n "$call" ]] && lint_fail "$skill" 3 script-calls "other script form: $call"
     done <<<"$leftovers"
@@ -67,6 +72,10 @@ lint_scripts() {
 lint_points() {
     local file=$1 skill=$2 root=$3 tsv="$3/lib/extension-points.tsv" doc="$3/docs/extension-points.md"
     local marker rows row n doc_missing=0
+    if [[ ! -f "$tsv" ]]; then
+        lint_fail "$skill" 4 points "registry lib/extension-points.tsv is missing"
+        return
+    fi
     while IFS= read -r marker; do
         [[ -n "$marker" ]] || continue
         if ! awk -F'\t' -v s="${marker%%/*}" -v p="${marker#*/}" '$1==s && $2==p{f=1} END{exit !f}' "$tsv" ||
@@ -78,7 +87,8 @@ lint_points() {
     [[ -f "$doc" ]] || doc_missing=1
     while IFS= read -r row; do
         [[ -n "$row" ]] || continue
-        n=$(grep -cF "<!-- point: $skill/$row -->" "$file" || true)
+        # -o puts each marker on its own line, so two on one line count as two.
+        n=$(grep -oF "<!-- point: $skill/$row -->" "$file" | wc -l)
         if [[ "$n" -eq 0 ]]; then
             lint_fail "$skill" 4 points "registry row $skill/$row has no marker"
         elif [[ "$n" -gt 1 ]]; then
@@ -117,27 +127,48 @@ lint_rules() {
     done < <(sort -u <<<"$got")
 }
 
-# (6) Every segment of a config.sh get path must appear as a word in lib/env.sh's header.
+# (6) Every identifier in a config.sh get filter must appear as a word in lib/env.sh's header.
 lint_config_keys() {
-    local file=$1 skill=$2 root=$3 header path seg
+    local file=$1 skill=$2 root=$3 header line tail filter scrubbed seg
     header=$(awk 'NR>1 && !/^#/{exit} {print}' "$root/lib/env.sh" 2>/dev/null || true)
-    while IFS= read -r path; do
-        [[ -n "$path" ]] || continue
-        path=${path//[\"\'\`]/}
-        path=${path%%[),;]*}
-        path=${path%.}
+    # One call per line, so several on a source line are all seen.
+    while IFS= read -r line; do
+        [[ "$line" =~ ^config\.sh\"?[[:space:]]+get[[:space:]]+(.*)$ ]] || continue
+        tail=${BASH_REMATCH[1]}
+        # Options such as -r come before the filter.
+        while [[ "$tail" == -* ]]; do
+            [[ "$tail" == *[[:space:]]* ]] || { tail=""; break; }
+            tail=${tail#*[[:space:]]}
+            tail=${tail#"${tail%%[![:space:]]*}"}
+        done
+        case "$tail" in
+            \'*) filter=$(sed -E "s/^'([^']*)'.*/\1/" <<<"$tail") ;;
+            \"*) filter=$(sed -E 's/^"(([^"\\]|\\.)*)".*/\1/' <<<"$tail"); filter=${filter//\\\"/\"} ;;
+            *)
+                filter=${tail%%[[:space:]]*}
+                filter=${filter%%\`*}
+                while [[ "$filter" == *[\),\;.] ]]; do filter=${filter%?}; done
+                ;;
+        esac
+        [[ -n "$filter" ]] || continue
+        if [[ "$filter" == *'$'* ]]; then
+            echo "$skill check 6 skipped for a dynamic filter: $filter"
+            continue
+        fi
+        # String literals are data, not paths.
+        scrubbed=$(sed -E 's/"[^"]*"/""/g' <<<"$filter")
         while IFS= read -r seg; do
-            seg=${seg//[\[\]?]/}
             [[ -n "$seg" ]] || continue
+            seg=${seg#.}
             grep -qw -- "$seg" <<<"$header" ||
-                lint_fail "$skill" 6 config-keys "'$seg' (in $path) is not documented in lib/env.sh"
-        done < <(tr '.' '\n' <<<"$path")
-    done < <(grep -oE 'config\.sh"?[[:space:]]+get[[:space:]]+[^[:space:]]+' "$file" | awk '{print $NF}' || true)
+                lint_fail "$skill" 6 config-keys "'$seg' (in $filter) is not documented in lib/env.sh"
+        done < <(grep -oE '\.[A-Za-z_][A-Za-z0-9_]*' <<<"$scrubbed" | sort -u || true)
+    done < <(sed 's/config\.sh/\nconfig.sh/g' "$file")
 }
 
 # Lints the skills under plugin root $1 (all, or only $2). Prints failure and skipped lines.
 lint_root() {
-    local root=$1 only=${2:-} dir skill file
+    local root=$1 only=${2:-} dir skill file clean
     for dir in "$root"/skills/*/; do
         skill=$(basename "$dir")
         [[ -z "$only" || "$only" == "$skill" ]] || continue
@@ -146,12 +177,17 @@ lint_root() {
             lint_fail "$skill" 1 frontmatter "SKILL.md is missing"
             continue
         fi
+        # CRLF files are linted as their LF equivalent.
+        clean=$(mktemp)
+        tr -d '\r' <"$file" >"$clean"
+        file=$clean
         lint_frontmatter "$file" "$skill"
         lint_precedence "$file" "$skill"
         lint_scripts "$file" "$skill" "$root"
         lint_points "$file" "$skill" "$root"
         lint_rules "$file" "$skill" "$root"
         lint_config_keys "$file" "$skill" "$root"
+        rm -f "$clean"
     done
 }
 
