@@ -34,6 +34,7 @@
 #   invariants              path to the project's invariants document
 #   models{subagent,reviewer}
 #   modules[]               optional modules the project enables
+#   stacks[]                optional; names recorded by setup.sh --stack (informational only)
 #   ci{requiredChecks[]}    optional; checks the project's CI requires before a merge
 
 CODEO_PLUGIN_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
