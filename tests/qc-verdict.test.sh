@@ -438,6 +438,20 @@ assert_eq "exit code" 1 "$rc"
 assert_contains "stderr names the file" ".codeo/7" "$out"
 assert_lacks "no archived-dossier line on a failure" "no archived dossier" "$out"
 
+# --- case: live dossier, run from a subdirectory -----------------------------------------------
+case_desc="live dossier, run from a subdirectory"
+dir=$(new_repo)
+git -C "$dir" commit -q --allow-empty -m base
+base=$(git -C "$dir" rev-parse HEAD)
+mkdir -p "$dir/.codeo/7" "$dir/sub/deep"
+echo "issue 7" > "$dir/.codeo/7/init.md"
+git -C "$dir" add .codeo
+git -C "$dir" commit -q -m head
+head=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir/sub/deep" "$base" "$head"
+assert_eq "exit code" 1 "$rc"
+assert_contains "stderr names the dossier" ".codeo/7" "$out"
+
 # --- case: a quoted earlier verdict is not the decision ------------------------------------------
 case_desc="a quoted earlier verdict is not the decision"
 dir=$(new_repo)

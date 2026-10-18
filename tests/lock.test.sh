@@ -172,6 +172,17 @@ assert_contains "took the lock" "took the lock for #40 on feat/y" "$out"
 active=$(cat "$repo/.codeo/active")
 assert_contains "issue" "issue:   40" "$active"
 
+# --- container, run from a subdirectory ---------------------------------------------------------
+case_desc="container, run from a subdirectory"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+mkdir -p "$repo/sub/deep"
+marker=$(fresh_marker)
+out=$(run_lock "$repo/sub/deep" "$marker" container)
+assert_contains "took the lock" "took the lock for #38 on feat/x" "$out"
+assert_eq "active written at the root" yes "$(active_exists "$repo")"
+
 # --- web, branch already matches ------------------------------------------------------------------
 case_desc="web, branch already matches"
 repo=$(fresh_repo)

@@ -9,6 +9,8 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+# The dossier globs and git pathspecs below are relative to the repo root, not the caller's cwd.
+[[ -z $CODEO_PROJECT_ROOT ]] || cd "$CODEO_PROJECT_ROOT"
 
 # The state directory as git sees it (relative to the repo root, where this runs): dossier paths
 # are compared against branch contents, which are never absolute.

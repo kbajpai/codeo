@@ -16,6 +16,9 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+# state_rel is a git pathspec relative to the repo root; from a subdirectory it would match nothing.
+[[ -n $CODEO_PROJECT_ROOT ]] || codeo_die "not inside a git repository"
+cd "$CODEO_PROJECT_ROOT"
 
 # The state directory as git sees it, and as a regex: dossier paths are read from git, never from
 # the filesystem.
