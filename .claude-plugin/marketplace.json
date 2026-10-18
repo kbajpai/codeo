@@ -1,0 +1,13 @@
+{
+  "name": "codeo",
+  "owner": {
+    "name": "kbajpai"
+  },
+  "plugins": [
+    {
+      "name": "codeo",
+      "source": "./",
+      "description": "An agent-workflow plugin: issue, plan, implement, QC and close, with dossiers and locks."
+    }
+  ]
+}
