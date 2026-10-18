@@ -29,6 +29,8 @@
 #   skipGlobs[]             paths that never trigger a suite
 #   resources[]{name,paths[],parameterised}           exclusive resources (locks) and their footprints
 #   environment{resource,hooks{activate,revoke,preflight,start,deployed}}   optional shared environment
+#   hooks{onLeaseChange}    optional; a shell command run best effort after every lease change
+#                           that reaches origin (stdout discarded, a failure only reported)
 #   invariants              path to the project's invariants document
 #   models{subagent,reviewer}
 #   modules[]               optional modules the project enables
