@@ -34,15 +34,17 @@ is absent, and that is an answer, not a failure: no invariants document (nothing
 against), no shared environment (no environment tasks and no lease marker — step 8), no `wiki`
 module (no wiki pages to name, and the footprint's `wiki:` line says `none`). The test suites the
 plan's proofs run are the config's `suites[]`, each with a `name`, the `paths` that trigger it, and
-its `build`, `test` and optional `filter` commands:
+its `build` and `test` commands, and an optional `filter` — a command template that runs one test,
+`{}` standing for the test's name (`pytest -k {}`, say):
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.suites[] | .name'
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.suites[] | select(.name == "<suite>") | .test'
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.suites[]? | .name'
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.suites[]? | select(.name == "<suite>") | .test'
 ```
 
-(and the same with `.build`, `.filter` or `.paths[]`). No suites configured is an answer too: each
-task then names its own proof command in full (step 8).
+(and the same with `.build`, `.filter` or `.paths[]?`). The `?` forms matter: an absent array or
+field then exits 1 with nothing printed rather than a config fault. No suites configured is an
+answer too: each task then names its own proof command in full (step 8).
 
 ## Workflow
 
@@ -152,12 +154,14 @@ task then names its own proof command in full (step 8).
    <!-- point: plan/proof-of-done -->
    Fetch the project's form for it with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" plan proof-of-done`: on exit 0, follow the
-   printed text; on exit 3, the proof is the default — the `test` command of the configured suite
-   whose `paths` the task touches, narrowed by that suite's `filter` to the test the task writes
-   when the suite has a `filter`, and run whole when it has none, or the suite's `build` for a task
-   with nothing to test; on exit 1, 2 or 4, report the one `codeo:` line and use the default. With
-   no suites configured, the task names its proof command in full — whatever runs the check it
-   writes. Name the suite and the test, never a tool the config does not name. Write the tasks the
+   printed text; on exit 3, the proof is the default — for the configured suite whose `paths` the
+   task touches, the suite's `filter` with `{}` replaced by the name of the test the task writes; a
+   suite without `filter` has no single-test form, and its whole `test` command is the proof. A
+   task with no test to write is proved by the suite's `build`; a documentation-only task by a
+   check the task names — the documentation builds, its links resolve, or the suite's `build` —
+   never by no proof at all. On exit 1, 2 or 4, report the one `codeo:` line and use the default.
+   With no suites configured, the task names its proof command in full — whatever runs the check
+   it writes. Name the suite and the test, never a tool the config does not name. Write the tasks the
    way `superpowers:test-driven-development` runs them — the failing test first, its expected
    failure, then the code that makes it pass — so that check exists before the code it proves.
 
@@ -202,16 +206,18 @@ task then names its own proof command in full (step 8).
    block (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The footprint`) from the plan's File Structure
    (`files:`), its wiki tasks (`wiki:`, the page names — `none` without the `wiki` module), and the
    exclusive resources it changes (`exclusive:`, names from
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.resources[] | .name'` whose `paths` the
-   plan's files fall under; a parameterised one is written `<name>:<suffix>`). `exclusive:` never
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.resources[]? | .name'` — nothing printed
+   means none are configured — whose `paths` the plan's files fall under; a parameterised one is written `<name>:<suffix>`). `exclusive:` never
    lists `$ENV_RESOURCE`: the later steps lease the environment from its first task, not the plan.
    A key with nothing under it says `none`. Then run
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --except <N>` — one block per other workflow:
    its issue, branch, assignee, last finished step, its plan's footprint lines when it has one,
    and the files its branch has changed — and compare. Each overlap becomes a numbered question in
    `plan.md`: shared files, a shared page, or above all a shared `exclusive` resource. The
-   question names the other issue, its branch, its assignee, its step and exactly what overlaps,
-   and offers *proceed and coordinate* · *sequence after #M* · *re-scope*.
+   question names the other issue as `#M`, its branch, its assignee, its step and exactly what
+   overlaps — a path, a page, or `exclusive:<name>` — and offers *proceed and coordinate* ·
+   *sequence after #M* · *re-scope*. Writing `#M` and the overlapping item that way is what lets
+   `overlap.sh` recognise the pair as already raised at step 10.
    <!-- rule: plan-05 -->
    For an `exclusive` overlap, recommend sequencing: two changes to one exclusive resource on
    parallel branches do not merge cleanly, whatever the diff looks like. The gate below waits on
@@ -236,36 +242,51 @@ task then names its own proof command in full (step 8).
      Committing or opening a PR is a distinct step the engineer asks for separately, never implied
      by "save the plan."
 
-10. **Write `plan.md`'s `## Outcome` before reporting anything.** Nothing in
-    `.codeo/<N>/plan.md` may still be open at this point (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md →
-    The gate`). The outcome is the plan file's path, the shape chosen in step 5, the decisions made
-    and the options rejected, the documentation pages the plan will change, any intake question
-    this skill resolved, and — last, because `inflight.sh` reads it from there — the
-    `### Footprint`, with a `sequenced:` line when an overlap question was answered that way.
-    <!-- rule: plan-06 -->
-    Once the `### Footprint` is in `plan.md`, run
-    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" <N>` — step 8 compared a draft, which
-    `overlap.sh` cannot read; it reads this checkout's `plan.md` and every other workflow's pushed
-    branch. It prints one `M<TAB>what` line per overlap not already raised in this issue's
-    dossiers, where `what` is a path, `glob:<glob>`, `wiki:<Page>` or `exclusive:<name>`, and
-    nothing when there is none. Any line it prints becomes a numbered question (the other issue,
-    its branch, assignee and step from `inflight.sh`, and exactly what overlaps; the options
-    *proceed and coordinate* · *sequence after #M* · *re-scope*; for `exclusive:` a lock replaces
-    *sequence after*), and the hand-off waits until it is answered: commit and push the dossier as
-    at step 4, and stop.
+10. **Check the footprint as written, then write `plan.md`'s `## Outcome` before reporting
+    anything.** The checks come first and the outcome last, because an `## Outcome` that is not
+    `_Pending — written at the hand-off._` tells every other workflow, through `inflight.sh`, that
+    this one is past `plan` — and no outcome is written while a question is open
+    (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The gate`).
 
-    Then take the locks the footprint names: for each `exclusive` entry,
-    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take <resource> <N> "<plan slug>"`. A
-    refusal names the holder: record the wait
-    (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease wait <resource> <N>`), write it under
-    `## Where this stands`, commit, push, and stop — the hand-off waits for the lock as `implement`
-    waits for the environment. For exclusive resources the lock replaces *sequence after*;
-    `sequenced:` remains for files and pages. Append one `## Log` line —
-    `- <date> — planned: <plan path> · cost: <output of bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" plan>`
-    (or `cost: unavailable` and why, when it cannot run), naming any `/codeo:issue` number filed
-    and any optional skill that was unavailable. Commit the dossier, staged by name, with the
-    subject `docs(codeo): plan dossier for #<N>`, and push, as at step 4. A failed push is loud but
-    not fatal (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).
+    1. **Write the footprint down.** Put the `### Footprint` block, as step 8 drafted it and the
+       answers since have amended it (with a `sequenced:` line when an overlap question was
+       answered that way), under `plan.md`'s `## Notes`, leaving `## Outcome` pending. Commit it
+       alone, staged by name, with the subject `docs(codeo): plan dossier for #<N> — footprint`,
+       and push.
+       <!-- rule: plan-06 -->
+       Only now run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" <N>` — step 8 compared a
+       draft, which `overlap.sh` cannot read; it reads the `### Footprint` in this checkout's
+       `plan.md`, wherever in the file it sits, and every other workflow's pushed branch. It prints
+       one `M<TAB>what` line per overlap not already raised in this issue's dossiers, where `what`
+       is a path, `glob:<glob>`, `wiki:<Page>` or `exclusive:<name>`, and nothing when there is
+       none.
+    2. **Raise what it prints.** Each line becomes a numbered question that quotes `#M` and the
+       printed `what` verbatim — `overlap.sh` drops a pair as already raised only when a `### Q`
+       block names both — together with the other issue's branch, assignee and step from
+       `inflight.sh`, and the options *proceed and coordinate* · *sequence after #M* ·
+       *re-scope*; for `exclusive:` a lock replaces *sequence after*. With any question raised,
+       commit and push the dossier as at step 4 and stop, `## Outcome` still pending. Re-invoked
+       once they are answered, amend the footprint in `## Notes`, commit and push it, and run this
+       step again from sub-step 1.
+    3. **Take the locks the footprint names.** For each `exclusive` entry,
+       `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take <resource> <N> "<plan slug>"`. A
+       refusal names the holder: record the wait
+       (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease wait <resource> <N>`), write it under
+       `## Where this stands`, commit, push, and stop with `## Outcome` still pending — the
+       hand-off waits for the lock as `implement` waits for the environment; re-invoked, run this
+       step again from sub-step 1. For exclusive resources the lock replaces *sequence after*;
+       `sequenced:` remains for files and pages.
+    4. **Write the outcome — only when nothing was raised and every lock is held.** Nothing in
+       `.codeo/<N>/plan.md` may still be open. The outcome is the plan file's path, the shape
+       chosen in step 5, the decisions made and the options rejected, the documentation pages the
+       plan will change, any intake question this skill resolved, and — last, because
+       `inflight.sh` reads it from there — the `### Footprint`, moved out of `## Notes` to end it
+       (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The footprint`). Append one `## Log` line —
+       `- <date> — planned: <plan path> · cost: <output of bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" plan>`
+       (or `cost: unavailable` and why, when it cannot run), naming any `/codeo:issue` number
+       filed and any optional skill that was unavailable. Commit the dossier, staged by name, with
+       the subject `docs(codeo): plan dossier for #<N>`, and push, as at step 4. A failed push is
+       loud but not fatal (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).
 
 11. **Report** the file path and a one-line summary, and suggest `/codeo:implement` to execute
     the plan once the engineer has committed it. If this plan tracks a GitHub issue but no branch
@@ -285,8 +306,8 @@ task then names its own proof command in full (step 8).
   every turn it writes it; and the leases on the exclusive resources its footprint names, through
   `intake.sh lease`. The plan doc itself stays unstaged — it is awaiting the engineer's approval;
   the dossier is not.
-- **Never touches** the issue's text, the documentation pages (it names them; `/codeo:implement`
-  writes them), code, the branch, the lease on `$ENV_RESOURCE`, or another skill's dossier file.
+- **Never touches** the issue's text, the documentation pages other than the reference doc step 5
+  chose (it names them; `/codeo:implement` writes them), code, the branch, the lease on `$ENV_RESOURCE`, or another skill's dossier file.
   An intake question this skill resolves is recorded in its own `## Outcome`, never struck from
   `init.md`.
 - **May call** `/codeo:issue` for out-of-scope findings — a call, not a hand-off: control

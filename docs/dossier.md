@@ -209,8 +209,10 @@ _Pending — written at the hand-off._
 
 `plan.md`'s `## Outcome` ends with a `### Footprint`, the one block in any dossier written for a
 script as well as a reader: `inflight.sh` prints it for every other workflow and `overlap.sh`
-compares it, which is how two plans find out they touch the same thing. Keys at the start of a
-line, values comma-separated, inside a fence:
+compares it, which is how two plans find out they touch the same thing. While `plan`'s pass is
+still open the block sits under `## Notes` — both scripts read it wherever it is in the file — and
+it moves to the end of `## Outcome` at the hand-off. Keys at the start of a line, values
+comma-separated, inside a fence:
 
 ````markdown
 ### Footprint
