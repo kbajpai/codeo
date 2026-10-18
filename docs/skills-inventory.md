@@ -10,98 +10,98 @@ the top. Each skill's rewrite is checked against its list: a rule that disappear
 
 ## issue
 
-- A bare invocation asks; it never infers what to file.
-- For a bug, run systematic-debugging Phase 1 only; a suspected but unshown cause goes in as an open
+- [issue-01] A bare invocation asks; it never infers what to file.
+- [issue-02] For a bug, run systematic-debugging Phase 1 only; a suspected but unshown cause goes in as an open
   question.
-- Two kinds of unknown: one the engineer can answer blocks the skill; one nobody can answer yet goes
+- [issue-03] Two kinds of unknown: one the engineer can answer blocks the skill; one nobody can answer yet goes
   verbatim into the draft.
-- The caller supplies the finding, not the answers.
-- Acceptance criteria are checkable outcomes, not a contract.
-- File through REST because `gh issue create` cannot set the Issue Type; take the number and URL from
+- [issue-04] The caller supplies the finding, not the answers.
+- [issue-05] Acceptance criteria are checkable outcomes, not a contract.
+- [issue-06] File through REST because `gh issue create` cannot set the Issue Type; take the number and URL from
   the response, never reconstruct them.
-- Never set Priority or Effort.
+- [issue-07] Never set Priority or Effort.
 
 ## init
 
-- Decide "is this a pull request" from `html_url` containing `/pull/`, not from an exit code.
-- A closed issue: ask, never reopen it.
-- The create-only push is the claim and runs before the assignee is added; earlier checks are advisory.
-- A resume is pushed against the tip it saw, so of two resumes exactly one wins.
-- The resume line's wording belongs to the script; write nothing else on it, and put an override in
+- [init-01] Decide "is this a pull request" from `html_url` containing `/pull/`, not from an exit code.
+- [init-02] A closed issue: ask, never reopen it.
+- [init-03] The create-only push is the claim and runs before the assignee is added; earlier checks are advisory.
+- [init-04] A resume is pushed against the tip it saw, so of two resumes exactly one wins.
+- [init-05] The resume line's wording belongs to the script; write nothing else on it, and put an override in
   Notes, never on that line.
-- `unavailable` is not a failure, but the Ready check is never skipped just because it could not run.
-- Never merge, rebase or reset a container's unpushed commits.
-- Acceptance criteria are copied verbatim.
-- The state directory's `.gitignore` must be committed.
+- [init-06] `unavailable` is not a failure, but the Ready check is never skipped just because it could not run.
+- [init-07] Never merge, rebase or reset a container's unpushed commits.
+- [init-08] Acceptance criteria are copied verbatim.
+- [init-09] The state directory's `.gitignore` must be committed.
 
 ## plan
 
-- Brainstorm before writing the questions.
-- Commit and push before ending the turn, so the questions survive the machine.
-- Out-of-scope work goes to `issue`; neither widen the scope nor drop it.
-- Every task carries a runnable proof of done, because a subagent sees only the plan.
-- An exclusive-resource overlap means recommend sequencing; an init-only workflow has no footprint
+- [plan-01] Brainstorm before writing the questions.
+- [plan-02] Commit and push before ending the turn, so the questions survive the machine.
+- [plan-03] Out-of-scope work goes to `issue`; neither widen the scope nor drop it.
+- [plan-04] Every task carries a runnable proof of done, because a subagent sees only the plan.
+- [plan-05] An exclusive-resource overlap means recommend sequencing; an init-only workflow has no footprint
   yet, so say so.
-- Run the overlap check after the footprint is written, because it cannot read a draft.
-- The draft file is not committed and the plan doc stays unstaged.
-- A missing optional plugin means apply its structure directly; a missing required skill is a stop.
+- [plan-06] Run the overlap check after the footprint is written, because it cannot read a draft.
+- [plan-07] The draft file is not committed and the plan doc stays unstaged.
+- [plan-08] A missing optional plugin means apply its structure directly; a missing required skill is a stop.
 
 ## implement
 
-- The plan is the file the dossier names, not the newest file.
-- An uncommitted plan is a stop.
-- Never rebase or force-push a branch that has a pull request.
-- A finding that does not hold becomes a question with evidence, never an argument written into QC's file.
-- A design question means the plan was wrong: a send-back, not a round.
-- Run systematic-debugging before a fix round; no escalation off the cheap model.
-- Never release a lease here; never wait in its own loop; an environment deploy with no lease marker is
+- [implement-01] The plan is the file the dossier names, not the newest file.
+- [implement-02] An uncommitted plan is a stop.
+- [implement-03] Never rebase or force-push a branch that has a pull request.
+- [implement-04] A finding that does not hold becomes a question with evidence, never an argument written into QC's file.
+- [implement-05] A design question means the plan was wrong: a send-back, not a round.
+- [implement-06] Run systematic-debugging before a fix round; no escalation off the cheap model.
+- [implement-07] Never release a lease here; never wait in its own loop; an environment deploy with no lease marker is
   a plan gap.
-- Behaviour no documentation task covers is a plan gap, not an unplanned page.
-- Build only; never grade its own work.
+- [implement-08] Behaviour no documentation task covers is a plan gap, not an unplanned page.
+- [implement-09] Build only; never grade its own work.
 
 ## qc
 
-- Never fixes what it finds.
-- Findings are scoped to the diff.
-- The scope script never overrules the diff you read.
-- A broken build ends the pass.
-- Map every acceptance criterion to the test or line that settles it.
-- The reviewer gets the acceptance criteria, never the implementer's account.
-- Classify every finding on two axes, blocking and whose; Phase 1 only.
-- A question comes before the verdict.
-- The bold verdict span counts only as the last one in the round.
-- Evidence must come from this pass.
-- A failed release still hands off.
-- A send-back return means a full re-run.
-- A missing lease or deploy identity means "not yet checkable"; an orphan is non-blocking.
+- [qc-01] Never fixes what it finds.
+- [qc-02] Findings are scoped to the diff.
+- [qc-03] The scope script never overrules the diff you read.
+- [qc-04] A broken build ends the pass.
+- [qc-05] Map every acceptance criterion to the test or line that settles it.
+- [qc-06] The reviewer gets the acceptance criteria, never the implementer's account.
+- [qc-07] Classify every finding on two axes, blocking and whose; Phase 1 only.
+- [qc-08] A question comes before the verdict.
+- [qc-09] The bold verdict span counts only as the last one in the round.
+- [qc-10] Evidence must come from this pass.
+- [qc-11] A failed release still hands off.
+- [qc-12] A send-back return means a full re-run.
+- [qc-13] A missing lease or deploy identity means "not yet checkable"; an orphan is non-blocking.
 
 ## close
 
-- Work out the phase from facts, with GitHub's REST merged semantics.
-- Account for the single-PR lookup gap.
-- The clear round must be newer than the review round.
-- Never sweep work-in-progress into the PR; never resolve a conflict here.
-- Check again for a PR template.
-- A release after approval goes in a PR comment, not a commit.
-- For squash merges, the proof is GitHub's state plus the tip match.
-- Ask once before deleting the branch.
-- Nothing is committed to the base branch after the merge.
-- Release the lock last.
-- Never infer a stash from a failing verdict.
-- Before an irreversible put-back, stop and show the engineer.
-- Never use `finishing-a-development-branch`.
+- [close-01] Work out the phase from facts, with GitHub's REST merged semantics.
+- [close-02] Account for the single-PR lookup gap.
+- [close-03] The clear round must be newer than the review round.
+- [close-04] Never sweep work-in-progress into the PR; never resolve a conflict here.
+- [close-05] Check again for a PR template.
+- [close-06] A release after approval goes in a PR comment, not a commit.
+- [close-07] For squash merges, the proof is GitHub's state plus the tip match.
+- [close-08] Ask once before deleting the branch.
+- [close-09] Nothing is committed to the base branch after the merge.
+- [close-10] Release the lock last.
+- [close-11] Never infer a stash from a failing verdict.
+- [close-12] Before an irreversible put-back, stop and show the engineer.
+- [close-13] Never use `finishing-a-development-branch`.
 
 ## triage
 
-- The intake-branch ledger is authoritative and merged row by row.
-- Fingerprints must survive the code moving.
-- Read with `git show`; never switch branches.
-- Say "possibly #N"; the engineer confirms.
-- A backlog decision is recorded once, not re-listed.
-- A mark-Ready script failure leaves the item unrecorded, so it comes back.
-- Sources unavailable in a web session are reported, not skipped silently.
-- Never re-judge QC's classification.
-- Quote the evidence; one item can have many sources.
+- [triage-01] The intake-branch ledger is authoritative and merged row by row.
+- [triage-02] Fingerprints must survive the code moving.
+- [triage-03] Read with `git show`; never switch branches.
+- [triage-04] Say "possibly #N"; the engineer confirms.
+- [triage-05] A backlog decision is recorded once, not re-listed.
+- [triage-06] A mark-Ready script failure leaves the item unrecorded, so it comes back.
+- [triage-07] Sources unavailable in a web session are reported, not skipped silently.
+- [triage-08] Never re-judge QC's classification.
+- [triage-09] Quote the evidence; one item can have many sources.
 
 ## Riskiest places to rewrite (generic and project text interleaved)
 
