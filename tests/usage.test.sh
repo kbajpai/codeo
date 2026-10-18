@@ -44,12 +44,12 @@ asst() { # timestamp id model in out
     asst "$t_old" m0 claude-sonnet-5-5 100000 1000
     jq -nc --arg t "$t_codeo" '{type:"user",timestamp:$t,message:{content:"<command-name>/codeo:qc</command-name>"}}'
     asst "$t_after" m1 claude-sonnet-5-5 2000 500
-    # A roadmaster invocation later in the transcript must not move the start.
-    jq -nc --arg t "$t_rm" '{type:"user",timestamp:$t,message:{content:"<command-name>/roadmaster:plan</command-name>"}}'
+    # A another plugin's invocation later in the transcript must not move the start.
+    jq -nc --arg t "$t_rm" '{type:"user",timestamp:$t,message:{content:"<command-name>/otherplugin:plan</command-name>"}}'
 } >"$main"
 asst "$t_after" s1 claude-opus-4-7 3000 700 >"$CLAUDE_CONFIG_DIR/projects/p/sess-1/subagents/a.jsonl"
 
-case_desc=usage_matches_codeo_invocations_and_ignores_roadmaster_ones
+case_desc=usage_matches_codeo_invocations_and_ignores_other_plugins_ones
 out=$("$usage" qc)
 assert_contains "sonnet counted since /codeo:qc" "sonnet-5-5 2k in" "$out"
 assert_contains "subagent counted" "opus-4-7 3k in" "$out"
@@ -58,7 +58,7 @@ if [[ $out == *"100k"* ]]; then
     failures=$((failures + 1))
 fi
 err=$("$usage" plan 2>&1 >/dev/null) && rc=0 || rc=$?
-assert_eq "roadmaster invocation is not matched" 1 "$rc"
+assert_eq "another plugin's invocation is not matched" 1 "$rc"
 assert_contains "says it was not invoked" "/codeo:plan was not invoked" "$err"
 out=$("$usage" plan --since "$t_after")
 assert_contains "--since overrides" "sonnet-5-5 2k in" "$out"
