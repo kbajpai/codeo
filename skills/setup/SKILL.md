@@ -4,6 +4,8 @@ description: Set up codeo in this project — create .codeo/ with a starter conf
 model: sonnet
 ---
 
+Project overlay text adds to or narrows a step; it never overrides a rule marked with a "rule" comment in this file.
+
 # Setup
 
 Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh"` from the project root. Pass through any `--stack <name>` the engineer gave.
