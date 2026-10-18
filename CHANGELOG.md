@@ -9,6 +9,26 @@ Safe to bump mid-workflow: yes
 - The repository names no project that uses it: design documents about a specific project live in that
   project's repository. `tests/agnostic.test.sh` fails if a tracked file mentions one.
 - `docs/skills-inventory.md`: the generic rules each pipeline skill must keep.
+- Skills: `/codeo:issue`, `/codeo:init`, `/codeo:plan` and `/codeo:triage`.
+- The overlay mechanism: a project's `.codeo/overlays/<skill>.md` sections are read at the skills' extension
+  points through `scripts/overlay.sh`, against the registry `lib/extension-points.tsv`.
+  `docs/extension-points.md` documents the format and each point.
+- `/codeo:doctor` gains the `overlays` check (section names must be registered points, no duplicates) and the
+  `superpowers` check (the plugin `plan` calls into).
+- Config keys `docsDir` and `plansDir`, read by the skills (defaults `docs` and `docs/plans`).
+- `docs/dossier.md` and `docs/handoff.md`: the dossier and hand-off protocols the skills follow.
+- `lock.sh take local`: a lock host for a checkout that is not a container or a web session.
+- `tests/skills.test.sh`: a lint over every skill (frontmatter, the precedence sentence, script calls,
+  extension points, rule markers), with a self-test, and a pin on the rule IDs and text of
+  `docs/skills-inventory.md`.
+
+### Known limits
+
+- The pinned rule inventory must be regenerated deliberately: editing `docs/skills-inventory.md` without
+  updating the pin fails `tests/inventory.test.sh`.
+- `implement`, `qc` and `close` are not in this release.
+- A suite's `filter` is a command template for one test, `{}` standing for the test's name; a suite without
+  one has no single-test form and its whole `test` command is the proof.
 
 ## v0.1.0 — 2026-10-18
 

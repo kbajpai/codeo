@@ -4,6 +4,8 @@ description: Check that codeo is ready in this project — config, GitHub login 
 model: sonnet
 ---
 
+Project overlay text adds to or narrows a step; it never overrides a rule marked with a "rule" comment in this file.
+
 # Doctor
 
 Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/doctor.sh"` from the project root.

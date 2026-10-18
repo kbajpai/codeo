@@ -1,0 +1,6 @@
+plan	plan-shape	Use the generic plan shape in the skill.
+plan	proof-of-done	The suite's filter with {} replaced by the name of the test the task writes; a suite without filter has no single-test form and its whole test command is the proof. With no suites configured, the task names its proof command in full.
+plan	environment-lease-notes	None; the plan adds no environment lease notes.
+plan	wiki-rules	Documentation rules are only the project's docsDir conventions.
+init	host-workflow	None; the skill hands off to plan in the same session.
+triage	todo-excludes	Scan tracked files only, with no exclusions.

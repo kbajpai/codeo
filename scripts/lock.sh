@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # $CODEO_STATE_DIR/active — the workflow lock: which issue this checkout is bound to. Shared by the
-# dev container's start script (host container) and a web session's start script (host web); the
-# only difference between them is the branch-checkout step below, which only a web session needs.
+# dev container's start script (host container), a web session's start script (host web) and a
+# plain checkout (host local, which the default init takes itself). Only a web session needs the
+# branch-checkout step below; container and local differ only in the line that identifies the
+# checkout: a container records its volume, and a plain checkout has nothing to identify.
 #
-#   lock.sh take <container|web> [session-id]
+#   lock.sh take <container|web|local> [session-id]
 #       Writes $CODEO_STATE_DIR/active from the working tree's dossier and prints what it did, or
 #       a TODO line when it could not. Never fails the caller.
 set -euo pipefail
@@ -41,7 +43,7 @@ stale_local() {
 }
 
 take() {
-    local host=${1:?container or web} session=${2:-} todo=() refused=
+    local host=${1:?container, web or local} session=${2:-} todo=() refused=
 
     if [[ $host == web ]]; then
         # Exactly one live dossier in the working tree, whose recorded branch differs from what
@@ -141,6 +143,9 @@ take() {
                         /proc/self/mountinfo | head -n 1)
                     printf 'volume:  %s\n' "${volume:-unknown}"
                     [[ -n $volume ]] || todo+=("could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)")
+                elif [[ $host == local ]]; then
+                    # A plain checkout is identified by its own path, which the lock never records.
+                    :
                 else
                     printf 'session: %s\n' "${session:-unknown}"
                 fi
@@ -155,5 +160,5 @@ take() {
 
 case ${1:-} in
     take) shift; take "$@" ;;
-    *) echo "usage: lock.sh take <container|web> [session-id]" >&2; exit 1 ;;
+    *) echo "usage: lock.sh take <container|web|local> [session-id]" >&2; exit 1 ;;
 esac

@@ -18,6 +18,8 @@
 #                                 invalid JSON, no repo) prints one "codeo:" line and exits the shell.
 #   codeo_cfg_required <filter>   as codeo_cfg, but dies with "config.json: missing <filter>"
 #   codeo_base_branch             baseBranch (required)
+#   codeo_docs_dir                docsDir, or "docs" when the key is absent
+#   codeo_plans_dir               plansDir, or "docs/plans" when the key is absent
 #
 # Config keys (.codeo/config.json):
 #   schema                  integer, required, <= CODEO_SCHEMA
@@ -28,12 +30,18 @@
 #                           logical names (ready, inProgress, inReview, done, backlog) mapping to the
 #                           board's own option names; a name that is not a key passes through.
 #   labelTypes{}            issue label -> branch type
-#   suites[]{name,paths[],build,test,filter}          test suites and the paths that trigger them
+#   suites[]{name,paths[],build,test,filter}          test suites and the paths that trigger them.
+#                           filter is a command template that runs ONE test, {} standing for the
+#                           test's name (e.g. pytest -k {}); absent means the suite has no
+#                           single-test form and its whole test command is the proof
 #   skipGlobs[]             paths that never trigger a suite
 #   resources[]{name,paths[],parameterised}           exclusive resources (locks) and their footprints
 #   environment{resource,hooks{activate,revoke,preflight,start,deployed}}   optional shared environment
 #   hooks{onLeaseChange}    optional; a shell command run best effort after every lease change
 #                           that reaches origin (stdout discarded, a failure only reported)
+#   docsDir                 optional; the project's documentation directory, relative to the root
+#                           (default docs)
+#   plansDir                optional; where plans are saved, relative to the root (default docs/plans)
 #   invariants              path to the project's invariants document
 #   models{subagent,reviewer}
 #   modules[]               optional modules the project enables
@@ -81,4 +89,13 @@ codeo_cfg_required() {
 
 codeo_base_branch() {
     codeo_cfg_required .baseBranch
+}
+
+# The directory keys are optional, so a project that sets neither still gets conventional paths.
+codeo_docs_dir() {
+    codeo_cfg .docsDir || echo docs
+}
+
+codeo_plans_dir() {
+    codeo_cfg .plansDir || echo docs/plans
 }

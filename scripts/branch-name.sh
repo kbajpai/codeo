@@ -22,7 +22,7 @@ stop=(a an the and or of to for in on with from through into as is are be by)
 # label -> type. The config's labelTypes replaces the defaults whole when present, so a project can
 # drop a mapping as well as add one. An absent key is codeo_cfg's quiet exit 1, not an error.
 declare -A types=()
-if mapped=$(codeo_cfg '.labelTypes | to_entries[] | "\(.key)\t\(.value)"'); then
+if mapped=$(codeo_cfg '(.labelTypes // empty) | to_entries[] | "\(.key)\t\(.value)"'); then
     while IFS=$'\t' read -r key value; do types[$key]=$value; done <<<"$mapped"
 else
     types=([enhancement]=feat [bug]=fix [documentation]=docs)
