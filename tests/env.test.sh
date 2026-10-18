@@ -58,7 +58,7 @@ newer_schema_is_refused_naming_both_numbers() {
     local repo; repo=$(make_repo '{"schema":7,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}')
     local err
     if err=$(cd "$repo" && bash "$config_sh" validate 2>&1); then fail "expected refusal"; fi
-    [[ "$err" == *"7"* && "$err" == *"1"* ]] || fail "numbers missing: $err"
+    [[ "$err" == "codeo: config.json: schema 7 is newer than this plugin supports (1); update the plugin" ]] || fail "unexpected: $err"
 }
 
 missing_base_branch_names_the_key() {
@@ -89,7 +89,24 @@ no_write_outside_project_or_secrets_dir() {
     chmod u+w "$ro"
 }
 
-for c in resolves_project_root_from_a_subdirectory missing_config_names_the_file \
+# Each failure path must print exactly one "codeo:" line, naming the file, with no jq text leaking.
+one_line_failures() {
+    local label="$1" dir="$2" needle="$3" cmd err
+    for cmd in "get .schema" "validate"; do
+        if err=$(cd "$dir" && bash "$config_sh" $cmd 2>&1); then fail "$label/$cmd: expected refusal"; fi
+        [[ "$(printf '%s\n' "$err" | wc -l)" -eq 1 ]] || fail "$label/$cmd: not one line: $err"
+        [[ "$err" == codeo:* && "$err" != *jq:* && "$err" == *"$needle"* ]] || fail "$label/$cmd: unexpected: $err"
+    done
+}
+
+failures_print_exactly_one_line() {
+    one_line_failures missing "$(make_repo "")" "config.json not found"
+    one_line_failures invalid "$(make_repo "{not json")" "invalid JSON"
+    local nogit; nogit=$(mktemp -d "$scratch_root/nogit.XXXXXX")
+    one_line_failures nogit "$nogit" "not inside a git repository"
+}
+
+for c in failures_print_exactly_one_line resolves_project_root_from_a_subdirectory missing_config_names_the_file \
     invalid_json_names_the_file newer_schema_is_refused_naming_both_numbers \
     missing_base_branch_names_the_key optional_key_is_empty_with_exit_1_and_get_works \
     no_write_outside_project_or_secrets_dir; do

@@ -12,7 +12,10 @@
 #
 # Functions:
 #   codeo_die <msg>               print "codeo: <msg>" to stderr and exit 1
-#   codeo_cfg <jq-filter>         raw result from .codeo/config.json; empty and exit 1 if null/absent
+#   codeo_cfg <jq-filter>         raw result from .codeo/config.json; empty and exit 1 if null/absent.
+#                                 An empty string or the literal "null" counts as absent. Array filters
+#                                 such as .suites[] print one value per line. An unusable config (missing,
+#                                 invalid JSON, no repo) prints one "codeo:" line and exits the shell.
 #   codeo_cfg_required <filter>   as codeo_cfg, but dies with "config.json: missing <filter>"
 #   codeo_base_branch             baseBranch (required)
 #
@@ -54,8 +57,11 @@ _codeo_config_file() {
 
 codeo_cfg() {
     local file value
-    file=$(_codeo_config_file)
-    value=$(jq -r "$1" "$file") || codeo_die "config.json: bad filter $1"
+    # exit, not return: the resolver has already printed the one line explaining the failure, and
+    # a function on the left of || runs with errexit off, so a mere failed assignment would let
+    # the caller carry on with an empty file name.
+    file=$(_codeo_config_file) || exit 1
+    value=$(jq -r "$1" "$file" 2>/dev/null) || codeo_die "config.json: bad filter $1"
     # jq prints the word null for an absent key; a literal "null" string is not a valid setting.
     if [[ -z "$value" || "$value" == "null" ]]; then
         return 1
