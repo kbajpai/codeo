@@ -89,6 +89,11 @@ assert_eq "nothing left: exit" 1 "$status"
 assert_contains "nothing left: message" "no words left" "$out"
 assert_eq "same input, same name" "$(run_name 120)" "$(run_name 120)"
 
+case_desc="a config without labelTypes is quiet"
+err=$(run_name 5 2>&1 >/dev/null) || true
+assert_eq "stderr empty" "" "$err"
+assert_eq "name still right" "fix/fix-thing" "$(run_name 5 2>/dev/null)"
+
 case_desc="the config's labelTypes replace the defaults"
 write_config '"labelTypes":{"story":"feat","defect":"fix"}'
 canned 10 'Add a widget' story
