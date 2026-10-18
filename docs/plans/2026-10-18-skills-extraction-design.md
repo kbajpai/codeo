@@ -84,11 +84,48 @@ encode, and without RoadMaster's specifics leaking into other projects.
 
 ## Config additions **[call]**
 
-`docsDir` and `plansDir` (defaults `docs` and `docs/plans`, matching the strict paths), suite field
-`parallel` (bool), and environment hooks `deployed` (prints tab-separated name, tag, state, one per
-workload, for QC's evidence step) and `deploy` (called by `implement`). Each new key is documented in
-`lib/env.sh`'s header and read through `codeo_cfg`/`codeo_cfg_required`. `putback` is deliberately
-**not** a key: put-back is an overlay (`put-back`).
+Each key arrives with the phase that reads it, and is documented in `lib/env.sh`'s header and read
+through `codeo_cfg`/`codeo_cfg_required` in the same change that adds it.
+
+- **2a:** `docsDir` and `plansDir` (defaults `docs` and `docs/plans`, matching the strict paths).
+- **2b:** suite field `parallel` (bool); environment hooks `deployed` (prints tab-separated name, tag,
+  state, one line per workload, for QC's evidence step; its contract is written down in 2b) and
+  `deploy` (run by `implement` after the environment lease is held; a non-zero exit is a failed task,
+  not a lease refusal; the lease-then-deploy ordering stays in the generic prose, and
+  project-specific notes about it go in the `environment-lease-notes` point).
+
+`putback` is deliberately **not** a key: put-back is an overlay (`put-back`).
+
+## Calls the author made after the builder check **[call]**
+
+- **The inventory.** The generic half (the rules each skill must keep, the riskiest places, the config
+  gaps) is `docs/skills-inventory.md` in this repo. The per-line map of RoadMaster-specific passages
+  names private internals, so it lives in RoadMaster's private repository
+  (`Docs/plans/2026-10-18-skills-prose-inventory.md`); the builder works from both.
+- **Scope of one plan.** Each of 2a, 2b and 2c gets its own plan, written when the previous one is
+  built. Planning 2a covers the overlay mechanism, the extension-points document and the config keys
+  it reads; contracts for 2b's keys land with 2b as above.
+- **Absent overlays.** Every extension point documents the default behaviour of its skill when the
+  point is absent; none is "refuse". Defaults are conservative (for example no `put-back` section means
+  `close` says plainly that it knows of no irreversible environment change to put back and asks the
+  engineer once; no `proof-of-done` section means the suites' `test` command is the proof). The doctor
+  `overlays` check validates names, not required-ness.
+- **Scripts with no codeo port.** `dev-scope.sh` and `changed-scope.sh` are fully replaced by
+  `scope.sh` (`deploy=` and `suite.<name>=`), and the paragraphs that quoted them are rewritten around
+  those lines, not turned into overlays. The Gemini/`agy` reviewer steps are removed from the generic
+  skills with no extension point; they return with a module. Plan 1's scripts keep the command-line
+  interfaces they were ported with.
+- **`init` with no host overlay.** The generic `init` validates the issue and the Ready gate, claims the
+  branch with the create-only push, writes the dossier, pushes it, and hands off to `plan` in the same
+  session. The home-container versus issue-container split (and any lock-taking by a second
+  environment) is the `host-workflow` point's content.
+- **The replay's data stays private.** RoadMaster's repository is private and codeo is public, so the
+  real dossiers and RoadMaster's overlay files are never copied into codeo. The replay reads them from
+  a directory named by `CODEO_GOLDEN_DIR` and skips, saying so, when it is unset; codeo's own tests use
+  small synthetic dossiers of the same shapes. RoadMaster's overlay drafts live in RoadMaster and are
+  first used by plan 3's parallel run.
+- **Doctor and `superpowers`.** Doctor gains a check that the `superpowers` skills the pipeline calls
+  are installed, as a `fail` with the install command; the detection mechanism is the builder's.
 
 ## Phases
 
