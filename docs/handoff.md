@@ -1,6 +1,6 @@
 # The hand-off protocol
 
-Seven skills, each with its own artifacts. This file is the authority on who owns what, how they
+Seven pipeline skills, each with its own artifacts. This file is the authority on who owns what, how they
 talk to each other, and what they spend on subagents; each `SKILL.md` states only its own half of
 the contract and points here. `dossier.md` is its companion — the same discipline applied to what
 a skill asks the *engineer*, and to the file it asks in.
@@ -38,25 +38,30 @@ and `.codeo/active` in that checkout is the binding:
 issue:   12
 branch:  feat/order-export
 started: 2026-03-04
-host:    container
-volume:  <the checkout's volume>
+host:    local
 ```
 
-`host` says what kind of checkout took the lock, and the line after it identifies that checkout
-(`volume:` for a container, `session:` for a hosted session), so it can be found again.
-`bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" take <container|web> [session-id]` writes it, from the
-`init.md` that names the branch the checkout has checked out; it never comes from anything typed
-by hand, and it never fails its caller — what it could not do it prints as a `TODO` line. On the
-base branch it takes no lock.
+`bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" take <container|web|local> [session-id]` writes it,
+from the `init.md` that names the branch the checkout has checked out; it never comes from anything
+typed by hand, and it never fails its caller — what it could not do it prints as a `TODO` line. On
+the base branch it takes no lock. `host` says what kind of checkout took it:
+
+- **`container`** — a dev container; a `volume:` line follows, identifying the container so it can
+  be found again.
+- **`web`** — a hosted session; a `session:` line follows. It is the only host that checks the
+  issue's branch out at bind time, when the session started on another branch, and it refuses —
+  taking no lock, with a `TODO` saying how to reconcile — when the two have diverged or a local
+  branch of that name holds commits the checkout would discard.
+- **`local`** — a plain checkout, with nothing further to identify it.
 
 The lock is gitignored, so it belongs to one checkout — which is the whole of how several workflows
 run at once. One engineer holds as many issues as they have checkouts; several engineers each hold
 their own. *Parallel workflows* below is what keeps workflows out of each other's way.
 
-`/codeo:init` prepares the lock: it pushes the branch with its `init.md`, and the lock is taken in
-the checkout where the later steps run. With no host workflow that is `init`'s own checkout, and
-`plan` follows in the same session; a project whose `init/host-workflow` overlay section runs each
-issue somewhere else has the lock taken there, as that section says. `/codeo:close` removes it —
+By default `/codeo:init` takes the lock itself: after it cuts and checks out the issue's branch and
+writes and pushes its `init.md`, it runs `lock.sh take local`, and `plan` follows in the same
+session. A project with an `init/host-workflow` overlay section takes the lock as that section
+says, in whatever checkout it runs the issue's later steps. `/codeo:close` removes it —
 once the pull request has merged and the branch is cleaned up, or on a stash or an abandon. Nothing
 else ever writes it. **A workflow whose pull request is open is still running**: review can send it
 back, and until the merge the issue is what the pipeline is working on.
@@ -148,7 +153,8 @@ it.
   answered by the engineer, never a guess: proceed and coordinate, sequence after the other issue,
   or re-scope. An `exclusive` resource — one of the config's `resources[]` — is one where two
   branches cannot both change it and merge cleanly, so for those the plan takes a lock
-  (`intake.sh lease take <resource> <N> <purpose>`), refused while another issue holds it.
+  (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take <resource> <N> <purpose>`), refused
+  while another issue holds it.
 - **Leases and their queue.** Every lock goes through
   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease`, and lives on the intake branch, where
   every engineer can see it; every decision is read from origin after a fetch, and with origin
@@ -188,7 +194,8 @@ it.
     it does not (naming the holder), 2 when origin cannot be asked — which is how a project's own
     deploy command refuses a caller whose issue does not hold it.
   - `/codeo:qc` releases it at a clear verdict, after recording what the environment ran and its
-    results in `qc.md`. `/codeo:close` releases everything at every exit (`lease release-all <N>`),
+    results in `qc.md` — `environment.hooks.deployed` is how `qc` learns what the branch left
+    deployed, and it names any workload the plan did not declare. `/codeo:close` releases everything at every exit (`lease release-all <N>`),
     so a finished or parked workflow never keeps the environment, and releases the environment at
     approval only when `qc` could not. A review round that changes what the environment runs —
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <the commit it last ran> HEAD` prints
@@ -293,8 +300,8 @@ What is enforced is what the project's ruleset on the base branch requires — o
 - **The live-dossier rule.** A send-back moves the dossier back to `.codeo/<N>/`, and the
   `qc-verdict` check fails closed on a live dossier the head still carries, so the open PR stays
   unmergeable until `/codeo:close` archives it to `done/` again.
-- **No bypass.** The checks bind only as far as the ruleset makes them required. One that lets a
-  direct push, or anyone at all, past them leaves the pipeline's gates advisory.
+- **No bypass.** The ruleset should require the checks and refuse every direct push to the base
+  branch, repository admins included. The checks bind only as far as it does.
 
 ## A call is not a hand-off
 
