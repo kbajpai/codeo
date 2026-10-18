@@ -5,7 +5,8 @@
 #   doctor.sh
 #
 # Checks: config, schema, gh-auth, gh-scopes, board, ruleset, suites, deps. Every GitHub read is
-# REST (`gh api`, `gh project view`); nothing uses the GraphQL-backed `gh issue|pr|run`.
+# `gh api` except the board check's `gh project view`, which is GraphQL-backed; nothing uses the
+# GraphQL-backed `gh issue|pr|run`.
 # The ruleset check reads the effective rules for the base branch from
 # `gh api repos/<owner>/<repo>/rules/branches/<base>`, which covers rulesets and branch
 # protection alike, and compares required_status_checks contexts with ci.requiredChecks
@@ -59,20 +60,28 @@ fi
 has_board=0
 [[ -n "$board_owner" || -n "$projects" ]] && has_board=1
 
-if [[ $has_board -eq 0 ]]; then
+if [[ $config_ok -eq 0 ]]; then
+    # An unusable config says nothing about the board, so "no board configured" would be a false ok.
+    report fail gh-scopes "skipped: config is unusable"
+elif [[ $has_board -eq 0 ]]; then
     report ok gh-scopes "no board configured; the project scope is not needed"
 elif [[ -z "$response" ]]; then
     report fail gh-scopes "cannot read scopes without a working gh login"
 else
     scopes=$(printf '%s\n' "$response" | tr -d '\r' | grep -i '^x-oauth-scopes:' | head -n 1 | cut -d: -f2- || true)
-    if [[ ",$(printf '%s' "$scopes" | tr -d ' ')," == *,project,* ]]; then
+    if ! printf '%s\n' "$response" | grep -qi '^x-oauth-scopes:'; then
+        # Fine-grained PATs and App/Actions tokens send no scopes header; the board check decides.
+        report ok gh-scopes "cannot verify scopes for this token type; the board check decides"
+    elif [[ ",$(printf '%s' "$scopes" | tr -d ' ')," == *,project,* ]]; then
         report ok gh-scopes "the project scope is granted"
     else
         report fail gh-scopes "the token lacks the project scope; run 'gh auth refresh -s project'"
     fi
 fi
 
-if [[ $has_board -eq 0 ]]; then
+if [[ $config_ok -eq 0 ]]; then
+    report fail board "skipped: config is unusable"
+elif [[ $has_board -eq 0 ]]; then
     report ok board "no board configured"
 elif ! command -v gh >/dev/null 2>&1; then
     report fail board "gh is not installed"
@@ -100,7 +109,9 @@ else
     base=$(cfg .baseBranch)
     required=$(cfg '.ci.requiredChecks[]?')
     [[ -n "$required" ]] || required=$'tests\nqc-verdict'
-    if rules=$(gh api "repos/$repo/rules/branches/$base" 2>&1); then
+    # A base branch such as release/1.x holds a "/" that would split the URL path.
+    base_enc=$(jq -rn --arg b "$base" '$b | @uri')
+    if rules=$(gh api "repos/$repo/rules/branches/$base_enc" 2>&1); then
         have=$(printf '%s' "$rules" | jq -r '.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context' 2>/dev/null || true)
         missing=()
         while IFS= read -r c; do
@@ -121,7 +132,9 @@ if [[ $config_ok -eq 0 ]]; then
 else
     missing=()
     count=0
-    while IFS=$'\t' read -r sname build test; do
+    # A unit separator, not a tab: tab is IFS whitespace, so read would collapse an empty build
+    # field and shift the test command into its place.
+    while IFS=$'\x1f' read -r sname build test; do
         [[ -n "$sname" ]] || continue
         count=$((count + 1))
         for cmd in "$build" "$test"; do
@@ -132,7 +145,7 @@ else
                 missing+=("$sname:$word")
             fi
         done
-    done < <(jq -r '.suites[]? | [.name, (.build // ""), (.test // "")] | @tsv' "$CODEO_STATE_DIR/config.json")
+    done < <(jq -r '.suites[]? | [.name, (.build // ""), (.test // "")] | join("\u001f")' "$CODEO_STATE_DIR/config.json")
     if [[ ${#missing[@]} -eq 0 ]]; then
         report ok suites "$count suite(s), every build and test command resolves"
     else
@@ -144,7 +157,13 @@ missing=()
 for tool in jq git; do
     command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
 done
-((BASH_VERSINFO[0] >= 4)) || missing+=("bash>=4 (have $BASH_VERSION)")
+# scope.sh uses `local -n` (namerefs), which arrived in bash 4.3. Parsed from BASH_VERSION so a test
+# can stand in an older version; BASH_VERSINFO is read-only.
+bash_ver=${BASH_VERSION%%[!0-9.]*}
+bash_major=${bash_ver%%.*}
+bash_rest=${bash_ver#*.}
+bash_minor=${bash_rest%%.*}
+((bash_major > 4 || (bash_major == 4 && bash_minor >= 3))) || missing+=("bash>=4.3 (have $BASH_VERSION)")
 if [[ ${#missing[@]} -eq 0 ]]; then
     report ok deps "jq, git, bash $BASH_VERSION"
 else

@@ -20,8 +20,11 @@ cd "$work/repo"
 # the contexts in GH_CHECKS; `project view` fails for the number in GH_BAD_PROJECT.
 cat > "$work/bin/gh" <<'STUB'
 #!/usr/bin/env bash
+echo "$*" >> "${GH_LOG:-/dev/null}"
 case "$1 ${2:-}" in
     "api -i")
+        [[ -z "${GH_AUTH_FAIL:-}" ]] || { echo "To get started with GitHub CLI, please run:  gh auth login" >&2; exit 4; }
+        [[ -z "${GH_NO_SCOPES_HEADER:-}" ]] || { printf 'HTTP/2.0 200 OK\r\n\r\n{"login":"me"}\n'; exit 0; }
         printf 'HTTP/2.0 200 OK\r\nX-Oauth-Scopes: %s\r\n\r\n{"login":"me"}\n' "${GH_SCOPES:-repo, project}" ;;
     "api repos/"*)
         jq -n --arg c "${GH_CHECKS:-tests qc-verdict}" '[{type:"required_status_checks",parameters:{required_status_checks:($c|split(" ")|map({context:.}))}}]' ;;
@@ -99,7 +102,66 @@ doctor_reports_a_todo_marker_as_a_config_failure_and_skips_the_ruleset() {
     grep -q '^fail ruleset: skipped: baseBranch is not set' <<<"$out" || fail "ruleset not skipped"
 }
 
-for c in doctor_reports_a_todo_marker_as_a_config_failure_and_skips_the_ruleset doctor_passes_a_healthy_project doctor_fails_when_the_board_scope_is_missing \
+doctor_reports_an_unauthenticated_gh_without_hanging() {
+    echo "$healthy" > .codeo/config.json
+    out=$(GH_AUTH_FAIL=1 timeout 20 bash "$script" 2>&1) && rc=0 || rc=$?
+    [[ $rc -ne 0 && $rc -ne 124 ]] || fail "expected a prompt non-zero exit, got $rc"
+    grep -q '^fail gh-auth: ' <<<"$out" || fail "no gh-auth failure"
+    [[ $(wc -l <<<"$out") -eq 8 ]] || fail "expected one line per check"
+}
+
+doctor_outside_a_repository_prints_eight_lines_and_fails_cleanly() {
+    local outside; outside=$(mktemp -d "$work/outside.XXXXXX")
+    out=$(cd "$outside" && bash "$script" 2>&1) && rc=0 || rc=$?
+    [[ $rc -ne 0 ]] || fail "expected non-zero"
+    [[ $(wc -l <<<"$out") -eq 8 ]] || fail "expected one line per check"
+    ! grep -Eqi 'unbound|traceback|syntax error|line [0-9]+:' <<<"$out" || fail "stack trace leaked"
+}
+
+doctor_does_not_call_an_unusable_config_no_board() {
+    echo '{"schema":9,"repo":{"owner":"a","name":"b"},"baseBranch":"main","board":{"owner":"a","projects":[2]}}' > .codeo/config.json
+    run
+    grep -q '^fail gh-scopes: skipped: config is unusable' <<<"$out" || fail "gh-scopes masked: $out"
+    grep -q '^fail board: skipped: config is unusable' <<<"$out" || fail "board masked: $out"
+}
+
+doctor_accepts_a_token_that_sends_no_scopes_header() {
+    echo "$healthy" > .codeo/config.json
+    GH_NO_SCOPES_HEADER=1 run
+    [[ $rc -eq 0 ]] || fail "expected exit 0, got $rc: $out"
+    grep -q '^ok gh-scopes: cannot verify scopes for this token type; the board check decides' <<<"$out" || fail "no unverifiable-scopes line"
+}
+
+doctor_names_the_right_command_when_build_is_empty() {
+    jq '.suites[0].build = "" | .suites[0].test = "no-such-tool-xyz"' <<<"$healthy" > .codeo/config.json
+    run
+    grep -q '^fail suites: not installed or unset: s:(no command) s:no-such-tool-xyz$' <<<"$out" || fail "wrong report: $out"
+}
+
+doctor_encodes_a_slash_in_the_base_branch() {
+    jq '.baseBranch = "release/1.x"' <<<"$healthy" > .codeo/config.json
+    : > "$work/gh.log"
+    GH_LOG="$work/gh.log" run
+    grep -q 'rules/branches/release%2F1.x' "$work/gh.log" || fail "branch not encoded: $(cat "$work/gh.log")"
+}
+
+doctor_requires_bash_4_3() {
+    echo "$healthy" > .codeo/config.json
+    printf 'BASH_VERSION=4.2.46\(2\)-release\n' > "$work/old-bash-env"
+    out=$(BASH_ENV="$work/old-bash-env" bash "$script" 2>&1) && rc=0 || rc=$?
+    [[ $rc -ne 0 ]] || fail "bash 4.2 accepted"
+    grep -q '^fail deps: .*bash>=4.3' <<<"$out" || fail "no deps failure: $out"
+    printf 'BASH_VERSION=4.3.0\(1\)-release\n' > "$work/old-bash-env"
+    out=$(BASH_ENV="$work/old-bash-env" bash "$script" 2>&1) && rc=0 || rc=$?
+    [[ $rc -eq 0 ]] || fail "bash 4.3 refused: $out"
+}
+
+for c in doctor_reports_an_unauthenticated_gh_without_hanging \
+    doctor_outside_a_repository_prints_eight_lines_and_fails_cleanly \
+    doctor_does_not_call_an_unusable_config_no_board doctor_accepts_a_token_that_sends_no_scopes_header \
+    doctor_names_the_right_command_when_build_is_empty doctor_encodes_a_slash_in_the_base_branch \
+    doctor_requires_bash_4_3 \
+    doctor_reports_a_todo_marker_as_a_config_failure_and_skips_the_ruleset doctor_passes_a_healthy_project doctor_fails_when_the_board_scope_is_missing \
     doctor_ignores_the_project_scope_without_a_board doctor_fails_when_a_suite_command_is_not_installed \
     doctor_fails_when_the_ruleset_lacks_a_required_check doctor_reports_every_failure_not_only_the_first \
     doctor_survives_an_unusable_config; do
