@@ -21,8 +21,8 @@ runs its own questions with the engineer. Resuming, stashing or deleting a branc
 command to run, never run.
 
 **It is what makes an issue startable.** `/codeo:init` starts only an issue whose Status on
-the project board is **Ready**, and this skill is where the engineer says an issue is: *mark
-Ready* runs `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`. Its other card move is
+the project board is **Ready** (when a board is configured), and this skill is where the engineer
+says an issue is: *mark Ready* runs `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`. Its other card move is
 *leave in the backlog* (`set <N> backlog`). Those card moves are the only changes it makes outside
 its ledger, each only while acting on the engineer's answer. When the project has no board
 (`board.sh` exits 3 and prints `board: not configured`), there is nothing to mark: say once, at the
@@ -61,7 +61,7 @@ The ledger's shape:
 |---|---|---|---|
 | `qc:12:P1` | The retry loop never caps its attempts | filed #15 | 2026-01-14 |
 | `branch:spike/player` | Pushed, no PR, last commit 2025-12-30 | dismissed — throwaway spike | 2026-01-14 |
-| `review:13:2718281828` | "Should this retry on 429?" — unresolved | deferred | 2026-01-14 |
+| `review:13:4417` | "Is this timeout meant to be configurable?" — unresolved | deferred | 2026-01-14 |
 | `issue:17` | Filed 2026-01-08, no branch, board Status `Backlog` | ready | 2026-01-14 |
 ```
 
@@ -94,13 +94,18 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
       - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh"` for every workflow on a pushed branch,
         with its last step and assignee. One whose last step is weeks old, or assigned to nobody,
         is worth asking about.
-      - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list`: a lease held more than a day,
-        or held by an issue whose last `qc.md` round is clear or whose PR is approved or merged, is
-        blocking every issue listed as waiting behind it — name them. A wait that has outlived its
-        right of way is a finding too: the queue drops it at the next take, so the nudge is to
-        take the lease. Its fingerprint is `lease:<resource>:<N>`, and its options are *ask the
-        holder* · *dismiss (why)*. Releasing it is `/codeo:qc`'s, at its clear verdict, in the
-        holder's checkout, never this skill's.
+      - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list`. The lease on the config's
+        environment resource (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.resource`)
+        is held more than a day, or by an issue whose last `qc.md` round is clear or whose PR is
+        approved or merged, is blocking every issue listed as waiting behind it — name them. A wait
+        that has outlived its right of way is a finding too: the queue drops it at the next take,
+        so the nudge is to take the lease. Releasing it is `/codeo:qc`'s, at its clear verdict, in
+        the holder's checkout, never this skill's. These criteria apply only to that lease; when no
+        environment resource is configured they do not apply at all. Every other lease is held
+        from plan until close, so holding one for days is normal: flag it only when its holder's PR
+        has merged or closed, or the holder has no workflow in flight, and say `/codeo:close` (its
+        `lease release-all`) is what releases it. The fingerprint is `lease:<resource>:<N>`, and the
+        options are *ask the holder* · *dismiss (why)*.
       - A workflow whose PR has merged but whose dossier is still at `.codeo/<N>/` on its
         branch, or whose branch is still on origin, never finished `/codeo:close` — and its
         checkout is probably still open on someone's machine. Fingerprint `unclosed:<N>`; options
@@ -118,17 +123,17 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
       - Open issues with no branch or PR at all
         (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue list-all`, filtered to
         `state == "open"`), for the same reason. For each,
-        `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`: one already **Ready** is waiting
+        `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`: one whose Status is already the
+        Ready status (the option `board.statuses.ready` names, else `Ready`) is waiting
         on `/codeo:init`, not on a decision, and is listed as such rather than asked about. When
-        the board is not configured, or in a hosted web session where this read is `unavailable`:
-        list the issue without that classification — as an ordinary item to ask about, since there
+        <!-- rule: triage-07 -->
+        the board is not configured, or in a hosted web session where this read is `unavailable`
+        (a source that is unavailable there is reported, never skipped silently): list the issue without that classification — as an ordinary item to ask about, since there
         is no board Status to tell it apart from one still undecided — and note in the run's
         `## Outcome` that board-status enrichment was unavailable, the same way source 1.3 reports
         itself skipped.
    3. **Unresolved review threads on merged PRs** — merged since the ledger's last run, or the last
       twenty on a first run.
-      <!-- rule: triage-07 -->
-      A source that is unavailable in a hosted web session is reported, never skipped silently.
       This one has no REST form: the session's proxy refuses GraphQL outside a pinned set of PR
       operations regardless of token, so a web-session run reports "review threads: skipped, run
       from a local checkout for this source" in its `## Outcome` and continues with every other
@@ -136,6 +141,8 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
       above:
 
       ```bash
+      OWNER=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .repo.owner)
+      NAME=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .repo.name)
       gh api graphql -f o="$OWNER" -f r="$NAME" -f query='
         query($o:String!,$r:String!){repository(owner:$o,name:$r){
           pullRequests(states:MERGED,last:20,orderBy:{field:UPDATED_AT,direction:ASC}){nodes{
@@ -156,7 +163,8 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
       <!-- point: triage/todo-excludes -->
       Fetch them with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" triage todo-excludes`: on
       exit 0, add the printed pathspecs (each as `':!<glob>'`) to the command; on exit 3, use the
-      default and add none beyond what `.gitignore` already leaves out.
+      default and add none (scan tracked files only). On exit 1, 2 or 4 the script prints one `codeo:`
+      line: report it to the engineer in the run's `## Outcome` and use the default.
 
    Collecting is lookup work — delegate a source to a subagent only when it is too large to read
    directly, and then on the configured subagent model (`models.subagent`, sonnet when unset),
@@ -183,7 +191,7 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
      that is an argument for dismissing it.
    - **Options** that fit the kind of item:
      - a finding or a review thread: *file it* · *already #N* · *dismiss (why)* · *defer*;
-     - parked work: *resume* (`board.sh set <N> ready` at step 5, then `/codeo:init #<N>` or
+     - parked work: *resume* (with a board, `board.sh set <N> ready` at step 5, then `/codeo:init #<N>` or
        `/codeo:close` on its branch — named, never run) · *file it* · *dismiss (why)* · *defer*.
        Deleting a branch is never an option here; it is the engineer's to do.
      - a filed issue never started: *mark Ready* (`board.sh set <N> ready`, run at step 5) ·
@@ -192,8 +200,9 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
        a backlog decision is recorded once and not shown again, because an issue on the tracker
        is not lost, and a report that re-lists the backlog every run stops being read. Say the
        issue's current board Status in the question. An issue already Ready is not asked about;
-       the report names `/codeo:init #<N>` for it. With no board configured these two options are
-       not offered.
+       the report names `/codeo:init #<N>` for it. With no board configured the options are instead
+       *start it* (`/codeo:init #<N>`, named, never run) · *leave in the backlog* (recorded once in
+       the ledger, no card move, no `board.sh` call) · *dismiss (why)*.
 
    Commit it — `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit triage "docs(codeo): triage dossier for <date> — Q1-Q<n> raised"`
    — then print the path and the numbers, and end the turn. Three items or fewer may go to the
@@ -206,9 +215,9 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
    - **File it** → call `/codeo:issue` with the item and its evidence. It is a call, not a
      hand-off: `/codeo:issue` asks the engineer its own questions and returns a number. One at
      a time, in the order the engineer ranked them. Then ask, as a follow-up question, whether the
-     new issue is ready to work on; yes is a *mark Ready*.
+     new issue is ready to work on (with a board); yes is a *mark Ready*.
    - **Mark Ready** → `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`, which adds the
-     issue to the board if it is not on it. Record `ready` and quote the script's `→ Ready` line in
+     issue to the board if it is not on it. Record `ready` and quote the script's output line (`board.sh: #N <old> → <option> on #P <title>`) in
      the run's `## Outcome`.
      <!-- rule: triage-06 -->
      A script failure — the `project` token scope is the likely one, and the script names the
@@ -216,12 +225,13 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
    - **Already #N** → record the number.
    - **Dismiss** → record the reason in the engineer's words.
    - **Defer** → record it; it comes back next run.
-   - **Leave in the backlog** → `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog`.
-     Record it, quoting the script's `→ Backlog` line in the run's `## Outcome` and `board: Backlog
+   - **Leave in the backlog** → with no board configured, only record it in the ledger (no
+     `board.sh` call). With a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog`.
+     Record it, quoting the script's output line in the run's `## Outcome` and `board: Backlog
      on #<n>…` (or `board: failed — <reason>`) in the `## Log` line; it does not come back. A
      script failure is reported, and the decision is still recorded — the issue is on the tracker
      either way.
-   - **Resume** → `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready` — the stash already
+   - **Resume** → with a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready` — the stash already
      set it, but a lost checkout may not have — recorded the same way, then name the command in the
      report. A script failure is reported and the resume still named.
 
