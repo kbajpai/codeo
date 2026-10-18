@@ -30,16 +30,52 @@ for skill in issue init plan implement qc close triage; do
     [[ "$n" -eq "${want[$skill]}" ]] || check_fail "$skill has $n rules, expected ${want[$skill]}"
 done
 
-# Nothing was reworded: with the ID prefixes stripped, the file equals the committed one. Where
-# the file is untracked there is nothing to compare against.
-strip_ids() { sed -E 's/^- \[[a-z]+-[0-9]+\] /- /'; }
-if git -C "$repo" ls-files --error-unmatch docs/skills-inventory.md >/dev/null 2>&1 &&
-    head_copy=$(git -C "$repo" show HEAD:docs/skills-inventory.md 2>/dev/null); then
-    if ! diff <(strip_ids <<<"$head_copy") <(strip_ids <"$inv") >/dev/null; then
-        check_fail "rule text differs from HEAD once the IDs are stripped"
-    fi
-else
-    echo "skipped text comparison (docs/skills-inventory.md is not tracked at HEAD)"
+# Nothing was reworded or dropped: the rule texts are pinned by a committed hash. The stream that is
+# hashed has one line per rule in file order, "<skill>-NN<TAB><rule text>", with the "[ID] " prefix
+# removed from the text and a wrapped bullet's continuation lines joined by single spaces. Pinning
+# the ID beside its text also catches a rule moved under another ID.
+fixture="$repo/tests/fixtures/skills-inventory.rules.sha256"
+
+rules_stream() {
+    awk '
+        function flush() { if (id != "") printf "%s\t%s\n", id, txt; id = "" }
+        /^## / { flush(); in_s = ($0 ~ /^## (issue|init|plan|implement|qc|close|triage)$/); next }
+        in_s && /^- \[[a-z]+-[0-9]+\] / {
+            flush(); id = $2; gsub(/[\[\]]/, "", id)
+            txt = $0; sub(/^- \[[a-z]+-[0-9]+\] /, "", txt); next
+        }
+        in_s && id != "" && /^[[:space:]]+[^[:space:]]/ { l = $0; sub(/^[[:space:]]+/, "", l); txt = txt " " l; next }
+        { flush() }
+        END { flush() }
+    ' "$1"
+}
+rules_hash() { rules_stream "$1" | sha256sum | cut -d' ' -f1; }
+
+if [[ "${1:-}" == "--update" ]]; then
+    mkdir -p "$(dirname "$fixture")"
+    echo "$(rules_hash "$inv")" >"$fixture"
+    echo "rewrote $fixture"
+    exit 0
+fi
+
+# Cases proving the pin discriminates, run over scratch copies.
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+base=$(rules_hash "$inv")
+[[ "$base" == "$(rules_hash "$inv")" ]] || check_fail "hash of an untouched file is not stable"
+sed 's/^\(- \[issue-01\] .*\)$/\1 extra/' "$inv" >"$scratch/reworded.md"
+[[ "$(rules_hash "$scratch/reworded.md")" != "$base" ]] || check_fail "a reworded bullet does not change the hash"
+sed 's/^- \[issue-01\] /- [issue-02] /; t; s/^- \[issue-02\] /- [issue-01] /' "$inv" >"$scratch/swapped.md"
+[[ "$(rules_hash "$scratch/swapped.md")" != "$base" ]] || check_fail "a swapped ID does not change the hash"
+sed '0,/^- \[qc-13\] .*/{//d}' "$inv" >"$scratch/dropped.md"
+[[ "$(rules_hash "$scratch/dropped.md")" != "$base" ]] || check_fail "a dropped rule does not change the hash"
+cp "$inv" "$scratch/same.md"
+[[ "$(rules_hash "$scratch/same.md")" == "$base" ]] || check_fail "an untouched copy does not match"
+
+if [[ ! -f "$fixture" ]]; then
+    check_fail "tests/fixtures/skills-inventory.rules.sha256 is missing; run: bash tests/inventory.test.sh --update"
+elif [[ "$(tr -d '[:space:]' <"$fixture")" != "$base" ]]; then
+    check_fail "the rule texts differ from the pinned hash. If the change is deliberate, run: bash tests/inventory.test.sh --update, commit the fixture, and explain the rule change in the commit message"
 fi
 
 [[ "$fail" -eq 0 ]] || exit 1
