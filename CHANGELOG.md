@@ -16,7 +16,7 @@ Safe to bump mid-workflow: n/a — not for projects to adopt; this tag exists fo
 ### Known limits
 
 - Skills for issue, init, plan, implement, qc, close and triage are not in this release.
-- Hook order is start -> preflight -> activate. start and activate run before the lease is held, so they must not be exclusive, and revoke must be idempotent.
+- Hook order is start -> preflight -> activate. start, preflight and activate run before the lease is held, so they must not be exclusive, and revoke must be idempotent.
 - `--override` is exported to hooks as `CODEO_OVERRIDE` and bypasses no hook failure.
 - Board access uses `gh project` (GraphQL).
-- bash >= 4.4 is recommended (empty-array expansion in `scope.sh`).
+- bash >= 4.3 is required (`scope.sh` uses namerefs); `/codeo:doctor` checks it.

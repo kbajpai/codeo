@@ -23,7 +23,10 @@
 #   schema                  integer, required, <= CODEO_SCHEMA
 #   repo{owner,name}        required
 #   baseBranch              required
-#   board{owner,projects[],gateProject,statuses{}}   optional project board
+#   board{owner,projects[],gateProject,statuses{}}   optional project board. projects[] and
+#                           gateProject are integers (project numbers). statuses keys are camelCase
+#                           logical names (ready, inProgress, inReview, done, backlog) mapping to the
+#                           board's own option names; a name that is not a key passes through.
 #   labelTypes{}            issue label -> branch type
 #   suites[]{name,paths[],build,test,filter}          test suites and the paths that trigger them
 #   skipGlobs[]             paths that never trigger a suite

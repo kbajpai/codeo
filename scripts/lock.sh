@@ -135,6 +135,8 @@ take() {
                 printf 'issue:   %s\nbranch:  %s\nstarted: %s\nhost:    %s\n' \
                     "$n" "$branch" "$(date -u +%Y-%m-%d)" "$host"
                 if [[ $host == container ]]; then
+                    # A host convention (the dev container mounts its volume at /workspaces), kept in
+                    # the core for parity with web sessions; the host module will own it later.
                     volume=$(awk '$5 == "/workspaces" { n = split($4, p, "/"); if (p[n] == "_data") print p[n - 1] }' \
                         /proc/self/mountinfo | head -n 1)
                     printf 'volume:  %s\n' "${volume:-unknown}"

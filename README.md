@@ -10,7 +10,7 @@ bash tests/run.sh [pattern]   # runs tests/*.test.sh whose name contains the pat
 
 ## Requirements
 
-bash 4 or later, jq, git and gh. Board access uses `gh project`, which needs GraphQL access to GitHub.
+bash 4.3 or later, jq, git and gh. Board access uses `gh project`, which needs GraphQL access to GitHub.
 
 ## Status
 

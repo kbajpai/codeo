@@ -23,7 +23,8 @@
 #   A lease is a lock on an exclusive resource, under .codeo/intake/leases/. The resource must be
 #   one the config's resources[] lists; an entry with "parameterised": true stands for
 #   <name>:<suffix> (the suffix letters, digits, '.', '_' or '-'), never the bare name. A take fails
-#   naming the holder while another issue holds it.
+#   naming the holder while another issue holds it. A plain resource x_y and a parameterised x:y
+#   share the lease file name x_y, so avoid configuring both.
 #   The config's environment.resource alone has side effects. Its take needs the branch to contain
 #   origin/<baseBranch>, since the environment is about to run this branch and one missing merged
 #   work would roll it back. It then runs the environment.hooks, in order: start, preflight,
