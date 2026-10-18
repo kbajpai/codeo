@@ -106,16 +106,16 @@ block, the put-back section, the lease-refusal kinds (a hook refusal is not a qu
 proof-of-done and lease ordering, the wiki rules, the invariants feed to the reviewer. The
 `deployed` hook's output contract is specified here.
 
-**2c — the golden replay.** A script and fixtures that replay RoadMaster's finished dossiers (chosen:
+**2c — the golden replay.** A script, with synthetic fixtures of its own, that replays RoadMaster's finished dossiers (chosen:
 #159, a clear verdict after one send-back; #91, a plan send-back then an implement send-back then
 clear; and one with a DEV block, #146, #150 or #182) and check mechanically: round order, the last
 bold `**Verdict:**`/`**Routing:**` per round and that its route is one of close, implement or plan,
 the cross-file round links, the dossier skeleton, the log-line format, and acceptance-criteria row
 counts. Normalisers map codeo's new strings (`.codeo/`, `suite.x=`). A human judges the rest.
 Known drifts in the golden data (a missing cost on one log line, a wrong model name, an unset-flag
-sentence the skill forbids) are recorded as expected findings, not failures. **[call]** RoadMaster's
-overlay files are drafted as fixtures under `tests/fixtures/roadmaster-overlays/` for the replay and
-move into RoadMaster's `.codeo/overlays/` in plan 4.
+sentence the skill forbids) are recorded as expected findings, not failures. The real dossiers and
+RoadMaster's overlay files stay in RoadMaster (see the calls above); the replay reads them from
+`CODEO_GOLDEN_DIR`.
 
 ## What is left to the builder
 
