@@ -27,6 +27,7 @@ must_contain 'a qc or close send-back round names its source' '`(send-back from 
 must_contain 'a round after a re-plan names the plan round' 'step 3 read, or `(after plan.md round <k>)` when it follows a re-plan'
 
 must_contain "the Outcome line qc reads" 'Deployed revision:'
+must_contain "the revision is a bare line" 'Write `Deployed revision: <x>` as a bare line under'
 must_contain "the subagent model read" "config.sh\" get '.models.subagent // \"sonnet\"'"
 # Word-bounded: environment.hooks.deployed is qc's hook, not this one.
 grep -qE 'hooks\.deploy([^A-Za-z]|$)' "$skill" || fail "the deploy hook — no [hooks.deploy] (hooks.deployed does not count)"

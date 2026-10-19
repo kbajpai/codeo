@@ -56,7 +56,8 @@ with a different reader: the project's documentation (`docsDir` in the config, a
 `wiki` module's pages), which `handoff.md` describes.
 
 `/codeo:issue` runs before the issue has a number, so it writes `.codeo/intake/new-<slug>/` and
-renames the directory to `.codeo/intake/<N>/` once the issue is filed. `/codeo:init` adopts that
+renames the directory to `.codeo/intake/<N>/` once the issue is filed, rewriting `issue.md`'s
+first line to `# Issue #<N> — issue` in the same commit. `/codeo:init` adopts that
 `issue.md` into `.codeo/<N>/` on the branch it cuts, rather than objecting that it already exists.
 
 There is always an `<N>` to key on, because `/codeo:init` is the only way into the flow and it
@@ -274,8 +275,9 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
 - **Findings.** Every finding says `blocking` or `non-blocking`. A round with a blocking finding is
   never routed to `/codeo:close`. An empty answer such as `Blocking findings: none` is not a
   finding. Neither is a recap of an earlier round's finding, such as
-  `F1 (blocking in round 1) — fixed by <commit>` or `(was blocking)`. A row of the criteria table
-  is not a finding either.
+  `F1 (blocking in round 1) — fixed by <commit>` or `(was blocking)`. A finding marked fixed is
+  not live either: its parenthesis closes and a dash follows with `fixed` or `resolved`, as in
+  `F1 (blocking) — fixed by <commit>`. A row of the criteria table is not a finding either.
 - **The pull request.** `close.md` records an opened pull request in a round headed
   `### Round <n> — pull request opened`, its date on the first line and the pull request as the
   line `#<number> <html_url>`, from `pr create`'s response; exactly one round carries that
@@ -300,8 +302,8 @@ A `qc.md` criteria table, for an imaginary shop's order export:
 | The export retries a failed upload once | not yet checkable — pass stopped at step 9 | — |
 ```
 
-A park heads its round in `close.md` with exactly one of these, the date on the line beneath —
-the headings `claim.sh --stash-live` reads:
+A park heads its round in `close.md` with one of the headings `claim.sh --stash-live` reads, the
+date on the line beneath:
 
 ```markdown
 ### Round 4 — stashed

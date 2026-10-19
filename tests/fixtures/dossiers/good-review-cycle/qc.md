@@ -59,6 +59,8 @@ None.
 | Blocking calls are gone from the export | met | `tests/export.test.sh` — async case |
 
 - Blocking issues: none
+- F1 (blocking) — fixed by `a1b2c3d` in round 3.
+- F3 (blocking) – resolved: the writer streams rows.
 
 **Verdict: clear — forward to `/codeo:close`.**
 

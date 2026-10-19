@@ -40,7 +40,7 @@ bash scripts/dossier-check.sh <dossier-dir>
 The checker reads one finished or live dossier directory (`.codeo/<issue>/`, an archived copy, or any
 other directory holding some of `issue.md`, `init.md`, `plan.md`, `implement.md`, `qc.md` and `close.md`)
 and checks its structure against the forms `docs/dossier.md` (see *What a finished dossier looks like*)
-and `docs/handoff.md` state. It judges shape only, never whether a finding, plan or answer is right. It
+and `docs/handoff.md` state, except the date line, which is not checked. It judges shape only, never whether a finding, plan or answer is right. It
 prints one line per finding, in file order and then check order, and no summary:
 
 ```

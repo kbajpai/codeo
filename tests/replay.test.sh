@@ -73,6 +73,9 @@ replay() {
     fi
 
     work=$(mktemp -d)
+    # A replay that dies part-way (an unreadable expected.tsv, say) still removes its scratch.
+    # work is local, so the trap carries its path rather than the name.
+    trap "rm -rf $(printf '%q' "$work")" EXIT
     : >"$work/actual"
     : >"$work/expected"
     for name in "${dossiers[@]}"; do
@@ -223,6 +226,17 @@ rm -r "$dir/case-b" "$dir/expected.tsv"
 run_replay "$dir"
 assert_eq rc 0 "$rc"
 assert_eq out "replay: 1 dossiers, 0 recorded drifts, all as expected" "$out"
+
+case_desc="a replay that dies part-way leaves no scratch directory behind"
+if (($(id -u) != 0)); then
+    dir=$(fresh unreadable-expected)
+    chmod 000 "$dir/expected.tsv"
+    mkdir "$scratch/tmp"
+    out=$(TMPDIR=$scratch/tmp CODEO_GOLDEN_DIR=$dir bash "$self" 2>&1) && rc=0 || rc=$?
+    chmod 644 "$dir/expected.tsv"
+    assert_eq "rc is not a pass" 1 "$((rc != 0))"
+    assert_eq "left in TMPDIR" "" "$(ls -A "$scratch/tmp")"
+fi
 
 case_desc="a row recorded twice must occur twice"
 dir=$(fresh duplicate)

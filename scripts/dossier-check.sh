@@ -19,8 +19,7 @@
 #   title             FAIL   the first line is "# Issue #<n> — <step>", <step> the file's name
 #   header-table      drift  the first non-blank line after the title opens a "| | |" table
 #   sections          drift  "## Where this stands", "## Questions", "## Outcome", "## Log" are all
-#                            there in that relative order ("## Notes" optional anywhere; issue.md
-#                            must also have "## Draft", anywhere)
+#                            there in that relative order ("## Notes" optional anywhere)
 #   round-numbering   FAIL   the "### Round <n>" headings in a written ## Outcome run consecutively
 #                            from 1, or from 2 when the Outcome opens with unheaded content (the
 #                            unheaded first round); qc.md and close.md head every round, so they
@@ -142,9 +141,11 @@ has_section() {
 }
 
 # outcome_written <file>: status 0 when ## Outcome exists and is neither empty nor the pending
-# placeholder (its first non-blank line starting "_Pending").
+# placeholder (its first non-blank line starting "_Pending"). An Outcome with any "### Round"
+# heading is written, even under a placeholder left above it: the rounds are what was written.
 outcome_written() {
     local first
+    [[ -z $(rounds_of "$1") ]] || return 0
     first=$(section_of "$1" Outcome | cut -f2- | awk 'NF && !seen { print; seen = 1 }')
     [[ -n $first && $first != _Pending* ]]
 }
@@ -229,7 +230,6 @@ check_header_table() {
 check_sections() {
     local file=$1 name=$2 s range missing=() present=() ordered=()
     local required=("Where this stands" Questions Outcome Log) listed=("Where this stands" Questions)
-    [[ $name != issue.md ]] || listed+=(Draft)
     listed+=(Outcome Log)
     for s in "${listed[@]}"; do
         has_section "$file" "$s" || missing+=("## $s")
@@ -465,7 +465,9 @@ last_round_clear() {
 # after the item's start and an optional id ("- F2 blocking", "- Blocking — …"), or after a
 # "(", "[", ",", ":", ";", "|", "/" or a dash ("F2 (blocking, implement)", "F2 — blocking"),
 # and is not answered as empty, with or without a noun ("Blocking: none", "Blocking findings:
-# none") or a recap of an earlier round ("F1 (blocking in round 1) — fixed", "(blocking was …)").
+# none"), a recap of an earlier round ("F1 (blocking in round 1) — fixed", "(blocking was …)"),
+# or a finding since fixed: its parenthesis closes and a dash follows with "fixed" or "resolved"
+# ("F1 (blocking) — fixed by <commit>").
 # Prose that merely mentions the word ("no blocking finding", "two findings it called blocking")
 # is not a finding, and neither is a row of a table with a "Verdict" header cell: that is the
 # criteria table, whose criteria may say "blocking" themselves.
@@ -481,6 +483,7 @@ blocking_findings_of() {
                 if (before ~ /[[:alnum:]-]$/ || after ~ /^[[:alnum:]-]/) continue
                 if (after ~ /^[ \t]*((findings?|issues?|items?)[ \t]*)?(:|—|–|-)?[ \t]*(none|nothing|no|0)([^[:alnum:]]|$)/) continue
                 if (after ~ /^[ \t]+(in round|was)([^[:alnum:]]|$)/) continue
+                if (after ~ /^[^)]*\)[ \t]*(—|–|-)+[ \t]*(fixed|resolved)([^[:alnum:]]|$)/) continue
                 prefix = before; sub(/[ \t]+$/, "", prefix)
                 if (prefix ~ /^[ \t]*([-*+]|[0-9]+[.)])([ \t]+[a-z]{0,3}[0-9]+[.:)]?)?$/) return 1
                 if (prefix ~ /(\(|\[|,|:|;|\||\/|—|–|-)$/) return 1

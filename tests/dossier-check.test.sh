@@ -72,6 +72,9 @@ drift qc.md [send-back-link] round 2 is routed back to implement.md, but no impl
 drift close.md [send-back-link] round 1 carries "(send-back from qc.md round 3)", which only a later implement.md or plan.md round or a "— pull request updated" round carries
 drift close.md [send-back-link] round 3 carries no "(send-back from <file> round <k>)"'
 want[good-review-cycle]=
+want[good-issue-no-draft]=
+want[bad-pending-above-rounds]='FAIL plan.md [footprint] no ### Footprint in ## Outcome
+FAIL plan.md [open-question] Q2 is open but ## Outcome is written'
 want[bad-qc-round-at-review]='FAIL close.md [qc-round-at-review] round 2 carries no "qc round at review: <k>"
 FAIL close.md [qc-round-at-review] round 3 names qc round 7, which qc.md does not have'
 want[bad-park-heading]='FAIL close.md [park-heading] line 19: "### Round 1 — Stashed" is not a park heading claim.sh reads

@@ -158,7 +158,9 @@ The repository is read from the project's config, never typed into a command:
 8. **Rename the dossier directory, commit it, report, and stop.** `.codeo/intake/new-<slug>/`
    becomes `.codeo/intake/<N>/` now that the number exists — that is what lets
    `/codeo:init` adopt it and what keeps the reasoning that produced the issue attached to the
-   issue. Commit the rename in one step:
+   issue. The draft's title had no number to carry, so in the same commit as the rename,
+   rewrite its first line to `# Issue #<N> — issue`, the title every dossier carries
+   (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The shape of a file`). Commit the rename in one step:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit <N> "docs(codeo): issue dossier for #<N> — filed" --drop new-<slug>`.
    Then report the created issue's URL and number. No next step, no suggested skill, no branch. If
    another skill delegated here, hand the number back to it and let it resume what it was doing.

@@ -176,7 +176,7 @@ pages under `$DOCS`).
    - The log's last line is the revision it deployed. An empty last line means `HEAD` as it is
      now — `git rev-parse HEAD` after the hook and the clean-tree check, so a bookkeeping commit
      the hook made is part of it; record that, and say the hook printed no revision.
-   - Write `Deployed revision: <x>` under `## Where this stands` in `.codeo/<N>/implement.md` and
+   - Write `Deployed revision: <x>` as a bare line under `## Where this stands` in `.codeo/<N>/implement.md` and
      commit the dossier there and then, staged by name, with the subject
      `docs(codeo): implement dossier for #<N> — deployed <revision as printed, or its short SHA>`,
      and push — so the revision survives a turn that stops before step 8. Step 8 repeats it in the

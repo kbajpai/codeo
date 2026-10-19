@@ -3,7 +3,12 @@
 # the output of each failing file and exiting non-zero if any failed.
 #
 #   run.sh [pattern]
+#
+# CODEO_GOLDEN_DIR is unset first, so the suite stays hermetic: tests/replay.test.sh replays only
+# its synthetic directory here, whatever the caller's environment holds. To replay a project's
+# golden data, run CODEO_GOLDEN_DIR=<dir> bash tests/replay.test.sh directly.
 set -euo pipefail
+unset CODEO_GOLDEN_DIR
 
 dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 pattern="${1:-}"
