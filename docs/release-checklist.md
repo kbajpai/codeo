@@ -71,7 +71,23 @@ constrain other people and accidents, not the owner.
 
    The list must show both rulesets as `active` before the next step.
 
-6. Tag and push the release, then check it from a clean clone:
+6. Before tagging, from a clean clone of the commit to be tagged:
+
+   ```bash
+   git clone https://github.com/kbajpai/codeo.git /tmp/codeo-release && cd /tmp/codeo-release
+   bash tests/run.sh
+   ```
+
+   It must end `all cases passed`. Then set the release's version in `.claude-plugin/plugin.json`
+   and in `.claude-plugin/marketplace.json` (its plugin entry; add a `version` there if it has none),
+   and retitle `CHANGELOG.md`'s `## Unreleased` as
+   `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change.
+
+   The changelog's `Shared state:` line must name every dossier convention a script reads — today
+   `qc round at review: <k>` and `### Round <n> — stashed|abandoned` — since a project mid-workflow
+   carries dossiers written to them.
+
+7. Tag and push the release, then check it from a clean clone:
 
    ```bash
    git tag vX.Y.Z && git push origin vX.Y.Z

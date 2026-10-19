@@ -1,6 +1,6 @@
 # codeo
 
-codeo is an agent-workflow plugin for Claude Code: it carries a piece of work from issue to merged pull request through plan, implement and QC steps. It is unrelated to SYSGO's CODEO IDE and to GoCodeo.
+codeo is an agent-workflow plugin for Claude Code: it carries a piece of work from issue to merged pull request through six steps: issue, init, plan, implement, QC and close. It is unrelated to SYSGO's CODEO IDE and to GoCodeo.
 
 ## Tests
 

@@ -314,7 +314,8 @@ environment carries.
 **May rely on.** The merge commit, the base branch, and the project's `gh` access.
 
 **Expected back.** What to look at for the merge commit (a workflow run, a published artefact) and
-how to read it. The result is reported and never blocks the close.
+how to read it. The skill relays it and reads only what it names; it never runs a command from it
+that writes anything. The result is reported and never blocks the close.
 
 **Default when absent.** None; no check of what CI did for the merge commit.
 
@@ -334,7 +335,8 @@ should carry the commit's short sha; report anything else.
 **May rely on.** The lock's host line (`volume:` or `session:`), the issue number and the branch.
 
 **Expected back.** What the engineer does next with this checkout, for instance how to remove it,
-as ordered commands or prose.
+as ordered commands or prose. The skill relays it to the engineer; the commands are theirs to run,
+never the skill's.
 
 **Default when absent.** None; the report names the lock's host and says whether anything is left
 to remove.
