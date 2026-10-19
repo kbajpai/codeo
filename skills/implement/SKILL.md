@@ -273,7 +273,11 @@ pages under `$DOCS`).
    may still be open at this point. Record what was built, the documentation pages changed, the
    build result, `Deployed revision: <x>` repeated from `## Where this stands` when the round
    deployed, and anything that deviated from the plan and why; a round after a send-back goes
-   beneath the first as its own dated `### Round <n>`. Append one `## Log` line, ending `· cost: ` with what
+   beneath the first as its own dated `### Round <n>`. That round's date is its first line,
+   beneath the heading, followed by `(send-back from qc.md round <n>)` or
+   `(send-back from close.md round <n>)` naming the round step 3 read
+   (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
+   Append one `## Log` line, ending `· cost: ` with what
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" implement` prints, then commit the dossier, staged
    by name, and push as at step 4, with the subject `docs(codeo): implement dossier for #<N>`
    (`— round <n>` for a later round; `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).

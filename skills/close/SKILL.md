@@ -242,6 +242,10 @@ the step carries on.
    the next `### Round <n>` beneath it, never above it or in place of it. A return from review
    likewise adds the next `### Round <n>` beneath the last, saying which review round it answers
    and which `qc.md` round cleared it.
+   That round is headed `### Round <n> — pull request updated`, with the date as its first line,
+   followed by `(send-back from close.md round <m>)` naming the review round it answers. So
+   `— pull request opened` heads exactly one round, and a re-run that finds a
+   `— pull request updated` round after the latest review round adds no second one.
 
    **Move the card** — with a board — `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$IN_REVIEW"`,
    once the pull request is open; on a return from review the same call puts it back, since the

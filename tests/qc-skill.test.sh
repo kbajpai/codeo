@@ -61,6 +61,12 @@ done < <(grep -oE '(never `)?implement\.md' <<<"$step7" || true)
 must_follow "debugging stops at Phase 1" 'Stop at the end of' 'Phase 1'
 must_contain "the blocking axis" '**Blocking or not.**'
 must_contain "the whose axis" '**Whose it is.**'
+# The dossier forms docs/dossier.md documents and the dossier checker reads.
+must_contain "every finding says blocking or non-blocking" 'every finding in `qc.md` says `blocking` or'
+must_contain "the non-blocking spelling" '`non-blocking`, so a reader'
+must_contain "the criteria mapping is a table" 'The criterion-by-criterion result is a table with one row per acceptance criterion'
+must_contain "the four verdict values" 'begins with `met`, `not met`, `untestable` or'
+must_contain "not yet checkable is a verdict, and a note may follow" '`not yet checkable`, and a note may follow after a dash or sit in another column'
 
 # Step 9: environment evidence.
 must_contain "the revision is read as implement writes it" 'Deployed revision:'

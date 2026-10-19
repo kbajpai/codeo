@@ -214,6 +214,10 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
      distinction is the routing decision, so make it deliberately rather than defaulting everything
      to the implementer.
 
+   Write the first answer in those words: every finding in `qc.md` says `blocking` or
+   `non-blocking`, so a reader — or the dossier checker — can tell a round that must not go to
+   `/codeo:close` (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
+
    For a failing test or a finding whose cause is not obvious from the diff, invoke
    `superpowers:systematic-debugging` via the Skill tool and run *Phase 1: Root Cause
    Investigation* only. The root cause is what decides whose finding it is. **Stop at the end of
@@ -386,6 +390,10 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
     criterion-by-criterion result with the test or line that settles each, the documentation check,
     the `#### Environment` block when step 9 ran, every finding with its classification, the number
     of any issue `/codeo:issue` filed for this pass, and the routing decision.
+    The criterion-by-criterion result is a table with one row per acceptance criterion in
+    `init.md`. Each row's verdict cell begins with `met`, `not met`, `untestable` or
+    `not yet checkable`, and a note may follow after a dash or sit in another column, so step 9's
+    *untestable here — no evidence hook* stands as written.
     <!-- rule: qc-09 -->
     The decision is a bold span, `**Verdict: …**` or `**Routing: …**`, with the label inside the
     bold, and only the last such span of the round counts. The project's `qc-verdict` check

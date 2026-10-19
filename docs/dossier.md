@@ -246,14 +246,18 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
 
 - **Rounds.** `## Outcome`'s rounds are `### Round <n>` headings, numbered consecutively. The
   first round may be written unheaded — `implement.md` and `plan.md` write theirs that way — and
-  the next is then `### Round 2`. `qc.md` heads every round, from `### Round 1`, as
-  `### Round <n> — <YYYY-MM-DD>`: the `qc-verdict` check finds the latest round by its heading.
-  `close.md` heads every round from `### Round 1` too, as `### Round <n> — <what happened>`, with
-  the date as the round's first line.
+  the next is then `### Round 2`, with the date as its first line. `qc.md` heads every round, from
+  `### Round 1`, as `### Round <n> — <YYYY-MM-DD>`: the `qc-verdict` check finds the latest round
+  by its heading. `close.md` heads every round from `### Round 1` too, as
+  `### Round <n> — <what happened>` — `pull request opened`, `review feedback`,
+  `conflicts with <base>`, `pull request updated`, `stashed`, `abandoned` — with the date as the
+  round's first line.
 - **Send-backs.** A round that answers a send-back names the file and round it answers in one
-  parenthesis — `(send-back from qc.md round 2)`, `(send-back from close.md round 3)` — so a reader
-  can follow the change between files. A send-back to `/codeo:plan` adds a round to `plan.md` like
-  any other receiving step (`handoff.md` → *A send-back*).
+  parenthesis, on the line after the date — `(send-back from qc.md round 2)`,
+  `(send-back from close.md round 3)` — so a reader can follow the change between files. A
+  send-back to `/codeo:plan` adds a round to `plan.md` like any other receiving step
+  (`handoff.md` → *A send-back*); `close.md`'s `— pull request updated` round names the review
+  round it answers the same way.
 - **Criteria.** Each `qc.md` round maps every acceptance criterion — one per `- [ ]` line in
   `init.md`'s `## Outcome` — in a table, one row per criterion, whose verdict cell begins with
   exactly one of `met`, `not met`, `untestable` or `not yet checkable` (environment evidence this
@@ -261,7 +265,8 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
 - **Findings.** Every finding says `blocking` or `non-blocking`. A round with a blocking finding is
   never routed to `/codeo:close`.
 - **The pull request.** `close.md` records an opened pull request in a round headed
-  `### Round <n> — pull request opened`, carrying its number and URL (`#<n> <url>`). Every
+  `### Round <n> — pull request opened`, carrying its number and URL (`#<n> <url>`); exactly one
+  round carries that heading, and a return from review is `— pull request updated`. Every
   `— review feedback` or `— conflicts with <base>` round carries the line
   `qc round at review: <k>`, `<k>` being the latest `qc.md` round when it was written.
 - **Form lines.** `Deployed revision: <x>` in `implement.md`; `Lease not held: <line>`,

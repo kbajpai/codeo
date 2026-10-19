@@ -290,6 +290,12 @@ answer too: each task then names its own proof command in full (step 8).
        the subject `docs(codeo): plan dossier for #<N>`, and push, as at step 4. A failed push is
        loud but not fatal (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).
 
+       After a send-back from `/codeo:qc`, the first outcome stays as it was written: this pass's
+       outcome goes beneath it as the next `### Round <n>` (the unheaded first is round 1), with
+       the date as its first line, followed by `(send-back from qc.md round <n>)` naming the
+       `qc.md` round it answers. The `### Footprint` moves to the end of that round, so the file
+       still holds one (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
+
 11. **Report** the file path and a one-line summary, and suggest `/codeo:implement` to execute
     the plan once the engineer has committed it. If this plan tracks a GitHub issue but no branch
     exists yet, `/codeo:init #<number>` is the step that was skipped — it runs upstream of this
