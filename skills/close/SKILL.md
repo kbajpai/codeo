@@ -263,22 +263,25 @@ the step carries on.
    the head commit's check runs as one array, each with its `name`, `status` and `conclusion`; and
    whether it can merge, from `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr view <PR>`, which
    prints `mergeable` and `mergeStateStatus`. When the config lists the checks the base branch
-   requires — `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.ci.requiredChecks[]'`, one per
-   line, exit 1 when none are listed — report each of those by name first, and a required check
-   with no run as missing; with none listed, report every run. `mergeable` is `null` while GitHub
-   is still working it out: say so, and read it again on the next invocation rather than waiting
-   here. This phase writes nothing to `close.md` — a dossier commit now would be a push onto a
-   review in progress — and nothing in this step changes anything, except in the two cases below.
+   requires — `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.ci.requiredChecks[]?'`, one
+   per line, exit 1 when none are listed — report each of those by name first, and a required
+   check with no run as missing; with none listed, report every run. Required checks are matched
+   against check runs only, so one the base branch requires as a legacy commit status has no run
+   here and reads as missing: say it may be a commit status, not that it failed. `mergeable` is
+   `null` while GitHub is still working it out: say so, and read it again on the next invocation
+   rather than waiting here. Until a send-back at step 11, this phase writes nothing to `close.md`
+   — a dossier commit now would be a push onto a review in progress — and nothing in this step
+   changes anything, except in the two cases below.
    - **`BEHIND`** — the base branch moved since the last push, and where it requires branches to
      be up to date, that blocks the merge. Bringing the branch up to date is mechanical when the
      merge is clean, so it happens here, on a clean tree (step 3's check; anything uncommitted is
-     the same stop): `git fetch origin`, then
+     the same stop). `git fetch origin`, then check the upstream first: if `git status -sb` shows
+     this branch behind its upstream and not ahead, the engineer already pressed *Update branch*
+     on GitHub — run `git pull --ff-only`, so this checkout's branch carries the merge commit
+     GitHub made, and nothing more. Otherwise run
      `git merge-tree --write-tree --name-only origin/<base> HEAD` as at step 3; on exit 0,
      `git merge --no-edit origin/<base>` and `git push`, which runs the checks again. Exit 1 is a
-     conflict, which goes to step 11 like `CONFLICTING` and is never resolved here. If the engineer
-     already pressed *Update branch* on GitHub — after the fetch, `git status -sb` shows this
-     branch behind its upstream and not ahead — run `git pull --ff-only` instead, so this
-     checkout's branch carries the merge commit GitHub made.
+     conflict, which goes to step 11 like `CONFLICTING` and is never resolved here.
    - **`CONFLICTING`** — a parallel workflow merged first. It is a send-back exactly like step 3's,
      made at step 11.
 
@@ -376,7 +379,9 @@ the step carries on.
       the printed text for `<merge_commit_sha>` — often a workflow run, read with
       `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" run list <workflow-file> <merge_commit_sha>`,
       which prints each run's `status`, `conclusion` and `html_url` — and report what it shows,
-      still running with its URL, failed loudly; on exit 3, there is no such check, and the report
+      still running with its URL, failed loudly. When `run list` prints nothing, report it as
+      no run found for the merge commit — the workflow was not triggered, or is not configured
+      for that branch — a finding, not a blocker; on exit 3, there is no such check, and the report
       says nothing about CI; on exit 1, 2 or 4, report the one `codeo:` line it printed and carry
       on. Whatever it shows is reported, never a blocker.
 
@@ -411,7 +416,9 @@ the step carries on.
     what was deleted and what kept — with the engineer's answer at step 14 — and one line ending
     ` · cost: ` with what `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints. A comment
     that fails to post is reported loudly, with its body in the report, so the engineer can post it
-    by hand.
+    by hand. A re-run after step 16 kept the lock asks step 14's question again and posts a new
+    comment: the earlier comment stands, and the new one records only what is new — the release or
+    deletion that failed before, and how it went this time.
 
 16. **Release the lock.**
     <!-- rule: close-10 -->
@@ -442,4 +449,156 @@ the step carries on.
     `git ls-remote`, the leases from `lease list`, the lock from `.codeo/active` being gone — never
     from a step having been attempted.
 
-<!-- stash and abandon, hand-off and non-goals are added by the next task -->
+## Stash, and closed unmerged
+
+**Putting the environment back.** A stash or an abandon lets go of the shared environment, and the
+next holder deploys onto whatever this branch left there. The put-back runs
+only when `$ENV_RESOURCE` is set and `lease list` shows this issue holding it
+(`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list`); otherwise there is nothing to put
+back, and `close.md` says nothing about an environment. What the next deploy cannot repair on its
+own, and how to restore it to what the base branch carries, is the project's:
+<!-- point: close/put-back -->
+fetch it with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close put-back`: on exit 0, the
+printed text is the put-back's steps in order, each marked irreversible or not — do them in that
+order, under the rule below; on exit 3, there is no put-back — nothing is restored, so all of it
+counts as not put back below: release what is held, and record what the environment carries;
+on exit 1, 2 or 4, report the one `codeo:` line it printed and do as on exit 3.
+
+<!-- rule: close-12 -->
+Before anything irreversible — a step the put-back marks irreversible, or one that drops data or
+destroys something it cannot recreate — **stop and show it to the engineer**, and do only what
+they approve. Whatever was not put back is written into `close.md`'s outcome, beneath the stash or
+abandon round, with the latest `Deployed revision:` in `implement.md` (or that it records none),
+so the next holder knows what the environment is carrying. A workload or resource this branch
+added is never removed by this skill, put-back or not: the next holder's `/codeo:qc` names it as an
+orphan, a non-blocking finding, so it neither fails anyone's checks nor goes unnoticed. Only then
+release.
+
+**Stash** parks the work, deliberately and with a reason: the `--stash` argument, or the engineer
+saying to park it.
+<!-- rule: close-11 -->
+Never infer a stash from a failing verdict — a change that isn't ready is a send-back, not a park;
+step 2's stop leaves the lease held, the dossier live and the card where it is.
+
+If the dossier is under `.codeo/done/<N>/`, move it back first — `git mv .codeo/done/<N> .codeo/<N>` —
+since parked work is not finished work. Then add the next round to `close.md`'s `## Outcome` (the
+next after the highest `### Round` there, or `### Round 1` when there is none), headed exactly:
+
+<!-- example: stash -->
+```markdown
+### Round <n> — stashed
+```
+
+The heading is exactly that, with no date: the date goes in the first line beneath it and in the
+`## Log` line. `claim.sh --stash-live` counts these headings, and `/codeo:init` resumes from them;
+a date between the round and its kind hides the park from it. Beneath the date, say why the work is
+parked and what the next person needs to pick it up. Commit `close.md` (and the rename, when there
+was one), staged by name, with the subject `docs(codeo): close dossier for #<N> — stashed`, and
+push — a re-run that finds this round already at the tip adds no second one. Then let go of what a
+parked workflow must not hold, in this order:
+
+- Put the environment back, as above.
+- `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease release-all <N>` — every lease the issue
+  holds, the environment's and any other exclusive one, and every wait it still has queued. Quote
+  what it prints; a release that fails is reported with its line and not retried in a loop.
+- `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-remove <N>`, so the team sees the
+  issue is free. When `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" user login` prints nothing,
+  there is no login to remove: skip the call and say so rather than stopping, the same skip
+  `/codeo:init`'s claim makes.
+- With a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$READY"`, so the board
+  shows it free too, and so `/codeo:init`, which starts only a Ready issue, can start it again.
+  Handled as the preamble says: a failure is written into `close.md`'s outcome with `#<N>` and the
+  status to move it to by hand, and never stops the stash.
+
+Then write beneath the round what the environment is left carrying, when the put-back applied,
+and append this invocation's `## Log` line — the date, the stash, what was released, the board
+result, then ` · cost: ` with what `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints —
+and commit `close.md`, staged by name, with the same subject, and push. Delete `.codeo/active`
+last; when the release or a push failed, keep it, say what failed, and that running
+`/codeo:close --stash` again in this checkout finishes the stash. Report that `/codeo:init #<N>`
+resumes it, on any machine. Everything is pushed, so this checkout holds nothing the branch lacks:
+say what is left of it as step 17 does, by the lock's host, read before the lock goes. An open pull
+request stays open; say so.
+
+**Closed unmerged** is the engineer's decision to read, not this skill's: ask, as a numbered
+question in `close.md` (step 0), whether to reopen it (theirs to do on GitHub; running
+`/codeo:close` again then finds it open), stash the work, or abandon it. Abandoning adds the next
+round to `close.md`'s `## Outcome`, headed exactly:
+
+<!-- example: abandon -->
+```markdown
+### Round <n> — abandoned
+```
+
+with the date and then the reason beneath it, never in the heading — it is the heading
+`claim.sh --stash-live` reads, so `/codeo:init` stops an abandoned workflow as abandoned instead of
+resuming it. Then everything a stash does, in the same order: the dossier back to `.codeo/<N>/` if
+it was archived, committed and pushed with the subject
+`docs(codeo): close dossier for #<N> — abandoned`; the environment put back; every lease released;
+the assignee removed. Bar the board: an abandoned issue is not Ready, so with a board
+`bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$BACKLOG"` moves its card there, handled
+as a stash's is (`board: Backlog on #<n>…`, or `board: failed — <reason>` with the card left for
+the engineer to move by hand). Then the `## Log` line, the last commit and push, and the lock
+deleted last, as a stash does. It deletes the branch only if the engineer asks, after the
+same confirmation as step 14 — what the branch carries shown, and asked once — with the same
+`git ls-remote` check, never the base branch, and never a force-push. Work that never merged is
+kept unless someone says otherwise.
+
+<!-- rule: close-13 -->
+Never use `superpowers:finishing-a-development-branch`: it looks like this skill's twin and is
+not, since it offers to merge locally and to discard work, and re-runs checks `/codeo:qc` already
+ran.
+
+## Hand-off
+
+`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md` is the protocol; this is this skill's half of it.
+
+- **Reads** the lock, every dossier file — `qc.md`'s last round above all — and the pull request's
+  state, reviews and checks on GitHub.
+- **Writes** `.codeo/<N>/close.md` — its questions, its `## Outcome` rounds and one `## Log` line
+  per invocation — and the commits carrying it and the archive moves; the pull request and its
+  comments. Nothing else.
+- **Deletes** `.codeo/active` and the merged branch on the remote, and moves the dossier directory
+  in and out of `.codeo/done/`. It is the only skill that may do any of these.
+- **Releases** every lease the issue holds at every exit — the merge, a stash, an abandon — and
+  the environment at approval when it is still held; `/codeo:qc` normally released that already.
+  It removes the issue's assignee on a stash or an abandon, after putting the environment back.
+- **Moves** the issue's board card through `board.sh`, with a board: In review when the pull
+  request opens or is readied again, In progress on a send-back, Ready on a stash, Backlog on an
+  abandon, Done once the merge is verified. Each move is part of its step, never a gate on it.
+- **Never touches** code, tests, documentation pages, the plan's text, the issue's text, another
+  skill's dossier file, or the base branch.
+- **Hands off to** `/codeo:implement` when review asks for changes or the branch conflicts with
+  the base branch — a send-back; otherwise nobody. The workflow ends when the merged branch is
+  cleaned up and the lock released.
+- **Spins out subagents** on the configured subagent model (`$SUBAGENT_MODEL`: `models.subagent`,
+  sonnet when unset), passed explicitly on every dispatch, and prefers a direct `grep`/`Read` over
+  an agent when the target is already known — see
+  `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Spinning out subagents`.
+
+## Non-goals
+
+- Doesn't merge, approve or review the pull request, and doesn't answer review comments on the
+  implementer's behalf beyond step 7's summary of what changed.
+- Doesn't re-run the build, the suites or the acceptance criteria — that is `/codeo:qc`'s, and
+  re-running them here for a friendlier answer would defeat the gate.
+- Doesn't fix anything — not a problem found on the way past, not a review comment. Those are
+  send-backs.
+- Doesn't delete a branch without GitHub's merged state, a tip that matches the pull request's
+  head and the engineer's yes — and never deletes the base branch, force-pushes, or rewrites
+  history.
+- Doesn't commit to the base branch. Its last commit is on the branch, before the merge.
+- Doesn't start the next workflow. Releasing the lock is the invitation; `/codeo:init` is still
+  the engineer's to run.
+- Doesn't remove the checkout it runs in: removing the environment the engineer is looking at is
+  theirs to do, and step 17 says how, from the project's host workflow.
+
+## Tips
+
+- The pull request body is the last thing most people read about the change, and it is already
+  written: the dossiers' outcomes have been accumulating it for four steps. Quote them rather than
+  paraphrase them.
+- A pull request waiting on review is not a stuck workflow; it is Phase 2. Running this skill again
+  to ask "is it merged yet?" is cheap, and exactly what it is for.
+- Release the lock last, in every exit. Any other order leaves a failure in which the workflow is
+  unreachable and nothing records why.

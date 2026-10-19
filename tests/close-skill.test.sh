@@ -6,7 +6,9 @@
 # release at approval recorded in a PR comment, the send-back round with its qc round line, the
 # proof of the merge, the release of every lease, the one question before the branch is deleted,
 # the record on the merged PR, the lock removed last, the point fetches with their exit handling
-# and the last report by the lock's host.
+# and the last report by the lock's host; then the stash and closed-unmerged section, the put-back
+# point, the hand-off, the non-goals, and a behavioural check that the stash and abandon headings
+# the skill writes are the ones `claim.sh --stash-live` reads (scratch repos, no network).
 #
 #   close-skill.test.sh
 #       Exits non-zero and names the failing cases; prints "all cases passed" otherwise.
@@ -46,15 +48,50 @@ step_contains() {
     grep -qF -- "$3" <<<"$text" || fail "$1 — step $2 has no [$3]"
 }
 
+# $1 case, $2 text, $3 fixed string, $4 fixed string whose first occurrence must come after $3's
+# first occurrence, both within $2. Character offsets, so two on one line are ordered too.
+text_order() {
+    local text=$2 before first
+    if [[ $text != *"$3"* || $text != *"$4"* ]]; then
+        fail "$1 — no [$4] after [$3]"
+        return
+    fi
+    before=${text%%"$3"*}
+    first=${#before}
+    before=${text%%"$4"*}
+    ((${#before} > first)) || fail "$1 — [$4] first appears before [$3]"
+}
+
 # $1 case, $2 step number, $3 fixed string, $4 fixed string that must come later in the same step.
 step_order() {
-    local text first second
+    local text
     text=$(step "$2")
-    first=$(grep -nF -- "$3" <<<"$text" | head -1 | cut -d: -f1 || true)
-    second=$(grep -nF -- "$4" <<<"$text" | tail -1 | cut -d: -f1 || true)
-    if [[ -z $first || -z $second ]] || ((second < first)); then
-        fail "$1 — step $2 has no [$4] after [$3]"
-    fi
+    [[ -n $text ]] || { fail "$1 — no step $2 in the skill"; return; }
+    text_order "$1 (step $2)" "$text" "$3" "$4"
+}
+
+# Prints the "## $1" section: from its heading up to the next "## " heading.
+section() {
+    awk -v h="## $1" '
+        $0 == h { f = 1; print; next }
+        f && /^## / { exit }
+        f { print }' "$skill"
+}
+
+# $1 case, $2 section heading, $3 fixed string the section must contain.
+section_contains() {
+    local text
+    text=$(section "$2")
+    [[ -n $text ]] || { fail "$1 — no section [## $2] in the skill"; return; }
+    grep -qF -- "$3" <<<"$text" || fail "$1 — section [$2] has no [$3]"
+}
+
+# $1 case, $2 section heading, $3 fixed string, $4 fixed string that must come later in it.
+section_order() {
+    local text
+    text=$(section "$2")
+    [[ -n $text ]] || { fail "$1 — no section [## $2] in the skill"; return; }
+    text_order "$1 ($2)" "$text" "$3" "$4"
 }
 
 # The frontmatter: stash and abandon are named, and abandoning is the closed-unmerged path.
@@ -135,7 +172,7 @@ step_contains "the record carries the cost" 15 'usage.sh" close'
 
 # Step 16: the lock last.
 step_contains "the lock is deleted" 16 '.codeo/active'
-step_contains "the lock is deleted last" 16 'last'
+step_contains "the lock is deleted last" 16 'Delete `.codeo/active` — last, so a failure anywhere above'
 
 # Step 17: the last report by the lock's host.
 step_contains "the host-workflow point is fetched" 17 'overlay.sh" close host-workflow'
@@ -158,6 +195,138 @@ done
 for pair in close-06:10 close-07:12 close-08:14 close-09:15 close-10:16; do
     id=${pair%%:*} n=${pair#*:}
     step_contains "$id sits in step $n" "$n" "<!-- rule: $id -->"
+done
+
+# Review carry-overs on Phases 2 and 3.
+step_contains "the required-checks read tolerates an absent ci key" 9 "config.sh\" get '.ci.requiredChecks[]?'"
+step_contains "required checks are matched against check runs only" 9 'commit status'
+step_contains "Phase 2 writes nothing until a send-back" 9 'Until a send-back at step 11, this phase writes nothing'
+step_order "the upstream is checked before the merge" 9 'git pull --ff-only' 'git merge --no-edit origin/<base>'
+step_contains "no run for the merge commit is reported" 13 'no run found for the merge commit'
+step_contains "a re-run after a kept lock records only what is new" 15 'the earlier comment stands'
+
+# The stash and closed-unmerged section.
+stash_section='Stash, and closed unmerged'
+section_contains "the stash heading" "$stash_section" '### Round <n> — stashed'
+section_contains "the abandon heading" "$stash_section" '### Round <n> — abandoned'
+section_contains "the date goes beneath the heading" "$stash_section" 'no date'
+section_contains "the put-back point marker" "$stash_section" '<!-- point: close/put-back -->'
+must_follow "the put-back marker sits above its fetch" '<!-- point: close/put-back -->' 'close put-back'
+section_order "the put-back exit 3 is handled" "$stash_section" 'close put-back' 'on exit 3'
+section_order "the put-back failure exits are handled" "$stash_section" 'close put-back' 'on exit 1, 2 or 4'
+section_contains "the put-back runs only when the environment is configured and held" "$stash_section" 'only when `$ENV_RESOURCE` is set and `lease list` shows this issue holding it'
+section_contains "the default records what the environment carries" "$stash_section" 'Deployed revision:'
+section_contains "an orphan workload is never removed" "$stash_section" 'never removed'
+section_contains "close-12 names irreversible steps" "$stash_section" 'irreversible'
+section_contains "close-12 shows the engineer" "$stash_section" 'show it to the engineer'
+section_contains "close-11 never infers a stash" "$stash_section" 'Never infer a stash from a failing verdict'
+section_contains "close-13 names the skill not to use" "$stash_section" 'finishing-a-development-branch'
+section_contains "a stash releases every lease" "$stash_section" 'lease release-all <N>'
+section_order "the put-back comes before the release" "$stash_section" 'close put-back' 'lease release-all <N>'
+section_contains "the assignee is removed" "$stash_section" 'github.sh" issue assignee-remove <N>'
+section_contains "no login is a skip" "$stash_section" 'github.sh" user login'
+section_contains "a stash moves the card to Ready" "$stash_section" 'board.sh" set <N> "$READY"'
+section_contains "an abandon moves the card to Backlog" "$stash_section" 'board.sh" set <N> "$BACKLOG"'
+section_contains "init resumes a stash" "$stash_section" '/codeo:init #<N>'
+section_contains "an open pull request stays open" "$stash_section" 'stays open'
+section_contains "the abandon deletes the branch only on request" "$stash_section" 'same confirmation as step 14'
+section_order "a stash deletes the lock last" "$stash_section" 'lease release-all <N>' 'Delete `.codeo/active`'
+for id in close-11 close-12 close-13; do
+    section_contains "$id sits in the stash section" "$stash_section" "<!-- rule: $id -->"
+done
+for heading in Hand-off Non-goals Tips; do
+    grep -qxF "## $heading" "$skill" || fail "no ## $heading section"
+done
+section_contains "the hand-off says close hands off to implement" Hand-off '/codeo:implement'
+section_contains "the hand-off names the subagent model" Hand-off '$SUBAGENT_MODEL'
+section_contains "the non-goals never force-push" Non-goals 'force-push'
+if grep -qF 'added by the next task' "$skill"; then
+    fail "the placeholder for the next task is still there"
+fi
+
+# Behavioural: the stash and abandon headings the skill tells close to write are the ones
+# `claim.sh --stash-live` reads, so `init` resumes a stash and stops on an abandon. Each is the
+# first "### Round" line within three lines below its "<!-- example: … -->" marker.
+example_heading() {
+    grep -F -A3 -- "<!-- example: $1 -->" "$skill" | grep -m1 -E '^### Round ' || true
+}
+
+export GIT_COMMITTER_NAME="Close Test" GIT_COMMITTER_EMAIL="close-test@example.com"
+export GIT_AUTHOR_NAME="Close Test" GIT_AUTHOR_EMAIL="close-test@example.com"
+scratch_root=$(mktemp -d)
+trap 'rm -rf "$scratch_root"' EXIT
+export HOME="$scratch_root/home"
+mkdir -p "$HOME"
+# claim.sh reads the base branch from the config of the project it runs in, so the project is a
+# repo of its own; the repos it is pointed at are scratch ones, origin reached by a local path.
+project="$scratch_root/project"
+git init -q "$project"
+mkdir -p "$project/.codeo"
+printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}\n' > "$project/.codeo/config.json"
+
+origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
+git -C "$origin" -c init.defaultBranch=main init -q
+git -C "$origin" config gc.auto 0
+git -C "$origin" config maintenance.auto false
+git -C "$origin" config receive.autogc false
+echo placeholder > "$origin/README.md"
+git -C "$origin" add README.md
+git -C "$origin" commit -q -m init
+
+# park_branch <branch> <heading>: pushes <branch> off main with init.md and a close.md whose
+# ## Outcome carries that heading, then fetches; prints the clone's path.
+park_branch() {
+    local c
+    c=$(mktemp -d "$scratch_root/clone.XXXXXX")
+    git clone -q "$origin" "$c"
+    git -C "$c" checkout -q -b "$1" origin/main
+    mkdir -p "$c/.codeo/42"
+    printf '## Log\n\n- initialized: branch %s\n' "$1" > "$c/.codeo/42/init.md"
+    printf '## Outcome\n\n%s\n\n2026-10-19 — parked: why, and what the next person needs\n' "$2" > "$c/.codeo/42/close.md"
+    git -C "$c" add .codeo
+    git -C "$c" commit -q -m "docs(codeo): close dossier for #42"
+    git -C "$c" push -q origin "$1"
+    git -C "$c" fetch -q origin
+    printf '%s' "$c"
+}
+
+status=0 out=
+run_stash_live() {
+    status=0
+    out=$(cd "$project" && bash "$plugin_root/scripts/claim.sh" --stash-live 42 "$1" "$2" 2>&1) || status=$?
+}
+
+for kind in stash abandon; do
+    heading=$(example_heading "$kind")
+    if [[ -z $heading ]]; then
+        fail "no ### Round heading under <!-- example: $kind -->"
+        continue
+    fi
+    if grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}' <<<"$heading"; then
+        fail "the $kind heading the skill writes carries a date: [$heading]"
+    fi
+    heading=${heading//<n>/2}
+    clone=$(park_branch "feat/$kind" "$heading")
+    run_stash_live "feat/$kind" "$clone"
+    if [[ $kind == stash ]]; then
+        [[ $status == 0 && $out == *"claim: #42's stash is live"* ]] ||
+            fail "claim.sh does not read the skill's stash heading [$heading] as live: exit $status [$out]"
+    else
+        [[ $status == 4 && $out == *"claim: #42 was abandoned on "* ]] ||
+            fail "claim.sh does not read the skill's abandon heading [$heading] as abandoned: exit $status [$out]"
+    fi
+done
+
+# A date written into the heading's own place, between the round and its kind, breaks the
+# "### Round <n> — " prefix the reader needs: that park is invisible, which is why the date goes
+# beneath the heading.
+i=0
+for heading in "### Round 2 (2026-10-19) — stashed" "### 2026-10-19 Round 2 — stashed" "### Round 2, 2026-10-19 — abandoned"; do
+    i=$((i + 1))
+    clone=$(park_branch "feat/dated$i" "$heading")
+    run_stash_live "feat/dated$i" "$clone"
+    [[ $status == 3 && $out == *"has no stash"* ]] ||
+        fail "a dated heading [$heading] counted as a park: exit $status [$out]"
 done
 
 if ((failures)); then
