@@ -34,4 +34,9 @@ rc=0
 out=$(bash "$runner" 2>&1) || rc=$?
 [[ "$rc" -ne 0 ]] || fail "no filter runs every file, so the failing one should fail the run"
 
+# The suite is hermetic: a CODEO_GOLDEN_DIR in the caller's environment never reaches a test, so
+# the replay runs its synthetic directory rather than a project's golden data.
+printf '#!/usr/bin/env bash\n[[ -z ${CODEO_GOLDEN_DIR+set} ]] || { echo "golden dir leaked"; exit 1; }\n' > "$scratch/tests/gamma.test.sh"
+out=$(CODEO_GOLDEN_DIR=/nowhere bash "$runner" gamma 2>&1) || fail "CODEO_GOLDEN_DIR must be unset for the tests: $out"
+
 echo "all cases passed"

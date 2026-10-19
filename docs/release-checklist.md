@@ -83,8 +83,16 @@ constrain other people and accidents, not the owner.
 
    It must end `all cases passed`.
 
+   When a project keeps a golden directory of finished dossiers, replay it too:
+
+   ```bash
+   CODEO_GOLDEN_DIR=<the project's golden directory> bash tests/replay.test.sh
+   ```
+
+   It must end `all as expected`.
+
    The changelog's `Shared state:` line must name every dossier convention a script or a skill
-   reads back — today `qc round at review: <k>` and `### Round <n> — stashed|abandoned` — since a
+   reads back — today `qc round at review: <k>`, `### Round <n> — stashed|abandoned` and the forms the dossier checker reads — since a
    project mid-workflow carries dossiers written to them.
 
 7. Tag and push the release, then check it from a clean clone:

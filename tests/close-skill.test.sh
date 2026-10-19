@@ -113,6 +113,13 @@ step_contains "the conflict log follows the first parent" 3 "git log --first-par
 
 # Step 5: the record follows a first-open conflict round.
 step_contains "the record goes in as the next round after a conflict round" 5 'next `### Round <n>`'
+# Step 5: the dossier forms docs/dossier.md documents and the dossier checker reads.
+step_contains 'the opened round'\''s date is its first line' 5 'In the `— pull request opened` round, the date is the round'\''s first line, beneath the heading,'
+step_contains 'the opened round records #number html_url' 5 'and the pull request is the line `#<number> <html_url>`, from the two fields `pr create`'
+step_contains 'the opened round writes no send-back parenthesis' 5 'It writes no send-back parenthesis, even'
+step_contains 'a return from review is a pull request updated round' 5 'A return from review is headed `### Round <n> — pull request updated`, with the date as its'
+step_contains 'the updated round names the review round on the next line' 5 'first line and, on the next line, `(send-back from close.md round <m>)` naming the review round'
+step_contains 'pull request opened heads exactly one round' 5 '`— pull request opened` heads exactly one round'
 
 # Step 7: the review-return comment body is written outside the tree.
 step_order "the review-return comment body is a mktemp file" 7 'pr comment <PR> <body-file>' 'mktemp'

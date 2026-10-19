@@ -20,7 +20,14 @@ fail() {
 # $1 case, $2 fixed string the skill must contain.
 must_contain() { grep -qF -- "$2" "$skill" || fail "$1 — no [$2]"; }
 
+# Step 8: the dossier forms docs/dossier.md documents and the dossier checker reads.
+must_contain 'every later round'\''s date is its first line' 'Every later round'\''s date is its first line,'
+must_contain 'the link goes on the next line' 'beneath the heading, and the next line names what the round answers:'
+must_contain 'a qc or close send-back round names its source' '`(send-back from qc.md round <k>)` or `(send-back from close.md round <k>)` for the round'
+must_contain 'a round after a re-plan names the plan round' 'step 3 read, or `(after plan.md round <k>)` when it follows a re-plan'
+
 must_contain "the Outcome line qc reads" 'Deployed revision:'
+must_contain "the revision is a bare line" 'Write `Deployed revision: <x>` as a bare line under'
 must_contain "the subagent model read" "config.sh\" get '.models.subagent // \"sonnet\"'"
 # Word-bounded: environment.hooks.deployed is qc's hook, not this one.
 grep -qE 'hooks\.deploy([^A-Za-z]|$)' "$skill" || fail "the deploy hook — no [hooks.deploy] (hooks.deployed does not count)"

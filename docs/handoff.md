@@ -291,7 +291,10 @@ destroys the independence that made the finding worth anything. Write the round,
 change, route it, and stop.
 
 The receiving step opens a new round in its own dossier rather than editing the round that was
-already answered, so the file shows what the send-back changed. A send-back returns to the sender
+already answered, so the file shows what the send-back changed. One edit is sanctioned: a
+`plan.md` round answering a send-back replaces the earlier round's `### Footprint` block with its
+own, since `overlap.sh` and `inflight.sh` read every block and a stale one goes on producing
+overlaps. A send-back returns to the sender
 once the receiving step is done, and the pass then runs again in full. Re-checking only the part
 that changed is how a regression ships.
 

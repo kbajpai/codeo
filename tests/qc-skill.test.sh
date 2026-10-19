@@ -61,6 +61,19 @@ done < <(grep -oE '(never `)?implement\.md' <<<"$step7" || true)
 must_follow "debugging stops at Phase 1" 'Stop at the end of' 'Phase 1'
 must_contain "the blocking axis" '**Blocking or not.**'
 must_contain "the whose axis" '**Whose it is.**'
+# The dossier forms docs/dossier.md documents and the dossier checker reads.
+must_contain 'every finding says blocking or non-blocking' 'every finding in `qc.md` says `blocking` or'
+must_contain 'the non-blocking spelling' '`non-blocking`, so a reader'
+must_contain 'a fixed finding is recapped, not live' 'write it `(blocking in round <k>)`'
+must_contain 'the criteria table is found by its Verdict column' 'Its verdict column is headed `Verdict`'
+must_contain 'the quoted revision is a bare line' 'quote it in the block as a bare line'
+must_contain 'the criteria mapping is a table' 'The criterion-by-criterion result is a table with one row per acceptance criterion'
+must_contain 'the four verdict values' 'begins with `met`, `not met`, `untestable` or'
+must_contain 'the verdict is a prefix and any text may follow' '`not yet checkable` — a prefix, after which any text may follow in the cell, and further'
+must_contain 'an environment criterion names the environment' 'A criterion step 9 settles names the environment in its settled-by column (`environment`),'
+must_contain 'the environment row points at the Environment block' 'which points at this round'\''s `#### Environment` block'
+must_contain 'an early stop still maps every criterion' 'still has a row for every criterion: those the pass did not reach read'
+must_contain 'the unreached criteria form' '`not yet checkable — pass stopped at step <k>`.'
 
 # Step 9: environment evidence.
 must_contain "the revision is read as implement writes it" 'Deployed revision:'

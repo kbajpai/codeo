@@ -176,7 +176,7 @@ pages under `$DOCS`).
    - The log's last line is the revision it deployed. An empty last line means `HEAD` as it is
      now — `git rev-parse HEAD` after the hook and the clean-tree check, so a bookkeeping commit
      the hook made is part of it; record that, and say the hook printed no revision.
-   - Write `Deployed revision: <x>` under `## Where this stands` in `.codeo/<N>/implement.md` and
+   - Write `Deployed revision: <x>` as a bare line under `## Where this stands` in `.codeo/<N>/implement.md` and
      commit the dossier there and then, staged by name, with the subject
      `docs(codeo): implement dossier for #<N> — deployed <revision as printed, or its short SHA>`,
      and push — so the revision survives a turn that stops before step 8. Step 8 repeats it in the
@@ -273,7 +273,13 @@ pages under `$DOCS`).
    may still be open at this point. Record what was built, the documentation pages changed, the
    build result, `Deployed revision: <x>` repeated from `## Where this stands` when the round
    deployed, and anything that deviated from the plan and why; a round after a send-back goes
-   beneath the first as its own dated `### Round <n>`. Append one `## Log` line, ending `· cost: ` with what
+   beneath the first as its own dated `### Round <n>`. Every later round's date is its first line,
+   beneath the heading, and the next line names what the round answers:
+   `(send-back from qc.md round <k>)` or `(send-back from close.md round <k>)` for the round
+   step 3 read, or `(after plan.md round <k>)` when it follows a re-plan — the `plan.md` round
+   that answered a send-back to `/codeo:plan`
+   (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
+   Append one `## Log` line, ending `· cost: ` with what
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" implement` prints, then commit the dossier, staged
    by name, and push as at step 4, with the subject `docs(codeo): implement dossier for #<N>`
    (`— round <n>` for a later round; `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).

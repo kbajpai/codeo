@@ -56,7 +56,8 @@ with a different reader: the project's documentation (`docsDir` in the config, a
 `wiki` module's pages), which `handoff.md` describes.
 
 `/codeo:issue` runs before the issue has a number, so it writes `.codeo/intake/new-<slug>/` and
-renames the directory to `.codeo/intake/<N>/` once the issue is filed. `/codeo:init` adopts that
+renames the directory to `.codeo/intake/<N>/` once the issue is filed, rewriting `issue.md`'s
+first line to `# Issue #<N> — issue` in the same commit. `/codeo:init` adopts that
 `issue.md` into `.codeo/<N>/` on the branch it cuts, rather than objecting that it already exists.
 
 There is always an `<N>` to key on, because `/codeo:init` is the only way into the flow and it
@@ -238,6 +239,76 @@ sequenced:  after #7 — both add an Orders migration (Q6)
 
 A key with nothing under it says `none` rather than disappearing, so a missing line means the
 plan never looked, not that it found nothing.
+
+## What a finished dossier looks like
+
+The skills write a handful of fixed forms into `## Outcome`, and the dossier checker reads them.
+Each is stated here once; a skill's `SKILL.md` says when it writes one.
+
+- **Rounds.** `## Outcome`'s rounds are `### Round <n>` headings, numbered consecutively. The
+  first round may be written unheaded — `implement.md` and `plan.md` write theirs that way — and
+  the next is then `### Round 2`; every later round in those two files has its date as its first
+  line. `qc.md` heads every round, from `### Round 1`, as `### Round <n> — <YYYY-MM-DD>`: the
+  `qc-verdict` check finds the latest round by its heading. `close.md` heads every round from
+  `### Round 1` too, as `### Round <n> — <what happened>` — `pull request opened`,
+  `review feedback`, `conflicts with <base>`, `pull request updated`, `stashed`, `abandoned` —
+  with the date as the round's first line.
+- **Send-backs.** A later `implement.md` or `plan.md` round, and `close.md`'s
+  `— pull request updated` round, name what they answer in one parenthesis on the line after the
+  date: `(send-back from <file> round <k>)` for a send-back — `(send-back from qc.md round 2)`,
+  `(send-back from close.md round 3)` — and, in `implement.md`, `(after plan.md round <k>)` for a
+  round that follows a re-plan. `<k>` is the other file's round, not this one's. No other round
+  carries one: `close.md`'s `— pull request opened` round writes none, even after a
+  `— conflicts with <base>` round from before the pull request existed. A send-back to
+  `/codeo:plan` adds a round to `plan.md` like any other receiving step (`handoff.md` →
+  *A send-back*), and its `### Footprint` replaces the earlier round's block — the one edit an
+  answered round takes, because `overlap.sh` and `inflight.sh` read every block in the file.
+- **Criteria.** Each `qc.md` round maps every acceptance criterion — one per `- [ ]` line in
+  `init.md`'s `## Outcome` — in a table, one row per criterion. The verdict cell begins with one of
+  `met`, `not met`, `untestable` or `not yet checkable`: a prefix match, after which any text may
+  follow (`untestable here — no evidence hook` is valid), and further columns may carry more.
+  `not yet checkable` is a criterion this round could not settle — environment evidence it could
+  not read, or a pass that stopped early (a conflict, a broken build, a missing deploy), whose
+  unreached criteria read `not yet checkable — pass stopped at step <k>`. A criterion settled by
+  the environment says `environment` in its settled-by column, pointing at the round's
+  `#### Environment` block.
+- **Findings.** Every finding says `blocking` or `non-blocking`. A round with a blocking finding is
+  never routed to `/codeo:close`. An empty answer such as `Blocking findings: none` is not a
+  finding. Neither is a recap of an earlier round's finding, such as
+  `F1 (blocking in round 1) — fixed by <commit>` or `(was blocking)`. A finding marked fixed is
+  not live either: its parenthesis closes and a dash follows with `fixed` or `resolved`, as in
+  `F1 (blocking) — fixed by <commit>`. A row of the criteria table is not a finding either.
+- **The pull request.** `close.md` records an opened pull request in a round headed
+  `### Round <n> — pull request opened`, its date on the first line and the pull request as the
+  line `#<number> <html_url>`, from `pr create`'s response; exactly one round carries that
+  heading, and a return from review is `— pull request updated`. Every `— review feedback` or
+  `— conflicts with <base>` round carries the line `qc round at review: <k>`, `<k>` being the
+  latest `qc.md` round when it was written.
+- **Form lines.** `Deployed revision: <x>` in `implement.md`, under `## Where this stands` or in
+  an `## Outcome` round, and quoted by `qc.md` in its `#### Environment` block;
+  `Lease not held: <line>`, `Environment released at the clear verdict: <output>` and
+  `Environment NOT released: <output>` in a `qc.md` round. None is required; each, when present,
+  starts its line in exactly that form.
+
+A `qc.md` criteria table, for an imaginary shop's order export:
+
+```markdown
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| The export lists only paid orders | met | `tests/export.test.sh` — paid-only case |
+| The export file names the day it covers | not met — names the run time | `src/export/file.sh:14` |
+| An export of an empty day is a header row only | untestable — no fixture has an empty day | — |
+| The nightly job writes to the shared bucket | not yet checkable — lease not held | environment |
+| The export retries a failed upload once | not yet checkable — pass stopped at step 9 | — |
+```
+
+A park heads its round in `close.md` with one of the headings `claim.sh --stash-live` reads, the
+date on the line beneath:
+
+```markdown
+### Round 4 — stashed
+### Round 5 — abandoned
+```
 
 ## Questions, and the cycle
 

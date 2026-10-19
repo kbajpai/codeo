@@ -214,6 +214,13 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
      distinction is the routing decision, so make it deliberately rather than defaulting everything
      to the implementer.
 
+   Write the first answer in those words: every finding in `qc.md` says `blocking` or
+   `non-blocking`, so a reader — or the dossier checker — can tell a round that must not go to
+   `/codeo:close` (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
+   A blocking finding from an earlier round that has since been fixed is recapped, not raised
+   again: write it `(blocking in round <k>)`, as in `F1 (blocking in round 1) — fixed by <commit>`,
+   so it reads as history and not as a live blocking finding.
+
    For a failing test or a finding whose cause is not obvious from the diff, invoke
    `superpowers:systematic-debugging` via the Skill tool and run *Phase 1: Root Cause
    Investigation* only. The root cause is what decides whose finding it is. **Stop at the end of
@@ -265,7 +272,8 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
 
    **The revision.** Read the most recent `Deployed revision: <x>` in `.codeo/<N>/implement.md` —
    the one under `## Where this stands` when there is one, else the last in `## Outcome` — and
-   quote it in the block, with any `lease <resource> taken with override: <reason>` on that file's
+   quote it in the block as a bare line (`Deployed revision: <x>`, with no bullet, bold or quote
+   marker in front of it), with any `lease <resource> taken with override: <reason>` on that file's
    `## Log` lines. With none, while step 2's `scope.sh origin/<base> HEAD` printed `deploy=true`
    (or, with no `deploy=` line, the diff plainly alters what the environment runs) and a criterion
    needs the environment, this branch was never put there: that is a send-back to
@@ -386,6 +394,17 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
     criterion-by-criterion result with the test or line that settles each, the documentation check,
     the `#### Environment` block when step 9 ran, every finding with its classification, the number
     of any issue `/codeo:issue` filed for this pass, and the routing decision.
+    The criterion-by-criterion result is a table with one row per acceptance criterion in
+    `init.md`. Each row's verdict cell begins with `met`, `not met`, `untestable` or
+    `not yet checkable` — a prefix, after which any text may follow in the cell, and further
+    columns may carry more — so step 9's *untestable here — no evidence hook* stands as written.
+    Its verdict column is headed `Verdict`: that header cell is how the dossier checker finds the
+    table.
+    A criterion step 9 settles names the environment in its settled-by column (`environment`),
+    which points at this round's `#### Environment` block for the command and its output.
+    A round that stopped early — a conflict at step 2, a broken build at step 3, a send-back at
+    step 9 — still has a row for every criterion: those the pass did not reach read
+    `not yet checkable — pass stopped at step <k>`.
     <!-- rule: qc-09 -->
     The decision is a bold span, `**Verdict: …**` or `**Routing: …**`, with the label inside the
     bold, and only the last such span of the round counts. The project's `qc-verdict` check
