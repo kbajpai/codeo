@@ -141,18 +141,23 @@ pages under `$DOCS`).
      back already-merged work; if it refuses on that, run step 2a again, then take again.
    - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take "$ENV_RESOURCE" <N> "<task name>"`.
      The take also runs the project's environment hooks (`start`, `preflight`, `activate`) before
-     it publishes anything. It refuses in two kinds of way, and they are handled apart:
-     - **The queue.** The refusal names the issue that holds the lease (`is leased to #<M>`) or
-       whose turn it is (`is #<M>'s turn`). That is a wait — *A take that is queued*, below.
+     it publishes anything. Its refusals are handled apart:
+     - **The queue.** The refusal names the issue that holds the lease
+       (`<resource> is leased to #<M>`) or the waiter whose turn it is
+       (`<resource> is #<M>'s turn — … keeps right of way until <time>`). That is a wait — *A take
+       that is queued*, below.
      - **A hook.** The refusal reads `intake: <resource> refused — the <name> hook exited <rc>`, and
        nothing was published. That is not a wait: report the hook and what it printed to the
-       engineer, record **no** wait, and stop. A failing hook is the project's to fix, and
+       engineer, record no wait, and stop. A failing hook is the project's to fix, and
        `--override` does not get past it.
+     - **Anything else** — origin unreachable, a push that failed after its retries: report the one
+       line it printed and stop, and record no wait.
    - Only with the engineer's say-so take it with `--override "<reason>"` — the reason goes to the
      hooks, which decide whether it excuses anything — and put
      `lease <resource> taken with override: <reason>` in this round's `## Log` line.
 
-   **Then deploy.** Read the project's deploy step with
+   **Then deploy — right after the take, before dispatching the task that needed it**, so that task
+   runs against this branch as deployed. Read the project's deploy step with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.hooks.deploy`. Nothing printed
    (exit 1) while the plan has a `Needs lease:` task is a plan gap: stop and report it — the plan
    needs the environment and the project has no way to put this branch there. Otherwise, from the
@@ -177,28 +182,45 @@ pages under `$DOCS`).
    **A take that is queued** stops at that task. Record the wait with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease wait "$ENV_RESOURCE" <N>`. Every task
    before it is done and committed, so write `## Where this stands` in `.codeo/<N>/implement.md`
-   to say so and who holds the lease, commit and push the dossier as at step 4, and end the turn.
-   Offer the engineer a background watch instead of a bare stop — the Monitor tool on
-   `until ! bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list | grep -qFx "== $ENV_RESOURCE — held"; do sleep 300; done`,
-   which fires once the resource leaves the held list and costs nothing while it waits. When it
-   fires, resume from this task, taking the lease first — someone else may have been quicker.
+   to say so and who holds the lease or has the turn, commit and push the dossier as at step 4,
+   and end the turn. Offer the engineer a background watch instead of a bare stop — the Monitor
+   tool, which notifies the session and costs nothing while it waits; the watch is the engineer's
+   to accept, never a loop this skill runs itself:
+   - after `is leased to #<M>`, a watch until the resource leaves the held list —
+     `until ! bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list | grep -qFx "== $ENV_RESOURCE — held"; do sleep 300; done`;
+   - after `is #<M>'s turn`, the resource is already free, so that watch would fire at once: watch
+     instead until the `keeps right of way until <time>` the refusal names has passed —
+     `until (( $(date -u +%s) >= $(date -u -d "<time>" +%s) )); do sleep 300; done`.
 
-   **A round after a send-back or review may need the environment again.** Before the hand-off to
-   QC, find the revision the environment last ran for this issue: the one recorded in `qc.md`'s
-   last environment block, or else the last `Deployed revision:` in this file's `## Outcome`. With
-   neither, the issue never used the environment: there is nothing to compare, so take the lease
-   only if this round newly needs it. Otherwise run
+   When it fires, resume from this task, taking the lease first — the holder or the waiter ahead
+   may still have it, or someone else may have been quicker, and a refusal then is handled as
+   above.
+
+   **Before the hand-off to QC, in every round — the first included — check whether the
+   environment still runs this branch**, since a later task can change what it runs. The revision
+   to compare is the last `Deployed revision:` in this file's `## Outcome` (only this skill
+   deploys). With none, the issue never used the environment: there is nothing to compare, so take
+   the lease only if this round newly needs it. Otherwise run
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD` and read its `deploy=`
    line. `deploy=false` means no environment work and no take. `deploy=true` means take the lease
-   again (`lease take "$ENV_RESOURCE" <N> "<round>"`, which queues behind any waiter: a queue
-   refusal is the same record-a-wait stop as above), deploy as above, and record the new
-   `Deployed revision:` in the round's outcome. The script never overrules the diff you read: a
-   change you can see alters what the environment runs is a redeploy whatever it prints — say why.
+   (`lease take "$ENV_RESOURCE" <N> "<round>"`, a re-take while this issue still holds it, else
+   queued behind any waiter: a queue refusal is the same record-a-wait stop as above), deploy as
+   above, and record the new `Deployed revision:` in the round's outcome. Two cases the line
+   cannot answer: with no suites configured the script prints no `deploy=` line at all, and a
+   revision that does not resolve here (a tag not fetched, say) still gets `deploy=false` and exit
+   0, with only a `fatal:` from git on stderr — so first check it with
+   `git rev-parse --verify "<revision>^{commit}"`, fetching once if that fails. In either case
+   decide from `git diff <revision>...HEAD` yourself, redeploy when the revision still cannot be
+   resolved, and say which you did, and why, in the outcome.
+   The script never overrules the diff you read: a change you can see alters what the environment
+   runs is a redeploy whatever it prints — say why.
 
    **Documentation tasks are tasks like any other**, dispatched and reviewed the same way: pages
    under `$DOCS`, and wiki pages when `$WIKI` is set. A page describes what the system does
    *after* this change — present tense, no issue numbers, no "now", no history of what it used to
-   do — because it is read long after anyone remembers the issue.
+   do — because it is read long after anyone remembers the issue. Draw each diagram the way the
+   plan's task says to; if a diagram tool the task names cannot run, stop and say so in
+   `## Outcome` rather than committing a diagram it did not produce.
    <!-- point: implement/wiki-rules -->
    Fetch the project's documentation rules with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" implement wiki-rules`: on exit 0, follow the
@@ -248,9 +270,10 @@ pages under `$DOCS`).
   module) that the plan's documentation tasks name, the project's overlay sections for this skill,
   and every other in-flight workflow's footprint through `inflight.sh` and `overlap.sh`.
 - **Takes** the lease on `$ENV_RESOURCE`, when one is configured, at the first task that needs it,
-  and records a wait when another issue holds it — through `intake.sh lease` only — and again in a
-  review round when `scope.sh`'s `deploy=` line is `true`. It never releases it; that is
-  `/codeo:qc`'s, at its clear verdict.
+  and records a wait when another issue holds it or has the turn — through `intake.sh lease` only
+  — and again before any round's hand-off when the change since the last deployed revision alters
+  what the environment runs (`scope.sh`'s `deploy=true`, or the diff read directly). It never
+  releases it; that is `/codeo:qc`'s, at its clear verdict.
 - **Writes** application and test code, the documentation pages the plan names, and
   `.codeo/<N>/implement.md` — its questions, its `## Outcome`, and one `## Log` line per
   invocation — committed and pushed on every turn it writes it.
