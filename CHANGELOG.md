@@ -9,7 +9,11 @@ Safe to bump mid-workflow: yes
 - The repository names no project that uses it: design documents about a specific project live in that
   project's repository. `tests/agnostic.test.sh` fails if a tracked file mentions one.
 - `docs/skills-inventory.md`: the generic rules each pipeline skill must keep.
-- Skills: `/codeo:issue`, `/codeo:init`, `/codeo:plan` and `/codeo:triage`.
+- Skills: `/codeo:issue`, `/codeo:init`, `/codeo:plan`, `/codeo:implement` and `/codeo:triage`.
+- `/codeo:implement` registers two extension points, `environment-lease-notes` and `wiki-rules`.
+- Suite field `parallel`, read by `/codeo:implement`.
+- The `environment.hooks.deploy` contract: its last stdout line is the deployed revision, a non-zero exit
+  fails the task, and a dirty working tree after the hook is a stop.
 - The overlay mechanism: a project's `.codeo/overlays/<skill>.md` sections are read at the skills' extension
   points through `scripts/overlay.sh`, against the registry `lib/extension-points.tsv`.
   `docs/extension-points.md` documents the format and each point.
@@ -28,7 +32,7 @@ Safe to bump mid-workflow: yes
 
 - The pinned rule inventory must be regenerated deliberately: editing `docs/skills-inventory.md` without
   updating the pin fails `tests/inventory.test.sh`.
-- `implement`, `qc` and `close` are not in this release.
+- `qc` and `close` are not in this release.
 - A suite's `filter` is a command template for one test, `{}` standing for the test's name; a suite without
   one has no single-test form and its whole `test` command is the proof.
 

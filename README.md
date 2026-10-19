@@ -17,10 +17,11 @@ The pipeline skills run in this order, each owning one dossier file under `.code
 | `/codeo:issue` | Turn a raw idea or finding into a well-formed GitHub issue through a question-and-answer pass | none |
 | `/codeo:init` | Start work on a Ready issue: claim the branch, write its dossier, take the lock, hand off to plan | `host-workflow` |
 | `/codeo:plan` | Explore, ask, and document a change as a reference doc or implementation plan, and check its footprint against every other workflow in flight | `plan-shape`, `proof-of-done`, `environment-lease-notes`, `wiki-rules` |
+| `/codeo:implement` | Execute the approved plan task by task through the superpowers execution skills, deploy to a shared environment under its lease when the plan needs it, build, and hand off to QC | `environment-lease-notes`, `wiki-rules` |
 | `/codeo:triage` | Find the loose ends development left behind and route them to issues | `todo-excludes` |
 
-This release stops at `/codeo:plan`: `implement`, `qc` and `close` are not yet included, and the
-plan skill hands off to `/codeo:implement`, which is not shipped here.
+This release stops at `/codeo:implement`: `qc` and `close` are not yet included. The plan skill
+hands off to `/codeo:implement`, which ships here; implement hands off to `qc`, which does not.
 
 `/codeo:setup` writes the project's `.codeo/config.json`, and `/codeo:doctor` checks the setup,
 including the project's overlay files.
