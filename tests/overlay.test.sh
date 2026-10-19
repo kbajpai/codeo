@@ -168,13 +168,24 @@ implement_points_are_registered_and_absent() {
     [[ "$rc" -eq 2 ]] || fail "implement no-such-point rc=$rc"
 }
 
+qc_points_are_registered_and_absent() {
+    local repo; repo=$(make_repo)
+    local p
+    for p in environment-evidence wiki-rules invariants-extra; do
+        run_overlay "$repo" qc "$p"
+        [[ "$rc" -eq 3 ]] || fail "qc $p rc=$rc err=$err"
+    done
+    run_overlay "$repo" qc nonsense
+    [[ "$rc" -eq 2 ]] || fail "qc nonsense rc=$rc"
+}
+
 env_header_documents_parallel_and_deploy() {
     local header; header=$(grep '^#' "$plugin_root/lib/env.sh")
     grep -Eq '(^|[^a-z])parallel([^a-z]|$)' <<<"$header" || fail "env.sh header lacks parallel"
     grep -Eq '(^|[^a-z])deploy([^a-z]|$)' <<<"$header" || fail "env.sh header lacks deploy"
 }
 
-for c in implement_points_are_registered_and_absent env_header_documents_parallel_and_deploy unreadable_overlay_exits_1_one_line unreadable_registry_exits_1_one_line heading_at_eof_without_newline_is_found heading_with_extra_words_does_not_match heading_inside_a_code_fence_ends_the_section \
+for c in implement_points_are_registered_and_absent qc_points_are_registered_and_absent env_header_documents_parallel_and_deploy unreadable_overlay_exits_1_one_line unreadable_registry_exits_1_one_line heading_at_eof_without_newline_is_found heading_with_extra_words_does_not_match heading_inside_a_code_fence_ends_the_section \
     present_section_is_printed_trimmed absent_file_exits_3_silently empty_section_exits_3 \
     missing_section_exits_3 unknown_pair_exits_2_one_line regex_characters_in_a_point_are_literal \
     crlf_file_is_normalised duplicate_section_exits_4_naming_lines section_ends_at_next_heading; do

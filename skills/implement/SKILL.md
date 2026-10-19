@@ -216,7 +216,11 @@ pages under `$DOCS`).
    than every one in `## Outcome`), else the last in `## Outcome` (only this skill deploys). With none, the issue never used the
    environment: there is nothing to compare, so take the lease only if this round newly needs it.
    Otherwise run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD` and read its
-   `deploy=` line. `deploy=false` means no environment work and no take. `deploy=true` means read
+   `deploy=` line. `deploy=false` means no environment work and no take — except when the latest
+   round in `.codeo/<N>/qc.md` says `Lease not held:`: the branch came back because this issue no
+   longer held the lease, and another issue may have deployed since, so take the lease and deploy
+   as below whatever the script prints, record the new `Deployed revision:`, and say in the
+   outcome that qc's round asked for it. `deploy=true` means read
    the deploy step and take the lease as above (`lease take "$ENV_RESOURCE" <N> "<round>"`, a
    re-take while this issue still holds it, else queued behind any waiter: a queue refusal is the
    same record-a-wait stop as above), deploy as above, and record the new `Deployed revision:` as
