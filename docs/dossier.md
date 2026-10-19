@@ -239,6 +239,54 @@ sequenced:  after #7 — both add an Orders migration (Q6)
 A key with nothing under it says `none` rather than disappearing, so a missing line means the
 plan never looked, not that it found nothing.
 
+## What a finished dossier looks like
+
+The skills write a handful of fixed forms into `## Outcome`, and the dossier checker reads them.
+Each is stated here once; a skill's `SKILL.md` says when it writes one.
+
+- **Rounds.** `## Outcome`'s rounds are `### Round <n>` headings, numbered consecutively. The
+  first round may be written unheaded — `implement.md` and `plan.md` write theirs that way — and
+  the next is then `### Round 2`. `qc.md` heads every round, from `### Round 1`, as
+  `### Round <n> — <YYYY-MM-DD>`: the `qc-verdict` check finds the latest round by its heading.
+  `close.md` heads every round from `### Round 1` too, as `### Round <n> — <what happened>`, with
+  the date as the round's first line.
+- **Send-backs.** A round that answers a send-back names the file and round it answers in one
+  parenthesis — `(send-back from qc.md round 2)`, `(send-back from close.md round 3)` — so a reader
+  can follow the change between files. A send-back to `/codeo:plan` adds a round to `plan.md` like
+  any other receiving step (`handoff.md` → *A send-back*).
+- **Criteria.** Each `qc.md` round maps every acceptance criterion — one per `- [ ]` line in
+  `init.md`'s `## Outcome` — in a table, one row per criterion, whose verdict cell begins with
+  exactly one of `met`, `not met`, `untestable` or `not yet checkable` (environment evidence this
+  round could not read). A note may follow after a dash, or sit in another column.
+- **Findings.** Every finding says `blocking` or `non-blocking`. A round with a blocking finding is
+  never routed to `/codeo:close`.
+- **The pull request.** `close.md` records an opened pull request in a round headed
+  `### Round <n> — pull request opened`, carrying its number and URL (`#<n> <url>`). Every
+  `— review feedback` or `— conflicts with <base>` round carries the line
+  `qc round at review: <k>`, `<k>` being the latest `qc.md` round when it was written.
+- **Form lines.** `Deployed revision: <x>` in `implement.md`; `Lease not held: <line>`,
+  `Environment released at the clear verdict: <output>` and `Environment NOT released: <output>` in
+  `qc.md`. None is required; each, when present, starts its line in exactly that form.
+
+A `qc.md` criteria table, for an imaginary shop's order export:
+
+```markdown
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| The export lists only paid orders | met | `tests/export.test.sh` — paid-only case |
+| The export file names the day it covers | not met — names the run time | `src/export/file.sh:14` |
+| An export of an empty day is a header row only | untestable — no fixture has an empty day | — |
+| The nightly job writes to the shared bucket | not yet checkable — lease not held | environment |
+```
+
+A park heads its round in `close.md` with exactly one of these, the date on the line beneath —
+the headings `claim.sh --stash-live` reads:
+
+```markdown
+### Round 4 — stashed
+### Round 5 — abandoned
+```
+
 ## Questions, and the cycle
 
 - **A question with an empty `**Answer:**` body is open.** That is the only definition of open
