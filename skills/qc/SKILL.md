@@ -232,7 +232,8 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
 
    **Stopping here.** A stop in this step keeps the pass so far: write it under
    `## Where this stands` and `## Notes` in `qc.md`, append this invocation's `## Log` line as at
-   step 11, commit the file, staged by name, and push, then stop. A push that fails because origin
+   step 11, commit the file, staged by name, with the subject
+   `docs(codeo): qc dossier for #<N> — stopped at step 9`, and push, then stop. A push that fails because origin
    is down is reported and the commit kept (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`:
    a failed push is loud but not fatal).
 
@@ -246,7 +247,9 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
    lease, or the `deployed` hook could not answer — the identity it needs is missing in this
    checkout, say — each criterion that needs the environment is *not yet checkable*, and the block
    says why. Those criteria are not themselves the send-back: when the lease is not held, what goes
-   back to `/codeo:implement` is the take and the deploy it still owes. A workload nobody declares
+   back to `/codeo:implement` is the take and the deploy it still owes. When the lease is held and
+   the `deployed` hook still cannot answer, the verdict is not clear: the round records the failure
+   as a blocking finding owned by neither skill, raised as a numbered question at step 10. A workload nobody declares
    is an orphan: a non-blocking finding, never a send-back.
 
    **The evidence hook comes first**, before any lease is looked at:
@@ -270,9 +273,9 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
    `deploy=false` (or the diff shows no environment change) and a criterion still needs the
    environment, `/codeo:implement` owes nothing by its own rule — it takes the lease only for a
    task that needs it — so this is a plan gap: an environment criterion with no task that leases
-   the environment. Route it back to `/codeo:plan`, naming the gap — write the round, route, and
-   run nothing below — or, when the engineer must settle what the criterion meant, raise it as a
-   numbered question at step 10 instead.
+   the environment. Route it back to `/codeo:plan`, naming the gap — write the round and route —
+   or, when the engineer must settle what the criterion meant, raise it as a numbered question at
+   step 10 instead; either way, nothing below runs.
 
    **A later round** — after a send-back or a review round — starts from the revision the previous
    round's block recorded: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD`.
@@ -292,10 +295,12 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
    - **Exit 1**: this issue does not hold it. Quote the check's line, which names the holder or
      says it is not held; each criterion that needs the environment is *not yet checkable*, and the
      take and the deploy this branch still owes are a send-back to `/codeo:implement`. Write the
-     round, route, and run nothing below. Record no wait: `/codeo:implement`'s own take records
-     one if it is queued. (When `/codeo:implement` owes nothing — no `Deployed revision:` and no
-     environment change — *The revision* above has already routed the plan gap to `/codeo:plan`,
-     so this send-back never bounces.)
+     round with the line `Lease not held: <the check's line>`, route, and run nothing below. The
+     send-back asks for the take and a redeploy whatever `scope.sh` prints since the recorded
+     revision: while the lease was not held, another issue may have put something else there.
+     Record no wait: `/codeo:implement`'s own take records one if it is queued. (When
+     `/codeo:implement` owes nothing — no `Deployed revision:` and no environment change — *The
+     revision* above has already routed the plan gap to `/codeo:plan`.)
    - **Exit 2**: origin cannot be asked — report its line, and stop as under *Stopping here*.
 
    **The rows.** Run the evidence hook from the project root as

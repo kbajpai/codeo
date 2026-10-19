@@ -173,6 +173,10 @@ else
     ((rc != 0)) || fail "qc-verdict.sh passes the forbidden form **Verdict:** clear"
 fi
 
+must_contain "qc names the not-held line the implement skill reads" 'Lease not held: <the check'\''s line>'
+grep -qF -- 'Lease not held:' "$plugin_root/skills/implement/SKILL.md" || fail "implement does not read the Lease not held: line"
+must_contain "the verdict is not clear when the lease is held but the hook cannot answer" 'owned by neither skill'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
