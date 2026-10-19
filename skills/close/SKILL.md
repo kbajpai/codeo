@@ -452,11 +452,19 @@ the step carries on.
 ## Stash, and closed unmerged
 
 **Putting the environment back.** A stash or an abandon lets go of the shared environment, and the
-next holder deploys onto whatever this branch left there. The put-back runs
-only when `$ENV_RESOURCE` is set and `lease list` shows this issue holding it
-(`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list`); otherwise there is nothing to put
-back, and `close.md` says nothing about an environment. What the next deploy cannot repair on its
-own, and how to restore it to what the base branch carries, is the project's:
+next holder deploys onto whatever this branch left there. The put-back runs when `$ENV_RESOURCE`
+is set and `.codeo/<N>/implement.md` records a `Deployed revision:`; with no `$ENV_RESOURCE`, or no
+revision recorded there, this branch never deployed and there is nothing to put back.
+
+When `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list` does not show this issue holding
+`$ENV_RESOURCE` — qc released it at the clear verdict, or approval did — take it first:
+`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take "$ENV_RESOURCE" <N> "put-back"`, behind
+any waiter, never with `--override`. A refusal — another holder, a waiter with right of way, a hook,
+a stale base — means stop and ask, as a numbered question in `close.md` (step 0): wait, or proceed
+without it. Proceeding without it puts nothing back, and records so below.
+
+What the next deploy cannot repair on its own, and how to restore it to what the base branch
+carries, is the project's:
 <!-- point: close/put-back -->
 fetch it with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close put-back`: on exit 0, the
 printed text is the put-back's steps in order, each marked irreversible or not — do them in that
@@ -468,8 +476,8 @@ on exit 1, 2 or 4, report the one `codeo:` line it printed and do as on exit 3.
 Before anything irreversible — a step the put-back marks irreversible, or one that drops data or
 destroys something it cannot recreate — **stop and show it to the engineer**, and do only what
 they approve. Whatever was not put back is written into `close.md`'s outcome, beneath the stash or
-abandon round, with the latest `Deployed revision:` in `implement.md` (or that it records none),
-so the next holder knows what the environment is carrying. A workload or resource this branch
+abandon round, with the latest `Deployed revision:` in `implement.md`, so the next holder knows what the environment is carrying: whatever was not put back is what the
+next holder's `/codeo:qc` will name. A workload or resource this branch
 added is never removed by this skill, put-back or not: the next holder's `/codeo:qc` names it as an
 orphan, a non-blocking finding, so it neither fails anyone's checks nor goes unnoticed. Only then
 release.
@@ -491,7 +499,7 @@ next after the highest `### Round` there, or `### Round 1` when there is none), 
 
 The heading is exactly that, with no date: the date goes in the first line beneath it and in the
 `## Log` line. `claim.sh --stash-live` counts these headings, and `/codeo:init` resumes from them;
-a date between the round and its kind hides the park from it. Beneath the date, say why the work is
+a date that breaks the `### Round <n> — ` prefix hides the park from it. Beneath the date, say why the work is
 parked and what the next person needs to pick it up. Commit `close.md` (and the rename, when there
 was one), staged by name, with the subject `docs(codeo): close dossier for #<N> — stashed`, and
 push — a re-run that finds this round already at the tip adds no second one. Then let go of what a
@@ -510,7 +518,8 @@ parked workflow must not hold, in this order:
   Handled as the preamble says: a failure is written into `close.md`'s outcome with `#<N>` and the
   status to move it to by hand, and never stops the stash.
 
-Then write beneath the round what the environment is left carrying, when the put-back applied,
+Then write beneath the round what the environment is left carrying, when a `Deployed revision:`
+was recorded,
 and append this invocation's `## Log` line — the date, the stash, what was released, the board
 result, then ` · cost: ` with what `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints —
 and commit `close.md`, staged by name, with the same subject, and push. Delete `.codeo/active`
@@ -562,7 +571,8 @@ ran.
   in and out of `.codeo/done/`. It is the only skill that may do any of these.
 - **Releases** every lease the issue holds at every exit — the merge, a stash, an abandon — and
   the environment at approval when it is still held; `/codeo:qc` normally released that already.
-  It removes the issue's assignee on a stash or an abandon, after putting the environment back.
+  It takes `$ENV_RESOURCE` only for a put-back, when the issue no longer holds it, and releases it
+  with the rest. It removes the issue's assignee on a stash or an abandon, after putting the environment back.
 - **Moves** the issue's board card through `board.sh`, with a board: In review when the pull
   request opens or is readied again, In progress on a send-back, Ready on a stash, Backlog on an
   abandon, Done once the merge is verified. Each move is part of its step, never a gate on it.

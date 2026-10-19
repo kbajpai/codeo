@@ -198,7 +198,8 @@ it.
     results in `qc.md` — `environment.hooks.deployed` is how `qc` learns what the branch left
     deployed, and it names any workload the environment does not declare. `/codeo:close` releases everything at every exit (`lease release-all <N>`),
     so a finished or parked workflow never keeps the environment, and releases the environment at
-    approval only when `qc` could not. Before every hand-off to `qc`, the first round included,
+    approval only when `qc` could not. It takes the environment only to put it back on a stash or
+    an abandon, when the issue no longer holds it, and releases it with the rest. Before every hand-off to `qc`, the first round included,
     `/codeo:implement` checks whether the round changed what the environment runs —
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <the revision it last deployed> HEAD` prints
     `deploy=true` — and if so takes the lease again, behind whoever is waiting, and redeploys; a
@@ -228,7 +229,7 @@ fix it rather than at `close`.
 | `.codeo/<N>/<step>.md` | the one step named in the filename |
 | `.codeo/intake/` and the `codeo/intake` branch | `/codeo:issue`; `/codeo:init` only reads it, copying `issue.md` out when it adopts one |
 | `.codeo/intake/triage/` — the ledger and run files | `/codeo:triage` |
-| `.codeo/intake/leases/` — the locks on exclusive resources and who waits for them | `/codeo:plan` takes those its footprint names; `/codeo:implement` takes `environment.resource` and is the only step that deploys to it; `/codeo:qc` re-takes only a lease its issue already holds (to activate it in its own checkout), reads what is deployed, records no waits, and releases it at a clear verdict; every other wait is recorded through `intake.sh lease` only; `/codeo:close` releases the rest |
+| `.codeo/intake/leases/` — the locks on exclusive resources and who waits for them | `/codeo:plan` takes those its footprint names; `/codeo:implement` takes `environment.resource` and is the only step that deploys to it; `/codeo:qc` re-takes only a lease its issue already holds (to activate it in its own checkout), reads what is deployed, records no waits, and releases it at a clear verdict; every other wait is recorded through `intake.sh lease` only; `/codeo:close` takes `environment.resource` only for a put-back, and releases the rest at every exit |
 | `.codeo/active`, the lock, one per issue checkout | `/codeo:init`, taken in the checkout that runs the later steps; cleared by `/codeo:close` |
 
 Documentation is documentation in the same sense code is code: `/codeo:plan` decides which pages

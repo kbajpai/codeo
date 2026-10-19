@@ -214,7 +214,12 @@ section_contains "the put-back point marker" "$stash_section" '<!-- point: close
 must_follow "the put-back marker sits above its fetch" '<!-- point: close/put-back -->' 'close put-back'
 section_order "the put-back exit 3 is handled" "$stash_section" 'close put-back' 'on exit 3'
 section_order "the put-back failure exits are handled" "$stash_section" 'close put-back' 'on exit 1, 2 or 4'
-section_contains "the put-back runs only when the environment is configured and held" "$stash_section" 'only when `$ENV_RESOURCE` is set and `lease list` shows this issue holding it'
+section_contains "the put-back runs only when the branch recorded a deploy" "$stash_section" '`.codeo/<N>/implement.md` records a `Deployed revision:`'
+section_contains "the put-back takes the lease when the issue no longer holds it" "$stash_section" 'intake.sh" lease take "$ENV_RESOURCE" <N> "put-back"'
+section_contains "the put-back take never overrides" "$stash_section" 'never with `--override`'
+section_contains "a refused put-back take is a stop and a question" "$stash_section" 'means stop and ask'
+section_order "the put-back take comes before the release" "$stash_section" 'lease take "$ENV_RESOURCE" <N> "put-back"' 'lease release-all <N>'
+section_contains "what was not put back is what qc will name" "$stash_section" 'whatever was not put back is what the'
 section_contains "the default records what the environment carries" "$stash_section" 'Deployed revision:'
 section_contains "an orphan workload is never removed" "$stash_section" 'never removed'
 section_contains "close-12 names irreversible steps" "$stash_section" 'irreversible'
@@ -317,9 +322,9 @@ for kind in stash abandon; do
     fi
 done
 
-# A date written into the heading's own place, between the round and its kind, breaks the
-# "### Round <n> — " prefix the reader needs: that park is invisible, which is why the date goes
-# beneath the heading.
+# A date that breaks the "### Round <n> — " prefix the reader needs makes that park invisible,
+# which is why the date goes beneath the heading. (claim.sh still reads a date set off after the
+# prefix, as in "### Round 2 — 2026-10-01 — stashed"; tests/claim.test.sh pins those.)
 i=0
 for heading in "### Round 2 (2026-10-19) — stashed" "### 2026-10-19 Round 2 — stashed" "### Round 2, 2026-10-19 — abandoned"; do
     i=$((i + 1))

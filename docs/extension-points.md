@@ -283,10 +283,13 @@ configuration directly.
 ### close/put-back
 
 **Where.** `/codeo:close`, the stash and abandon section, before any release. The skill fetches it
-only when `$ENV_RESOURCE` is set and this issue holds that lease.
+when `$ENV_RESOURCE` is set and `implement.md` records a `Deployed revision:`, after taking the
+lease first when this issue no longer holds it — or after the engineer chose to proceed without it.
 
-**May rely on.** `$ENV_RESOURCE`, the config's `environment.resource` and `environment.hooks`, and
-the base branch.
+**May rely on.** `$ENV_RESOURCE`, the config's `environment.resource` and `environment.hooks`, the
+base branch, the latest `Deployed revision:` in `implement.md`, and this issue holding
+`$ENV_RESOURCE` — unless the engineer chose to proceed without it, when every step that needs the
+lease is recorded as not put back.
 
 **Expected back.** The steps that restore the shared environment to what the base branch carries,
 in order, as plain prose, each marked irreversible or not. The skill stops and shows the engineer
