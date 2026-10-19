@@ -255,6 +255,10 @@ answer too: each task then names its own proof command in full (step 8).
        answered that way), under `plan.md`'s `## Notes`, leaving `## Outcome` pending. Commit it
        alone, staged by name, with the subject `docs(codeo): plan dossier for #<N> — footprint`,
        and push.
+       On a pass after a send-back, `## Outcome` is not pending: it holds the earlier rounds, which
+       stay as written, and "pending" in sub-steps 1-3 means no new round is written yet. The draft
+       footprint goes under `## Notes` again all the same, and the earlier round's block stays where
+       it is until sub-step 4 replaces it.
        <!-- rule: plan-06 -->
        Only now run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" <N>` — step 8 compared a
        draft, which `overlap.sh` cannot read; it reads the `### Footprint` in this checkout's
@@ -290,11 +294,14 @@ answer too: each task then names its own proof command in full (step 8).
        the subject `docs(codeo): plan dossier for #<N>`, and push, as at step 4. A failed push is
        loud but not fatal (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).
 
-       After a send-back from `/codeo:qc`, the first outcome stays as it was written: this pass's
-       outcome goes beneath it as the next `### Round <n>` (the unheaded first is round 1), with
-       the date as its first line, followed by `(send-back from qc.md round <n>)` naming the
-       `qc.md` round it answers. The `### Footprint` moves to the end of that round, so the file
-       still holds one (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
+       After a send-back from `/codeo:qc`, the earlier rounds stay as they were written: this
+       pass's outcome goes beneath them as the next `### Round <n>` (the unheaded first is round
+       1), with the date as its first line and, on the next line, `(send-back from qc.md round <k>)`
+       naming the `qc.md` round it answers. The new `### Footprint` replaces the earlier round's:
+       moving it out of `## Notes` to end the new round removes the old block, because
+       `overlap.sh` and `inflight.sh` read every block in the file, and a stale one goes on
+       producing overlaps. That removal is the one edit an answered round ever takes
+       (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
 
 11. **Report** the file path and a one-line summary, and suggest `/codeo:implement` to execute
     the plan once the engineer has committed it. If this plan tracks a GitHub issue but no branch

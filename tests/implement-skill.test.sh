@@ -21,9 +21,10 @@ fail() {
 must_contain() { grep -qF -- "$2" "$skill" || fail "$1 — no [$2]"; }
 
 # Step 8: the dossier forms docs/dossier.md documents and the dossier checker reads.
-must_contain "a later round's date is its first line" "That round's date is its first line,"
-must_contain "a qc send-back round names its source" '`(send-back from qc.md round <n>)` or'
-must_contain "a close send-back round names its source" '`(send-back from close.md round <n>)` naming the round step 3 read'
+must_contain 'every later round'\''s date is its first line' 'Every later round'\''s date is its first line,'
+must_contain 'the link goes on the next line' 'beneath the heading, and the next line names what the round answers:'
+must_contain 'a qc or close send-back round names its source' '`(send-back from qc.md round <k>)` or `(send-back from close.md round <k>)` for the round'
+must_contain 'a round after a re-plan names the plan round' 'step 3 read, or `(after plan.md round <k>)` when it follows a re-plan'
 
 must_contain "the Outcome line qc reads" 'Deployed revision:'
 must_contain "the subagent model read" "config.sh\" get '.models.subagent // \"sonnet\"'"

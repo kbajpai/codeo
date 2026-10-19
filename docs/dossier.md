@@ -246,32 +246,44 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
 
 - **Rounds.** `## Outcome`'s rounds are `### Round <n>` headings, numbered consecutively. The
   first round may be written unheaded — `implement.md` and `plan.md` write theirs that way — and
-  the next is then `### Round 2`, with the date as its first line. `qc.md` heads every round, from
-  `### Round 1`, as `### Round <n> — <YYYY-MM-DD>`: the `qc-verdict` check finds the latest round
-  by its heading. `close.md` heads every round from `### Round 1` too, as
-  `### Round <n> — <what happened>` — `pull request opened`, `review feedback`,
-  `conflicts with <base>`, `pull request updated`, `stashed`, `abandoned` — with the date as the
-  round's first line.
-- **Send-backs.** A round that answers a send-back names the file and round it answers in one
-  parenthesis, on the line after the date — `(send-back from qc.md round 2)`,
-  `(send-back from close.md round 3)` — so a reader can follow the change between files. A
-  send-back to `/codeo:plan` adds a round to `plan.md` like any other receiving step
-  (`handoff.md` → *A send-back*); `close.md`'s `— pull request updated` round names the review
-  round it answers the same way.
+  the next is then `### Round 2`; every later round in those two files has its date as its first
+  line. `qc.md` heads every round, from `### Round 1`, as `### Round <n> — <YYYY-MM-DD>`: the
+  `qc-verdict` check finds the latest round by its heading. `close.md` heads every round from
+  `### Round 1` too, as `### Round <n> — <what happened>` — `pull request opened`,
+  `review feedback`, `conflicts with <base>`, `pull request updated`, `stashed`, `abandoned` —
+  with the date as the round's first line.
+- **Send-backs.** A later `implement.md` or `plan.md` round, and `close.md`'s
+  `— pull request updated` round, name what they answer in one parenthesis on the line after the
+  date: `(send-back from <file> round <k>)` for a send-back — `(send-back from qc.md round 2)`,
+  `(send-back from close.md round 3)` — and, in `implement.md`, `(after plan.md round <k>)` for a
+  round that follows a re-plan. `<k>` is the other file's round, not this one's. No other round
+  carries one: `close.md`'s `— pull request opened` round writes none, even after a
+  `— conflicts with <base>` round from before the pull request existed. A send-back to
+  `/codeo:plan` adds a round to `plan.md` like any other receiving step (`handoff.md` →
+  *A send-back*), and its `### Footprint` replaces the earlier round's block — the one edit an
+  answered round takes, because `overlap.sh` and `inflight.sh` read every block in the file.
 - **Criteria.** Each `qc.md` round maps every acceptance criterion — one per `- [ ]` line in
-  `init.md`'s `## Outcome` — in a table, one row per criterion, whose verdict cell begins with
-  exactly one of `met`, `not met`, `untestable` or `not yet checkable` (environment evidence this
-  round could not read). A note may follow after a dash, or sit in another column.
+  `init.md`'s `## Outcome` — in a table, one row per criterion. The verdict cell begins with one of
+  `met`, `not met`, `untestable` or `not yet checkable`: a prefix match, after which any text may
+  follow (`untestable here — no evidence hook` is valid), and further columns may carry more.
+  `not yet checkable` is a criterion this round could not settle — environment evidence it could
+  not read, or a pass that stopped early (a conflict, a broken build, a missing deploy), whose
+  unreached criteria read `not yet checkable — pass stopped at step <k>`. A criterion settled by
+  the environment says `environment` in its settled-by column, pointing at the round's
+  `#### Environment` block.
 - **Findings.** Every finding says `blocking` or `non-blocking`. A round with a blocking finding is
   never routed to `/codeo:close`.
 - **The pull request.** `close.md` records an opened pull request in a round headed
-  `### Round <n> — pull request opened`, carrying its number and URL (`#<n> <url>`); exactly one
-  round carries that heading, and a return from review is `— pull request updated`. Every
-  `— review feedback` or `— conflicts with <base>` round carries the line
-  `qc round at review: <k>`, `<k>` being the latest `qc.md` round when it was written.
-- **Form lines.** `Deployed revision: <x>` in `implement.md`; `Lease not held: <line>`,
-  `Environment released at the clear verdict: <output>` and `Environment NOT released: <output>` in
-  `qc.md`. None is required; each, when present, starts its line in exactly that form.
+  `### Round <n> — pull request opened`, its date on the first line and the pull request as the
+  line `#<number> <html_url>`, from `pr create`'s response; exactly one round carries that
+  heading, and a return from review is `— pull request updated`. Every `— review feedback` or
+  `— conflicts with <base>` round carries the line `qc round at review: <k>`, `<k>` being the
+  latest `qc.md` round when it was written.
+- **Form lines.** `Deployed revision: <x>` in `implement.md`, under `## Where this stands` or in
+  an `## Outcome` round, and quoted by `qc.md` in its `#### Environment` block;
+  `Lease not held: <line>`, `Environment released at the clear verdict: <output>` and
+  `Environment NOT released: <output>` in a `qc.md` round. None is required; each, when present,
+  starts its line in exactly that form.
 
 A `qc.md` criteria table, for an imaginary shop's order export:
 
@@ -282,6 +294,7 @@ A `qc.md` criteria table, for an imaginary shop's order export:
 | The export file names the day it covers | not met — names the run time | `src/export/file.sh:14` |
 | An export of an empty day is a header row only | untestable — no fixture has an empty day | — |
 | The nightly job writes to the shared bucket | not yet checkable — lease not held | environment |
+| The export retries a failed upload once | not yet checkable — pass stopped at step 9 | — |
 ```
 
 A park heads its round in `close.md` with exactly one of these, the date on the line beneath —

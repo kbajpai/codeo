@@ -242,8 +242,13 @@ the step carries on.
    the next `### Round <n>` beneath it, never above it or in place of it. A return from review
    likewise adds the next `### Round <n>` beneath the last, saying which review round it answers
    and which `qc.md` round cleared it.
-   That round is headed `### Round <n> — pull request updated`, with the date as its first line,
-   followed by `(send-back from close.md round <m>)` naming the review round it answers. So
+   In the `— pull request opened` round, the date is the round's first line, beneath the heading,
+   and the pull request is the line `#<number> <html_url>`, from the two fields `pr create`
+   printed (or step 1's lookup, on a first open resumed). It writes no send-back parenthesis, even
+   after a `— conflicts with <base>` round from before the pull request existed.
+   A return from review is headed `### Round <n> — pull request updated`, with the date as its
+   first line and, on the next line, `(send-back from close.md round <m>)` naming the review round
+   it answers. So
    `— pull request opened` heads exactly one round, and a re-run that finds a
    `— pull request updated` round after the latest review round adds no second one.
 

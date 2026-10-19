@@ -392,8 +392,13 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
     of any issue `/codeo:issue` filed for this pass, and the routing decision.
     The criterion-by-criterion result is a table with one row per acceptance criterion in
     `init.md`. Each row's verdict cell begins with `met`, `not met`, `untestable` or
-    `not yet checkable`, and a note may follow after a dash or sit in another column, so step 9's
-    *untestable here — no evidence hook* stands as written.
+    `not yet checkable` — a prefix, after which any text may follow in the cell, and further
+    columns may carry more — so step 9's *untestable here — no evidence hook* stands as written.
+    A criterion step 9 settles names the environment in its settled-by column (`environment`),
+    which points at this round's `#### Environment` block for the command and its output.
+    A round that stopped early — a conflict at step 2, a broken build at step 3, a send-back at
+    step 9 — still has a row for every criterion: those the pass did not reach read
+    `not yet checkable — pass stopped at step <k>`.
     <!-- rule: qc-09 -->
     The decision is a bold span, `**Verdict: …**` or `**Routing: …**`, with the label inside the
     bold, and only the last such span of the round counts. The project's `qc-verdict` check
