@@ -235,8 +235,8 @@ orphan, how to read a state.
 ```markdown
 ## environment-evidence
 
-If a row reports a revision the branch does not contain, treat it as an orphan: tell the engineer to
-redeploy rather than judging the environment.
+For an orphan row, name the command that removes the workload so the engineer can clean it up. After
+a redeploy, run the project's smoke check before reading any criterion against the environment.
 ```
 
 ### qc/wiki-rules
