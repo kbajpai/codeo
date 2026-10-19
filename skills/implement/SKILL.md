@@ -167,7 +167,9 @@ pages under `$DOCS`).
    (`$cmd`) with its output shown as it runs and kept in a log inside the git directory, which no
    commit and no `git status` ever sees:
    `CODEO_ISSUE=<N> CODEO_RESOURCE="$ENV_RESOURCE" bash -c "$cmd" | tee "$(git rev-parse --git-dir)/codeo-deploy-<N>.log"`,
-   taking the hook's own exit status from `${PIPESTATUS[0]}`, not `tee`'s. Then, in this order:
+   and read the hook's own exit status, not `tee`'s, in the same command:
+   `…| tee "<log>"; echo "deploy-exit=${PIPESTATUS[0]}"` (a later command would see only its own
+   shell's status). Then, in this order:
    - A non-zero exit is a failed task, not a lease refusal: the debugging rule above applies.
    - Anything `git status --porcelain` prints after the hook is a stop. The hook commits its own
      bookkeeping, so a dirty tree is work it left undone: report the paths, and never commit them.
@@ -176,8 +178,9 @@ pages under `$DOCS`).
      the hook made is part of it; record that, and say the hook printed no revision.
    - Write `Deployed revision: <x>` under `## Where this stands` in `.codeo/<N>/implement.md` and
      commit the dossier there and then, staged by name, with the subject
-     `docs(codeo): implement dossier for #<N> — deployed <short revision>`, and push — so the
-     revision survives a turn that stops before step 8. Step 8 repeats it in the round's outcome.
+     `docs(codeo): implement dossier for #<N> — deployed <revision as printed, or its short SHA>`,
+     and push — so the revision survives a turn that stops before step 8. Step 8 repeats it in the
+     round's outcome; until then a rewrite of `## Where this stands` keeps that line.
 
    <!-- rule: implement-07 -->
    Once taken, **the lease is never released here** — not after the task, not at the hand-off, not
@@ -207,9 +210,10 @@ pages under `$DOCS`).
 
    **The redeploy check: the last thing before step 8, in every round — the first included.**
    A later task, or a fix step 6's build needed, can change what the environment runs, so run it
-   after step 6, and again if anything after it added commits. The revision to compare is the last
-   `Deployed revision:` anywhere in `.codeo/<N>/implement.md` — under `## Where this stands` or in
-   any round of `## Outcome` (only this skill deploys). With none, the issue never used the
+   after step 6, and again if anything after it added commits other than this skill's own dossier
+   commits. The revision to compare is the most recent `Deployed revision:` in
+   `.codeo/<N>/implement.md` — the one under `## Where this stands` when there is one (it is newer
+   than every one in `## Outcome`), else the last in `## Outcome` (only this skill deploys). With none, the issue never used the
    environment: there is nothing to compare, so take the lease only if this round newly needs it.
    Otherwise run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD` and read its
    `deploy=` line. `deploy=false` means no environment work and no take. `deploy=true` means read

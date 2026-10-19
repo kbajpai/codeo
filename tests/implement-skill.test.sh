@@ -44,8 +44,11 @@ must_contain "the deploy precedes the lease task" 'before dispatching the task t
 must_contain "other take refusals stop without a wait" '**Anything else**'
 must_contain "no suites means no deploy= line" 'no `deploy=` line at all'
 must_contain "a failing scope.sh is retried after a fetch" 'A non-zero exit from the script'
-must_contain "the deployed revision is committed at once" 'deployed <short revision>'
-must_contain "the redeploy check reads the whole dossier" 'anywhere in `.codeo/<N>/implement.md`'
+must_contain "the deployed revision is committed at once" 'deployed <revision as printed, or its short SHA>'
+must_contain "the redeploy check prefers the newer Where-this-stands line" 'the one under `## Where this stands` when there is one'
+must_contain "the pipeline status is read in the same command" 'echo "deploy-exit=${PIPESTATUS[0]}"'
+must_contain "its own dossier commits do not re-trigger the check" "other than this skill's own dossier"
+
 must_contain "an empty revision is HEAD after the hook" 'after the hook and the clean-tree check'
 must_contain "a missing deploy hook stops before the take" 'with nothing taken'
 must_contain "an unresolvable revision is a take and deploy" 'the lease and deploy as above'
