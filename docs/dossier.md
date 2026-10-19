@@ -66,7 +66,7 @@ dossier to degrade to; it has found that no workflow is running, and it stops.
 
 `/codeo:close` moves an issue's directory to `.codeo/done/<N>/` when it opens the pull request, so
 the archive merges with the change — nothing is committed to the base branch after the merge. A
-review send-back or a stash moves it back to `.codeo/<N>/`; where the directory sits is how `close`
+send-back (review feedback or a conflict), a stash or an abandon moves it back to `.codeo/<N>/`; where the directory sits is how `close`
 tells an open PR that is waiting from one whose review work is in flight. What sits at the top
 level is work someone is actively changing. Nothing is ever deleted — a closed issue's dossier is
 the best record of why it closed the way it did.

@@ -62,7 +62,7 @@ By default `/codeo:init` takes the lock itself: after it cuts and checks out the
 writes and pushes its `init.md`, it runs `lock.sh take local`, and `plan` follows in the same
 session. A project with an `init/host-workflow` overlay section takes the lock as that section
 says, in whatever checkout it runs the issue's later steps. `/codeo:close` removes it —
-once the pull request has merged and the branch is cleaned up, or on a stash or an abandon. Nothing
+once the pull request has merged and the branch is cleaned up (deleted on the engineer's yes, or kept on their no), or on a stash or an abandon; a release or deletion that failed keeps it, and running `/codeo:close` again finishes the job. Nothing
 else ever writes it. **A workflow whose pull request is open is still running**: review can send it
 back, and until the merge the issue is what the pipeline is working on.
 
@@ -221,11 +221,11 @@ fix it rather than at `close`.
 | The GitHub issue | `/codeo:issue` |
 | The issue's assignee | `/codeo:init`, cleared by `/codeo:close` on a stash or an abandon |
 | The issue's board Status | `ready`: `/codeo:triage`, and `/codeo:close` on a stash; `backlog`: `/codeo:triage`, and `/codeo:close` on an abandon; `inProgress`: `/codeo:init`, and `/codeo:close` on a send-back; `inReview` and `done`: `/codeo:close` |
-| The branch | `/codeo:init`; `/codeo:close` deletes it after the merge |
+| The branch | `/codeo:init`; `/codeo:close` deletes it on the engineer's yes once the merge is verified |
 | `<plansDir>/YYYY-MM-DD-<slug>.md` and `<docsDir>/<slug>.md` | `/codeo:plan` |
 | Application and test code, and the documentation pages the plan names | `/codeo:implement` |
 | The quality verdict on a change | `/codeo:qc` |
-| The pull request, and deleting the branch once it has merged | `/codeo:close` |
+| The pull request, and deleting the branch (on the engineer's yes) once it has merged | `/codeo:close` |
 | `.codeo/<N>/<step>.md` | the one step named in the filename |
 | `.codeo/intake/` and the `codeo/intake` branch | `/codeo:issue`; `/codeo:init` only reads it, copying `issue.md` out when it adopts one |
 | `.codeo/intake/triage/` — the ledger and run files | `/codeo:triage` |
@@ -280,7 +280,9 @@ Two steps may hand work *backwards*, and everywhere else the flow runs forwards 
 - `/codeo:close`, to `/codeo:implement` when review on the pull request asks for changes, or when
   the pull request conflicts with the base branch because a parallel workflow merged first. The fix
   then goes through `/codeo:qc` in full before it returns to `/codeo:close`, and onto the same pull
-  request.
+  request. Each such round in `close.md` records `qc round at review: <k>`, the number of the latest
+  `qc.md` round when it was written; `/codeo:close` accepts only a clear `qc` round numbered above
+  every recorded `<k>`, comparing round numbers and never dates.
 
 A send-back is a hand-off, with the same four parts and one extra rule: **the sender never starts
 the fixing.** Naming a finding and then repairing it is doing the receiving step's work, and it
