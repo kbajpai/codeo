@@ -34,6 +34,35 @@
 #   footprint-single  drift  plan.md has at most one "### Footprint" block
 #   open-question     FAIL   no question under ## Questions has an empty **Answer:** body once
 #                            ## Outcome is written (docs/dossier.md → The gate)
+#   verdict-span      FAIL   every qc.md round has a bold "**Verdict: …**" / "**Routing: …**"
+#                            decision span (qc-verdict.sh's pattern; the round's last one decides)
+#   verdict-route     FAIL   that last span names exactly one route: clear (qc-verdict.sh's rule),
+#                            back to implement, or back to plan
+#   blocking-to-close FAIL   no qc.md round routed clear has a blocking finding: a list item or
+#                            table row saying "blocking" (not "non-blocking", "no blocking" or
+#                            "Blocking: none")
+#   criteria-count    drift  each qc.md round's criteria table (its first table with a "Verdict"
+#                            header cell) has one row per "- [ ]" line in init.md's ## Outcome;
+#                            checked only when init.md is there and lists one
+#   criterion-verdict drift  each criteria row's verdict cell begins met, not met, untestable or
+#                            not yet checkable (any case, bold aside)
+#   send-back-link    drift  every implement.md / plan.md round after the first, and close.md's
+#                            "— pull request updated" round, carries "(send-back from <file> round
+#                            <k>)" (implement.md also "(after plan.md round <k>)") naming a round
+#                            <file> has when <file> is there; every qc.md round but the last that
+#                            is sent back is named so by the receiving file, when it is there
+#   qc-round-at-review FAIL  every close.md "— review feedback" / "— conflicts with <base>" round
+#                            carries "qc round at review: <k>", <k> a qc.md round when qc.md is there
+#   park-heading      FAIL   a close.md "Round <n>" heading naming a stash or an abandon matches
+#                            claim.sh's park_re (read from claim.sh), the heading --stash-live counts
+#   finished-qc-clear FAIL   once close.md has a "— pull request opened" round: qc.md's last round
+#                            is clear, read exactly as qc-verdict.sh reads it (when qc.md is there)
+#   finished-pr       FAIL   once close.md has a "— pull request opened" round: exactly one has
+#                            that heading, and each such round has a "#<number> <url>" line
+#   env-form          drift  in implement.md and qc.md, a line that reads as "Deployed revision",
+#                            "Lease not held" or "Environment (NOT) released" once list, quote and
+#                            bold markers are set aside starts its line in exactly the documented
+#                            form ("Deployed revision: <x>", …); none is ever required
 #
 # "Written" means the ## Outcome is neither empty nor the "_Pending …_" placeholder. Headings
 # inside a fenced block are not headings, except that "### Footprint" is found wherever it is,
@@ -326,7 +355,428 @@ check_open_question() {
     done < <(open_questions_of "$file")
 }
 
-checks=(title header_table sections round_numbering log_format log_cost footprint footprint_single open_question)
+# ---------------------------------------------------------------------------------------------
+# qc rounds: decisions, findings, criteria.
+# ---------------------------------------------------------------------------------------------
+
+# sibling <file> <name>: the path of another dossier file beside <file> (all are copied before
+# any check runs); status 1 when that file is absent.
+sibling() {
+    local path
+    path=$(dirname "$1")/$2
+    [[ -f $path ]] || return 1
+    echo "$path"
+}
+
+# round_marked_of <file> <heading-line>: the round headed at <heading-line>, as marked_of rows.
+round_marked_of() {
+    local file=$1 at=$2 last
+    last=$(round_body_of "$file" "$at" | tail -n1 | cut -f1)
+    marked_of "$file" | awk -F'\t' -v from="$at" -v to="$last" '$1 >= from && $1 <= to'
+}
+
+# round_numbers_of <file>: the round numbers <file> has, one per line — its headed rounds, and 1
+# when its ## Outcome opens with unheaded content (the unheaded first round).
+round_numbers_of() {
+    [[ -z $(outcome_lead_of "$1") ]] || echo 1
+    rounds_of "$1" | cut -f2
+}
+
+# spans_of: the bold decision spans of stdin, in order — qc-verdict.sh's pattern, on the raw
+# text with lines joined, so a span wrapped over two lines is one span.
+spans_of() {
+    tr '\n' ' ' | grep -o -i -E '\*\*(verdict|routing)( then)?:[^*]*\*\*' || true
+}
+
+# span_text <span>: the span's text after its label, bold, backticks and underscores gone — the
+# text qc-verdict.sh judges.
+span_text() {
+    sed -E 's/\*\*//g; s/[`_]//g; s/^[[:space:]]*(verdict|routing)( then)?:[[:space:]]*//I' <<<"$1"
+}
+
+# is_clear_text <text>: status 0 when the span text reads clear by qc-verdict.sh's rule: "clear",
+# then the end of the span or one of . , ; : — –.
+is_clear_text() {
+    grep -q -i -E '^clear[[:space:]]*(\.|,|;|:|—|–|$)' <<<"$1"
+}
+
+# route_of <span>: "clear", "implement" or "plan" when the span names exactly that one route,
+# "none" when it names none, "many" when it names more than one. Clear is qc-verdict.sh's
+# reading; a send-back is the steps named in the clause after "back to" (up to a dash, a
+# semicolon, a parenthesis or a sentence's end), with or without their plugin prefix.
+route_of() {
+    local text dest routes=()
+    text=$(span_text "$1")
+    ! is_clear_text "$text" || routes+=(clear)
+    dest=$(grep -o -i -E 'back to .*' <<<"$text" | head -n1 | sed -E 's/(—|–|;|\(|\. |\.$).*//')
+    if [[ -n $dest ]]; then
+        ! grep -q -i -E '(^|[^[:alnum:]])implement([^[:alnum:]]|$)' <<<"$dest" || routes+=(implement)
+        ! grep -q -i -E '(^|[^[:alnum:]])plan([^[:alnum:]]|$)' <<<"$dest" || routes+=(plan)
+    fi
+    case ${#routes[@]} in
+        0) echo none ;;
+        1) echo "${routes[0]}" ;;
+        *) echo many ;;
+    esac
+}
+
+# decision_of <file> <heading-line>: the round's last decision span, or nothing.
+decision_of() {
+    round_body_of "$1" "$2" | cut -f2- | spans_of | tail -n1
+}
+
+# last_round_clear <file>: status 0 when qc.md's last round is clear — qc-verdict.sh's reading
+# transcribed step for step (## Outcome to the next "## " line, round headings and spans found
+# with no regard to fences), so the two cannot disagree; the test holds them to it.
+last_round_clear() {
+    local outcome headings last_line round decision
+    outcome=$(awk '
+        /^## Outcome/ { in_outcome = 1; next }
+        in_outcome && /^## / { exit }
+        in_outcome { print }
+    ' "$1")
+    headings=$(grep -nE '^### Round [0-9]+' <<<"$outcome" || true)
+    [[ -n $headings ]] || return 1
+    last_line=$(tail -n1 <<<"$headings")
+    last_line=${last_line%%:*}
+    round=$(tail -n +"$last_line" <<<"$outcome")
+    decision=$(spans_of <<<"$round" | tail -n1)
+    [[ -n $decision ]] || return 1
+    is_clear_text "$(span_text "$decision")"
+}
+
+# blocking_findings_of <file> <heading-line>: the line of each blocking finding in the round,
+# outside fenced blocks. A finding is a list item ("- ", "* ", "+ ", "1. ") or a table body row.
+# In a table with a "Blocking" header cell, a row is blocking when that cell begins "yes" or
+# "blocking". Anywhere else, a finding is blocking when it classifies itself with the word
+# "blocking" (any case, bold aside): the word stands alone (not "non-blocking"), comes right
+# after the item's start and an optional id ("- F2 blocking", "- Blocking — …"), or after a
+# "(", "[", ",", ":", ";", "|", "/" or a dash ("F2 (blocking, implement)", "F2 — blocking"),
+# and is not answered as empty ("Blocking: none"). Prose that merely mentions the word ("no
+# blocking finding", "two findings it called blocking") is not a finding.
+blocking_findings_of() {
+    round_marked_of "$1" "$2" | awk -F'\t' '
+        function strip(s) { s = tolower(s); gsub(/[*_`]/, "", s); return s }
+        function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+        function classifies(s,   rest, at, before, after, prefix) {
+            rest = s; at = 0
+            while (match(rest, /blocking/)) {
+                before = substr(s, 1, at + RSTART - 1); after = substr(rest, RSTART + RLENGTH)
+                at += RSTART + RLENGTH - 1; rest = after
+                if (before ~ /[[:alnum:]-]$/ || after ~ /^[[:alnum:]-]/) continue
+                if (after ~ /^[ \t]*(:|—|–|-)?[ \t]*(none|nothing|no|0)([^[:alnum:]]|$)/) continue
+                prefix = before; sub(/[ \t]+$/, "", prefix)
+                if (prefix ~ /^[ \t]*([-*+]|[0-9]+[.)])([ \t]+[a-z]{0,3}[0-9]+[.:)]?)?$/) return 1
+                if (prefix ~ /(\(|\[|,|:|;|\||\/|—|–|-)$/) return 1
+            }
+            return 0
+        }
+        $2 == 1 { tstate = 0; next }
+        {
+            t = $0; sub(/^[0-9]+\t[01]\t/, "", t)
+            if (t ~ /^[ \t]*\|/) {
+                # tstate 0: no table; 1: header read; 2: in the body.
+                if (tstate == 0) {
+                    bcol = 0; n = split(t, c, "|")
+                    for (i = 2; i <= n; i++) if (trim(strip(c[i])) ~ /^blocking/) { bcol = i; break }
+                    tstate = 1; next
+                }
+                if (tstate == 1 && t ~ /^[ \t|:-]+$/) { tstate = 2; next }
+                tstate = 2
+                if (bcol) {
+                    split(t, c, "|")
+                    if (trim(strip(c[bcol])) ~ /^(yes|blocking)([^[:alnum:]-]|$)/) print $1
+                } else if (classifies(strip(t))) print $1
+                next
+            }
+            tstate = 0
+            if (t ~ /^[ \t]*([-*+] |[0-9]+[.)] )/ && classifies(strip(t))) print $1
+        }'
+}
+
+# criteria_of <file> <heading-line>: the round's criteria table — the first table outside a
+# fenced block whose header row has a cell containing "verdict" (any case) and whose second row
+# is a separator. Prints "table\t<header-line>" and then "<line>\t<verdict cell>" per row;
+# nothing when the round has no such table. "\|" in a cell is not a column break.
+criteria_of() {
+    round_marked_of "$1" "$2" | awk -F'\t' '
+        function cells(s, out) {
+            gsub(/\\\|/, "\001", s)
+            sub(/^[ \t]*\|/, "", s); sub(/\|[ \t]*$/, "", s)
+            return split(s, out, "|")
+        }
+        function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); gsub(/\001/, "|", s); return s }
+        done { next }
+        {
+            t = $0; sub(/^[0-9]+\t[01]\t/, "", t)
+            is_row = ($2 == 0 && t ~ /^[ \t]*\|/)
+        }
+        # state 0: outside a table; 1: header read; 2: in the criteria rows; 3: in another table.
+        state == 0 && is_row {
+            n = cells(t, c); col = 0
+            for (i = 1; i <= n; i++) if (tolower(c[i]) ~ /verdict/) { col = i; break }
+            if (col) { state = 1; header = $1 } else state = 3
+            next
+        }
+        state == 3 { if (!is_row) state = 0; next }
+        state == 1 {
+            if (is_row && t ~ /^[ \t|:-]+$/ && t ~ /-/) { state = 2; print "table\t" header; next }
+            state = (is_row ? 3 : 0); next
+        }
+        state == 2 {
+            if (!is_row) { done = 1; next }
+            cells(t, c)
+            print $1 "\t" trim(c[col])
+        }'
+}
+
+# init_criteria_count <init-file>: the acceptance criteria in init.md's ## Outcome — its "- [ ]"
+# lines ("* " and a ticked "[x]" too), outside fenced blocks.
+init_criteria_count() {
+    local range
+    range=$(section_range "$1" Outcome)
+    [[ -n $range ]] || { echo 0; return 0; }
+    marked_of "$1" | awk -F'\t' -v from="${range% *}" -v to="${range#* }" '
+        $1 > from && $1 <= to && $2 == 0 && $3 ~ /^[ \t]*[-*] \[[ xX]\] / { n++ }
+        END { print n + 0 }'
+}
+
+check_verdict_span() {
+    local file=$1 name=$2 line n heading
+    [[ $name == qc.md ]] || return 0
+    while IFS=$'\t' read -r line n heading; do
+        [[ -n $(decision_of "$file" "$line") ]] \
+            || finding FAIL "$name" verdict-span "round $n has no bold \"**Verdict: …**\" or \"**Routing: …**\" span"
+    done < <(rounds_of "$file")
+}
+
+check_verdict_route() {
+    local file=$1 name=$2 line n heading span
+    [[ $name == qc.md ]] || return 0
+    while IFS=$'\t' read -r line n heading; do
+        span=$(decision_of "$file" "$line")
+        [[ -n $span ]] || continue
+        case $(route_of "$span") in
+            none) finding FAIL "$name" verdict-route "round $n's decision names no route: $span" ;;
+            many) finding FAIL "$name" verdict-route "round $n's decision names more than one route: $span" ;;
+        esac
+    done < <(rounds_of "$file")
+}
+
+check_blocking_to_close() {
+    local file=$1 name=$2 line n heading span at
+    [[ $name == qc.md ]] || return 0
+    while IFS=$'\t' read -r line n heading; do
+        span=$(decision_of "$file" "$line")
+        [[ -n $span ]] && is_clear_text "$(span_text "$span")" || continue
+        at=$(blocking_findings_of "$file" "$line" | head -n1)
+        [[ -z $at ]] || finding FAIL "$name" blocking-to-close "round $n is routed clear with a blocking finding at line $at"
+    done < <(rounds_of "$file")
+}
+
+check_criteria_count() {
+    local file=$1 name=$2 init want line n heading rows
+    [[ $name == qc.md ]] || return 0
+    init=$(sibling "$file" init.md) || return 0
+    want=$(init_criteria_count "$init")
+    ((want > 0)) || return 0
+    while IFS=$'\t' read -r line n heading; do
+        rows=$(criteria_of "$file" "$line")
+        if [[ -z $rows ]]; then
+            finding drift "$name" criteria-count "round $n has no criteria table; init.md lists $want"
+        elif (($(wc -l <<<"$rows") - 1 != want)); then
+            finding drift "$name" criteria-count "round $n maps $(($(wc -l <<<"$rows") - 1)) criteria; init.md lists $want"
+        fi
+    done < <(rounds_of "$file")
+}
+
+check_criterion_verdict() {
+    local file=$1 name=$2 line n heading row cell bare
+    [[ $name == qc.md ]] || return 0
+    while IFS=$'\t' read -r line n heading; do
+        while IFS=$'\t' read -r row cell; do
+            [[ -n $row && $row != table ]] || continue
+            bare=$(sed -E 's/[*_`]//g; s/^[[:space:]]+//' <<<"$cell")
+            grep -q -i -E '^(met|not met|untestable|not yet checkable)([^[:alnum:]]|$)' <<<"$bare" \
+                || finding drift "$name" criterion-verdict "line $row: verdict \"$cell\" does not begin met, not met, untestable or not yet checkable"
+        done < <(criteria_of "$file" "$line")
+    done < <(rounds_of "$file")
+}
+
+# ---------------------------------------------------------------------------------------------
+# Links between files, close.md's rounds, and the finished workflow.
+# ---------------------------------------------------------------------------------------------
+
+# link_of <file> <heading-line>: the round's first send-back parenthesis outside a fenced block,
+# as "send-back <file> <k>" or "after plan.md <k>"; nothing when it has none.
+link_of() {
+    round_marked_of "$1" "$2" | awk -F'\t' '
+        $2 == 1 { next }
+        match($3, /\(send-back from [a-z]+\.md round [0-9]+\)/) {
+            s = substr($3, RSTART + 16, RLENGTH - 17); sub(/ round /, " ", s)
+            print "send-back " s; exit
+        }
+        match($3, /\(after plan\.md round [0-9]+\)/) {
+            s = substr($3, RSTART + 7, RLENGTH - 8); sub(/ round /, " ", s)
+            print "after " s; exit
+        }'
+}
+
+# link_target <file> <name> <n> <target-file> <k>: a drift line when <target-file> is not a
+# dossier file, or is present without round <k>. An absent target is not checked.
+link_target() {
+    local file=$1 name=$2 n=$3 target=$4 k=$5 path
+    if [[ $target != *.md || " ${steps[*]} " != *" ${target%.md} "* ]]; then
+        finding drift "$name" send-back-link "round $n names $target, not a dossier file"
+        return 0
+    fi
+    path=$(sibling "$file" "$target") || return 0
+    round_numbers_of "$path" | grep -qx "$k" \
+        || finding drift "$name" send-back-link "round $n names $target round $k, which $target does not have"
+    return 0
+}
+
+check_send_back_link() {
+    local file=$1 name=$2 line n heading first=1 link kind target k
+    case $name in
+        implement.md | plan.md)
+            # Every round after the first; the first is the unheaded lead when there is one.
+            [[ -z $(outcome_lead_of "$file") ]] || first=0
+            while IFS=$'\t' read -r line n heading; do
+                if ((first)); then first=0; continue; fi
+                link=$(link_of "$file" "$line")
+                kind= target= k=
+                [[ -z $link ]] || read -r kind target k <<<"$link"
+                if [[ $kind == send-back || ($kind == after && $name == implement.md) ]]; then
+                    link_target "$file" "$name" "$n" "$target" "$k"
+                elif [[ $name == implement.md ]]; then
+                    finding drift "$name" send-back-link "round $n carries no \"(send-back from <file> round <k>)\" or \"(after plan.md round <k>)\""
+                else
+                    finding drift "$name" send-back-link "round $n carries no \"(send-back from <file> round <k>)\""
+                fi
+            done < <(rounds_of "$file")
+            ;;
+        close.md)
+            while IFS=$'\t' read -r line n heading; do
+                [[ $heading =~ ^Round\ [0-9]+\ —\ pull\ request\ updated ]] || continue
+                link=$(link_of "$file" "$line")
+                kind= target= k=
+                [[ -z $link ]] || read -r kind target k <<<"$link"
+                if [[ $kind == send-back ]]; then
+                    link_target "$file" "$name" "$n" "$target" "$k"
+                else
+                    finding drift "$name" send-back-link "round $n carries no \"(send-back from <file> round <k>)\""
+                fi
+            done < <(rounds_of "$file")
+            ;;
+        qc.md)
+            # A round sent back is followed by a round in the receiving file that names it. The
+            # last round is not held to that: its receiver may not have run yet.
+            local rounds last route receiver path
+            rounds=$(rounds_of "$file")
+            last=$(tail -n1 <<<"$rounds" | cut -f1)
+            while IFS=$'\t' read -r line n heading; do
+                [[ -n $line && $line != "$last" ]] || continue
+                route=$(route_of "$(decision_of "$file" "$line")")
+                [[ $route == implement || $route == plan ]] || continue
+                receiver=$route.md
+                path=$(sibling "$file" "$receiver") || continue
+                grep -qF "(send-back from qc.md round $n)" "$path" \
+                    || finding drift "$name" send-back-link "round $n is routed back to $receiver, but no $receiver round carries \"(send-back from qc.md round $n)\""
+            done <<<"$rounds"
+            ;;
+    esac
+    return 0
+}
+
+check_qc_round_at_review() {
+    local file=$1 name=$2 line n heading k qc
+    [[ $name == close.md ]] || return 0
+    qc=$(sibling "$file" qc.md) || qc=
+    while IFS=$'\t' read -r line n heading; do
+        [[ $heading =~ ^Round\ [0-9]+\ —\ (review\ feedback|conflicts\ with\ ) ]] || continue
+        k=$(round_marked_of "$file" "$line" | awk -F'\t' '
+            $2 == 0 && match($3, /^[ \t]*([-*] )?qc round at review: [0-9]+/) {
+                s = substr($3, RSTART, RLENGTH); sub(/.*: /, "", s); print s; exit
+            }')
+        if [[ -z $k ]]; then
+            finding FAIL "$name" qc-round-at-review "round $n carries no \"qc round at review: <k>\""
+        elif [[ -n $qc ]] && ! rounds_of "$qc" | cut -f2 | grep -qx "$k"; then
+            finding FAIL "$name" qc-round-at-review "round $n names qc round $k, which qc.md does not have"
+        fi
+    done < <(rounds_of "$file")
+}
+
+check_park_heading() {
+    local file=$1 name=$2 line level text full
+    [[ $name == close.md ]] || return 0
+    # A heading that names a round and a stash or an abandon, at any level, is meant as a park
+    # and must be one claim.sh --stash-live counts: its park_re, read from claim.sh in Main.
+    while IFS=$'\t' read -r line level text; do
+        [[ $text =~ ^Round\ [0-9]+ ]] || continue
+        grep -q -i -E 'stash|abandon' <<<"$text" || continue
+        full="$(printf '%*s' "$level" '' | tr ' ' '#') $text"
+        [[ $full =~ $park_re ]] \
+            || finding FAIL "$name" park-heading "line $line: \"$full\" is not a park heading claim.sh reads"
+    done < <(headings_of "$file")
+}
+
+# opened_rounds_of <close-file>: the rounds headed "— pull request opened", as rounds_of rows.
+opened_rounds_of() {
+    rounds_of "$1" | awk -F'\t' '$3 ~ /^Round [0-9]+ — pull request opened/'
+}
+
+check_finished_qc_clear() {
+    local file=$1 name=$2 qc
+    [[ $name == close.md && -n $(opened_rounds_of "$file") ]] || return 0
+    qc=$(sibling "$file" qc.md) || return 0
+    last_round_clear "$qc" \
+        || finding FAIL "$name" finished-qc-clear "a pull request is opened but qc.md's last round is not clear"
+    return 0
+}
+
+check_finished_pr() {
+    local file=$1 name=$2 opened count line n heading
+    [[ $name == close.md ]] || return 0
+    opened=$(opened_rounds_of "$file")
+    [[ -n $opened ]] || return 0
+    count=$(wc -l <<<"$opened")
+    ((count == 1)) || finding FAIL "$name" finished-pr "$count rounds headed \"— pull request opened\" (rounds $(cut -f2 <<<"$opened" | paste -sd, - | sed 's/,/, /g')); expected one"
+    while IFS=$'\t' read -r line n heading; do
+        round_marked_of "$file" "$line" \
+            | awk -F'\t' '$2 == 0 && $3 ~ /^#[0-9]+ [a-z]+:\/\/[^ \t]+[ \t]*$/ { found = 1 } END { exit !found }' \
+            || finding FAIL "$name" finished-pr "round $n records no \"#<number> <url>\" line"
+    done <<<"$opened"
+}
+
+check_env_form() {
+    local file=$1 name=$2 line f text bare want
+    [[ $name == implement.md || $name == qc.md ]] || return 0
+    while IFS=$'\t' read -r line f text; do
+        [[ $f == 0 ]] || continue
+        # A line that reads as a form line once list, quote and bold markers are set aside.
+        bare=$(sed -E 's/^[[:space:]>*_+-]+//' <<<"$text")
+        bare=${bare,,}
+        if [[ $bare =~ ^deployed\ revision[*_\ ]*[:—–-] ]]; then
+            want='"Deployed revision: <x>"'
+            [[ ! $text =~ ^Deployed\ revision:\ [^[:space:]] ]] || continue
+        elif [[ $bare =~ ^lease\ not\ held[*_\ ]*[:—–-] ]]; then
+            want='"Lease not held: <x>"'
+            [[ ! $text =~ ^Lease\ not\ held:\ [^[:space:]] ]] || continue
+        elif [[ $bare =~ ^environment\ (not\ )?released([^[:alnum:]]|$) ]]; then
+            want='"Environment released at the clear verdict: <x>" or "Environment NOT released: <x>"'
+            [[ ! $text =~ ^Environment\ released\ at\ the\ clear\ verdict:\ [^[:space:]] ]] || continue
+            [[ ! $text =~ ^Environment\ NOT\ released:\ [^[:space:]] ]] || continue
+        else
+            continue
+        fi
+        finding drift "$name" env-form "line $line: \"$text\" does not start its line as $want"
+    done < <(marked_of "$file")
+}
+
+checks=(title header_table sections round_numbering log_format log_cost footprint footprint_single open_question
+    verdict_span verdict_route blocking_to_close criteria_count criterion_verdict send_back_link
+    qc_round_at_review park_heading finished_qc_clear finished_pr env_form)
 
 # ---------------------------------------------------------------------------------------------
 # Main.
@@ -350,8 +800,15 @@ done
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
+# claim.sh's park heading pattern, read from claim.sh itself so the two cannot diverge.
+park_re=$(sed -n "s/^park_re='\(.*\)'\$/\1/p" "$(dirname "${BASH_SOURCE[0]}")/claim.sh" 2>/dev/null || true)
+[[ -n $park_re ]] || usage "cannot read park_re from claim.sh beside this script"
+
+# Every file is copied before any check runs: the cross-file checks read a sibling's copy.
 for name in "${present[@]}"; do
     tr -d '\r' <"$dir/$name" >"$work/$name"
+done
+for name in "${present[@]}"; do
     for check in "${checks[@]}"; do
         "check_$check" "$work/$name" "$name"
     done

@@ -3,7 +3,9 @@
 # every good-* fixture prints nothing, every bad-* fixture prints exactly its expected lines (and
 # exits 1 when one is a FAIL), every check id in the script's header comment has a bad-<id>/
 # fixture whose lines carry that id at that severity, and every usage error exits 2 with one
-# "dossier-check:" stderr line. Makes no network call and touches no git state.
+# "dossier-check:" stderr line, and the checker's reading of a clear last qc.md round agrees with
+# scripts/qc-verdict.sh's on every qc.md here. Makes no network call; the only git state it
+# touches is a scratch repository of its own.
 #
 #   dossier-check.test.sh
 #       Exits non-zero and reports how many cases failed; prints "all cases passed" otherwise.
@@ -52,6 +54,32 @@ FAIL plan.md [footprint] ### Footprint at line 35 has no value for: wiki'
 want[bad-footprint-absent]='FAIL plan.md [footprint] no ### Footprint in ## Outcome'
 want[bad-footprint-single]='drift plan.md [footprint-single] 2 ### Footprint blocks (lines 35, 44); expected one'
 want[bad-open-question]='FAIL implement.md [open-question] Q2 is open but ## Outcome is written'
+want[good-env]=
+want[good-planned-sendback]=
+want[good-first-round-clear]=
+want[bad-verdict-span]='FAIL qc.md [verdict-span] round 1 has no bold "**Verdict: …**" or "**Routing: …**" span'
+want[bad-verdict-route]='FAIL qc.md [verdict-route] round 1'"'"'s decision names no route: **Verdict:**
+FAIL qc.md [verdict-route] round 2'"'"'s decision names more than one route: **Verdict: back to `/codeo:implement` or `/codeo:plan`.**'
+want[bad-blocking-to-close]='FAIL qc.md [blocking-to-close] round 1 is routed clear with a blocking finding at line 29'
+want[bad-criteria-count]='drift qc.md [criteria-count] round 1 maps 2 criteria; init.md lists 3
+drift qc.md [criteria-count] round 2 has no criteria table; init.md lists 3'
+want[bad-criterion-verdict]='drift qc.md [criterion-verdict] line 24: verdict "partly met" does not begin met, not met, untestable or not yet checkable
+drift qc.md [criterion-verdict] line 25: verdict "" does not begin met, not met, untestable or not yet checkable'
+want[bad-send-back-link]='drift implement.md [send-back-link] round 2 carries no "(send-back from <file> round <k>)" or "(after plan.md round <k>)"
+drift implement.md [send-back-link] round 3 names qc.md round 5, which qc.md does not have
+drift qc.md [send-back-link] round 1 is routed back to implement.md, but no implement.md round carries "(send-back from qc.md round 1)"
+drift qc.md [send-back-link] round 2 is routed back to implement.md, but no implement.md round carries "(send-back from qc.md round 2)"
+drift close.md [send-back-link] round 3 carries no "(send-back from <file> round <k>)"'
+want[bad-qc-round-at-review]='FAIL close.md [qc-round-at-review] round 2 carries no "qc round at review: <k>"
+FAIL close.md [qc-round-at-review] round 3 names qc round 7, which qc.md does not have'
+want[bad-park-heading]='FAIL close.md [park-heading] line 19: "### Round 1 — Stashed" is not a park heading claim.sh reads
+FAIL close.md [park-heading] line 25: "### Round 2 - abandoned" is not a park heading claim.sh reads'
+want[bad-finished-qc-clear]='FAIL close.md [finished-qc-clear] a pull request is opened but qc.md'"'"'s last round is not clear'
+want[bad-finished-pr]='FAIL close.md [finished-pr] 2 rounds headed "— pull request opened" (rounds 1, 3); expected one
+FAIL close.md [finished-pr] round 1 records no "#<number> <url>" line'
+want[bad-env-form]='drift implement.md [env-form] line 13: "- Deployed revision: rev-0042" does not start its line as "Deployed revision: <x>"
+drift qc.md [env-form] line 28: "Lease not held — lease env is held by #13" does not start its line as "Lease not held: <x>"
+drift qc.md [env-form] line 32: "Environment not released: origin could not be asked" does not start its line as "Environment released at the clear verdict: <x>" or "Environment NOT released: <x>"'
 
 # --- every fixture: exact output, exit 1 exactly when a FAIL printed, nothing on stderr ----------
 for dir in "$fixtures"/*/; do
@@ -90,6 +118,68 @@ while read -r id severity; do
     assert_eq "lines naming the id" 1 "$((lines > 0))"
     assert_eq "lines of another id or severity" 0 "$others"
 done <<<"$ids"
+
+# --- the checker's "clear" agrees with qc-verdict.sh's on every qc.md ----------------------------
+# Each qc.md (every fixture's, plus decision forms on qc-verdict.sh's edges) is judged twice: by
+# qc-verdict.sh, archived under .codeo/done/<n>/ in a scratch repo, and by the checker, beside a
+# close.md that records an opened pull request, where finished-qc-clear prints exactly when the
+# last round is not clear.
+export GIT_AUTHOR_NAME="Test" GIT_AUTHOR_EMAIL="test@example.com"
+export GIT_COMMITTER_NAME="Test" GIT_COMMITTER_EMAIL="test@example.com"
+mkdir "$scratch/forms"
+form_n=0
+add_form() {
+    form_n=$((form_n + 1))
+    printf '# Issue #12 — qc\n\n## Outcome\n\n%s\n\n## Log\n\n- 2026-03-06 — x · cost: 1m\n' "$1" \
+        >"$scratch/forms/form-$form_n.md"
+}
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clear**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict:** clear'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clearly fine**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: not clear — back to `/codeo:implement`.**'
+add_form $'### Round 1 — 2026-03-06\n\n**Routing: clear.**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clear — forward to `/codeo:close`.**\n\n### Round 2 — 2026-03-07\n\n**Verdict: back to `/codeo:plan`.**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: back to `/codeo:plan`.**\n\n### Round 2 — 2026-03-07\n\n**Verdict:\nclear — forward to `/codeo:close`.**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clear** then **Routing: back to `/codeo:implement`.**'
+add_form $'### Round 1 — 2026-03-06\n\nThe verdict is clear.'
+add_form $'No round heading at all. **Verdict: clear**'
+# qc-verdict.sh reads round headings without regard to fences, so the fenced heading is the last
+# round there, and it has no span.
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clear**\n\n```\n### Round 2 — 2026-03-07\n```'
+
+agree_repo=$(mktemp -d -p "$scratch")
+git -C "$agree_repo" -c init.defaultBranch=main init -q
+git -C "$agree_repo" commit -q --allow-empty -m base
+agree_base=$(git -C "$agree_repo" rev-parse HEAD)
+qc_files=("$fixtures"/*/qc.md "$scratch"/forms/*.md)
+seen_clear=0 seen_not_clear=0
+for i in "${!qc_files[@]}"; do
+    qc=${qc_files[$i]}
+    case_desc="clear agreement on ${qc#"$plugin_root"/}"
+    archive=.codeo/done/$((i + 1))
+    git -C "$agree_repo" checkout -q --detach "$agree_base"
+    mkdir -p "$agree_repo/$archive"
+    cp "$qc" "$agree_repo/$archive/qc.md"
+    git -C "$agree_repo" add -A
+    git -C "$agree_repo" commit -q -m "archive $((i + 1))"
+    verdict_out=$(cd "$agree_repo" && bash "$plugin_root/scripts/qc-verdict.sh" "$agree_base" HEAD 2>&1) || true
+    if [[ $verdict_out == "qc-verdict: $archive/qc.md: round "*" clear" ]]; then
+        verdict_says=clear seen_clear=$((seen_clear + 1))
+    else
+        verdict_says=not-clear seen_not_clear=$((seen_not_clear + 1))
+    fi
+    rm -rf "$scratch/agree" && mkdir "$scratch/agree"
+    cp "$qc" "$scratch/agree/qc.md"
+    cp "$fixtures/good-basic/close.md" "$scratch/agree/close.md"
+    run_check "$scratch/agree"
+    if grep -q ' \[finished-qc-clear\] ' <<<"$out"; then checker_says=not-clear; else checker_says=clear; fi
+    assert_eq "checker against qc-verdict.sh" "$verdict_says" "$checker_says"
+    assert_eq "stderr" "" "$err"
+done
+# Both answers must have been exercised, or the agreement would be vacuous.
+case_desc="clear agreement"
+assert_eq "qc.md files judged clear" 1 "$((seen_clear > 0))"
+assert_eq "qc.md files judged not clear" 1 "$((seen_not_clear > 0))"
 
 # --- the checker reads CRLF files as it reads LF ones --------------------------------------------
 case_desc="CRLF line endings"
