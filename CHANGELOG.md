@@ -3,9 +3,13 @@
 ## Unreleased
 
 Config schema: 1
-Shared state: dossier conventions in `close.md` — the `### Round <n> — stashed|abandoned` headings `claim.sh --stash-live` reads, and the `qc round at review: <k>` line `/codeo:close` reads back.
+Shared state: dossier conventions in `close.md` — the `### Round <n> — stashed|abandoned` headings `claim.sh --stash-live` reads, the `qc round at review: <k>` line `/codeo:close` reads back, and the forms `scripts/dossier-check.sh` reads (the `**Verdict: …**` span, `(send-back from <file> round <k>)`, `(after plan.md round <k>)`, the `### Footprint` block, the criteria table).
 Safe to bump mid-workflow: yes
 
+- `scripts/dossier-check.sh`: checks one dossier directory against the forms the protocol documents state, printing `<FAIL|drift> <file> [<check-id>] <text>` per finding and exiting 1 on any `FAIL`.
+- `tests/replay.test.sh`: the golden replay, which runs the checker over a project's finished dossiers (`CODEO_GOLDEN_DIR`) and compares its findings with an `expected.tsv`; skipped when unset, with a synthetic directory proving the harness.
+- `docs/dossier.md` gains the section `What a finished dossier looks like`.
+- Skill edits so the skills write the forms the checker reads: `/codeo:qc` words findings blocking or non-blocking and writes the criteria table; `/codeo:implement` and `/codeo:plan` write the send-back parenthesis and the `(after plan.md round <k>)` form; `/codeo:plan` replaces the old footprint with a send-back round's new one; `/codeo:close` writes the `— pull request updated` round and the `#<n> <url>` line.
 - The repository names no project that uses it: design documents about a specific project live in that
   project's repository. `tests/agnostic.test.sh` fails if a tracked file mentions one.
 - `docs/skills-inventory.md`: the generic rules each pipeline skill must keep.

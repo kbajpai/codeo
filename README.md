@@ -31,6 +31,55 @@ A project shapes a skill without editing it through overlay files, `.codeo/overl
 `docs/extension-points.md` documents the file format and every extension point. The dossier and
 hand-off protocols are in `docs/dossier.md` and `docs/handoff.md`.
 
+## Checking a dossier
+
+```bash
+bash scripts/dossier-check.sh <dossier-dir>
+```
+
+The checker reads one finished or live dossier directory (`.codeo/<issue>/`, an archived copy, or any
+other directory holding some of `issue.md`, `init.md`, `plan.md`, `implement.md`, `qc.md` and `close.md`)
+and checks its structure against the forms `docs/dossier.md` (see *What a finished dossier looks like*)
+and `docs/handoff.md` state. It judges shape only, never whether a finding, plan or answer is right. It
+prints one line per finding, in file order and then check order, and no summary:
+
+```
+<FAIL|drift> <file> [<check-id>] <text>
+```
+
+`FAIL` is a promise the protocol documents make about every dossier the skills write; `drift` is a
+deviation that is reported but not failed on. A check's severity never depends on its input. Exit codes:
+0 when no `FAIL` printed, 1 when any did, 2 on a usage error (no directory, or a directory holding none of
+the six files). The header of `scripts/dossier-check.sh` lists every check id and is its documentation.
+
+```
+drift init.md [header-table] no "| | |" header table after the title
+FAIL plan.md [log-cost] line 42: no " · cost: "
+```
+
+## Replaying finished dossiers
+
+`tests/replay.test.sh` runs the checker over a project's finished dossiers and compares what it prints
+with the findings the project recorded as expected, so a change to the checker or to the skills' forms
+shows up against real dossiers. Point `CODEO_GOLDEN_DIR` at a directory of dossier directories plus an
+`expected.tsv`:
+
+```bash
+CODEO_GOLDEN_DIR=<the project's golden directory> bash tests/replay.test.sh
+```
+
+`expected.tsv` has one finding per row with the tab-separated columns `dossier`, `severity` (`FAIL` or
+`drift`), `file` and `check-id`; blank lines and lines starting with `#` are ignored. Free text is never
+compared, so rewording a finding breaks nothing, while a new finding, a moved or re-graded one, or a
+recorded one that no longer occurs does. The success line counts every `expected.tsv` row, `FAIL` rows
+included.
+
+With `CODEO_GOLDEN_DIR` unset (how `tests/run.sh` runs it) the replay prints a skip line for the real data
+and still exercises the harness on the synthetic directory `tests/fixtures/golden/`. Exit codes: 0 when all
+findings are as expected, 1 on a mismatch, 2 when the replay cannot be judged (the variable set but empty, a
+nonexistent or empty directory, the checker exiting 2, or a malformed `expected.tsv` row). The golden data
+stays in the project's own repository; codeo carries none.
+
 ## Requirements
 
 bash 4.3 or later, jq, git and gh. Board access uses `gh project`, which needs GraphQL access to GitHub.
