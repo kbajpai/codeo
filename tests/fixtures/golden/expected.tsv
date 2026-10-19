@@ -1,0 +1,4 @@
+# The findings the synthetic golden directory is known to produce, one per row:
+# dossier<TAB>severity<TAB>file<TAB>check-id. case-a is clean, so it has no rows.
+case-b	drift	init.md	header-table
+case-b	FAIL	plan.md	log-cost
