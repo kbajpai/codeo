@@ -147,7 +147,9 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    them, and step 7 hands the same text to the reviewer; on exit 3, there are none, and the
    invariants file (`$INVARIANTS`, when set) and the criteria are the whole standard, which step
    7's reviewer judges; on exit 1, 2 or 4, report the one `codeo:` line it printed to the engineer
-   and carry on without them. A breach is a finding, classified at step 8.
+   and carry on without them. A breach is a finding, classified at step 8. The `$INVARIANTS` file's
+   text is judged by step 7's reviewer, not in a separate invariants check here; this step judges
+   only the overlay's further rules itself.
 
    Then `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" --outside <N>`. Every path it prints is a
    finding — *the branch changed a file outside its footprint* — classified at step 8 like any
@@ -222,15 +224,27 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    environment, the block is one line saying so, and nothing below runs.
 
    **This skill never deploys.** Only `/codeo:implement` deploys, builds for the environment or
-   takes the lease to change what it runs. Here the lease is held only to read what the
-   environment runs, and anything that would change it is a send-back to `/codeo:implement`.
+   takes the lease. Here the lease is only checked, and re-taken by its holder when this checkout
+   needs the activation; anything that would change what the environment runs — the take and the
+   deploy included — is a send-back to `/codeo:implement`.
 
    <!-- rule: qc-13 -->
-   Evidence the environment cannot give yet is never a pass, and never on its own a send-back:
-   when this issue does not hold the lease and cannot take it, or the `deployed` hook could not
-   answer — the identity it needs is missing in this checkout, say — each criterion that needs the
-   environment is *not yet checkable*, and the block says why. A workload nobody declares is an
-   orphan: a non-blocking finding, never a send-back.
+   Evidence the environment cannot give yet is never a pass: when this issue does not hold the
+   lease, or the `deployed` hook could not answer — the identity it needs is missing in this
+   checkout, say — each criterion that needs the environment is *not yet checkable*, and the block
+   says why. Those criteria are not themselves the send-back: when the lease is not held, what goes
+   back to `/codeo:implement` is the take and the deploy it still owes. A workload nobody declares
+   is an orphan: a non-blocking finding, never a send-back.
+
+   **The evidence hook comes first**, before any lease is looked at:
+
+   ```bash
+   deployed=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.hooks.deployed)
+   ```
+
+   Absent or empty: say plainly that no evidence hook exists, mark every criterion that needs the
+   environment *untestable*, and do not block on it — no lease check and no send-back for evidence
+   that can never be read; nothing below runs.
 
    **The revision.** Read the most recent `Deployed revision: <x>` in `.codeo/<N>/implement.md` —
    the one under `## Where this stands` when there is one, else the last in `## Outcome` — and
@@ -244,35 +258,37 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    round's block recorded: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD`.
    `deploy=false` means no environment work since: the block says
    "environment evidence from round <n> stands: <revision>", quotes the line, and nothing below
-   runs. `deploy=true` means the step
-   runs as in a first round. No `deploy=` line means decide from `git diff <that revision>...HEAD`,
-   read directly, and say so.
+   runs. `deploy=true` means the step runs as in a first round. No `deploy=` line means decide from
+   `git diff <that revision>...HEAD`, read directly, and say so. A `scope: cannot diff` line means
+   `git fetch` once and run it again; still failing, run the step as in a first round, and say
+   why. Any other non-zero exit is a stop: report the line it printed, and stop.
 
-   **The lease.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease check "$ENV_RESOURCE" <N>`
-   first. Exit 0: this issue holds it — `/codeo:implement` took it and keeps it until this skill's
-   clear verdict — so proceed; re-take it with
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take "$ENV_RESOURCE" <N> "qc"` only when
-   the `deployed` hook needs the environment's activation in this checkout, since a holder's
-   re-take runs the activation hooks again here and keeps the lease whatever they answer. Exit 1:
-   this issue does not hold it — take it with the same command; once taken it stays held until
-   this skill releases it at a clear verdict. Exit 2: origin cannot be asked — report its line and
-   stop. The take's refusals are handled apart, and none is ever retried with an override, since
-   nothing this skill does changes what the lease guards:
-   - **The queue** — `<resource> is leased to #<M>`, or `<resource> is #<M>'s turn`: a recorded
-     wait. Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease wait "$ENV_RESOURCE" <N>`,
-     name the holder or the waiter in the block, take no environment action, and each criterion
-     that needs the environment is *not yet checkable*.
+   **The lease.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease check "$ENV_RESOURCE" <N>`.
+   - **Exit 0**: this issue holds it — `/codeo:implement` took it and keeps it until this skill's
+     clear verdict — so proceed. Re-take it with
+     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take "$ENV_RESOURCE" <N> "qc"` only when
+     the `deployed` hook needs the environment's activation in this checkout: a holder's re-take
+     runs the activation hooks again here and keeps the lease whatever they answer, and, taken
+     without an override, it drops a stale `override:` line the lease still records.
+   - **Exit 1**: this issue does not hold it. Quote the check's line, which names the holder or
+     says it is not held; each criterion that needs the environment is *not yet checkable*, and the
+     take and the deploy this branch still owes are a send-back to `/codeo:implement`. Write the
+     round, route, and run nothing below. Record no wait: `/codeo:implement`'s own take records
+     one if it is queued.
+   - **Exit 2**: origin cannot be asked — report its line and stop.
+
+   A holder's re-take's refusals are handled apart, and none is ever retried with an override,
+   since nothing this skill does changes what the lease guards:
    - **A hook** — `intake: <resource> refused — the <name> hook exited <rc>`: report the hook and
-     what it printed, and record no wait; each criterion that needs the environment is *not yet
-     checkable*. A failing hook is the project's to fix.
-   - **A stale base** — `this branch does not contain origin/<base>`: run step 2's sync again,
-     under its rules, then take again.
+     what it printed, and record no wait. The lease stays with this issue, unchanged; if the
+     `deployed` hook then fails for want of the activation, the criteria are *not yet checkable*.
+     A failing hook is the project's to fix.
+   - **A stale base** — `this branch does not contain origin/<base>`: the base branch moved during
+     this round, so the build, the suites and the review judged a tree that a merge would replace.
+     Run this pass again from step 2, sync included, rather than only taking again.
    - **Anything else**: report the one line it printed, and stop.
 
-   **The rows.** Read the evidence hook with
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.hooks.deployed`. Absent or
-   empty: say plainly that no evidence hook exists, mark every criterion that needs the environment
-   *untestable*, and do not block on it. Otherwise run it from the project root as
+   **The rows.** Run the evidence hook from the project root as
    `CODEO_ISSUE=<N> CODEO_RESOURCE="$ENV_RESOURCE" bash -c "$deployed"` and read its exit status.
    Non-zero: the criteria are *not yet checkable*, never a pass — quote what it printed. Exit 0:
    one line per workload, `name<TAB>revision<TAB>state<TAB>declared`; quote them in the block.
@@ -293,14 +309,20 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <revision> HEAD` printing `deploy=false` (no
    `deploy=` line: decide from `git diff <revision>...HEAD`, read directly, and say so; a
    `scope: cannot diff` line: `git fetch` once and run it again, and still failing, the revision
-   fails). The block records each result against its row.
+   fails; any other non-zero exit: report its line, and stop). The block records each result
+   against its row.
 
-   A `stopped` row: read the start step with
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.hooks.start`, run it once with
-   the same exports (absent, say so), then re-run the `deployed` hook once and read its rows as
-   above. A row still not `running` then is read like a `rolling` one. A `rolling` row, or a
-   revision that fails either check, means the environment is not running what is being cleared:
-   that is a send-back to `/codeo:implement` to redeploy, never a build or a deploy here.
+   A `stopped` row: read the start step,
+
+   ```bash
+   start=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.hooks.start)
+   ```
+
+   run it once as `CODEO_ISSUE=<N> CODEO_RESOURCE="$ENV_RESOURCE" bash -c "$start"` (absent, say
+   so), then re-run the `deployed` hook once and read its rows as above. A row still not `running`
+   then is read like a `rolling` one. A `rolling` row, or a revision that fails either check, means
+   the environment is not running what is being cleared: that is a send-back to `/codeo:implement`
+   to redeploy, never a build or a deploy here.
 
    **The criteria.** With every row that is not an orphan `running` a revision that passes both
    checks, run each criterion that needs the environment, and record it met or not met with the
