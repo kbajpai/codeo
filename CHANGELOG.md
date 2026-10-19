@@ -3,16 +3,20 @@
 ## Unreleased
 
 Config schema: 1
-Shared state: unchanged
+Shared state: dossier conventions in `close.md` — the `### Round <n> — stashed|abandoned` headings `claim.sh --stash-live` reads, and the `qc round at review: <k>` line `/codeo:close` reads back.
 Safe to bump mid-workflow: yes
 
 - The repository names no project that uses it: design documents about a specific project live in that
   project's repository. `tests/agnostic.test.sh` fails if a tracked file mentions one.
 - `docs/skills-inventory.md`: the generic rules each pipeline skill must keep.
-- Skills: `/codeo:issue`, `/codeo:init`, `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:triage`.
+- Skills: `/codeo:issue`, `/codeo:init`, `/codeo:plan`, `/codeo:implement`, `/codeo:qc`, `/codeo:close` and `/codeo:triage`: the whole pipeline ships.
 - `/codeo:qc` checks the build, the suites, the acceptance criteria, the documentation and an independent review, reads what the environment runs, and routes forward or back. It registers three extension points, `environment-evidence`, `wiki-rules` and `invariants-extra`.
 - The reviewer rule: the code reviewer runs on `models.reviewer` (default `opus`) with a `description` starting `QC review:`; there is no external second reviewer.
 - The environment-evidence contract: `/codeo:qc` reads the most recent `Deployed revision:` in `implement.md` and the rows of the `environment.hooks.deployed` hook, and never deploys.
+- `/codeo:close` opens the pull request, waits for the merge, routes review feedback or a conflict back through `/codeo:implement` and `/codeo:qc` onto the same pull request, releases the environment at approval when still held, verifies the merge, deletes the remote branch on the engineer's yes, releases every lease and the lock, and is the way to stash or abandon a workflow. It registers three extension points, `put-back`, `ci-publish-check` and `host-workflow`.
+- The `qc round at review: <k>` convention: every send-back round `close` writes records the latest `qc` round number, and the next clear round must be numbered higher; round numbers are compared, never dates.
+- A stash or an abandon takes the environment lease for the put-back when the issue no longer holds it, behind any waiter and never with `--override`, and releases it with the rest.
+- With no board configured `close` moves no card and logs `board: not configured`; with no environment it releases and puts back nothing.
 - `/codeo:implement` registers two extension points, `environment-lease-notes` and `wiki-rules`.
 - Suite field `parallel`, read by `/codeo:implement`.
 - The `environment.hooks.deploy` contract: its last stdout line is the deployed revision, a non-zero exit
@@ -35,7 +39,6 @@ Safe to bump mid-workflow: yes
 
 - The pinned rule inventory must be regenerated deliberately: editing `docs/skills-inventory.md` without
   updating the pin fails `tests/inventory.test.sh`.
-- `close` is not in this release.
 - A suite's `filter` is a command template for one test, `{}` standing for the test's name; a suite without
   one has no single-test form and its whole `test` command is the proof.
 

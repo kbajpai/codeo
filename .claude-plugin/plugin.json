@@ -1,5 +1,5 @@
 {
   "name": "codeo",
   "version": "0.1.0",
-  "description": "An agent-workflow plugin: issue, init, plan and triage, with dossiers, locks and overlays; implement, qc and close follow."
+  "description": "An agent-workflow plugin: the full pipeline (issue, init, plan, implement, qc and close, plus triage), with dossiers, locks and overlays."
 }

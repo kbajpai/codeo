@@ -62,7 +62,7 @@ By default `/codeo:init` takes the lock itself: after it cuts and checks out the
 writes and pushes its `init.md`, it runs `lock.sh take local`, and `plan` follows in the same
 session. A project with an `init/host-workflow` overlay section takes the lock as that section
 says, in whatever checkout it runs the issue's later steps. `/codeo:close` removes it —
-once the pull request has merged and the branch is cleaned up, or on a stash or an abandon. Nothing
+once the pull request has merged and the branch is cleaned up (deleted on the engineer's yes, or kept on their no), or on a stash or an abandon; a release or deletion that failed keeps it, and so does a stash's or an abandon's push that failed, and running `/codeo:close` again finishes the job. Nothing
 else ever writes it. **A workflow whose pull request is open is still running**: review can send it
 back, and until the merge the issue is what the pipeline is working on.
 
@@ -198,7 +198,8 @@ it.
     results in `qc.md` — `environment.hooks.deployed` is how `qc` learns what the branch left
     deployed, and it names any workload the environment does not declare. `/codeo:close` releases everything at every exit (`lease release-all <N>`),
     so a finished or parked workflow never keeps the environment, and releases the environment at
-    approval only when `qc` could not. Before every hand-off to `qc`, the first round included,
+    approval only when `qc` could not. It takes the environment only to put it back on a stash or
+    an abandon, when the issue no longer holds it, and releases it with the rest. Before every hand-off to `qc`, the first round included,
     `/codeo:implement` checks whether the round changed what the environment runs —
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <the revision it last deployed> HEAD` prints
     `deploy=true` — and if so takes the lease again, behind whoever is waiting, and redeploys; a
@@ -211,7 +212,8 @@ with the base branch. `/codeo:close` checks for it and sends it back to `/codeo:
 other change the code needs. Every `implement` and `qc` round starts by merging
 `origin/<baseBranch>` (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/sync-main.sh"`, with
 `--abort-on-conflict` in `qc`, which resolves nothing), so a conflict surfaces in the round that can
-fix it rather than at `close`.
+fix it rather than at `close`. A pull request that is merely behind the base branch, with a clean merge, `/codeo:close`
+brings up to date itself: that merge is the one commit it makes that is not its own dossier.
 
 ## Who owns what
 
@@ -220,15 +222,15 @@ fix it rather than at `close`.
 | The GitHub issue | `/codeo:issue` |
 | The issue's assignee | `/codeo:init`, cleared by `/codeo:close` on a stash or an abandon |
 | The issue's board Status | `ready`: `/codeo:triage`, and `/codeo:close` on a stash; `backlog`: `/codeo:triage`, and `/codeo:close` on an abandon; `inProgress`: `/codeo:init`, and `/codeo:close` on a send-back; `inReview` and `done`: `/codeo:close` |
-| The branch | `/codeo:init`; `/codeo:close` deletes it after the merge |
+| The branch | `/codeo:init`; `/codeo:close` deletes it on the engineer's yes once the merge is verified, or on an abandon when the engineer asks in so many words, after the same confirmation |
 | `<plansDir>/YYYY-MM-DD-<slug>.md` and `<docsDir>/<slug>.md` | `/codeo:plan` |
 | Application and test code, and the documentation pages the plan names | `/codeo:implement` |
 | The quality verdict on a change | `/codeo:qc` |
-| The pull request, and deleting the branch once it has merged | `/codeo:close` |
+| The pull request, and deleting the branch (on the engineer's yes) once it has merged — or on an abandon, when the engineer asks | `/codeo:close` |
 | `.codeo/<N>/<step>.md` | the one step named in the filename |
 | `.codeo/intake/` and the `codeo/intake` branch | `/codeo:issue`; `/codeo:init` only reads it, copying `issue.md` out when it adopts one |
 | `.codeo/intake/triage/` — the ledger and run files | `/codeo:triage` |
-| `.codeo/intake/leases/` — the locks on exclusive resources and who waits for them | `/codeo:plan` takes those its footprint names; `/codeo:implement` takes `environment.resource` and is the only step that deploys to it; `/codeo:qc` re-takes only a lease its issue already holds (to activate it in its own checkout), reads what is deployed, records no waits, and releases it at a clear verdict; every other wait is recorded through `intake.sh lease` only; `/codeo:close` releases the rest |
+| `.codeo/intake/leases/` — the locks on exclusive resources and who waits for them | `/codeo:plan` takes those its footprint names; `/codeo:implement` takes `environment.resource` and is the only step that deploys to it; `/codeo:qc` re-takes only a lease its issue already holds (to activate it in its own checkout), reads what is deployed, records no waits, and releases it at a clear verdict; every other wait is recorded through `intake.sh lease` only; `/codeo:close` takes `environment.resource` only for a put-back, and releases the rest at every exit |
 | `.codeo/active`, the lock, one per issue checkout | `/codeo:init`, taken in the checkout that runs the later steps; cleared by `/codeo:close` |
 
 Documentation is documentation in the same sense code is code: `/codeo:plan` decides which pages
@@ -279,7 +281,9 @@ Two steps may hand work *backwards*, and everywhere else the flow runs forwards 
 - `/codeo:close`, to `/codeo:implement` when review on the pull request asks for changes, or when
   the pull request conflicts with the base branch because a parallel workflow merged first. The fix
   then goes through `/codeo:qc` in full before it returns to `/codeo:close`, and onto the same pull
-  request.
+  request. Each such round in `close.md` records `qc round at review: <k>`, the number of the latest
+  `qc.md` round when it was written; `/codeo:close` accepts only a clear `qc` round numbered above
+  every recorded `<k>`, comparing round numbers and never dates.
 
 A send-back is a hand-off, with the same four parts and one extra rule: **the sender never starts
 the fixing.** Naming a finding and then repairing it is doing the receiving step's work, and it
