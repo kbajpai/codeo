@@ -44,6 +44,16 @@ must_contain "the deploy precedes the lease task" 'before dispatching the task t
 must_contain "other take refusals stop without a wait" '**Anything else**'
 must_contain "no suites means no deploy= line" 'no `deploy=` line at all'
 must_contain "a failing scope.sh is retried after a fetch" 'A non-zero exit from the script'
+must_contain "the deployed revision is committed at once" 'deployed <short revision>'
+must_contain "the redeploy check reads the whole dossier" 'anywhere in `.codeo/<N>/implement.md`'
+must_contain "an empty revision is HEAD after the hook" 'after the hook and the clean-tree check'
+must_contain "a missing deploy hook stops before the take" 'with nothing taken'
+must_contain "an unresolvable revision is a take and deploy" 'the lease and deploy as above'
+must_contain "the redeploy check is the last thing before step 8" 'the last thing before step 8'
+must_contain "the build comes before the redeploy check" 'redeploy check comes after this build'
+if grep -qF 'before the hook ran' "$skill"; then
+    fail "an empty revision still reads the HEAD from before the hook"
+fi
 
 # $1 case, $2 fixed string, $3 fixed string that must follow within three lines.
 must_follow() {

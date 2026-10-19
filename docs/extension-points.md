@@ -181,7 +181,8 @@ in the index page. Flows are Mermaid.
 the task being run.
 
 **Expected back.** What the project does around a deploy that the `deploy` hook does not: waiting
-for a rollout, smoke checks, who to tell. The skill applies it after the hook returns.
+for a rollout, smoke checks, who to tell — and anything about taking and holding the lease. The skill
+fetches it before the take and applies it to taking, holding and deploying.
 
 **Default when absent.** None; the lease and deploy paragraphs are the whole rule.
 

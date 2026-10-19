@@ -47,7 +47,8 @@ pages under `$DOCS`).
    wrote — not whichever file under the config's `plansDir` looks most recent. An argument
    overrides it only within the locked issue, and a mismatch between the two is worth saying out
    loud before acting on either. If that outcome is still `_Pending_`, the previous step hasn't
-   finished — say so and stop.
+   finished — say so and stop. A file it names that has no task checklist — a reference document,
+   not a plan — is a stop too: say so and send it back to `/codeo:plan`.
 
 2. **Confirm the plan is a locked, reviewed artifact, not a moving draft.**
    <!-- rule: implement-02 -->
@@ -135,7 +136,12 @@ pages under `$DOCS`).
    to the engineer and carry on without notes.
 
    **The first task marked `Needs lease: <the value of $ENV_RESOURCE>` takes the lease, and this
-   workflow keeps it.** Before dispatching it:
+   workflow keeps it.** This happens inside the sub-skill's loop, when it reaches that task, and
+   before dispatching it:
+   - Read the project's deploy step first, with
+     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.hooks.deploy` (a read, with no
+     side effects). Absent or empty is a plan gap: stop and report it with nothing taken — the
+     plan needs the environment and the project has no way to put this branch there.
    - Step 2a has already merged the base branch in. The environment is about to run this branch,
      and the take refuses one that does not contain `origin/<baseBranch>`, since it would roll
      back already-merged work; if it refuses on that, run step 2a again, then take again.
@@ -157,19 +163,21 @@ pages under `$DOCS`).
      `lease <resource> taken with override: <reason>` in this round's `## Log` line.
 
    **Then deploy — right after the take, before dispatching the task that needed it**, so that task
-   runs against this branch as deployed. Read the project's deploy step with
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.hooks.deploy`. Nothing printed
-   (exit 1) while the plan has a `Needs lease:` task is a plan gap: stop and report it — the plan
-   needs the environment and the project has no way to put this branch there. Otherwise, from the
-   project root, note `git rev-parse HEAD`, then run the hook as
-   `CODEO_ISSUE=<N> CODEO_RESOURCE="$ENV_RESOURCE" bash -c "$cmd"` (`$cmd` being the printed
-   command), capturing its stdout:
-   - Its last stdout line is the revision it deployed: record it in this round's `## Outcome` as
-     `Deployed revision: <x>`. An empty last line means the `HEAD` noted before the hook ran;
-     record that, and say the hook printed no revision.
+   runs against this branch as deployed. From the project root, run the command read above
+   (`$cmd`) with its output shown as it runs and kept in a log inside the git directory, which no
+   commit and no `git status` ever sees:
+   `CODEO_ISSUE=<N> CODEO_RESOURCE="$ENV_RESOURCE" bash -c "$cmd" | tee "$(git rev-parse --git-dir)/codeo-deploy-<N>.log"`,
+   taking the hook's own exit status from `${PIPESTATUS[0]}`, not `tee`'s. Then, in this order:
    - A non-zero exit is a failed task, not a lease refusal: the debugging rule above applies.
    - Anything `git status --porcelain` prints after the hook is a stop. The hook commits its own
      bookkeeping, so a dirty tree is work it left undone: report the paths, and never commit them.
+   - The log's last line is the revision it deployed. An empty last line means `HEAD` as it is
+     now — `git rev-parse HEAD` after the hook and the clean-tree check, so a bookkeeping commit
+     the hook made is part of it; record that, and say the hook printed no revision.
+   - Write `Deployed revision: <x>` under `## Where this stands` in `.codeo/<N>/implement.md` and
+     commit the dossier there and then, staged by name, with the subject
+     `docs(codeo): implement dossier for #<N> — deployed <short revision>`, and push — so the
+     revision survives a turn that stops before step 8. Step 8 repeats it in the round's outcome.
 
    <!-- rule: implement-07 -->
    Once taken, **the lease is never released here** — not after the task, not at the hand-off, not
@@ -182,10 +190,11 @@ pages under `$DOCS`).
    **A take that is queued** stops at that task. Record the wait with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease wait "$ENV_RESOURCE" <N>`. Every task
    before it is done and committed, so write `## Where this stands` in `.codeo/<N>/implement.md`
-   to say so and who holds the lease or has the turn, commit and push the dossier as at step 4,
-   and end the turn. Offer the engineer a background watch instead of a bare stop — the Monitor
-   tool, which notifies the session and costs nothing while it waits; the watch is the engineer's
-   to accept, never a loop this skill runs itself:
+   to say so and who holds the lease or has the turn, commit the dossier, staged by name, with the
+   subject `docs(codeo): implement dossier for #<N> — waiting for <resource>`, push, and end the
+   turn. Offer the engineer a background watch instead of a bare stop — the Monitor tool, which
+   notifies the session and costs nothing while it waits; the watch is the engineer's to accept,
+   never a loop this skill runs itself:
    - after `is leased to #<M>`, a watch until the resource leaves the held list —
      `until ! bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list | grep -qFx "== $ENV_RESOURCE — held"; do sleep 300; done`;
    - after `is #<M>'s turn`, the resource is already free, so that watch would fire at once: watch
@@ -196,22 +205,24 @@ pages under `$DOCS`).
    may still have it, or someone else may have been quicker, and a refusal then is handled as
    above.
 
-   **Before the hand-off to QC, in every round — the first included — check whether the
-   environment still runs this branch**, since a later task can change what it runs. The revision
-   to compare is the last `Deployed revision:` in this file's `## Outcome` (only this skill
-   deploys). With none, the issue never used the environment: there is nothing to compare, so take
-   the lease only if this round newly needs it. Otherwise run
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD` and read its `deploy=`
-   line. `deploy=false` means no environment work and no take. `deploy=true` means take the lease
-   (`lease take "$ENV_RESOURCE" <N> "<round>"`, a re-take while this issue still holds it, else
-   queued behind any waiter: a queue refusal is the same record-a-wait stop as above), deploy as
-   above, and record the new `Deployed revision:` in the round's outcome.
+   **The redeploy check: the last thing before step 8, in every round — the first included.**
+   A later task, or a fix step 6's build needed, can change what the environment runs, so run it
+   after step 6, and again if anything after it added commits. The revision to compare is the last
+   `Deployed revision:` anywhere in `.codeo/<N>/implement.md` — under `## Where this stands` or in
+   any round of `## Outcome` (only this skill deploys). With none, the issue never used the
+   environment: there is nothing to compare, so take the lease only if this round newly needs it.
+   Otherwise run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD` and read its
+   `deploy=` line. `deploy=false` means no environment work and no take. `deploy=true` means read
+   the deploy step and take the lease as above (`lease take "$ENV_RESOURCE" <N> "<round>"`, a
+   re-take while this issue still holds it, else queued behind any waiter: a queue refusal is the
+   same record-a-wait stop as above), deploy as above, and record the new `Deployed revision:` as
+   above.
    With no suites configured the script prints no `deploy=` line at all and exits 0: decide from
    `git diff <revision>...HEAD` yourself, and say so in the outcome.
    A non-zero exit from the script, with its `scope:` line, means the revision does not resolve
    here (a tag not fetched, say): `git fetch` once and run it again. Still failing, decide from
-   `git diff <revision>...HEAD` yourself, or redeploy when the revision cannot be resolved at all,
-   and say which you did, and why, in the outcome.
+   `git diff <revision>...HEAD` yourself — or, when the revision cannot be resolved at all, take
+   the lease and deploy as above — and say which you did, and why, in the outcome.
    The script never overrules the diff you read: a change you can see alters what the environment
    runs is a redeploy whatever it prints — say why.
 
@@ -238,7 +249,8 @@ pages under `$DOCS`).
    rather than wasting a QC pass; suites whose `parallel` is `true` may run together, the rest one
    at a time, and a suite with no `build` has nothing to run here. Nothing printed means no suites
    are configured: say there is no build command to run, and record that as the build result —
-   never invent one.
+   never invent one. With `$ENV_RESOURCE` set, step 5's redeploy check comes after this build,
+   and after any fix it needed.
    <!-- rule: implement-09 -->
    Build only, and never grade your own work. The full suites, the acceptance criteria, the
    project's invariants and the code review all belong to `/codeo:qc` — running them here would
@@ -251,9 +263,9 @@ pages under `$DOCS`).
 
 8. **Write `implement.md`'s `## Outcome` before reporting.** Nothing in `.codeo/<N>/implement.md`
    may still be open at this point. Record what was built, the documentation pages changed, the
-   build result, `Deployed revision: <x>` when the round deployed, and anything that deviated from
-   the plan and why; a round after a send-back goes beneath the first as its own dated
-   `### Round <n>`. Append one `## Log` line, ending `· cost: ` with what
+   build result, `Deployed revision: <x>` repeated from `## Where this stands` when the round
+   deployed, and anything that deviated from the plan and why; a round after a send-back goes
+   beneath the first as its own dated `### Round <n>`. Append one `## Log` line, ending `· cost: ` with what
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" implement` prints, then commit the dossier, staged
    by name, and push as at step 4, with the subject `docs(codeo): implement dossier for #<N>`
    (`— round <n>` for a later round; `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).
