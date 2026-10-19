@@ -30,13 +30,24 @@
 #                           logical names (ready, inProgress, inReview, done, backlog) mapping to the
 #                           board's own option names; a name that is not a key passes through.
 #   labelTypes{}            issue label -> branch type
-#   suites[]{name,paths[],build,test,filter}          test suites and the paths that trigger them.
+#   suites[]{name,paths[],build,test,filter,parallel} test suites and the paths that trigger them.
+#                           parallel is a bool, default false: true means the suite may run together
+#                           with other parallel suites.
 #                           filter is a command template that runs ONE test, {} standing for the
 #                           test's name (e.g. pytest -k {}); absent means the suite has no
 #                           single-test form and its whole test command is the proof
 #   skipGlobs[]             paths that never trigger a suite
 #   resources[]{name,paths[],parameterised}           exclusive resources (locks) and their footprints
-#   environment{resource,hooks{activate,revoke,preflight,start,deployed}}   optional shared environment
+#   environment{resource,hooks{activate,revoke,preflight,start,deployed,deploy}}   optional shared environment
+#                           deployed prints one line per workload, four tab-separated columns: name,
+#                           revision, state (running|rolling|stopped), declared (yes|no); the fourth
+#                           column is optional and absent means unknown. A non-zero exit from deployed
+#                           means "not yet checkable", never a pass. deploy is the project's whole
+#                           deploy step: its last stdout line is the deployed revision (an empty last
+#                           line means HEAD after the hook), a non-zero exit is a failed task, and it
+#                           commits its own bookkeeping, printing the revision after that commit, so
+#                           there is no tag-only exemption. The caller stops if the tree is dirty
+#                           after the hook.
 #   hooks{onLeaseChange}    optional; a shell command run best effort after every lease change
 #                           that reaches origin (stdout discarded, a failure only reported)
 #   docsDir                 optional; the project's documentation directory, relative to the root

@@ -172,6 +172,51 @@ Pages are in the present tense about the system, link to each other by page name
 in the index page. Flows are Mermaid.
 ```
 
+### implement/environment-lease-notes
+
+**Where.** `/codeo:implement`, step 5, the lease paragraph. The skill fetches it only when
+`$ENV_RESOURCE` is set.
+
+**May rely on.** `$ENV_RESOURCE`, the config's `environment.resource` and `environment.hooks`, and
+the task being run.
+
+**Expected back.** What the project does around a deploy that the `deploy` hook does not: waiting
+for a rollout, smoke checks, who to tell — and anything about taking and holding the lease. The skill
+fetches it before the take and applies it to taking, holding and deploying.
+
+**Default when absent.** None; the lease and deploy paragraphs are the whole rule.
+
+**Example.**
+
+```markdown
+## environment-lease-notes
+
+After a deploy, wait for the health endpoint to answer before the next task, and post the revision
+in the team channel.
+```
+
+### implement/wiki-rules
+
+**Where.** `/codeo:implement`, step 5, in the paragraph on documentation tasks.
+
+**May rely on.** `$DOCS`, the pages already under it, the config's `modules`, and the task being
+run.
+
+**Expected back.** How the project's pages are written, linked and indexed, and which diagrams
+are drawn with which tool. The skill applies it to every documentation task.
+
+**Default when absent.** Documentation rules are only the project's docsDir conventions: the
+conventions the existing pages under it already follow.
+
+**Example.**
+
+```markdown
+## wiki-rules
+
+Pages are in the present tense about the system, link to each other by page name, and are listed
+in the index page. Flows are Mermaid.
+```
+
 ### init/host-workflow
 
 **Where.** `/codeo:init`, step 1, "Read the project's host workflow, then check where this is

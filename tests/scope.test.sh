@@ -169,11 +169,26 @@ a_400_file_diff_with_three_suites_is_fast() {
     (( SECONDS - start < 5 )) || fail "took $((SECONDS - start))s"
 }
 
+an_unresolvable_revision_is_an_error_not_nothing_changed() {
+    local repo; repo=$(make_repo "$with_suites")
+    echo more >> "$repo/src/api/a.txt"
+    commit_change "$repo"
+    local args out err
+    for args in "no-such-tag HEAD" "HEAD no-such-tag"; do
+        # shellcheck disable=SC2086
+        if out=$(cd "$repo" && bash "$scope_sh" $args 2>"$scratch_root/stderr"); then fail "exited 0 for: $args"; fi
+        [[ -z $out ]] || fail "stdout for '$args': $out"
+        err=$(cat "$scratch_root/stderr")
+        [[ $err == scope:*no-such-tag* && $err != *$'\n'* ]] || fail "stderr for '$args': $err"
+    done
+}
+
 for case in docs_only_change_runs_no_suite path_in_one_suite_runs_only_that_suite \
     unknown_path_runs_every_suite rename_counts_old_and_new_path \
     deploy_true_only_for_environment_paths glob_star_stays_inside_a_segment \
     no_suites_configured_prints_nothing_and_exits_0 unusable_config_fails_loudly_and_prints_nothing \
-    metacharacters_and_spaces_in_paths_match_literally a_400_file_diff_with_three_suites_is_fast; do
+    metacharacters_and_spaces_in_paths_match_literally a_400_file_diff_with_three_suites_is_fast \
+    an_unresolvable_revision_is_an_error_not_nothing_changed; do
     "$case" || fail "$case"
     echo "ok $case" >&2
 done
