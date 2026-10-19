@@ -53,6 +53,8 @@ export-job	rev-0043	running	yes
 
 No findings; nothing blocking.
 
+Environment released to the export job only after this round: the job reads the bucket nightly.
+
 **Verdict: clear — forward to `/codeo:close`.**
 
 Environment released at the clear verdict: lease env released by #12

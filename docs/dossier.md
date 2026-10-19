@@ -272,7 +272,10 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
   the environment says `environment` in its settled-by column, pointing at the round's
   `#### Environment` block.
 - **Findings.** Every finding says `blocking` or `non-blocking`. A round with a blocking finding is
-  never routed to `/codeo:close`.
+  never routed to `/codeo:close`. An empty answer such as `Blocking findings: none` is not a
+  finding. Neither is a recap of an earlier round's finding, such as
+  `F1 (blocking in round 1) — fixed by <commit>` or `(was blocking)`. A row of the criteria table
+  is not a finding either.
 - **The pull request.** `close.md` records an opened pull request in a round headed
   `### Round <n> — pull request opened`, its date on the first line and the pull request as the
   line `#<number> <html_url>`, from `pr create`'s response; exactly one round carries that

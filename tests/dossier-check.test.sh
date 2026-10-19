@@ -69,7 +69,9 @@ want[bad-send-back-link]='drift implement.md [send-back-link] round 2 carries no
 drift implement.md [send-back-link] round 3 names qc.md round 5, which qc.md does not have
 drift qc.md [send-back-link] round 1 is routed back to implement.md, but no implement.md round carries "(send-back from qc.md round 1)"
 drift qc.md [send-back-link] round 2 is routed back to implement.md, but no implement.md round carries "(send-back from qc.md round 2)"
+drift close.md [send-back-link] round 1 carries "(send-back from qc.md round 3)", which only a later implement.md or plan.md round or a "— pull request updated" round carries
 drift close.md [send-back-link] round 3 carries no "(send-back from <file> round <k>)"'
+want[good-review-cycle]=
 want[bad-qc-round-at-review]='FAIL close.md [qc-round-at-review] round 2 carries no "qc round at review: <k>"
 FAIL close.md [qc-round-at-review] round 3 names qc round 7, which qc.md does not have'
 want[bad-park-heading]='FAIL close.md [park-heading] line 19: "### Round 1 — Stashed" is not a park heading claim.sh reads
@@ -146,6 +148,15 @@ add_form $'No round heading at all. **Verdict: clear**'
 # qc-verdict.sh reads round headings without regard to fences, so the fenced heading is the last
 # round there, and it has no span.
 add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clear**\n\n```\n### Round 2 — 2026-03-07\n```'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: Clear.**'
+add_form $'### Round 1 — 2026-03-06\n\n**verdict: clear**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: `clear`**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clear (no blocking)**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clear—forward to `/codeo:close`.**'
+# A bold recap after the decision decides, wrongly, in both readers (qc/SKILL.md step 11).
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: back to `/codeo:implement`.** The last round read **Verdict: clear**'
+add_form $'### Round 1 — 2026-03-06\n\n**Verdict: clear — forward to `/codeo:close`.**'
+sed -i 's/$/\r/' "$scratch/forms/form-$form_n.md"
 
 agree_repo=$(mktemp -d -p "$scratch")
 git -C "$agree_repo" -c init.defaultBranch=main init -q
@@ -191,6 +202,39 @@ run_check "$scratch/crlf"
 assert_eq "stdout" "" "$out"
 assert_eq "exit code" 0 "$rc"
 
+# --- a file whose last line has no newline keeps that line ---------------------------------------
+case_desc="no final newline"
+mkdir "$scratch/no-eol"
+for f in "$fixtures"/good-basic/*.md; do
+    printf '%s' "$(cat "$f")" >"$scratch/no-eol/$(basename "$f")"
+done
+run_check "$scratch/no-eol"
+assert_eq "stdout" "" "$out"
+assert_eq "exit code" 0 "$rc"
+case_desc="no final newline after a pull request heading"
+mkdir "$scratch/no-eol-close"
+printf '%s' "$(sed '/^## Log/,$d; /^### Round 1/q' "$fixtures/good-basic/close.md")" >"$scratch/no-eol-close/close.md"
+run_check "$scratch/no-eol-close"
+assert_eq "stdout" 'drift close.md [sections] missing: ## Log
+FAIL close.md [finished-pr] round 1 records no "#<number> <url>" line' "$out"
+assert_eq "exit code" 1 "$rc"
+
+# --- a long file is read to its end: no reader stops early and kills its writer -----------------
+case_desc="thousands of headings and findings"
+mkdir "$scratch/long"
+{
+    sed '/^## Outcome/,$d' "$fixtures/good-basic/qc.md"
+    printf '## Notes\n\n'
+    for i in $(seq 1 5000); do printf '### Note %d\n\n' "$i"; done
+    printf '## Outcome\n\n### Round 1 — 2026-03-06\n\n'
+    for i in $(seq 1 20000); do printf -- '- F%d (blocking) — x\n' "$i"; done
+    printf '\n**Verdict: clear**\n\n## Log\n\n- 2026-03-06 — round 1 · cost: 1m\n'
+} >"$scratch/long/qc.md"
+run_check "$scratch/long"
+assert_eq "stdout" 'FAIL qc.md [blocking-to-close] round 1 is routed clear with a blocking finding at line 10023' "$out"
+assert_eq "stderr" "" "$err"
+assert_eq "exit code" 1 "$rc"
+
 # --- a file with none of the shape is classified, not a crash -----------------------------------
 case_desc="shapeless file"
 mkdir "$scratch/shapeless"
@@ -221,6 +265,14 @@ usage_case "not a directory" "$scratch/a-file"
 usage_case "missing path" "$scratch/nowhere"
 usage_case "empty directory" "$scratch/empty"
 usage_case "no dossier files" "$scratch/unrelated"
+# Root reads a mode-000 file anyway, so the case means nothing there.
+if (($(id -u) != 0)); then
+    mkdir "$scratch/unreadable"
+    cp "$fixtures/good-basic/qc.md" "$scratch/unreadable/qc.md"
+    chmod 000 "$scratch/unreadable/qc.md"
+    usage_case "unreadable file" "$scratch/unreadable"
+    chmod 644 "$scratch/unreadable/qc.md"
+fi
 
 if ((failures)); then
     echo "$failures case(s) failed"

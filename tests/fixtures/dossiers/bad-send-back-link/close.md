@@ -19,6 +19,7 @@ None.
 ### Round 1 — pull request opened
 
 2026-03-07
+(send-back from qc.md round 3)
 
 #42 https://example.com/acme/shop/pull/42
 

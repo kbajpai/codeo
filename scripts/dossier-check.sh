@@ -36,11 +36,13 @@
 #                            ## Outcome is written (docs/dossier.md → The gate)
 #   verdict-span      FAIL   every qc.md round has a bold "**Verdict: …**" / "**Routing: …**"
 #                            decision span (qc-verdict.sh's pattern; the round's last one decides)
-#   verdict-route     FAIL   that last span names exactly one route: clear (qc-verdict.sh's rule),
-#                            back to implement, or back to plan
+#   verdict-route     FAIL   that last span names exactly one route: clear when qc-verdict.sh reads
+#                            it clear (whatever follows), else implement or plan, each counted
+#                            only right after "back to", "or", "and" or "," in the "back to" clause
 #   blocking-to-close FAIL   no qc.md round routed clear has a blocking finding: a list item or
-#                            table row saying "blocking" (not "non-blocking", "no blocking" or
-#                            "Blocking: none")
+#                            table row labelled "blocking" (not "non-blocking", "no blocking",
+#                            "Blocking findings: none" or a recap "(blocking in round 1)"); a
+#                            criteria table's rows are never findings
 #   criteria-count    drift  each qc.md round's criteria table (its first table with a "Verdict"
 #                            header cell) has one row per "- [ ]" line in init.md's ## Outcome;
 #                            checked only when init.md is there and lists one
@@ -50,7 +52,8 @@
 #                            "— pull request updated" round, carries "(send-back from <file> round
 #                            <k>)" (implement.md also "(after plan.md round <k>)") naming a round
 #                            <file> has when <file> is there; every qc.md round but the last that
-#                            is sent back is named so by the receiving file, when it is there
+#                            is sent back is named so by a round of the receiving file, when it is
+#                            there; and no other round carries one (docs/dossier.md → Send-backs)
 #   qc-round-at-review FAIL  every close.md "— review feedback" / "— conflicts with <base>" round
 #                            carries "qc round at review: <k>", <k> a qc.md round when qc.md is there
 #   park-heading      FAIL   a close.md "Round <n>" heading naming a stash or an abandon matches
@@ -59,14 +62,18 @@
 #                            is clear, read exactly as qc-verdict.sh reads it (when qc.md is there)
 #   finished-pr       FAIL   once close.md has a "— pull request opened" round: exactly one has
 #                            that heading, and each such round has a "#<number> <url>" line
-#   env-form          drift  in implement.md and qc.md, a line that reads as "Deployed revision",
-#                            "Lease not held" or "Environment (NOT) released" once list, quote and
-#                            bold markers are set aside starts its line in exactly the documented
-#                            form ("Deployed revision: <x>", …); none is ever required
+#   env-form          drift  in implement.md and qc.md, a line that reads as "Deployed revision:",
+#                            "Lease not held:", "Environment released at" or "Environment NOT
+#                            released" (any case) once list, quote and bold markers are set aside
+#                            starts its line in exactly the documented form ("Deployed revision:
+#                            <x>", …); none is ever required
 #
 # "Written" means the ## Outcome is neither empty nor the "_Pending …_" placeholder. Headings
 # inside a fenced block are not headings, except that "### Footprint" is found wherever it is,
-# as inflight.sh and overlap.sh find it. CRLF files read as LF ones.
+# as inflight.sh and overlap.sh find it. One known divergence follows: claim.sh --stash-live counts
+# a park heading inside a fenced block too, and park-heading does not judge one there. CRLF files
+# read as LF ones, and a last line with no newline is still a line. Every reader runs to the end
+# of its input (none stops early), so no writer upstream of it dies of SIGPIPE under pipefail.
 set -euo pipefail
 
 steps=(issue init plan implement qc close)
@@ -115,7 +122,8 @@ section_range() {
     local file=$1 name=$2 total
     total=$(wc -l <"$file")
     headings_of "$file" | awk -F'\t' -v name="$name" -v total="$total" '
-        start && $2 <= 2 { print start " " ($1 - 1); found = 1; exit }
+        found { next }
+        start && $2 <= 2 { print start " " ($1 - 1); found = 1; next }
         !start && $2 == 2 && ($3 == name || index($3, name " ") == 1) { start = $1 }
         END { if (start && !found) print start " " total }'
 }
@@ -137,7 +145,7 @@ has_section() {
 # placeholder (its first non-blank line starting "_Pending").
 outcome_written() {
     local first
-    first=$(section_of "$1" Outcome | cut -f2- | awk 'NF { print; exit }')
+    first=$(section_of "$1" Outcome | cut -f2- | awk 'NF && !seen { print; seen = 1 }')
     [[ -n $first && $first != _Pending* ]]
 }
 
@@ -160,7 +168,7 @@ outcome_lead_of() {
     local first
     first=$(rounds_of "$1" | awk -F'\t' 'NR == 1 { print $1 }')
     section_of "$1" Outcome | awk -F'\t' -v stop="${first:-0}" '
-        stop && $1 >= stop { exit }
+        stop && $1 >= stop { next }
         { t = $0; sub(/^[0-9]+\t/, "", t) } t ~ /[^ \t]/ { print }'
 }
 
@@ -169,7 +177,7 @@ outcome_lead_of() {
 round_body_of() {
     local file=$1 at=$2 range next
     range=$(section_range "$file" Outcome)
-    next=$(rounds_of "$file" | awk -F'\t' -v at="$at" '$1 > at { print $1; exit }')
+    next=$(rounds_of "$file" | awk -F'\t' -v at="$at" '$1 > at && !seen { print $1; seen = 1 }')
     awk -v from="$at" -v to="${next:-$((${range#* } + 1))}" 'NR >= from && NR < to { print NR "\t" $0 }' "$file"
 }
 
@@ -401,21 +409,25 @@ is_clear_text() {
 }
 
 # route_of <span>: "clear", "implement" or "plan" when the span names exactly that one route,
-# "none" when it names none, "many" when it names more than one. Clear is qc-verdict.sh's
-# reading; a send-back is the steps named in the clause after "back to" (up to a dash, a
-# semicolon, a parenthesis or a sentence's end), with or without their plugin prefix.
+# "none" when it names none, "many" when it names more than one. A span qc-verdict.sh reads as
+# clear is the close route whatever follows it ("… may route back to implement first" is not a
+# second route). Otherwise the routes are read from the clause after "back to" (up to a dash, a
+# semicolon, a parenthesis or a sentence's end): a step counts only where it directly follows
+# "back to", "or", "and" or ",", with or without its plugin prefix, so "back to implement for
+# the plan's task 3" is one route and "back to implement or plan" is two.
 route_of() {
-    local text dest routes=()
+    local text clause routes
     text=$(span_text "$1")
-    ! is_clear_text "$text" || routes+=(clear)
-    dest=$(grep -o -i -E 'back to .*' <<<"$text" | head -n1 | sed -E 's/(—|–|;|\(|\. |\.$).*//')
-    if [[ -n $dest ]]; then
-        ! grep -q -i -E '(^|[^[:alnum:]])implement([^[:alnum:]]|$)' <<<"$dest" || routes+=(implement)
-        ! grep -q -i -E '(^|[^[:alnum:]])plan([^[:alnum:]]|$)' <<<"$dest" || routes+=(plan)
+    if is_clear_text "$text"; then
+        echo clear
+        return 0
     fi
-    case ${#routes[@]} in
+    clause=$(grep -o -i -E 'back to .*' <<<"$text" | awk 'NR == 1' | sed -E 's/(—|–|;|\(|\. |\.$).*//')
+    routes=$(grep -o -i -E '(back to|\<or|\<and|,)[[:space:]]+(/?[[:alnum:]-]+:)?(implement|plan)([^[:alnum:]-]|$)' <<<"$clause" \
+        | grep -o -i -E '(implement|plan)([^[:alnum:]-]|$)' | cut -c1-4 | tr '[:upper:]' '[:lower:]' | sort -u || true)
+    case $(grep -c . <<<"$routes" || true) in
         0) echo none ;;
-        1) echo "${routes[0]}" ;;
+        1) if [[ $routes == impl ]]; then echo implement; else echo plan; fi ;;
         *) echo many ;;
     esac
 }
@@ -452,8 +464,11 @@ last_round_clear() {
 # "blocking" (any case, bold aside): the word stands alone (not "non-blocking"), comes right
 # after the item's start and an optional id ("- F2 blocking", "- Blocking — …"), or after a
 # "(", "[", ",", ":", ";", "|", "/" or a dash ("F2 (blocking, implement)", "F2 — blocking"),
-# and is not answered as empty ("Blocking: none"). Prose that merely mentions the word ("no
-# blocking finding", "two findings it called blocking") is not a finding.
+# and is not answered as empty, with or without a noun ("Blocking: none", "Blocking findings:
+# none") or a recap of an earlier round ("F1 (blocking in round 1) — fixed", "(blocking was …)").
+# Prose that merely mentions the word ("no blocking finding", "two findings it called blocking")
+# is not a finding, and neither is a row of a table with a "Verdict" header cell: that is the
+# criteria table, whose criteria may say "blocking" themselves.
 blocking_findings_of() {
     round_marked_of "$1" "$2" | awk -F'\t' '
         function strip(s) { s = tolower(s); gsub(/[*_`]/, "", s); return s }
@@ -464,7 +479,8 @@ blocking_findings_of() {
                 before = substr(s, 1, at + RSTART - 1); after = substr(rest, RSTART + RLENGTH)
                 at += RSTART + RLENGTH - 1; rest = after
                 if (before ~ /[[:alnum:]-]$/ || after ~ /^[[:alnum:]-]/) continue
-                if (after ~ /^[ \t]*(:|—|–|-)?[ \t]*(none|nothing|no|0)([^[:alnum:]]|$)/) continue
+                if (after ~ /^[ \t]*((findings?|issues?|items?)[ \t]*)?(:|—|–|-)?[ \t]*(none|nothing|no|0)([^[:alnum:]]|$)/) continue
+                if (after ~ /^[ \t]+(in round|was)([^[:alnum:]]|$)/) continue
                 prefix = before; sub(/[ \t]+$/, "", prefix)
                 if (prefix ~ /^[ \t]*([-*+]|[0-9]+[.)])([ \t]+[a-z]{0,3}[0-9]+[.:)]?)?$/) return 1
                 if (prefix ~ /(\(|\[|,|:|;|\||\/|—|–|-)$/) return 1
@@ -477,12 +493,17 @@ blocking_findings_of() {
             if (t ~ /^[ \t]*\|/) {
                 # tstate 0: no table; 1: header read; 2: in the body.
                 if (tstate == 0) {
-                    bcol = 0; n = split(t, c, "|")
-                    for (i = 2; i <= n; i++) if (trim(strip(c[i])) ~ /^blocking/) { bcol = i; break }
+                    bcol = 0; criteria = 0; n = split(t, c, "|")
+                    for (i = 2; i <= n; i++) {
+                        h = trim(strip(c[i]))
+                        if (!bcol && h ~ /^blocking/) bcol = i
+                        if (h ~ /verdict/) criteria = 1
+                    }
                     tstate = 1; next
                 }
                 if (tstate == 1 && t ~ /^[ \t|:-]+$/) { tstate = 2; next }
                 tstate = 2
+                if (criteria) next
                 if (bcol) {
                     split(t, c, "|")
                     if (trim(strip(c[bcol])) ~ /^(yes|blocking)([^[:alnum:]-]|$)/) print $1
@@ -569,7 +590,7 @@ check_blocking_to_close() {
     while IFS=$'\t' read -r line n heading; do
         span=$(decision_of "$file" "$line")
         [[ -n $span ]] && is_clear_text "$(span_text "$span")" || continue
-        at=$(blocking_findings_of "$file" "$line" | head -n1)
+        at=$(blocking_findings_of "$file" "$line" | awk 'NR == 1')
         [[ -z $at ]] || finding FAIL "$name" blocking-to-close "round $n is routed clear with a blocking finding at line $at"
     done < <(rounds_of "$file")
 }
@@ -614,11 +635,11 @@ link_of() {
         $2 == 1 { next }
         match($3, /\(send-back from [a-z]+\.md round [0-9]+\)/) {
             s = substr($3, RSTART + 16, RLENGTH - 17); sub(/ round /, " ", s)
-            print "send-back " s; exit
+            if (!seen) print "send-back " s; seen = 1; next
         }
         match($3, /\(after plan\.md round [0-9]+\)/) {
             s = substr($3, RSTART + 7, RLENGTH - 8); sub(/ round /, " ", s)
-            print "after " s; exit
+            if (!seen) print "after " s; seen = 1; next
         }'
 }
 
@@ -631,9 +652,26 @@ link_target() {
         return 0
     fi
     path=$(sibling "$file" "$target") || return 0
-    round_numbers_of "$path" | grep -qx "$k" \
+    round_numbers_of "$path" | grep -x "$k" >/dev/null \
         || finding drift "$name" send-back-link "round $n names $target round $k, which $target does not have"
     return 0
+}
+
+# stray_link <name> <n> <link>: the drift for a round that carries a link no round of its kind
+# carries (docs/dossier.md → Send-backs: "No other round carries one").
+stray_link() {
+    local kind target k text
+    read -r kind target k <<<"$3"
+    if [[ $kind == after ]]; then text="(after $target round $k)"; else text="(send-back from $target round $k)"; fi
+    finding drift "$1" send-back-link "round $2 carries \"$text\", which only a later implement.md or plan.md round or a \"— pull request updated\" round carries"
+}
+
+# links_of <file>: the link of each headed round in <file> that carries one, one per line.
+links_of() {
+    local line n heading
+    while IFS=$'\t' read -r line n heading; do
+        link_of "$1" "$line"
+    done < <(rounds_of "$1")
 }
 
 check_send_back_link() {
@@ -643,7 +681,12 @@ check_send_back_link() {
             # Every round after the first; the first is the unheaded lead when there is one.
             [[ -z $(outcome_lead_of "$file") ]] || first=0
             while IFS=$'\t' read -r line n heading; do
-                if ((first)); then first=0; continue; fi
+                if ((first)); then
+                    first=0
+                    link=$(link_of "$file" "$line")
+                    [[ -z $link ]] || stray_link "$name" "$n" "$link"
+                    continue
+                fi
                 link=$(link_of "$file" "$line")
                 kind= target= k=
                 [[ -z $link ]] || read -r kind target k <<<"$link"
@@ -658,8 +701,11 @@ check_send_back_link() {
             ;;
         close.md)
             while IFS=$'\t' read -r line n heading; do
-                [[ $heading =~ ^Round\ [0-9]+\ —\ pull\ request\ updated ]] || continue
                 link=$(link_of "$file" "$line")
+                if [[ ! $heading =~ ^Round\ [0-9]+\ —\ pull\ request\ updated ]]; then
+                    [[ -z $link ]] || stray_link "$name" "$n" "$link"
+                    continue
+                fi
                 kind= target= k=
                 [[ -z $link ]] || read -r kind target k <<<"$link"
                 if [[ $kind == send-back ]]; then
@@ -670,10 +716,16 @@ check_send_back_link() {
             done < <(rounds_of "$file")
             ;;
         qc.md)
-            # A round sent back is followed by a round in the receiving file that names it. The
-            # last round is not held to that: its receiver may not have run yet.
+            # A round sent back is followed by a round in the receiving file that names it (the
+            # link of one of its rounds, not a mention anywhere in it). The last round is not held
+            # to that: its receiver may not have run yet. A qc.md round carries no link itself.
             local rounds last route receiver path
             rounds=$(rounds_of "$file")
+            while IFS=$'\t' read -r line n heading; do
+                [[ -n $line ]] || continue
+                link=$(link_of "$file" "$line")
+                [[ -z $link ]] || stray_link "$name" "$n" "$link"
+            done <<<"$rounds"
             last=$(tail -n1 <<<"$rounds" | cut -f1)
             while IFS=$'\t' read -r line n heading; do
                 [[ -n $line && $line != "$last" ]] || continue
@@ -681,7 +733,7 @@ check_send_back_link() {
                 [[ $route == implement || $route == plan ]] || continue
                 receiver=$route.md
                 path=$(sibling "$file" "$receiver") || continue
-                grep -qF "(send-back from qc.md round $n)" "$path" \
+                links_of "$path" | grep -xF "send-back qc.md $n" >/dev/null \
                     || finding drift "$name" send-back-link "round $n is routed back to $receiver, but no $receiver round carries \"(send-back from qc.md round $n)\""
             done <<<"$rounds"
             ;;
@@ -697,11 +749,11 @@ check_qc_round_at_review() {
         [[ $heading =~ ^Round\ [0-9]+\ —\ (review\ feedback|conflicts\ with\ ) ]] || continue
         k=$(round_marked_of "$file" "$line" | awk -F'\t' '
             $2 == 0 && match($3, /^[ \t]*([-*] )?qc round at review: [0-9]+/) {
-                s = substr($3, RSTART, RLENGTH); sub(/.*: /, "", s); print s; exit
+                s = substr($3, RSTART, RLENGTH); sub(/.*: /, "", s); if (!seen) print s; seen = 1
             }')
         if [[ -z $k ]]; then
             finding FAIL "$name" qc-round-at-review "round $n carries no \"qc round at review: <k>\""
-        elif [[ -n $qc ]] && ! rounds_of "$qc" | cut -f2 | grep -qx "$k"; then
+        elif [[ -n $qc ]] && ! rounds_of "$qc" | cut -f2 | grep -x "$k" >/dev/null; then
             finding FAIL "$name" qc-round-at-review "round $n names qc round $k, which qc.md does not have"
         fi
     done < <(rounds_of "$file")
@@ -714,7 +766,7 @@ check_park_heading() {
     # and must be one claim.sh --stash-live counts: its park_re, read from claim.sh in Main.
     while IFS=$'\t' read -r line level text; do
         [[ $text =~ ^Round\ [0-9]+ ]] || continue
-        grep -q -i -E 'stash|abandon' <<<"$text" || continue
+        [[ ${text,,} == *stash* || ${text,,} == *abandon* ]] || continue
         full="$(printf '%*s' "$level" '' | tr ' ' '#') $text"
         [[ $full =~ $park_re ]] \
             || finding FAIL "$name" park-heading "line $line: \"$full\" is not a park heading claim.sh reads"
@@ -750,12 +802,12 @@ check_finished_pr() {
 }
 
 check_env_form() {
-    local file=$1 name=$2 line f text bare want
+    local file=$1 name=$2 line f text bare want lead_re='^[[:space:]>*_+-]'
     [[ $name == implement.md || $name == qc.md ]] || return 0
+    # Only lines that could be form lines reach the per-line test: a fork per line is slow.
     while IFS=$'\t' read -r line f text; do
-        [[ $f == 0 ]] || continue
         # A line that reads as a form line once list, quote and bold markers are set aside.
-        bare=$(sed -E 's/^[[:space:]>*_+-]+//' <<<"$text")
+        bare=$text; while [[ $bare =~ $lead_re ]]; do bare=${bare:1}; done
         bare=${bare,,}
         if [[ $bare =~ ^deployed\ revision[*_\ ]*[:—–-] ]]; then
             want='"Deployed revision: <x>"'
@@ -763,7 +815,7 @@ check_env_form() {
         elif [[ $bare =~ ^lease\ not\ held[*_\ ]*[:—–-] ]]; then
             want='"Lease not held: <x>"'
             [[ ! $text =~ ^Lease\ not\ held:\ [^[:space:]] ]] || continue
-        elif [[ $bare =~ ^environment\ (not\ )?released([^[:alnum:]]|$) ]]; then
+        elif [[ $bare =~ ^environment\ (released\ at|not\ released)([^[:alnum:]]|$) ]]; then
             want='"Environment released at the clear verdict: <x>" or "Environment NOT released: <x>"'
             [[ ! $text =~ ^Environment\ released\ at\ the\ clear\ verdict:\ [^[:space:]] ]] || continue
             [[ ! $text =~ ^Environment\ NOT\ released:\ [^[:space:]] ]] || continue
@@ -771,7 +823,7 @@ check_env_form() {
             continue
         fi
         finding drift "$name" env-form "line $line: \"$text\" does not start its line as $want"
-    done < <(marked_of "$file")
+    done < <(marked_of "$file" | awk -F'\t' '$2 == 0 && tolower($3) ~ /(deployed revision|lease not held|environment)/')
 }
 
 checks=(title header_table sections round_numbering log_format log_cost footprint footprint_single open_question
@@ -793,7 +845,9 @@ dir=$1
 
 present=()
 for step in "${steps[@]}"; do
-    [[ ! -f $dir/$step.md ]] || present+=("$step.md")
+    [[ -f $dir/$step.md ]] || continue
+    [[ -r $dir/$step.md ]] || usage "cannot read $dir/$step.md"
+    present+=("$step.md")
 done
 ((${#present[@]})) || usage "no dossier files (issue.md init.md plan.md implement.md qc.md close.md) in $dir"
 
@@ -806,7 +860,7 @@ park_re=$(sed -n "s/^park_re='\(.*\)'\$/\1/p" "$(dirname "${BASH_SOURCE[0]}")/cl
 
 # Every file is copied before any check runs: the cross-file checks read a sibling's copy.
 for name in "${present[@]}"; do
-    tr -d '\r' <"$dir/$name" >"$work/$name"
+    tr -d '\r' <"$dir/$name" | awk 1 >"$work/$name"
 done
 for name in "${present[@]}"; do
     for check in "${checks[@]}"; do

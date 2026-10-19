@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 built.
+Round 3 built. Rounds 2 and 3 answer (send-back from qc.md round 1) and (send-back from qc.md round 2), noted here only.
 
 ## Questions
 
