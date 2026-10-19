@@ -29,6 +29,7 @@ Safe to bump mid-workflow: yes
 - `implement`, `qc` and `close` are not in this release.
 - A suite's `filter` is a command template for one test, `{}` standing for the test's name; a suite without
   one has no single-test form and its whole `test` command is the proof.
+- `scripts/scope.sh`: an unresolvable revision exits 1 with a `scope:` message instead of reading as "nothing changed".
 
 ## v0.1.0 — 2026-10-18
 

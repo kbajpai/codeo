@@ -9,7 +9,8 @@
 #       and, only when `environment` is configured, whether the change touches its resource:
 #         deploy=true|false
 #       followed on stderr by the paths that decided each true. With no suites configured it
-#       prints nothing and exits 0. Renames are off (`--no-renames`), so a rename lists both its
+#       prints nothing and exits 0. A revision that does not resolve prints one `scope:` line on
+#       stderr and exits 1, with nothing on stdout. Renames are off (`--no-renames`), so a rename lists both its
 #       old and its new path and a deletion counts.
 #
 #   The rule: paths matching `skipGlobs` are ignored; a suite is true if any remaining path
@@ -100,11 +101,17 @@ if [[ ${#suite_names[@]} -eq 0 ]]; then
     exit 0
 fi
 
+# The diff runs on its own, into a file, because a failure inside a process substitution never
+# reaches `set -e`: an unresolvable revision would read as "nothing changed" and skip every suite.
 # -z keeps a path with a newline or unusual bytes in one piece, unquoted.
+diff_file=$(mktemp)
+trap 'rm -f "$diff_file"' EXIT
+git diff --name-only -z --no-renames "$1...$2" >"$diff_file" 2>/dev/null \
+    || { echo "scope: cannot diff $1...$2 (unresolvable revision?)" >&2; exit 1; }
 changed=()
 while IFS= read -r -d '' path; do
     changed+=("$path")
-done < <(git diff --name-only -z --no-renames "$1...$2")
+done <"$diff_file"
 
 read_globs skip_res '.skipGlobs[]?'
 
