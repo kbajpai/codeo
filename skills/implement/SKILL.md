@@ -205,13 +205,13 @@ pages under `$DOCS`).
    line. `deploy=false` means no environment work and no take. `deploy=true` means take the lease
    (`lease take "$ENV_RESOURCE" <N> "<round>"`, a re-take while this issue still holds it, else
    queued behind any waiter: a queue refusal is the same record-a-wait stop as above), deploy as
-   above, and record the new `Deployed revision:` in the round's outcome. Two cases the line
-   cannot answer: with no suites configured the script prints no `deploy=` line at all, and a
-   revision that does not resolve here (a tag not fetched, say) still gets `deploy=false` and exit
-   0, with only a `fatal:` from git on stderr — so first check it with
-   `git rev-parse --verify "<revision>^{commit}"`, fetching once if that fails. In either case
-   decide from `git diff <revision>...HEAD` yourself, redeploy when the revision still cannot be
-   resolved, and say which you did, and why, in the outcome.
+   above, and record the new `Deployed revision:` in the round's outcome.
+   With no suites configured the script prints no `deploy=` line at all and exits 0: decide from
+   `git diff <revision>...HEAD` yourself, and say so in the outcome.
+   A non-zero exit from the script, with its `scope:` line, means the revision does not resolve
+   here (a tag not fetched, say): `git fetch` once and run it again. Still failing, decide from
+   `git diff <revision>...HEAD` yourself, or redeploy when the revision cannot be resolved at all,
+   and say which you did, and why, in the outcome.
    The script never overrules the diff you read: a change you can see alters what the environment
    runs is a redeploy whatever it prints — say why.
 

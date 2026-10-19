@@ -9,9 +9,10 @@
 #       and, only when `environment` is configured, whether the change touches its resource:
 #         deploy=true|false
 #       followed on stderr by the paths that decided each true. With no suites configured it
-#       prints nothing and exits 0. A revision that does not resolve prints one `scope:` line on
-#       stderr and exits 1, with nothing on stdout. Renames are off (`--no-renames`), so a rename lists both its
-#       old and its new path and a deletion counts.
+#       prints nothing and exits 0, before any diff. With suites configured, a revision that does
+#       not resolve prints one `scope:` line on stderr and exits 1, with nothing on stdout. Renames
+#       are off (`--no-renames`), so a rename lists both its old and its new path and a deletion
+#       counts.
 #
 #   The rule: paths matching `skipGlobs` are ignored; a suite is true if any remaining path
 #   matches one of its `paths`; a remaining path matching NO suite's `paths` makes EVERY suite

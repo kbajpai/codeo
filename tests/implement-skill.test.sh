@@ -39,6 +39,11 @@ must_contain "the redeploy check reads deploy=false" 'deploy=false'
 must_contain "the scope script never overrules the diff" 'never overrules the diff'
 must_contain "no suites means no build command" 'there is no build command'
 must_contain "no environment means none of it applies" 'nothing in the rest of this part'
+must_contain "the redeploy check runs in every round" 'the first included'
+must_contain "the deploy precedes the lease task" 'before dispatching the task that needed it'
+must_contain "other take refusals stop without a wait" '**Anything else**'
+must_contain "no suites means no deploy= line" 'no `deploy=` line at all'
+must_contain "a failing scope.sh is retried after a fetch" 'A non-zero exit from the script'
 
 # $1 case, $2 fixed string, $3 fixed string that must follow within three lines.
 must_follow() {
