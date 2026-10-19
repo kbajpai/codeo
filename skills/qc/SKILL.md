@@ -328,4 +328,121 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    checks, run each criterion that needs the environment, and record it met or not met with the
    command and its output — evidence from this round, never a claim carried over from another.
 
-<!-- steps 10-12, hand-off and non-goals are added by the next task -->
+10. **Write the dossier, and stop if anything must be asked.** `.codeo/<N>/qc.md` carries the
+    commands this pass ran and their real output, the criterion-by-criterion result, the
+    documentation check, and every finding with both its answers from step 8.
+    <!-- rule: qc-08 -->
+    A question comes before the verdict, never after it: anything the engineer must settle before
+    this pass can reach one — an acceptance criterion untestable as written, a finding whose
+    severity turns on intent the diff does not show — is a numbered question in `qc.md`, and no
+    verdict is written while it is open. A verdict issued over an open question is a guess wearing
+    a verdict's clothes. With a question open, commit the file, staged by name, with the subject
+    `docs(codeo): qc dossier for #<N> — Q<a>-Q<b> raised`, push, print the path and the open
+    numbers, and end the turn (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The gate`).
+
+    An earlier step that says *write the round, route, and stop* — a conflict at step 2, a broken
+    build at step 3, a send-back at step 9 — comes here with what the pass found so far, and runs
+    steps 11 and 12 on it.
+
+11. **Write `qc.md`'s `## Outcome`.** Append a dated `### Round <n> — <YYYY-MM-DD>` beneath the
+    last one rather than overwriting it — how many rounds a change took is worth more to a later
+    reader than a tidy final verdict. The round records the commands run and their real output, the
+    criterion-by-criterion result with the test or line that settles each, the documentation check,
+    the `#### Environment` block when step 9 ran, every finding with its classification, the number
+    of any issue `/codeo:issue` filed for this pass, and the routing decision.
+    <!-- rule: qc-09 -->
+    The decision is a bold span, `**Verdict: …**` or `**Routing: …**`, with the label inside the
+    bold, and only the last such span of the round counts. The project's `qc-verdict` check
+    (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/qc-verdict.sh" <base> <head>`) reads the latest
+    `### Round <n>` under `## Outcome` and judges its last span alone, so an unbolded decision, a
+    label outside the bold (`**Verdict:** clear`), or a bold recap written after the decision fails
+    the pull request closed or decides it wrongly. Write a clear verdict exactly as
+
+    <!-- example: clear -->
+    **Verdict: clear — forward to `/codeo:close`.**
+
+    and a send-back as ``**Verdict: back to `/codeo:implement`.**`` or
+    ``**Verdict: back to `/codeo:plan`.**``, and put nothing bold labelled Verdict or Routing after
+    it in the round: the reviewer's verdict, or an earlier round's, is quoted in plain text.
+
+    Append one `## Log` line, ending ` · cost: ` with what
+    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" qc` prints, then commit the dossier, staged by
+    name, and push, with the subject `docs(codeo): qc dossier for #<N>` (`— round <n>` for a later
+    round; `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).
+
+12. **Report and route.**
+    <!-- rule: qc-10 -->
+    A verdict is a completion claim, so `superpowers:verification-before-completion` applies to it:
+    every statement in it — the build passed, N tests passed, a criterion is met — traces to
+    command output from *this* pass, quoted in `qc.md`, never to an earlier round, to
+    `implement.md` or to memory. The one carry-over step 9 allows, environment evidence from an
+    earlier round, stands only on the `deploy=false` this pass printed.
+
+    The routing decision is the deliverable: a list of findings with no verdict leaves the engineer
+    doing the classification this skill exists to do, and the bar does not move because a round is
+    tiring. State the verdict plainly, and exactly one of:
+    - **Clear** — no blocking finding. With `$ENV_RESOURCE` set, once the round and its `## Log`
+      line are written, run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease check "$ENV_RESOURCE" <N>`.
+      Exit 0, this issue holds it: run
+      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease release "$ENV_RESOURCE" <N>`, append one
+      line to the round — `Environment released at the clear verdict: <the script's output>` — and
+      commit and push the dossier once, as at step 11. Exit 1, it is not held: there is nothing to
+      release, and the report says so, quoting the check's line. Exit 2, origin cannot be asked:
+      report its line, and treat it as a release that failed.
+      <!-- rule: qc-11 -->
+      A release that fails is reported and never retried in a loop: record the script's output in
+      the appended line, and still hand off — `/codeo:close` releases everything this issue holds
+      at every exit. Then hand off to `/codeo:close`, which opens the pull request.
+    - **Back to `/codeo:implement`** — name the findings and what specifically must change.
+    - **Back to `/codeo:plan`** — name what the plan got wrong and why the code cannot fix it.
+
+    A verdict that is not clear does not release the lease: the environment stays with this issue,
+    which may still owe it a redeploy. A send-back is a hand-off: write the round, name what must
+    change, route it, and stop (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A send-back`).
+
+    <!-- rule: qc-12 -->
+    When a send-back returns here, re-run the whole pass from step 0 and open a new round in
+    `qc.md`. A partial re-check on a changed diff is how a regression ships.
+
+## Hand-off
+
+`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md` is the protocol; this is this skill's half of it.
+
+- **Reads** the diff, the plan file, every other skill's dossier file, the pages under `$DOCS` (and
+  the wiki pages, with the `wiki` module), the project's overlay sections for this skill, every
+  other in-flight workflow's footprint through `inflight.sh` and `overlap.sh`, and the output of
+  the suites it runs.
+- **Writes** `.codeo/<N>/qc.md` — its questions, its `## Outcome` rounds (with the
+  `#### Environment` block when the project has a shared environment), and one `## Log` line per
+  round — committed and pushed on every turn it writes it. Nothing else.
+- **Never touches** code, tests, the plan's text, the issue's text, a documentation page, or
+  another skill's dossier file. A test it wishes existed, or a page it wishes said something else,
+  is a finding, not something to go and write.
+- **Checks the lease** on `$ENV_RESOURCE`, when one is configured, re-takes it only as its holder
+  (step 9), and records no wait on it. It **releases** it at a clear verdict and only then, through
+  `intake.sh lease release "$ENV_RESOURCE" <N>` when this issue holds it, with the script's output
+  appended to the round.
+- **Hands off to** exactly one of three routes: forward to `/codeo:close`, back to
+  `/codeo:implement`, or back to `/codeo:plan` — and only once nothing in `.codeo/<N>/qc.md` is
+  still open. A send-back is still a hand-off: it names the findings and stops; it does not start
+  the fixing.
+- **May call** `/codeo:issue` for a real problem that is out of scope for this change — a call, not
+  a hand-off: control returns, and this skill records the number in its own `## Outcome` and
+  `## Log` line (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A call is not a hand-off`).
+- **Spins out subagents** on the configured subagent model (`$SUBAGENT_MODEL`: `models.subagent`,
+  sonnet when unset), passed explicitly on every dispatch — except step 7's reviewer, on
+  `$REVIEWER_MODEL` (`models.reviewer`, opus when unset) with a `description` starting
+  `QC review:` — and prefers a direct `grep`/`Read` over an agent when the target is already known
+  — see `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Spinning out subagents`.
+
+## Non-goals
+
+- Doesn't fix anything it finds — not the code, not a test, not a typo. That's
+  `/codeo:implement`'s purview, and fixing while judging corrupts the judgment.
+- Doesn't edit the plan or re-scope the work — that's `/codeo:plan`'s purview.
+- Doesn't open, merge or approve a pull request — opening one on a clear verdict is
+  `/codeo:close`'s. It pushes its own dossier commits and nothing else.
+- Doesn't deploy, build for the environment, or take the lease to change what the environment
+  runs. It reads what is deployed and sends back what is stale.
+- Doesn't invent acceptance criteria. If `init.md` has none to judge against, that is itself the
+  finding, and it routes back to whoever owed them.

@@ -2,7 +2,9 @@
 # Checks that skills/qc/SKILL.md carries the wording its steps and the plugin's own rules depend
 # on: the scope and suite reads, the reviewer's model and description and what it is never given,
 # the classification's Phase 1 stop, and the environment evidence — the revision it reads, the
-# lease refusals, the stopped-row rule, orphans, and that qc never deploys.
+# lease refusals, the stopped-row rule, orphans, and that qc never deploys — and the verdict, the
+# release and the hand-off, including that the clear verdict line the skill tells qc to write passes
+# scripts/qc-verdict.sh in a scratch repo while the form it forbids fails closed.
 #
 #   qc-skill.test.sh
 #       Exits non-zero and names the failing cases; prints "all cases passed" otherwise.
@@ -96,10 +98,53 @@ if grep -qF -- '--override' "$skill"; then
     fail "the skill takes a lease with --override — $(grep -nF -- '--override' "$skill" | head -1)"
 fi
 
-# Deferred to the next task (steps 10-12 and the hand-off): the verdict spans, the last-span rule,
-# the round heading, the lease release and the failed-release hand-off, a non-clear verdict
-# releasing nothing, the full re-run after a send-back, the usage.sh Log line, the verdict-script
-# behaviour test, and the removal of the placeholder.
+# Steps 10-12 and the hand-off.
+must_contain "the Verdict span is named" '**Verdict: …**'
+must_contain "the Routing span is named" '**Routing: …**'
+must_contain "only the last span of the round decides" 'the last such span'
+must_contain "a round is a ### Round heading" '### Round <n>'
+must_contain "the Log line carries usage.sh's cost" 'usage.sh" qc'
+must_contain "a clear verdict releases the lease" 'lease release "$ENV_RESOURCE" <N>'
+must_contain "the release is recorded in the round" 'Environment released at the clear verdict:'
+must_contain "a failed release still hands off" 'still hand off'
+must_contain "a verdict that is not clear releases nothing" 'does not release'
+must_contain "a send-back return re-runs the whole pass" 're-run the whole pass'
+must_contain "the hand-off writes only qc.md" '**Writes** `.codeo/<N>/qc.md`'
+must_contain "the reviewer dispatch is the one exception in the hand-off" '**Spins out subagents**'
+must_contain "no invented criteria" "Doesn't invent acceptance criteria"
+if grep -qF 'added by the next task' "$skill"; then
+    fail "the placeholder for the next task is still in the skill"
+fi
+
+# The clear verdict line the skill tells qc to write must pass scripts/qc-verdict.sh, and the form
+# it forbids must fail closed. The line is the one directly below the example marker.
+verdict_line=$(grep -F -A1 -- '<!-- example: clear -->' "$skill" | sed -n 2p | sed -E 's/^[[:space:]]+//' || true)
+if [[ -z $verdict_line ]]; then
+    fail "no line below <!-- example: clear --> in the skill"
+else
+    scratch=$(mktemp -d)
+    trap 'rm -rf "$scratch"' EXIT
+    export GIT_AUTHOR_NAME="Test" GIT_AUTHOR_EMAIL="test@example.com"
+    export GIT_COMMITTER_NAME="Test" GIT_COMMITTER_EMAIL="test@example.com"
+    # $1 the round's decision line; prints the script's output and sets rc.
+    verdict_of() {
+        local dir
+        dir=$(mktemp -d -p "$scratch")
+        git -C "$dir" -c init.defaultBranch=main init -q
+        git -C "$dir" commit -q --allow-empty -m base
+        mkdir -p "$dir/.codeo/done/1"
+        printf '## Outcome\n\n### Round 1 — 2026-09-01\n\nEvery criterion met.\n\n%s\n\n## Log\n\n- log line\n' \
+            "$1" >"$dir/.codeo/done/1/qc.md"
+        git -C "$dir" add .codeo
+        git -C "$dir" commit -q -m head
+        out=$(cd "$dir" && bash "$plugin_root/scripts/qc-verdict.sh" HEAD~1 HEAD 2>&1) && rc=0 || rc=$?
+    }
+    verdict_of "$verdict_line"
+    ((rc == 0)) || fail "the skill's clear verdict line [$verdict_line] fails qc-verdict.sh — $out"
+    [[ $out == *"round 1 clear"* ]] || fail "qc-verdict.sh does not call [$verdict_line] clear — $out"
+    verdict_of '**Verdict:** clear'
+    ((rc != 0)) || fail "qc-verdict.sh passes the forbidden form **Verdict:** clear"
+fi
 
 if ((failures)); then
     echo "$failures case(s) failed"
