@@ -3,7 +3,7 @@
 ## Unreleased
 
 Config schema: 1
-Shared state: the dossier conventions scripts read — `qc round at review: <k>` in close.md (the round a send-back was written against), and the `### Round <n> — stashed` / `### Round <n> — abandoned` headings `claim.sh --stash-live` counts
+Shared state: dossier conventions in `close.md` — the `### Round <n> — stashed|abandoned` headings `claim.sh --stash-live` reads, and the `qc round at review: <k>` line `/codeo:close` reads back.
 Safe to bump mid-workflow: yes
 
 - The repository names no project that uses it: design documents about a specific project live in that

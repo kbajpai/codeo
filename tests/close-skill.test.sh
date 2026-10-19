@@ -236,6 +236,29 @@ section_contains "the non-goals allow the abandon deletion on request" Non-goals
 section_contains "the non-goals never dispatch a workflow" Non-goals 'workflow dispatch'
 section_contains "overlay text is never executed" Non-goals 'never executed'
 
+# Re-invocation safety.
+step_contains "an interrupted stash is detected without --stash" 1 "ends in a \`— stashed\` round while the lock is held"
+step_contains "an interrupted abandon is detected" 1 "ends in a \`— abandoned\` round while the lock is held"
+step_contains "an interrupted park is finished" 1 'is an interrupted park, which this run finishes'
+step_contains "a failed send-back push is found before the qc stop" 2 'git log --format=%s @{u}..HEAD'
+step_order "the failed send-back push is checked before routing" 2 'Before that stop' 'hand off to `/codeo:implement` as step 11'
+step_contains "a failed send-back push is never routed to qc" 2 'would let a clear round on unchanged code pass the review'
+step_contains "close-04 keeps this skill's own modified close.md" 3 'The one exception is this skill'"'"'s own dossier'
+step_contains "a staged rename is still a stop" 3 'A staged rename, or any other path, is still a stop.'
+step_contains "an existing PR-opened round is not duplicated" 3 'step 5 adds no second `— pull request opened` round'
+step_contains "only this skill's own commits ahead are pushed" 3 'they are pushed only when each'
+step_contains "unjudged commits ahead route to qc" 3 '`/codeo:qc` never judged: name it, stop, and route to `/codeo:qc`'
+step_contains "the conflict send-back push has a failure path" 3 'reported loudly and the commit kept, and there is no hand-off until it lands'
+step_contains "a resumed first open records from the lookup" 5 "(on a first open resumed, from step 1's lookup)"
+step_contains "the review-return comment waits for the push" 7 'only once the push has landed'
+step_contains "a re-run into Phase 2 posts the review-return comment" 7 'a re-run into Phase 2 never skips it'
+step_contains "step 9 pushes only this skill's own commits" 9 'only when each is this skill'"'"'s own'
+step_contains "step 9 routes unjudged commits to qc" 9 '`/codeo:qc` never judged: name it, stop, and'
+step_contains "step 9 posts a pending review-return comment" 9 "post step 7's review-return"
+section_contains "an abandon's deletion warns the dossier goes with it" "Stash, and closed unmerged" 'deletes the only copy of its dossier'
+section_contains "a failed abandon deletion keeps the lock" "Stash, and closed unmerged" 'a deletion that failed keeps it'
+section_order "an abandon deletes the branch before the lock" "Stash, and closed unmerged" 'deletes the only copy of its dossier' 'Then the lock is deleted last'
+
 # The stash and closed-unmerged section.
 stash_section='Stash, and closed unmerged'
 section_contains "the stash heading" "$stash_section" '### Round <n> — stashed'

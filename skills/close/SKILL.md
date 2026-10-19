@@ -95,12 +95,12 @@ the step carries on.
 
    | What the facts say | Phase |
    |---|---|
-   | `--stash`, or the engineer parking the work — on any pull request not merged | → **Stash** |
+   | `--stash`, or the engineer parking the work, or `HEAD`'s `close.md` ends in a `— stashed` round while the lock is held — on any pull request not merged | → **Stash** |
    | No pull request for the branch (`number` is null) | → **Phase 1 — open** |
    | `state` is `open`, dossier under `.codeo/done/<N>/` | → **Phase 2 — waiting** |
    | `state` is `open`, dossier back at `.codeo/<N>/` | → **Phase 1 — return from review** |
    | `state` is `closed` and `merged_at` is set | → **Phase 3 — clean up** |
-   | `state` is `closed` and `merged_at` is empty | → **Closed unmerged** |
+   | `state` is `closed` and `merged_at` is empty, or `HEAD`'s `close.md` ends in a `— abandoned` round while the lock is held | → **Closed unmerged** |
 
    Where the dossier sits is read from `HEAD`, the committed tree —
    `git ls-tree -d --name-only HEAD .codeo/<N> .codeo/done/<N>` — never from the working tree:
@@ -110,7 +110,9 @@ the step carries on.
    is the first open resumed, not a return from review: the pull request exists, so step 4 is
    skipped, and steps 5–7 record and archive it as a first open. A merged pull request cannot be
    stashed or abandoned: on `--stash`, or a request to abandon, with `merged_at` set, say so, and
-   Phase 3 runs instead.
+   Phase 3 runs instead. A `close.md` at `HEAD` whose last round is `— stashed` (or `— abandoned`)
+   while the lock is held is an interrupted park, which this run finishes — with or without
+   `--stash`, and without asking the closed-unmerged question again.
 
    A pull request based on anything but `$BASE` (`base_ref`), or more than one pull request for the
    branch, is a stop: name them and ask.
@@ -144,14 +146,25 @@ the step carries on.
    records the line `qc round at review: <k>`, where `<k>` is the number of the latest `### Round`
    in `qc.md`'s `## Outcome` when it was written. The clear round's number must be greater than the
    highest `<k>` recorded in `close.md`; equal or lower means `/codeo:qc` has not run since the
-   send-back, which is a stop routed to `/codeo:qc`. With no `qc round at review:` line in
+   send-back, which is a stop routed to `/codeo:qc`.
+   Before that stop, `git fetch origin` and `git log --format=%s @{u}..HEAD`: when the send-back's
+   own commit (`docs(codeo): close dossier for #<N> — review feedback`, or
+   `— conflicts with <base>`) is among the commits ahead, its push failed and `/codeo:implement`
+   has never seen the round. `git push`, and on success hand off to `/codeo:implement` as step 11
+   (or step 3) does; on failure report it as that step does and stop. Routing this to `/codeo:qc`
+   would let a clear round on unchanged code pass the review. With no `qc round at review:` line in
    `close.md` — the first time the pull request is opened — any clear round passes. Compare the
    round numbers only, never dates.
 
 3. **The tree is clean and pushed.**
    <!-- rule: close-04 -->
-   `git status --porcelain` prints nothing. Anything it does print — uncommitted code, a stray
-   file — stops the skill and asks the engineer what it is: this skill commits its own dossier and
+   `git status --porcelain` prints nothing. The one exception is this skill's own dossier:
+   `.codeo/<N>/close.md` modified in place and nothing else — answers the engineer wrote in the
+   file, or a round an interrupted invocation wrote — is kept as it stands and goes into this
+   step's next dossier commit; step 5 adds no second `— pull request opened` round when one already
+   records this pull request's number. A staged rename, or any other path, is still a stop.
+   Anything else it prints — uncommitted code, a stray file — stops the skill and asks the engineer
+   what it is: this skill commits its own dossier and
    nothing else, bar the clean base-branch merge step 9 makes, and never sweeps someone's work in
    progress into a pull request. A conflict with
    the base branch, below, is never resolved here either: resolving one is writing code, and the
@@ -160,8 +173,10 @@ the step carries on.
    The branch has commits `origin/<base>` does not (`git log --oneline origin/<base>..HEAD`); none
    means `/codeo:implement` never landed anything — say so and stop. Then the upstream, after
    `git fetch origin`: `git status -sb` shows nothing ahead of or behind it, since every step pushed
-   its own dossier. Commits ahead mean an earlier push never landed, so say so and `git push` them
-   (they are committed work, not swept work). Behind and not ahead — on a return from review, an
+   its own dossier. Commits ahead mean an earlier push never landed; they are pushed only when each
+   is this skill's own — a `docs(codeo): close dossier for #<N>` commit touching only `.codeo/`, or
+   step 9's base-branch merge — so say so and `git push` them. Any other commit ahead is work
+   `/codeo:qc` never judged: name it, stop, and route to `/codeo:qc`. Behind and not ahead — on a return from review, an
    *Update branch* merge GitHub made while the pull request was open — means `git pull --ff-only`
    first, so nothing is committed on a stale tip. Ahead and behind both is a stop: name both sides
    and ask. A branch with no upstream at all is a stop.
@@ -182,7 +197,8 @@ the step carries on.
    - Append this invocation's `## Log` line, ending ` · cost: ` with what
      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints.
    - Commit `close.md`, staged by name, with the subject
-     `docs(codeo): close dossier for #<N> — conflicts with <base>`, and push.
+     `docs(codeo): close dossier for #<N> — conflicts with <base>`, and push. A failed push is
+     reported loudly and the commit kept, and there is no hand-off until it lands.
    - Hand off to `/codeo:implement` and stop: it merges the base branch and resolves the conflict,
      `/codeo:qc` runs its whole pass again, and this skill comes back to step 2
      (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A send-back`).
@@ -220,7 +236,7 @@ the step carries on.
 5. **Record it.** Write `close.md`'s `## Outcome` under `### Round <n> — pull request opened` —
    `### Round 1` when the outcome is empty, otherwise the next after the highest `### Round`
    already there: the pull request's number and URL as the
-   response printed them, not reconstructed; the `qc.md` round and verdict it went out on; any
+   response printed them (on a first open resumed, from step 1's lookup), not reconstructed; the `qc.md` round and verdict it went out on; any
    override from step 2, verbatim; and the date. When `## Outcome` already holds a round — a
    conflict send-back from step 3 before the pull request was ever opened — this record goes in as
    the next `### Round <n>` beneath it, never above it or in place of it. A return from review
@@ -248,7 +264,9 @@ the step carries on.
    picks it up. A failed push is reported loudly and the commit kept: the pull request does not
    carry the archive until it lands, and step 9's first check pushes it on the next invocation. On
    a return from review — a review round in `close.md`, not a first open resumed — also leave one
-   comment on the pull request — `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr comment <PR> <body-file>` — listing,
+   comment on the pull request, only once the push has landed (after a failed push, step 9 posts
+   it when its first check pushes the `— round <n>` commit; a re-run into Phase 2 never skips it) —
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr comment <PR> <body-file>` — listing,
    for each review point, what changed, quoted from `implement.md`'s latest round, so the reviewer
    does not have to diff to find out. The body file is a `mktemp` file outside the working tree,
    as at step 4, so the tree stays clean for the next invocation's step 3.
@@ -284,9 +302,13 @@ the step carries on.
 9. **Report where the pull request stands.** First, step 3's tree and upstream checks, before
    anything else here: anything `git status --porcelain` prints — a staged, uncommitted rename
    included — is step 3's stop. Then `git fetch origin`, and against the upstream: commits ahead
-   mean an earlier push never landed — `git push` them; behind and not ahead means an *Update
-   branch* merge GitHub made — `git pull --ff-only`, and nothing more; ahead and behind both is a
-   stop. Steps 10 and 11 then never act on a stale tip. Then `review_decision` from step 1's lookup; the state of
+   mean an earlier push never landed — `git push` them only when each is this skill's own, as at
+   step 3 (a `docs(codeo): close dossier for #<N>` commit touching only `.codeo/`, or step 9's
+   base-branch merge); any other commit ahead is work `/codeo:qc` never judged: name it, stop, and
+   route to `/codeo:qc`. When that push carries a `— round <n>` commit, post step 7's review-return
+   comment now, on the pull request. Behind and not ahead means an *Update branch* merge GitHub
+   made — `git pull --ff-only`, and nothing more; ahead and behind both is a stop. Steps 10 and 11
+   then never act on a stale tip. Then `review_decision` from step 1's lookup; the state of
    its checks, from `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr checks <PR>`, which prints
    the head commit's check runs as one array, each with its `name`, `status` and `conclusion`; and
    whether it can merge, from `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr view <PR>`, which
@@ -588,11 +610,14 @@ it was archived, committed and pushed with the subject
 the assignee removed. Bar the board: an abandoned issue is not Ready, so with a board
 `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$BACKLOG"` moves its card there, handled
 as a stash's is (`board: Backlog on #<n>…`, or `board: failed — <reason>` with the card left for
-the engineer to move by hand). Then the `## Log` line, the last commit and push, and the lock
-deleted last, as a stash does. It deletes the branch only if the engineer asks, after the
-same confirmation as step 14 — what the branch carries shown, and asked once — with the same
-`git ls-remote` check, never the base branch, and never a force-push. Work that never merged is
-kept unless someone says otherwise.
+the engineer to move by hand). Then the `## Log` line and the last commit and push. It deletes
+the branch only if the engineer asks, after the
+same confirmation as step 14 — what the branch carries shown, and asked once, saying that
+deleting an unmerged branch deletes the only copy of its dossier, `close.md` and the abandon round
+included — with the same `git ls-remote` check, never the base branch, and never a force-push.
+Work that never merged is kept unless someone says otherwise. Then the lock is deleted last, as a
+stash does; a deletion that failed keeps it, as close-10 does on the merge path, and running
+`/codeo:close` again finishes the abandon.
 
 <!-- rule: close-13 -->
 Never use `superpowers:finishing-a-development-branch`: it looks like this skill's twin and is

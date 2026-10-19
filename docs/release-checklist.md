@@ -71,21 +71,21 @@ constrain other people and accidents, not the owner.
 
    The list must show both rulesets as `active` before the next step.
 
-6. Before tagging, from a clean clone of the commit to be tagged:
+6. Before tagging, set the release's version in `.claude-plugin/plugin.json` only
+   (`.claude-plugin/marketplace.json` carries none), and retitle `CHANGELOG.md`'s `## Unreleased`
+   as `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change. Once that pull
+   request merges, test the merged commit — the one the tag will name — from a clean clone:
 
    ```bash
-   git clone https://github.com/kbajpai/codeo.git /tmp/codeo-release && cd /tmp/codeo-release
+   dir=$(mktemp -d) && git clone https://github.com/kbajpai/codeo.git "$dir" && cd "$dir"
    bash tests/run.sh
    ```
 
-   It must end `all cases passed`. Then set the release's version in `.claude-plugin/plugin.json`
-   and in `.claude-plugin/marketplace.json` (its plugin entry; add a `version` there if it has none),
-   and retitle `CHANGELOG.md`'s `## Unreleased` as
-   `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change.
+   It must end `all cases passed`.
 
-   The changelog's `Shared state:` line must name every dossier convention a script reads — today
-   `qc round at review: <k>` and `### Round <n> — stashed|abandoned` — since a project mid-workflow
-   carries dossiers written to them.
+   The changelog's `Shared state:` line must name every dossier convention a script or a skill
+   reads back — today `qc round at review: <k>` and `### Round <n> — stashed|abandoned` — since a
+   project mid-workflow carries dossiers written to them.
 
 7. Tag and push the release, then check it from a clean clone:
 
