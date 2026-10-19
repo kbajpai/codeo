@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 — 2026-10-19
 
 Config schema: 1
 Shared state: dossier conventions in `close.md` — the `### Round <n> — stashed|abandoned` headings `claim.sh --stash-live` reads, the `qc round at review: <k>` line `/codeo:close` reads back, and the forms `scripts/dossier-check.sh` reads (the `**Verdict: …**` span, `(send-back from <file> round <k>)`, `(after plan.md round <k>)`, the `### Footprint` block, the criteria table).
