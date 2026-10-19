@@ -217,6 +217,69 @@ Pages are in the present tense about the system, link to each other by page name
 in the index page. Flows are Mermaid.
 ```
 
+### qc/environment-evidence
+
+**Where.** `/codeo:qc`, after the `deployed` hook's rows are read. The skill fetches it only when
+`$ENV_RESOURCE` is set.
+
+**May rely on.** `$ENV_RESOURCE`, the config's `environment.resource` and `environment.hooks`, and
+the rows the `deployed` hook printed.
+
+**Expected back.** The project's steps beyond the hook: a diagnostic to run, the remedy for an
+orphan, how to read a state.
+
+**Default when absent.** None; the evidence is the deployed hook's output and nothing more.
+
+**Example.**
+
+```markdown
+## environment-evidence
+
+If a row reports a revision the branch does not contain, treat it as an orphan: tell the engineer to
+redeploy rather than judging the environment.
+```
+
+### qc/wiki-rules
+
+**Where.** `/codeo:qc`, the documentation check.
+
+**May rely on.** `$DOCS`, the pages already under it, the config's `modules`, and the diff.
+
+**Expected back.** How the project's pages are written, linked and indexed, and how diagrams are
+checked, including any render step.
+
+**Default when absent.** Documentation checks are only the project's docsDir conventions.
+
+**Example.**
+
+```markdown
+## wiki-rules
+
+Pages are in the present tense about the system, link to each other by page name, and are listed in
+the index page. A diagram's rendered image must be regenerated from its source.
+```
+
+### qc/invariants-extra
+
+**Where.** `/codeo:qc`, the reviewer feed.
+
+**May rely on.** The issue's criteria, the invariants file, the diff, and the config's `modules`.
+
+**Expected back.** Further rules the reviewer must judge the diff against, as plain prose:
+conventions the invariants file does not state.
+
+**Default when absent.** None; the reviewer works from the criteria, the invariants file and the
+diff.
+
+**Example.**
+
+```markdown
+## invariants-extra
+
+Every public function states its failure mode in a comment, and no module reads another module's
+configuration directly.
+```
+
 ### init/host-workflow
 
 **Where.** `/codeo:init`, step 1, "Read the project's host workflow, then check where this is
