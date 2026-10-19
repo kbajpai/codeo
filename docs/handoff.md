@@ -150,7 +150,7 @@ it.
   every step — `plan`, `implement`, `qc` and `close` — from the branches' actual diffs as well as
   their footprints, and footprint against footprint through the files each glob resolves to. Work
   that has outgrown its plan still shows up that way, and an overlap already raised as a question
-  in the issue's dossiers is not raised again. An overlap is a numbered question in `plan.md`,
+  in the issue's dossiers is not raised again. An overlap is a numbered question in that step's dossier,
   answered by the engineer, never a guess: proceed and coordinate, sequence after the other issue,
   or re-scope. An `exclusive` resource — one of the config's `resources[]` — is one where two
   branches cannot both change it and merge cleanly, so for those the plan takes a lock
@@ -196,7 +196,7 @@ it.
     deploy command refuses a caller whose issue does not hold it.
   - `/codeo:qc` releases it at a clear verdict, after recording what the environment ran and its
     results in `qc.md` — `environment.hooks.deployed` is how `qc` learns what the branch left
-    deployed, and it names any workload the plan did not declare. `/codeo:close` releases everything at every exit (`lease release-all <N>`),
+    deployed, and it names any workload the environment does not declare. `/codeo:close` releases everything at every exit (`lease release-all <N>`),
     so a finished or parked workflow never keeps the environment, and releases the environment at
     approval only when `qc` could not. Before every hand-off to `qc`, the first round included,
     `/codeo:implement` checks whether the round changed what the environment runs —

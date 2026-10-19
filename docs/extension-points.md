@@ -261,7 +261,7 @@ the index page. A diagram's rendered image must be regenerated from its source.
 
 ### qc/invariants-extra
 
-**Where.** `/codeo:qc`, the reviewer feed.
+**Where.** `/codeo:qc`, step 6, the diff check; the same text goes to the reviewer at step 7.
 
 **May rely on.** The issue's criteria, the invariants file, the diff, and the config's `modules`.
 

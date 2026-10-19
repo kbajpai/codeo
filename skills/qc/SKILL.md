@@ -36,10 +36,10 @@ REVIEWER_MODEL=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.models.rev
 
 `$DOCS`, `$SUBAGENT_MODEL` and `$REVIEWER_MODEL` always have a value. The reads behind
 `$ENV_RESOURCE`, `$INVARIANTS` and `$WIKI` exit 1 with nothing printed when the key is absent, and
-that is an answer, not a failure: no shared environment (nothing in this skill about the environment applies,
-and `qc.md` says nothing about one), no invariants file (the reviewer works from the acceptance
-criteria and the diff alone), no `wiki` module (the documentation check covers the pages under
-`$DOCS`).
+that is an answer, not a failure: no shared environment (nothing in this skill about the
+environment applies, and `qc.md` says nothing about one), no invariants file (the reviewer works
+from the acceptance criteria, the diff and the overlay's further rules, if any), no `wiki` module
+(the documentation check covers the pages under `$DOCS`).
 
 ## Workflow
 
@@ -83,8 +83,10 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    already raised in this issue's dossiers, and becomes a numbered question in `qc.md`: quote `#M`
    and the printed `what` verbatim, with the other issue's branch, assignee and step from
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh"`, and the options *proceed and coordinate* ·
-   *sequence after #M* · *re-scope*. The step stops until it is answered: commit and push the
-   dossier with the questions open, print the path and the numbers, and end the turn.
+   *sequence after #M* · *re-scope*. The step stops until it is answered: append this
+   invocation's `## Log` line, ending ` · cost: ` with what
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" qc` prints, commit and push the dossier with the
+   questions open, print the path and the numbers, and end the turn.
 
    Then `git diff origin/<base>...HEAD --stat`, then the diff itself. Every finding must point at a
    line this change touched. Checking is cheap; re-litigating the whole repository is not, and a
@@ -192,7 +194,10 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
      other dossier. A reviewer handed the implementer's account of the change grades the account.
 
    Tell it to find defects, and documentation that says something untrue, not matters of style.
-   This is an independent opinion on the same diff, not a re-run of steps 3-6.
+   This is an independent opinion on the same diff, not a re-run of steps 3-6. The review skill's
+   *Act on feedback* section does not apply here: its findings go to step 8 for classification,
+   nothing is fixed, and a finding the engineer would reject is recorded with the evidence, not
+   argued.
 
    Two lessons about how much one round says, guidance rather than new rules: report every defect
    this pass can find in this round — the reviewer's and your own together — rather than one per
@@ -220,8 +225,16 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    the criteria step 5 left to the environment and writes what it found as a `#### Environment`
    block in this round of `qc.md`: the deployed revision it read, the `deployed` hook's rows, the
    ancestor and scope checks of each row that is not an orphan, the orphans, and each environment
-   criterion's result with the command it ran and its output. With no criterion that needs the
-   environment, the block is one line saying so, and nothing below runs.
+   criterion's result with the command it ran and its output. It runs when `implement.md` records
+   a `Deployed revision:` or a criterion needs the environment — a deployed branch is checked for
+   a stale, stopped or orphaned workload even when every criterion was settled by a test. When
+   neither holds, the block is one line saying so, and nothing below runs.
+
+   **Stopping here.** A stop in this step keeps the pass so far: write it under
+   `## Where this stands` and `## Notes` in `qc.md`, append this invocation's `## Log` line as at
+   step 11, commit the file, staged by name, and push, then stop. A push that fails because origin
+   is down is reported and the commit kept (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`:
+   a failed push is loud but not fatal).
 
    **This skill never deploys.** Only `/codeo:implement` deploys, builds for the environment or
    takes the lease. Here the lease is only checked, and re-taken by its holder when this checkout
@@ -242,9 +255,10 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    deployed=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.hooks.deployed)
    ```
 
-   Absent or empty: say plainly that no evidence hook exists, mark every criterion that needs the
-   environment *untestable*, and do not block on it — no lease check and no send-back for evidence
-   that can never be read; nothing below runs.
+   Absent or empty: say plainly that no evidence hook exists, and mark every criterion that needs
+   the environment *untestable here — no evidence hook*. That result is recorded in the round; it
+   is not a question, and it does not stop the verdict. There is no lease check and no send-back
+   for evidence that can never be read; nothing below runs.
 
    **The revision.** Read the most recent `Deployed revision: <x>` in `.codeo/<N>/implement.md` —
    the one under `## Where this stands` when there is one, else the last in `## Outcome` — and
@@ -252,46 +266,61 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    `## Log` lines. With none, while step 2's `scope.sh origin/<base> HEAD` printed `deploy=true`
    (or, with no `deploy=` line, the diff plainly alters what the environment runs) and a criterion
    needs the environment, this branch was never put there: that is a send-back to
-   `/codeo:implement` naming the missing deploy. Write the round, route, and run nothing below.
+   `/codeo:implement` naming the missing deploy. With none, while `scope.sh` printed
+   `deploy=false` (or the diff shows no environment change) and a criterion still needs the
+   environment, `/codeo:implement` owes nothing by its own rule — it takes the lease only for a
+   task that needs it — so this is a plan gap: an environment criterion with no task that leases
+   the environment. Route it back to `/codeo:plan`, naming the gap — write the round, route, and
+   run nothing below — or, when the engineer must settle what the criterion meant, raise it as a
+   numbered question at step 10 instead.
 
    **A later round** — after a send-back or a review round — starts from the revision the previous
    round's block recorded: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD`.
+   A previous round that recorded no revision — its criteria were not yet checkable, or it sent
+   back a missing deploy — gives nothing to start from: run the step as in a first round.
    `deploy=false` means no environment work since: the block says
    "environment evidence from round <n> stands: <revision>", quotes the line, and nothing below
    runs. `deploy=true` means the step runs as in a first round. No `deploy=` line means decide from
    `git diff <that revision>...HEAD`, read directly, and say so. A `scope: cannot diff` line means
    `git fetch` once and run it again; still failing, run the step as in a first round, and say
-   why. Any other non-zero exit is a stop: report the line it printed, and stop.
+   why. Any other non-zero exit is a stop: report the line it printed, and stop as under
+   *Stopping here*.
 
    **The lease.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease check "$ENV_RESOURCE" <N>`.
    - **Exit 0**: this issue holds it — `/codeo:implement` took it and keeps it until this skill's
-     clear verdict — so proceed. Re-take it with
-     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take "$ENV_RESOURCE" <N> "qc"` only when
-     the `deployed` hook needs the environment's activation in this checkout: a holder's re-take
-     runs the activation hooks again here and keeps the lease whatever they answer, and, taken
-     without an override, it drops a stale `override:` line the lease still records.
+     clear verdict — so go on to the rows. Nothing is re-taken up front.
    - **Exit 1**: this issue does not hold it. Quote the check's line, which names the holder or
      says it is not held; each criterion that needs the environment is *not yet checkable*, and the
      take and the deploy this branch still owes are a send-back to `/codeo:implement`. Write the
      round, route, and run nothing below. Record no wait: `/codeo:implement`'s own take records
-     one if it is queued.
-   - **Exit 2**: origin cannot be asked — report its line and stop.
-
-   A holder's re-take's refusals are handled apart, and none is ever retried with an override,
-   since nothing this skill does changes what the lease guards:
-   - **A hook** — `intake: <resource> refused — the <name> hook exited <rc>`: report the hook and
-     what it printed, and record no wait. The lease stays with this issue, unchanged; if the
-     `deployed` hook then fails for want of the activation, the criteria are *not yet checkable*.
-     A failing hook is the project's to fix.
-   - **A stale base** — `this branch does not contain origin/<base>`: the base branch moved during
-     this round, so the build, the suites and the review judged a tree that a merge would replace.
-     Run this pass again from step 2, sync included, rather than only taking again.
-   - **Anything else**: report the one line it printed, and stop.
+     one if it is queued. (When `/codeo:implement` owes nothing — no `Deployed revision:` and no
+     environment change — *The revision* above has already routed the plan gap to `/codeo:plan`,
+     so this send-back never bounces.)
+   - **Exit 2**: origin cannot be asked — report its line, and stop as under *Stopping here*.
 
    **The rows.** Run the evidence hook from the project root as
    `CODEO_ISSUE=<N> CODEO_RESOURCE="$ENV_RESOURCE" bash -c "$deployed"` and read its exit status.
-   Non-zero: the criteria are *not yet checkable*, never a pass — quote what it printed. Exit 0:
-   one line per workload, `name<TAB>revision<TAB>state<TAB>declared`; quote them in the block.
+   Exit 0: one line per workload, `name<TAB>revision<TAB>state<TAB>declared`; quote them in the
+   block. Non-zero, with output saying the activation or identity it needs is missing in this
+   checkout: re-take the lease once as its holder,
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take "$ENV_RESOURCE" <N> "qc"` — a
+   holder's re-take runs the activation hooks again here and keeps the lease whatever they answer,
+   and, taken without an override, it drops a stale `override:` line the lease still records —
+   then re-run the `deployed` hook once. Still non-zero, or non-zero for any other reason: the
+   criteria are *not yet checkable*, never a pass — quote what it printed.
+
+   That re-take's refusals are handled apart, and none is ever retried with an override, since
+   nothing this skill does changes what the lease guards:
+   - **A hook** — `intake: <resource> refused — the <name> hook exited <rc>`: report the hook and
+     what it printed, and record no wait. The lease stays with this issue, unchanged, and the
+     criteria are *not yet checkable*. A failing hook is the project's to fix.
+   - **A stale base** — `this branch does not contain origin/<base>`: the base branch moved during
+     this round, so the build, the suites and the review judged a tree that a merge would replace.
+     Run this pass again from step 2, sync included, rather than only taking again — once only: a
+     second such refusal is a stop, as under *Stopping here*. The restarted attempt is the same
+     round, and the superseded attempt's output is not quoted.
+   - **Anything else**: report the one line it printed, and stop as under *Stopping here*.
+
    <!-- point: qc/environment-evidence -->
    Fetch the project's evidence notes with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" qc environment-evidence`: on exit 0, follow
@@ -309,8 +338,8 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <revision> HEAD` printing `deploy=false` (no
    `deploy=` line: decide from `git diff <revision>...HEAD`, read directly, and say so; a
    `scope: cannot diff` line: `git fetch` once and run it again, and still failing, the revision
-   fails; any other non-zero exit: report its line, and stop). The block records each result
-   against its row.
+   fails; any other non-zero exit: report its line, and stop as under *Stopping here*). The block
+   records each result against its row.
 
    A `stopped` row: read the start step,
 
@@ -330,13 +359,15 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
 
 10. **Write the dossier, and stop if anything must be asked.** `.codeo/<N>/qc.md` carries the
     commands this pass ran and their real output, the criterion-by-criterion result, the
-    documentation check, and every finding with both its answers from step 8.
+    documentation check, and every finding with both its answers from step 8 — under `## Notes`
+    and `## Where this stands` until step 11 writes them into the round.
     <!-- rule: qc-08 -->
     A question comes before the verdict, never after it: anything the engineer must settle before
     this pass can reach one — an acceptance criterion untestable as written, a finding whose
     severity turns on intent the diff does not show — is a numbered question in `qc.md`, and no
     verdict is written while it is open. A verdict issued over an open question is a guess wearing
-    a verdict's clothes. With a question open, commit the file, staged by name, with the subject
+    a verdict's clothes. With a question open, append this invocation's `## Log` line as at
+    step 11, commit the file, staged by name, with the subject
     `docs(codeo): qc dossier for #<N> — Q<a>-Q<b> raised`, push, print the path and the open
     numbers, and end the turn (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The gate`).
 
@@ -390,9 +421,12 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
       release, and the report says so, quoting the check's line. Exit 2, origin cannot be asked:
       report its line, and treat it as a release that failed.
       <!-- rule: qc-11 -->
-      A release that fails is reported and never retried in a loop: record the script's output in
-      the appended line, and still hand off — `/codeo:close` releases everything this issue holds
-      at every exit. Then hand off to `/codeo:close`, which opens the pull request.
+      A release that fails is reported and never retried in a loop: append
+      `Environment NOT released: <the script's output>` to the round instead (the check's line,
+      for exit 2), and still hand off: `/codeo:close` releases everything this issue holds at
+      every exit.
+
+      Then hand off to `/codeo:close`, which opens the pull request.
     - **Back to `/codeo:implement`** — name the findings and what specifically must change.
     - **Back to `/codeo:plan`** — name what the plan got wrong and why the code cannot fix it.
 
@@ -414,7 +448,7 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
   the suites it runs.
 - **Writes** `.codeo/<N>/qc.md` — its questions, its `## Outcome` rounds (with the
   `#### Environment` block when the project has a shared environment), and one `## Log` line per
-  round — committed and pushed on every turn it writes it. Nothing else.
+  invocation — committed and pushed on every turn it writes it. Nothing else.
 - **Never touches** code, tests, the plan's text, the issue's text, a documentation page, or
   another skill's dossier file. A test it wishes existed, or a page it wishes said something else,
   is a finding, not something to go and write.
@@ -441,7 +475,8 @@ criteria and the diff alone), no `wiki` module (the documentation check covers t
   `/codeo:implement`'s purview, and fixing while judging corrupts the judgment.
 - Doesn't edit the plan or re-scope the work — that's `/codeo:plan`'s purview.
 - Doesn't open, merge or approve a pull request — opening one on a clear verdict is
-  `/codeo:close`'s. It pushes its own dossier commits and nothing else.
+  `/codeo:close`'s. It pushes its own dossier commits and nothing else — the merge commit step 2's
+  sync made rides the same push.
 - Doesn't deploy, build for the environment, or take the lease to change what the environment
   runs. It reads what is deployed and sends back what is stale.
 - Doesn't invent acceptance criteria. If `init.md` has none to judge against, that is itself the

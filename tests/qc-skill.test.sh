@@ -98,6 +98,33 @@ if grep -qF -- '--override' "$skill"; then
     fail "the skill takes a lease with --override — $(grep -nF -- '--override' "$skill" | head -1)"
 fi
 
+# The final review wave.
+must_follow "the block runs on a recorded revision too" 'It runs when `implement.md` records' 'or a criterion needs the environment'
+must_follow "only neither short-circuits the block" 'stale, stopped or orphaned workload' 'neither holds'
+must_follow "no evidence hook has its own phrase" 'no evidence hook exists' 'untestable here — no evidence hook'
+must_follow "untestable here is not a question" 'untestable here — no evidence hook' 'not a question'
+must_follow "untestable here does not stop the verdict" 'untestable here — no evidence hook' 'does not stop the verdict'
+must_follow "implement owing nothing is a plan gap" 'owes nothing by its own rule' 'plan gap'
+must_contain "the plan gap goes to plan" 'Route it back to `/codeo:plan`, naming the gap'
+must_follow "the review skill's feedback section does not apply" 'Act on feedback' 'step 8'
+must_follow "a rejected finding is recorded, not argued" 'would reject' 'recorded with the evidence'
+must_follow "the re-take follows a deployed failure" 'missing in this' 're-take the lease once as its holder'
+must_follow "the re-take re-runs the deployed hook once" 'drops a stale `override:` line' 'then re-run the `deployed` hook once'
+must_follow "a stop keeps the pass" '**Stopping here.**' '## Where this stands'
+must_contain "a failed push is not fatal" 'loud but not fatal'
+must_follow "a later round with no revision runs as a first" 'recorded no revision' 'first round'
+must_follow "the stale-base re-run happens once" 'Run this pass again from step 2' 'once only'
+must_follow "the restarted attempt is the same round" 'second such refusal is a stop' 'same'
+must_follow "an overlap question stop writes a Log line" "*sequence after #M* · *re-scope*" '## Log'
+must_follow "a step 10 question stop writes a Log line" 'With a question open' '## Log'
+must_follow "interim content lives in Notes until step 11" 'both its answers from step 8' '## Notes'
+must_contain "a failed release is recorded as not released" 'Environment NOT released:'
+must_follow "the hand-off logs per invocation" '`## Log` line per' 'invocation'
+must_follow "the sync merge rides the dossier push" 'pushes its own dossier commits' 'merge commit'
+if awk '/<!-- rule: qc-11 -->/{f=1;next} f&&/^$/{exit} f' "$skill" | grep -qF 'opens the pull request'; then
+    fail "the hand-off to close sits inside the failed-release paragraph"
+fi
+
 # Steps 10-12 and the hand-off.
 must_contain "the Verdict span is named" '**Verdict: …**'
 must_contain "the Routing span is named" '**Routing: …**'
