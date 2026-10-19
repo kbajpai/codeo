@@ -280,6 +280,71 @@ Every public function states its failure mode in a comment, and no module reads 
 configuration directly.
 ```
 
+### close/put-back
+
+**Where.** `/codeo:close`, the stash and abandon section, before any release. The skill fetches it
+only when `$ENV_RESOURCE` is set and this issue holds that lease.
+
+**May rely on.** `$ENV_RESOURCE`, the config's `environment.resource` and `environment.hooks`, and
+the base branch.
+
+**Expected back.** The steps that restore the shared environment to what the base branch carries,
+in order, as plain prose, each marked irreversible or not. The skill stops and shows the engineer
+any irreversible step before it goes on.
+
+**Default when absent.** None; a stash or an abandon releases what is held and records what the
+environment carries.
+
+**Example.**
+
+```markdown
+## put-back
+
+1. Redeploy the base branch's build to the environment (reversible).
+2. Drop the scratch data this branch loaded (irreversible: say so, and stop for the engineer).
+```
+
+### close/ci-publish-check
+
+**Where.** `/codeo:close`, step 13, after the merge is verified.
+
+**May rely on.** The merge commit, the base branch, and the project's `gh` access.
+
+**Expected back.** What to look at for the merge commit (a workflow run, a published artefact) and
+how to read it. The result is reported and never blocks the close.
+
+**Default when absent.** None; no check of what CI did for the merge commit.
+
+**Example.**
+
+```markdown
+## ci-publish-check
+
+List the workflow runs for the merge commit. The publish run should be green and its artefact
+should carry the commit's short sha; report anything else.
+```
+
+### close/host-workflow
+
+**Where.** `/codeo:close`, step 17, the last report.
+
+**May rely on.** The lock's host line (`volume:` or `session:`), the issue number and the branch.
+
+**Expected back.** What the engineer does next with this checkout, for instance how to remove it,
+as ordered commands or prose.
+
+**Default when absent.** None; the report names the lock's host and says whether anything is left
+to remove.
+
+**Example.**
+
+```markdown
+## host-workflow
+
+1. Close the editor window for this checkout.
+2. Remove the checkout's volume, named on the lock's `volume:` line.
+```
+
 ### init/host-workflow
 
 **Where.** `/codeo:init`, step 1, "Read the project's host workflow, then check where this is

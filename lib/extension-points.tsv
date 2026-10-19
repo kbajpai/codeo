@@ -9,3 +9,6 @@ implement	wiki-rules	Documentation rules are only the project's docsDir conventi
 qc	environment-evidence	None; the evidence is the deployed hook's output and nothing more.
 qc	wiki-rules	Documentation checks are only the project's docsDir conventions.
 qc	invariants-extra	None; the reviewer works from the criteria, the invariants file and the diff.
+close	put-back	None; a stash or an abandon releases what is held and records what the environment carries.
+close	ci-publish-check	None; no check of what CI did for the merge commit.
+close	host-workflow	None; the report names the lock's host and says whether anything is left to remove.
