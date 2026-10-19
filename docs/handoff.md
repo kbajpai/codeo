@@ -173,7 +173,7 @@ it.
   checkout builds and runs the suites on its own. The shared environment is where the branch runs
   integrated, and **one issue has it at a time**, from its first task that needs the environment
   until `/codeo:qc` returns a clear verdict. The plan does not declare it in its footprint; the
-  later steps take it when they reach that task. What the environment is, and anything a project
+  `/codeo:implement` takes it when it reaches that task, and is the only step that deploys to it. What the environment is, and anything a project
   must say about holding it, belongs to the project — its hooks, and its overlay sections such as
   `plan/environment-lease-notes`.
   - `intake.sh lease take <environment.resource> <N> "<purpose>"` takes it. It refuses a branch that
@@ -228,7 +228,7 @@ fix it rather than at `close`.
 | `.codeo/<N>/<step>.md` | the one step named in the filename |
 | `.codeo/intake/` and the `codeo/intake` branch | `/codeo:issue`; `/codeo:init` only reads it, copying `issue.md` out when it adopts one |
 | `.codeo/intake/triage/` — the ledger and run files | `/codeo:triage` |
-| `.codeo/intake/leases/` — the locks on exclusive resources and who waits for them | `/codeo:plan` takes those its footprint names; `/codeo:implement` or `/codeo:qc` take `environment.resource`; all record waits, through `intake.sh lease` only; `/codeo:qc` releases `environment.resource`, `/codeo:close` releases the rest |
+| `.codeo/intake/leases/` — the locks on exclusive resources and who waits for them | `/codeo:plan` takes those its footprint names; `/codeo:implement` takes `environment.resource` and is the only step that deploys to it; `/codeo:qc` re-takes only a lease its issue already holds (to activate it in its own checkout), reads what is deployed, records no waits, and releases it at a clear verdict; every other wait is recorded through `intake.sh lease` only; `/codeo:close` releases the rest |
 | `.codeo/active`, the lock, one per issue checkout | `/codeo:init`, taken in the checkout that runs the later steps; cleared by `/codeo:close` |
 
 Documentation is documentation in the same sense code is code: `/codeo:plan` decides which pages
@@ -308,7 +308,7 @@ What is enforced is what the project's ruleset on the base branch requires — o
 
 ## A call is not a hand-off
 
-`/codeo:plan`, `/codeo:implement` and `/codeo:triage` may *call* `/codeo:issue` when they turn up
+`/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:triage` may *call* `/codeo:issue` when they turn up
 real work belonging in an issue of its own. That is a call, not a hand-off: control returns to the
 caller with a number, and the caller — not `/codeo:issue` — records it in its own dossier's
 `## Outcome` and `## Log` line. `/codeo:issue` writes nothing into the running workflow's dossiers

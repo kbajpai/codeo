@@ -9,7 +9,10 @@ Safe to bump mid-workflow: yes
 - The repository names no project that uses it: design documents about a specific project live in that
   project's repository. `tests/agnostic.test.sh` fails if a tracked file mentions one.
 - `docs/skills-inventory.md`: the generic rules each pipeline skill must keep.
-- Skills: `/codeo:issue`, `/codeo:init`, `/codeo:plan`, `/codeo:implement` and `/codeo:triage`.
+- Skills: `/codeo:issue`, `/codeo:init`, `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:triage`.
+- `/codeo:qc` checks the build, the suites, the acceptance criteria, the documentation and an independent review, reads what the environment runs, and routes forward or back. It registers three extension points, `environment-evidence`, `wiki-rules` and `invariants-extra`.
+- The reviewer rule: the code reviewer runs on `models.reviewer` (default `opus`) with a `description` starting `QC review:`; there is no external second reviewer.
+- The environment-evidence contract: `/codeo:qc` reads the most recent `Deployed revision:` in `implement.md` and the rows of the `environment.hooks.deployed` hook, and never deploys.
 - `/codeo:implement` registers two extension points, `environment-lease-notes` and `wiki-rules`.
 - Suite field `parallel`, read by `/codeo:implement`.
 - The `environment.hooks.deploy` contract: its last stdout line is the deployed revision, a non-zero exit
@@ -32,7 +35,7 @@ Safe to bump mid-workflow: yes
 
 - The pinned rule inventory must be regenerated deliberately: editing `docs/skills-inventory.md` without
   updating the pin fails `tests/inventory.test.sh`.
-- `qc` and `close` are not in this release.
+- `close` is not in this release.
 - A suite's `filter` is a command template for one test, `{}` standing for the test's name; a suite without
   one has no single-test form and its whole `test` command is the proof.
 
