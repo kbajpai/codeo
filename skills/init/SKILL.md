@@ -241,7 +241,11 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
    checkout's commits, then `git pull --ff-only` there. Then go on to step 10.
 
 7. **Draft the dossier.** Write `.codeo/<N>/init.md` in this checkout for the gate — the proposed
-   `## Outcome` (below), the exact branch name, and the base SHA.
+   `## Outcome` (below), the exact branch name, and the base SHA. It takes the shape
+   `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The shape of a file` gives every step: the title and
+   header table, then `## Where this stands`, `## Questions`, `## Outcome`, `## Log`, in that
+   order. `## Questions` is there even when there is nothing to ask, holding `None.`, and
+   `## Notes` only when there is something to keep (an override, steps 3 and 6).
    **Adopt the issue's dossier** if `/codeo:issue` wrote one:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" restore <N>` brings it from the `codeo/intake`
    branch when this clone lacks it (an error saying there is no intake branch, or that it has no

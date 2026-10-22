@@ -166,6 +166,19 @@ want="Clips/Endpoints/Health.cs
 Clips/Endpoints/Other.cs"
 assert_eq "lines" "$want" "$(run "$clone" --outside 7)"
 
+case_desc="--outside leaves out the configured plansDir, not docs/plans"
+clone=$(scenario 'Clips/Endpoints/**' Clips/Endpoints/Other.cs)
+jq '.plansDir = "Docs/plans"' "$clone/.codeo/config.json" > "$clone/cfg" && mv "$clone/cfg" "$clone/.codeo/config.json"
+mkdir -p "$clone/Docs/plans" "$clone/docs/plans"
+echo p > "$clone/Docs/plans/p.md"
+echo p > "$clone/docs/plans/q.md"
+git -C "$clone" add Docs/plans docs/plans
+git -C "$clone" commit -q -m "plan docs"
+want="Clips/Endpoints/Health.cs
+Clips/Endpoints/Other.cs
+docs/plans/q.md"
+assert_eq "lines" "$want" "$(run "$clone" --outside 7)"
+
 # wiki_plan <clone> <wiki> — rewrites issue 7's footprint `wiki:` line and commits it.
 wiki_plan() {
     sed -i "s/^wiki:.*/wiki:       $2/" "$1/.codeo/7/plan.md"
