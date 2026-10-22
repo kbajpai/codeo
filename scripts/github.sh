@@ -13,7 +13,7 @@
 #
 #   Verbs: issue view|assignee-add|assignee-remove|search|list-all, issue-types (prints nothing
 #   when the owner is a user, who has none), user login,
-#   pr list-for-branch|view|reviews|comments|review-comments|checks|create|comment, run list,
+#   pr list-for-branch|view|reviews|comments|review-comments|checks|create [--draft]|comment, run list,
 #   workflow dispatch <workflow-file> <ref> (prints nothing on success; the ref must carry the
 #   workflow file and the caller needs `actions: write`), label list.
 set -euo pipefail
@@ -186,11 +186,15 @@ case $group in
                 jq -s '.' <<<"$out"
                 ;;
             create)
+                # --draft opens it as a draft; -F so GitHub receives the boolean, not the string. The +
+                # expansion keeps an empty array legal under set -u on bash 4.3.
+                draft=()
+                [[ ${1:-} == --draft ]] && { draft=(-F draft=true); shift; }
                 title=${1:?title}; body_file=${2:?body file}; head=${3:?head}; base=${4:?base}
                 # Captured, then printed, like every read verb: a failed POST's error body must
                 # not reach stdout, which close reads {number,html_url} from.
                 out=$(gh api -X POST "repos/$repo/pulls" -f "title=$title" -F "body=@$body_file" \
-                    -f "head=$head" -f "base=$base" -q '{number,html_url}') \
+                    -f "head=$head" -f "base=$base" ${draft[@]+"${draft[@]}"} -q '{number,html_url}') \
                     || die "pr create: POST failed"
                 printf '%s\n' "$out"
                 ;;

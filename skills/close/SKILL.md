@@ -230,6 +230,8 @@ the step carries on.
    Write the body to a file outside the working tree (`mktemp`), so the tree stays clean, and open
    the pull request with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr create <title> <body-file> <branch> "$BASE"`.
+   When the engineer asks for a draft, put `--draft` before the title; otherwise the pull request
+   opens ready for review.
    It prints `{number, html_url}`; those are what step 5 records. A non-zero exit is a stop: report
    its one line, and nothing below runs.
 

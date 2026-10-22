@@ -553,6 +553,19 @@ assert_eq "html_url" "https://github.com/acme/widgets/pull/99" "$(jq -r '.html_u
 assert_contains "title field" "FIELD=title=My PR title" "$(cat "$calls_log")"
 assert_contains "head field" "FIELD=head=feat/x" "$(cat "$calls_log")"
 assert_contains "base field" "FIELD=base=main" "$(cat "$calls_log")"
+assert_eq "no draft field" 0 "$(grep -c 'FIELD=draft=' "$calls_log" || true)"
+
+case_desc="pr create --draft"
+reset_case
+write_fixture POST "repos/$repo/pulls" <<'JSON'
+{"number":99,"html_url":"https://github.com/acme/widgets/pull/99"}
+JSON
+if out=$(bash "$script" pr create --draft "My PR title" "$scratch_dir/body.txt" feat/x main 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 0 "$rc"
+assert_eq "number" 99 "$(jq -r '.number' <<<"$out")"
+assert_contains "title field" "FIELD=title=My PR title" "$(cat "$calls_log")"
+assert_contains "head field" "FIELD=head=feat/x" "$(cat "$calls_log")"
+assert_contains "draft field" "FIELD=draft=true" "$(cat "$calls_log")"
 
 case_desc="pr create (POST fails)"
 reset_case
