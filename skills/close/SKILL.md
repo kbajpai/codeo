@@ -260,8 +260,10 @@ the step carries on.
    Append one `## Log` line: the date, what this invocation did, the board result, then ` · cost: `
    with what `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints.
 
-6. **Archive the dossier.** `git mv .codeo/<N> .codeo/done/<N>` — the files are tracked, so git
-   records a rename. The archive reaches `<base>` with the merge, which is the only way it can:
+6. **Archive the dossier.** `mkdir -p .codeo/done`, then `git mv .codeo/<N> .codeo/done/<N>` —
+   the files are tracked, so git records a rename. The `mkdir` is for a project's first close:
+   `git mv` will not create a missing destination directory, and git tracks no empty one, so
+   `.codeo/done/` exists only once something has been archived into it. The archive reaches `<base>` with the merge, which is the only way it can:
    nothing is committed to the base branch after the merge. It is also what lets the `qc-verdict`
    check pass, since that check fails closed on a live dossier.
 

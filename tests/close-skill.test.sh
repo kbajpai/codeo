@@ -121,6 +121,9 @@ step_contains 'a return from review is a pull request updated round' 5 'A return
 step_contains 'the updated round names the review round on the next line' 5 'first line and, on the next line, `(send-back from close.md round <m>)` naming the review round'
 step_contains 'pull request opened heads exactly one round' 5 '`— pull request opened` heads exactly one round'
 
+# Step 6: a project's first close has no .codeo/done/ yet, and git mv will not create it.
+step_order "the archive directory is created before the move" 6 'mkdir -p .codeo/done' 'git mv .codeo/<N> .codeo/done/<N>'
+
 # Step 7: the review-return comment body is written outside the tree.
 step_order "the review-return comment body is a mktemp file" 7 'pr comment <PR> <body-file>' 'mktemp'
 
