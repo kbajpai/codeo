@@ -19,7 +19,12 @@
 #   title             FAIL   the first line is "# Issue #<n> — <step>", <step> the file's name
 #   header-table      drift  the first non-blank line after the title opens a "| | |" table
 #   sections          drift  "## Where this stands", "## Questions", "## Outcome", "## Log" are all
-#                            there in that relative order ("## Notes" optional anywhere)
+#                            there in that relative order ("## Notes" optional anywhere); a section
+#                            gate-sections requires is reported there, not here
+#   gate-sections     FAIL   plan.md has "## Questions" and "## Outcome", and any file with an
+#                            "**Answer:**" line has "## Questions": without them the open-question
+#                            gate and the footprint check have nothing to read, so a truncated
+#                            plan would otherwise pass
 #   round-numbering   FAIL   the "### Round <n>" headings in a written ## Outcome run consecutively
 #                            from 1, or from 2 when the Outcome opens with unheaded content (the
 #                            unheaded first round); qc.md and close.md head every round, so they
@@ -227,11 +232,23 @@ check_header_table() {
         || finding drift "$name" header-table 'no "| | |" header table after the title'
 }
 
+# gate_sections_of <file> <name>: the sections gate-sections requires of this file, one per line.
+gate_sections_of() {
+    if [[ $2 == plan.md ]]; then
+        printf '%s\n' Questions Outcome
+    elif marked_of "$1" | awk -F'\t' '$2 == 0 && $3 ~ /^\*\*Answer:\*\*/ { found = 1 } END { exit !found }'; then
+        echo Questions
+    fi
+}
+
 check_sections() {
-    local file=$1 name=$2 s range missing=() present=() ordered=()
+    local file=$1 name=$2 s range gate missing=() present=() ordered=()
     local required=("Where this stands" Questions Outcome Log) listed=("Where this stands" Questions)
     listed+=(Outcome Log)
+    gate=$'\n'$(gate_sections_of "$file" "$name")$'\n'
     for s in "${listed[@]}"; do
+        # A missing gate section is a FAIL in check_gate_sections; reporting it twice adds nothing.
+        [[ $gate == *$'\n'"$s"$'\n'* ]] && continue
         has_section "$file" "$s" || missing+=("## $s")
     done
     if ((${#missing[@]})); then
@@ -248,6 +265,22 @@ check_sections() {
     actual=$(printf '%s\n' "${present[@]}" | sort -n | cut -f2 | paste -sd, - | sed 's/,/, /g')
     want=$(printf '%s\n' "${ordered[@]}" | paste -sd, - | sed 's/,/, /g')
     [[ $actual == "$want" ]] || finding drift "$name" sections "out of order: $actual"
+}
+
+check_gate_sections() {
+    local file=$1 name=$2 s missing=()
+    while IFS= read -r s; do
+        [[ -n $s ]] || continue
+        has_section "$file" "$s" || missing+=("## $s")
+    done < <(gate_sections_of "$file" "$name")
+    ((${#missing[@]})) || return 0
+    if [[ $name == plan.md ]]; then
+        local joined
+        joined=$(printf '%s, ' "${missing[@]}")
+        finding FAIL "$name" gate-sections "missing: ${joined%, }"
+    else
+        finding FAIL "$name" gate-sections "has an **Answer:** but no ## Questions"
+    fi
 }
 
 check_round_numbering() {
@@ -829,7 +862,7 @@ check_env_form() {
     done < <(marked_of "$file" | awk -F'\t' '$2 == 0 && tolower($3) ~ /(deployed revision|lease not held|environment)/')
 }
 
-checks=(title header_table sections round_numbering log_format log_cost footprint footprint_single open_question
+checks=(title header_table sections gate_sections round_numbering log_format log_cost footprint footprint_single open_question
     verdict_span verdict_route blocking_to_close criteria_count criterion_verdict send_back_link
     qc_round_at_review park_heading finished_qc_clear finished_pr env_form)
 

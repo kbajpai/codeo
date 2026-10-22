@@ -44,6 +44,8 @@ want[bad-title]='FAIL implement.md [title] first line is not "# Issue #<n> — i
 want[bad-header-table]='drift init.md [header-table] no "| | |" header table after the title'
 want[bad-sections]='drift implement.md [sections] missing: ## Questions
 drift close.md [sections] out of order: Where this stands, Outcome, Questions, Log'
+want[bad-gate-sections]='FAIL plan.md [gate-sections] missing: ## Questions, ## Outcome
+FAIL implement.md [gate-sections] has an **Answer:** but no ## Questions'
 want[bad-round-numbering]='FAIL implement.md [round-numbering] round headings run 3; expected 2
 FAIL qc.md [round-numbering] ## Outcome has content before its first ### Round heading
 FAIL qc.md [round-numbering] round headings run 2; expected 1'
@@ -245,7 +247,8 @@ printf 'hello\n' >"$scratch/shapeless/plan.md"
 run_check "$scratch/shapeless"
 assert_eq "stdout" 'FAIL plan.md [title] first line is not "# Issue #<n> — plan"
 drift plan.md [header-table] no "| | |" header table after the title
-drift plan.md [sections] missing: ## Where this stands, ## Questions, ## Outcome, ## Log' "$out"
+drift plan.md [sections] missing: ## Where this stands, ## Log
+FAIL plan.md [gate-sections] missing: ## Questions, ## Outcome' "$out"
 assert_eq "stderr" "" "$err"
 assert_eq "exit code" 1 "$rc"
 
