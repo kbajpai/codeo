@@ -25,7 +25,7 @@
 #       Prints this branch's changed paths that match none of its own `files` globs, one per line.
 #
 # Globs: `**` is read as `*`, matched with bash `==`; `none` is no glob. `$CODEO_STATE_DIR/**` never
-# pairs, and `--outside` also leaves out `docs/plans/*`. This branch's footprint is read from the
+# pairs, and `--outside` also leaves out the configured plansDir. This branch's footprint is read from the
 # working tree's $CODEO_STATE_DIR/<N>/plan.md (or done/<N>/); another workflow's from its pushed
 # branch. The base branch is the configured baseBranch; `wiki:` applies only when the project's
 # `modules` include "wiki", and names the page file wiki/<Page>.md.
@@ -44,6 +44,9 @@ cd "$(git rev-parse --show-toplevel)"
 export LC_ALL=C
 
 base=$(codeo_base_branch)
+# The plan doc lives here, not in the footprint, so `--outside` must not report it.
+plans_dir=$(codeo_plans_dir)
+plans_dir=${plans_dir%/}
 # The state directory as git sees it (relative to the repo root, where this runs): dossier paths
 # are compared against branch contents, which are never absolute.
 state_rel=${CODEO_STATE_DIR#"$CODEO_PROJECT_ROOT"/}
@@ -112,7 +115,7 @@ mapfile -t mine < <(changes HEAD)
 
 if [[ -n $outside ]]; then
     for p in "${mine[@]}"; do
-        [[ $p == docs/plans/* ]] && continue
+        [[ $p == "$plans_dir"/* ]] && continue
         # `wiki:` lists page names, each the file wiki/<Page>.md — and only that file: the images
         # and diagram sources a page brings are listed under `files:`.
         if [[ -n $wiki_on && $p == wiki/*.md && $p != wiki/*/* ]]; then
