@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.1 — 2026-10-22
+
+Config schema: 1
+Shared state: unchanged from v0.2.0 — the `### Round <n> — stashed|abandoned` headings `claim.sh --stash-live` reads, the `qc round at review: <k>` line `/codeo:close` reads back, and the forms `scripts/dossier-check.sh` reads.
+Safe to bump mid-workflow: yes
+
+- `scripts/dossier-check.sh`: new check `gate-sections` (FAIL) — `plan.md` must have `## Questions` and `## Outcome`, and any file with an `**Answer:**` line must have `## Questions`. A truncated plan used to pass with only a `sections` drift, so the open-question gate and the footprint check never ran (#11). `sections` stays drift and no longer reports a section `gate-sections` requires.
+- `/codeo:init` drafts `init.md` in the shape `docs/dossier.md` gives every step, `## Questions` included (`None.` when empty) (#12).
+- `scripts/github.sh pr create --draft` opens the pull request as a draft; `/codeo:close` passes it when the engineer asks for one (#13).
+- `/codeo:close` creates `.codeo/done/` before archiving, so a project's first close no longer fails at `git mv` (#14).
+- `scripts/overlap.sh --outside` leaves out the configured `plansDir` instead of a hard-coded `docs/plans` (#7).
+
+**Upgrading.** No config change. `gate-sections` can report a FAIL on a dossier written before this version whose `plan.md` lacks `## Questions` or `## Outcome`, where v0.2.0 reported only `drift [sections]`. A project's golden replay records findings in `expected.tsv`; re-record any such dossier there. A dossier mid-workflow written by the v0.2.0 skills already carries both sections.
+
 ## v0.2.0 — 2026-10-19
 
 Config schema: 1
