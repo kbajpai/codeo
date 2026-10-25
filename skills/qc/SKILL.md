@@ -286,7 +286,8 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
    step 10 instead; either way, nothing below runs.
 
    **A later round** — after a send-back or a review round — starts from the revision the previous
-   round's block recorded: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD`.
+   round's block recorded: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" --delivered-since origin/<base> <that revision> HEAD`
+   — the branch's own delivery since it, so base-branch code merged in after the deploy does not by itself read `deploy=true`.
    A previous round that recorded no revision — its criteria were not yet checkable, or it sent
    back a missing deploy — gives nothing to start from: run the step as in a first round.
    `deploy=false` means no environment work since: the block says
@@ -348,7 +349,7 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
    `HEAD`. A row with no fourth column is unknown: it is checked like a declared one, and the block
    makes no orphan statement about it. Every other row must be `running`, and each distinct
    revision among them must pass `git merge-base --is-ancestor <revision> HEAD` and
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <revision> HEAD` printing `deploy=false` (no
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" --delivered-since origin/<base> <revision> HEAD` printing `deploy=false` (no
    `deploy=` line: decide from `git diff <revision>...HEAD`, read directly, and say so; a
    `scope: cannot diff` line: `git fetch` once and run it again, and still failing, the revision
    fails; any other non-zero exit: report its line, and stop as under *Stopping here*). The block

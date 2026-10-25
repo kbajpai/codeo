@@ -6,9 +6,10 @@ Config schema: 1
 Shared state: unchanged from v1.0.1.
 Safe to bump mid-workflow: yes
 
+- `scripts/scope.sh --delivered-since <base> <revision> <head>` judges the branch's own delivery since a revision: only the paths changed between `<revision>` and `<head>` that are also in `git diff <base>...<head>`. Base-branch code merged in after the last deploy no longer flips `deploy=` to true, but a path the branch changed before the deploy and the base branch changed after it stays in scope. `/codeo:qc` and `/codeo:implement` use it for their redeploy checks (#17). Without the flag, behaviour is unchanged.
 - `scripts/doctor.sh` checks the project's `codename`: `ok codename: <name>` for a valid one, `ok codename: not set` when `.codeo/config.json` has none, and `fail codename: …` for a value that is not a string or is not lower-case letters, digits and single hyphens between them, starting with a letter, 2 to 30 characters. An unusable config prints `fail codename: skipped: config is unusable`. codeo itself does not use the key; projects that derive their tooling names from it do (#21).
 
-**Upgrading.** No config change. `doctor.sh` prints one more line, so a project's own test that counts its lines must count one more.
+**Upgrading.** No config change. A project's own scripts that call `scope.sh <revision> HEAD` for a redeploy check can switch to the new form. `doctor.sh` prints one more line, so a project's own test that counts its lines must count one more.
 
 ## v1.0.1 — 2026-10-25
 

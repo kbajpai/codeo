@@ -183,12 +183,98 @@ an_unresolvable_revision_is_an_error_not_nothing_changed() {
     done
 }
 
+# Puts a deployed revision on "work": the branch's own change, committed and tagged R. Prints nothing.
+deploy_at_r() {
+    echo more >> "$1/src/api/a.txt"
+    commit_change "$1"
+    git -C "$1" tag R
+}
+
+# Commits a file on main and merges main back into "work", as a branch does to catch up.
+merge_main_change() { # repo path content
+    git -C "$1" checkout -q main
+    mkdir -p "$(dirname "$1/$2")"
+    printf '%s\n' "$3" > "$1/$2"
+    git -C "$1" add -A
+    git -C "$1" commit -q -m "main: $2"
+    git -C "$1" checkout -q work
+    git -C "$1" merge -q --no-edit main
+}
+
+run_delivered() { (cd "$1" && bash "$scope_sh" --delivered-since main R HEAD 2>"$scratch_root/stderr") || { cat "$scratch_root/stderr" >&2; return 1; }; }
+run_since() { (cd "$1" && bash "$scope_sh" R HEAD 2>"$scratch_root/stderr") || { cat "$scratch_root/stderr" >&2; return 1; }; }
+
+delivered_since_ignores_a_base_branch_merge_after_the_deploy() {
+    local repo; repo=$(make_repo "$with_suites")
+    deploy_at_r "$repo"
+    merge_main_change "$repo" deploy/x/k.yaml x
+    local out; out=$(run_since "$repo")
+    [[ "$out" == *"deploy=true"* ]] || fail "old form should read deploy=true: $out"
+    out=$(run_delivered "$repo")
+    [[ "$out" == $'suite.api=false\nsuite.web=false\ndeploy=false' ]] || fail "unexpected: $out"
+}
+
+delivered_since_counts_a_deployed_path_the_branch_changed_after_the_deploy() {
+    local repo; repo=$(make_repo "$with_suites")
+    deploy_at_r "$repo"
+    merge_main_change "$repo" web/index.txt y
+    mkdir -p "$repo/deploy/x"
+    echo x > "$repo/deploy/x/k.yaml"
+    commit_change "$repo"
+    local out; out=$(run_delivered "$repo")
+    [[ "$out" == *"deploy=true"* ]] || fail "deploy not true: $out"
+    # The merged-in web path is not the branch's: it must not be what decided.
+    [[ "$(cd "$repo" && bash "$scope_sh" --delivered-since main R HEAD 2>&1 >/dev/null)" != *web/index.txt* ]] || fail "merged-in path decided: $out"
+}
+
+delivered_since_keeps_a_path_both_sides_changed() {
+    local repo; repo=$(make_repo "$with_suites")
+    mkdir -p "$repo/deploy"
+    seq 1 10 > "$repo/deploy/shared.yaml"
+    git -C "$repo" checkout -q main
+    git -C "$repo" merge -q --no-edit work 2>/dev/null || true
+    mkdir -p "$repo/deploy"
+    seq 1 10 > "$repo/deploy/shared.yaml"
+    git -C "$repo" add -A
+    git -C "$repo" commit -q -m "main: shared"
+    git -C "$repo" checkout -q work
+    git -C "$repo" merge -q --no-edit main
+    # The branch edits the first line and deploys; main edits the last line afterwards.
+    sed -i '1s/.*/branch/' "$repo/deploy/shared.yaml"
+    commit_change "$repo"
+    git -C "$repo" tag R
+    git -C "$repo" checkout -q main
+    sed -i '10s/.*/main/' "$repo/deploy/shared.yaml"
+    git -C "$repo" add -A
+    git -C "$repo" commit -q -m "main: last line"
+    git -C "$repo" checkout -q work
+    git -C "$repo" merge -q --no-edit main
+    local out; out=$(run_delivered "$repo")
+    [[ "$out" == *"deploy=true"* ]] || fail "shared path should stay in scope: $out"
+}
+
+delivered_since_without_the_flag_and_with_a_bad_argument() {
+    local repo; repo=$(make_repo "$with_suites")
+    deploy_at_r "$repo"
+    local err
+    if (cd "$repo" && bash "$scope_sh" --delivered-since main R 2>"$scratch_root/stderr"); then fail "exited 0 for a missing head"; fi
+    err=$(cat "$scratch_root/stderr")
+    [[ $err == *"usage: scope.sh --delivered-since"* ]] || fail "usage: $err"
+    if (cd "$repo" && bash "$scope_sh" --delivered-since no-such-base R HEAD 2>"$scratch_root/stderr"); then fail "exited 0 for an unresolvable base"; fi
+    err=$(cat "$scratch_root/stderr")
+    [[ $err == scope:*no-such-base* && $err != *$'\n'* ]] || fail "stderr: $err"
+}
+
 for case in docs_only_change_runs_no_suite path_in_one_suite_runs_only_that_suite \
     unknown_path_runs_every_suite rename_counts_old_and_new_path \
     deploy_true_only_for_environment_paths glob_star_stays_inside_a_segment \
     no_suites_configured_prints_nothing_and_exits_0 unusable_config_fails_loudly_and_prints_nothing \
     metacharacters_and_spaces_in_paths_match_literally a_400_file_diff_with_three_suites_is_fast \
-    an_unresolvable_revision_is_an_error_not_nothing_changed; do
+    an_unresolvable_revision_is_an_error_not_nothing_changed \
+    delivered_since_ignores_a_base_branch_merge_after_the_deploy \
+    delivered_since_counts_a_deployed_path_the_branch_changed_after_the_deploy \
+    delivered_since_keeps_a_path_both_sides_changed \
+    delivered_since_without_the_flag_and_with_a_bad_argument; do
     "$case" || fail "$case"
     echo "ok $case" >&2
 done
