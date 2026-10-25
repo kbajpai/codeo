@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1
+Shared state: unchanged from v1.0.1.
+Safe to bump mid-workflow: yes
+
+- `scripts/scope.sh --delivered-since <base> <revision> <head>` judges the branch's own delivery since a revision: only the paths changed between `<revision>` and `<head>` that are also in `git diff <base>...<head>`. Base-branch code merged in after the last deploy no longer flips `deploy=` to true, but a path the branch changed before the deploy and the base branch changed after it stays in scope. `/codeo:qc` and `/codeo:implement` use it for their redeploy checks (#17). Without the flag, behaviour is unchanged.
+
+**Upgrading.** No config change. A project's own scripts that call `scope.sh <revision> HEAD` for a redeploy check can switch to the new form.
+
 ## v1.0.1 — 2026-10-25
 
 Config schema: 1

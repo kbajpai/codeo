@@ -14,6 +14,16 @@
 #       are off (`--no-renames`), so a rename lists both its old and its new path and a deletion
 #       counts.
 #
+#   scope.sh --delivered-since <base> <revision> <head>
+#       The same answer for the branch's own delivery since <revision> (the revision last put on
+#       the environment): only the paths that both changed between <revision> and <head> and are
+#       in the branch's delivery against <base> (`git diff <base>...<head>`). Code that arrived by
+#       merging <base> after <revision> is in the first set but not the second, so it does not by
+#       itself flip `deploy=` to true; a path the branch changed before <revision> and <base>
+#       changed after it is in both, so it stays. Every line the script prints, suites included,
+#       is judged over that set. An unresolvable <base>, <revision> or <head> is the same
+#       `scope: cannot diff` exit 1.
+#
 #   The rule: paths matching `skipGlobs` are ignored; a suite is true if any remaining path
 #   matches one of its `paths`; a remaining path matching NO suite's `paths` makes EVERY suite
 #   true. The skip list names what is safe to ignore rather than what is code, so a path nobody
@@ -31,8 +41,17 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 
-if [[ $# -ne 2 ]]; then
+delivered_base=""
+if [[ ${1:-} == --delivered-since ]]; then
+    if [[ $# -ne 4 ]]; then
+        echo "usage: scope.sh --delivered-since <base> <revision> <head>" >&2
+        exit 1
+    fi
+    delivered_base=$2
+    shift 2
+elif [[ $# -ne 2 ]]; then
     echo "usage: scope.sh <base> <head>" >&2
+    echo "       scope.sh --delivered-since <base> <revision> <head>" >&2
     exit 1
 fi
 
@@ -110,9 +129,24 @@ trap 'rm -f "$diff_file"' EXIT
 git diff --name-only -z --no-renames "$1...$2" >"$diff_file" 2>/dev/null \
     || { echo "scope: cannot diff $1...$2 (unresolvable revision?)" >&2; exit 1; }
 changed=()
-while IFS= read -r -d '' path; do
-    changed+=("$path")
-done <"$diff_file"
+if [[ -n $delivered_base ]]; then
+    # The branch's own delivery, read the same way and kept as a set to intersect with.
+    delivered_file=$(mktemp)
+    trap 'rm -f "$diff_file" "$delivered_file"' EXIT
+    git diff --name-only -z --no-renames "$delivered_base...$2" >"$delivered_file" 2>/dev/null \
+        || { echo "scope: cannot diff $delivered_base...$2 (unresolvable revision?)" >&2; exit 1; }
+    declare -A delivered=()
+    while IFS= read -r -d '' path; do
+        delivered[$path]=1
+    done <"$delivered_file"
+    while IFS= read -r -d '' path; do
+        if [[ -n ${delivered[$path]:-} ]]; then changed+=("$path"); fi
+    done <"$diff_file"
+else
+    while IFS= read -r -d '' path; do
+        changed+=("$path")
+    done <"$diff_file"
+fi
 
 read_globs skip_res '.skipGlobs[]?'
 
