@@ -115,8 +115,10 @@ it.
   only a **Ready** issue — read on `board.gateProject`, and marked by `/codeo:triage` on the
   engineer's answer — and moves it to **In progress**.
   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh"` is the only thing that reads or writes it: `set`
-  writes every project the issue is on whose Status has the option, first adding the issue to each
-  of `board.projects[]` it is missing from, so the boards stay in step. A status is named by its
+  writes each synced project whose Status has the option, first adding the issue to each synced
+  project it is missing from, so the boards stay in step. The synced set is `board.projects[]` plus
+  `board.gateProject`; a card the issue has on any other project is left as it is, without a line,
+  so a project retired from the list stops being stamped. A status is named by its
   key in `board.statuses` (below), which maps it to the board's own option name; a name that is not
   a key passes through. Every transition moves the card, each write part of its step and never a
   gate on it — a failure is reported with what to do by hand, in the skill's `## Log` line as

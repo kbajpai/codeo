@@ -290,8 +290,8 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
    — when it was not, the `## Outcome` already says so and there is nothing left to call. Finally,
    with a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$IN_PROGRESS"` — the card
    move is the claim as the board shows it, as the assignee is on the issue. It adds the issue to
-   every project in `board.projects` it is missing from, and sets the Status on every project it
-   is on that has the option, printing one `board.sh: #<N> <old> → <new> on #<project> <title>`
+   every synced project (`board.projects` plus the gate project) it is missing from, and sets the
+   Status on each of them that has the option, leaving a card on any other project alone, printing one `board.sh: #<N> <old> → <new> on #<project> <title>`
    line per project written. Quote those lines in this turn's output. The dossier is pushed by
    now, so the outcome (those lines, or the failure the script reports) is reported here and at
    step 10, not in the `## Log` line. A failure here (refused in a web session, or a missing
