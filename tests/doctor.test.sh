@@ -46,7 +46,7 @@ doctor_passes_a_healthy_project() {
     echo "$healthy" > .codeo/config.json
     run
     [[ $rc -eq 0 ]] || fail "expected exit 0, got $rc"
-    [[ $(grep -c '^ok ' <<<"$out") -eq 10 ]] || fail "expected ten ok lines"
+    [[ $(grep -c '^ok ' <<<"$out") -eq 11 ]] || fail "expected eleven ok lines"
 }
 
 doctor_fails_when_the_board_scope_is_missing() {
@@ -84,14 +84,14 @@ doctor_reports_every_failure_not_only_the_first() {
     for c in gh-scopes board ruleset suites; do
         grep -q "^fail $c: " <<<"$out" || fail "missing failure for $c"
     done
-    [[ $(wc -l <<<"$out") -eq 10 ]] || fail "expected one line per check"
+    [[ $(wc -l <<<"$out") -eq 11 ]] || fail "expected one line per check"
 }
 
 doctor_survives_an_unusable_config() {
     echo '{"schema":9,"repo":{"owner":"a","name":"b"},"baseBranch":"main"}' > .codeo/config.json
     run
     grep -q '^fail config: ' <<<"$out" && grep -q '^fail schema: ' <<<"$out" || fail "config/schema failures"
-    [[ $(wc -l <<<"$out") -eq 10 ]] || fail "later checks did not run"
+    [[ $(wc -l <<<"$out") -eq 11 ]] || fail "later checks did not run"
 }
 
 doctor_reports_a_todo_marker_as_a_config_failure_and_skips_the_ruleset() {
@@ -107,14 +107,14 @@ doctor_reports_an_unauthenticated_gh_without_hanging() {
     out=$(GH_AUTH_FAIL=1 timeout 20 bash "$script" 2>&1) && rc=0 || rc=$?
     [[ $rc -ne 0 && $rc -ne 124 ]] || fail "expected a prompt non-zero exit, got $rc"
     grep -q '^fail gh-auth: ' <<<"$out" || fail "no gh-auth failure"
-    [[ $(wc -l <<<"$out") -eq 10 ]] || fail "expected one line per check"
+    [[ $(wc -l <<<"$out") -eq 11 ]] || fail "expected one line per check"
 }
 
-doctor_outside_a_repository_prints_ten_lines_and_fails_cleanly() {
+doctor_outside_a_repository_prints_eleven_lines_and_fails_cleanly() {
     local outside; outside=$(mktemp -d "$work/outside.XXXXXX")
     out=$(cd "$outside" && bash "$script" 2>&1) && rc=0 || rc=$?
     [[ $rc -ne 0 ]] || fail "expected non-zero"
-    [[ $(wc -l <<<"$out") -eq 10 ]] || fail "expected one line per check"
+    [[ $(wc -l <<<"$out") -eq 11 ]] || fail "expected one line per check"
     ! grep -Eqi 'unbound|traceback|syntax error|line [0-9]+:' <<<"$out" || fail "stack trace leaked"
 }
 
@@ -186,7 +186,7 @@ doctor_overlays_fail_names_file_section_and_known_points() {
     [[ $rc -ne 0 ]] || fail "expected non-zero"
     grep -q '^fail overlays: .*plan.md: ## plan-shpae is not an extension point of plan (known: plan-shape, wiki-rules)' <<<"$out" || fail "no section failure: $out"
     grep -q 'nosuch.md: no extension points for skill nosuch' <<<"$out" || fail "no unknown-skill failure: $out"
-    [[ $(wc -l <<<"$out") -eq 10 ]] || fail "overlays must stay one line: $out"
+    [[ $(wc -l <<<"$out") -eq 11 ]] || fail "overlays must stay one line: $out"
 }
 
 doctor_superpowers_fail_with_install_command() {
@@ -229,7 +229,7 @@ doctor_overlays_fail_on_a_duplicate_section() {
     CODEO_EXTENSION_POINTS="$reg" run
     rm -rf .codeo/overlays
     grep -q '^fail overlays: plan.md: duplicate section ## plan-shape' <<<"$out" || fail "no duplicate failure: $out"
-    [[ $(wc -l <<<"$out") -eq 10 ]] || fail "overlays must stay one line: $out"
+    [[ $(wc -l <<<"$out") -eq 11 ]] || fail "overlays must stay one line: $out"
 }
 
 doctor_overlays_hint_at_a_double_space_heading() {
@@ -248,16 +248,59 @@ doctor_superpowers_json_without_plugins_key_is_not_a_fail() {
     grep -q '^ok superpowers: cannot verify$' <<<"$out" || fail "no-plugins-key: $out"
 }
 
+codename_line() { # $1 = JSON for .codename, or "" for none; runs doctor, sets out and rc
+    if [[ -n $1 ]]; then
+        jq --argjson c "$1" '. + {codename: $c}' <<<"$healthy" > .codeo/config.json
+    else
+        echo "$healthy" > .codeo/config.json
+    fi
+    run
+}
+
+doctor_codename_ok_when_valid() {
+    local c
+    for c in '"ab"' '"widgets"' '"my-project-2"'; do
+        codename_line "$c"
+        grep -qxF "ok codename: ${c//\"/}" <<<"$out" || fail "valid codename $c: $out"
+    done
+}
+
+doctor_codename_ok_when_not_set() {
+    codename_line ""
+    grep -qx 'ok codename: not set' <<<"$out" || fail "unset codename: $out"
+    [[ $rc -eq 0 ]] || fail "expected exit 0 without a codename, got $rc"
+}
+
+doctor_codename_fails_when_malformed() {
+    local c
+    for c in '""' '7' 'null' '["a"]' '"Widgets"' '"a--b"' '"-ab"' '"ab-"' '"9lives"' '"a"' '"abcdefghijklmnopqrstuvwxyzabcde"'; do
+        codename_line "$c"
+        [[ $rc -ne 0 ]] || fail "expected non-zero for codename $c"
+        grep -q '^fail codename: ' <<<"$out" || fail "no fail codename line for $c: $out"
+    done
+    codename_line '"a--b"'
+    grep -q '^fail codename: "a--b" is not valid' <<<"$out" || fail "value not quoted: $out"
+    codename_line '7'
+    grep -qx 'fail codename: must be a string, found number' <<<"$out" || fail "type not named: $out"
+}
+
+doctor_codename_is_skipped_when_the_config_is_unusable() {
+    echo '{ not json' > .codeo/config.json
+    run
+    grep -qx 'fail codename: skipped: config is unusable' <<<"$out" || fail "unusable config: $out"
+}
+
 for c in doctor_overlays_ok_with_trailing_whitespace_and_crlf doctor_overlays_fail_on_a_duplicate_section \
     doctor_overlays_hint_at_a_double_space_heading doctor_superpowers_json_without_plugins_key_is_not_a_fail \
     doctor_overlays_ok_when_none doctor_overlays_ok_counts_sections \
     doctor_overlays_fail_names_file_section_and_known_points doctor_superpowers_fail_with_install_command \
     doctor_superpowers_ok_when_present doctor_superpowers_undetectable_is_not_a_fail \
     doctor_reports_an_unauthenticated_gh_without_hanging \
-    doctor_outside_a_repository_prints_ten_lines_and_fails_cleanly \
+    doctor_outside_a_repository_prints_eleven_lines_and_fails_cleanly \
     doctor_does_not_call_an_unusable_config_no_board doctor_accepts_a_token_that_sends_no_scopes_header \
     doctor_names_the_right_command_when_build_is_empty doctor_encodes_a_slash_in_the_base_branch \
-    doctor_requires_bash_4_3 \
+    doctor_requires_bash_4_3 doctor_codename_ok_when_valid doctor_codename_ok_when_not_set \
+    doctor_codename_fails_when_malformed doctor_codename_is_skipped_when_the_config_is_unusable \
     doctor_reports_a_todo_marker_as_a_config_failure_and_skips_the_ruleset doctor_passes_a_healthy_project doctor_fails_when_the_board_scope_is_missing \
     doctor_ignores_the_project_scope_without_a_board doctor_fails_when_a_suite_command_is_not_installed \
     doctor_fails_when_the_ruleset_lacks_a_required_check doctor_reports_every_failure_not_only_the_first \

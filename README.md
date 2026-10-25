@@ -25,7 +25,7 @@ The pipeline skills run in this order, each owning one dossier file under `.code
 The whole pipeline ships: every skill from `issue` to `close`, and `triage`, is included.
 
 `/codeo:setup` writes the project's `.codeo/config.json`, and `/codeo:doctor` checks the setup,
-including the project's overlay files.
+including the project's overlay files and, when it sets one, its `codename`.
 
 A project shapes a skill without editing it through overlay files, `.codeo/overlays/<skill>.md`;
 `docs/extension-points.md` documents the file format and every extension point. The dossier and

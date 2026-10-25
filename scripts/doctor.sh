@@ -4,7 +4,7 @@
 #
 #   doctor.sh
 #
-# Checks: config, schema, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays, superpowers.
+# Checks: config, schema, codename, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays, superpowers.
 # Every GitHub read is `gh api` except the board check's `gh project view`, which is GraphQL-backed; nothing uses the
 # GraphQL-backed `gh issue|pr|run`.
 # The ruleset check reads the effective rules for the base branch from
@@ -40,6 +40,24 @@ else
 fi
 
 cfg() { jq -r "$1" "$CODEO_STATE_DIR/config.json" 2>/dev/null; }
+
+# codename: the project's own key, used by projects that derive their tooling names from it. Absent is
+# fine (codeo itself does not need one); present, it must be a string of lower-case letters and digits
+# with single hyphens between them, starting with a letter, 2 to 30 characters.
+if [[ $config_ok -eq 0 ]]; then
+    report fail codename "skipped: config is unusable"
+elif [[ $(cfg 'has("codename")') != true ]]; then
+    report ok codename "not set"
+elif [[ $(cfg '.codename | type') != string ]]; then
+    report fail codename "must be a string, found $(cfg '.codename | type')"
+else
+    codename=$(cfg '.codename')
+    if [[ $codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#codename} -ge 2 && ${#codename} -le 30 ]]; then
+        report ok codename "$codename"
+    else
+        report fail codename "\"$codename\" is not valid: lower-case letters, digits and single hyphens between them, starting with a letter, 2-30 characters"
+    fi
+fi
 
 # gh-auth and gh-scopes share one call: -i keeps the response headers, which carry the scopes.
 if ! command -v gh >/dev/null 2>&1; then

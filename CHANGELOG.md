@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1
+Shared state: unchanged from v1.0.1.
+Safe to bump mid-workflow: yes
+
+- `scripts/doctor.sh` checks the project's `codename`: `ok codename: <name>` for a valid one, `ok codename: not set` when `.codeo/config.json` has none, and `fail codename: …` for a value that is not a string or is not lower-case letters, digits and single hyphens between them, starting with a letter, 2 to 30 characters. An unusable config prints `fail codename: skipped: config is unusable`. codeo itself does not use the key; projects that derive their tooling names from it do (#21).
+
+**Upgrading.** No config change. `doctor.sh` prints one more line, so a project's own test that counts its lines must count one more.
+
 ## v1.0.1 — 2026-10-25
 
 Config schema: 1
