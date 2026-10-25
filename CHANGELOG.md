@@ -1,9 +1,9 @@
 # Changelog
 
-## Unreleased
+## v1.0.1 — 2026-10-25
 
 Config schema: 1
-Shared state: unchanged from v0.2.1.
+Shared state: unchanged from v1.0.0.
 Safe to bump mid-workflow: yes
 
 - **Behaviour change.** `scripts/board.sh set` writes Status only on the synced projects — `board.projects` plus `board.gateProject` — and leaves a card the issue has on any other project exactly as it is, with no write, no field lookup and no line on either stream. It used to write every project the issue was a card on, so a project retired from `board.projects` kept being stamped for every issue still on it (#18). The gate project is synced even when `board.projects` does not list it, so `set` adds the issue there. `status` is unchanged: it reads the gate project, and its drift line still compares the listed projects.
