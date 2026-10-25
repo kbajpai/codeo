@@ -203,7 +203,7 @@ it.
     approval only when `qc` could not. It takes the environment only to put it back on a stash or
     an abandon, when the issue no longer holds it, and releases it with the rest. Before every hand-off to `qc`, the first round included,
     `/codeo:implement` checks whether the round changed what the environment runs —
-    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <the revision it last deployed> HEAD` prints
+    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" --delivered-since origin/<base> <the revision it last deployed> HEAD` prints
     `deploy=true` — and if so takes the lease again, behind whoever is waiting, and redeploys; a
     round that prints `deploy=false` does not take the lease again or redeploy. Either way `qc`
     then runs its pass in full, its environment checks included.

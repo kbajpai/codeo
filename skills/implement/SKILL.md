@@ -215,7 +215,7 @@ pages under `$DOCS`).
    `.codeo/<N>/implement.md` — the one under `## Where this stands` when there is one (it is newer
    than every one in `## Outcome`), else the last in `## Outcome` (only this skill deploys). With none, the issue never used the
    environment: there is nothing to compare, so take the lease only if this round newly needs it.
-   Otherwise run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" <that revision> HEAD` and read its
+   Otherwise run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh" --delivered-since origin/<base> <that revision> HEAD` — the branch's own delivery since it, so base-branch code merged in after the deploy is not redeployed — and read its
    `deploy=` line. `deploy=false` means no environment work and no take — except when the latest
    round in `.codeo/<N>/qc.md` says `Lease not held:`: the branch came back because this issue no
    longer held the lease, and another issue may have deployed since, so take the lease and deploy
