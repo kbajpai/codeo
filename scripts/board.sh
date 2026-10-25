@@ -14,10 +14,12 @@
 #       the gate project's.
 #   board.sh set <N> <status>
 #       Sets issue N's Status to the option named <status> ("Ready", "In progress"), or to the name
-#       configured under board.statuses when <status> is one of that map's keys, on every project
-#       the issue is on whose Status has that option, one line per project written; a project
-#       without the option is skipped with a line on stderr. The issue is first added to each synced
-#       project it is missing from, so `status` finds it where init gates. Exits non-zero in two
+#       configured under board.statuses when <status> is one of that map's keys, on each synced
+#       project (board.projects plus the gate project) that has that option, one line per project
+#       written; a synced project without the option is skipped with a line on stderr. The issue
+#       is first added to each synced project it is missing from, so `status` finds it where init
+#       gates. A card the issue has on any other project is left exactly as it is, without a
+#       line: a project retired from board.projects is not stamped. Exits non-zero in two
 #       cases. When an add, a field lookup or a write failed on some project, that project is
 #       skipped with one stderr line naming it and the reason, the others are still written, and
 #       the exit is non-zero at the end even though something was written. When nothing failed but
@@ -28,8 +30,10 @@
 set -euo pipefail
 
 # The boards are kept in step: `status` reads the gate project, which init gates on; `set` adds the
-# issue to every project in board.projects it is missing from, then writes those and every other
-# project it is on. A board with no projects list is just its gate project.
+# issue to every synced project it is missing from, then writes those and no others. The synced
+# set is board.projects plus the gate project, so a project retired from the list stops being
+# written even while old cards remain on it. A board with no projects list is just its gate
+# project.
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 # Read in the top-level shell (not inside $(...)) so an unusable config ends the script.
 repo_owner=$(codeo_cfg_required .repo.owner) || exit 1
@@ -46,6 +50,10 @@ if projects=$(codeo_cfg '.board.projects[]?'); then
 else
     projects=$project
 fi
+# `projects` stays the listed set, which is what `status`'s drift line compares; `synced` is what
+# `set` adds to and writes, and the gate project is in it even when the list leaves it out.
+synced=$projects
+[[ " $projects " == *" $project "* ]] || synced+=" $project"
 
 usage() {
     echo "usage: board.sh status <N> | board.sh set <N> <status>" >&2
@@ -167,10 +175,10 @@ case $cmd in
         want=$3
         # Every synced project gets the issue, so the boards never disagree about whether it exists:
         # one on neither, or only on one, is added to the rest, and the loop below sets it on all
-        # of them along with any other project it was already on. The title is read here because
-        # the row has none.
+        # of them and on no other project it happens to be on. The title is read here because the
+        # row has none.
         added=() failed=
-        for p in $projects; do
+        for p in $synced; do
             on=
             while IFS= read -r row; do
                 split_row "$row"
@@ -202,6 +210,9 @@ case $cmd in
             split_row "$row"
             # The empty row of an issue on no project survives when every add failed: nothing to write.
             [[ -n ${item:-} ]] || continue
+            # A card on a project outside the synced set is left exactly as it is: no field lookup,
+            # no write, no line. Retiring a project from board.projects is how it stops being stamped.
+            [[ " $synced " == *" $pnum "* ]] || continue
             # The option ids come from each project itself rather than being pinned here, so
             # renaming or reordering columns on GitHub cannot leave this script writing a stale id.
             if [[ -z ${names_of[$pnum]+x} ]]; then

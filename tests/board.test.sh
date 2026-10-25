@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Exercises scripts/board.sh against a stubbed gh: status read from the gate project
-# (#2) and not another, set adding a missing issue before editing it, set writing every project
-# the issue is on, a project lacking the option skipped, an unknown Status option, and the missing
-# `project` scope. Makes no network call.
+# (#2) and not another, set adding a missing issue before editing it, set writing the synced
+# projects (board.projects plus the gate project) and leaving a card on any other project alone, a
+# listed project lacking the option skipped, an unknown Status option, and the missing `project`
+# scope. Makes no network call.
 #
 #   board.test.sh
 #       Exits non-zero and names the first failing case; prints "all cases passed" otherwise.
@@ -47,7 +48,7 @@ case "$1 ${2:-}" in
             exit 1
         fi
         case $3 in
-            2|1) printf 'F%s\tO_BACKLOG\tBacklog\nF%s\tO_READY\tReady\nF%s\tO_PROG\tIn progress\nF%s\tO_REVIEW\tIn review\nF%s\tO_DONE\tDone\n' "$3" "$3" "$3" "$3" "$3" ;;
+            2|1|3) printf 'F%s\tO_BACKLOG\tBacklog\nF%s\tO_READY\tReady\nF%s\tO_PROG\tIn progress\nF%s\tO_REVIEW\tIn review\nF%s\tO_DONE\tDone\n' "$3" "$3" "$3" "$3" "$3" ;;
             9) printf 'F9\tO_TODO\tTodo\nF9\tO_DOING\tDoing\n' ;;
         esac ;;
     "project item-add")
@@ -152,14 +153,47 @@ grep -q "^project item-add 1 --owner" "$GH_STUB_LOG" || fail "an issue only on #
 grep -q -- "item-edit --id ITEM_NEW --project-id PROJ_1 --field-id F1 --single-select-option-id O_PROG" "$GH_STUB_LOG" || fail "...and set there"
 grep -q -- "item-edit --id ITEM_2 --project-id PROJ_2" "$GH_STUB_LOG" || fail "...and on #2"
 
+# #9 is listed here, so it is synced: it lacks the option and is reported, while #2 is written.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[2,9],"gateProject":2,"statuses":{}}}' > "$config"
 GH_STUB_ROWS="$P2\n$url\tITEM_9\tTodo\t9\tOther" run set 7 "In review"
 [[ $rc -eq 0 && $err == *"project #9 Other has no option 'In review' — skipped"* ]] || fail "one project lacks the option: rc=$rc err=$err"
+[[ $out == "board.sh: #7 Ready → In review on #2 Acme - Kanban" ]] || fail "...and #2 alone is reported: out=$out"
 grep -q -- "item-edit --id ITEM_2" "$GH_STUB_LOG" || fail "the project with the option was not written"
 ! grep -q -- "item-edit --id ITEM_9" "$GH_STUB_LOG" || fail "the project without the option was written"
+printf '%s\n' "$with_board" > "$config"
 
+# The only project the issue is on lacks the option: #9 is both listed and the gate project.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[9],"gateProject":9,"statuses":{}}}' > "$config"
 GH_STUB_ROWS="$url\tITEM_9\tTodo\t9\tOther" run set 7 Blocked
-[[ $rc -ne 0 && $err == *"no project"* && $err == *"Todo"* ]] || fail "nothing writable fails naming the options: rc=$rc err=$err"
+[[ $rc -ne 0 && $err == *"project #9 Other has no option 'Blocked' — skipped"* ]] || fail "nothing writable names the project: rc=$rc err=$err"
+[[ $err == *"no project #7 is on has the option 'Blocked' (it has: Todo, Doing)"* ]] || fail "nothing writable fails naming the options: rc=$rc err=$err"
 ! grep -q "item-edit" "$GH_STUB_LOG" || fail "nothing writable still edited an item"
+printf '%s\n' "$with_board" > "$config"
+
+# A card on a project the config does not list is left exactly as it is, and silently: no write, no
+# field lookup, no line on either stream. #9 is listed nowhere.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[2],"gateProject":2,"statuses":{}}}' > "$config"
+GH_STUB_ROWS="$P2\n$url\tITEM_9\tTodo\t9\tOther" run set 7 "In progress"
+[[ $rc -eq 0 && -z $err ]] || fail "an unlisted project is left alone silently: rc=$rc err=$err"
+[[ $out == "board.sh: #7 Ready → In progress on #2 Acme - Kanban" ]] || fail "...and only #2 is reported: out=$out"
+grep -q -- "^project field-list 2" "$GH_STUB_LOG" || fail "...#2's options are read"
+grep -q -- "item-edit --id ITEM_2 --project-id PROJ_2 --field-id F2 --single-select-option-id O_PROG" "$GH_STUB_LOG" || fail "...and #2 is written"
+! grep -q "item-add" "$GH_STUB_LOG" || fail "...nothing is added"
+! grep -q "field-list 9" "$GH_STUB_LOG" || fail "...no field lookup for the unlisted project"
+! grep -q -- "item-edit --id ITEM_9" "$GH_STUB_LOG" || fail "...and its card is not written"
+
+# The gate project is synced even when board.projects does not list it: added, then written.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[2],"gateProject":3,"statuses":{}}}' > "$config"
+GH_STUB_ROWS="$P2" run set 7 Ready
+[[ $rc -eq 0 && -z $err ]] || fail "an unlisted gate project is synced: rc=$rc err=$err"
+[[ $out == "board.sh: #7 Ready → Ready on #2 Acme - Kanban"$'\n'"board.sh: #7 (not on the board) → Ready on #3 PROJ_3" ]] || fail "...and both projects are reported: out=$out"
+grep -q "^project item-add 3 --owner acme --url $url" "$GH_STUB_LOG" || fail "...the issue is added to the gate project"
+grep -q -- "item-edit --id ITEM_NEW --project-id PROJ_3 --field-id F3 --single-select-option-id O_READY" "$GH_STUB_LOG" || fail "...and set there"
+grep -q -- "item-edit --id ITEM_2 --project-id PROJ_2 --field-id F2 --single-select-option-id O_READY" "$GH_STUB_LOG" || fail "...and still on #2"
+GH_STUB_ROWS="$P2" run status 7
+[[ $rc -eq 0 && $out == none ]] || fail "status never adds, so the gate project answers none: rc=$rc out=$out"
+! grep -q "item-add" "$GH_STUB_LOG" || fail "status added the issue"
+printf '%s\n' "$with_board" > "$config"
 
 # One board's failed add must not stop the other's: #1 refuses the add, #2 still gets it and the
 # Status write, stderr names #1, and the exit status is still non-zero.
