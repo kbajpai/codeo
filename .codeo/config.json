@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "repo": {
+    "owner": "kbajpai",
+    "name": "codeo"
+  },
+  "baseBranch": "main",
+  "suites": [
+    {
+      "name": "shell",
+      "paths": [
+        "scripts/**",
+        "lib/**",
+        "hooks/**",
+        "skills/**",
+        "docs/**",
+        "tests/**"
+      ],
+      "build": "true",
+      "test": "bash tests/run.sh",
+      "parallel": false
+    }
+  ],
+  "resources": []
+}
