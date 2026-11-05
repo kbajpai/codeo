@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # The required check `tests`: the suite `.codeo/config.json` names for every path.
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the test suite
+        run: bash tests/run.sh
+
+  # The required check `qc-verdict`: reads the archived dossier's qc verdict and fails closed on a
+  # live dossier. It judges a pull request's diff, so it passes trivially elsewhere.
+  qc-verdict:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read the qc verdict
+        if: github.event_name == 'pull_request'
+        run: >
+          bash scripts/qc-verdict.sh
+          "origin/${{ github.base_ref }}"
+          "${{ github.event.pull_request.head.sha }}"
