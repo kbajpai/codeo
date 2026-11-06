@@ -86,4 +86,7 @@ bash 4.3 or later, jq, git and gh. Board access uses `gh project`, which needs G
 
 ## Status
 
-v0.1.0 is a testing tag, not for projects to adopt.
+codeo is released and ready for projects to adopt. The current version is in `.claude-plugin/plugin.json`,
+and `CHANGELOG.md` lists what changed in each release. Every entry states the config schema (currently 1),
+whether the shared state changed, and whether it is safe to bump mid-workflow, so read the entries between
+your version and the new one before upgrading.
