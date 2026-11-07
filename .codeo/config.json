@@ -1,5 +1,10 @@
 {
   "schema": 1,
+  "codename": "codeo",
+  "plugin": {
+    "repo": "kbajpai/codeo",
+    "ref": "v1.0.3"
+  },
   "repo": {
     "owner": "kbajpai",
     "name": "codeo"
@@ -14,7 +19,8 @@
         "hooks/**",
         "skills/**",
         "docs/**",
-        "tests/**"
+        "tests/**",
+        ".devcontainer/**"
       ],
       "build": "true",
       "test": "bash tests/run.sh",
