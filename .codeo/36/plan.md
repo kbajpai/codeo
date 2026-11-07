@@ -78,6 +78,27 @@ Calls I am making unless you say otherwise (none changes what gets built much):
 - **Tests:** a new `tests/devcontainer.test.sh` checks the files (valid JSON, `remoteUser`, `runArgs`, the `codeo-gh` mount and no other, no bind mounts, none of the excluded tools or the the reference project secrets names in any `.devcontainer/` file, the `codename`).
 - **Docs:** `CHANGELOG.md` gets an `Unreleased` line. `README.md` is untouched (out of scope per the issue), and `docs/` describes the pipeline, not the repo's tooling, so no page moves.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-07-dev-container.md` (left unstaged for the engineer to review and commit). Shape: an executable plan under `docs/plans/`, six tasks, each tests-first, with an options table and a Mermaid flow of the container's start-up. No reference doc under `docs/`.
+
+**Decisions**
+- The dev container lives in this repo, not in a separate private one (Q4): a per-issue container is a clone of the issue's branch and reads `devcontainer.json` from it. A private companion repo for golden replay data and shadow-run notes was suggested as a separate follow-up, not filed.
+- Pin (Q1): `.codeo/config.json` gains `plugin{repo: kbajpai/codeo, ref: v1.0.3}` and `codename: codeo`; superpowers is installed unpinned.
+- Start script (Q2): minimal. It takes ownership of a root-owned clone, runs `plugins.sh`, wires `gh` into git, and lists the outstanding logins and git identity as TODOs. It takes no lock and does not name the container.
+- Proof (Q3): `docker build` / `docker run` here, plus two manual checks by the engineer before `/codeo:close` (VS Code clone-in-volume build; `gh` login surviving a rebuild).
+- The issue's wording was changed (Q4) so no tracked file names a project that uses codeo; `init.md`'s criteria match the edited issue verbatim.
+
+**Options rejected:** a separate repo for the container; codeo pinned to `main`; superpowers pinned; also taking the container lock; installing the `devcontainer` CLI on the host; the git-core PPA; commented JSONC.
+
+**Calls made by the planner:** base image `ubuntu:24.04`; `runArgs` `--memory=4g --cpus=2`; strict-JSON `devcontainer.json`; no `agy`, no `--name`, no bind mounts; a git-identity TODO; `plugins.sh` captures `claude plugin list` before `grep -q` (the v1.0.3 `pipefail` fix).
+
+**Documentation moved:** none. `README.md` is out of scope per the issue; `CHANGELOG.md` gets an `Unreleased` line (Task 6). No wiki module.
+
+**Intake questions resolved:** the one left open at intake (the reference was not in the repository) was answered by the engineer cloning it locally; nothing from it is recorded in a tracked file.
+
+**Issues filed:** none.
+
 ### Footprint
 
 ```
@@ -86,12 +107,9 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-07 — questions raised: Q1-Q3 (round 1)
 - 2026-11-07 — Q1-Q3 answered; Q4 raised (round 2)
 - 2026-11-07 — Q4 answered: keep the container in this repo; the engineer edited the issue (verified: no project name, criteria match init.md verbatim)
+- 2026-11-07 — planned: docs/plans/2026-11-07-dev-container.md · cost: 25m · sonnet-5-5 90k in + 4.2M cached / 40k out · engineering:architecture applied; writing-plans used
