@@ -67,7 +67,7 @@ fi
 
 # $1 case, $2 fixed string, $3 fixed string that must follow within three lines.
 must_follow() {
-    grep -F -A3 -- "$2" "$skill" | grep -qF -- "$3" || fail "$1 — no [$3] within three lines of [$2]"
+    grep -F -A3 -- "$2" "$skill" | grep -F -- "$3" >/dev/null || fail "$1 — no [$3] within three lines of [$2]"
 }
 must_follow "a hook refusal records no wait" 'hook exited' 'no wait'
 must_follow "a dirty tree after the deploy is never committed" 'git status --porcelain' 'never commit'

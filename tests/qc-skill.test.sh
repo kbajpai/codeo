@@ -25,7 +25,7 @@ must_contain() { grep -qF -- "$2" "$skill" || fail "$1 — no [$2]"; }
 
 # $1 case, $2 fixed string, $3 fixed string that must follow within three lines.
 must_follow() {
-    grep -F -A3 -- "$2" "$skill" | grep -qF -- "$3" || fail "$1 — no [$3] within three lines of [$2]"
+    grep -F -A3 -- "$2" "$skill" | grep -F -- "$3" >/dev/null || fail "$1 — no [$3] within three lines of [$2]"
 }
 
 # Steps 2-4.
@@ -134,7 +134,7 @@ must_follow "interim content lives in Notes until step 11" 'both its answers fro
 must_contain "a failed release is recorded as not released" 'Environment NOT released:'
 must_follow "the hand-off logs per invocation" '`## Log` line per' 'invocation'
 must_follow "the sync merge rides the dossier push" 'pushes its own dossier commits' 'merge commit'
-if awk '/<!-- rule: qc-11 -->/{f=1;next} f&&/^$/{exit} f' "$skill" | grep -qF 'opens the pull request'; then
+if awk '/<!-- rule: qc-11 -->/{f=1;next} f&&/^$/{exit} f' "$skill" | grep -F 'opens the pull request' >/dev/null; then
     fail "the hand-off to close sits inside the failed-release paragraph"
 fi
 

@@ -7,6 +7,7 @@ Shared state: unchanged from v1.0.2.
 Safe to bump mid-workflow: yes
 
 - `scripts/scope.sh --delivered-since <base> <revision> <head>` no longer drops a path the branch changed before the deploy and reverted after it. Such a path is back to the base branch's content, so it left `git diff <base>...<head>` and the check printed `deploy=false` while the environment still ran the branch's version. The branch's delivery at `<revision>` (`git diff <base>...<revision>`) now counts too. Code that arrived only by merging `<base>` after `<revision>` is in neither delivery, so #17's guarantee holds (#25).
+- `scripts/intake.sh` and `scripts/doctor.sh` no longer end a pipeline in `grep -q` under `pipefail`, where the early exit could hand the writer a SIGPIPE and flip the result. They now read the whole stream. No behaviour change otherwise.
 
 ## v1.0.2 — 2026-10-25
 
