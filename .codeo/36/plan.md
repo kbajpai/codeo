@@ -8,15 +8,11 @@
 
 ## Where this stands
 
-Round 3. Q1-Q4 answered. Round 1 explored the reference project's `.devcontainer/` (`Dockerfile`, `devcontainer.json`, `scripts/plugins.sh`, and the start, naming and login scripts beside them) and codeo's side: `.codeo/config.json`, `scripts/doctor.sh`, `tests/run.sh`, `.github/workflows/ci.yml`, `.claude/settings.json`. Plan approved and saved to `docs/plans/2026-11-07-dev-container.md`; handed off to `/codeo:implement` once the engineer commits it.
+Round 2, after a send-back from `/codeo:qc` (qc.md round 1). Two blocking findings, both prescribed by the plan's own text: F1, `plugins.sh` runs `claude plugin marketplace remove` from inside the repository, and the CLI rewrites the tracked `.claude/settings.json` on every pin bump; F2, `devcontainer-start.sh` runs `sudo chown -R` on the clone's parent whenever the owner is not the current user, which can change the ownership of a bind-mounted host checkout on a rootless runtime. F1 has one sensible fix and no question. F2 is Q5; which non-blocking findings to fold in is Q6. Nothing is drafted past them.
 
-What I found that shapes the questions:
-
-- `.codeo/config.json` has no `codename` and no pin. `plugins.sh` reads `.plugin.repo` and `.plugin.ref` from it. `config.sh validate` only checks `schema`, so a new `plugin` key is accepted, and `doctor.sh` already validates `codename`.
-- `docker` 29.8.2 is on this machine, so the image can be built and `bash tests/run.sh` run inside it here. `devcontainer` and `shellcheck` are not installed on the host.
-- Ubuntu 24.04's own git is 2.43, which has `git merge-tree --write-tree` (2.38+), the only reason the reference project adds the git-core PPA. Its bash is 5.2, above codeo's 4.3 floor.
-- The `shell` suite's `paths` do not cover `.devcontainer/**`, so a change there would match no suite.
-- the reference project's start script is large and mostly project-specific: secrets store, `.NET` and Terraform, folder-name checks, and an `agy` login. Only the `gh`, git-identity, Claude-login and lock-taking parts could carry over.
+What this pass checked in the image (`codeo-dev-test`):
+- A root-owned directory stays unusable for `dev` after `git config --global --add safe.directory`: `git status` and `touch` both fail with `Permission denied`. So the reviewer's suggested cure fixes git's "dubious ownership" refusal only when the clone is already readable and writable; a clone-in-volume made as root is neither, and a chown is still needed there.
+- From inside the container, a named volume and a bind mount are distinguishable. In `/proc/self/mountinfo`, field 4 for a named volume mounted at `/workspaces/x` is `/var/lib/docker/volumes/<name>/_data`; for a bind mount of a host folder it is that folder's host path (`/home/<user>/…`). Podman volumes follow the same `…/volumes/<name>/_data` form. `findmnt` is in the image but not needed.
 
 ## Questions
 
@@ -61,6 +57,29 @@ Accepted the recommendation.
 
 **Answer:**
 Edit the issue. Done: the engineer edited #36, which no longer names the reference project, and its criteria match `init.md` verbatim. The dev container stays in this repo: a per-issue container is a clone of the issue's branch, so `devcontainer.json` must live in the repo being developed.
+
+### Q5 — How should the start script fix a root-owned clone without touching a host checkout?
+
+**Why it matters:** this is qc's F2. VS Code's clone-in-volume makes the clone as root, so `dev` can neither read it as a git repo nor write to it, and the whole pipeline (every commit) fails until ownership changes. A bind-mounted host folder under rootless Docker or Podman also *appears* root-owned inside the container, and a `chown -R` there changes the ownership of the engineer's own files on the host. The two cases look the same to `stat`, but not to `/proc/self/mountinfo` (above).
+
+**Options:**
+- *Gate the chown on a named volume (my recommendation):* always add `git config --global --add safe.directory <clone>` (harmless, cures the git refusal on every runtime); then chown **the clone itself, never its parent**, and only when (a) its owner is not the current user and (b) the mount that holds it is a named volume, read from `/proc/self/mountinfo` field 4 matching `/volumes/[^/]+/_data$`. A clone that is not the user's and is *not* on a named volume gets a TODO naming the situation and the command (`sudo chown -R …`, or run the container with the host UID), never an automatic chown. Tests cover the three cases with a stubbed mountinfo file: volume + foreign owner → chown of the clone; bind mount + foreign owner → TODO, no sudo; own uid → nothing.
+- *Never chown:* `safe.directory` only, plus a TODO telling the engineer to `sudo chown` by hand when the clone is not theirs. Simplest, no risk to the host, but the first clone-in-volume container always comes up with a TODO before it can commit anything, which undercuts acceptance criterion 1's spirit.
+- *Chown only when the owner is uid 0:* weaker than the first option, since a rootless runtime shows host files as uid 0 too.
+
+**Answer:**
+
+### Q6 — Which non-blocking qc findings does this round fold in?
+
+**Why it matters:** each is small, but each widens the diff `/codeo:implement` and the next `/codeo:qc` round have to carry; the ones left out go to `/codeo:triage` as loose ends.
+
+**Options (my recommendation is to fold in the first group and defer the second):**
+- *Fold in:* F5 (drop the pointless `/workspaces` line, or make its comment true), F6 (`has_plugin` matches the plugin name as a whole token, not an unanchored regex), F7 (`/home/${USERNAME}` instead of a hard-coded `/home/dev` in the Dockerfile `ENV`), F8 (`gh auth login -s project` as the one-step login the TODO list names), F9 (test cases: identity TODO with only `user.name` set and only `user.email` set; the `setup-git` failure TODO; the `plugin.ref` pin assertion loosened to "non-empty, well-formed tag or branch" so a pin bump does not need a test edit), F10 (this dossier's own `## Log` cost lines and `sequenced:` footprint key — fixed in this pass), F11 (`implement.md`'s `Deployed revision` line — `/codeo:implement` drops it in its round).
+- *Defer to triage:* F3 (a volume for Claude's own login — Q2 decided against it and the issue asks only for `gh` to persist) and F4 (documenting the `plugin` key in `lib/env.sh` — it touches `lib/`, which the issue and the plan keep untouched; a one-line comment there is a separate, trivial issue).
+- *Fold in everything, F3 and F4 included.*
+- *Fold in only F1 and F2's fixes, nothing else.*
+
+**Answer:**
 
 ## Notes
 
@@ -113,3 +132,4 @@ exclusive:  none
 - 2026-11-07 — Q1-Q3 answered; Q4 raised (round 2)
 - 2026-11-07 — Q4 answered: keep the container in this repo; the engineer edited the issue (verified: no project name, criteria match init.md verbatim)
 - 2026-11-07 — planned: docs/plans/2026-11-07-dev-container.md · cost: 25m · sonnet-5-5 90k in + 4.2M cached / 40k out · engineering:architecture applied; writing-plans used
+- 2026-11-07 — send-back from qc.md round 1: Q5-Q6 raised (round 2) · cost: 2m · fable-5-1 314k in + 359k cached / 4k out
