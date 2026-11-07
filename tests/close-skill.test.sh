@@ -29,7 +29,7 @@ must_contain() { grep -qF -- "$2" "$skill" || fail "$1 — no [$2]"; }
 
 # $1 case, $2 fixed string, $3 fixed string that must follow within three lines.
 must_follow() {
-    grep -F -A3 -- "$2" "$skill" | grep -qF -- "$3" || fail "$1 — no [$3] within three lines of [$2]"
+    grep -F -A3 -- "$2" "$skill" | grep -F -- "$3" >/dev/null || fail "$1 — no [$3] within three lines of [$2]"
 }
 
 # Prints step $1's text: from its "<n>. **" line up to the next step, section heading or comment.

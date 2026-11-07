@@ -87,7 +87,7 @@ elif [[ -z "$response" ]]; then
     report fail gh-scopes "cannot read scopes without a working gh login"
 else
     scopes=$(printf '%s\n' "$response" | tr -d '\r' | grep -i '^x-oauth-scopes:' | head -n 1 | cut -d: -f2- || true)
-    if ! printf '%s\n' "$response" | grep -qi '^x-oauth-scopes:'; then
+    if ! printf '%s\n' "$response" | grep -i '^x-oauth-scopes:' >/dev/null; then
         # Fine-grained PATs and App/Actions tokens send no scopes header; the board check decides.
         report ok gh-scopes "cannot verify scopes for this token type; the board check decides"
     elif [[ ",$(printf '%s' "$scopes" | tr -d ' ')," == *,project,* ]]; then

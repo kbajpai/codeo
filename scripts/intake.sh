@@ -569,7 +569,7 @@ lease() {
                             checked=1
                         fi
                         if [[ -z $override ]] &&
-                            git show "$(origin_tip):$path" 2>/dev/null | grep -q '^override:'; then
+                            git show "$(origin_tip):$path" 2>/dev/null | grep '^override:' >/dev/null; then
                             # The hooks pass without one, so the override the lease records is
                             # stale: dropped the same way it was written, or the lease keeps
                             # claiming one was needed.
