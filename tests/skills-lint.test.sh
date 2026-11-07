@@ -91,12 +91,17 @@ mkdir -p "$scratch/skills/crlf" "$scratch/skills/folded"
 printf -- '---\r\nname: crlf\r\ndescription: Fine.\r\nmodel: opus\r\n---\r\n\r\n%s\r\n' "$PREC" >"$scratch/skills/crlf/SKILL.md"
 printf -- '---\nname: folded\ndescription: >\n  Folded text\n  on two lines.\nmodel: haiku\n---\n\n%s\n' "$PREC" >"$scratch/skills/folded/SKILL.md"
 
+# A skill far larger than a pipe buffer is still clean: the frontmatter check must not depend on how
+# a pipe between two processes is scheduled (an early-exiting reader once made it report "no
+# frontmatter block" for a valid file, at random on a big one and every time on a huge one).
+make_skill bigfile "$(yes 'Filler text that makes this skill span many pipe writes.' | head -c 1000000)"
+
 out=$(lint_root "$scratch")
 
 expect() { grep -qF -- "$1" <<<"$out" || { echo "$out" >&2; fail "missing report: $1"; }; }
 refute() { ! grep -qF -- "$1" <<<"$out" || { echo "$out" >&2; fail "unexpected report: $1"; }; }
 
-for ok in good crlf folded; do refute "FAIL $ok "; done
+for ok in good crlf folded bigfile; do refute "FAIL $ok "; done
 expect 'good check 6 skipped for a dynamic filter: $KEY'
 expect 'FAIL wrongdir check 1 frontmatter: name'
 expect 'FAIL noprec check 2 precedence'
