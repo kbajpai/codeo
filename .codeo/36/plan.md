@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2. Q1-Q3 answered: all three recommendations accepted. Q4 is new. Round 1 explored the reference project's `.devcontainer/` (`Dockerfile`, `devcontainer.json`, `scripts/plugins.sh`, and the start, naming and login scripts beside them) and codeo's side: `.codeo/config.json`, `scripts/doctor.sh`, `tests/run.sh`, `.github/workflows/ci.yml`, `.claude/settings.json`. Q4 is open; nothing is drafted past it.
+Round 3. Q1-Q4 answered. Round 1 explored the reference project's `.devcontainer/` (`Dockerfile`, `devcontainer.json`, `scripts/plugins.sh`, and the start, naming and login scripts beside them) and codeo's side: `.codeo/config.json`, `scripts/doctor.sh`, `tests/run.sh`, `.github/workflows/ci.yml`, `.claude/settings.json`. Drafting the plan.
 
 What I found that shapes the questions:
 
@@ -60,11 +60,9 @@ Accepted the recommendation.
 - *Exempt `.codeo/` from the agnostic test:* not recommended, since the dossiers are tracked in a public repo.
 
 **Answer:**
-Edit the issue (the engineer's action, pending). The dev container stays in this repo: a per-issue container is a clone of the issue's branch, so `devcontainer.json` must live in the repo being developed. Once the issue is edited, `init.md`'s criteria are re-copied verbatim and the stopgap rewording is dropped.
+Edit the issue. Done: the engineer edited #36, which no longer names the reference project, and its criteria match `init.md` verbatim. The dev container stays in this repo: a per-issue container is a clone of the issue's branch, so `devcontainer.json` must live in the repo being developed.
 
 ## Notes
-
-Stopgap for Q4: `init.md` and this file now say "the reference project" instead of its name, and `init.md`'s fifth criterion reads "reference-project-specific tools" instead of the issue's wording. Reverse it if you choose the second option.
 
 Because codeo is a plugin that serves every project, not only this one, three things follow: no tracked file may name the reference project (so `tests/devcontainer.test.sh` assembles any such word from parts, as `agnostic.test.sh` does); `.devcontainer/` is generic to codeo's own needs (bash, jq, git, gh, shellcheck, Claude Code) and assumes nothing about a project that uses codeo; and the `plugin` pin and `codename` in `.codeo/config.json` are this repo's own settings, not defaults for anyone else. The plugin's source is `./`, so `.devcontainer/` also ships in every installed copy; it is inert there.
 
@@ -88,4 +86,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-07 — questions raised: Q1-Q3 (round 1)
 - 2026-11-07 — Q1-Q3 answered; Q4 raised (round 2)
-- 2026-11-07 — Q4 answered: keep the container in this repo; waiting on the engineer's edit of the issue
+- 2026-11-07 — Q4 answered: keep the container in this repo; the engineer edited the issue (verified: no project name, criteria match init.md verbatim)
