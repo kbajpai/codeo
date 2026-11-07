@@ -10,6 +10,9 @@
 # .devcontainer/scripts/plugins.sh in a scratch repo against stub claude and git executables: a fresh
 # machine gets both plugins, a re-run changes nothing, a new pin reinstalls codeo, an unreachable pin
 # leaves the installed codeo alone, a missing pin fails, and a very long plugin list is read whole.
+# Last it runs .devcontainer/scripts/devcontainer-start.sh in a scratch repo against stub gh, claude,
+# sudo and stat executables and a stub plugins.sh: it always exits 0, lists each login still to do in
+# order, says "ready" when nothing is left, and takes ownership of a clone owned by someone else.
 #
 #   bash tests/devcontainer.test.sh
 #
@@ -261,6 +264,131 @@ plugins_large_plugin_list_does_not_break_the_pipe() {
     fi
 }
 
+# ds_setup <name>: a scratch git repo holding devcontainer-start.sh and a stub plugins.sh, with stub gh,
+# claude, sudo and stat first on PATH and an empty global git config. Sets ds_dir. `calls` logs every
+# stubbed gh setup-git and sudo call. A case sets STUB_* variables before ds_run: STUB_GH_RC, STUB_GH_OUT,
+# STUB_CLAUDE_RC, STUB_PLUGINS_RC, STUB_STAT_UID (default: the real uid).
+ds_setup() {
+    local name=$1
+    [[ -n $pl_root ]] || pl_root=$(mktemp -d)
+    ds_dir="$pl_root/ds-$name"
+    mkdir -p "$ds_dir/repo/.devcontainer/scripts" "$ds_dir/bin" "$ds_dir/home"
+    git -C "$ds_dir/repo" init -q || { fail 'git init failed'; return 1; }
+    cp "$repo/.devcontainer/scripts/devcontainer-start.sh" "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" \
+        || { fail 'devcontainer-start.sh is missing'; return 1; }
+    cat > "$ds_dir/repo/.devcontainer/scripts/plugins.sh" <<'STUB'
+#!/usr/bin/env bash
+exit "${STUB_PLUGINS_RC:-0}"
+STUB
+    : > "$ds_dir/calls"
+    : > "$ds_dir/gitconfig"
+    cat > "$ds_dir/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+case "$1 $2" in
+    "auth status") printf '%s\n' "${STUB_GH_OUT:-}"; exit "${STUB_GH_RC:-1}" ;;
+    "auth setup-git") echo "gh auth setup-git" >> "$STUB_DIR/calls" ;;
+    *) echo "stub gh: unexpected: $*" >&2; exit 1 ;;
+esac
+STUB
+    cat > "$ds_dir/bin/claude" <<'STUB'
+#!/usr/bin/env bash
+if [[ "$1 $2" == "auth status" ]]; then exit "${STUB_CLAUDE_RC:-1}"; fi
+echo "stub claude: unexpected: $*" >&2; exit 1
+STUB
+    cat > "$ds_dir/bin/sudo" <<'STUB'
+#!/usr/bin/env bash
+echo "sudo $*" >> "$STUB_DIR/calls"
+STUB
+    cat > "$ds_dir/bin/stat" <<'STUB'
+#!/usr/bin/env bash
+echo "${STUB_STAT_UID:?}"
+STUB
+    chmod +x "$ds_dir/bin/gh" "$ds_dir/bin/claude" "$ds_dir/bin/sudo" "$ds_dir/bin/stat"
+}
+
+# ds_identity: give the scratch global git config a name and email.
+ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git config --file "$ds_dir/gitconfig" user.email dev@example.com; }
+
+# ds_run: run the scratch start script; sets ds_rc, ds_out and ds_err.
+ds_run() {
+    ds_rc=0
+    env PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
+        STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
+        bash "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
+    ds_out=$(cat "$ds_dir/out")
+    ds_err=$(cat "$ds_dir/err")
+}
+
+# ds_todos <pattern>: how many TODO lines on stderr match the pattern.
+ds_todos() { local n; n=$(grep -c "devcontainer-start: TODO.*$1" <<<"$ds_err" || true); echo "$n"; }
+
+start_todo_when_nothing_is_set_up() {
+    local n list want got
+    ds_setup nothing || return 0
+    STUB_PLUGINS_RC=1 ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'gh auth login'); ((n == 1)) || fail "wanted one TODO for gh auth login, got $n: $ds_err"
+    n=$(ds_todos 'git identity'); ((n == 1)) || fail "wanted one TODO for git identity, got $n: $ds_err"
+    n=$(ds_todos 'claude auth login'); ((n == 1)) || fail "wanted one TODO for claude auth login, got $n: $ds_err"
+    n=$(ds_todos 'plugins.sh'); ((n == 1)) || fail "wanted one TODO for plugins.sh, got $n: $ds_err"
+    grep -qF 'devcontainer-start: what is left to do, in this order:' <<<"$ds_err" || fail "no numbered list heading: $ds_err"
+    list=$(sed -n '/what is left to do, in this order:/,$p' <<<"$ds_err" | tail -n +2)
+    got=$(sed -E 's/^[[:space:]]*[0-9]+\.[[:space:]]*//' <<<"$list" | paste -sd'|')
+    want='gh auth login|gh auth refresh -s project|claude auth login|bash .devcontainer/scripts/devcontainer-start.sh'
+    [[ $got == "$want" ]] || fail "numbered list is not in order: $got"
+    if grep -qiE 'git (config|identity)|user\.(name|email)' <<<"$list"; then fail "git identity is in the numbered list: $list"; fi
+}
+
+start_ready_when_everything_is_set_up() {
+    ds_setup ready || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    STUB_GH_RC=0 STUB_GH_OUT="Token scopes: 'repo', 'project'" STUB_CLAUDE_RC=0 ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, stderr: $ds_err"
+    [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' ]] || fail "stdout does not end with ready: $ds_out"
+    [[ -z $ds_err ]] || fail "stderr is not empty: $ds_err"
+    grep -qxF 'gh auth setup-git' "$ds_dir/calls" || fail 'gh auth setup-git was not run'
+    if grep -q '^sudo' "$ds_dir/calls"; then fail 'sudo ran for a clone we own'; fi
+}
+
+start_project_scope_missing_is_a_todo() {
+    local n
+    ds_setup scope || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    STUB_GH_RC=0 STUB_GH_OUT="Token scopes: 'repo'" STUB_CLAUDE_RC=0 ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, stderr: $ds_err"
+    n=$(ds_todos 'gh auth refresh -s project'); ((n == 1)) || fail "wanted one TODO for the project scope, got $n: $ds_err"
+    n=$(ds_todos 'gh auth login'); ((n == 0)) || fail "asked to log in again although logged in: $ds_err"
+    grep -qxF 'gh auth setup-git' "$ds_dir/calls" || fail 'gh auth setup-git was not run'
+    if grep -qF 'devcontainer-start: ready' <<<"$ds_out"; then fail 'said ready with the project scope missing'; fi
+}
+
+start_plugins_failure_is_a_todo_not_a_failure() {
+    local n
+    ds_setup plugins || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    STUB_PLUGINS_RC=1 STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'plugins.sh'); ((n == 1)) || fail "wanted one TODO naming plugins.sh, got $n: $ds_err"
+    grep -qxF 'gh auth setup-git' "$ds_dir/calls" || fail 'later steps did not run after plugins.sh failed'
+    if grep -qF 'devcontainer-start: ready' <<<"$ds_out"; then fail 'said ready with plugins.sh failed'; fi
+}
+
+start_takes_ownership_of_a_root_owned_clone() {
+    local mine other parent line
+    ds_setup owner || return 0
+    mine=$(id -u)
+    other=$((mine + 1))
+    parent="$ds_dir"
+    STUB_STAT_UID=$other ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    line=$(grep '^sudo chown -R ' "$ds_dir/calls" || true)
+    [[ -n $line ]] || fail 'no sudo chown -R for a clone owned by another uid'
+    [[ $line == *" $parent" ]] || fail "chown was not on the clone's parent directory $parent: $line"
+    : > "$ds_dir/calls"
+    STUB_STAT_UID=$mine ds_run
+    if grep -q '^sudo' "$ds_dir/calls"; then fail 'sudo ran although the clone is ours'; fi
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
@@ -276,6 +404,11 @@ cases=(
     plugins_offline_keeps_codeo
     plugins_no_pin_fails
     plugins_large_plugin_list_does_not_break_the_pipe
+    start_todo_when_nothing_is_set_up
+    start_ready_when_everything_is_set_up
+    start_project_scope_missing_is_a_todo
+    start_plugins_failure_is_a_todo_not_a_failure
+    start_takes_ownership_of_a_root_owned_clone
 )
 
 for current in "${cases[@]}"; do
