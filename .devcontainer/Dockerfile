@@ -47,5 +47,8 @@ ENV CLAUDE_CONFIG_DIR=/home/dev/.claude \
 
 # Claude Code is left to update itself in a running container. The installer's first run writes state
 # (including a machine id) into the config directory; keep only settings.json so none of it is baked in.
+# The final claude --version fails the build if the download did not install anything (a failed curl
+# piped into bash exits 0 under /bin/sh).
 RUN curl -fsSL https://claude.ai/install.sh | bash -s latest \
-    && find "${CLAUDE_CONFIG_DIR}" -mindepth 1 -maxdepth 1 ! -name settings.json -exec rm -rf {} +
+    && find "${CLAUDE_CONFIG_DIR}" -mindepth 1 -maxdepth 1 ! -name settings.json -exec rm -rf {} + \
+    && claude --version

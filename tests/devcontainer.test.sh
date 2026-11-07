@@ -76,15 +76,20 @@ dockerfile_code() {
 }
 
 dockerfile_is_ubuntu_2404_with_the_tools() {
-    local code first word
+    local code first tool
     code=$(dockerfile_code) || { fail 'Dockerfile is missing or unreadable'; return 0; }
     first=$(grep -m1 '^FROM ' <<<"$code" || true)
     [[ "$first" == 'FROM ubuntu:24.04' ]] || fail "first FROM is not ubuntu:24.04 (got: $first)"
-    for word in jq shellcheck git gh 'https://claude.ai/install.sh'; do
-        if ! grep -qw -- "$word" <<<"$code"; then
-            fail "Dockerfile does not mention $word"
+    # git, jq and shellcheck must sit in the apt package list: a bare word, not part of a path or URL.
+    for tool in git jq shellcheck; do
+        if ! grep -qE "^[[:space:]]+[a-z0-9. -]*[[:space:]]$tool([[:space:]]|\\\\|$)" <<<"$code"; then
+            fail "apt package list does not install $tool"
         fi
     done
+    grep -q 'apt-get install .*[[:space:]]gh[[:space:]]*\\*$' <<<"$code" || fail 'no apt-get install of gh'
+    grep -q 'https://cli.github.com/packages stable main' <<<"$code" || fail "gh's apt repository is not configured"
+    grep -q 'curl -fsSL https://claude.ai/install.sh | bash -s latest' <<<"$code" || fail 'no Claude Code installer line'
+    grep -q '&& claude --version$' <<<"$code" || fail 'no claude --version check after the install'
 }
 
 dockerfile_creates_dev_uid_1000_and_the_gh_dir() {
