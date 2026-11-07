@@ -53,6 +53,14 @@ Decisions I intend to make in the plan unless told otherwise (marked as my calls
 - One PR; a `CHANGELOG.md` Unreleased entry, as every change here gets.
 - Tasks follow TDD: the guard test first, failing because `docs/skills.md` does not exist, then the doc, then the README.
 
+### Footprint
+
+```
+files:      docs/skills.md, tests/skills-doc.test.sh, README.md, CHANGELOG.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
