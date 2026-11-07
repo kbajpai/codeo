@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` (qc.md round 1). Two blocking findings, both prescribed by the plan's own text: F1, `plugins.sh` runs `claude plugin marketplace remove` from inside the repository, and the CLI rewrites the tracked `.claude/settings.json` on every pin bump; F2, `devcontainer-start.sh` runs `sudo chown -R` on the clone's parent whenever the owner is not the current user, which can change the ownership of a bind-mounted host checkout on a rootless runtime. F1 has one sensible fix and no question. F2 is Q5; which non-blocking findings to fold in is Q6. Nothing is drafted past them.
+Round 2, after a send-back from `/codeo:qc` (qc.md round 1). Two blocking findings, both prescribed by the plan's own text: F1, `plugins.sh` runs `claude plugin marketplace remove` from inside the repository, and the CLI rewrites the tracked `.claude/settings.json` on every pin bump; F2, `devcontainer-start.sh` runs `sudo chown -R` on the clone's parent whenever the owner is not the current user, which can change the ownership of a bind-mounted host checkout on a rootless runtime. F1 has one sensible fix and no question. Q5 (F2) and Q6 (which non-blocking findings to fold in) are answered: both recommendations accepted. Drafting the round-2 amendment.
 
 What this pass checked in the image (`codeo-dev-test`):
 - A root-owned directory stays unusable for `dev` after `git config --global --add safe.directory`: `git status` and `touch` both fail with `Permission denied`. So the reviewer's suggested cure fixes git's "dubious ownership" refusal only when the clone is already readable and writable; a clone-in-volume made as root is neither, and a chown is still needed there.
@@ -68,6 +68,7 @@ Edit the issue. Done: the engineer edited #36, which no longer names the referen
 - *Chown only when the owner is uid 0:* weaker than the first option, since a rootless runtime shows host files as uid 0 too.
 
 **Answer:**
+Accepted the recommendation.
 
 ### Q6 — Which non-blocking qc findings does this round fold in?
 
@@ -80,6 +81,7 @@ Edit the issue. Done: the engineer edited #36, which no longer names the referen
 - *Fold in only F1 and F2's fixes, nothing else.*
 
 **Answer:**
+Accepted the recommendation: fold in F5-F11, defer F3 and F4 to triage.
 
 ## Notes
 
@@ -96,6 +98,15 @@ Calls I am making unless you say otherwise (none changes what gets built much):
 - **Config:** `.codeo/config.json` gains `"codename": "codeo"`, a `plugin` pin (Q1), and `.devcontainer/**` in the `shell` suite's `paths`, so a change under `.devcontainer/` is judged by the suite.
 - **Tests:** a new `tests/devcontainer.test.sh` checks the files (valid JSON, `remoteUser`, `runArgs`, the `codeo-gh` mount and no other, no bind mounts, none of the excluded tools or the the reference project secrets names in any `.devcontainer/` file, the `codename`).
 - **Docs:** `CHANGELOG.md` gets an `Unreleased` line. `README.md` is untouched (out of scope per the issue), and `docs/` describes the pipeline, not the repo's tooling, so no page moves.
+
+### Footprint
+
+```
+files:      .devcontainer/Dockerfile, .devcontainer/scripts/plugins.sh, .devcontainer/scripts/devcontainer-start.sh, tests/devcontainer.test.sh, docs/plans/2026-11-07-dev-container.md, .codeo/36/implement.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
@@ -128,8 +139,8 @@ exclusive:  none
 
 ## Log
 
-- 2026-11-07 — questions raised: Q1-Q3 (round 1)
-- 2026-11-07 — Q1-Q3 answered; Q4 raised (round 2)
-- 2026-11-07 — Q4 answered: keep the container in this repo; the engineer edited the issue (verified: no project name, criteria match init.md verbatim)
+- 2026-11-07 — questions raised: Q1-Q3 (round 1) · cost: not recorded
+- 2026-11-07 — Q1-Q3 answered; Q4 raised (round 2) · cost: not recorded
+- 2026-11-07 — Q4 answered: keep the container in this repo; the engineer edited the issue (verified: no project name, criteria match init.md verbatim) · cost: not recorded
 - 2026-11-07 — planned: docs/plans/2026-11-07-dev-container.md · cost: 25m · sonnet-5-5 90k in + 4.2M cached / 40k out · engineering:architecture applied; writing-plans used
 - 2026-11-07 — send-back from qc.md round 1: Q5-Q6 raised (round 2) · cost: 2m · fable-5-1 314k in + 359k cached / 4k out
