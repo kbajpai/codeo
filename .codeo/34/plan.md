@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Exploration done; three questions open before drafting. What exploration found:
+Round 1. Q1-Q3 answered in the conversation; drafting the plan. What exploration found:
 
 - The seven pipeline skills each end with `## Hand-off` (Reads / Writes / Never touches / Hands off to) and `## Non-goals` sections, so most of the material for `docs/skills.md` already exists in a fixed shape. `setup` and `doctor` are 12-line skills that run `scripts/setup.sh` and `scripts/doctor.sh`; their descriptions come from those scripts' headers.
 - `lib/extension-points.tsv` is the machine-readable registry of the 14 extension points, already checked against each `SKILL.md` and `docs/extension-points.md` by `tests/skills.test.sh` check 4.
@@ -23,6 +23,7 @@ Round 1. Exploration done; three questions open before drafting. What exploratio
 **Options:** closely follow the `## Hand-off` and `## Non-goals` wording, rephrased only where needed · fresh prose written for a newcomer, using `SKILL.md` as the source but not its wording · no preference, you pick.
 
 **Answer:**
+Follow the `## Hand-off` and `## Non-goals` wording closely, rephrasing only where needed.
 
 ### Q2 — How strict should the guard test be?
 
@@ -32,6 +33,7 @@ Round 1. Exploration done; three questions open before drafting. What exploratio
 I'd recommend (c): the extension-point check is exact and cheap, and it is the one thing in the doc that can be verified mechanically. Placement is my call either way: a standalone `tests/skills-doc.test.sh` on the `inventory.test.sh` precedent, not a seventh check in `skills.test.sh`, so `skills-lint.test.sh`'s scratch tree is untouched.
 
 **Answer:**
+(c): headings, the four sub-parts, and the extension points matched exactly against `lib/extension-points.tsv`. Standalone `tests/skills-doc.test.sh`.
 
 ### Q3 — What happens to the README's Skills table?
 
@@ -39,6 +41,7 @@ I'd recommend (c): the extension-point check is exact and cheap, and it is the o
 **Options:** keep the table as is and add the link · drop the *Extension points* column, keep Skill and Purpose, link each row to its `docs/skills.md` section · replace the table with a short list plus one link · no preference, you pick.
 
 **Answer:**
+Drop the *Extension points* column; keep Skill and Purpose; link each row to its `docs/skills.md` section.
 
 ## Notes
 
@@ -57,3 +60,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-07 — Q1-Q3 raised · cost: 1m · fable-5-1 167k in + 235k cached / 335 out
+- 2026-11-07 — Q1-Q3 answered · cost: 3m · fable-5-1 175k in + 641k cached / 6k out
