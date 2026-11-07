@@ -78,6 +78,14 @@ Calls I am making unless you say otherwise (none changes what gets built much):
 - **Tests:** a new `tests/devcontainer.test.sh` checks the files (valid JSON, `remoteUser`, `runArgs`, the `codeo-gh` mount and no other, no bind mounts, none of the excluded tools or the the reference project secrets names in any `.devcontainer/` file, the `codename`).
 - **Docs:** `CHANGELOG.md` gets an `Unreleased` line. `README.md` is untouched (out of scope per the issue), and `docs/` describes the pipeline, not the repo's tooling, so no page moves.
 
+### Footprint
+
+```
+files:      .devcontainer/**, .codeo/config.json, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-07-dev-container.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
