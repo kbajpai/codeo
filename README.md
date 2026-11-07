@@ -10,26 +10,25 @@ bash tests/run.sh [pattern]   # runs tests/*.test.sh whose name contains the pat
 
 ## Skills
 
-The pipeline skills run in this order, each owning one dossier file under `.codeo/<issue>/`:
+The six pipeline skills run in order inside one workflow, each owning one dossier file under `.codeo/<issue>/`; `triage` runs outside the workflow lock, between workflows; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
 
-| Skill | Purpose | Extension points |
-|-------|---------|------------------|
-| `/codeo:issue` | Turn a raw idea or finding into a well-formed GitHub issue through a question-and-answer pass | none |
-| `/codeo:init` | Start work on a Ready issue: claim the branch, write its dossier, take the lock, hand off to plan | `host-workflow` |
-| `/codeo:plan` | Explore, ask, and document a change as a reference doc or implementation plan, and check its footprint against every other workflow in flight | `plan-shape`, `proof-of-done`, `environment-lease-notes`, `wiki-rules` |
-| `/codeo:implement` | Execute the approved plan task by task through the superpowers execution skills, deploy to a shared environment under its lease when the plan needs it, build, and hand off to QC | `environment-lease-notes`, `wiki-rules` |
-| `/codeo:qc` | Check the build, the suites, the criteria, the documentation and an independent review, read what the environment runs, and route forward or back | `environment-evidence`, `wiki-rules`, `invariants-extra` |
-| `/codeo:close` | Open the pull request, wait for the merge, route review feedback back, verify the merge, clean up and release the lock; also the way to stash or abandon a workflow | `put-back`, `ci-publish-check`, `host-workflow` |
-| `/codeo:triage` | Find the loose ends development left behind and route them to issues | `todo-excludes` |
+| Skill | Purpose |
+|-------|---------|
+| [`/codeo:issue`](docs/skills.md#issue) | Turn a raw idea or finding into a well-formed GitHub issue through a question-and-answer pass |
+| [`/codeo:init`](docs/skills.md#init) | Start work on a Ready issue: claim the branch, write its dossier, take the lock, hand off to plan |
+| [`/codeo:plan`](docs/skills.md#plan) | Explore, ask, and document a change as a reference doc or implementation plan, and check its footprint against every other workflow in flight |
+| [`/codeo:implement`](docs/skills.md#implement) | Execute the approved plan task by task through the superpowers execution skills, deploy to a shared environment under its lease when the plan needs it, build, and hand off to QC |
+| [`/codeo:qc`](docs/skills.md#qc) | Check the build, the suites, the criteria, the documentation and an independent review, read what the environment runs, and route forward or back |
+| [`/codeo:close`](docs/skills.md#close) | Open the pull request, wait for the merge, route review feedback back, verify the merge, clean up and release the lock; also the way to stash or abandon a workflow |
+| [`/codeo:triage`](docs/skills.md#triage) | Find the loose ends development left behind and route them to issues |
 
-The whole pipeline ships: every skill from `issue` to `close`, and `triage`, is included.
+[`/codeo:setup`](docs/skills.md#setup) writes `.codeo/` with a starter `config.json` and creates `docs/plans/`;
+[`/codeo:doctor`](docs/skills.md#doctor) checks the whole set-up — config, GitHub login and scopes, board, branch ruleset, suites, dependencies, overlays and superpowers — and reports every failure.
 
-`/codeo:setup` writes the project's `.codeo/config.json`, and `/codeo:doctor` checks the setup,
-including the project's overlay files and, when it sets one, its `codename`.
-
-A project shapes a skill without editing it through overlay files, `.codeo/overlays/<skill>.md`;
-`docs/extension-points.md` documents the file format and every extension point. The dossier and
-hand-off protocols are in `docs/dossier.md` and `docs/handoff.md`.
+A project shapes a skill without editing it through overlay files, `.codeo/overlays/<skill>.md`.
+Each skill's extension points are listed in `docs/skills.md` and documented in
+`docs/extension-points.md`, which also gives the file format. The dossier and hand-off protocols are
+in `docs/dossier.md` and `docs/handoff.md`.
 
 ## Checking a dossier
 

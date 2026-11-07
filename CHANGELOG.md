@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1
+Shared state: unchanged from v1.0.3.
+Safe to bump mid-workflow: yes
+
+- `docs/skills.md` describes every skill — purpose and triggers, reads and writes, hand-offs and non-goals, extension points — and `README.md`'s Skills table links to it. `tests/skills-doc.test.sh` fails when a directory under `skills/` has no section there, or a section's extension points differ from `lib/extension-points.tsv` (#34).
+
 ## v1.0.3 — 2026-11-07
 
 Config schema: 1
