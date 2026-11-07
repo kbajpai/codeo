@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` (qc.md round 1). Two blocking findings, both prescribed by the plan's own text: F1, `plugins.sh` runs `claude plugin marketplace remove` from inside the repository, and the CLI rewrites the tracked `.claude/settings.json` on every pin bump; F2, `devcontainer-start.sh` runs `sudo chown -R` on the clone's parent whenever the owner is not the current user, which can change the ownership of a bind-mounted host checkout on a rootless runtime. F1 has one sensible fix and no question. Q5 (F2) and Q6 (which non-blocking findings to fold in) are answered: both recommendations accepted. Drafting the round-2 amendment.
+Round 2 is planned and handed to `/codeo:implement`. Round 2, after a send-back from `/codeo:qc` (qc.md round 1). Two blocking findings, both prescribed by the plan's own text: F1, `plugins.sh` runs `claude plugin marketplace remove` from inside the repository, and the CLI rewrites the tracked `.claude/settings.json` on every pin bump; F2, `devcontainer-start.sh` runs `sudo chown -R` on the clone's parent whenever the owner is not the current user, which can change the ownership of a bind-mounted host checkout on a rootless runtime. F1 has one sensible fix and no question. Q5 (F2) and Q6 (which non-blocking findings to fold in) are answered: both recommendations accepted. Drafting the round-2 amendment.
 
 What this pass checked in the image (`codeo-dev-test`):
 - A root-owned directory stays unusable for `dev` after `git config --global --add safe.directory`: `git status` and `touch` both fail with `Permission denied`. So the reviewer's suggested cure fixes git's "dubious ownership" refusal only when the clone is already readable and writable; a clone-in-volume made as root is neither, and a chown is still needed there.
@@ -99,15 +99,6 @@ Calls I am making unless you say otherwise (none changes what gets built much):
 - **Tests:** a new `tests/devcontainer.test.sh` checks the files (valid JSON, `remoteUser`, `runArgs`, the `codeo-gh` mount and no other, no bind mounts, none of the excluded tools or the the reference project secrets names in any `.devcontainer/` file, the `codename`).
 - **Docs:** `CHANGELOG.md` gets an `Unreleased` line. `README.md` is untouched (out of scope per the issue), and `docs/` describes the pipeline, not the repo's tooling, so no page moves.
 
-### Footprint
-
-```
-files:      .devcontainer/Dockerfile, .devcontainer/scripts/plugins.sh, .devcontainer/scripts/devcontainer-start.sh, tests/devcontainer.test.sh, docs/plans/2026-11-07-dev-container.md, .codeo/36/implement.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-07-dev-container.md` (left unstaged for the engineer to review and commit). Shape: an executable plan under `docs/plans/`, six tasks, each tests-first, with an options table and a Mermaid flow of the container's start-up. No reference doc under `docs/`.
@@ -129,12 +120,29 @@ sequenced:  none
 
 **Issues filed:** none.
 
+### Round 2
+
+2026-11-07
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-07-dev-container.md`, with a `## Round 2` appended (Tasks 7-10; Tasks 1-6 stand as built). Left unstaged for the engineer to review and commit, as in round 1.
+
+**Decisions**
+- F1: `plugins.sh` reads the config by absolute path and runs every `claude plugin ...` call from `$HOME`, never inside a repository, so a pin bump cannot rewrite the tracked `.claude/settings.json`. Rejected: editing settings back afterwards.
+- F2 (Q5): the start script always sets `safe.directory`; it chowns the clone itself (never its parent), and only when the clone is not the user's and its mount is a named volume, read from `/proc/self/mountinfo` (longest mount point wins, source `.../volumes/<name>/_data`). Otherwise a TODO, never a chown. Rejected: `safe.directory` alone (checked in the image: a root-owned clone stays unwritable), chown on uid 0 (a rootless runtime shows host files as root too).
+- Q6: fold in F5-F11 (drop `/workspaces`, whole-name plugin match, `/home/${USERNAME}`, one-step `gh auth login -s project`, the F9 test cases and a looser pin assertion, this dossier's log and footprint form, `implement.md`'s Deployed-revision line); defer F3 and F4 to `/codeo:triage`.
+
+**Documentation moved:** none.
+
+**Intake questions resolved:** none. **Issues filed:** none.
+
 ### Footprint
 
 ```
-files:      .devcontainer/**, .codeo/config.json, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-07-dev-container.md
+files:      .devcontainer/Dockerfile, .devcontainer/scripts/plugins.sh, .devcontainer/scripts/devcontainer-start.sh, tests/devcontainer.test.sh, docs/plans/2026-11-07-dev-container.md, .codeo/36/implement.md
 wiki:       none
 exclusive:  none
+sequenced:  none
 ```
 
 ## Log
@@ -144,3 +152,4 @@ exclusive:  none
 - 2026-11-07 — Q4 answered: keep the container in this repo; the engineer edited the issue (verified: no project name, criteria match init.md verbatim) · cost: not recorded
 - 2026-11-07 — planned: docs/plans/2026-11-07-dev-container.md · cost: 25m · sonnet-5-5 90k in + 4.2M cached / 40k out · engineering:architecture applied; writing-plans used
 - 2026-11-07 — send-back from qc.md round 1: Q5-Q6 raised (round 2) · cost: 2m · fable-5-1 314k in + 359k cached / 4k out
+- 2026-11-07 — planned (round 2): docs/plans/2026-11-07-dev-container.md · cost: 8m · fable-5-1 319k in + 1M cached / 9k out · sonnet-5-5 473k in + 695k cached / 15k out · engineering:architecture and system-design not applied (no new choice beyond the Q5 table); writing-plans structure used
