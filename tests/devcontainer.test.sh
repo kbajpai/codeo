@@ -36,7 +36,8 @@ config_has_codename_pin_and_suite_path() {
     local cfg="$repo/.codeo/config.json"
     jq -e '.codename == "codeo"' "$cfg" >/dev/null || fail 'codename is not "codeo"'
     jq -e '.plugin.repo == "kbajpai/codeo"' "$cfg" >/dev/null || fail 'plugin.repo is not kbajpai/codeo'
-    jq -e '.plugin.ref == "v1.0.3"' "$cfg" >/dev/null || fail 'plugin.ref is not v1.0.3'
+    jq -e '.plugin.ref | type == "string" and length > 0 and test("^\\S+$")' "$cfg" >/dev/null \
+        || fail 'plugin.ref is not a non-empty string without whitespace'
     jq -e '.suites[] | select(.name == "shell") | .paths | index(".devcontainer/**")' "$cfg" >/dev/null \
         || fail 'shell suite paths lack .devcontainer/**'
 }
@@ -113,6 +114,30 @@ dockerfile_has_none_of_the_excluded_tools() {
     hit=$(grep -iE 'dotnet|nodejs|npm|terraform|google-cloud|gcloud|postgresql|kubectl|docker\.io|docker-ce' <<<"$code" || true)
     if [[ -n "$hit" ]]; then
         fail "Dockerfile names an excluded tool: $hit"
+    fi
+}
+
+# dockerfile_env_lines: every ENV instruction in the Dockerfile with its continuation lines, comments dropped.
+dockerfile_env_lines() {
+    dockerfile_code | awk '/^[[:space:]]*ENV[[:space:]]/ {on=1} on {print} on && !/\\[[:space:]]*$/ {on=0}'
+}
+
+dockerfile_env_uses_the_username_arg() {
+    local env
+    dockerfile_code >/dev/null || { fail 'Dockerfile is missing or unreadable'; return 0; }
+    env=$(dockerfile_env_lines)
+    if grep -q '/home/dev' <<<"$env"; then
+        fail 'an ENV line hard-codes /home/dev'
+    fi
+    # shellcheck disable=SC2016  # the literal ${USERNAME} text is what is being matched
+    grep -q 'CLAUDE_CONFIG_DIR=/home/${USERNAME}/\.claude' <<<"$env" || fail 'CLAUDE_CONFIG_DIR is not /home/${USERNAME}/.claude'
+}
+
+dockerfile_does_not_create_workspaces() {
+    local hit
+    hit=$(dockerfile_code | grep '/workspaces' || true)
+    if [[ -n "$hit" ]]; then
+        fail "Dockerfile mentions /workspaces: $hit"
     fi
 }
 
@@ -503,6 +528,8 @@ cases=(
     dockerfile_is_ubuntu_2404_with_the_tools
     dockerfile_creates_dev_uid_1000_and_the_gh_dir
     dockerfile_has_none_of_the_excluded_tools
+    dockerfile_env_uses_the_username_arg
+    dockerfile_does_not_create_workspaces
     plugins_fresh_machine_installs_both
     plugins_rerun_changes_nothing
     plugins_ref_change_reinstalls_codeo

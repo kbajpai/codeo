@@ -29,20 +29,19 @@ RUN install -d -m 0755 /etc/apt/keyrings \
 
 # Ubuntu 24.04 ships a user named ubuntu that holds UID 1000; remove it so dev can have that UID.
 # The gh directory is created here, owned by dev, so an empty named volume mounted over it takes dev's
-# ownership. /workspaces is where VS Code's clone-in-volume puts the repository (cloned as root), so dev
-# gets passwordless sudo to take ownership of it.
+# ownership. dev gets passwordless sudo because the start script uses it to take ownership of a
+# repository clone that a named volume holds as root.
 RUN userdel -r ubuntu \
     && useradd --uid "${USER_UID}" --create-home --shell /bin/bash "${USERNAME}" \
     && install -d -o "${USERNAME}" -g "${USERNAME}" /home/${USERNAME}/.config /home/${USERNAME}/.config/gh /home/${USERNAME}/.claude \
-    && install -d -o "${USERNAME}" -g "${USERNAME}" /workspaces \
     && echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
     && chmod 0440 /etc/sudoers.d/${USERNAME}
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
-ENV CLAUDE_CONFIG_DIR=/home/dev/.claude \
-    PATH=/home/dev/.local/bin:${PATH} \
+ENV CLAUDE_CONFIG_DIR=/home/${USERNAME}/.claude \
+    PATH=/home/${USERNAME}/.local/bin:${PATH} \
     LANG=en_US.UTF-8
 
 # Claude Code is left to update itself in a running container. The installer's first run writes state
