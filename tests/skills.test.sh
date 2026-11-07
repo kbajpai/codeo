@@ -22,17 +22,17 @@ lint_fail() { printf 'FAIL %s check %s %s: %s\n' "$1" "$2" "$3" "$4"; }
 # (1) $1 = SKILL.md path, $2 = skill (directory) name.
 lint_frontmatter() {
     local file=$1 skill=$2 fm name desc model
-    if [[ "$(sed -n 1p "$file")" != "---" ]] || ! sed -n '2,$p' "$file" | grep -q '^---$'; then
+    if [[ "$(sed -n 1p "$file")" != "---" ]] || ! awk 'NR > 1 && /^---$/ { found = 1 } END { exit !found }' "$file"; then
         lint_fail "$skill" 1 frontmatter "no frontmatter block"
         return
     fi
     fm=$(sed -n '2,$p' "$file" | awk '/^---$/{exit} {print}')
-    name=$(sed -n 's/^name:[[:space:]]*//p' <<<"$fm" | head -1)
+    name=$(sed -n '/^name:/{s/^name:[[:space:]]*//;p;q;}' <<<"$fm")
     # A folded or literal block ("description: >") keeps its text on the indented lines below.
     desc=$(awk '/^description:/{sub(/^description:[[:space:]]*/,""); v=$0; d=1; next}
         d && /^[[:space:]]+[^[:space:]]/{gsub(/^[[:space:]]+/,""); v=v $0; next}
         d{d=0} END{gsub(/^[>|][-+]?$/,"",v); print v}' <<<"$fm")
-    model=$(sed -n 's/^model:[[:space:]]*//p' <<<"$fm" | head -1)
+    model=$(sed -n '/^model:/{s/^model:[[:space:]]*//;p;q;}' <<<"$fm")
     [[ "$name" == "$skill" ]] || lint_fail "$skill" 1 frontmatter "name '$name' is not the directory name '$skill'"
     [[ -n "$desc" ]] || lint_fail "$skill" 1 frontmatter "description is empty"
     case "$model" in

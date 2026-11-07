@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `scripts/intake.sh` and `scripts/doctor.sh` no longer end a pipeline in `grep -q` under `pipefail`, where the early exit could hand the writer a SIGPIPE and flip the result. They now read the whole stream. No behaviour change otherwise.
+
 ## v1.0.2 — 2026-10-25
 
 Config schema: 1

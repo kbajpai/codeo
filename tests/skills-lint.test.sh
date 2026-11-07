@@ -91,6 +91,16 @@ mkdir -p "$scratch/skills/crlf" "$scratch/skills/folded"
 printf -- '---\r\nname: crlf\r\ndescription: Fine.\r\nmodel: opus\r\n---\r\n\r\n%s\r\n' "$PREC" >"$scratch/skills/crlf/SKILL.md"
 printf -- '---\nname: folded\ndescription: >\n  Folded text\n  on two lines.\nmodel: haiku\n---\n\n%s\n' "$PREC" >"$scratch/skills/folded/SKILL.md"
 
+# A large valid skill must never read as frontmatter-less: the check may not depend on how a pipe's
+# reader and writer interleave (an early-exiting consumer under pipefail made it flaky). Run it
+# repeatedly so a regression shows up as a failure here, not as an occasional one elsewhere.
+make_skill big 'x'
+awk 'BEGIN { for (i = 0; i < 5000; i++) print "Filler line to make the skill larger than a pipe buffer holds." }' >>"$scratch/skills/big/SKILL.md"
+for _ in $(seq 1 50); do
+    got=$(lint_frontmatter "$scratch/skills/big/SKILL.md" big)
+    [[ -z "$got" ]] || fail "a large valid skill failed the frontmatter check: $got"
+done
+
 out=$(lint_root "$scratch")
 
 expect() { grep -qF -- "$1" <<<"$out" || { echo "$out" >&2; fail "missing report: $1"; }; }
