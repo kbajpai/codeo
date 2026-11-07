@@ -22,7 +22,9 @@ lint_fail() { printf 'FAIL %s check %s %s: %s\n' "$1" "$2" "$3" "$4"; }
 # (1) $1 = SKILL.md path, $2 = skill (directory) name.
 lint_frontmatter() {
     local file=$1 skill=$2 fm name desc model
-    if [[ "$(sed -n 1p "$file")" != "---" ]] || ! sed -n '2,$p' "$file" | grep -q '^---$'; then
+    # One awk reads the whole file: a `sed | grep -q` pipe would let grep quit at the first match and
+    # sed die of SIGPIPE, which `pipefail` reports as "no closing line" on a large file.
+    if [[ "$(sed -n 1p "$file")" != "---" ]] || ! awk 'NR>1 && /^---$/{f=1; exit} END{exit !f}' "$file"; then
         lint_fail "$skill" 1 frontmatter "no frontmatter block"
         return
     fi
