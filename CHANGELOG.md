@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.3 — 2026-11-07
 
 Config schema: 1
 Shared state: unchanged from v1.0.2.
