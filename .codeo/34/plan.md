@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q3 answered in the conversation; drafting the plan. What exploration found:
+Round 1 complete: plan approved and written to `docs/plans/2026-11-07-describe-every-skill.md` (unstaged — the engineer commits it). Next: `/codeo:implement`. What exploration found:
 
 - The seven pipeline skills each end with `## Hand-off` (Reads / Writes / Never touches / Hands off to) and `## Non-goals` sections, so most of the material for `docs/skills.md` already exists in a fixed shape. `setup` and `doctor` are 12-line skills that run `scripts/setup.sh` and `scripts/doctor.sh`; their descriptions come from those scripts' headers.
 - `lib/extension-points.tsv` is the machine-readable registry of the 14 extension points, already checked against each `SKILL.md` and `docs/extension-points.md` by `tests/skills.test.sh` check 4.
@@ -53,19 +53,35 @@ Decisions I intend to make in the plan unless told otherwise (marked as my calls
 - One PR; a `CHANGELOG.md` Unreleased entry, as every change here gets.
 - Tasks follow TDD: the guard test first, failing because `docs/skills.md` does not exist, then the doc, then the README.
 
+## Outcome
+
+**Plan.** `docs/plans/2026-11-07-describe-every-skill.md` — an executable plan (Goal / Architecture / Tech Stack / Spec / Global Constraints / Review Focus, three checkbox tasks). Approved by the engineer; left unstaged for them to commit.
+
+**Shape chosen.** A plan under `docs/plans/`, not a reference doc: the deliverable (`docs/skills.md`) is itself the standing reference, and the plan is the build order for it.
+
+**Tasks.** (1) `tests/skills-doc.test.sh` — the guard, with eleven scratch-tree cases, written first and failing with `FAIL doc-missing`; (2) `docs/skills.md` — nine sections in the fixed four-part shape; (3) `README.md` Skills section and a `CHANGELOG.md` Unreleased entry.
+
+**Decisions** (Q1–Q3, answered by the engineer): descriptions follow each `SKILL.md`'s `## Hand-off` and `## Non-goals` wording closely (rejected: fresh newcomer prose); the guard checks headings, the four sub-parts and the extension points exactly against `lib/extension-points.tsv` (rejected: headings only, headings plus parts); the README table drops its *Extension points* column and links each row to its section (rejected: keep as is, short list).
+
+**My calls, marked in the plan.** One test file rather than the lint's two-file split; standalone test, not a seventh `skills.test.sh` check, so `skills-lint.test.sh`'s scratch trees are untouched; `None.` is the exact text for a skill with no points; the doctor check list lives in `docs/skills.md`, not the README; CI is the suite's verdict because nine unrelated tests already fail on Windows checkouts.
+
+**Options rejected** are tabulated in the plan's *Options considered*.
+
+**Documentation the plan changes.** `README.md` (Skills section) and the new `docs/skills.md`. No wiki module. `docs/extension-points.md` and `docs/skills-inventory.md` are untouched (issue's Out of Scope).
+
+**Intake questions resolved.** None; `init.md` left none open. No `/codeo:issue` filed; no optional skill unavailable (the `engineering` skills were not needed — no technology choice or new component).
+
 ### Footprint
 
 ```
 files:      docs/skills.md, tests/skills-doc.test.sh, README.md, CHANGELOG.md
 wiki:       none
 exclusive:  none
+sequenced:  none
 ```
-
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 
 - 2026-11-07 — Q1-Q3 raised · cost: 1m · fable-5-1 167k in + 235k cached / 335 out
 - 2026-11-07 — Q1-Q3 answered · cost: 3m · fable-5-1 175k in + 641k cached / 6k out
+- 2026-11-07 — planned: docs/plans/2026-11-07-describe-every-skill.md · cost: 8m · fable-5-1 197k in + 1.7M cached / 21k out · sonnet-5-5 197k in + 36k cached / 924 out
