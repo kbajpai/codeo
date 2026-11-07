@@ -303,7 +303,7 @@ plugins_large_plugin_list_does_not_break_the_pipe() {
 # ds_setup <name>: a scratch git repo holding devcontainer-start.sh and a stub plugins.sh, with stub gh,
 # claude, sudo and stat first on PATH and an empty global git config. Sets ds_dir. `calls` logs every
 # stubbed gh setup-git and sudo call. A case sets STUB_* variables before ds_run: STUB_GH_RC, STUB_GH_OUT,
-# STUB_CLAUDE_RC, STUB_PLUGINS_RC, STUB_STAT_UID (default: the real uid).
+# STUB_CLAUDE_RC, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO.
 ds_setup() {
     local name=$1
     [[ -n $pl_root ]] || pl_root=$(mktemp -d)
@@ -322,7 +322,7 @@ STUB
 #!/usr/bin/env bash
 case "$1 $2" in
     "auth status") printf '%s\n' "${STUB_GH_OUT:-}"; exit "${STUB_GH_RC:-1}" ;;
-    "auth setup-git") echo "gh auth setup-git" >> "$STUB_DIR/calls" ;;
+    "auth setup-git") echo "gh auth setup-git" >> "$STUB_DIR/calls"; exit "${STUB_SETUP_GIT_RC:-0}" ;;
     *) echo "stub gh: unexpected: $*" >&2; exit 1 ;;
 esac
 STUB
@@ -350,6 +350,7 @@ ds_run() {
     ds_rc=0
     env PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
+        ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
         bash "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
     ds_out=$(cat "$ds_dir/out")
     ds_err=$(cat "$ds_dir/err")
@@ -370,7 +371,7 @@ start_todo_when_nothing_is_set_up() {
     grep -qF 'devcontainer-start: what is left to do, in this order:' <<<"$ds_err" || fail "no numbered list heading: $ds_err"
     list=$(sed -n '/what is left to do, in this order:/,$p' <<<"$ds_err" | tail -n +2)
     got=$(sed -E 's/^[[:space:]]*[0-9]+\.[[:space:]]*//' <<<"$list" | paste -sd'|')
-    want='gh auth login|gh auth refresh -s project|claude auth login|bash .devcontainer/scripts/devcontainer-start.sh'
+    want='gh auth login -s project|claude auth login|bash .devcontainer/scripts/devcontainer-start.sh'
     [[ $got == "$want" ]] || fail "numbered list is not in order: $got"
     if grep -qiE 'git (config|identity)|user\.(name|email)' <<<"$list"; then fail "git identity is in the numbered list: $list"; fi
 }
@@ -409,20 +410,88 @@ start_plugins_failure_is_a_todo_not_a_failure() {
     if grep -qF 'devcontainer-start: ready' <<<"$ds_out"; then fail 'said ready with plugins.sh failed'; fi
 }
 
-start_takes_ownership_of_a_root_owned_clone() {
-    local mine other parent line
-    ds_setup owner || return 0
-    mine=$(id -u)
-    other=$((mine + 1))
-    parent="$ds_dir"
+# ds_mountinfo <root> <mountpoint>...: write a stub mountinfo file with one line per (root, mountpoint) pair
+# and set CODEO_MOUNTINFO to it.
+ds_mountinfo() {
+    local f="$ds_dir/mountinfo" id=100
+    : > "$f"
+    while (($# >= 2)); do
+        echo "$id 90 0:50 $1 $2 rw,relatime - ext4 /dev/sda1 rw" >> "$f"
+        id=$((id + 1))
+        shift 2
+    done
+    CODEO_MOUNTINFO=$f
+}
+
+ds_sudo_calls() { grep -c '^sudo' "$ds_dir/calls" || true; }
+ds_safe_dir_set() { git config --file "$ds_dir/gitconfig" --get-all safe.directory | grep -qxF -- "$1"; }
+
+start_chowns_the_clone_on_a_named_volume() {
+    local mine other clone
+    ds_setup volume || return 0
+    mine=$(id -u); other=$((mine + 1)); clone="$ds_dir/repo"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$clone"
     STUB_STAT_UID=$other ds_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
-    line=$(grep '^sudo chown -R ' "$ds_dir/calls" || true)
-    [[ -n $line ]] || fail 'no sudo chown -R for a clone owned by another uid'
-    [[ $line == *" $parent" ]] || fail "chown was not on the clone's parent directory $parent: $line"
+    grep -qxF "sudo chown -R $mine:$(id -g) $clone" "$ds_dir/calls" || fail "no chown of the clone: $(cat "$ds_dir/calls")"
+    if grep -qxF "sudo chown -R $mine:$(id -g) $ds_dir" "$ds_dir/calls"; then fail "sudo named the clone's parent: $(cat "$ds_dir/calls")"; fi
+    ds_safe_dir_set "$clone" || fail 'safe.directory was not set'
+}
+
+start_never_chowns_a_bind_mount() {
+    local mine other n
+    ds_setup bind || return 0
+    mine=$(id -u); other=$((mine + 1))
+    ds_mountinfo /home/u/src/codeo "$ds_dir/repo"
+    STUB_STAT_UID=$other ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_sudo_calls); ((n == 0)) || fail "sudo ran for a bind mount: $(cat "$ds_dir/calls")"
+    n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "wanted one bind-mount TODO, got $n: $ds_err"
+    ds_safe_dir_set "$ds_dir/repo" || fail 'safe.directory was not set'
+}
+
+start_longest_mount_wins() {
+    local mine other n
+    ds_setup longest || return 0
+    mine=$(id -u); other=$((mine + 1))
+    ds_mountinfo /home/u/src "$(dirname "$ds_dir")" /var/lib/docker/volumes/v1/_data "$ds_dir/repo"
+    STUB_STAT_UID=$other ds_run
+    n=$(ds_sudo_calls); ((n == 1)) || fail "volume under a bind mount: wanted one chown, got $n: $(cat "$ds_dir/calls")"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$(dirname "$ds_dir")" /home/u/src/codeo "$ds_dir/repo"
     : > "$ds_dir/calls"
-    STUB_STAT_UID=$mine ds_run
-    if grep -q '^sudo' "$ds_dir/calls"; then fail 'sudo ran although the clone is ours'; fi
+    STUB_STAT_UID=$other ds_run
+    n=$(ds_sudo_calls); ((n == 0)) || fail "bind mount under a volume: wanted no chown, got $n: $(cat "$ds_dir/calls")"
+}
+
+start_own_clone_runs_nothing_privileged() {
+    local n
+    ds_setup own || return 0
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo"
+    STUB_STAT_UID=$(id -u) ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_sudo_calls); ((n == 0)) || fail "sudo ran for a clone we own: $(cat "$ds_dir/calls")"
+    ds_safe_dir_set "$ds_dir/repo" || fail 'safe.directory was not set'
+}
+
+start_identity_todo_when_only_one_is_set() {
+    local n
+    ds_setup ident || return 0
+    git config --file "$ds_dir/gitconfig" user.name Dev
+    ds_run
+    n=$(ds_todos 'git identity'); ((n == 1)) || fail "only user.name set: wanted a TODO, got $n: $ds_err"
+    : > "$ds_dir/gitconfig"
+    git config --file "$ds_dir/gitconfig" user.email dev@example.com
+    ds_run
+    n=$(ds_todos 'git identity'); ((n == 1)) || fail "only user.email set: wanted a TODO, got $n: $ds_err"
+}
+
+start_setup_git_failure_is_a_todo() {
+    local n
+    ds_setup setupgit || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    STUB_SETUP_GIT_RC=1 STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'gh auth setup-git'); ((n == 1)) || fail "wanted one TODO naming gh auth setup-git, got $n: $ds_err"
 }
 
 cases=(
@@ -446,7 +515,12 @@ cases=(
     start_ready_when_everything_is_set_up
     start_project_scope_missing_is_a_todo
     start_plugins_failure_is_a_todo_not_a_failure
-    start_takes_ownership_of_a_root_owned_clone
+    start_chowns_the_clone_on_a_named_volume
+    start_never_chowns_a_bind_mount
+    start_longest_mount_wins
+    start_own_clone_runs_nothing_privileged
+    start_identity_todo_when_only_one_is_set
+    start_setup_git_failure_is_a_todo
 )
 
 for current in "${cases[@]}"; do
