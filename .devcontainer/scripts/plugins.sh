@@ -9,22 +9,31 @@
 #   bash .devcontainer/scripts/plugins.sh
 set -euo pipefail
 
-cd "$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+root=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)
 config_dir=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
 say() { echo "plugins: $*"; }
 ok=1
-# The list is captured before grep reads it: a pipeline ending in `grep -q` can kill the writer early.
-has_plugin() { local list; list=$(claude plugin list 2>/dev/null || true); grep -q "$1" <<<"$list"; }
+# claude never runs inside a git repository: `plugin marketplace remove` rewrites the repository's
+# tracked .claude/settings.json when it does.
+claude_out() { (cd "$HOME" && claude "$@"); }
+# The list is captured, then compared word by word: a plugin counts only when its whole name is a word
+# of the list (grep would match codeo@codeo inside codeo@codeo-fork, and grep -w treats - as a boundary).
+has_plugin() {
+    local list word
+    list=$(claude_out plugin list 2>/dev/null || true)
+    for word in $list; do [[ $word == "$1" ]] && return 0; done
+    return 1
+}
 
 has_plugin 'superpowers@superpowers-marketplace' || {
-    if claude plugin marketplace add obra/superpowers-marketplace >/dev/null 2>&1 &&
-        claude plugin install superpowers@superpowers-marketplace --scope user >/dev/null 2>&1; then
+    if claude_out plugin marketplace add obra/superpowers-marketplace >/dev/null 2>&1 &&
+        claude_out plugin install superpowers@superpowers-marketplace --scope user >/dev/null 2>&1; then
         say "installed superpowers"
     else ok=; echo "plugins: superpowers is not installed: check the network, then re-run this script" >&2; fi
 }
 
-repo=$(jq -r '.plugin.repo // empty' .codeo/config.json 2>/dev/null || true)
-ref=$(jq -r '.plugin.ref // empty' .codeo/config.json 2>/dev/null || true)
+repo=$(jq -r '.plugin.repo // empty' "$root/.codeo/config.json" 2>/dev/null || true)
+ref=$(jq -r '.plugin.ref // empty' "$root/.codeo/config.json" 2>/dev/null || true)
 have_ref=$(jq -r '.codeo.source.ref // empty' "$config_dir/plugins/known_marketplaces.json" 2>/dev/null || true)
 if [[ -z $repo || -z $ref ]]; then
     ok=; echo "plugins: .codeo/config.json has no plugin.repo and plugin.ref, so codeo is not installed" >&2
@@ -35,9 +44,9 @@ elif [[ $have_ref != "$ref" ]] || ! has_plugin 'codeo@codeo'; then
         ! GIT_TERMINAL_PROMPT=0 timeout 20 git ls-remote --exit-code -q "https://github.com/$repo" "$ref" >/dev/null 2>&1; then
         ok=; echo "plugins: codeo stays at ${have_ref:-its current version}: the pin $ref could not be fetched: check the network and the pin, then re-run this script" >&2
     else
-        claude plugin marketplace remove codeo >/dev/null 2>&1 || true
-        if claude plugin marketplace add "$repo@$ref" >/dev/null 2>&1 &&
-            claude plugin install codeo@codeo --scope user >/dev/null 2>&1; then
+        claude_out plugin marketplace remove codeo >/dev/null 2>&1 || true
+        if claude_out plugin marketplace add "$repo@$ref" >/dev/null 2>&1 &&
+            claude_out plugin install codeo@codeo --scope user >/dev/null 2>&1; then
             say "installed codeo $ref"
         else ok=; echo "plugins: codeo is not installed at $ref: check the network, then re-run this script" >&2; fi
     fi

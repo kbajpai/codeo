@@ -140,10 +140,17 @@ pl_setup() {
     fi
     : > "$pl_dir/stub/installed"
     : > "$pl_dir/stub/calls"
+    : > "$pl_dir/stub/pwds"
+    mkdir -p "$pl_dir/repo/.claude"
+    echo '{"enabledPlugins": {"codeo@codeo": true}}' > "$pl_dir/repo/.claude/settings.json"
+    git -C "$pl_dir/repo" add -A
+    git -C "$pl_dir/repo" -c user.name=Dev -c user.email=dev@example.com commit -q -m fixture \
+        || { fail 'git commit failed'; return 1; }
     cat > "$pl_dir/bin/claude" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 echo "$*" >> "$STUB_DIR/calls"
+echo "$PWD" >> "$STUB_DIR/pwds"
 market="$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
 case "$1 $2 ${3:-}" in
     "plugin list "*)
@@ -156,6 +163,10 @@ case "$1 $2 ${3:-}" in
             jq -n --arg r "${4#*@}" '{codeo: {source: {ref: $r}}}' > "$market"
         fi ;;
     "plugin marketplace remove")
+        # The real CLI rewrites the project's settings when run inside a repository.
+        if top=$(git rev-parse --show-toplevel 2>/dev/null) && [[ -f $top/.claude/settings.json ]]; then
+            echo '{"enabledPlugins": {}}' > "$top/.claude/settings.json"
+        fi
         rm -f "$market"
         grep -v "@$4\$" "$STUB_DIR/installed" > "$STUB_DIR/installed.new" || true
         mv "$STUB_DIR/installed.new" "$STUB_DIR/installed" ;;
@@ -229,6 +240,31 @@ plugins_ref_change_reinstalls_codeo() {
     fi
     pl_calls_have 'plugin install codeo@codeo --scope user' || fail 'codeo was not reinstalled'
     ! pl_calls_have 'plugin install superpowers@superpowers-marketplace --scope user' || fail 'superpowers was reinstalled'
+}
+
+plugins_pin_change_leaves_tracked_files_alone() {
+    local dirty inside
+    pl_setup tracked "$pl_pin" || return 0
+    echo 'superpowers@superpowers-marketplace' >> "$pl_dir/stub/installed"
+    pl_installed_codeo_at v1.0.2
+    pl_run
+    ((pl_rc == 0)) || fail "exit $pl_rc, stderr: $pl_err"
+    pl_calls_have 'plugin marketplace remove codeo' || fail 'no marketplace remove codeo'
+    dirty=$(git -C "$pl_dir/repo" status --porcelain)
+    [[ -z $dirty ]] || fail "a tracked file changed: $dirty"
+    inside=$(grep -E "^$pl_dir/repo(/|\$)" "$pl_dir/stub/pwds" || true)
+    [[ -z $inside ]] || fail "claude ran inside the repository: $inside"
+}
+
+plugins_matches_whole_plugin_names() {
+    pl_setup wholenames "$pl_pin" || return 0
+    printf '%s\n' 'xcodeo@codeo-fork' 'superpowers-extra@superpowers-marketplace-x' > "$pl_dir/stub/installed"
+    # The marketplace is already at the pin, so only the installed-plugin check decides.
+    jq -n '{codeo: {source: {ref: "v1.0.3"}}}' > "$pl_dir/claude/plugins/known_marketplaces.json"
+    pl_run
+    pl_calls_have 'plugin install codeo@codeo --scope user' || fail 'codeo@codeo-fork counted as codeo@codeo'
+    pl_calls_have 'plugin install superpowers@superpowers-marketplace --scope user' \
+        || fail 'a longer plugin name counted as superpowers'
 }
 
 plugins_offline_keeps_codeo() {
@@ -401,6 +437,8 @@ cases=(
     plugins_fresh_machine_installs_both
     plugins_rerun_changes_nothing
     plugins_ref_change_reinstalls_codeo
+    plugins_pin_change_leaves_tracked_files_alone
+    plugins_matches_whole_plugin_names
     plugins_offline_keeps_codeo
     plugins_no_pin_fails
     plugins_large_plugin_list_does_not_break_the_pipe
