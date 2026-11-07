@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3. Q1-Q4 answered. Round 1 explored the reference project's `.devcontainer/` (`Dockerfile`, `devcontainer.json`, `scripts/plugins.sh`, and the start, naming and login scripts beside them) and codeo's side: `.codeo/config.json`, `scripts/doctor.sh`, `tests/run.sh`, `.github/workflows/ci.yml`, `.claude/settings.json`. Drafting the plan.
+Round 3. Q1-Q4 answered. Round 1 explored the reference project's `.devcontainer/` (`Dockerfile`, `devcontainer.json`, `scripts/plugins.sh`, and the start, naming and login scripts beside them) and codeo's side: `.codeo/config.json`, `scripts/doctor.sh`, `tests/run.sh`, `.github/workflows/ci.yml`, `.claude/settings.json`. Plan approved and saved to `docs/plans/2026-11-07-dev-container.md`; handed off to `/codeo:implement` once the engineer commits it.
 
 What I found that shapes the questions:
 
