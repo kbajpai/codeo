@@ -16,11 +16,13 @@
 #
 #   scope.sh --delivered-since <base> <revision> <head>
 #       The same answer for the branch's own delivery since <revision> (the revision last put on
-#       the environment): only the paths that both changed between <revision> and <head> and are
-#       in the branch's delivery against <base> (`git diff <base>...<head>`). Code that arrived by
-#       merging <base> after <revision> is in the first set but not the second, so it does not by
-#       itself flip `deploy=` to true; a path the branch changed before <revision> and <base>
-#       changed after it is in both, so it stays. Every line the script prints, suites included,
+#       the environment): only the paths that changed between <revision> and <head> and are in the
+#       branch's delivery against <base>, at <head> (`git diff <base>...<head>`) or at <revision>
+#       (`git diff <base>...<revision>`). Code that arrived by merging <base> after <revision> is
+#       in the first set but in neither delivery, so it does not by itself flip `deploy=` to true;
+#       a path the branch changed before <revision> and <base> changed after it stays; so does one
+#       the branch changed before <revision> and reverted after it, though it no longer differs
+#       from <base>. Every line the script prints, suites included,
 #       is judged over that set. An unresolvable <base>, <revision> or <head> is the same
 #       `scope: cannot diff` exit 1.
 #
@@ -135,6 +137,11 @@ if [[ -n $delivered_base ]]; then
     trap 'rm -f "$diff_file" "$delivered_file"' EXIT
     git diff --name-only -z --no-renames "$delivered_base...$2" >"$delivered_file" 2>/dev/null \
         || { echo "scope: cannot diff $delivered_base...$2 (unresolvable revision?)" >&2; exit 1; }
+    # What the branch had already delivered when <revision> was deployed: a path in it is running
+    # the branch's version, so it still counts after the branch reverts it to the base's content.
+    # Code that arrived by merging <base> after <revision> is not in it, so #17 holds.
+    git diff --name-only -z --no-renames "$delivered_base...$1" >>"$delivered_file" 2>/dev/null \
+        || { echo "scope: cannot diff $delivered_base...$1 (unresolvable revision?)" >&2; exit 1; }
     declare -A delivered=()
     while IFS= read -r -d '' path; do
         delivered[$path]=1
