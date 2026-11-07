@@ -253,6 +253,21 @@ delivered_since_keeps_a_path_both_sides_changed() {
     [[ "$out" == *"deploy=true"* ]] || fail "shared path should stay in scope: $out"
 }
 
+delivered_since_counts_a_path_the_branch_deployed_and_then_reverted() {
+    local repo; repo=$(make_repo "$with_suites")
+    # The branch changes a deployable path and deploys it (R), then reverts it: the path is back to
+    # the base branch's content, yet the environment still runs the branch's version.
+    mkdir -p "$repo/deploy/x"
+    echo x > "$repo/deploy/x/k.yaml"
+    commit_change "$repo"
+    git -C "$repo" tag R
+    git -C "$repo" rm -q "deploy/x/k.yaml"
+    commit_change "$repo"
+    [[ -z "$(git -C "$repo" diff --name-only main...HEAD -- deploy)" ]] || fail "setup: the revert should leave no delivery"
+    local out; out=$(run_delivered "$repo")
+    [[ "$out" == *"deploy=true"* ]] || fail "reverted path should still count: $out"
+}
+
 delivered_since_without_the_flag_and_with_a_bad_argument() {
     local repo; repo=$(make_repo "$with_suites")
     deploy_at_r "$repo"
@@ -274,6 +289,7 @@ for case in docs_only_change_runs_no_suite path_in_one_suite_runs_only_that_suit
     delivered_since_ignores_a_base_branch_merge_after_the_deploy \
     delivered_since_counts_a_deployed_path_the_branch_changed_after_the_deploy \
     delivered_since_keeps_a_path_both_sides_changed \
+    delivered_since_counts_a_path_the_branch_deployed_and_then_reverted \
     delivered_since_without_the_flag_and_with_a_bad_argument; do
     "$case" || fail "$case"
     echo "ok $case" >&2
