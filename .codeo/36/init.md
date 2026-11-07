@@ -23,7 +23,7 @@ None.
 | Branch | `feat/add-dev-container-so-codeo` off `main` at `14f49f5` |
 | Board | Ready → In progress |
 
-**Problem.** codeo has no `.devcontainer/`, so it cannot be developed and tested inside a container the way projects that use codeo can. Add one dev container definition, modelled on the reference project's `.devcontainer/` (`Dockerfile`, `devcontainer.json`, `scripts/plugins.sh`) but carrying only what codeo needs: bash, jq, git, gh, shellcheck and Claude Code. None of the reference project's .NET, Node, Terraform, gcloud or PostgreSQL, and neither its `roadmaster-secrets` nor `~/.codeo-secrets` mount.
+**Problem.** codeo has no `.devcontainer/`, so it cannot be developed and tested inside a container the way projects that use codeo can. Add one dev container definition, modelled on the reference project's `.devcontainer/` (`Dockerfile`, `devcontainer.json`, `scripts/plugins.sh`) but carrying only what codeo needs: bash, jq, git, gh, shellcheck and Claude Code. None of the reference project's .NET, Node, Terraform, gcloud or PostgreSQL, and neither its the reference project's secrets volume nor `~/.codeo-secrets` mount.
 
 **Key requirements** (from the issue):
 - One image based on Ubuntu 24.04 with bash 4.3+, jq, git, gh, shellcheck and Claude Code.
