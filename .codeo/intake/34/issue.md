@@ -1,3 +1,66 @@
+# Issue #34 — issue
+
+| | |
+|---|---|
+| Issue | https://github.com/kbajpai/codeo/issues/34 |
+| Branch | none |
+| Updated | 2026-11-07 |
+
+## Where this stands
+
+Round 1, Q1-Q4 answered in the conversation; draft below awaits review.
+Round 1 opened: The engineer asked for an issue so that every skill under `skills/` is covered in the
+user-facing docs with a comprehensive description. Today `README.md` gives each pipeline skill one
+table row and `/codeo:setup` and `/codeo:doctor` one sentence between them. Three gaps already
+deferred in the triage ledger (`doc:README.md:six-steps-vs-seven-skills`,
+`doc:README.md:setup-docs-plans`, `doc:README.md:doctor-checks`) are symptoms of this.
+`docs/skills-inventory.md` is not a duplicate: it is a maintainer-facing list of hard rules for
+the seven pipeline skills, pinned by `tests/inventory.test.sh`, and omits setup and doctor.
+No existing issue covers this (searched "README", "skills", "documentation").
+
+## Questions
+
+### Q1 — Where should the comprehensive descriptions live?
+
+**Why it matters:** expanding the README makes it much longer; a separate page keeps the README a
+summary but adds a file to keep in step.
+**Options:** expand README's Skills section · new `docs/skills.md` with the README table linking to it · you pick.
+
+**Answer:**
+New `docs/skills.md`; README keeps its summary table and links to it.
+
+### Q2 — What should each skill's description cover?
+
+**Why it matters:** sets the acceptance criteria per skill.
+**Options:** purpose and when to use it (trigger phrases) · what it reads and writes (its dossier file, branches, board, GitHub) · what it hands off to and what it never does · its extension points · any mix.
+
+**Answer:**
+All four: purpose and when to use it; what it reads and writes; hand-offs and what it never does; its extension points.
+
+### Q3 — Should the three deferred README gaps be folded into this issue?
+
+**Why it matters:** if yes, the triage ledger rows become "already #N" at the next triage instead of separate items.
+**Options:** yes, fold them in · no, keep them separate.
+
+**Answer:**
+Yes, fold them in.
+
+### Q4 — Should a test guard coverage, so a new skill without a description fails CI?
+
+**Why it matters:** without one, the docs drift again the next time a skill is added; with one, it is a requirement on the change, not just docs.
+**Options:** yes, a test · no, docs only.
+
+**Answer:**
+Yes, add a test.
+
+## Notes
+
+### Draft
+
+**Title:** Describe every codeo skill in docs/skills.md and guard coverage with a test
+**Type:** none (user-owned repository)
+**Labels:** documentation
+
 ### Description
 
 The user-facing docs do not describe codeo's skills in enough depth to use them without reading each `SKILL.md`. `README.md`'s Skills section gives each pipeline skill one table row, and `/codeo:setup` and `/codeo:doctor` share one sentence. Three gaps follow from that:
@@ -47,3 +110,15 @@ A new adopter, or an engineer deciding which skill to run next, has to open ever
 - `skills/*/SKILL.md` — the source for each description.
 - `docs/extension-points.md`, `docs/skills-inventory.md`.
 - Triage ledger on `codeo/intake`: `doc:README.md:six-steps-vs-seven-skills`, `doc:README.md:setup-docs-plans`, `doc:README.md:doctor-checks`.
+
+Proposed type: none (user-owned repository; `issue-types` printed nothing). Proposed label: `documentation`.
+
+## Outcome
+
+Filed as #34 on 2026-11-07 with label `documentation`, no Issue Type. Q1-Q4 answered: docs/skills.md, all four coverage areas, fold in the three deferred README gaps, add a guard test.
+
+## Log
+
+- 2026-11-07 — Q1-Q4 raised · cost: 1m · opus-5-5 99k in + 424k cached / 2k out
+- 2026-11-07 — Q1-Q4 answered, draft written for review · cost: 3m · opus-5-5 102k in + 826k cached / 5k out
+- 2026-11-07 — draft approved, filed as #34 · cost: 4m · opus-5-5 105k in + 1.1M cached / 8k out · sonnet-5-5 104k in + 36k cached / 359 out
