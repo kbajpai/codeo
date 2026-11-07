@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Drafted for the review gate. Branch `chore/describe-every-codeo-skill-docs` will be cut off `main` at `8e3605a`. Nothing is pushed yet.
+Initialized: branch `chore/describe-every-codeo-skill-docs` off `main` at `8e3605a`, pushed and claimed. Next: /codeo:plan.
 
 ## Questions
 
