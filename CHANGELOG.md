@@ -7,6 +7,7 @@ Shared state: unchanged from v1.0.3.
 Safe to bump mid-workflow: yes
 
 - `docs/skills.md` describes every skill — purpose and triggers, reads and writes, hand-offs and non-goals, extension points — and `README.md`'s Skills table links to it. `tests/skills-doc.test.sh` fails when a directory under `skills/` has no section there, or a section's extension points differ from `lib/extension-points.tsv` (#34).
+- `.devcontainer/` defines a development container for this repository: an Ubuntu 24.04 image with bash, jq, git, gh, shellcheck and Claude Code, a non-root `dev` user, the `gh` login in the `codeo-gh` volume, and a start script that installs superpowers and codeo at the pin in `.codeo/config.json` (`plugin`). `.codeo/config.json` gains `codename` and `plugin`, and the `shell` suite's paths gain `.devcontainer/**`. Nothing in `scripts/`, `lib/`, `hooks/` or `skills/` changes (#36).
 
 ## v1.0.3 — 2026-11-07
 
