@@ -2,7 +2,9 @@
 # Guards the development container (.devcontainer/) and the config that points at it. Each case is a
 # function named in the final cases=( ... ) array; add a case by writing a function and listing it.
 # Today it checks .codeo/config.json: the codename, the plugin pin, and that the shell suite's paths
-# cover .devcontainer/**.
+# cover .devcontainer/**. It also checks .devcontainer/devcontainer.json: it is valid JSON that runs as
+# the dev user and names the Dockerfile and start script, caps memory and cpus, mounts only the one
+# named gh volume, and carries no bind mounts, secrets or localEnv.
 #
 #   bash tests/devcontainer.test.sh
 #
@@ -31,8 +33,45 @@ config_has_codename_pin_and_suite_path() {
         || fail 'shell suite paths lack .devcontainer/**'
 }
 
+dc_json() { printf '%s' "$repo/.devcontainer/devcontainer.json"; }
+
+devcontainer_json_is_valid_and_runs_as_dev() {
+    local f
+    f=$(dc_json)
+    jq -e . "$f" >/dev/null || fail 'devcontainer.json is missing or not valid JSON'
+    jq -e '.remoteUser == "dev"' "$f" >/dev/null || fail 'remoteUser is not "dev"'
+    jq -e '.build.dockerfile == "Dockerfile"' "$f" >/dev/null || fail 'build.dockerfile is not "Dockerfile"'
+    jq -e '.postCreateCommand == "bash .devcontainer/scripts/devcontainer-start.sh"' "$f" >/dev/null \
+        || fail 'postCreateCommand does not run devcontainer-start.sh'
+}
+
+run_args_cap_memory_and_cpus() {
+    jq -e '.runArgs == ["--memory=4g","--cpus=2"]' "$(dc_json)" >/dev/null \
+        || fail 'runArgs is not ["--memory=4g","--cpus=2"]'
+}
+
+gh_login_is_one_named_volume() {
+    jq -e '.mounts == ["source=codeo-gh,target=/home/dev/.config/gh,type=volume"]' "$(dc_json)" >/dev/null \
+        || fail 'mounts is not the single codeo-gh volume at /home/dev/.config/gh'
+}
+
+no_bind_mounts_or_secrets() {
+    local f text word
+    f=$(dc_json)
+    text=$(cat "$f") || { fail 'devcontainer.json is unreadable'; return 0; }
+    for word in type=bind secrets localEnv; do
+        if grep -q -- "$word" <<<"$text"; then
+            fail "devcontainer.json contains $word"
+        fi
+    done
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
+    devcontainer_json_is_valid_and_runs_as_dev
+    run_args_cap_memory_and_cpus
+    gh_login_is_one_named_volume
+    no_bind_mounts_or_secrets
 )
 
 for current in "${cases[@]}"; do

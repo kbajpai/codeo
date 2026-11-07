@@ -1,0 +1,26 @@
+{
+  "name": "codeo",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "dev",
+  "runArgs": ["--memory=4g", "--cpus=2"],
+  "mounts": ["source=codeo-gh,target=/home/dev/.config/gh,type=volume"],
+  "postCreateCommand": "bash .devcontainer/scripts/devcontainer-start.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "timonwong.shellcheck",
+        "bierner.markdown-mermaid"
+      ],
+      "settings": {
+        "files.insertFinalNewline": true,
+        "files.trimTrailingWhitespace": true,
+        "[markdown]": {
+          "files.trimTrailingWhitespace": false
+        }
+      }
+    }
+  }
+}
