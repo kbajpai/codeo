@@ -213,3 +213,104 @@ The test runs it from a scratch git repo holding the script, a stub `plugins.sh`
 - [ ] **Step 4: Prove the scripts inside the image.** `docker run --rm -v "$PWD":/work -w /work codeo-dev-test bash -c 'git config --global --add safe.directory /work && shellcheck .devcontainer/scripts/*.sh && bash .devcontainer/scripts/devcontainer-start.sh; echo rc=$?'` → no shellcheck output, TODO lines for the logins, and `rc=0`.
 - [ ] **Step 5: Manual checks for the engineer, before `/codeo:close`.** (a) On a machine with the Dev Containers extension and no `codeo-gh` volume, run *Dev Containers: Clone Repository in Named Container Volume…* on this branch: the build completes with no folder or volume created beforehand. (b) In that container run `gh auth login`, then `gh auth refresh -s project`, then `gh auth status` (shows `project`); rebuild the container; `gh auth status` still shows it. Then `bash .devcontainer/scripts/devcontainer-start.sh` ends `ready` after `claude auth login`, and `/codeo:doctor` reports every line `ok`.
 - [ ] **Step 6: Commit.** `git add CHANGELOG.md && git commit -m "docs: changelog for the dev container (#36)"`
+
+---
+
+## Round 2 — fixes after QC round 1
+
+> **For agentic workers:** Tasks 1-6 above were built and reviewed in round 1 (commits `a5a8742`..`f9af9f6`): **do not redo them.** Round 2 is Tasks 7-10, which amend that code. Run them in order with the same REQUIRED SUB-SKILL as above. (send-back from qc.md round 1)
+
+**Why:** `/codeo:qc` found two blocking defects that this plan's own Task 4 and Task 5 text prescribed — F1: `plugins.sh` runs `claude plugin marketplace remove` from inside the repository, and the CLI then rewrites the tracked `.claude/settings.json` (reproduced: `"enabledPlugins": {}`); F2: `devcontainer-start.sh` runs `sudo chown -R` on the clone's *parent* whenever the owner is not the current user, which on a rootless runtime changes the ownership of a bind-mounted host checkout. Q6 folds in the non-blocking F5-F11; F3 (Claude login not in a volume) and F4 (the `plugin` key is not listed in `lib/env.sh`) go to `/codeo:triage`.
+
+### Round 2 decisions
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Where `claude plugin …` runs (F1) | every call in a subshell with `cd "$HOME"`; the config is read from an absolute path, no `cd` into the repo | removing the marketplace first or editing settings after | the CLI writes the *project* settings of whatever repository it runs in; running outside one cannot touch tracked files |
+| Root-owned clone (F2, Q5) | always `git config --global --add safe.directory <clone>`; chown **the clone itself** only when its owner is not the current user *and* its mount is a named volume; otherwise a TODO, never a chown | `safe.directory` alone; chown whenever uid is 0; chown of the parent (round 1) | `safe.directory` does not make a root-owned clone writable (checked in the image: `git status` and `touch` still fail); a rootless runtime shows host files as uid 0 too; the parent can hold other projects' volumes |
+| Named volume vs bind mount | `/proc/self/mountinfo`: the mount whose mount point (field 5) is the longest prefix of the clone path, and whose root (field 4) matches `/volumes/<name>/_data` | `findmnt`, `docker inspect`, or the folder's name | verified in the image: a named volume's field 4 is `/var/lib/docker/volumes/<name>/_data`, a bind mount's is the host path; no extra tool and no Docker socket |
+| `has_plugin` (F6) | equality against whitespace-split words of the captured `plugin list` | an unanchored `grep`, `grep -w` | `grep -w` treats `-` as a boundary, so `codeo@codeo-fork` would still match |
+| Pin assertion (F9) | the test asserts `plugin.ref` is a non-empty string with no whitespace | the literal `v1.0.3` | a pin bump then needs no test edit |
+
+### Round 2 Global Constraints (in addition to those above)
+
+- `plugins.sh` never runs `claude` with a git repository as its working directory: it reads `.codeo/config.json` by absolute path, and every `claude plugin …` call (`list`, `marketplace add|remove`, `install`) runs as `(cd "$HOME" && claude …)`.
+- `devcontainer-start.sh` never runs `sudo` on the clone's parent directory, and never chowns a path that is not on a named volume. `CODEO_MOUNTINFO` (default `/proc/self/mountinfo`) is a test-only override of the file it reads, as `doctor.sh` has `CODEO_PLUGINS_FILE`.
+- The Dockerfile has no `/home/dev` literal in its `ENV` lines (the user comes from `ARG USERNAME`). `devcontainer.json`'s mount target `/home/dev/.config/gh` stays literal: JSON has no variables, and the user is `dev`.
+- Nothing under `scripts/`, `lib/`, `hooks/` or `skills/` changes. The `shell` suite is the proof throughout; `bash tests/run.sh` must print `all cases passed` after every task.
+- Tests added here must be mutation-resistant: each fails when the line it pins is reverted, shown in a temp copy in the task's report.
+- Documentation moved by round 2: none. `CHANGELOG.md`'s existing line still describes the change; Task 10 amends it only if the start script's behavior wording needs it (it does not: the line names no chown).
+
+### Round 2 Review Focus
+
+1. A pin change must leave `git status --porcelain` empty in a repo that tracks `.claude/settings.json` with codeo enabled (Task 7, case `plugins_pin_change_leaves_tracked_files_alone`, whose stub rewrites that file when `marketplace remove` runs inside a repository).
+2. A bind-mounted clone owned by someone else must never be chowned, parent or clone (Task 8, case `start_never_chowns_a_bind_mount`: no `sudo` call at all).
+3. A clone-in-volume made as root must still become writable by `dev` (Task 8, case `start_chowns_the_clone_on_a_named_volume`: `sudo chown -R <uid>:<gid> <clone>`, argument is the clone, not its parent).
+4. The mountinfo parser must pick the *longest* matching mount point, not the first: a clone under `/workspaces/x` where `/workspaces` is a bind mount and `/workspaces/x` a volume (Task 8, case `start_longest_mount_wins`).
+5. `codeo@codeo-fork` in the plugin list must not count as codeo installed (Task 7, case `plugins_matches_whole_plugin_names`).
+
+### Task 7: `plugins.sh` runs `claude` outside the repository and matches whole names (F1, F6)
+
+**Files:**
+- Modify: `.devcontainer/scripts/plugins.sh`
+- Test: `tests/devcontainer.test.sh`
+
+**Interfaces:**
+- Consumes: Task 4's scratch fixture (`pl_setup`, `pl_run`, the `claude` and `git` stubs, `pl_calls_have`).
+- Produces: same CLI as before. New behavior: every `claude` invocation has a working directory outside the repository; `has_plugin <name>` is true only when `<name>` equals one whitespace-delimited word of the captured `claude plugin list`.
+
+- [ ] **Step 1: Write the failing tests.** The stub `claude` logs `$PWD` beside each call and, on `plugin marketplace remove`, rewrites `<toplevel>/.claude/settings.json` to `{"enabledPlugins": {}}` when `git rev-parse --show-toplevel` succeeds in its working directory (this models the real CLI, reproduced in QC round 1). The scratch repo commits a `.claude/settings.json` that enables `codeo@codeo`.
+  - `plugins_pin_change_leaves_tracked_files_alone`: installed at `v1.0.2`, config at `v1.0.3` → exit 0; `git status --porcelain` is empty; no logged call has a `$PWD` inside the scratch repo.
+  - `plugins_matches_whole_plugin_names`: the stub's `plugin list` prints only `xcodeo@codeo-fork` and `superpowers-extra@superpowers-marketplace-x` → the script still runs both installs (calls contain `plugin install codeo@codeo` and `plugin install superpowers@superpowers-marketplace`).
+- [ ] **Step 2: Run and see them fail.** `bash tests/devcontainer.test.sh` → `FAIL plugins_pin_change_leaves_tracked_files_alone`, `FAIL plugins_matches_whole_plugin_names`, exit 1; the six round-1 plugins cases still pass.
+- [ ] **Step 3: Edit `plugins.sh`.** Replace the top-level `cd` with `root=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)` and read the pin with `jq … "$root/.codeo/config.json"`; add `claude_out() { (cd "$HOME" && claude "$@"); }` and use it for every `claude` call; rewrite `has_plugin` as: capture `claude_out plugin list 2>/dev/null || true`, then loop over its whitespace-split words and return 0 on the first word equal to `$1`. Keep the captured-output rule (no `grep -q` at the end of a pipeline).
+- [ ] **Step 4: Prove it.** `bash tests/devcontainer.test.sh` → `all cases passed`; `bash tests/run.sh` → `all cases passed`. Mutation (temp copy): restore `cd "$root"` before the `claude` calls → `plugins_pin_change_leaves_tracked_files_alone` fails; restore `grep -q "$1"` → `plugins_matches_whole_plugin_names` fails.
+- [ ] **Step 5: Commit.** `git add .devcontainer/scripts/plugins.sh tests/devcontainer.test.sh && git commit -m "fix(devcontainer): plugins.sh runs claude outside the repository and matches whole plugin names (#36)"`
+
+### Task 8: `devcontainer-start.sh` — ownership only on a named volume; one-step `gh` login; identity and `setup-git` cases (F2, F8, F9)
+
+**Files:**
+- Modify: `.devcontainer/scripts/devcontainer-start.sh`
+- Test: `tests/devcontainer.test.sh`
+
+**Interfaces:**
+- Consumes: Task 5's fixture (the stubs for `gh`, `claude`, `sudo`, `stat`, `git`, the `calls` log, `ds_todos`).
+- Produces: step 1 of the script becomes: (a) always `git config --global --add safe.directory "$clone"`; (b) when `stat -c %u "$clone"` ≠ `id -u`: if `clone_on_named_volume "$clone"` is true, `sudo chown -R "$(id -u):$(id -g)" "$clone"` (the clone, never its parent) with a TODO if it fails; otherwise a TODO `the clone at <path> is not owned by you and is not on a Docker volume, so it was left alone: run 'sudo chown -R <uid>:<gid> <path>' yourself if that is what you want`. `clone_on_named_volume <path>` reads `${CODEO_MOUNTINFO:-/proc/self/mountinfo}`, selects the line whose field 5 (mount point) is the longest prefix of `<path>` on a path boundary, and succeeds iff its field 4 matches `/volumes/[^/]+/_data$`. The numbered list names `gh auth login -s project` (instead of `gh auth login` then `gh auth refresh -s project`) when `gh` is not logged in; `gh auth refresh -s project` remains when it is logged in without the `project` scope.
+
+- [ ] **Step 1: Write the failing tests** (stub mountinfo files in the scratch dir, `CODEO_MOUNTINFO` pointing at them; update the round-1 `start_todo_when_nothing_is_set_up` and the ownership case to the new behavior):
+  - `start_chowns_the_clone_on_a_named_volume`: foreign uid; mountinfo line `… /var/lib/docker/volumes/v1/_data <clone> …` → `calls` has `sudo chown -R <uid>:<gid> <clone>` and no `sudo` call naming the clone's parent; `git config --global --add safe.directory <clone>` took effect.
+  - `start_never_chowns_a_bind_mount`: foreign uid; field 4 `/home/u/src/codeo` → no `sudo` call at all; a TODO matching `not on a Docker volume`; exit 0.
+  - `start_longest_mount_wins`: mountinfo has `/workspaces` as a bind mount and `<clone>` (under it) as a volume → chown happens; swapped (volume at `/workspaces`, bind at the clone) → no chown.
+  - `start_own_clone_runs_nothing_privileged`: matching uid → no `sudo` call; `safe.directory` still set.
+  - `start_identity_todo_when_only_one_is_set`: only `user.name` set → TODO; only `user.email` set → TODO.
+  - `start_setup_git_failure_is_a_todo`: stub `gh auth setup-git` exits 1 → TODO naming `gh auth setup-git`, exit 0.
+  - `start_todo_when_nothing_is_set_up` (updated): the numbered list is `gh auth login -s project`, `claude auth login`, `bash .devcontainer/scripts/devcontainer-start.sh`, in that order; no `gh auth refresh -s project` line.
+- [ ] **Step 2: Run and see them fail.** `bash tests/devcontainer.test.sh` → FAIL lines for each new or changed case.
+- [ ] **Step 3: Edit `devcontainer-start.sh`** as in Interfaces. Under bash 4.3 `set -u`, test array lengths before expanding, as the script already does.
+- [ ] **Step 4: Prove it.** `bash tests/devcontainer.test.sh` → `all cases passed`; shellcheck in the image (`docker run --rm -v "$PWD":/work -w /work codeo-dev-test shellcheck .devcontainer/scripts/*.sh tests/devcontainer.test.sh`) → no output; `bash tests/run.sh` → `all cases passed`. Mutations (temp copy): chown the parent → `start_chowns_the_clone_on_a_named_volume` fails; drop the named-volume test → `start_never_chowns_a_bind_mount` fails; take the first matching mount instead of the longest → `start_longest_mount_wins` fails; `||` → `&&` between the identity checks → `start_identity_todo_when_only_one_is_set` fails.
+- [ ] **Step 5: Commit.** `git add .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh && git commit -m "fix(devcontainer): chown only a clone on a named volume; one-step gh login (#36)"`
+
+### Task 9: Dockerfile and the pin assertion (F5, F7, F9)
+
+**Files:**
+- Modify: `.devcontainer/Dockerfile`, `tests/devcontainer.test.sh`
+
+- [ ] **Step 1: Write the failing tests.**
+  - `dockerfile_env_uses_the_username_arg`: no non-comment `ENV` line contains `/home/dev`; the `ENV` for `CLAUDE_CONFIG_DIR` contains `/home/${USERNAME}/.claude`.
+  - `dockerfile_does_not_create_workspaces`: no non-comment line mentions `/workspaces`.
+  - `config_pin_is_a_wellformed_ref` (replaces the literal `plugin.ref == "v1.0.3"` assertion in `config_has_codename_pin_and_suite_path`): `plugin.ref` is a string, non-empty, with no whitespace; `plugin.repo` still equals `kbajpai/codeo`.
+- [ ] **Step 2: Run and see them fail** (the first two; the third is a loosening, so it passes — confirm the old literal assertion is gone by `grep -c 'v1.0.3' tests/devcontainer.test.sh` printing only the fixture lines the plugin cases use).
+- [ ] **Step 3: Edit the Dockerfile.** `ENV CLAUDE_CONFIG_DIR=/home/${USERNAME}/.claude` and `PATH=/home/${USERNAME}/.local/bin:${PATH}`; remove `/workspaces` from the `install -d` and reword the nearby comment so it does not imply the directory matters. Keep the passwordless-sudo comment (the start script still uses `sudo` for the volume case).
+- [ ] **Step 4: Prove it.** `bash tests/devcontainer.test.sh` and `bash tests/run.sh` → `all cases passed`; `docker build -t codeo-dev-test .devcontainer` → exit 0; `docker run --rm codeo-dev-test bash -c 'echo $CLAUDE_CONFIG_DIR; claude --version; stat -c %U /home/dev/.config/gh'` → `/home/dev/.claude`, a Claude Code version, `dev`.
+- [ ] **Step 5: Commit.** `git add .devcontainer/Dockerfile tests/devcontainer.test.sh && git commit -m "fix(devcontainer): derive the home from USERNAME, drop /workspaces, loosen the pin assertion (#36)"`
+
+### Task 10: The end-to-end proof, against the real CLI
+
+**Files:** none changed unless the proof finds a gap (then fix it here, with a case that would have caught it).
+
+- [ ] **Step 1: Rebuild and run the suite in the image.** `docker build --no-cache -t codeo-dev-test .devcontainer`, then `docker run --rm -v "$PWD":/work -w /work codeo-dev-test bash -c 'git config --global --add safe.directory /work && bash tests/run.sh'` → `all cases passed`; shellcheck over `.devcontainer/scripts/*.sh tests/devcontainer.test.sh` → no output.
+- [ ] **Step 2: Prove F1 against the real CLI.** In the image, in a scratch git repo that commits the same `.claude/settings.json` as this repo and a `.codeo/config.json` copied from it with `plugin.ref` set to `v1.0.2`: copy `plugins.sh` in, run it (installs codeo at `v1.0.2`), change the pin to `v1.0.3`, run it again → both exit 0, `git status --porcelain` prints nothing, `claude plugin list` shows `codeo@codeo`.
+- [ ] **Step 3: Prove F2 against real mounts, never the host checkout.** (a) Named-volume case: `docker volume create codeo-p1`, populate it as root with a copy of the repo (`docker run --rm --user root -v codeo-p1:/workspaces/x -v "$PWD":/src:ro codeo-dev-test bash -c 'cp -a /src/. /workspaces/x/ && chown -R root:root /workspaces/x'`), then run the start script from it as `dev` → `stat -c %U /workspaces/x` prints `dev` and `git -C /workspaces/x status` works; `docker volume rm codeo-p1`. (b) Bind-mount case, on a **copy** of the repo in a scratch directory (never `$PWD`): bind-mount the copy, run the start script as `dev` with the copy owned by another uid → no `sudo` runs, the output has the `not on a Docker volume` TODO, and the copy's ownership is unchanged.
+- [ ] **Step 4: Run the doctor.** `docker run … bash scripts/doctor.sh` → record the `ok`/`fail` lines (expected: the four gh-dependent checks fail until a login).
+- [ ] **Step 5: Manual checks for the engineer** (unchanged from Task 6, step 5): (a) clone-in-volume build on a machine with no `codeo-gh` volume; (b) `gh auth login -s project`, `gh auth status` shows `project`, rebuild, still shows it; then `claude auth login`, the start script ends `ready`, `/codeo:doctor` is all `ok`.
+- [ ] **Step 6: Commit** only if a fix was needed: `git add <the files> && git commit -m "fix(devcontainer): <what the proof found> (#36)"`.
