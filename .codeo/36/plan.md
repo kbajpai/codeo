@@ -60,6 +60,7 @@ Accepted the recommendation.
 - *Exempt `.codeo/` from the agnostic test:* not recommended, since the dossiers are tracked in a public repo.
 
 **Answer:**
+Edit the issue (the engineer's action, pending). The dev container stays in this repo: a per-issue container is a clone of the issue's branch, so `devcontainer.json` must live in the repo being developed. Once the issue is edited, `init.md`'s criteria are re-copied verbatim and the stopgap rewording is dropped.
 
 ## Notes
 
@@ -87,3 +88,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-07 — questions raised: Q1-Q3 (round 1)
 - 2026-11-07 — Q1-Q3 answered; Q4 raised (round 2)
+- 2026-11-07 — Q4 answered: keep the container in this repo; waiting on the engineer's edit of the issue
