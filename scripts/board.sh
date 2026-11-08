@@ -34,10 +34,10 @@
 set -euo pipefail
 
 # The boards are kept in step: `status` reads the gate project, which init gates on; `set` adds the
-# issue to every synced project it is missing from, then writes those and no others. The synced
-# set is board.projects plus the gate project, so a project retired from the list stops being
-# written even while old cards remain on it. A board with no projects list is just its gate
-# project.
+# issue only to a synced project whose Status has the option (probed before adding), then writes
+# those and no others. The synced set is board.projects plus the gate project, so a project
+# retired from the list stops being written even while old cards remain on it. A board with no
+# projects list is just its gate project.
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 # Read in the top-level shell (not inside $(...)) so an unusable config ends the script.
 repo_owner=$(codeo_cfg_required .repo.owner) || exit 1

@@ -116,8 +116,8 @@ it.
   engineer's answer — and moves it to **In progress**.
   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh"` is the only thing that reads or writes it: `set`
   writes each synced project whose Status has the option, adding the issue only to a project whose
-  Status has it, and removing the card again if the write fails after the add, so a failed `set`
-  leaves the board as it found it. The synced set is `board.projects[]` plus
+  Status has the option, and removing the card again if the write fails after the add (a failed
+  removal is reported with the item to remove by hand). The synced set is `board.projects[]` plus
   `board.gateProject`; a card the issue has on any other project is left as it is, without a line,
   so a project retired from the list stops being stamped. A status is named by its
   key in `board.statuses` (below), which maps it to the board's own option name; the keys `ready`,
