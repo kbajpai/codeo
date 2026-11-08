@@ -12,6 +12,7 @@ need_login=()
 say() { echo "devcontainer-start: $*"; }
 add_todo() { todo+=("$1"); }
 
+# (The last of several lines for one mount point is the one in effect, hence >=.)
 # clone_on_named_volume <path>: succeeds when <path> lives on a Docker named volume. It takes the mount
 # that holds <path> (the longest mount point that is <path> or a parent of it) and checks that the mount's
 # root, field 4 of its mountinfo line, is /var/lib/docker/volumes/<name>/_data. A bind mount's root is the
@@ -21,7 +22,7 @@ clone_on_named_volume() {
     info=${CODEO_MOUNTINFO:-/proc/self/mountinfo}
     while read -r _ _ _ root mnt _; do
         [[ -n $mnt ]] || continue
-        if [[ $path == "$mnt" || $path == "${mnt%/}"/* ]] && ((${#mnt} > best_len)); then
+        if [[ $path == "$mnt" || $path == "${mnt%/}"/* ]] && ((${#mnt} >= best_len)); then
             best_len=${#mnt}
             best_root=$root
         fi
@@ -32,7 +33,7 @@ clone_on_named_volume() {
 # 1. Let git trust the clone. VS Code's clone-in-volume clones as root, and a root-owned clone must be
 # handed to this user; but only a clone on a Docker volume is: a bind-mounted host checkout looks
 # root-owned under rootless Docker and Podman, and changing it would change the engineer's files on the host.
-clone=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+clone=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)
 git config --global --add safe.directory "$clone" || add_todo "git was not told to trust the clone: run git config --global --add safe.directory $clone"
 if [[ $(stat -c %u "$clone" 2>/dev/null || true) != "$(id -u)" ]]; then
     if clone_on_named_volume "$clone"; then

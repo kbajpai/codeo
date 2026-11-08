@@ -370,13 +370,13 @@ STUB
 # ds_identity: give the scratch global git config a name and email.
 ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git config --file "$ds_dir/gitconfig" user.email dev@example.com; }
 
-# ds_run: run the scratch start script; sets ds_rc, ds_out and ds_err.
+# ds_run: run the scratch start script (through $DS_REPO when set, else the repo itself); sets ds_rc, ds_out and ds_err.
 ds_run() {
     ds_rc=0
     env PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
-        bash "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
+        bash "${DS_REPO:-$ds_dir/repo}/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
     ds_out=$(cat "$ds_dir/out")
     ds_err=$(cat "$ds_dir/err")
 }
@@ -498,6 +498,44 @@ start_own_clone_runs_nothing_privileged() {
     ds_safe_dir_set "$ds_dir/repo" || fail 'safe.directory was not set'
 }
 
+start_last_mount_at_the_same_point_wins() {
+    local mine other n
+    ds_setup lastwins || return 0
+    mine=$(id -u); other=$((mine + 1))
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo" /home/u/src/codeo "$ds_dir/repo"
+    STUB_STAT_UID=$other ds_run
+    n=$(ds_sudo_calls); ((n == 0)) || fail "bind mount last: wanted no chown, got $n: $(cat "$ds_dir/calls")"
+    n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "bind mount last: wanted one bind-mount TODO, got $n: $ds_err"
+    ds_mountinfo /home/u/src/codeo "$ds_dir/repo" /var/lib/docker/volumes/v1/_data "$ds_dir/repo"
+    : > "$ds_dir/calls"
+    STUB_STAT_UID=$other ds_run
+    n=$(ds_sudo_calls); ((n == 1)) || fail "volume last: wanted one chown, got $n: $(cat "$ds_dir/calls")"
+}
+
+start_mount_prefix_needs_a_path_boundary() {
+    local mine other n
+    ds_setup boundary || return 0
+    mine=$(id -u); other=$((mine + 1))
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo2"
+    STUB_STAT_UID=$other ds_run
+    n=$(ds_sudo_calls); ((n == 0)) || fail "a volume at <clone>2 counted: $(cat "$ds_dir/calls")"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/rep"
+    : > "$ds_dir/calls"
+    STUB_STAT_UID=$other ds_run
+    n=$(ds_sudo_calls); ((n == 0)) || fail "a volume at a string prefix of the clone counted: $(cat "$ds_dir/calls")"
+}
+
+start_resolves_symlinks_before_matching() {
+    local mine other n
+    ds_setup symlink || return 0
+    mine=$(id -u); other=$((mine + 1))
+    ln -s "$ds_dir/repo" "$ds_dir/link" || { fail 'could not make the symlink'; return 0; }
+    # The logical path $ds_dir/link sits under the volume; the physical path $ds_dir/repo is a bind mount.
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir" /home/u/src/codeo "$ds_dir/repo"
+    DS_REPO="$ds_dir/link" STUB_STAT_UID=$other ds_run
+    n=$(ds_sudo_calls); ((n == 0)) || fail "matched the logical path: $(cat "$ds_dir/calls")"
+}
+
 start_identity_todo_when_only_one_is_set() {
     local n
     ds_setup ident || return 0
@@ -546,6 +584,9 @@ cases=(
     start_never_chowns_a_bind_mount
     start_longest_mount_wins
     start_own_clone_runs_nothing_privileged
+    start_last_mount_at_the_same_point_wins
+    start_mount_prefix_needs_a_path_boundary
+    start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
     start_setup_git_failure_is_a_todo
 )
