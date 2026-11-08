@@ -13,6 +13,8 @@
 # Last it runs .devcontainer/scripts/devcontainer-start.sh in a scratch repo against stub gh, claude,
 # sudo and stat executables and a stub plugins.sh: it always exits 0, lists each login still to do in
 # order, says "ready" when nothing is left, and takes ownership of a clone owned by someone else.
+# The devcontainer.json checks also cover the postStartCommand that re-runs window-title.sh (the
+# window title) on every start; the start script's login checks are the ones listed just above.
 #
 #   bash tests/devcontainer.test.sh
 #
@@ -57,6 +59,11 @@ devcontainer_json_is_valid_and_runs_as_dev() {
 run_args_cap_memory_and_cpus() {
     jq -e '.runArgs == ["--memory=4g","--cpus=2"]' "$(dc_json)" >/dev/null \
         || fail 'runArgs is not ["--memory=4g","--cpus=2"]'
+}
+
+post_start_command_reruns_the_title() {
+    jq -e '.postStartCommand == "bash .devcontainer/scripts/window-title.sh || true"' "$(dc_json)" >/dev/null \
+        || fail 'postStartCommand is not "bash .devcontainer/scripts/window-title.sh || true"'
 }
 
 gh_login_is_one_named_volume() {
@@ -745,6 +752,7 @@ cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
     run_args_cap_memory_and_cpus
+    post_start_command_reruns_the_title
     gh_login_is_one_named_volume
     no_bind_mounts_or_secrets
     dockerfile_is_ubuntu_2404_with_the_tools
