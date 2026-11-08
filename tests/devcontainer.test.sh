@@ -328,7 +328,7 @@ plugins_large_plugin_list_does_not_break_the_pipe() {
 # ds_setup <name>: a scratch git repo holding devcontainer-start.sh and a stub plugins.sh, with stub gh,
 # claude, sudo and stat first on PATH and an empty global git config. Sets ds_dir. `calls` logs every
 # stubbed gh setup-git and sudo call. A case sets STUB_* variables before ds_run: STUB_GH_RC, STUB_GH_OUT,
-# STUB_CLAUDE_RC, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO.
+# STUB_CLAUDE_RC, STUB_CLAUDE_OUT, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO.
 ds_setup() {
     local name=$1
     [[ -n $pl_root ]] || pl_root=$(mktemp -d)
@@ -337,6 +337,10 @@ ds_setup() {
     git -C "$ds_dir/repo" init -q || { fail 'git init failed'; return 1; }
     cp "$repo/.devcontainer/scripts/devcontainer-start.sh" "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" \
         || { fail 'devcontainer-start.sh is missing'; return 1; }
+    cp "$repo/.devcontainer/scripts/window-title.sh" "$ds_dir/repo/.devcontainer/scripts/window-title.sh" \
+        || { fail 'window-title.sh is missing'; return 1; }
+    mkdir -p "$ds_dir/repo/.codeo"
+    echo '{"codename":"codeo"}' > "$ds_dir/repo/.codeo/config.json"
     cat > "$ds_dir/repo/.devcontainer/scripts/plugins.sh" <<'STUB'
 #!/usr/bin/env bash
 exit "${STUB_PLUGINS_RC:-0}"
@@ -353,7 +357,10 @@ esac
 STUB
     cat > "$ds_dir/bin/claude" <<'STUB'
 #!/usr/bin/env bash
-if [[ "$1 $2" == "auth status" ]]; then exit "${STUB_CLAUDE_RC:-1}"; fi
+if [[ "$1 $2" == "auth status" ]]; then
+    printf '%s' "${STUB_CLAUDE_OUT:-}"
+    exit "${STUB_CLAUDE_RC:-1}"
+fi
 echo "stub claude: unexpected: $*" >&2; exit 1
 STUB
     cat > "$ds_dir/bin/sudo" <<'STUB'
@@ -373,7 +380,8 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 # ds_run: run the scratch start script (through $DS_REPO when set, else the repo itself); sets ds_rc, ds_out and ds_err.
 ds_run() {
     ds_rc=0
-    env PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
+    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL \
+        PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
         bash "${DS_REPO:-$ds_dir/repo}/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
@@ -557,6 +565,86 @@ start_setup_git_failure_is_a_todo() {
     n=$(ds_todos 'gh auth setup-git'); ((n == 1)) || fail "wanted one TODO naming gh auth setup-git, got $n: $ds_err"
 }
 
+# ds_ready_run: a run with every login configured (the "ready" baseline); extra STUB_* come from the caller.
+ds_ready_run() { STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run; }
+
+start_enables_remote_control() {
+    ds_setup rc || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    jq -e '.remoteControlAtStartup == true' "$ds_dir/claude/settings.json" >/dev/null \
+        || fail "remoteControlAtStartup is not true: $(cat "$ds_dir/claude/settings.json" 2>&1)"
+}
+
+start_keeps_other_settings() {
+    ds_setup keep || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    echo '{"enabledPlugins":{"a@b":true},"autoUpdatesChannel":"stable"}' > "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ds_ready_run
+    jq -e '.remoteControlAtStartup == true and .enabledPlugins["a@b"] == true and .autoUpdatesChannel == "stable"' \
+        "$ds_dir/claude/settings.json" >/dev/null || fail "keys lost: $(cat "$ds_dir/claude/settings.json")"
+}
+
+start_malformed_settings_is_a_todo() {
+    local n
+    ds_setup badjson || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '{not json' > "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/settings.json") == '{not json' ]] || fail 'malformed settings.json was changed'
+    n=$(ds_todos 'settings.json'); ((n == 1)) || fail "wanted one TODO naming settings.json, got $n: $ds_err"
+}
+
+start_writes_the_title() {
+    local n
+    ds_setup title || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_ready_run
+    [[ $(jq -r '.["window.title"]' "$ds_dir/repo/.vscode/settings.json" 2>&1) == 'codeo [home]' ]] \
+        || fail "no home title: $(cat "$ds_dir/repo/.vscode/settings.json" 2>&1)"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$ds_dir/repo/.devcontainer/scripts/window-title.sh"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'window-title.sh'); ((n == 1)) || fail "wanted one TODO naming window-title.sh, got $n: $ds_err"
+}
+
+start_env_vars_are_todos() {
+    local n v
+    ds_setup envvars || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_ready_run
+    [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' && -z $ds_err ]] || fail "baseline not ready: $ds_out / $ds_err"
+    for v in CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL; do
+        ds_setup "env-$v" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        # ds_run clears the variables; set this one on the stub claude's way in via a wrapper env
+        ds_rc=0
+        env "$v=x" PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" \
+            GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 STUB_DIR="$ds_dir" STUB_STAT_UID="$(id -u)" \
+            STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 \
+            bash "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
+        ds_err=$(cat "$ds_dir/err")
+        ((ds_rc == 0)) || fail "$v: exit $ds_rc"
+        n=$(ds_todos "$v.*Remote Control"); ((n == 1)) || fail "$v: wanted one TODO, got $n: $ds_err"
+    done
+}
+
+start_non_claude_ai_login_is_a_todo() {
+    local n
+    ds_setup authmethod || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    STUB_CLAUDE_OUT='{"loggedIn":true,"authMethod":"api_key"}' ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'claude auth login'); ((n == 1)) || fail "api_key: wanted one TODO, got $n: $ds_err"
+    STUB_CLAUDE_OUT='{"loggedIn":true,"authMethod":"claude.ai"}' ds_ready_run
+    n=$(ds_todos 'claude auth login'); ((n == 0)) || fail "claude.ai: wanted none, got $n: $ds_err"
+}
+
 # wt_setup <name>: a scratch git repo (committed) holding the real window-title.sh and a config naming the
 # codename "codeo". Sets wt_dir, the clone's root.
 wt_setup() {
@@ -685,6 +773,12 @@ cases=(
     start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
     start_setup_git_failure_is_a_todo
+    start_enables_remote_control
+    start_keeps_other_settings
+    start_malformed_settings_is_a_todo
+    start_writes_the_title
+    start_env_vars_are_todos
+    start_non_claude_ai_login_is_a_todo
     title_is_home_without_a_lock
     title_names_the_issue_with_a_lock
     title_falls_back_to_the_clone_name

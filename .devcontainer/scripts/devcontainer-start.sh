@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The dev container's postCreateCommand. Trusts the clone (and takes ownership of it when it is on a Docker volume), installs the Claude Code
-# plugins, wires git to the GitHub login, and prints what is still left for the engineer to do
-# (the GitHub and Claude logins, a git identity). Safe to re-run: each step checks before it acts.
+# plugins, writes the window title, turns on Claude Code Remote Control (remoteControlAtStartup in the user
+# settings), wires git to the GitHub login, and prints what is still left for the engineer to do
+# (the GitHub and Claude logins, a git identity, credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
 #
 #   bash .devcontainer/scripts/devcontainer-start.sh
@@ -50,6 +51,26 @@ cd "$(git -C "$clone" rev-parse --show-toplevel)" || { add_todo "could not enter
 # 3. Plugins.
 bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/plugins.sh"
 
+# 3b. Window title: write this clone's title into .vscode/settings.json.
+bash .devcontainer/scripts/window-title.sh || add_todo "window-title.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/window-title.sh"
+
+# 3c. Remote Control: merge {"remoteControlAtStartup": true} into the user-scope Claude settings, keeping every other key.
+# A file that is not valid JSON is left untouched.
+claude_dir=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
+claude_settings=$claude_dir/settings.json
+mkdir -p "$claude_dir" || add_todo "could not create $claude_dir: Remote Control was not enabled"
+if [[ ! -e $claude_settings ]]; then
+    echo '{}' > "$claude_settings" || add_todo "could not create $claude_settings: Remote Control was not enabled"
+fi
+if [[ -f $claude_settings ]]; then
+    if jq '. + {remoteControlAtStartup: true}' "$claude_settings" > "$claude_settings.tmp" 2>/dev/null; then
+        mv "$claude_settings.tmp" "$claude_settings" || add_todo "could not write $claude_settings: Remote Control was not enabled"
+    else
+        rm -f "$claude_settings.tmp"
+        add_todo "$claude_settings is not valid JSON and was left alone: fix it, then add \"remoteControlAtStartup\": true"
+    fi
+fi
+
 # 4. GitHub: wire git to the login, and check the project scope the board needs.
 # The output is captured before grep reads it: a pipeline ending in `grep -q` can kill the writer early.
 if gh_status=$(gh auth status 2>&1); then
@@ -69,10 +90,22 @@ if [[ -z $(git config user.email || true) || -z $(git config user.name || true) 
 fi
 
 # 6. Claude Code login.
-if ! claude auth status >/dev/null 2>&1; then
+# Remote Control needs a claude.ai login, so these credentials must not be set. The output is captured before it is read.
+if claude_status=$(claude auth status 2>&1); then
+    auth_method=$(jq -r '.authMethod // empty' <<<"$claude_status" 2>/dev/null || true)
+    if [[ -n $auth_method && $auth_method != "claude.ai" ]]; then
+        add_todo "Claude Code is logged in with $auth_method, not claude.ai, and Remote Control needs claude.ai: run claude auth login"
+        need_login+=("claude auth login")
+    fi
+else
     add_todo "Claude Code is not logged in: run claude auth login"
     need_login+=("claude auth login")
 fi
+for var in CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL; do
+    if [[ -n ${!var:-} ]]; then
+        add_todo "$var is set, and Remote Control does not work while it is set: unset it"
+    fi
+done
 
 # 7. Report.
 if ((${#todo[@]} == 0)); then
