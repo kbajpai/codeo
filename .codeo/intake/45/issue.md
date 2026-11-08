@@ -1,8 +1,8 @@
-# New issue — issue
+# Issue #45 — issue
 
 | | |
 |---|---|
-| Issue | _not filed yet_ |
+| Issue | https://github.com/kbajpai/codeo/issues/45 |
 | Branch | none |
 | Updated | 2026-11-08 |
 
@@ -25,7 +25,7 @@ None open.
 
 ## Outcome
 
-_Pending — written at filing._
+Filed as #45 (label `enhancement`, no Issue Type): session titles after the container, split out of #44.
 
 ## Draft
 
@@ -67,3 +67,4 @@ title they can't be told apart.
 - Depends on #44.
 - RoadMaster (`sarathi-vl/roadmaster`, private): `.claude/hooks/session-title.sh` and its `SessionStart`
   registration in `.claude/settings.json`; README "Remote Control and titles".
+- 2026-11-08 — draft approved; filed as #45
