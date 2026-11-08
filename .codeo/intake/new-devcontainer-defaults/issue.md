@@ -60,6 +60,20 @@ reference #40 and #36. Two separate issues is also possible.
   `/remote-control` prints the reason. RoadMaster's README documents this under "Remote Control and
   titles", so the title answer for Q1 may live there too. Not yet verified against codeo's image.
 
+- Read from `sarathi-vl/roadmaster` (private, `.devcontainer/`), the reference project:
+  - **Title:** `scripts/window-title.sh` writes `"window.title": "<codename> [#<N>]"` (or
+    `<codename> [home]`) into the clone's own `.vscode/settings.json`, which is gitignored; workspace
+    scope because `window.title` is window-scoped and `devcontainer.json` has no variable for the issue
+    number. The start script calls it. `scripts/container-name.sh` picks the text: `[#<N>]` when
+    `.codeo/active` holds an `issue:` line, else `[home]`; `--docker` gives the Docker name
+    (`<codename>-<N>` / `<codename>-home`). The codename comes from `.codeo/config.json`.
+  - **Remote Control:** Dockerfile merges `remoteControlAtStartup: true` into user-scope settings.json
+    (project scope ignores `true`). `claude-login.sh` turns each missing prerequisite into a start-script
+    TODO. README "Remote Control and titles" also says sessions are listed in claude.ai/code as
+    `<codename> [#<N>] · <id>`, via a `.claude/hooks/session-title.sh` hook.
+  - **Does not carry over as is:** codeo's `.gitignore` has no `.vscode/` line, and codeo has no
+    `.codeo/project.sh` (it reads config with `scripts/config.sh`).
+
 ## Outcome
 
 _Pending — written at filing._
@@ -68,3 +82,4 @@ _Pending — written at filing._
 
 - 2026-11-08 — Q1-Q3 raised
 - 2026-11-08 — Remote Control setting recorded from the engineer's paste; Q1-Q3 still open
+- 2026-11-08 — read RoadMaster's .devcontainer (title + Remote Control); Q1 proposed answer below, Q2-Q3 still open
