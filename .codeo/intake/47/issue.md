@@ -1,15 +1,15 @@
-# Issue (new) — issue
+# Issue #47 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/47 |
 | Branch | none |
 | Updated | 2026-11-08 |
 
 ## Where this stands
 
 Filed from `/codeo:triage` (run 2026-11-08, Q1+Q2). The engineer chose to file qc:44 F1 and F2-F7 plus
-the implement:44 "left unfixed" minors as one issue. Draft below awaits approval; no open questions.
+the implement:44 "left unfixed" minors as one issue. Draft below approved and filed; no open questions.
 
 ## Questions
 
@@ -22,7 +22,7 @@ None open.
 
 ## Outcome
 
-Pending approval.
+Filed as #47 (label `bug`, no Issue Type).
 
 ## Draft
 
