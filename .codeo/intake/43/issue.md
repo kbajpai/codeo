@@ -1,14 +1,14 @@
-# Issue #new — issue
+# Issue #43 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/43 |
 | Source | `/codeo:triage` run 2026-11-08-2, Q1-Q3 (`qc:39:F1-F3`, `qc:39:F4-F5-F7`, `qc:39:F2-F6-F8`) |
 | Updated | 2026-11-08 |
 
 ## Where this stands
 
-Engineer asked for the three triage items to go into one issue. Draft below awaits answers to Q1-Q2 and approval.
+Filed as #43 on 2026-11-08.
 
 ## Questions
 
@@ -20,7 +20,7 @@ Engineer asked for the three triage items to go into one issue. Draft below awai
 
 **Options.** include it as a requirement · list it under Out of Scope as a follow-up · drop it
 
-**Recommended:** include it. **Answer:**
+**Recommended:** include it. **Answer:** include it as a requirement (as recommended).
 
 ### Q2 — Shape of the mechanical footprint check
 
@@ -30,7 +30,7 @@ Engineer asked for the three triage items to go into one issue. Draft below awai
 
 **Options.** requirement only, location left to plan · name `dossier-check.sh` as the preferred home
 
-**Recommended:** requirement only. **Answer:**
+**Recommended:** requirement only. **Answer:** requirement only, location left to plan (as recommended).
 
 ## Notes
 
@@ -94,8 +94,9 @@ Engineer asked for the three triage items to go into one issue. Draft below awai
 
 ## Outcome
 
-(pending)
+Filed as #43 (https://github.com/kbajpai/codeo/issues/43), labels `enhancement`, `documentation`, no Issue Type. Q1 and Q2 answered as recommended.
 
 ## Log
 
 - 2026-11-08 — drafted from triage run 2026-11-08-2 Q1-Q3 · cost: unavailable
+- 2026-11-08 — filed #43 · cost: unavailable
