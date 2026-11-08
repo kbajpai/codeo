@@ -63,7 +63,7 @@ if [[ ! -e $claude_settings ]]; then
     echo '{}' > "$claude_settings" || add_todo "could not create $claude_settings: Remote Control was not enabled"
 fi
 if [[ -f $claude_settings ]]; then
-    if jq '. + {remoteControlAtStartup: true}' "$claude_settings" > "$claude_settings.tmp" 2>/dev/null; then
+    if jq -n '([inputs][0] // {}) + {remoteControlAtStartup: true}' "$claude_settings" > "$claude_settings.tmp" 2>/dev/null && [[ -s $claude_settings.tmp ]]; then
         mv "$claude_settings.tmp" "$claude_settings" || add_todo "could not write $claude_settings: Remote Control was not enabled"
     else
         rm -f "$claude_settings.tmp"

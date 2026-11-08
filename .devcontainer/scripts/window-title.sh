@@ -28,7 +28,7 @@ settings="$root/.vscode/settings.json"
 mkdir -p "$root/.vscode" || die "could not create $root/.vscode"
 [[ -f $settings ]] || echo '{}' > "$settings" || die "could not write $settings"
 tmp=$(mktemp "$root/.vscode/.settings.XXXXXX") || die "could not write in $root/.vscode"
-if ! jq --arg t "$title" '. + {"window.title": $t}' "$settings" > "$tmp" 2>/dev/null; then
+if ! jq -n --arg t "$title" '([inputs][0] // {}) + {"window.title": $t}' "$settings" > "$tmp" 2>/dev/null || [[ ! -s $tmp ]]; then
     rm -f "$tmp"
     die "$settings is not valid JSON; left untouched"
 fi

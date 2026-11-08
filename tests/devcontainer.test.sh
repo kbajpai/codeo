@@ -607,6 +607,18 @@ start_malformed_settings_is_a_todo() {
     n=$(ds_todos 'settings.json'); ((n == 1)) || fail "wanted one TODO naming settings.json, got $n: $ds_err"
 }
 
+start_fills_an_empty_settings_file() {
+    ds_setup emptyjson || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    : > "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    jq -e '.remoteControlAtStartup == true' "$ds_dir/claude/settings.json" >/dev/null \
+        || fail "an empty settings.json was not filled: '$(cat "$ds_dir/claude/settings.json" 2>&1)'"
+    [[ $(ds_todos 'settings.json') == 0 ]] || fail "unexpected TODO naming settings.json: $ds_err"
+}
+
 start_writes_the_title() {
     local n
     ds_setup title || return 0
@@ -748,6 +760,16 @@ title_leaves_malformed_settings_alone() {
     [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
 }
 
+title_fills_an_empty_settings_file() {
+    wt_setup empty || return 0
+    mkdir -p "$wt_dir/.vscode"
+    : > "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    jq -e '.["window.title"] == "codeo [home]"' "$wt_dir/.vscode/settings.json" >/dev/null \
+        || fail "an empty settings.json was not filled: '$(cat "$wt_dir/.vscode/settings.json")'"
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
@@ -784,6 +806,7 @@ cases=(
     start_enables_remote_control
     start_keeps_other_settings
     start_malformed_settings_is_a_todo
+    start_fills_an_empty_settings_file
     start_writes_the_title
     start_env_vars_are_todos
     start_non_claude_ai_login_is_a_todo
@@ -794,6 +817,7 @@ cases=(
     title_rerun_and_worktree
     title_follows_the_lock_on_a_rerun
     title_leaves_malformed_settings_alone
+    title_fills_an_empty_settings_file
 )
 
 for current in "${cases[@]}"; do
