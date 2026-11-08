@@ -89,6 +89,14 @@ Calls I am making unless you say otherwise:
 - Documentation: `CHANGELOG.md` gets an entry; the start script's and `devcontainer.json`'s header comments are updated. No page under `docs/` describes the dev container, so none moves.
 - Nothing in `scripts/`, `lib/`, `hooks/` or `skills/` changes.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/window-title.sh, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/devcontainer.json, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-08-dev-container-defaults.md
+wiki:       none
+exclusive:  none
+```
+
 ## Log
 
 - 2026-11-08 — plan round 1: Q1-Q5 raised · cost: unavailable
