@@ -30,7 +30,7 @@ requirement (a window-title setting). The acceptance criterion depends on which 
 (e.g. it matches what the reference project shows — say which).
 
 **Answer:**
-Literal `codeo [home]`, as RoadMaster does it: a workspace `window.title` written by the start script (engineer, after reading RoadMaster's approach).
+Literal `codeo [home]`, as the reference project does it: a workspace `window.title` written by the start script (engineer, after reading the reference project's approach).
 
 ### Q2 — "Enabled by default" for which sessions, and for whom?
 
@@ -54,16 +54,16 @@ One new issue covering both points, linked to #36 and #40 (engineer accepted the
 
 ## Notes
 
-- Remote Control setting, from the reference project (RoadMaster), pasted by the engineer: the key is
+- Remote Control setting, from the reference project, pasted by the engineer: the key is
   `remoteControlAtStartup: true` in the user-scope `~/.claude/settings.json`, written by the
   Dockerfile with `jq '. + {remoteControlAtStartup: true}'`. It's baked into the image, so changing
   it means a rebuild. It also needs a claude.ai login (`claude auth login`, once per container);
   `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL` each stop it working, and
-  RoadMaster's `claude-login.sh` checks for them. If a session doesn't show in claude.ai/code,
-  `/remote-control` prints the reason. RoadMaster's README documents this under "Remote Control and
+  The reference project's `claude-login.sh` checks for them. If a session doesn't show in claude.ai/code,
+  `/remote-control` prints the reason. The reference project's README documents this under "Remote Control and
   titles", so the title answer for Q1 may live there too. Not yet verified against codeo's image.
 
-- Read from `sarathi-vl/roadmaster` (private, `.devcontainer/`), the reference project:
+- Read from the reference project (private, `.devcontainer/`):
   - **Title:** `scripts/window-title.sh` writes `"window.title": "<codename> [#<N>]"` (or
     `<codename> [home]`) into the clone's own `.vscode/settings.json`, which is gitignored; workspace
     scope because `window.title` is window-scoped and `devcontainer.json` has no variable for the issue
@@ -85,7 +85,7 @@ Filed as #44 (label `enhancement`, no Issue Type): Remote Control on at startup 
 
 - 2026-11-08 — Q1-Q3 raised
 - 2026-11-08 — Remote Control setting recorded from the engineer's paste; Q1-Q3 still open
-- 2026-11-08 — read RoadMaster's .devcontainer (title + Remote Control); Q1 proposed answer below, Q2-Q3 still open
+- 2026-11-08 — read the reference project's .devcontainer (title + Remote Control); Q1 proposed answer below, Q2-Q3 still open
 
 ## Draft
 
@@ -132,7 +132,7 @@ a window title that says which container this is stops two windows being mistake
 - The other items in #40.
 
 ### Reference
-- Reference project (`sarathi-vl/roadmaster`, private): `.devcontainer/Dockerfile` merges
+- Reference project (private): `.devcontainer/Dockerfile` merges
   `remoteControlAtStartup: true` into user-level settings; `scripts/window-title.sh` and
   `scripts/container-name.sh` write the title; `scripts/claude-login.sh` checks the login; README
   "Remote Control and titles".
