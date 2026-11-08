@@ -1,8 +1,8 @@
-# New issue — issue
+# Issue #44 — issue
 
 | | |
 |---|---|
-| Issue | _not filed yet_ |
+| Issue | https://github.com/kbajpai/codeo/issues/44 |
 | Branch | none — `/codeo:issue` cuts no branch |
 | Updated | 2026-11-08 |
 
@@ -79,7 +79,7 @@ One new issue covering both points, linked to #36 and #40 (engineer accepted the
 
 ## Outcome
 
-_Pending — written at filing._
+Filed as #44 (label `enhancement`, no Issue Type): Remote Control on at startup and a `codeo [home]` window title, one issue. Session titles are left to a follow-up.
 
 ## Log
 
@@ -141,3 +141,4 @@ a window title that says which container this is stops two windows being mistake
   Code version the image installs (2.1.319 here), and how `.vscode/` is kept out of `git status`
   (codeo's `.gitignore` has no line for it).
 - 2026-11-08 — Q1-Q3 answered; draft written, awaiting approval
+- 2026-11-08 — draft approved; filed as #44
