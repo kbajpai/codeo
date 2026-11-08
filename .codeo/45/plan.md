@@ -112,6 +112,17 @@ Accepted the recommendation (picked in the conversation): `.devcontainer/scripts
   writes it; the hook never writes to stderr except nothing — a failure is silent, per criterion 6.
 - The claude.ai/code listing cannot be seen by the suite; as #44 did, the plan's last section names the
   manual check for the engineer, recorded in `qc.md`.
+- The `engineering` plugin (`system-design`, `architecture`) is not installed here; its Options Considered /
+  Consequences structure is applied directly in the plan's `## Options considered` table.
+- `inflight.sh --except 45`: no other workflow in flight, so the draft footprint overlaps nothing.
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/session-title.sh, .claude/settings.json, tests/devcontainer.test.sh, CHANGELOG.md
+wiki:       none
+exclusive:  none
+```
 
 ## Outcome
 
