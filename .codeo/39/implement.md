@@ -46,4 +46,4 @@ None.
 
 ## Log
 
-- 2026-11-08 — implemented: 5 tasks, 8 task and fix commits (`bd9f19c`..`dc127b3`), build `true` exit 0 · cost: pending
+- 2026-11-08 — implemented: 5 tasks, 8 task and fix commits (`bd9f19c`..`dc127b3`), build `true` exit 0 · cost: 20m · sonnet-5-5 500k in + 14.7M cached / 83k out
