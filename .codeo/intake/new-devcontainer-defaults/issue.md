@@ -51,9 +51,14 @@ reference #40 and #36. Two separate issues is also possible.
 
 ## Notes
 
-- Claude Code here is 2.1.319. Which setting turns Remote Control on at startup (and whether it can
-  live in `settings.json` vs. the per-user `~/.claude.json` the image deletes at build) is for
-  `/codeo:plan`; it goes into the draft as an open question if still unknown.
+- Remote Control setting, from the reference project (RoadMaster), pasted by the engineer: the key is
+  `remoteControlAtStartup: true` in the user-scope `~/.claude/settings.json`, written by the
+  Dockerfile with `jq '. + {remoteControlAtStartup: true}'`. It's baked into the image, so changing
+  it means a rebuild. It also needs a claude.ai login (`claude auth login`, once per container);
+  `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL` each stop it working, and
+  RoadMaster's `claude-login.sh` checks for them. If a session doesn't show in claude.ai/code,
+  `/remote-control` prints the reason. RoadMaster's README documents this under "Remote Control and
+  titles", so the title answer for Q1 may live there too. Not yet verified against codeo's image.
 
 ## Outcome
 
@@ -62,3 +67,4 @@ _Pending — written at filing._
 ## Log
 
 - 2026-11-08 — Q1-Q3 raised
+- 2026-11-08 — Remote Control setting recorded from the engineer's paste; Q1-Q3 still open
