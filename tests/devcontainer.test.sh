@@ -770,6 +770,119 @@ title_fills_an_empty_settings_file() {
         || fail "an empty settings.json was not filled: '$(cat "$wt_dir/.vscode/settings.json")'"
 }
 
+# st_setup <name>: like wt_setup, plus the real session-title.sh. Sets st_dir, the clone's root.
+st_setup() {
+    local name=$1
+    wt_setup "st-$name" || return 1
+    st_dir=$wt_dir
+    cp "$repo/.devcontainer/scripts/session-title.sh" "$st_dir/.devcontainer/scripts/session-title.sh" \
+        || { fail 'session-title.sh is missing'; return 1; }
+    git -C "$st_dir" add -A
+    git -C "$st_dir" -c user.name=Dev -c user.email=dev@example.com commit -q -m fixture-st \
+        || { fail 'git commit failed'; return 1; }
+}
+
+# st_json <event> <session_id> [session_title]: the hook's stdin fixture.
+st_json() {
+    local event=$1 sid=$2
+    jq -cn --arg e "$event" --arg s "$sid" --arg d "$st_dir" --arg t "${3:-}" --argjson has "$(($# >= 3 ? 1 : 0))" \
+        '{hook_event_name: $e, session_id: $s, transcript_path: "/x.jsonl", cwd: $d}
+         + (if $e == "SessionStart" then {source: "startup"} else {} end)
+         + (if $has == 1 then {session_title: $t} else {} end)'
+}
+
+# st_run <stdin> [remote]: runs session-title.sh with REMOTE_CONTAINERS=<remote> (default true; "unset"
+# leaves it out) from /. Sets st_rc, st_out, st_err.
+st_run() {
+    local input=$1 remote=${2:-true} errf envs=()
+    [[ $remote == unset ]] || envs=("REMOTE_CONTAINERS=$remote")
+    errf=$(mktemp -p "$pl_root")
+    st_rc=0
+    st_out=$(cd / && env -u REMOTE_CONTAINERS "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
+    st_err=$(<"$errf")
+}
+
+st_title() { jq -r '.hookSpecificOutput.sessionTitle' <<<"$st_out"; }
+st_event() { jq -r '.hookSpecificOutput.hookEventName' <<<"$st_out"; }
+
+# st_silent <label>: the last st_run printed nothing and exited 0.
+st_silent() {
+    ((st_rc == 0)) || fail "$1: exit $st_rc"
+    [[ -z $st_out ]] || fail "$1: stdout '$st_out'"
+    [[ -z $st_err ]] || fail "$1: stderr '$st_err'"
+}
+
+st_sid=a21b9973-0000-4000-8000-000000000000
+
+session_title_names_home_and_the_id() {
+    st_setup home || return 0
+    st_run "$(st_json SessionStart $st_sid)"
+    ((st_rc == 0)) || fail "exit $st_rc"
+    [[ -z $st_err ]] || fail "stderr '$st_err'"
+    (($(wc -l <<<"$st_out") == 1)) || fail "not one line: '$st_out'"
+    [[ $(st_event) == SessionStart ]] || fail "event '$(st_event)'"
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_names_the_issue_with_a_lock() {
+    st_setup lock || return 0
+    printf 'issue:   45\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json SessionStart $st_sid)"
+    [[ $(st_title) == 'codeo [#45] · a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_on_a_prompt_after_clear() {
+    st_setup prompt || return 0
+    st_run "$(st_json UserPromptSubmit $st_sid)"
+    [[ $(st_event) == UserPromptSubmit ]] || fail "event '$(st_event)'"
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_keeps_an_existing_title() {
+    st_setup keep || return 0
+    st_run "$(st_json SessionStart $st_sid 'my name')"
+    st_silent SessionStart
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name')"
+    st_silent UserPromptSubmit
+}
+
+session_title_is_silent_outside_a_dev_container() {
+    st_setup outside || return 0
+    local remote
+    for remote in unset false 1; do
+        st_run "$(st_json SessionStart $st_sid)" "$remote"
+        st_silent "REMOTE_CONTAINERS=$remote"
+    done
+}
+
+session_title_is_silent_on_bad_input() {
+    st_setup bad || return 0
+    st_run ''; st_silent 'empty stdin'
+    st_run '{not json'; st_silent 'invalid json'
+    st_run '{"hook_event_name":"SessionStart"}'; st_silent 'no id'
+    st_run "$(st_json SessionStart abc)"; st_silent 'short id'
+    st_run "$(st_json PreToolUse $st_sid)"; st_silent 'other event'
+}
+
+session_title_is_silent_when_the_title_script_fails() {
+    st_setup fails || return 0
+    local script=$st_dir/.devcontainer/scripts/window-title.sh
+    rm -f "$script"
+    st_run "$(st_json SessionStart $st_sid)"; st_silent 'missing'
+    printf '#!/usr/bin/env bash\necho boom >&2\nexit 1\n' > "$script"
+    st_run "$(st_json SessionStart $st_sid)"; st_silent 'failing'
+    printf '#!/usr/bin/env bash\nexit 0\n' > "$script"
+    st_run "$(st_json SessionStart $st_sid)"; st_silent 'empty'
+}
+
+session_title_escapes_the_codename() {
+    st_setup escape || return 0
+    jq -n '{codename: "co\"de\\o"}' > "$st_dir/.codeo/config.json"
+    st_run "$(st_json SessionStart $st_sid)"
+    jq -e . <<<"$st_out" >/dev/null || fail "not valid JSON: '$st_out'"
+    [[ $(st_title) == 'co"de\o [home]'* ]] || fail "title '$(st_title)'"
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
@@ -818,6 +931,14 @@ cases=(
     title_follows_the_lock_on_a_rerun
     title_leaves_malformed_settings_alone
     title_fills_an_empty_settings_file
+    session_title_names_home_and_the_id
+    session_title_names_the_issue_with_a_lock
+    session_title_on_a_prompt_after_clear
+    session_title_keeps_an_existing_title
+    session_title_is_silent_outside_a_dev_container
+    session_title_is_silent_on_bad_input
+    session_title_is_silent_when_the_title_script_fails
+    session_title_escapes_the_codename
 )
 
 for current in "${cases[@]}"; do
