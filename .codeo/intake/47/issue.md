@@ -71,3 +71,9 @@ Surfaced by `/codeo:qc` on #44 (PR #46): `.codeo/done/44/qc.md` F1-F7, `.codeo/d
 bundle: #40 (follow-ups from #36).
 
 Label: `bug`. No Issue Type.
+
+## Amendment — 2026-11-08
+
+At the engineer's request, a requirement and criterion for persisting the git identity across dev
+containers (`~/.config/git` volume) were folded into #47 and its title extended; found when container
+`codeo-45` printed the "git identity is not set" TODO again. Edited on GitHub with `gh api -X PATCH`.
