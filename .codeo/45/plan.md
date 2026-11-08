@@ -8,7 +8,9 @@
 
 ## Where this stands
 
-Round 1. Q1-Q3 answered (all three recommendations accepted); the plan is being drafted.
+Round 1, done. Q1-Q3 are answered and the plan is approved and saved at
+`docs/plans/2026-11-08-dev-container-session-titles.md` (unstaged, for the engineer to review and commit).
+`overlap.sh 45` printed nothing; no exclusive resources, so no leases. Next: `/codeo:implement`.
 
 What the code and Claude Code do today:
 
@@ -116,6 +118,33 @@ Accepted the recommendation (picked in the conversation): `.devcontainer/scripts
   Consequences structure is applied directly in the plan's `## Options considered` table.
 - `inflight.sh --except 45`: no other workflow in flight, so the draft footprint overlaps nothing.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-08-dev-container-session-titles.md` — an implementation plan under `plansDir`
+(a scoped body of work; no standing reference doc, since no page under `docs/` describes the dev container).
+Three TDD tasks, each proved by `bash tests/run.sh devcontainer`, the last by the whole suite and `shellcheck`.
+
+**Decisions** (all three recommendations accepted): the hook is registered in the tracked `.claude/settings.json`
+(rejected: user settings merged by the start script; both); `SessionStart` on `startup|resume|fork` plus
+`UserPromptSubmit`, one script, titling only when stdin carries no `session_title` — the docs say a
+`SessionStart` title is ignored on `clear`, so a `/clear`ed session is titled at its first prompt (rejected:
+`UserPromptSubmit` only; `SessionStart` on `…|clear` as the reference project did); the script is
+`.devcontainer/scripts/session-title.sh`, a thin adapter over `window-title.sh --print` (rejected:
+`.claude/hooks/`; a `--session` mode in `window-title.sh`). Made without asking: an existing title is detected
+through the documented `session_title` input, not the transcript; the gate is `REMOTE_CONTAINERS=true` only;
+the id is `${session_id:0:8}`; the hook prints one compact JSON line or nothing, never stderr, exit 0 always;
+`timeout: 10`.
+
+**Documentation the plan changes:** `CHANGELOG.md` (Unreleased entry) and the header comment of
+`tests/devcontainer.test.sh`. No page under `docs/`; no wiki module.
+
+**Intake questions resolved:** none were open. The issue's "applies on startup, resume and `/clear`" is met
+through the prompt hook rather than a `SessionStart` `clear` matcher, for the reason above.
+
+**For the engineer after `/codeo:qc`:** the listing in the picker and claude.ai/code, `/clear`, `/rename`
+then resume, and the host check are manual (plan's last section); a bare `sessionTitle` not applied, or
+`session_title` not delivered on stdin, by Claude Code 2.1.319 is a send-back to this plan.
+
 ### Footprint
 
 ```
@@ -124,10 +153,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-08 — Q1-Q3 raised · cost: unavailable (usage.sh output recorded at the hand-off)
+- 2026-11-08 — planned: docs/plans/2026-11-08-dev-container-session-titles.md · no issue filed · `engineering:system-design` and `engineering:architecture` unavailable (structure applied directly) · cost: 10m · fable-5-1 188k in + 2.6M cached / 33k out · sonnet-5-5 46k in + 164k cached / 5k out
