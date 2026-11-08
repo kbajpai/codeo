@@ -557,6 +557,102 @@ start_setup_git_failure_is_a_todo() {
     n=$(ds_todos 'gh auth setup-git'); ((n == 1)) || fail "wanted one TODO naming gh auth setup-git, got $n: $ds_err"
 }
 
+# wt_setup <name>: a scratch git repo (committed) holding the real window-title.sh and a config naming the
+# codename "codeo". Sets wt_dir, the clone's root.
+wt_setup() {
+    local name=$1
+    [[ -n $pl_root ]] || pl_root=$(mktemp -d)
+    wt_dir="$pl_root/wt-$name"
+    mkdir -p "$wt_dir/.devcontainer/scripts" "$wt_dir/.codeo"
+    git -C "$wt_dir" init -q || { fail 'git init failed'; return 1; }
+    cp "$repo/.devcontainer/scripts/window-title.sh" "$wt_dir/.devcontainer/scripts/window-title.sh" \
+        || { fail 'window-title.sh is missing'; return 1; }
+    echo '{"codename":"codeo"}' > "$wt_dir/.codeo/config.json"
+    git -C "$wt_dir" add -A
+    git -C "$wt_dir" -c user.name=Dev -c user.email=dev@example.com commit -q -m fixture \
+        || { fail 'git commit failed'; return 1; }
+}
+
+# wt_run [args]: runs window-title.sh from $wt_dir (or $wt_clone when set). Sets wt_rc, wt_out, wt_err.
+wt_run() {
+    local root=${wt_clone:-$wt_dir} errf
+    errf=$(mktemp -p "$pl_root")
+    wt_rc=0
+    wt_out=$(bash "$root/.devcontainer/scripts/window-title.sh" "$@" 2>"$errf") || wt_rc=$?
+    wt_err=$(<"$errf")
+}
+
+wt_title() { jq -r '.["window.title"]' "$1/.vscode/settings.json"; }
+
+title_is_home_without_a_lock() {
+    wt_setup home || return 0
+    wt_run --print
+    [[ $wt_out == 'codeo [home]' ]] || fail "--print gave '$wt_out'"
+    wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail 'settings.json lacks window.title "codeo [home]"'
+}
+
+title_names_the_issue_with_a_lock() {
+    wt_setup lock || return 0
+    printf 'issue:   44\nbranch: feat/x\nstarted: now\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "--print gave '$wt_out'"
+}
+
+title_falls_back_to_the_clone_name() {
+    wt_setup fallback || return 0
+    echo '{}' > "$wt_dir/.codeo/config.json"
+    wt_run --print
+    [[ $wt_out == 'wt-fallback [home]' ]] || fail "--print gave '$wt_out'"
+}
+
+title_keeps_other_keys() {
+    wt_setup keys || return 0
+    mkdir -p "$wt_dir/.vscode"
+    echo '{"editor.tabSize": 2}' > "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    jq -e '.["editor.tabSize"] == 2 and .["window.title"] == "codeo [home]"' "$wt_dir/.vscode/settings.json" >/dev/null \
+        || fail 'the seeded key was lost or the title is missing'
+}
+
+title_rerun_and_worktree() {
+    local n wtree
+    wt_setup rerun || return 0
+    wt_run; wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    n=$(grep -cxF '.vscode/settings.json' "$(git -C "$wt_dir" rev-parse --path-format=absolute --git-path info/exclude)" || true)
+    ((n == 1)) || fail "exclude has the entry $n times"
+    [[ -z $(git -C "$wt_dir" status --porcelain) ]] || fail 'git status is not clean'
+    wtree="$pl_root/wt-rerun-tree"
+    git -C "$wt_dir" worktree add -q "$wtree" -b other || { fail 'git worktree add failed'; return 0; }
+    wt_clone=$wtree wt_run
+    ((wt_rc == 0)) || fail "worktree: exit $wt_rc: $wt_err"
+    [[ -f $wtree/.vscode/settings.json ]] || fail 'worktree: settings.json was not written'
+    [[ -z $(git -C "$wtree" status --porcelain) ]] || fail 'worktree: git status is not clean'
+    n=$(grep -cxF '.vscode/settings.json' "$(git -C "$wtree" rev-parse --path-format=absolute --git-path info/exclude)" || true)
+    ((n == 1)) || fail "worktree: exclude has the entry $n times"
+}
+
+title_follows_the_lock_on_a_rerun() {
+    wt_setup follow || return 0
+    wt_run
+    printf 'issue:   44\n' > "$wt_dir/.codeo/active"
+    wt_run
+    [[ $(wt_title "$wt_dir") == 'codeo [#44]' ]] || fail "title is '$(wt_title "$wt_dir")'"
+}
+
+title_leaves_malformed_settings_alone() {
+    wt_setup bad || return 0
+    mkdir -p "$wt_dir/.vscode"
+    printf '{not json' > "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $(<"$wt_dir/.vscode/settings.json") == '{not json' ]] || fail 'the malformed file was changed'
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
@@ -589,6 +685,13 @@ cases=(
     start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
     start_setup_git_failure_is_a_todo
+    title_is_home_without_a_lock
+    title_names_the_issue_with_a_lock
+    title_falls_back_to_the_clone_name
+    title_keeps_other_keys
+    title_rerun_and_worktree
+    title_follows_the_lock_on_a_rerun
+    title_leaves_malformed_settings_alone
 )
 
 for current in "${cases[@]}"; do
