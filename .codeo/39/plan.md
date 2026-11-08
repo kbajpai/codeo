@@ -64,6 +64,14 @@ Calls I am making unless you say otherwise:
 - **Tests** follow the two files that already exist: new cases in `tests/board.test.sh` against its `gh` stub (a logical key with `statuses: {}`, a configured key winning, the no-option `set` making no add, the failed write undoing a fresh add), new cases in `tests/overlap.test.sh` (Q3), and new `must_contain` pins in `tests/plan-skill.test.sh` for the reworded step 10.
 - **The installed plugin is v1.0.3**, so this workflow's own later steps run the old rule; the fix reaches the pipeline at the next release.
 
+### Footprint
+
+```
+files:      scripts/board.sh, tests/board.test.sh, tests/overlap.test.sh, tests/plan-skill.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, docs/handoff.md, docs/dossier.md, CHANGELOG.md, docs/plans/2026-11-08-board-keys-and-footprint-union.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
