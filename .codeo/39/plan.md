@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Read `init.md` and `issue.md`, `scripts/board.sh`, `scripts/overlap.sh`, `scripts/inflight.sh`, `scripts/dossier-check.sh`, `skills/plan/SKILL.md` step 10, `docs/dossier.md` and `docs/handoff.md`, and the tests that cover them (`tests/board.test.sh`, `tests/overlap.test.sh`, `tests/plan-skill.test.sh`). Nothing else is in flight (`inflight.sh --except 39`: none). Three questions raised, each a design choice with a recommendation; the plan is drafted once they are answered.
+Round 1. Q1-Q3 are answered (all recommendations accepted). The plan is drafted at `.codeo/39/plan-draft.md` and awaits the engineer's review; the plan file under `docs/plans/` is written only after approval. One detail moved from Q3's wording: the `--outside` check runs after the earlier footprint block is replaced (sub-step 4), because `overlap.sh` reads every block.
 
 What the code does today, as far as the two defects go:
 
@@ -28,6 +28,7 @@ What the code does today, as far as the two defects go:
 - *Both:* the script defaults the keys and triage passes names anyway. Belt and braces; the second half is then dead weight.
 
 **Answer:**
+Accepted the recommendation (the engineer, in the conversation: "I accept all your recommendations"): the script defaults the five keys; a configured `board.statuses` entry still wins.
 
 ### Q2 — How does a failed `set` leave the card as it was: by checking before it adds, by undoing a fresh add, or both?
 
@@ -39,6 +40,7 @@ What the code does today, as far as the two defects go:
 - *Undo only:* keep today's order and delete the fresh card whenever its write is skipped or fails. Every no-option `set` then makes two `gh` writes to end where it started; checking first is cheaper and clearer.
 
 **Answer:**
+Accepted the recommendation (same words): check each project's options before adding, and delete a fresh add whose write fails.
 
 ### Q3 — What makes a re-planned footprint the union: the planning rule with a mechanical check, or the scripts reading every round's block?
 
@@ -50,6 +52,7 @@ What the code does today, as far as the two defects go:
 - *The rule alone, no check:* say "union" in the skill and the docs and trust the planner. Cheapest, and exactly what the replace rule relied on; the check is what makes this a fix rather than a rewording.
 
 **Answer:**
+Accepted the recommendation (same words): one block that covers the branch, checked with `overlap.sh --outside <N>` at step 10 sub-step 1; the scripts are unchanged.
 
 ## Notes
 
@@ -68,3 +71,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-08 — Q1-Q3 raised · cost: 4m · fable-5-1 101k in + 806k cached / 14k out
+- 2026-11-08 — Q1-Q3 answered; plan drafted at .codeo/39/plan-draft.md, awaiting review · cost: 11m · fable-5-1 109k in + 1.2M cached / 16k out · sonnet-5-5 176k in + 777k cached / 17k out
