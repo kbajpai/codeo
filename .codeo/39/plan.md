@@ -64,19 +64,32 @@ Calls I am making unless you say otherwise:
 - **Tests** follow the two files that already exist: new cases in `tests/board.test.sh` against its `gh` stub (a logical key with `statuses: {}`, a configured key winning, the no-option `set` making no add, the failed write undoing a fresh add), new cases in `tests/overlap.test.sh` (Q3), and new `must_contain` pins in `tests/plan-skill.test.sh` for the reworded step 10.
 - **The installed plugin is v1.0.3**, so this workflow's own later steps run the old rule; the fix reaches the pipeline at the next release.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-08-board-keys-and-footprint-union.md` (left unstaged for the engineer to review and commit). Shape: an executable plan under `docs/plans/`, five tasks, each tests-first, with an options table and a Mermaid flow of `board.sh set`. No reference doc under `docs/`.
+
+**Decisions**
+- Q1: `board.sh set` defaults `ready`, `backlog`, `inProgress`, `inReview`, `done` to `Ready`, `Backlog`, `In progress`, `In review`, `Done` when `board.statuses` omits them; a configured entry wins; other strings pass through. `triage`, `init` and `close` are unchanged.
+- Q2: `set` reads each synced project's Status options before adding the issue, adds only where it will write, and deletes a card it just added if the write fails.
+- Q3: a footprint block written after a send-back covers the branch, proved with `overlap.sh --outside <N>`; the scripts are unchanged. The check runs at sub-step 4, after the old block is replaced, not at sub-step 1 as the answer said, because `overlap.sh` reads every block and the old one hides the gap until it is gone.
+
+**Options rejected:** triage passing names; both fixes together; check-first without the undo; undo without checking first; the scripts unioning every block; the rule with no check.
+
+**Documentation moved:** `docs/handoff.md` (board paragraph, send-back paragraph), `docs/dossier.md` (the footprint, send-backs), one sentence in `skills/init/SKILL.md`, and a `CHANGELOG.md` bullet. No wiki module.
+
+**Intake questions resolved:** none. **Issues filed:** none.
+
 ### Footprint
 
 ```
 files:      scripts/board.sh, tests/board.test.sh, tests/overlap.test.sh, tests/plan-skill.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, docs/handoff.md, docs/dossier.md, CHANGELOG.md, docs/plans/2026-11-08-board-keys-and-footprint-union.md
 wiki:       none
 exclusive:  none
+sequenced:  none
 ```
-
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 
 - 2026-11-08 — Q1-Q3 raised · cost: 4m · fable-5-1 101k in + 806k cached / 14k out
 - 2026-11-08 — Q1-Q3 answered; plan drafted at .codeo/39/plan-draft.md, awaiting review · cost: 11m · fable-5-1 109k in + 1.2M cached / 16k out · sonnet-5-5 176k in + 777k cached / 17k out
+- 2026-11-08 — planned: docs/plans/2026-11-08-board-keys-and-footprint-union.md · cost: 12m · fable-5-1 109k in + 1.2M cached / 16k out · sonnet-5-5 181k in + 2M cached / 21k out · engineering skills not used (no new technology choice); writing-plans structure used
