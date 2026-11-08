@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q5 are answered (all recommendations accepted). The plan is drafted at `.codeo/44/plan-draft.md` and awaits the engineer's review; the plan file under `docs/plans/` is written only after approval. No other workflow is in flight, so there is no footprint overlap to raise.
+Round 1, done. Q1-Q5 are answered and the plan is approved and saved at `docs/plans/2026-11-08-dev-container-defaults.md` (unstaged, for the engineer to review and commit). Next: `/codeo:implement`.
 
 What the code does today:
 
@@ -89,6 +89,18 @@ Calls I am making unless you say otherwise:
 - Documentation: `CHANGELOG.md` gets an entry; the start script's and `devcontainer.json`'s header comments are updated. No page under `docs/` describes the dev container, so none moves.
 - Nothing in `scripts/`, `lib/`, `hooks/` or `skills/` changes.
 
+## Outcome
+
+Plan: `docs/plans/2026-11-08-dev-container-defaults.md` (a plan under `docs/plans/`; four test-first tasks, each proved with `bash tests/run.sh devcontainer`, the last with the whole suite and shellcheck).
+
+**Decisions** (all the recommendations, "Accept All"): the start script merges `remoteControlAtStartup: true` into user-scope settings (rejected: Dockerfile merge, both); `window-title.sh` runs from the start script and a `postStartCommand`, `lock.sh` not hooked (rejected: creation only, a `lock.sh` hook); the title file is hidden through the clone's `info/exclude` (rejected: a tracked `.gitignore` line); tests cover the setting, criteria 1-2 are checked by hand after a rebuild and recorded in `qc.md` (rejected: declaring them unverifiable); the four login TODOs live in the start script (rejected: a separate `claude-login.sh`).
+
+**Intake questions resolved:** `remoteControlAtStartup` exists as a boolean setting in Claude Code 2.1.319 (found in the binary); whether user scope is what it reads is still to be seen by the engineer's manual check. `.vscode/` stays out of `git status` through `info/exclude`. The image does not bake the plugins or update channel into `settings.json` (the plugins come from `plugins.sh`), so the merge must keep whatever is in the file.
+
+**Documentation:** `CHANGELOG.md` only; no page under `docs/` describes the dev container and there is no wiki module.
+
+No overlap with another workflow (none in flight); no exclusive resources.
+
 ### Footprint
 
 ```
@@ -101,3 +113,4 @@ exclusive:  none
 
 - 2026-11-08 — plan round 1: Q1-Q5 raised · cost: unavailable
 - 2026-11-08 — Q1-Q5 answered (accept all); plan drafted at plan-draft.md, awaiting approval
+- 2026-11-08 — planned: docs/plans/2026-11-08-dev-container-defaults.md · cost: 24m · sonnet-5-5 71k in + 2.6M cached / 21k out; superpowers:writing-plans used, engineering skills not used (not a new-component design)
