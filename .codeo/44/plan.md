@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q5 are open; no plan is drafted. No other workflow is in flight, so there is no footprint overlap to raise.
+Round 1. Q1-Q5 are answered (all recommendations accepted). The plan is drafted at `.codeo/44/plan-draft.md` and awaits the engineer's review; the plan file under `docs/plans/` is written only after approval. No other workflow is in flight, so there is no footprint overlap to raise.
 
 What the code does today:
 
@@ -32,6 +32,7 @@ What the code does today:
 - *Both:* belt and braces; the second half is dead weight.
 
 **Answer:**
+Accepted the recommendation (the engineer: "Accept All"): the start script merges `remoteControlAtStartup: true` into the user-scope settings file.
 
 ### Q2 — How is the window title kept right when the lock is taken after the container starts?
 
@@ -43,6 +44,7 @@ What the code does today:
 - *Creation only:* simplest, but the title stays `[home]` in every container that later takes a lock, which defeats the point of the issue.
 
 **Answer:**
+Accepted the recommendation (same words): `window-title.sh` runs from the start script and from a `postStartCommand`; `lock.sh` is not hooked.
 
 ### Q3 — How is `.vscode/settings.json` kept out of `git status`?
 
@@ -53,6 +55,7 @@ What the code does today:
 - *A line in the tracked `.gitignore`:* `.vscode/` for everyone. One more tracked change in this PR, and it hides `.vscode/` for people who do not use the dev container too.
 
 **Answer:**
+Accepted the recommendation (same words): the clone's `info/exclude`, resolved with `git rev-parse --git-path`.
 
 ### Q4 — How do we prove "a session is listed in claude.ai/code" (criteria 1 and 2)?
 
@@ -63,6 +66,7 @@ What the code does today:
 - *Test the setting only and declare 1 and 2 unverifiable:* same tests, no manual step; `qc` would carry the two criteria as open.
 
 **Answer:**
+Accepted the recommendation (same words): tests cover the setting; criteria 1 and 2 are checked by hand after a rebuild and recorded in `qc.md`.
 
 ### Q5 — Which environment and login states raise a TODO?
 
@@ -73,6 +77,7 @@ What the code does today:
 - *A separate `claude-login.sh`, as the reference project has:* the same checks in their own script the start script calls. Easier to test alone, one more file to maintain, and a second place that runs `claude`.
 
 **Answer:**
+Accepted the recommendation (same words): four TODO checks inside the start script, no new file.
 
 ## Notes
 
@@ -87,3 +92,4 @@ Calls I am making unless you say otherwise:
 ## Log
 
 - 2026-11-08 — plan round 1: Q1-Q5 raised · cost: unavailable
+- 2026-11-08 — Q1-Q5 answered (accept all); plan drafted at plan-draft.md, awaiting approval
