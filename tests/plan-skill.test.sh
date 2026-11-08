@@ -29,6 +29,9 @@ must_contain 'the round names the qc round on the next line' 'with the date as i
 must_contain 'the new footprint replaces the old' 'naming the `qc.md` round it answers. The new `### Footprint` replaces the earlier round'\''s:'
 must_contain 'moving it removes the old block' 'moving it out of `## Notes` to end the new round removes the old block, because'
 must_contain 'the one sanctioned edit of an answered round' 'That removal is the one edit an answered round ever takes'
+must_contain 'a block written after a send-back covers the branch' 'A block written after a send-back covers the branch, not only this round'
+must_contain 'the outside check adds every path to files' 'run `overlap.sh --outside <N>` and add every path it prints to `files:` before committing'
+must_contain 'the pair check runs again after an addition' 'run `overlap.sh <N>` again if you added any'
 
 if ((failures)); then
     echo "$failures case(s) failed"

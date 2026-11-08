@@ -289,9 +289,9 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
    has claimed the branch, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-add <N>`
    — when it was not, the `## Outcome` already says so and there is nothing left to call. Finally,
    with a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$IN_PROGRESS"` — the card
-   move is the claim as the board shows it, as the assignee is on the issue. It adds the issue to
-   every synced project (`board.projects` plus the gate project) it is missing from, and sets the
-   Status on each of them that has the option, leaving a card on any other project alone, printing one `board.sh: #<N> <old> → <new> on #<project> <title>`
+   move is the claim as the board shows it, as the assignee is on the issue. It sets the Status
+   on every synced project (`board.projects` plus the gate project) whose board has the option,
+   adding the issue there first when it is missing, leaving a card on any other project alone, printing one `board.sh: #<N> <old> → <new> on #<project> <title>`
    line per project written. Quote those lines in this turn's output. The dossier is pushed by
    now, so the outcome (those lines, or the failure the script reports) is reported here and at
    step 10, not in the `## Log` line. A failure here (refused in a web session, or a missing

@@ -237,6 +237,11 @@ sequenced:  after #7 — both add an Orders migration (Q6)
 - `sequenced` — only when an overlap question was answered that way: which issue this waits for,
   why, and the question that decided it.
 
+A block written after a send-back covers the branch, not only the round: its `files` carry the
+round's own paths plus every earlier path the branch still changes. `overlap.sh --outside <N>`
+prints the paths the branch changes that the file's blocks do not cover, and the plan adds each
+one before the block is committed.
+
 A key with nothing under it says `none` rather than disappearing, so a missing line means the
 plan never looked, not that it found nothing.
 
@@ -261,8 +266,9 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
   carries one: `close.md`'s `— pull request opened` round writes none, even after a
   `— conflicts with <base>` round from before the pull request existed. A send-back to
   `/codeo:plan` adds a round to `plan.md` like any other receiving step (`handoff.md` →
-  *A send-back*), and its `### Footprint` replaces the earlier round's block — the one edit an
-  answered round takes, because `overlap.sh` and `inflight.sh` read every block in the file.
+  *A send-back*), and its `### Footprint` replaces the earlier round's block and covers everything the
+  branch still changes — the one edit an answered round takes, because `overlap.sh` and
+  `inflight.sh` read every block in the file.
 - **Criteria.** Each `qc.md` round maps every acceptance criterion — one per `- [ ]` line in
   `init.md`'s `## Outcome` — in a table, one row per criterion. The verdict cell begins with one of
   `met`, `not met`, `untestable` or `not yet checkable`: a prefix match, after which any text may

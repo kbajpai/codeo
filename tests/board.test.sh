@@ -64,6 +64,12 @@ case "$1 ${2:-}" in
             exit 1
         fi
         echo '{}' ;;
+    "project item-delete")
+        if [[ -n ${GH_STUB_DELETE_FAILS:-} && $3 == "$GH_STUB_DELETE_FAILS" ]]; then
+            echo "gh: could not delete" >&2
+            exit 1
+        fi
+        echo '{}' ;;
     *) echo "unexpected gh call: $*" >&2; exit 2 ;;
 esac
 STUB
@@ -220,6 +226,36 @@ GH_STUB_FIELDS_FAIL=1 GH_STUB_ROWS="$P1\n$P2" run set 7 "In progress"
 grep -q -- "item-edit --id ITEM_2 --project-id PROJ_2" "$GH_STUB_LOG" || fail "a failed field lookup on #1 still writes #2"
 ! grep -q -- "--project-id PROJ_1" "$GH_STUB_LOG" || fail "the project whose field lookup failed was written"
 
+# A project without the option is probed before anything is added to it: no card is created just
+# to be skipped.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[9],"gateProject":9,"statuses":{}}}' > "$config"
+GH_STUB_ROWS="$url\t\t\t\t" run set 7 Blocked
+[[ $rc -ne 0 ]] || fail "no-option-no-add: rc=$rc"
+[[ $err == *"project #9 PROJ_9 has no option 'Blocked' — skipped"* ]] || fail "no-option-no-add names the project: err=$err"
+! grep -q "item-add" "$GH_STUB_LOG" || fail "no-option-no-add added the issue"
+! grep -q "item-edit" "$GH_STUB_LOG" || fail "no-option-no-add edited"
+
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[2,9],"gateProject":2,"statuses":{}}}' > "$config"
+GH_STUB_ROWS="$P2" run set 7 "In progress"
+[[ $rc -eq 0 ]] || fail "no-option-keeps-others: rc=$rc err=$err"
+! grep -q "item-add 9" "$GH_STUB_LOG" || fail "no-option-keeps-others added to #9"
+grep -q -- "item-edit --id ITEM_2" "$GH_STUB_LOG" || fail "no-option-keeps-others did not write #2"
+printf '%s\n' "$with_board" > "$config"
+
+# A card this run added is removed again when its write fails; one that was already there is kept.
+GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$url\t\t\t\t" run set 7 Ready
+[[ $rc -ne 0 ]] || fail "undo-fresh-add: rc=$rc"
+grep -q "project item-delete 1 --owner acme --id ITEM_NEW" "$GH_STUB_LOG" || fail "undo-fresh-add did not remove the card"
+! grep -q "item-delete 2" "$GH_STUB_LOG" || fail "undo-fresh-add removed #2's card"
+grep -q -- "item-edit .*PROJ_2" "$GH_STUB_LOG" || fail "undo-fresh-add did not write #2"
+
+GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$P1\n$P2" run set 7 "In progress"
+[[ $rc -ne 0 ]] || fail "keep-existing-card: rc=$rc"
+! grep -q "item-delete" "$GH_STUB_LOG" || fail "keep-existing-card removed a card it did not add"
+
+GH_STUB_DELETE_FAILS=1 GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$url\t\t\t\t" run set 7 Ready
+[[ $rc -ne 0 && $err == *"remove item ITEM_NEW by hand"* ]] || fail "undo-fails: rc=$rc err=$err"
+
 GH_STUB_ROWS="$P2" run set 7 Blocked
 [[ $rc -ne 0 && $err == *"has the option 'Blocked'"* && $err == *"In progress"* ]] || fail "unknown option: rc=$rc err=$err"
 ! grep -q "item-edit" "$GH_STUB_LOG" || fail "unknown option still edited the item"
@@ -266,6 +302,27 @@ printf '%s\n' "$with_board" > "$config"
 printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[2],"gateProject":2,"statuses":{"inProgress":"In progress"}}}' > "$config"
 GH_STUB_ROWS="$P2" run set 7 inProgress
 [[ $rc -eq 0 && $out == *"Ready → In progress on #2"* ]] || fail "a logical status resolves to the configured name: rc=$rc out=$out err=$err"
+printf '%s\n' "$with_board" > "$config"
+
+# The five conventional keys work with no board.statuses entry at all (with_board's map is empty).
+GH_STUB_ROWS="$P2" run set 7 backlog
+[[ $rc -eq 0 && $out == *"Ready → Backlog on #2"* ]] || fail "backlog without statuses: rc=$rc out=$out err=$err"
+grep -q -- "--single-select-option-id O_BACKLOG" "$GH_STUB_LOG" || fail "backlog did not write O_BACKLOG"
+GH_STUB_ROWS="${P2//Ready/Backlog}" run set 7 ready
+[[ $rc -eq 0 && $out == *"Backlog → Ready on #2"* ]] || fail "ready without statuses: rc=$rc out=$out err=$err"
+grep -q -- "--single-select-option-id O_READY" "$GH_STUB_LOG" || fail "ready did not write O_READY"
+for pair in "inProgress:In progress:O_PROG" "inReview:In review:O_REVIEW" "done:Done:O_DONE"; do
+    IFS=: read -r key name opt <<<"$pair"
+    GH_STUB_ROWS="$P2" run set 7 "$key"
+    [[ $rc -eq 0 && $out == *"Ready → $name on #2"* ]] || fail "$key without statuses: rc=$rc out=$out err=$err"
+    grep -q -- "--single-select-option-id $opt" "$GH_STUB_LOG" || fail "$key did not write $opt"
+done
+
+# A configured entry beats the default.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[9],"gateProject":9,"statuses":{"inProgress":"Doing"}}}' > "$config"
+GH_STUB_ROWS="$url\tITEM_9\tTodo\t9\tOther" run set 7 inProgress
+[[ $rc -eq 0 && $out == *"Todo → Doing on #9 Other"* ]] || fail "configured-wins: rc=$rc out=$out err=$err"
+grep -q -- "--single-select-option-id O_DOING" "$GH_STUB_LOG" || fail "configured-wins did not write O_DOING"
 printf '%s\n' "$with_board" > "$config"
 
 # A board without board.projects is just its gate project, and says nothing about the absent key.

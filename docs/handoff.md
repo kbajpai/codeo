@@ -115,12 +115,15 @@ it.
   only a **Ready** issue — read on `board.gateProject`, and marked by `/codeo:triage` on the
   engineer's answer — and moves it to **In progress**.
   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh"` is the only thing that reads or writes it: `set`
-  writes each synced project whose Status has the option, first adding the issue to each synced
-  project it is missing from, so the boards stay in step. The synced set is `board.projects[]` plus
+  writes each synced project whose Status has the option, adding the issue only to a project whose
+  Status has the option, and removing the card again if the write fails after the add (a failed
+  removal is reported with the item to remove by hand). The synced set is `board.projects[]` plus
   `board.gateProject`; a card the issue has on any other project is left as it is, without a line,
   so a project retired from the list stops being stamped. A status is named by its
-  key in `board.statuses` (below), which maps it to the board's own option name; a name that is not
-  a key passes through. Every transition moves the card, each write part of its step and never a
+  key in `board.statuses` (below), which maps it to the board's own option name; the keys `ready`,
+  `backlog`, `inProgress`, `inReview` and `done` default to `Ready`, `Backlog`, `In progress`,
+  `In review` and `Done` when the map leaves them out, a configured entry wins, and any other name
+  passes through. Every transition moves the card, each write part of its step and never a
   gate on it — a failure is reported with what to do by hand, in the skill's `## Log` line as
   `board: failed — <reason>` (except `init`, whose dossier is already pushed when the card moves;
   it reports the failure in the turn), and the step carries on. Where the GraphQL it needs is refused (a
@@ -296,7 +299,8 @@ The receiving step opens a new round in its own dossier rather than editing the 
 already answered, so the file shows what the send-back changed. One edit is sanctioned: a
 `plan.md` round answering a send-back replaces the earlier round's `### Footprint` block with its
 own, since `overlap.sh` and `inflight.sh` read every block and a stale one goes on producing
-overlaps. A send-back returns to the sender
+overlaps. The replacing block carries the earlier round's files too, so it covers the whole
+branch. A send-back returns to the sender
 once the receiving step is done, and the pass then runs again in full. Re-checking only the part
 that changed is how a regression ships.
 
