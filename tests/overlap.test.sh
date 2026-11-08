@@ -278,6 +278,27 @@ case_desc="a none footprint against a literal pairs nothing"
 clone=$(SC_APART=1 SC_A_FILES='none' scenario 'Clips/New/Thing.cs')
 assert_eq "lines" "9${tab}exclusive:terraform" "$(run "$clone" 7)"
 
+# two_block_plan <clone> <files1> <files2> — issue 7's plan.md with two `### Footprint` blocks, committed.
+two_block_plan() {
+    printf '# Plan\n\n## Notes\n\n### Footprint\n\n```\nfiles:      %s\nwiki:       none\nexclusive:  terraform\n```\n\n### Footprint\n\n```\nfiles:      %s\nwiki:       none\nexclusive:  terraform\n```\n' \
+        "$2" "$3" > "$1/.codeo/7/plan.md"
+    git -C "$1" add .codeo
+    git -C "$1" commit -q -m "two blocks"
+}
+
+case_desc="replaced-block: round 2 alone leaves round 1's path outside"
+clone=$(SC_A_FILES='Terraform/**' scenario none)
+assert_eq "lines" "Clips/Endpoints/Health.cs" "$(run "$clone" --outside 7)"
+
+case_desc="union-block: a block naming both rounds leaves nothing outside"
+clone=$(SC_A_FILES='Terraform/**, Clips/Endpoints/Health.cs' scenario none)
+assert_eq "lines" "" "$(run "$clone" --outside 7)"
+
+case_desc="both-blocks: two footprint blocks give the union"
+clone=$(scenario none)
+two_block_plan "$clone" 'Terraform/**' 'Clips/Endpoints/Health.cs'
+assert_eq "lines" "" "$(run "$clone" --outside 7)"
+
 case_desc="nothing in flight"
 origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
 git -C "$origin" -c init.defaultBranch=main init -q
