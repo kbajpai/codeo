@@ -1,11 +1,11 @@
-# Issue new-skills-doc-accuracy — issue
+# Issue #41 — issue
 
 Filed from triage 2026-11-08 Q7 (`.codeo/intake/triage/2026-11-08.md`).
 
 ## Questions
 
 ### Q1 — Approve the draft as written?
-**Answer:** _open_
+**Answer:** approved as recommended.
 
 ## Draft
 
