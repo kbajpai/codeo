@@ -883,6 +883,18 @@ session_title_escapes_the_codename() {
     [[ $(st_title) == 'co"de\o [home]'* ]] || fail "title '$(st_title)'"
 }
 
+session_title_hooks_are_registered() {
+    local f=$repo/.claude/settings.json
+    local cmd='bash "${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh"' hook
+    hook="$(jq -cn --arg c "$cmd" '{type:"command",command:$c,timeout:10}')"
+    jq -e '.enabledPlugins["codeo@codeo"] == true' "$f" >/dev/null || fail "codeo plugin not enabled"
+    jq -e '.hooks | keys == ["SessionStart","UserPromptSubmit"]' "$f" >/dev/null || fail "hook events differ"
+    jq -e --argjson hook "$hook" '.hooks.SessionStart == [{matcher:"startup|resume|fork", hooks:[$hook]}]' "$f" >/dev/null \
+        || fail "SessionStart hook differs"
+    jq -e --argjson hook "$hook" '.hooks.UserPromptSubmit == [{hooks:[$hook]}]' "$f" >/dev/null \
+        || fail "UserPromptSubmit hook differs"
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
@@ -939,6 +951,7 @@ cases=(
     session_title_is_silent_on_bad_input
     session_title_is_silent_when_the_title_script_fails
     session_title_escapes_the_codename
+    session_title_hooks_are_registered
 )
 
 for current in "${cases[@]}"; do
