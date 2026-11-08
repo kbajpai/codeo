@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q3 raised; the plan is drafted once they are answered.
+Round 1. Q1-Q3 answered (all three recommendations accepted); the plan is being drafted.
 
 What the code and Claude Code do today:
 
@@ -58,6 +58,7 @@ makes into `${CLAUDE_CONFIG_DIR}/settings.json` that exists only inside a contai
 - *Both:* two registrations run the hook twice; the second is dead weight.
 
 **Answer:**
+Accepted the recommendation (the engineer picked it in the conversation): the tracked `.claude/settings.json`.
 
 ### Q2 — How is `/clear` covered, given `SessionStart`'s `sessionTitle` applies to `startup`, `resume` and `fork` only?
 
@@ -77,6 +78,8 @@ reference project registered it, would leave `/clear` sessions untitled on 2.1.3
   change; contradicts the current docs, so it most likely comes back as a send-back on criterion 3.
 
 **Answer:**
+Accepted the recommendation (picked in the conversation): `SessionStart` on `startup|resume|fork` plus
+`UserPromptSubmit`, one script, setting a title only when stdin carries no `session_title`.
 
 ### Q3 — Where does the hook script live, and how does it get the title text?
 
@@ -98,6 +101,8 @@ container's own code.
   stdin.
 
 **Answer:**
+Accepted the recommendation (picked in the conversation): `.devcontainer/scripts/session-title.sh`, calling
+`window-title.sh --print`.
 
 ## Notes
 
