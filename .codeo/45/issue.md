@@ -9,7 +9,7 @@
 ## Where this stands
 
 Follow-up split out of #44 at the engineer's request ("Yes, please go ahead"). Everything needed was
-read from RoadMaster's `.claude/hooks/session-title.sh` during #44's pass, so there are no open
+read from the reference project's `.claude/hooks/session-title.sh` during #44's pass, so there are no open
 questions. Draft below awaits approval.
 
 ## Questions
@@ -18,7 +18,7 @@ None open.
 
 ## Notes
 
-- Scope, title format and hook mechanics are as described in the draft; RoadMaster's hook registers on
+- Scope, title format and hook mechanics are as described in the draft; the reference hook registers on
   `SessionStart` for `startup|resume|clear`, exits 0 on any failure, skips a session that already has a
   title, and only acts when `REMOTE_CONTAINERS=true`.
 - Depends on #44's `container-name.sh`-style script (one source for window and session titles).
@@ -65,6 +65,6 @@ title they can't be told apart.
 
 ### Reference
 - Depends on #44.
-- RoadMaster (`sarathi-vl/roadmaster`, private): `.claude/hooks/session-title.sh` and its `SessionStart`
-  registration in `.claude/settings.json`; README "Remote Control and titles".
+- A private reference project: its session-title hook and its `SessionStart` registration.
+
 - 2026-11-08 — draft approved; filed as #45
