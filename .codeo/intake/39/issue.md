@@ -1,11 +1,11 @@
-# Issue new-codeo-tooling-fixes — issue
+# Issue #39 — issue
 
 Filed from triage 2026-11-08 Q1 + Q4 (`.codeo/intake/triage/2026-11-08.md`).
 
 ## Questions
 
 ### Q1 — Group `board.sh` key handling and the plan footprint rule in one issue?
-They are unrelated code (`scripts/board.sh` vs the plan skill / `overlap.sh`), but both are small codeo-tooling defects found while using the pipeline. **Recommended:** one issue, two requirements. Alternative: two issues. **Answer:** _open_
+They are unrelated code (`scripts/board.sh` vs the plan skill / `overlap.sh`), but both are small codeo-tooling defects found while using the pipeline. **Recommended:** one issue, two requirements. Alternative: two issues. **Answer:** approved as recommended.
 
 ## Draft
 
