@@ -64,6 +64,12 @@ case "$1 ${2:-}" in
             exit 1
         fi
         echo '{}' ;;
+    "project item-delete")
+        if [[ -n ${GH_STUB_DELETE_FAILS:-} && $3 == "$GH_STUB_DELETE_FAILS" ]]; then
+            echo "gh: could not delete" >&2
+            exit 1
+        fi
+        echo '{}' ;;
     *) echo "unexpected gh call: $*" >&2; exit 2 ;;
 esac
 STUB
@@ -219,6 +225,36 @@ GH_STUB_FIELDS_FAIL=1 GH_STUB_ROWS="$P1\n$P2" run set 7 "In progress"
 [[ $err == *"#1"* && $err == *"Could not resolve to a ProjectV2"* ]] || fail "a failed field lookup names the project and the reason: err=$err"
 grep -q -- "item-edit --id ITEM_2 --project-id PROJ_2" "$GH_STUB_LOG" || fail "a failed field lookup on #1 still writes #2"
 ! grep -q -- "--project-id PROJ_1" "$GH_STUB_LOG" || fail "the project whose field lookup failed was written"
+
+# A project without the option is probed before anything is added to it: no card is created just
+# to be skipped.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[9],"gateProject":9,"statuses":{}}}' > "$config"
+GH_STUB_ROWS="$url\t\t\t\t" run set 7 Blocked
+[[ $rc -ne 0 ]] || fail "no-option-no-add: rc=$rc"
+[[ $err == *"project #9 PROJ_9 has no option 'Blocked' — skipped"* ]] || fail "no-option-no-add names the project: err=$err"
+! grep -q "item-add" "$GH_STUB_LOG" || fail "no-option-no-add added the issue"
+! grep -q "item-edit" "$GH_STUB_LOG" || fail "no-option-no-add edited"
+
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[2,9],"gateProject":2,"statuses":{}}}' > "$config"
+GH_STUB_ROWS="$P2" run set 7 "In progress"
+[[ $rc -eq 0 ]] || fail "no-option-keeps-others: rc=$rc err=$err"
+! grep -q "item-add 9" "$GH_STUB_LOG" || fail "no-option-keeps-others added to #9"
+grep -q -- "item-edit --id ITEM_2" "$GH_STUB_LOG" || fail "no-option-keeps-others did not write #2"
+printf '%s\n' "$with_board" > "$config"
+
+# A card this run added is removed again when its write fails; one that was already there is kept.
+GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$url\t\t\t\t" run set 7 Ready
+[[ $rc -ne 0 ]] || fail "undo-fresh-add: rc=$rc"
+grep -q "project item-delete 1 --owner acme --id ITEM_NEW" "$GH_STUB_LOG" || fail "undo-fresh-add did not remove the card"
+! grep -q "item-delete 2" "$GH_STUB_LOG" || fail "undo-fresh-add removed #2's card"
+grep -q -- "item-edit .*PROJ_2" "$GH_STUB_LOG" || fail "undo-fresh-add did not write #2"
+
+GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$P1\n$P2" run set 7 "In progress"
+[[ $rc -ne 0 ]] || fail "keep-existing-card: rc=$rc"
+! grep -q "item-delete" "$GH_STUB_LOG" || fail "keep-existing-card removed a card it did not add"
+
+GH_STUB_DELETE_FAILS=1 GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$url\t\t\t\t" run set 7 Ready
+[[ $rc -ne 0 && $err == *"remove item ITEM_NEW by hand"* ]] || fail "undo-fails: rc=$rc err=$err"
 
 GH_STUB_ROWS="$P2" run set 7 Blocked
 [[ $rc -ne 0 && $err == *"has the option 'Blocked'"* && $err == *"In progress"* ]] || fail "unknown option: rc=$rc err=$err"

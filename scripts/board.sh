@@ -18,9 +18,11 @@
 #       configured under board.statuses for it, else its conventional default (Ready, Backlog,
 #       In progress, In review, Done), on each synced
 #       project (board.projects plus the gate project) that has that option, one line per project
-#       written; a synced project without the option is skipped with a line on stderr. The issue
-#       is first added to each synced project it is missing from, so `status` finds it where init
-#       gates. A card the issue has on any other project is left exactly as it is, without a
+#       written; a synced project without the option is skipped with a line on stderr. Every
+#       project is probed for the option first, and the issue is added only to a synced project
+#       that has it and is missing it, so `status` finds it where init gates. A card this run
+#       added whose Status write then fails is removed again (one more stderr line asks for a hand
+#       removal if that fails too); a card that was already there is never removed. A card the issue has on any other project is left exactly as it is, without a
 #       line: a project retired from board.projects is not stamped. Exits non-zero in two
 #       cases. When an add, a field lookup or a write failed on some project, that project is
 #       skipped with one stderr line naming it and the reason, the others are still written, and
@@ -189,91 +191,92 @@ case $cmd in
         ;;
     set)
         want=$3
-        # Every synced project gets the issue, so the boards never disagree about whether it exists:
-        # one on neither, or only on one, is added to the rest, and the loop below sets it on all
-        # of them and on no other project it happens to be on. The title is read here because the
-        # row has none.
-        added=() failed=
+        issue_url=$url
+        # Two passes over the synced set. The probe reads, for each project, where the issue's card
+        # is and whether the project has the option; nothing is created yet, so a project that
+        # cannot take the Status never gets a card. The write pass then adds the issue where it is
+        # missing and sets the Status. The title is read from the project when the row has none.
+        declare -A item_of status_of title_of field_of option_of names_of
+        probed=() skipped_names=()
+        failed=
         for p in $synced; do
-            on=
+            item_of[$p]='' status_of[$p]='' title_of[$p]=''
             while IFS= read -r row; do
                 split_row "$row"
-                [[ ${pnum:-} == "$p" ]] && on=1
+                if [[ ${pnum:-} == "$p" && -n ${item:-} ]]; then
+                    item_of[$p]=$item status_of[$p]=${status:-} title_of[$p]=${ptitle:-}
+                fi
             done <<<"$rows"
-            [[ -z $on ]] || continue
-            split_row "${rows%%$'\n'*}"
-            # One project refusing the add must not stop the others: under set -e it would abort
-            # before the gate project, which init gates on, was added to or written. Skipped with a line
-            # naming it; `failed` makes the exit status non-zero at the end.
-            add_err=$(mktemp)
-            if ! new=$(run_gh project item-add "$p" --owner "$owner" --url "$url" --format json --jq .id 2>"$add_err") ||
-                ! ptitle=$(run_gh project view "$p" --owner "$owner" --format json --jq .title 2>>"$add_err"); then
-                echo "board.sh: could not add #$n to project #$p — skipped: $(head -n 1 "$add_err")" >&2
-                rm -f "$add_err"
+            probe_err=$(mktemp)
+            # Like a failed add or write: one project failing is reported and skipped, never allowed
+            # to abort before the others (the gate project, which init gates on); `failed` carries
+            # it to the exit.
+            if [[ -z ${item_of[$p]} ]] &&
+                ! title_of[$p]=$(run_gh project view "$p" --owner "$owner" --format json --jq .title 2>"$probe_err"); then
+                echo "board.sh: could not add #$n to project #$p — skipped: $(head -n 1 "$probe_err")" >&2
+                rm -f "$probe_err"
                 failed=1
                 continue
             fi
-            rm -f "$add_err"
-            added+=("$p")
-            # An issue on no project has one empty row, which the new row replaces.
-            if [[ -z ${item:-} ]]; then rows=; fi
-            rows+="${rows:+$'\n'}$url"$'\t'"$new"$'\t\t'"$p"$'\t'"$ptitle"
-        done
-
-        written=0 skipped_names=()
-        declare -A field_of option_of names_of
-        while IFS= read -r row; do
-            split_row "$row"
-            # The empty row of an issue on no project survives when every add failed: nothing to write.
-            [[ -n ${item:-} ]] || continue
-            # A card on a project outside the synced set is left exactly as it is: no field lookup,
-            # no write, no line. Retiring a project from board.projects is how it stops being stamped.
-            [[ " $synced " == *" $pnum "* ]] || continue
             # The option ids come from each project itself rather than being pinned here, so
             # renaming or reordering columns on GitHub cannot leave this script writing a stale id.
-            if [[ -z ${names_of[$pnum]+x} ]]; then
-                # Like a failed add or write: reported, skipped, never allowed to abort before the
-                # other boards (the gate project, which init gates on) are written; `failed` carries it to the exit.
-                field_err=$(mktemp)
-                if ! options=$(run_gh project field-list "$pnum" --owner "$owner" --format json \
-                    --jq '.fields[] | select(.name == "Status") | .id as $f | .options[] | [$f, .id, .name] | @tsv' 2>"$field_err"); then
-                    echo "board.sh: could not read the Status options of project #$pnum $ptitle — skipped: $(head -n 1 "$field_err")" >&2
-                    rm -f "$field_err"
-                    failed=1
-                    names_of[$pnum]=
-                    continue
-                fi
-                rm -f "$field_err"
-                names_of[$pnum]=
-                while IFS=$'\t' read -r f o name; do
-                    [[ -n $name ]] || continue
-                    names_of[$pnum]+="${names_of[$pnum]:+, }$name"
-                    if [[ $name == "$want" ]]; then
-                        field_of[$pnum]=$f option_of[$pnum]=$o
-                    fi
-                done <<<"$options"
-            fi
-            if [[ -z ${option_of[$pnum]:-} ]]; then
-                echo "board.sh: project #$pnum $ptitle has no option '$want' — skipped" >&2
-                skipped_names+=("${names_of[$pnum]:-none}")
+            if ! options=$(run_gh project field-list "$p" --owner "$owner" --format json \
+                --jq '.fields[] | select(.name == "Status") | .id as $f | .options[] | [$f, .id, .name] | @tsv' 2>"$probe_err"); then
+                echo "board.sh: could not read the Status options of project #$p ${title_of[$p]} — skipped: $(head -n 1 "$probe_err")" >&2
+                rm -f "$probe_err"
+                failed=1
                 continue
             fi
-            # Like a failed add: one project refusing the write is reported and skipped, never
-            # allowed to abort before the others (the gate project, which init gates on) are written.
+            rm -f "$probe_err"
+            names_of[$p]=
+            while IFS=$'\t' read -r f o name; do
+                [[ -n $name ]] || continue
+                names_of[$p]+="${names_of[$p]:+, }$name"
+                if [[ $name == "$want" ]]; then
+                    field_of[$p]=$f option_of[$p]=$o
+                fi
+            done <<<"$options"
+            if [[ -z ${option_of[$p]:-} ]]; then
+                echo "board.sh: project #$p ${title_of[$p]} has no option '$want' — skipped" >&2
+                skipped_names+=("${names_of[$p]:-none}")
+                continue
+            fi
+            probed+=("$p")
+        done
+
+        written=0
+        for p in "${probed[@]}"; do
+            item=${item_of[$p]} fresh=
+            if [[ -z $item ]]; then
+                add_err=$(mktemp)
+                if ! item=$(run_gh project item-add "$p" --owner "$owner" --url "$issue_url" --format json --jq .id 2>"$add_err"); then
+                    echo "board.sh: could not add #$n to project #$p — skipped: $(head -n 1 "$add_err")" >&2
+                    rm -f "$add_err"
+                    failed=1
+                    continue
+                fi
+                rm -f "$add_err"
+                fresh=1
+            fi
             write_err=$(mktemp)
-            if ! project_id=$(run_gh project view "$pnum" --owner "$owner" --format json --jq .id 2>"$write_err") ||
+            if ! project_id=$(run_gh project view "$p" --owner "$owner" --format json --jq .id 2>"$write_err") ||
                 ! run_gh project item-edit --id "$item" --project-id "$project_id" \
-                    --field-id "${field_of[$pnum]}" --single-select-option-id "${option_of[$pnum]}" >/dev/null 2>>"$write_err"; then
-                echo "board.sh: could not write '$want' on project #$pnum $ptitle — skipped: $(head -n 1 "$write_err")" >&2
+                    --field-id "${field_of[$p]}" --single-select-option-id "${option_of[$p]}" >/dev/null 2>>"$write_err"; then
+                echo "board.sh: could not write '$want' on project #$p ${title_of[$p]} — skipped: $(head -n 1 "$write_err")" >&2
                 rm -f "$write_err"
                 failed=1
+                # A card this run created and could not stamp is taken off again, so the board is
+                # as it was; a card that was already there is never touched.
+                if [[ -n $fresh ]] && ! run_gh project item-delete "$p" --owner "$owner" --id "$item" >/dev/null 2>&1; then
+                    echo "board.sh: could not remove the card it added to project #$p — remove item $item by hand" >&2
+                fi
                 continue
             fi
             rm -f "$write_err"
-            if [[ " ${added[*]:-} " == *" $pnum "* ]]; then old="(not on the board)"; else old=${status:-(unset)}; fi
-            echo "board.sh: #$n $old → $want on #$pnum $ptitle"
+            if [[ -n $fresh ]]; then old="(not on the board)"; else old=${status_of[$p]:-(unset)}; fi
+            echo "board.sh: #$n $old → $want on #$p ${title_of[$p]}"
             written=$((written + 1))
-        done <<<"$rows"
+        done
 
         if [[ $written -eq 0 && -z $failed ]]; then
             echo "board.sh: no project #$n is on has the option '$want' (it has: ${skipped_names[*]:-none})" >&2
