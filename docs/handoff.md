@@ -299,7 +299,8 @@ The receiving step opens a new round in its own dossier rather than editing the 
 already answered, so the file shows what the send-back changed. One edit is sanctioned: a
 `plan.md` round answering a send-back replaces the earlier round's `### Footprint` block with its
 own, since `overlap.sh` and `inflight.sh` read every block and a stale one goes on producing
-overlaps. A send-back returns to the sender
+overlaps. The replacing block carries the earlier round's files too, so it covers the whole
+branch. A send-back returns to the sender
 once the receiving step is done, and the pass then runs again in full. Re-checking only the part
 that changed is how a regression ships.
 
