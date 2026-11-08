@@ -13,8 +13,10 @@
 #       synced boards and their Status differs, one line on stderr says so; the answer is still
 #       the gate project's.
 #   board.sh set <N> <status>
-#       Sets issue N's Status to the option named <status> ("Ready", "In progress"), or to the name
-#       configured under board.statuses when <status> is one of that map's keys, on each synced
+#       Sets issue N's Status to the option named <status> ("Ready", "In progress"), or, when
+#       <status> is one of the keys ready, backlog, inProgress, inReview, done, to the name
+#       configured under board.statuses for it, else its conventional default (Ready, Backlog,
+#       In progress, In review, Done), on each synced
 #       project (board.projects plus the gate project) that has that option, one line per project
 #       written; a synced project without the option is skipped with a line on stderr. The issue
 #       is first added to each synced project it is missing from, so `status` finds it where init
@@ -116,12 +118,26 @@ case $cmd in
     set) [[ $# -eq 3 ]] || usage ;;
     *) usage ;;
 esac
-# A logical name in board.statuses ("inProgress") becomes the project's own option name; any other
-# string is already an option name and passes through.
+# The five logical keys have conventional option names, so a project that follows them needs no
+# board.statuses entry; prints the name for a key and returns 1 for any other word.
+default_status() {
+    case $1 in
+        ready) echo "Ready" ;;
+        backlog) echo "Backlog" ;;
+        inProgress) echo "In progress" ;;
+        inReview) echo "In review" ;;
+        done) echo "Done" ;;
+        *) return 1 ;;
+    esac
+}
+# A logical name resolves to its entry under board.statuses when one is configured, else to its
+# conventional default; any other string is already an option name and passes through.
 # Only a plain word is looked up, so the argument can never reshape the jq filter.
 want_arg=${3:-}
-if [[ $cmd == set && $want_arg =~ ^[A-Za-z0-9_]+$ ]] && mapped=$(codeo_cfg ".board.statuses.$want_arg"); then
-    set -- "$1" "$2" "$mapped"
+if [[ $cmd == set && $want_arg =~ ^[A-Za-z0-9_]+$ ]]; then
+    if mapped=$(codeo_cfg ".board.statuses.$want_arg") || mapped=$(default_status "$want_arg"); then
+        set -- "$1" "$2" "$mapped"
+    fi
 fi
 
 # Projects v2 is GraphQL-only, and a web session's proxy refuses GraphQL outright — the same

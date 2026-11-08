@@ -268,6 +268,27 @@ GH_STUB_ROWS="$P2" run set 7 inProgress
 [[ $rc -eq 0 && $out == *"Ready → In progress on #2"* ]] || fail "a logical status resolves to the configured name: rc=$rc out=$out err=$err"
 printf '%s\n' "$with_board" > "$config"
 
+# The five conventional keys work with no board.statuses entry at all (with_board's map is empty).
+GH_STUB_ROWS="$P2" run set 7 backlog
+[[ $rc -eq 0 && $out == *"Ready → Backlog on #2"* ]] || fail "backlog without statuses: rc=$rc out=$out err=$err"
+grep -q -- "--single-select-option-id O_BACKLOG" "$GH_STUB_LOG" || fail "backlog did not write O_BACKLOG"
+GH_STUB_ROWS="${P2//Ready/Backlog}" run set 7 ready
+[[ $rc -eq 0 && $out == *"Backlog → Ready on #2"* ]] || fail "ready without statuses: rc=$rc out=$out err=$err"
+grep -q -- "--single-select-option-id O_READY" "$GH_STUB_LOG" || fail "ready did not write O_READY"
+for pair in "inProgress:In progress:O_PROG" "inReview:In review:O_REVIEW" "done:Done:O_DONE"; do
+    IFS=: read -r key name opt <<<"$pair"
+    GH_STUB_ROWS="$P2" run set 7 "$key"
+    [[ $rc -eq 0 && $out == *"Ready → $name on #2"* ]] || fail "$key without statuses: rc=$rc out=$out err=$err"
+    grep -q -- "--single-select-option-id $opt" "$GH_STUB_LOG" || fail "$key did not write $opt"
+done
+
+# A configured entry beats the default.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[9],"gateProject":9,"statuses":{"inProgress":"Doing"}}}' > "$config"
+GH_STUB_ROWS="$url\tITEM_9\tTodo\t9\tOther" run set 7 inProgress
+[[ $rc -eq 0 && $out == *"Todo → Doing on #9 Other"* ]] || fail "configured-wins: rc=$rc out=$out err=$err"
+grep -q -- "--single-select-option-id O_DOING" "$GH_STUB_LOG" || fail "configured-wins did not write O_DOING"
+printf '%s\n' "$with_board" > "$config"
+
 # A board without board.projects is just its gate project, and says nothing about the absent key.
 printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","gateProject":2,"statuses":{}}}' > "$config"
 GH_STUB_ROWS="$P2" run set 7 "In progress"
