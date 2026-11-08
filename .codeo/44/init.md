@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Draft, awaiting the engineer's approval at the review gate. Nothing is cut or pushed yet.
+Initialized: branch pushed and claimed; lock taken. Next: `/codeo:plan`.
 
 ## Questions
 
