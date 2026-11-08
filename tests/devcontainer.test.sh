@@ -15,6 +15,9 @@
 # order, says "ready" when nothing is left, and takes ownership of a clone owned by someone else.
 # The devcontainer.json checks also cover the postStartCommand that re-runs window-title.sh (the
 # window title) on every start; the start script's login checks are the ones listed just above.
+# It also runs .devcontainer/scripts/session-title.sh against hook fixtures on stdin (home and lock titles,
+# the prompt hook, an existing title kept, silent outside a dev container and on every failure) and
+# checks that .claude/settings.json registers it.
 #
 #   bash tests/devcontainer.test.sh
 #
