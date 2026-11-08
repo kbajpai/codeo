@@ -245,7 +245,7 @@ case $cmd in
         done
 
         written=0
-        for p in "${probed[@]}"; do
+        for p in ${probed[@]+"${probed[@]}"}; do
             item=${item_of[$p]} fresh=
             if [[ -z $item ]]; then
                 add_err=$(mktemp)
