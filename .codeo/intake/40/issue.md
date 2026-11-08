@@ -1,14 +1,14 @@
-# Issue new-devcontainer-followups — issue
+# Issue #40 — issue
 
 Filed from triage 2026-11-08 Q2, Q3, Q5, Q6 (`.codeo/intake/triage/2026-11-08.md`).
 
 ## Questions
 
 ### Q1 — Include Q6 (Claude login and plugins lost on rebuild)?
-The plan chose this on purpose; the start script lists the TODO each time. **Recommended:** include it as an explicitly optional requirement (persisting `/home/dev/.claude` in a volume), so it is not lost but does not block the issue. Alternatives: leave it out (dismiss). **Answer:** _open_
+The plan chose this on purpose; the start script lists the TODO each time. **Recommended:** include it as an explicitly optional requirement (persisting `/home/dev/.claude` in a volume), so it is not lost but does not block the issue. Alternatives: leave it out (dismiss). **Answer:** approved as recommended.
 
 ### Q2 — One issue for Q2, Q3, Q5?
-**Recommended:** yes — all are small follow-ups to #36 touching `.devcontainer/`, `lib/env.sh`. **Answer:** _open_
+**Recommended:** yes — all are small follow-ups to #36 touching `.devcontainer/`, `lib/env.sh`. **Answer:** approved as recommended.
 
 ## Draft
 
