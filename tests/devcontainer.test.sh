@@ -13,6 +13,8 @@
 # Last it runs .devcontainer/scripts/devcontainer-start.sh in a scratch repo against stub gh, claude,
 # sudo and stat executables and a stub plugins.sh: it always exits 0, lists each login still to do in
 # order, says "ready" when nothing is left, and takes ownership of a clone owned by someone else.
+# The devcontainer.json checks also cover the postStartCommand that re-runs window-title.sh (the
+# window title) on every start; the start script's login checks are the ones listed just above.
 #
 #   bash tests/devcontainer.test.sh
 #
@@ -57,6 +59,11 @@ devcontainer_json_is_valid_and_runs_as_dev() {
 run_args_cap_memory_and_cpus() {
     jq -e '.runArgs == ["--memory=4g","--cpus=2"]' "$(dc_json)" >/dev/null \
         || fail 'runArgs is not ["--memory=4g","--cpus=2"]'
+}
+
+post_start_command_reruns_the_title() {
+    jq -e '.postStartCommand == "bash .devcontainer/scripts/window-title.sh || true"' "$(dc_json)" >/dev/null \
+        || fail 'postStartCommand is not "bash .devcontainer/scripts/window-title.sh || true"'
 }
 
 gh_login_is_one_named_volume() {
@@ -328,7 +335,7 @@ plugins_large_plugin_list_does_not_break_the_pipe() {
 # ds_setup <name>: a scratch git repo holding devcontainer-start.sh and a stub plugins.sh, with stub gh,
 # claude, sudo and stat first on PATH and an empty global git config. Sets ds_dir. `calls` logs every
 # stubbed gh setup-git and sudo call. A case sets STUB_* variables before ds_run: STUB_GH_RC, STUB_GH_OUT,
-# STUB_CLAUDE_RC, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO.
+# STUB_CLAUDE_RC, STUB_CLAUDE_OUT, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO.
 ds_setup() {
     local name=$1
     [[ -n $pl_root ]] || pl_root=$(mktemp -d)
@@ -337,6 +344,10 @@ ds_setup() {
     git -C "$ds_dir/repo" init -q || { fail 'git init failed'; return 1; }
     cp "$repo/.devcontainer/scripts/devcontainer-start.sh" "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" \
         || { fail 'devcontainer-start.sh is missing'; return 1; }
+    cp "$repo/.devcontainer/scripts/window-title.sh" "$ds_dir/repo/.devcontainer/scripts/window-title.sh" \
+        || { fail 'window-title.sh is missing'; return 1; }
+    mkdir -p "$ds_dir/repo/.codeo"
+    echo '{"codename":"codeo"}' > "$ds_dir/repo/.codeo/config.json"
     cat > "$ds_dir/repo/.devcontainer/scripts/plugins.sh" <<'STUB'
 #!/usr/bin/env bash
 exit "${STUB_PLUGINS_RC:-0}"
@@ -353,7 +364,10 @@ esac
 STUB
     cat > "$ds_dir/bin/claude" <<'STUB'
 #!/usr/bin/env bash
-if [[ "$1 $2" == "auth status" ]]; then exit "${STUB_CLAUDE_RC:-1}"; fi
+if [[ "$1 $2" == "auth status" ]]; then
+    printf '%s' "${STUB_CLAUDE_OUT:-}"
+    exit "${STUB_CLAUDE_RC:-1}"
+fi
 echo "stub claude: unexpected: $*" >&2; exit 1
 STUB
     cat > "$ds_dir/bin/sudo" <<'STUB'
@@ -373,7 +387,8 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 # ds_run: run the scratch start script (through $DS_REPO when set, else the repo itself); sets ds_rc, ds_out and ds_err.
 ds_run() {
     ds_rc=0
-    env PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
+    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL \
+        PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
         bash "${DS_REPO:-$ds_dir/repo}/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
@@ -557,10 +572,209 @@ start_setup_git_failure_is_a_todo() {
     n=$(ds_todos 'gh auth setup-git'); ((n == 1)) || fail "wanted one TODO naming gh auth setup-git, got $n: $ds_err"
 }
 
+# ds_ready_run: a run with every login configured (the "ready" baseline); extra STUB_* come from the caller.
+ds_ready_run() { STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run; }
+
+start_enables_remote_control() {
+    ds_setup rc || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    jq -e '.remoteControlAtStartup == true' "$ds_dir/claude/settings.json" >/dev/null \
+        || fail "remoteControlAtStartup is not true: $(cat "$ds_dir/claude/settings.json" 2>&1)"
+}
+
+start_keeps_other_settings() {
+    ds_setup keep || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    echo '{"enabledPlugins":{"a@b":true},"autoUpdatesChannel":"stable"}' > "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ds_ready_run
+    jq -e '.remoteControlAtStartup == true and .enabledPlugins["a@b"] == true and .autoUpdatesChannel == "stable"' \
+        "$ds_dir/claude/settings.json" >/dev/null || fail "keys lost: $(cat "$ds_dir/claude/settings.json")"
+}
+
+start_malformed_settings_is_a_todo() {
+    local n
+    ds_setup badjson || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '{not json' > "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/settings.json") == '{not json' ]] || fail 'malformed settings.json was changed'
+    n=$(ds_todos 'settings.json'); ((n == 1)) || fail "wanted one TODO naming settings.json, got $n: $ds_err"
+}
+
+start_fills_an_empty_settings_file() {
+    ds_setup emptyjson || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    : > "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    jq -e '.remoteControlAtStartup == true' "$ds_dir/claude/settings.json" >/dev/null \
+        || fail "an empty settings.json was not filled: '$(cat "$ds_dir/claude/settings.json" 2>&1)'"
+    [[ $(ds_todos 'settings.json') == 0 ]] || fail "unexpected TODO naming settings.json: $ds_err"
+}
+
+start_writes_the_title() {
+    local n
+    ds_setup title || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_ready_run
+    [[ $(jq -r '.["window.title"]' "$ds_dir/repo/.vscode/settings.json" 2>&1) == 'codeo [home]' ]] \
+        || fail "no home title: $(cat "$ds_dir/repo/.vscode/settings.json" 2>&1)"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$ds_dir/repo/.devcontainer/scripts/window-title.sh"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'window-title.sh'); ((n == 1)) || fail "wanted one TODO naming window-title.sh, got $n: $ds_err"
+}
+
+start_env_vars_are_todos() {
+    local n v
+    ds_setup envvars || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_ready_run
+    [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' && -z $ds_err ]] || fail "baseline not ready: $ds_out / $ds_err"
+    for v in CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL; do
+        ds_setup "env-$v" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        # ds_run clears the variables; set this one on the stub claude's way in via a wrapper env
+        ds_rc=0
+        env "$v=x" PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" \
+            GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 STUB_DIR="$ds_dir" STUB_STAT_UID="$(id -u)" \
+            STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 \
+            bash "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
+        ds_err=$(cat "$ds_dir/err")
+        ((ds_rc == 0)) || fail "$v: exit $ds_rc"
+        n=$(ds_todos "$v.*Remote Control"); ((n == 1)) || fail "$v: wanted one TODO, got $n: $ds_err"
+    done
+}
+
+start_non_claude_ai_login_is_a_todo() {
+    local n
+    ds_setup authmethod || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    STUB_CLAUDE_OUT='{"loggedIn":true,"authMethod":"api_key"}' ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'claude auth login'); ((n == 1)) || fail "api_key: wanted one TODO, got $n: $ds_err"
+    STUB_CLAUDE_OUT='{"loggedIn":true,"authMethod":"claude.ai"}' ds_ready_run
+    n=$(ds_todos 'claude auth login'); ((n == 0)) || fail "claude.ai: wanted none, got $n: $ds_err"
+}
+
+# wt_setup <name>: a scratch git repo (committed) holding the real window-title.sh and a config naming the
+# codename "codeo". Sets wt_dir, the clone's root.
+wt_setup() {
+    local name=$1
+    [[ -n $pl_root ]] || pl_root=$(mktemp -d)
+    wt_dir="$pl_root/wt-$name"
+    mkdir -p "$wt_dir/.devcontainer/scripts" "$wt_dir/.codeo"
+    git -C "$wt_dir" init -q || { fail 'git init failed'; return 1; }
+    cp "$repo/.devcontainer/scripts/window-title.sh" "$wt_dir/.devcontainer/scripts/window-title.sh" \
+        || { fail 'window-title.sh is missing'; return 1; }
+    echo '{"codename":"codeo"}' > "$wt_dir/.codeo/config.json"
+    git -C "$wt_dir" add -A
+    git -C "$wt_dir" -c user.name=Dev -c user.email=dev@example.com commit -q -m fixture \
+        || { fail 'git commit failed'; return 1; }
+}
+
+# wt_run [args]: runs window-title.sh from $wt_dir (or $wt_clone when set). Sets wt_rc, wt_out, wt_err.
+wt_run() {
+    local root=${wt_clone:-$wt_dir} errf
+    errf=$(mktemp -p "$pl_root")
+    wt_rc=0
+    wt_out=$(bash "$root/.devcontainer/scripts/window-title.sh" "$@" 2>"$errf") || wt_rc=$?
+    wt_err=$(<"$errf")
+}
+
+wt_title() { jq -r '.["window.title"]' "$1/.vscode/settings.json"; }
+
+title_is_home_without_a_lock() {
+    wt_setup home || return 0
+    wt_run --print
+    [[ $wt_out == 'codeo [home]' ]] || fail "--print gave '$wt_out'"
+    wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail 'settings.json lacks window.title "codeo [home]"'
+}
+
+title_names_the_issue_with_a_lock() {
+    wt_setup lock || return 0
+    printf 'issue:   44\nbranch: feat/x\nstarted: now\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "--print gave '$wt_out'"
+}
+
+title_falls_back_to_the_clone_name() {
+    wt_setup fallback || return 0
+    echo '{}' > "$wt_dir/.codeo/config.json"
+    wt_run --print
+    [[ $wt_out == 'wt-fallback [home]' ]] || fail "--print gave '$wt_out'"
+}
+
+title_keeps_other_keys() {
+    wt_setup keys || return 0
+    mkdir -p "$wt_dir/.vscode"
+    echo '{"editor.tabSize": 2}' > "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    jq -e '.["editor.tabSize"] == 2 and .["window.title"] == "codeo [home]"' "$wt_dir/.vscode/settings.json" >/dev/null \
+        || fail 'the seeded key was lost or the title is missing'
+}
+
+title_rerun_and_worktree() {
+    local n wtree
+    wt_setup rerun || return 0
+    wt_run; wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    n=$(grep -cxF '.vscode/settings.json' "$(git -C "$wt_dir" rev-parse --path-format=absolute --git-path info/exclude)" || true)
+    ((n == 1)) || fail "exclude has the entry $n times"
+    [[ -z $(git -C "$wt_dir" status --porcelain) ]] || fail 'git status is not clean'
+    wtree="$pl_root/wt-rerun-tree"
+    git -C "$wt_dir" worktree add -q "$wtree" -b other || { fail 'git worktree add failed'; return 0; }
+    wt_clone=$wtree wt_run
+    ((wt_rc == 0)) || fail "worktree: exit $wt_rc: $wt_err"
+    [[ -f $wtree/.vscode/settings.json ]] || fail 'worktree: settings.json was not written'
+    [[ -z $(git -C "$wtree" status --porcelain) ]] || fail 'worktree: git status is not clean'
+    n=$(grep -cxF '.vscode/settings.json' "$(git -C "$wtree" rev-parse --path-format=absolute --git-path info/exclude)" || true)
+    ((n == 1)) || fail "worktree: exclude has the entry $n times"
+}
+
+title_follows_the_lock_on_a_rerun() {
+    wt_setup follow || return 0
+    wt_run
+    printf 'issue:   44\n' > "$wt_dir/.codeo/active"
+    wt_run
+    [[ $(wt_title "$wt_dir") == 'codeo [#44]' ]] || fail "title is '$(wt_title "$wt_dir")'"
+}
+
+title_leaves_malformed_settings_alone() {
+    wt_setup bad || return 0
+    mkdir -p "$wt_dir/.vscode"
+    printf '{not json' > "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $(<"$wt_dir/.vscode/settings.json") == '{not json' ]] || fail 'the malformed file was changed'
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
+}
+
+title_fills_an_empty_settings_file() {
+    wt_setup empty || return 0
+    mkdir -p "$wt_dir/.vscode"
+    : > "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    jq -e '.["window.title"] == "codeo [home]"' "$wt_dir/.vscode/settings.json" >/dev/null \
+        || fail "an empty settings.json was not filled: '$(cat "$wt_dir/.vscode/settings.json")'"
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
     run_args_cap_memory_and_cpus
+    post_start_command_reruns_the_title
     gh_login_is_one_named_volume
     no_bind_mounts_or_secrets
     dockerfile_is_ubuntu_2404_with_the_tools
@@ -589,6 +803,21 @@ cases=(
     start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
     start_setup_git_failure_is_a_todo
+    start_enables_remote_control
+    start_keeps_other_settings
+    start_malformed_settings_is_a_todo
+    start_fills_an_empty_settings_file
+    start_writes_the_title
+    start_env_vars_are_todos
+    start_non_claude_ai_login_is_a_todo
+    title_is_home_without_a_lock
+    title_names_the_issue_with_a_lock
+    title_falls_back_to_the_clone_name
+    title_keeps_other_keys
+    title_rerun_and_worktree
+    title_follows_the_lock_on_a_rerun
+    title_leaves_malformed_settings_alone
+    title_fills_an_empty_settings_file
 )
 
 for current in "${cases[@]}"; do

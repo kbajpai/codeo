@@ -7,6 +7,7 @@
   "runArgs": ["--memory=4g", "--cpus=2"],
   "mounts": ["source=codeo-gh,target=/home/dev/.config/gh,type=volume"],
   "postCreateCommand": "bash .devcontainer/scripts/devcontainer-start.sh",
+  "postStartCommand": "bash .devcontainer/scripts/window-title.sh || true",
   "customizations": {
     "vscode": {
       "extensions": [
