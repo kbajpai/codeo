@@ -30,6 +30,7 @@ requirement (a window-title setting). The acceptance criterion depends on which 
 (e.g. it matches what the reference project shows — say which).
 
 **Answer:**
+Literal `codeo [home]`, as RoadMaster does it: a workspace `window.title` written by the start script (engineer, after reading RoadMaster's approach).
 
 ### Q2 — "Enabled by default" for which sessions, and for whom?
 
@@ -39,6 +40,7 @@ requirement (a window-title setting). The acceptance criterion depends on which 
   (a `/codeo:setup` concern)?
 
 **Answer:**
+Every Claude Code session in the container. Scope is codeo's own dev container (assumed, not objected to). Session titles (`codeo [home] · <id>`) are a separate follow-up, not part of this issue (engineer accepted the recommendation).
 
 ### Q3 — A new issue, or fold these into #40?
 
@@ -48,6 +50,7 @@ reference #40 and #36. Two separate issues is also possible.
 **Options:** one new issue (recommended) · two new issues · add to #40.
 
 **Answer:**
+One new issue covering both points, linked to #36 and #40 (engineer accepted the recommendation).
 
 ## Notes
 
@@ -83,3 +86,58 @@ _Pending — written at filing._
 - 2026-11-08 — Q1-Q3 raised
 - 2026-11-08 — Remote Control setting recorded from the engineer's paste; Q1-Q3 still open
 - 2026-11-08 — read RoadMaster's .devcontainer (title + Remote Control); Q1 proposed answer below, Q2-Q3 still open
+
+## Draft
+
+**Title:** Dev container defaults: Remote Control on at startup and a `codeo [home]` window title
+**Type:** none (user-owned repository, `issue-types` prints nothing) · **Labels:** `enhancement`
+
+### Description
+Two defaults of codeo's dev container (#36) are wrong for the way codeo is developed. Claude Code's
+Remote Control is off in a new container, so each session needs `/remote-control` by hand. And the VS
+Code window is titled `codeo [Dev Container: codeo @ desktop-linux]` where `codeo [home]` is wanted.
+
+### Motivation / Context
+codeo is developed with codeo, in several containers at once (one per issue plus a home container).
+Remote Control on from the start lets any session be driven from claude.ai/code or the mobile app, and
+a window title that says which container this is stops two windows being mistaken for each other.
+
+### Key Requirements
+- Every interactive Claude Code session in the container (the VS Code panel and `claude` in a
+  terminal, `/clear` included) starts with Remote Control on, without running `/remote-control`.
+- Remote Control needs a claude.ai login made in the container. The container's start-up checks tell
+  the engineer when it is missing, or when `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or
+  `ANTHROPIC_BASE_URL` is set, since each stops Remote Control working.
+- The VS Code window is titled `codeo [home]` in the home container (no workflow lock), and
+  `codeo [#<N>]` in a container holding issue N's lock.
+- The title is written per clone and does not appear in `git status`.
+- Any existing user-level Claude settings (plugins, update channel) are kept.
+
+### Acceptance Criteria
+- [ ] In a freshly built container after `claude auth login`, a new Claude Code session is listed in
+      claude.ai/code without running `/remote-control`.
+- [ ] A session started with `/clear` in the same container is also listed.
+- [ ] With `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or `ANTHROPIC_BASE_URL` set, or no claude.ai
+      login, the start script reports it as a TODO and still exits 0.
+- [ ] The window title reads `codeo [home]` with no `.codeo/active`, and `codeo [#<N>]` with one.
+- [ ] Re-running the start script keeps the title right and leaves other keys in
+      `.vscode/settings.json` alone.
+- [ ] `git status` is clean after the start script has written the title.
+- [ ] `~/.claude/settings.json` still has the plugins and update channel the image set.
+- [ ] `tests/devcontainer.test.sh` covers the title and the login checks, and `bash tests/run.sh` passes.
+
+### Out of Scope
+- Naming sessions (`codeo [home] · <id>`) in claude.ai/code: a follow-up issue.
+- Setting this up for projects that use codeo (`/codeo:setup`).
+- The other items in #40.
+
+### Reference
+- Reference project (`sarathi-vl/roadmaster`, private): `.devcontainer/Dockerfile` merges
+  `remoteControlAtStartup: true` into user-level settings; `scripts/window-title.sh` and
+  `scripts/container-name.sh` write the title; `scripts/claude-login.sh` checks the login; README
+  "Remote Control and titles".
+- #36 (the dev container), #40 (follow-ups).
+- Open question for `/codeo:plan`: whether `remoteControlAtStartup` behaves the same on the Claude
+  Code version the image installs (2.1.319 here), and how `.vscode/` is kept out of `git status`
+  (codeo's `.gitignore` has no line for it).
+- 2026-11-08 — Q1-Q3 answered; draft written, awaiting approval
