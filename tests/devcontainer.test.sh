@@ -1044,7 +1044,7 @@ session_title_names_home_and_the_id() {
     st_run "$(st_json SessionStart $st_sid)"
     ((st_rc == 0)) || fail "exit $st_rc"
     [[ -z $st_err ]] || fail "stderr '$st_err'"
-    (($(wc -l <<<"$st_out") == 1)) || fail "not one line: '$st_out'"
+    [[ -n $st_out && $st_out != *$'\n'* ]] || fail "not one line: '$st_out'"
     [[ $(st_event) == SessionStart ]] || fail "event '$(st_event)'"
     [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
 }
@@ -1106,6 +1106,47 @@ session_title_escapes_the_codename() {
     st_run "$(st_json SessionStart $st_sid)"
     jq -e . <<<"$st_out" >/dev/null || fail "not valid JSON: '$st_out'"
     [[ $(st_title) == 'co"de\o [home]'* ]] || fail "title '$(st_title)'"
+}
+
+session_title_treats_a_leading_newline_as_a_title() {
+    st_setup newline || return 0
+    st_run "$(st_json UserPromptSubmit $st_sid $'\nmy name')"
+    st_silent 'leading newline'
+}
+
+session_title_replaces_its_own_title_when_the_lock_changes() {
+    st_setup own || return 0
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
+    [[ $(st_title) == 'codeo [#47] · a21b9973' ]] || fail "title '$(st_title)'"
+    rm -f "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [#47] · a21b9973')"
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
+    st_silent 'current title'
+}
+
+session_title_keeps_a_renamed_title() {
+    st_setup renamed || return 0
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name')"
+    st_silent 'renamed'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · ffffffff')"
+    st_silent "another session's id"
+}
+
+session_title_refreshes_the_window_title() {
+    st_setup window || return 0
+    local f=$st_dir/.vscode/settings.json
+    st_run "$(st_json UserPromptSubmit $st_sid)"
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [home]' ]] || fail "no lock: $(jq -r '."window.title"' "$f")"
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name')"
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [#47]' ]] || fail "lock: $(jq -r '."window.title"' "$f")"
+    rm -f "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name')"
+    st_silent 'renamed'
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [home]' ]] || fail "released: $(jq -r '."window.title"' "$f")"
 }
 
 session_title_hooks_are_registered() {
@@ -1206,6 +1247,10 @@ cases=(
     session_title_is_silent_on_bad_input
     session_title_is_silent_when_the_title_script_fails
     session_title_escapes_the_codename
+    session_title_treats_a_leading_newline_as_a_title
+    session_title_replaces_its_own_title_when_the_lock_changes
+    session_title_keeps_a_renamed_title
+    session_title_refreshes_the_window_title
     session_title_hooks_are_registered
     scripts_are_committed_executable
 )
