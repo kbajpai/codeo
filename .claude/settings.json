@@ -1,5 +1,30 @@
 {
   "enabledPlugins": {
     "codeo@codeo": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
