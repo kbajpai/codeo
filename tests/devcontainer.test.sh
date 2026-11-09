@@ -617,7 +617,9 @@ start_trusts_the_clone_once() {
     [[ "$got" == "$want" ]] || fail "safe.directory is not /elsewhere then the clone, once: $got"
 }
 
-start_finds_the_identity_in_the_git_volume_file() {
+# Pins that the start script reads whatever GIT_CONFIG_GLOBAL names; the wiring itself is pinned by
+# git_config_global_points_into_the_git_volume and volumes_hold_the_gh_login_and_the_git_config.
+start_reads_the_identity_from_the_global_config_file() {
     local n last
     ds_setup volfile || return 0
     mkdir -p "$ds_dir/home/.config/git"
@@ -780,7 +782,7 @@ start_env_vars_are_todos() {
 }
 
 start_credential_variables_hide_the_login_advice() {
-    local v n
+    local v n method
     for v in ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN; do
         ds_setup "cred-$v" || return 0
         ds_identity || { fail 'could not set the scratch git identity'; return 0; }
@@ -790,6 +792,17 @@ start_credential_variables_hide_the_login_advice() {
         ((n == 0)) || fail "$v: claude auth login is advised: $ds_err"
         n=$(ds_todos "$v.*unset"); ((n == 1)) || fail "$v: wanted one unset TODO, got $n: $ds_err"
         if grep -q 'what is left to do' <<<"$ds_out$ds_err"; then fail "$v: a what-is-left list is printed: $ds_err"; fi
+        ds_setup "cred-ok-$v" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        method=oauth_token
+        [[ $v == ANTHROPIC_API_KEY ]] && method=api_key
+        DS_SET="$v=x" STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 \
+            STUB_CLAUDE_OUT="{\"loggedIn\":true,\"authMethod\":\"$method\"}" ds_run
+        ((ds_rc == 0)) || fail "$v (logged in): exit $ds_rc"
+        n=$(grep -c 'claude auth login' <<<"$ds_err" || true)
+        ((n == 0)) || fail "$v (logged in): claude auth login is advised: $ds_err"
+        n=$(ds_todos "$v.*unset"); ((n == 1)) || fail "$v (logged in): wanted one unset TODO, got $n: $ds_err"
+        if grep -q 'what is left to do' <<<"$ds_out$ds_err"; then fail "$v (logged in): a what-is-left list is printed: $ds_err"; fi
     done
 }
 
@@ -918,7 +931,7 @@ start_ignores_content_edits_when_restoring_modes() {
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
     r="$ds_dir/repo"
-    printf 'edited\n' > "$r/data.txt" && chmod 644 "$r/data.txt" || { fail 'could not edit data.txt'; return 0; }
+    if ! { printf 'edited\n' > "$r/data.txt" && chmod 644 "$r/data.txt"; }; then fail 'could not edit data.txt'; return 0; fi
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
@@ -1328,6 +1341,8 @@ session_title_keeps_a_renamed_title() {
     st_silent 'sid suffix only'
     st_run "$(st_json UserPromptSubmit $st_sid 'codeo [x] · a21b9973')"
     st_silent 'unknown bracket'
+    st_run "$(st_json UserPromptSubmit $st_sid $'\ncodeo [home] · a21b9973')"
+    st_silent 'multi-line title'
 }
 
 session_title_refreshes_the_window_title() {
@@ -1431,7 +1446,7 @@ cases=(
     start_identity_todo_when_only_one_is_set
     start_setup_git_failure_is_a_todo
     start_trusts_the_clone_once
-    start_finds_the_identity_in_the_git_volume_file
+    start_reads_the_identity_from_the_global_config_file
     start_enables_remote_control
     start_keeps_other_settings
     start_malformed_settings_is_a_todo
