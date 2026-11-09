@@ -1,4 +1,4 @@
-# Issue — use the latest Claude models (Fable 5.2, Opus 5.5, Sonnet 5.5; evaluate Haiku 5.5)
+# Issue #52 — issue
 
 ## Questions
 1. Aliases or pinned IDs? — **Answered: verify the aliases resolve to the latest, keep them.** Update only the version-bearing examples.
