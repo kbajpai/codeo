@@ -688,7 +688,7 @@ wt_run() {
     local root=${wt_clone:-$wt_dir} errf
     errf=$(mktemp -p "$pl_root")
     wt_rc=0
-    wt_out=$(bash "$root/.devcontainer/scripts/window-title.sh" "$@" 2>"$errf") || wt_rc=$?
+    wt_out=$(PATH="${wt_path:+$wt_path:}$PATH" bash "$root/.devcontainer/scripts/window-title.sh" "$@" 2>"$errf") || wt_rc=$?
     wt_err=$(<"$errf")
 }
 
@@ -700,6 +700,7 @@ title_is_home_without_a_lock() {
     [[ $wt_out == 'codeo [home]' ]] || fail "--print gave '$wt_out'"
     wt_run
     ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ $wt_out == 'window-title: codeo [home]' ]] || fail "a plain run printed '$wt_out'"
     [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail 'settings.json lacks window.title "codeo [home]"'
 }
 
@@ -771,6 +772,39 @@ title_fills_an_empty_settings_file() {
     ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
     jq -e '.["window.title"] == "codeo [home]"' "$wt_dir/.vscode/settings.json" >/dev/null \
         || fail "an empty settings.json was not filled: '$(cat "$wt_dir/.vscode/settings.json")'"
+}
+
+title_strips_a_hash_from_the_lock_line() {
+    wt_setup hash || return 0
+    printf 'issue: #44\nbranch: feat/x\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "--print gave '$wt_out'"
+    wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ $(wt_title "$wt_dir") == 'codeo [#44]' ]] || fail "title is '$(wt_title "$wt_dir")'"
+}
+
+title_reports_an_unwritable_exclude() {
+    local exclude
+    wt_setup noexcl || return 0
+    exclude=$(git -C "$wt_dir" rev-parse --path-format=absolute --git-path info/exclude)
+    rm -f "$exclude"
+    mkdir "$exclude"
+    wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
+    [[ ! -e $wt_dir/.vscode/settings.json ]] || fail 'settings.json was written before the exclude entry'
+}
+
+title_outside_a_repository_says_so() {
+    local d
+    wt_setup norepo || return 0
+    d="$pl_root/not-a-repo"
+    mkdir -p "$d/.devcontainer/scripts"
+    cp "$wt_dir/.devcontainer/scripts/window-title.sh" "$d/.devcontainer/scripts/"
+    wt_clone=$d wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
 }
 
 # st_setup <name>: like wt_setup, plus the real session-title.sh. Sets st_dir, the clone's root.
@@ -960,6 +994,9 @@ cases=(
     title_follows_the_lock_on_a_rerun
     title_leaves_malformed_settings_alone
     title_fills_an_empty_settings_file
+    title_strips_a_hash_from_the_lock_line
+    title_reports_an_unwritable_exclude
+    title_outside_a_repository_says_so
     session_title_names_home_and_the_id
     session_title_names_the_issue_with_a_lock
     session_title_on_a_prompt_after_clear
