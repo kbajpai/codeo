@@ -1,8 +1,8 @@
-# Issue new-name-dev-container — issue
+# Issue #50 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/50 |
 | Branch | none (intake) |
 | Updated | 2026-11-09 |
 
