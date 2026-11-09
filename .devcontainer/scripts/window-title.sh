@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Names the VS Code window after the clone's state: "<codename> [home]" when no workflow holds the
-# clone, "<codename> [#<N>]" while .codeo/active holds issue N (written "issue: 44" or "issue: #44").
+# clone, "<codename> [#<N>]" while .codeo/active holds issue N (the digits after "issue:", with or without
+# spaces or "#").
 # The codename is .codeo/config.json's, else the clone directory's name. Keeps .vscode/settings.json
 # out of git status through the clone's info/exclude first, then merges window.title into it (every
 # other key stays). Safe to re-run: a symlinked settings.json is written through (a dangling one is
@@ -21,8 +22,8 @@ root=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/
 codename=$(jq -r '.codename // empty' "$root/.codeo/config.json" 2>/dev/null || true)
 [[ -n $codename ]] || codename=$(basename "$root")
 issue=""
-[[ ! -f $root/.codeo/active ]] || issue=$(awk '/^issue:/ {print $2; exit}' "$root/.codeo/active")
-issue=${issue#\#}
+[[ ! -f $root/.codeo/active ]] \
+    || issue=$(sed -n 's/^issue: *#*\([0-9]\{1,\}\).*/\1/p' "$root/.codeo/active" | head -n 1) || true
 if [[ -n $issue ]]; then title="$codename [#$issue]"; else title="$codename [home]"; fi
 
 if [[ ${1:-} == --print ]]; then

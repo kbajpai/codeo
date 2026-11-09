@@ -1037,6 +1037,16 @@ title_strips_a_hash_from_the_lock_line() {
     wt_run
     ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
     [[ $(wt_title "$wt_dir") == 'codeo [#44]' ]] || fail "title is '$(wt_title "$wt_dir")'"
+    printf 'issue:#44\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "issue:#44 gave '$wt_out'"
+    printf 'issue: ##44\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "issue: ##44 gave '$wt_out'"
+    printf 'issue: x\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    ((wt_rc == 0)) || fail "issue: x exited $wt_rc: $wt_err"
+    [[ $wt_out == 'codeo [home]' ]] || fail "issue: x gave '$wt_out'"
 }
 
 title_reports_an_unwritable_exclude() {
@@ -1049,6 +1059,18 @@ title_reports_an_unwritable_exclude() {
     ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
     [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
     [[ ! -e $wt_dir/.vscode/settings.json ]] || fail 'settings.json was written before the exclude entry'
+    if (( $(id -u) != 0 )); then   # root ignores mode bits
+        wt_setup noexcl-ro || return 0
+        exclude=$(git -C "$wt_dir" rev-parse --path-format=absolute --git-path info/exclude)
+        mkdir -p "$(dirname "$exclude")"
+        : > "$exclude"
+        chmod 444 "$exclude"
+        wt_run
+        chmod 644 "$exclude"
+        ((wt_rc == 1)) || fail "read-only exclude: exit $wt_rc, wanted 1"
+        [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "read-only exclude: stderr was: $wt_err"
+        [[ ! -e $wt_dir/.vscode/settings.json ]] || fail 'read-only exclude: settings.json was written'
+    fi
 }
 
 title_outside_a_repository_says_so() {
