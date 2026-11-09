@@ -698,6 +698,23 @@ start_settings_that_are_not_an_object_are_a_todo() {
     done
 }
 
+start_settings_that_are_not_a_regular_file_are_a_todo() {
+    local n leg
+    for leg in dir link; do
+        ds_setup "notreg-$leg" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        mkdir -p "$ds_dir/claude"
+        case $leg in
+            dir)  mkdir "$ds_dir/claude/settings.json" ;;
+            link) mkdir "$ds_dir/claude/d"; ln -s "$ds_dir/claude/d" "$ds_dir/claude/settings.json" ;;
+        esac
+        ds_ready_run
+        ((ds_rc == 0)) || fail "$leg: exit $ds_rc, wanted 0"
+        n=$(ds_todos 'settings.json.*not a regular file'); ((n == 1)) || fail "$leg: wanted one 'not a regular file' TODO, got $n: $ds_err"
+        [[ -d $ds_dir/claude/settings.json ]] || fail "$leg: settings.json is no longer a directory"
+    done
+}
+
 start_settings_that_cannot_be_resolved_are_a_todo() {
     local n
     ds_setup noresolve || return 0
@@ -1529,6 +1546,7 @@ cases=(
     start_malformed_settings_is_a_todo
     start_fills_an_empty_settings_file
     start_settings_that_are_not_an_object_are_a_todo
+    start_settings_that_are_not_a_regular_file_are_a_todo
     start_settings_that_cannot_be_resolved_are_a_todo
     start_settings_symlink_is_kept
     start_settings_keep_their_mode

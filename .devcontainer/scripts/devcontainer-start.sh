@@ -174,6 +174,8 @@ if [[ -f $claude_settings ]]; then
     else
         add_todo "could not write $claude_target: Remote Control was not enabled"
     fi
+elif [[ -e $claude_settings ]]; then
+    add_todo "$claude_settings is not a regular file and was left alone: fix it, then add \"remoteControlAtStartup\": true"
 fi
 
 # 4. GitHub: wire git to the login, and check the project scope the board needs.
