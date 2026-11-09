@@ -8,8 +8,9 @@
 
 ## Where this stands
 
-Q1 and Q2 answered (name = folder + `${devcontainerId}`; the engineer runs the host check first). Waiting on Q3:
-the engineer applies the one-line `runArgs` change, rebuilds, and reports the `docker ps` names. Nothing is drafted past it.
+Q1-Q3 answered. The rebuilt container is named `codeo-home-031er97u1o8nfhn55jo8tkvqb43vvn3483bfpgnn92fj540pqokb`:
+on a Docker-volume clone `${localWorkspaceFolderBasename}` resolves to `codeo-home` and `${devcontainerId}` is 52
+characters (`[0-9a-v]`), 63 in all. Draft plan written to `.codeo/50/plan-draft.md`, awaiting review. No open question.
 
 ## Questions
 
@@ -69,13 +70,15 @@ anywhere I could find. The suite can pin the `runArgs` text; it cannot show what
 
 **To do (engineer):** set `runArgs` to `["--name=${localWorkspaceFolderBasename}-${devcontainerId}", "--memory=4g", "--cpus=2"]` in `.devcontainer/devcontainer.json`, rebuild the container, then on the host run `docker ps --format '{{.Names}}'` and paste the line for this container.
 
-**Answer:**
+**Answer:** `codeo-home-031er97u1o8nfhn55jo8tkvqb43vvn3483bfpgnn92fj540pqokb` (2026-11-09). The folder part resolves correctly for a clone on a Docker volume, and the suffix is 52 characters, as expected; the name is 63 characters long.
 
 ## Outcome
 
 _Pending — written at the hand-off._
 
 ## Log
+
+- 2026-11-09 — Q3 answered (host check passed); plan drafted for review
 
 - 2026-11-09 — Q1-Q2 answered, Q3 raised (host check) · cost: see the line below (same session)
 - 2026-11-09 — Q1-Q2 raised · cost: 2m · fable-5-2 139k in + 779k cached / 8k out · sonnet-5-5 32k in + 4k cached / 3k out
