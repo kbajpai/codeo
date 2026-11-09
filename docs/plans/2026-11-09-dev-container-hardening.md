@@ -473,3 +473,216 @@ git commit -m "docs: changelog wording for the dev container titles; credential 
 ```
 
 The manual checks in *After the tasks* above still stand for `/codeo:qc` round 2.
+
+---
+
+## Round 3 — after `qc.md` round 2 (2026-11-09)
+
+Tasks 1-15 above are done (`d963bfa`..`e59e859`). `/codeo:qc` round 2 sent the branch back with one blocking
+finding, F8, and seven non-blocking ones, F9-F15 (`.codeo/47/qc.md`). This round fixes all eight in five
+tasks, appended here so the issue keeps one plan. Q4 and Q5 in `.codeo/47/plan.md` decided F8 and F9. The
+constraints below amend the matching bullets of Global Constraints and of Round 2's amended constraints;
+everything else there still binds.
+
+**Amended constraints**
+
+- **`core.fileMode` (F8, Q4).** The two-way probe of Round 2 stays and gates everything below. When it passes,
+  the script does *not* set `core.fileMode` first. It lists the tracked files whose mode on disk differs from the
+  index *as if the setting were on* — `git -c core.fileMode=true diff --raw -z --no-renames` — keeps the entries
+  whose old and new modes are both `100644` or `100755` (anything else, a symlink or a submodule, is left alone),
+  and gives each the mode the index records: `chmod +x -- <path>` for `100755`, `chmod -x -- <path>` for `100644`
+  (what `git checkout` would have written; `+x` respects the umask). It then lists again. Only when that second
+  list is empty does it run `git config core.fileMode true` and say so, naming how many files it restored (none
+  restored → the existing message). If the list is still not empty — a `chmod` failed — `core.fileMode` stays
+  `false` and one TODO names the files left (at most five, then "and N more") and says to `chmod` them to the
+  index's modes or stage with `git update-index --chmod=+x`. A restored file is never one the setting being off
+  had let you edit mode-wise: with it off, git neither showed nor staged those modes. The probe-failure TODOs
+  are unchanged.
+- **Settings classification (F11).** In both scripts the "is this a JSON object" probe becomes
+  `jq -rn '[inputs] | if length == 0 then "object" elif length == 1 then (.[0] | type) else "multi" end'` (an
+  empty file is still `{}`): no output → "not valid JSON" (as before); `multi` → "not valid JSON" (two top-level
+  values; the merge would drop the second); any other result but `object` — `array`, `string`, `number`,
+  `boolean`, `null` — → "not a JSON object". The file is left untouched in each.
+- **Resolve failure (F13).** In `devcontainer-start.sh` step 3c a `readlink -f` that fails (or prints nothing)
+  adds one TODO "could not resolve `<file>`: Remote Control was not enabled", not "not valid JSON".
+- **One line on stderr (F12).** In `window-title.sh` every external command whose failure reaches `die` —
+  `mkdir -p "$root/.vscode"`, `mktemp`, `mv` — has its own stderr discarded (`2>/dev/null`), so a failure prints
+  exactly the one `window-title:` line the header promises.
+- **The lock line (F14).** `window-title.sh` accepts any whitespace after `issue:` (`[[:space:]]*`, so a TAB
+  works) before the `#`s and digits. It deliberately keeps taking the leading digits (`issue: 44abc`, `issue:
+  ##44` → `[#44]`) where `scripts/intake.sh` rejects them: a title is cosmetic and a stricter parse would turn a
+  hand-edited lock into `[home]`. The header says "the digits after `issue:`", not "as `intake.sh` does".
+- **Changelog (F9, F10).** The #47 line says the title is read from the lock (`.codeo/active`), and that with
+  `GIT_CONFIG_GLOBAL` set the host's `~/.gitconfig` that VS Code copies into the container no longer applies
+  inside it (Q5: documented, not guarded); its `core.fileMode` clause says it also restores tracked files'
+  modes to the index's.
+- Files that change this round: `.devcontainer/scripts/devcontainer-start.sh`, `.devcontainer/scripts/window-title.sh`,
+  `tests/devcontainer.test.sh`, `CHANGELOG.md`. No other file.
+
+```mermaid
+flowchart TD
+    A["core.fileMode == false"] --> B{"probe: not-x, u+x, u-x as set and cleared"}
+    B -- no --> T1["TODO: stage with update-index --chmod=+x"]
+    B -- yes --> C["list modes that differ from the index, as if fileMode were on"]
+    C --> D["chmod each to the index's mode (100755 +x, 100644 -x)"]
+    D --> E{"list again: empty?"}
+    E -- no --> T2["TODO: name the files left; fileMode stays false"]
+    E -- yes --> F["git config core.fileMode true"]
+```
+
+### Task 16: Restore the index's modes before turning `core.fileMode` on (F8, Q4)
+
+**Files:**
+- Modify: `.devcontainer/scripts/devcontainer-start.sh` (step 2b and its comment)
+- Test: `tests/devcontainer.test.sh`
+
+**Interfaces:**
+- Consumes: Round 2's two-way probe in step 2b (unchanged).
+- Produces: after a run, either `core.fileMode` is `true` and `git status --porcelain` shows no mode-only change,
+  or it is `false` with a TODO naming the files left; the script still exits 0.
+
+- [ ] **Step 1: Write the failing tests** (add to `cases`). Both build the scratch repo of `ds_setup`, then
+  `git add -A` and commit everything (a committed `bin/run.sh` at `100755` and `data.txt` at `100644` are added
+  first), then `git config core.fileMode false`, then change the disk modes: `chmod 644 bin/run.sh`,
+  `chmod 755 data.txt`.
+  - `start_restores_tracked_modes_before_turning_file_mode_on`: `ds_ready_run`; `ds_rc == 0`; `core.fileMode` is
+    `true`; `bin/run.sh` is executable and `data.txt` is not; `git status --porcelain` is empty; stdout
+    mentions `core.fileMode` and the count `2`.
+  - `start_keeps_file_mode_off_when_a_mode_cannot_be_restored`: a `$ds_dir/bin/chmod` stub that runs the real
+    `/usr/bin/chmod` when its arguments contain `filemode.` (the probe) or `--reference` (step 3c) and otherwise
+    exits 1; `ds_ready_run`; `ds_rc == 0`; `core.fileMode` is still `false`; `bin/run.sh` is still `644`;
+    exactly one TODO matches `update-index --chmod` and it names `bin/run.sh`.
+  Keep `start_sets_file_mode_so_new_scripts_are_executable`, `start_file_mode_that_cannot_stick_is_a_todo` and
+  `start_file_mode_that_cannot_clear_is_a_todo` as they are.
+- [ ] **Step 2: Run to verify they fail.** Run: `bash tests/run.sh devcontainer`. Expected:
+  `FAIL start_restores_tracked_modes_before_turning_file_mode_on` (status lists ` M bin/run.sh`) and
+  `FAIL start_keeps_file_mode_off_when_a_mode_cannot_be_restored` (`core.fileMode` was turned on); the rest pass.
+- [ ] **Step 3: Implement** in step 2b, after the probe branch that now sets `core.fileMode`: replace the bare
+  `git config core.fileMode true` with the sequence of the amended constraint, written as a small function
+  (`restore_modes`: list, `chmod`, list again; prints nothing, returns non-zero with the leftover paths in a
+  variable) so the branch reads: probe passes → `restore_modes` → `git config core.fileMode true` and `say …`, or
+  `add_todo …`. Read the `-z` output with `while IFS= read -r -d '' meta; IFS= read -r -d '' path` (the raw record
+  is `:<old> <new> <sha> <sha> <status>`). Update the step comment and header sentence to say the tracked files'
+  modes are restored to the index's.
+- [ ] **Step 4: Run to verify they pass.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/devcontainer-start.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): restore tracked files' modes to the index's before turning core.fileMode on (#47)"
+```
+
+### Task 17: Settings classification and an honest resolve failure, in both scripts (F11, F13)
+
+**Files:**
+- Modify: `.devcontainer/scripts/window-title.sh`, `.devcontainer/scripts/devcontainer-start.sh` (step 3c)
+- Test: `tests/devcontainer.test.sh`
+
+- [ ] **Step 1: Write the failing tests.** Extend `title_rejects_settings_that_are_not_an_object` with three legs,
+  each its own scratch clone: `false` and `null` → unchanged, exit 1, one `window-title:` line saying
+  `not a JSON object`; `{"a":1} [2]` → unchanged, exit 1, `not valid JSON`. Extend
+  `start_settings_that_are_not_an_object_are_a_todo` with the same three seeds in `$ds_dir/claude/settings.json`:
+  `false` and `null` → one TODO matching `settings.json.*not a JSON object`, file unchanged; `{"a":1} [2]` → one
+  TODO matching `not valid JSON`, unchanged. Add `start_settings_that_cannot_be_resolved_are_a_todo`: a
+  `$ds_dir/bin/readlink` stub that exits 1 (settings file seeded `{"a":1}`), `ds_ready_run` → one TODO matching
+  `could not resolve`, none matching `not valid JSON`, file unchanged, `ds_rc == 0`.
+- [ ] **Step 2: Run to verify they fail.** Run: `bash tests/run.sh devcontainer`. Expected: FAIL for the three
+  extended/new cases (`false`/`null` are rewritten; the multi-value file loses its second value; the resolve
+  failure says "not valid JSON"); everything else passes.
+- [ ] **Step 3: Implement** the classification of the amended constraint in both scripts (the same one-liner in
+  each; the plan keeps the duplication), and in `devcontainer-start.sh` guard `claude_target` — empty after
+  `readlink -f` → the resolve TODO, no `jq` call.
+- [ ] **Step 4: Run to verify they pass.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/window-title.sh .devcontainer/scripts/devcontainer-start.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/window-title.sh .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): settings that are false, null or several values are left alone; a failed resolve says so (#47)"
+```
+
+### Task 18: `window-title.sh` — one stderr line, and a TAB after `issue:` (F12, F14)
+
+**Files:**
+- Modify: `.devcontainer/scripts/window-title.sh`
+- Test: `tests/devcontainer.test.sh`
+
+- [ ] **Step 1: Write the failing tests.** Change the `mv` stub of `title_leaves_no_temp_file_when_mv_fails` to
+  print `mv: boom` on stderr before exiting 1 (so the case now proves the single-line promise against a noisy
+  tool); add a leg to `title_reports_an_unwritable_exclude`-style coverage for `.vscode`: make `<clone>/.vscode` a
+  regular file (`touch`), plain run → `wt_rc == 1`, `wt_err` exactly one line starting `window-title:`. Extend
+  `title_strips_a_hash_from_the_lock_line` with `printf 'issue:\t44\n'` → `--print` gives `codeo [#44]`.
+- [ ] **Step 2: Run to verify they fail.** Run: `bash tests/run.sh devcontainer`. Expected: FAIL for the `mv` case
+  (two lines: `mv: boom` and the `window-title:` line), the `.vscode` leg (`mkdir: cannot create directory`
+  first) and the TAB leg (`[home]`).
+- [ ] **Step 3: Implement:** `2>/dev/null` on the three commands of the amended constraint (their `die` lines
+  keep the reason), `[[:space:]]*` after `issue:` in the `sed`, and the header sentence "the digits after
+  `issue:`, with or without spaces, tabs or `#`".
+- [ ] **Step 4: Run to verify they pass.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/window-title.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/window-title.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): window-title.sh prints one line per failure and reads a tab after issue: (#47)"
+```
+
+### Task 19: Tests that pin what they claim (F15)
+
+**Files:**
+- Test: `tests/devcontainer.test.sh`
+
+These add coverage to behaviour that already exists, so apart from the rename each passes on arrival; the proof
+is that they pass and that the mutation noted in each makes them fail (the implementer checks it in a scratch
+copy, not in the repo).
+
+- [ ] **Step 1: Write the tests.**
+  - In `session_title_keeps_a_renamed_title` (lock present) add `$'\ncodeo [home] · a21b9973'` →
+    `st_silent`. Mutation: remove `$existing != *$'\n'*` from `session-title.sh` in a scratch copy → this leg
+    fails.
+  - In `start_credential_variables_hide_the_login_advice` add a second run per variable with
+    `STUB_CLAUDE_RC=0` and `STUB_CLAUDE_OUT` of `{"loggedIn":true,"authMethod":"api_key"}` /
+    `"oauth_token"`, same four assertions. Mutation: make the step-6 guard `if true` in a scratch copy → the
+    rc 0 leg fails on the `authMethod` TODO.
+  - Rename `start_finds_the_identity_in_the_git_volume_file` to
+    `start_reads_the_identity_from_the_global_config_file` (function, `cases` entry, and its comment saying it
+    pins that the start script reads whatever `GIT_CONFIG_GLOBAL` names; the wiring itself is pinned by
+    `git_config_global_points_into_the_git_volume` and `volumes_hold_the_gh_login_and_the_git_config`).
+- [ ] **Step 2: Run to verify.** Run: `bash tests/run.sh devcontainer`. Expected: `all cases passed`.
+- [ ] **Step 3: Commit.**
+
+```bash
+git add tests/devcontainer.test.sh
+git commit -m "test(devcontainer): pin the newline guard and the authMethod leg; name the identity test for what it checks (#47)"
+```
+
+### Task 20: Changelog and the whole suite (F9, F10)
+
+**Files:**
+- Modify: `CHANGELOG.md`
+
+- [ ] **Step 1: Edit the #47 line:** "reads `issue: #N` from the dossier" → "reads the issue number from the
+  lock (`.codeo/active`), with or without a `#`"; "turns `core.fileMode` back on where the filesystem keeps the
+  executable bit as set" → "… as set, restoring the tracked files' modes to the index's first"; after "rebuild the
+  container once to get the volume, then set the identity once" add "; with `GIT_CONFIG_GLOBAL` set the host's
+  `~/.gitconfig`, which VS Code copies into the container, no longer applies inside it". Quote before/after in the
+  report; change nothing else.
+- [ ] **Step 2: Prove the whole change.** Run: `bash tests/run.sh && shellcheck .devcontainer/scripts/*.sh tests/devcontainer.test.sh`.
+  Expected: `all cases passed`; no shellcheck output apart from the one pre-existing `SC2016` info note on the
+  single-quoted hook-command string in `session_title_hooks_are_registered`.
+- [ ] **Step 3: Commit.**
+
+```bash
+git add CHANGELOG.md
+git commit -m "docs: changelog says where the title reads the issue from and that the host gitconfig no longer applies (#47)"
+```
+
+### After the tasks (not a plan task): checks only the engineer can make
+
+The manual checks of *After the tasks* above still stand, plus two for this round: in a clone with
+`core.fileMode false` whose tracked scripts are `644` on disk, run the start script and see `core.fileMode`
+`true`, the scripts executable and `git status` clean (and, with a tracked file `chmod`-protected, `false` and a
+TODO); and after the rebuild read `/home/dev/.config/git/config` for a VS Code credential helper naming a
+`/tmp/vscode-remote-containers-*.js` (Q5) — if one is there and a second container prints helper errors, file
+the follow-up.
