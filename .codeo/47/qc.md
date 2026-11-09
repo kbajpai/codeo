@@ -8,9 +8,11 @@
 
 ## Where this stands
 
-Round 1 done: back to `/codeo:plan`. The build and the whole suite pass and every criterion is met as written,
-but the plan's `core.fileMode` probe (F1) can switch the setting on where it should stay off, and that is the
-plan's design, not the implementer's. F2-F7 are non-blocking and fold into the same re-plan cheaply.
+Round 2 done: back to `/codeo:plan` again. Round 1's seven findings are all fixed, the build and the whole suite
+pass and every criterion is met as written, but one blocking finding remains of the same class as round 1's F1
+(F8): the `core.fileMode` flip still dirties the working tree where tracked files' modes on disk differ from the
+index, which is the very state a `core.fileMode=false` clone is usually in. The code does what the round 2 plan
+says; the plan's check (probing a new file) cannot see it. F9-F15 are non-blocking and fold into the re-plan.
 
 ## Questions
 
@@ -23,10 +25,11 @@ None.
   prompt (session and window titles say `[#N]`), release it (`[home]` at the next prompt), `/rename` a session
   (kept). If Claude Code does not apply a `sessionTitle` to a session that already has one, that is a send-back
   to `/codeo:plan`.
-- `bash scripts/dossier-check.sh .codeo/47` passes `qc.md` and `implement.md`; it fails `plan.md`'s
-  `### Footprint` (no `sequenced:` line, which the checker wants as `none`) and says `issue.md` lacks a `## Log`
-  (it was adopted from `/codeo:issue`). Both are other skills' files, so `qc` leaves them; the re-plan writes a new
-  footprint and can add `sequenced:  none`.
+- `bash scripts/dossier-check.sh .codeo/47` passes `plan.md`, `implement.md` and `qc.md`; its one remaining drift
+  is `issue.md` lacking a `## Log` (adopted from `/codeo:issue`), another skill's file that `qc` leaves alone.
+- Also check by hand, with F8's fix in place: in a clone with `core.fileMode false` whose tracked scripts are
+  `644` on disk, the start script leaves `core.fileMode` false and `git status` clean; and what VS Code writes
+  into the shared `codeo-git` config (F9).
 - Pre-existing, not a finding: `shellcheck tests/devcontainer.test.sh` prints one `SC2016` info note on the
   single-quoted hook-command string; `origin/main`'s test file prints the same note for its older form.
 
@@ -138,6 +141,128 @@ No issue filed by this pass. F2-F7 fold into the re-plan; none needs an issue of
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 2 — 2026-11-09
+
+(second pass; implement.md round 2, answering this file's round 1)
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`.
+`overlap.sh 47` and `overlap.sh --outside 47`: nothing. `scope.sh origin/main HEAD`:
+
+```
+scope: suite shell needed for unclassified paths:
+  .claude/settings.json
+  .codeo/47/implement.md
+  .codeo/47/init.md
+  .codeo/47/issue.md
+  .codeo/47/plan.md
+  .codeo/47/qc.md
+  CHANGELOG.md
+suite.shell=true
+```
+
+No `deploy=` line and no shared environment configured, so there is no environment step. Diff stat against
+`origin/main`: 14 files, 1686 insertions, 72 deletions; nothing under `scripts/`, `lib/`, `hooks/` or `skills/`.
+
+**Build.** `shell` suite `build` = `true`: exit 0.
+
+**Suites.** `bash tests/run.sh` (whole `shell` suite): `all cases passed`, exit 0, 48 s.
+`shellcheck .devcontainer/scripts/*.sh`: no output, exit 0. `shellcheck tests/devcontainer.test.sh`: one `SC2016`
+info note (line 1249, the single-quoted hook-command string), also present on `origin/main`'s file. All four
+`.devcontainer/scripts/*.sh` are `100755` in the index.
+
+**Round 1's findings.** F1 (blocking in round 1) — fixed by `8988cea` (the probe needs the bit to set and to
+clear) and `e59e859` (its tests' lint); F8 below is the part it did not reach. F2 (non-blocking in round 1) —
+fixed by `f331d45`; F3 — fixed by `3e5a1aa`; F4 and F7 — fixed by `7e549a7`; F5 and F6 — fixed by `c132cd5`.
+Each re-read in the diff and by its test, `start_file_mode_that_cannot_clear_is_a_todo`,
+`start_trusts_the_clone_once`, `session_title_keeps_a_renamed_title`, `title_strips_a_hash_from_the_lock_line`,
+`title_reports_an_unwritable_exclude`.
+
+**Criteria**
+
+| # | Criterion (abbreviated) | Verdict | Settled by |
+|---|---|---|---|
+| 1 | No `claude auth login` line with `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` set | met | `start_credential_variables_hide_the_login_advice` (tests/devcontainer.test.sh:759); `devcontainer-start.sh` step 6 guard |
+| 2 | Unwritable `info/exclude` still prints a `window-title:` line | met | `title_reports_an_unwritable_exclude` (:1051), both legs; `window-title.sh` exclude block |
+| 3 | `issue: #44` gives `[#44]` exactly once | met | `title_strips_a_hash_from_the_lock_line` (:1031); `window-title.sh:24-26` |
+| 4 | `settings.json` holding `[]` is reported as not an object | met | `title_rejects_settings_that_are_not_an_object`, `start_settings_that_are_not_an_object_are_a_todo` |
+| 5 | Symlinked `settings.json` still a symlink | met | `title_writes_through_a_symlink`, `start_settings_symlink_is_kept` |
+| 6 | `window-title.sh` is mode 100755 in the index | met | `scripts_are_committed_executable`; `git ls-files -s` above |
+| 7 | Failed `mv` leaves no `.tmp`; mode not 0600 unless the original's was | met | `title_leaves_no_temp_file_when_mv_fails`, `start_leaves_no_temp_file_when_mv_fails`, `title_keeps_the_settings_mode`, `start_settings_keep_their_mode` |
+| 8 | Registered hook command exits 0, no output, with `session-title.sh` removed | met | `session_title_hook_command_survives_a_missing_script` (:1250 region) runs the command read from `.claude/settings.json` |
+| 9 | `session_title` beginning with a newline prints nothing | met (the newline guard has no test that isolates it, F15) | `session_title_treats_a_leading_newline_as_a_title` (:1199) |
+| 10 | Lock taken/released changes `--print` and the window title follows without a restart | met on the script side; whether Claude Code fires the hook is a manual check | `title_follows_a_released_lock`, `session_title_refreshes_the_window_title`, `session_title_replaces_its_own_title_when_the_lock_changes` |
+| 11 | A script added in a fresh container is staged 100755 without `update-index --chmod` | met in a fresh container whose tracked files' modes match the index; see F8 for a clone whose modes do not | `start_sets_file_mode_so_new_scripts_are_executable` (:788), `start_file_mode_that_cannot_clear_is_a_todo` (:826) |
+| 12 | `bash tests/run.sh` prints `all cases passed` | met | output above |
+| 13 | Fresh container with the `~/.config/git` volume already holding an identity: no identity TODO | met in the suite (config, Dockerfile directory, the start script reading a file at that path); a real fresh container is a manual check | `start_finds_the_identity_in_the_git_volume_file` (:620), `volumes_hold_the_gh_login_and_the_git_config`, `git_config_global_points_into_the_git_volume`, `dockerfile_creates_the_git_config_dir`, `git_global_writes_land_in_the_volume_file` |
+
+**Documentation.** The plan names `CHANGELOG.md` only and says no page under `docs/` describes the dev container;
+I checked, none does, and there is no wiki module. The #44 and #45 lines now match the code; the #47 line has two
+untruths (F9, F10).
+
+**Review.** Independent code review (opus, `QC review:`) of `162720b..fdf15c2`, given the acceptance criteria and
+the issue line only. Its assessment, in plain text: ready to merge with fixes — two Important findings, six
+Minor. I reproduced its first one before classifying it: in a scratch repo with `core.fileMode=false`, a tracked
+`100755` file that is `644` on disk shows a clean `git status`; after `git config core.fileMode true` it shows
+` M run.sh` and `mode change 100755 => 100644`. The reviewer saw the same on this repository's own
+`plugins.sh`.
+
+**Findings**
+
+- **F8 — blocking (plan's).** `.devcontainer/scripts/devcontainer-start.sh:57-74`. The probe shows that a *new*
+  file in the git dir keeps `chmod`; it never looks at the files already checked out. A clone has
+  `core.fileMode=false` precisely because modes on disk and in the index disagreed or could not be trusted (a
+  checkout made with the setting off writes tracked scripts without the executable bit), so flipping it to true
+  makes `git status` list every tracked script whose disk mode differs from the index, and a later `git add -A`
+  or `git commit -a` would commit the mode changes. This is round 1's F1 in its other shape: F1 covered a
+  filesystem that reports every file executable, F8 a filesystem that behaves but a tree whose modes are stale.
+  The code does what the round 2 plan's amended constraint says; the plan's check is insufficient. Direction for
+  the re-plan: after `git config core.fileMode true`, run `git diff --summary` (or `git status --porcelain`) and,
+  if it lists any `mode change`, set `core.fileMode` back to `false` and add a TODO naming those files and
+  `git update-index --chmod=+x` (or telling the engineer to `chmod` them to the index's modes first); add a case
+  with a committed `100755` file at `644` on disk and `core.fileMode false`, which must stay `false` and leave
+  `git status` clean.
+- **F9 — non-blocking (plan's).** `.devcontainer/devcontainer.json` `containerEnv`, `CHANGELOG.md:14`. With
+  `GIT_CONFIG_GLOBAL` set, git ignores `~/.gitconfig`, which VS Code's Dev Containers copies from the host by
+  default, so host aliases and signing settings stop applying; the changelog says only "set the identity once".
+  Plan Q2 accepted this cost, but the entry should say it. Also to verify by hand: VS Code writes a credential
+  helper into `~/.gitconfig` that names a per-container `/tmp/vscode-remote-containers-*.js`; if it now lands in
+  the shared `codeo-git` file, another container sharing the volume would call a helper that does not exist
+  there (git skips a failing helper and falls through to `gh`'s, so the expected harm is a warning). The reviewer
+  could not confirm what VS Code writes.
+- **F10 — non-blocking (implement's).** `CHANGELOG.md:14` says `window-title.sh` "reads `issue: #N` from the
+  dossier"; it reads the lock, `.codeo/active` (`window-title.sh:24-26`).
+- **F11 — non-blocking (plan's).** `window-title.sh` and `devcontainer-start.sh` step 3c: `jq '[inputs][0] // {}
+  | type'` reports `object` for a settings file holding `false` or `null` (and for one holding two top-level
+  values, the second being dropped), so they are rewritten, while both headers say a value that is not a JSON
+  object is left untouched. Fix: classify `[inputs]` by length first (`0` → object, `1` → the value's type,
+  more → "multi").
+- **F12 — non-blocking (implement's).** `window-title.sh` header (lines 9-11) promises exactly one
+  `window-title:` stderr line on every failure, but `mkdir -p "$root/.vscode"`, `mktemp` and `mv` print their own
+  messages too. `title_leaves_no_temp_file_when_mv_fails` passes only because its `mv` stub is silent. Redirect
+  those tools' stderr, or soften the header.
+- **F13 — non-blocking (implement's).** `devcontainer-start.sh:92`: if `readlink -f` fails, the empty target
+  produces the TODO "is not valid JSON", which is wrong.
+- **F14 — non-blocking (plan's).** `window-title.sh:25` is looser than `scripts/intake.sh:495-497`: it takes the
+  leading digits, so `issue: 44abc` and `issue: ##44` give `[#44]` where `intake.sh` rejects them, and `issue:` +
+  TAB gives `[home]`. `lock.sh` always writes `issue:   N`, so the effect is cosmetic, but commit `c132cd5`'s
+  subject and the header say "as `intake.sh` does".
+- **F15 — non-blocking (implement's).** Tests that claim more than they check: `start_finds_the_identity_in_the_git_volume_file`
+  points `GIT_CONFIG_GLOBAL` at a file by hand, so it shows nothing beyond `ds_identity`; the newline guard in
+  the own-title rule has no test of its own (`$'\nfoo · <sid8>'` is kept by the shape rule alone; a case such as
+  `$'\ncodeo [home] · <sid8>'` would pin it); `start_credential_variables_hide_the_login_advice` lost its leg
+  where `claude auth status` succeeds with `api_key`/`oauth_token` while the variable is set.
+
+Recorded, not findings: an unwritable `info/exclude` now stops the window title being written at all (the plan's
+stated order); two hooks racing on `info/exclude` can add a duplicate line, harmless; a `/rename` to exactly
+`<x> [home] · <this sid8>` is retitled, inherent in the rule; the reviewer declined to judge whether Claude Code
+applies a `sessionTitle` to a session that already has one, and what VS Code writes into `~/.gitconfig`; both
+stay with the manual checks under Notes.
+
+No issue filed by this pass. F9-F15 fold into the re-plan; none needs an issue of its own.
+
+**Verdict: back to `/codeo:plan`.**
+
 ## Log
 
 - 2026-11-09 — qc round 1: back to plan · 1 blocking, 6 non-blocking · no issue filed · opus reviewer · cost: 6m · opus-5-5 397k in + 2.8M cached / 20k out
+- 2026-11-09 — qc round 2: back to plan · 1 blocking, 7 non-blocking · no issue filed · opus reviewer · cost: 5m · opus-5-5 550k in + 2.2M cached / 19k out · sonnet-5-5 28k in + 456k cached / 2k out
