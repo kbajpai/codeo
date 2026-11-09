@@ -898,6 +898,20 @@ session_title_hooks_are_registered() {
         || fail "UserPromptSubmit hook differs"
 }
 
+# Every dev container script is committed 100755 (a file git does not track yet needs the bit on disk).
+scripts_are_committed_executable() {
+    local f rel mode
+    for f in "$repo"/.devcontainer/scripts/*.sh; do
+        rel=${f#"$repo"/}
+        mode=$(git -C "$repo" ls-files -s -- "$rel" | cut -d' ' -f1)
+        if [[ -z $mode ]]; then
+            [[ -x $f ]] || fail "$rel is untracked and not executable"
+        else
+            [[ $mode == 100755 ]] || fail "$rel is committed with mode $mode, not 100755"
+        fi
+    done
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
@@ -955,6 +969,7 @@ cases=(
     session_title_is_silent_when_the_title_script_fails
     session_title_escapes_the_codename
     session_title_hooks_are_registered
+    scripts_are_committed_executable
 )
 
 for current in "${cases[@]}"; do
