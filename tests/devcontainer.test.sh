@@ -605,6 +605,18 @@ start_setup_git_failure_is_a_todo() {
 # ds_ready_run: a run with every login configured (the "ready" baseline); extra STUB_* come from the caller.
 ds_ready_run() { STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run; }
 
+start_trusts_the_clone_once() {
+    local got want
+    ds_setup trustonce || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    git config --file "$ds_dir/gitconfig" --add safe.directory /elsewhere
+    ds_ready_run
+    ds_ready_run
+    got=$(git config --file "$ds_dir/gitconfig" --get-all safe.directory)
+    want=$'/elsewhere\n'$(cd "$ds_dir/repo" && pwd -P)
+    [[ "$got" == "$want" ]] || fail "safe.directory is not /elsewhere then the clone, once: $got"
+}
+
 start_finds_the_identity_in_the_git_volume_file() {
     local n last
     ds_setup volfile || return 0
@@ -1290,6 +1302,7 @@ cases=(
     start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
     start_setup_git_failure_is_a_todo
+    start_trusts_the_clone_once
     start_finds_the_identity_in_the_git_volume_file
     start_enables_remote_control
     start_keeps_other_settings

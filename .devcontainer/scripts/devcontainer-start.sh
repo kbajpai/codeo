@@ -35,7 +35,9 @@ clone_on_named_volume() {
 # handed to this user; but only a clone on a Docker volume is: a bind-mounted host checkout looks
 # root-owned under rootless Docker and Podman, and changing it would change the engineer's files on the host.
 clone=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)
-git config --global --add safe.directory "$clone" || add_todo "git was not told to trust the clone: run git config --global --add safe.directory $clone"
+trusted=$(git config --global --get-all safe.directory 2>/dev/null || true)
+grep -qxF -- "$clone" <<<"$trusted" ||
+    git config --global --add safe.directory "$clone" || add_todo "git was not told to trust the clone: run git config --global --add safe.directory $clone"
 if [[ $(stat -c %u "$clone" 2>/dev/null || true) != "$(id -u)" ]]; then
     if clone_on_named_volume "$clone"; then
         sudo chown -R "$(id -u):$(id -g)" "$clone" ||
