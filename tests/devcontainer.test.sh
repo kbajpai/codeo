@@ -3,8 +3,9 @@
 # function named in the final cases=( ... ) array; add a case by writing a function and listing it.
 # Today it checks .codeo/config.json: the codename, the plugin pin, and that the shell suite's paths
 # cover .devcontainer/**. It also checks .devcontainer/devcontainer.json: it is valid JSON that runs as
-# the dev user and names the Dockerfile and start script, caps memory and cpus, mounts only the one
-# named gh volume, and carries no bind mounts, secrets or localEnv. It also checks .devcontainer/Dockerfile
+# the dev user and names the Dockerfile and start script, caps memory and cpus, names the container after its
+# clone folder, mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
+# It also checks .devcontainer/Dockerfile
 # (over its non-comment lines): Ubuntu 24.04 with the tools codeo needs, user dev at UID 1000 with the
 # gh config directory, and none of the tools the image deliberately leaves out. Finally it runs
 # .devcontainer/scripts/plugins.sh in a scratch repo against stub claude and git executables: a fresh
@@ -62,8 +63,14 @@ devcontainer_json_is_valid_and_runs_as_dev() {
 }
 
 run_args_cap_memory_and_cpus() {
-    jq -e '.runArgs == ["--memory=4g","--cpus=2"]' "$(dc_json)" >/dev/null \
-        || fail 'runArgs is not ["--memory=4g","--cpus=2"]'
+    jq -e '.runArgs | (index("--memory=4g") != null) and (index("--cpus=2") != null)' "$(dc_json)" >/dev/null \
+        || fail 'runArgs does not carry both --memory=4g and --cpus=2'
+}
+
+run_args_name_the_container_after_its_clone() {
+    # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
+    jq -e '.runArgs | index("--name=${localWorkspaceFolderBasename}-${devcontainerId}") != null' "$(dc_json)" >/dev/null \
+        || fail 'runArgs has no --name=${localWorkspaceFolderBasename}-${devcontainerId}'
 }
 
 post_start_command_reruns_the_title() {
@@ -1508,6 +1515,7 @@ cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
     run_args_cap_memory_and_cpus
+    run_args_name_the_container_after_its_clone
     post_start_command_reruns_the_title
     volumes_hold_the_gh_login_and_the_git_config
     git_config_global_points_into_the_git_volume
