@@ -45,8 +45,8 @@ mkdir -p "$root/.vscode" || die "could not create $root/.vscode"
 target=$(readlink -f -- "$root/.vscode/settings.json") || die "could not resolve $root/.vscode/settings.json"
 src=$target
 if [[ -e $target ]]; then
-    kind=$(jq -rn '[inputs][0] // {} | type' "$target" 2>/dev/null || true)
-    [[ -n $kind ]] || die "$target is not valid JSON; left untouched"
+    kind=$(jq -rn '[inputs] | if length == 0 then "object" elif length == 1 then (.[0] | type) else "multi" end' "$target" 2>/dev/null || true)
+    [[ -n $kind && $kind != multi ]] || die "$target is not valid JSON; left untouched"
     [[ $kind == object ]] || die "$target is not a JSON object; left untouched"
     current=$(jq -r '.["window.title"] // empty | strings' "$target" 2>/dev/null || true)
     if [[ $current == "$title" ]]; then

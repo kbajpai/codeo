@@ -675,15 +675,38 @@ start_fills_an_empty_settings_file() {
 }
 
 start_settings_that_are_not_an_object_are_a_todo() {
+    local n leg body want
+    for leg in array false null multi; do
+        case $leg in
+            array) body='[]';          want='settings.json.*not a JSON object' ;;
+            false) body='false';       want='settings.json.*not a JSON object' ;;
+            null)  body='null';        want='settings.json.*not a JSON object' ;;
+            multi) body='{"a":1} [2]'; want='settings.json.*not valid JSON' ;;
+        esac
+        ds_setup "notobj-$leg" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        mkdir -p "$ds_dir/claude"
+        printf '%s' "$body" > "$ds_dir/claude/settings.json"
+        ds_ready_run
+        ((ds_rc == 0)) || fail "$leg: exit $ds_rc, wanted 0"
+        [[ $(cat "$ds_dir/claude/settings.json") == "$body" ]] || fail "$leg: settings.json was changed"
+        n=$(ds_todos "$want"); ((n == 1)) || fail "$leg: wanted one '$want' TODO, got $n: $ds_err"
+    done
+}
+
+start_settings_that_cannot_be_resolved_are_a_todo() {
     local n
-    ds_setup notobj || return 0
+    ds_setup noresolve || return 0
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     mkdir -p "$ds_dir/claude"
-    printf '[]' > "$ds_dir/claude/settings.json"
+    printf '{"a":1}' > "$ds_dir/claude/settings.json"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$ds_dir/bin/readlink"
+    chmod +x "$ds_dir/bin/readlink"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
-    [[ $(cat "$ds_dir/claude/settings.json") == '[]' ]] || fail 'a non-object settings.json was changed'
-    n=$(ds_todos 'settings.json.*not a JSON object'); ((n == 1)) || fail "wanted one 'not a JSON object' TODO, got $n: $ds_err"
+    [[ $(cat "$ds_dir/claude/settings.json") == '{"a":1}' ]] || fail 'settings.json was changed'
+    n=$(ds_todos 'could not resolve'); ((n == 1)) || fail "wanted one 'could not resolve' TODO, got $n: $ds_err"
+    n=$(ds_todos 'not valid JSON'); ((n == 0)) || fail "unexpected 'not valid JSON' TODO: $ds_err"
 }
 
 start_settings_symlink_is_kept() {
@@ -992,9 +1015,12 @@ title_follows_the_lock_on_a_rerun() {
 
 title_rejects_settings_that_are_not_an_object() {
     local leg body want
-    for leg in array broken jsonc; do
+    for leg in array false null multi broken jsonc; do
         case $leg in
             array)  body='[]';                want='not a JSON object' ;;
+            false)  body='false';             want='not a JSON object' ;;
+            null)   body='null';              want='not a JSON object' ;;
+            multi)  body='{"a":1} [2]';       want='not valid JSON' ;;
             broken) body='{not json';         want='not valid JSON' ;;
             jsonc)  body=$'{ // c\n"a": 1 }'; want='not valid JSON' ;;
         esac
@@ -1400,6 +1426,7 @@ cases=(
     start_malformed_settings_is_a_todo
     start_fills_an_empty_settings_file
     start_settings_that_are_not_an_object_are_a_todo
+    start_settings_that_cannot_be_resolved_are_a_todo
     start_settings_symlink_is_kept
     start_settings_keep_their_mode
     start_leaves_no_temp_file_when_mv_fails

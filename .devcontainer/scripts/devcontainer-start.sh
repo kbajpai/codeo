@@ -124,9 +124,12 @@ if [[ ! -e $claude_settings ]]; then
     echo '{}' > "$claude_settings" || add_todo "could not create $claude_settings: Remote Control was not enabled"
 fi
 if [[ -f $claude_settings ]]; then
-    claude_target=$(readlink -f -- "$claude_settings")
-    claude_kind=$(jq -rn '[inputs][0] // {} | type' "$claude_target" 2>/dev/null || true)
-    if [[ -z $claude_kind ]]; then
+    claude_target=$(readlink -f -- "$claude_settings" 2>/dev/null || true)
+    claude_kind=
+    [[ -z $claude_target ]] || claude_kind=$(jq -rn '[inputs] | if length == 0 then "object" elif length == 1 then (.[0] | type) else "multi" end' "$claude_target" 2>/dev/null || true)
+    if [[ -z $claude_target ]]; then
+        add_todo "could not resolve $claude_settings: Remote Control was not enabled"
+    elif [[ -z $claude_kind || $claude_kind == multi ]]; then
         add_todo "$claude_settings is not valid JSON and was left alone: fix it, then add \"remoteControlAtStartup\": true"
     elif [[ $claude_kind != object ]]; then
         add_todo "$claude_settings is not a JSON object and was left alone: fix it, then add \"remoteControlAtStartup\": true"
