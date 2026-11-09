@@ -712,6 +712,7 @@ start_settings_that_are_not_a_regular_file_are_a_todo() {
         ((ds_rc == 0)) || fail "$leg: exit $ds_rc, wanted 0"
         n=$(ds_todos 'settings.json.*not a regular file'); ((n == 1)) || fail "$leg: wanted one 'not a regular file' TODO, got $n: $ds_err"
         [[ -d $ds_dir/claude/settings.json ]] || fail "$leg: settings.json is no longer a directory"
+        [[ $leg != link || -L $ds_dir/claude/settings.json ]] || fail "link: settings.json is no longer a symlink"
     done
 }
 

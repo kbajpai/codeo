@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The dev container's postCreateCommand. Trusts the clone (and takes ownership of it when it is on a Docker volume), installs the Claude Code
 # plugins, writes the window title, turns on Claude Code Remote Control (remoteControlAtStartup in the user
-# settings), restores tracked files' modes to the index's and turns core.fileMode back on where the filesystem keeps the executable bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
+# settings), restores the executable bit the index records on tracked files and turns core.fileMode back on, only on a clone on a Docker volume where the filesystem keeps the bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
 # (the GitHub and Claude logins, a git identity, credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
 #
@@ -144,7 +144,7 @@ bash .devcontainer/scripts/window-title.sh || add_todo "window-title.sh did not 
 
 # 3c. Remote Control: merge {"remoteControlAtStartup": true} into the user-scope Claude settings, keeping every other key.
 # A symlinked settings.json is written through (readlink -f), and the file keeps its mode. A file that is not valid
-# JSON, or not a JSON object, is left untouched. The merge goes through a temp file beside the target, removed on failure.
+# JSON, or not a JSON object, is left untouched; a path that exists but is not a regular file is reported as a TODO and left alone. The merge goes through a temp file beside the target, removed on failure.
 claude_dir=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
 claude_settings=$claude_dir/settings.json
 mkdir -p "$claude_dir" || add_todo "could not create $claude_dir: Remote Control was not enabled"
