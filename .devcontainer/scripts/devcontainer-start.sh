@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The dev container's postCreateCommand. Trusts the clone (and takes ownership of it when it is on a Docker volume), installs the Claude Code
 # plugins, writes the window title, turns on Claude Code Remote Control (remoteControlAtStartup in the user
-# settings), turns core.fileMode back on where the filesystem keeps the executable bit, wires git to the GitHub login, and prints what is still left for the engineer to do
+# settings), turns core.fileMode back on where the filesystem keeps the executable bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
 # (the GitHub and Claude logins, a git identity, credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
 #
@@ -49,21 +49,22 @@ fi
 cd "$(git -C "$clone" rev-parse --show-toplevel)" || { add_todo "could not enter the clone at $clone"; }
 
 # 2b. Executable scripts. Some container filesystems (a Windows or macOS host mount) set core.fileMode=false, and then
-# `git add` records every new script as 100644. When it is false, probe the git dir: if chmod u+x sticks there, the
-# filesystem keeps the executable bit and core.fileMode goes back on for this clone; if not, say how to stage by hand.
+# `git add` records every new script as 100644. When it is false, probe the git dir: only if the fresh probe file is not
+# executable, chmod u+x makes it executable and chmod u-x makes it not executable again does the filesystem keep the
+# executable bit as set, and core.fileMode goes back on for this clone; if not, say how to stage by hand.
 if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
     if filemode_probe=$(mktemp "$(git rev-parse --git-dir)/filemode.XXXXXX" 2>/dev/null); then
-        chmod u+x -- "$filemode_probe" 2>/dev/null || true
-        if [[ -x $filemode_probe ]]; then
+        if [[ ! -x $filemode_probe ]] && chmod u+x -- "$filemode_probe" 2>/dev/null && [[ -x $filemode_probe ]] \
+            && chmod u-x -- "$filemode_probe" 2>/dev/null && [[ ! -x $filemode_probe ]]; then
             rm -f -- "$filemode_probe"
             if git config core.fileMode true; then
-                say "core.fileMode was false and this filesystem keeps the executable bit: set it to true for this clone"
+                say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
             else
                 add_todo "core.fileMode is false and could not be turned on: run git config core.fileMode true, or stage new scripts with git update-index --chmod=+x"
             fi
         else
             rm -f -- "$filemode_probe"
-            add_todo "core.fileMode is false and this filesystem does not keep the executable bit: stage each new script with git update-index --chmod=+x <file>"
+            add_todo "core.fileMode is false and this filesystem does not keep the executable bit as set: stage each new script with git update-index --chmod=+x <file>"
         fi
     else
         add_todo "core.fileMode is false and the git dir is not writable to probe it: stage each new script with git update-index --chmod=+x <file>"
