@@ -51,7 +51,9 @@ fi
 cd "$(git -C "$clone" rev-parse --show-toplevel)" || { add_todo "could not enter the clone at $clone"; }
 
 # 2b. Executable scripts. Some container filesystems (a Windows or macOS host mount) set core.fileMode=false, and then
-# `git add` records every new script as 100644. When it is false, probe the git dir: only if the fresh probe file is not
+# `git add` records every new script as 100644. This runs only on a clone that is on a Docker volume, as step 1
+# does: a bind-mounted host checkout's config and file modes are the host's, so it gets a TODO and nothing else. On a
+# volume, when it is false, probe the git dir: only if the fresh probe file is not
 # executable, chmod u+x makes it executable and chmod u-x makes it not executable again does the filesystem keep the
 # executable bit as set. Then the tracked files' modes on disk are restored to the index's (so turning the setting on
 # shows no mode-only change), and only when that worked does core.fileMode go back on for this clone; if not, say how
@@ -81,30 +83,34 @@ restore_modes() {
 }
 
 if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
-    if filemode_probe=$(mktemp "$(git rev-parse --git-dir)/filemode.XXXXXX" 2>/dev/null); then
-        if [[ ! -x $filemode_probe ]] && chmod u+x -- "$filemode_probe" 2>/dev/null && [[ -x $filemode_probe ]] \
-            && chmod u-x -- "$filemode_probe" 2>/dev/null && [[ ! -x $filemode_probe ]]; then
-            rm -f -- "$filemode_probe"
-            if ! restore_modes; then
-                left_list=$(printf '%s, ' "${left_paths[@]:0:5}")
-                left_list=${left_list%, }
-                ((${#left_paths[@]} <= 5)) || left_list+=" and $((${#left_paths[@]} - 5)) more"
-                add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
-            elif git config core.fileMode true; then
-                if ((restored_count > 0)); then
-                    say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) to the index's and set it to true for this clone"
+    if ! clone_on_named_volume "$clone"; then
+        add_todo "core.fileMode is false and the clone is not on a Docker volume, so it was left alone (its config and file modes are the host's): stage each new script with git update-index --chmod=+x <file>"
+    else
+        if filemode_probe=$(mktemp "$(git rev-parse --git-dir)/filemode.XXXXXX" 2>/dev/null); then
+            if [[ ! -x $filemode_probe ]] && chmod u+x -- "$filemode_probe" 2>/dev/null && [[ -x $filemode_probe ]] \
+                && chmod u-x -- "$filemode_probe" 2>/dev/null && [[ ! -x $filemode_probe ]]; then
+                rm -f -- "$filemode_probe"
+                if ! restore_modes; then
+                    left_list=$(printf '%s, ' "${left_paths[@]:0:5}")
+                    left_list=${left_list%, }
+                    ((${#left_paths[@]} <= 5)) || left_list+=" and $((${#left_paths[@]} - 5)) more"
+                    add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
+                elif git config core.fileMode true; then
+                    if ((restored_count > 0)); then
+                        say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) to the index's and set it to true for this clone"
+                    else
+                        say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
+                    fi
                 else
-                    say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
+                    add_todo "core.fileMode is false and could not be turned on: run git config core.fileMode true, or stage new scripts with git update-index --chmod=+x"
                 fi
             else
-                add_todo "core.fileMode is false and could not be turned on: run git config core.fileMode true, or stage new scripts with git update-index --chmod=+x"
+                rm -f -- "$filemode_probe"
+                add_todo "core.fileMode is false and this filesystem does not keep the executable bit as set: stage each new script with git update-index --chmod=+x <file>"
             fi
         else
-            rm -f -- "$filemode_probe"
-            add_todo "core.fileMode is false and this filesystem does not keep the executable bit as set: stage each new script with git update-index --chmod=+x <file>"
+            add_todo "core.fileMode is false and the git dir is not writable to probe it: stage each new script with git update-index --chmod=+x <file>"
         fi
-    else
-        add_todo "core.fileMode is false and the git dir is not writable to probe it: stage each new script with git update-index --chmod=+x <file>"
     fi
 fi
 

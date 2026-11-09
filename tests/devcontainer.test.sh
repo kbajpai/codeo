@@ -493,6 +493,8 @@ ds_mountinfo() {
     CODEO_MOUNTINFO=$f
 }
 
+ds_on_volume() { ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo"; }
+
 ds_sudo_calls() { grep -c '^sudo' "$ds_dir/calls" || true; }
 ds_safe_dir_set() { git config --file "$ds_dir/gitconfig" --get-all safe.directory | grep -qxF -- "$1"; }
 
@@ -819,6 +821,7 @@ start_non_claude_ai_login_is_a_todo() {
 
 start_sets_file_mode_so_new_scripts_are_executable() {
     ds_setup filemode || return 0
+    ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     git -C "$ds_dir/repo" config core.fileMode false
     ds_ready_run
@@ -848,6 +851,7 @@ start_leaves_file_mode_alone_when_it_is_fine() {
 start_file_mode_that_cannot_stick_is_a_todo() {
     local n
     ds_setup filemode-stuck || return 0
+    ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     git -C "$ds_dir/repo" config core.fileMode false
     printf '#!/usr/bin/env bash\nexit 0\n' > "$ds_dir/bin/chmod"
@@ -862,6 +866,7 @@ start_file_mode_that_cannot_stick_is_a_todo() {
 start_file_mode_that_cannot_clear_is_a_todo() {
     local n
     ds_setup filemode-sticky || return 0
+    ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     git -C "$ds_dir/repo" config core.fileMode false
     cat > "$ds_dir/bin/chmod" <<'STUB'
@@ -891,6 +896,7 @@ ds_modes_repo() {
 start_restores_tracked_modes_before_turning_file_mode_on() {
     local r
     ds_setup restore-modes || return 0
+    ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
     r="$ds_dir/repo"
@@ -906,6 +912,7 @@ start_restores_tracked_modes_before_turning_file_mode_on() {
 start_keeps_file_mode_off_when_a_mode_cannot_be_restored() {
     local r n
     ds_setup restore-fails || return 0
+    ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
     r="$ds_dir/repo"
@@ -928,6 +935,7 @@ STUB
 start_ignores_content_edits_when_restoring_modes() {
     local r n
     ds_setup content-edit || return 0
+    ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
     r="$ds_dir/repo"
@@ -937,6 +945,24 @@ start_ignores_content_edits_when_restoring_modes() {
     [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
     n=$(ds_todos 'update-index --chmod'); ((n == 0)) || fail "wanted no update-index --chmod TODO, got $n: $ds_err"
     [[ $(<"$r/data.txt") == edited ]] || fail 'data.txt content changed'
+}
+
+start_leaves_a_bind_mounted_clone_alone() {
+    local r n
+    ds_setup bind-modes || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    ds_mountinfo /home/u/src/codeo "$ds_dir/repo"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed on a clone that is not on a volume'
+    [[ $(stat -c %a "$r/bin/run.sh") == 644 ]] || fail 'bin/run.sh mode changed'
+    [[ $(stat -c %a "$r/data.txt") == 755 ]] || fail 'data.txt mode changed'
+    ! compgen -G "$r/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
+    n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "wanted one 'not on a Docker volume' TODO, got $n: $ds_err"
+    grep 'not on a Docker volume' <<<"$ds_err" | grep -q 'update-index --chmod' || fail "the TODO does not name update-index --chmod: $ds_err"
+    ! grep -q 'core.fileMode' <<<"$ds_out" || fail "stdout mentions core.fileMode: $ds_out"
 }
 
 # wt_setup <name>: a scratch git repo (committed) holding the real window-title.sh and a config naming the
@@ -1467,6 +1493,7 @@ cases=(
     start_restores_tracked_modes_before_turning_file_mode_on
     start_keeps_file_mode_off_when_a_mode_cannot_be_restored
     start_ignores_content_edits_when_restoring_modes
+    start_leaves_a_bind_mounted_clone_alone
     title_is_home_without_a_lock
     title_names_the_issue_with_a_lock
     title_falls_back_to_the_clone_name
