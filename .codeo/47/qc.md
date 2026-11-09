@@ -8,8 +8,8 @@
 
 ## Where this stands
 
-Round 3 in progress, **no verdict yet**: two questions (Q1, Q2) are open, so the round is not written (see
-`## Questions`). Pass so far: sync (branch already contains `origin/main`), `overlap.sh 47` nothing, build `true`
+Round 3 done: back to `/codeo:plan`. Q1 and Q2 are answered and both change what the start script must do, so
+F16 (blocking) and F17 are the plan's. Pass: sync (branch already contains `origin/main`), `overlap.sh 47` nothing, build `true`
 exit 0, `bash tests/run.sh` prints `all cases passed` (exit 0), `shellcheck .devcontainer/scripts/*.sh
 tests/devcontainer.test.sh` prints only the one pre-existing `SC2016` note. F8 (round 2, blocking) is fixed as
 planned: I re-ran it by hand in a scratch repo (`core.fileMode false`, `bin/run.sh` 755 in the index and 644 on disk,
@@ -45,7 +45,8 @@ whether it goes back to `/codeo:plan` (Q4's rule was wrong in one direction) or 
   rejected second option).
 
 **Answer:**
-_Pending._
+Accepted the recommendation (answered in the conversation, 2026-11-09): restore only the `100755`-in-index
+direction, leave an executable `100644`-in-index file for git to show as a mode change, and name the files changed.
 
 ### Q2 — Should step 2b (the `core.fileMode` flip and the mode restore) apply to a bind-mounted host checkout, as step 1 deliberately does not?
 
@@ -67,7 +68,8 @@ false", which holds only where the probe fails (a Docker Desktop mount that drop
   deliberate one without reading the config's origin; more code for an edge case.
 
 **Answer:**
-_Pending._
+Accepted the recommendation (answered in the conversation, 2026-11-09): apply step 2b only to a clone on a Docker
+named volume; a bind-mounted checkout gets the `update-index --chmod` TODO.
 
 ## Notes
 
@@ -84,7 +86,7 @@ _Pending._
 - Pre-existing, not a finding: `shellcheck tests/devcontainer.test.sh` prints one `SC2016` info note on the
   single-quoted hook-command string; `origin/main`'s test file prints the same note for its older form.
 
-- Round 3 findings so far (classification waits on Q1/Q2). Opus review of `162720b..HEAD` (code only), `tests/run.sh
+- Round 3 findings (classified in Round 3 below once Q1/Q2 were answered). Opus review of `162720b..HEAD` (code only), `tests/run.sh
   devcontainer` passing: **F16** (`devcontainer-start.sh:63-81,88`, the Q1 behaviour) — `restore_modes` strips the
   executable bit from files that are `755` on disk and `100644` in the index; the test `ds_modes_repo` (`data.txt`
   755 on disk → back to 644) codifies it. Provisionally blocking, the plan's (Q4's rule was stated wrongly), pending
@@ -337,8 +339,114 @@ No issue filed by this pass. F9-F15 fold into the re-plan; none needs an issue o
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 3 — 2026-11-09
+
+(implement.md round 3, `b1e21ca`..`8ef25ff`, plus the dossier commit `0dc9e87`; answers Q1 and Q2 of this file)
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`.
+`overlap.sh 47`: nothing. `overlap.sh --outside 47`: `.claude/settings.json`, `.devcontainer/Dockerfile`,
+`.devcontainer/devcontainer.json`, `.devcontainer/scripts/session-title.sh` — files rounds 1-2 touched that the
+round 3 footprint (the four files of this round) does not list; non-blocking, as in round 2, the original
+footprint (round 1/2) covers them. `scope.sh origin/main HEAD`:
+
+```
+scope: suite shell needed for unclassified paths:
+  .claude/settings.json
+  .codeo/47/implement.md  .codeo/47/init.md  .codeo/47/issue.md  .codeo/47/plan.md  .codeo/47/qc.md
+  CHANGELOG.md
+suite.shell=true
+```
+
+No `deploy=` line: no shared environment is configured. `git diff origin/main...HEAD --stat`: 14 files changed,
+2326 insertions, 73 deletions.
+
+**Build.** `shell` suite `build` = `true`: exit 0.
+
+**Suites.** `bash tests/run.sh` (whole `shell` suite): `all cases passed`, exit 0.
+`shellcheck .devcontainer/scripts/*.sh tests/devcontainer.test.sh`: only the one `SC2016` info note on the
+single-quoted hook-command string in `session_title_hooks_are_registered`.
+
+**Round 2's findings.** F8 (blocking in round 2) — fixed by `b1e21ca` and `44783f8`: `restore_modes` lists the
+tracked mode differences as if `core.fileMode` were on, `chmod`s them to the index's modes and sets the setting only
+when a second listing is empty. Re-run by hand in a scratch repo (`core.fileMode false`, `bin/run.sh` `755` in the
+index and `644` on disk, `data.txt` content-edited): `restore_modes` returned 0 with `restored=1`, `bin/run.sh` is
+`755`, `data.txt` untouched, and after `git config core.fileMode true` `git status --short` shows only ` M data.txt`.
+F9 (reworded) and F10 — fixed by `8ef25ff` (changelog). F11, F12, F13, F14, F15 — fixed by `42dea00`, `4ad09a7`,
+`49556eb`, each with a test that fails without it (the implementer's mutation runs are in `implement.md`).
+
+**Criteria**
+
+| # | Criterion (abbreviated) | Verdict | Settled by |
+|---|---|---|---|
+| 1 | No `claude auth login` line with `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` set | met | `start_credential_variables_hide_the_login_advice` (now with a `claude auth status` that succeeds as well as one that fails) |
+| 2 | Unwritable `info/exclude` still prints a `window-title:` line | met | `title_reports_an_unwritable_exclude`; `title_reports_an_unwritable_vscode_dir` |
+| 3 | `issue: #44` gives `[#44]` exactly once | met | `title_strips_a_hash_from_the_lock_line` (also a TAB after `issue:`) |
+| 4 | `settings.json` holding `[]` is reported as not an object | met | `title_rejects_settings_that_are_not_an_object`, `start_settings_that_are_not_an_object_are_a_todo` (now also `false`, `null`, two values) |
+| 5 | Symlinked `settings.json` still a symlink | met | `title_writes_through_a_symlink`, `start_settings_symlink_is_kept` |
+| 6 | `window-title.sh` is mode 100755 in the index | met | `scripts_are_committed_executable` |
+| 7 | Failed `mv` leaves no `.tmp`; mode not 0600 unless the original's was | met | `title_leaves_no_temp_file_when_mv_fails` (noisy `mv` stub), `start_leaves_no_temp_file_when_mv_fails`, `title_keeps_the_settings_mode`, `start_settings_keep_their_mode` |
+| 8 | Registered hook command exits 0, no output, with `session-title.sh` removed | met | `session_title_hook_command_survives_a_missing_script` |
+| 9 | `session_title` beginning with a newline prints nothing | met | `session_title_treats_a_leading_newline_as_a_title`, `session_title_keeps_a_renamed_title` (newline before a valid-looking suffix) |
+| 10 | Lock taken/released changes `--print` and the window title follows without a restart | met on the script side; whether Claude Code fires the hook is a manual check | `title_follows_the_lock_on_a_rerun`, `title_follows_a_released_lock`, `session_title_refreshes_the_window_title`, `session_title_replaces_its_own_title_when_the_lock_changes` |
+| 11 | A script added in a fresh container is staged 100755 without `update-index --chmod` | met as written; F16 and F17 are about how the start script gets there | `start_sets_file_mode_so_new_scripts_are_executable`, `start_restores_tracked_modes_before_turning_file_mode_on` |
+| 12 | `bash tests/run.sh` prints `all cases passed` | met | output above |
+| 13 | Fresh container with the volume already holding an identity: no identity TODO | met in the suite; a real fresh container is a manual check | `start_reads_the_identity_from_the_global_config_file`, `volumes_hold_the_gh_login_and_the_git_config`, `git_config_global_points_into_the_git_volume`, `dockerfile_creates_the_git_config_dir` |
+
+**Documentation.** The plan names `CHANGELOG.md` only; no page under `docs/` describes the dev container and there is
+no wiki module. The #47 line says the number is read from the lock, that tracked modes are restored before
+`core.fileMode` goes on, and that the host `~/.gitconfig` no longer applies; all true to the code today. It will
+need a matching edit when F16 and F17 are fixed (restoring only one direction; the flip only on a named volume).
+
+**Review.** Independent code review (opus, `QC review:`) of `162720b..HEAD`, code only, given the acceptance
+criteria and the issue line. Its assessment, in plain text: ready to merge with fixes; no Critical, two Important
+(F16, F17), six Minor.
+
+**Findings**
+
+- **F16 — blocking, the plan's.** `devcontainer-start.sh:63-81,88` `restore_modes` strips the executable bit from a
+  tracked file that is `755` on disk and `100644` in the index (the state `git add` leaves under
+  `core.fileMode=false`, which is the mistake criterion 11 exists to fix). Scenario: `tool.sh` created, `chmod +x`,
+  committed under `core.fileMode=false` (index `100644`); after the start script it is `-rw-r--r--`, `git status` is
+  clean, the wrong record is hidden and `./tool.sh` fails; only a count is printed, not the files. The code does what
+  the round 3 plan says (Q4's rule restored in both directions, and its "nothing of yours is lost" holds only for the
+  `100755`-in-index direction); `ds_modes_repo` codifies it. Q1 settled the fix: restore only the
+  `100755`-in-index, not-executable-on-disk direction, leave an executable `100644`-in-index file for git to show,
+  ignore it in the second listing, and name the files changed.
+- **F17 — non-blocking, the plan's.** `devcontainer-start.sh:83-109` step 2b flips `core.fileMode` and `chmod`s
+  tracked files on a bind-mounted host checkout (a Linux or WSL host passes the probe), which step 1 deliberately
+  does not touch; it can override a `core.fileMode=false` set on purpose and writes the host's `.git/config`. Q2
+  settled the fix: apply 2b only to a clone on a named volume (`clone_on_named_volume`), a bind mount gets the
+  `update-index --chmod` TODO.
+- **F18 — non-blocking, the plan's.** `session-title.sh:40-41` a forked or resumed session (new id) keeps a title
+  ending in another session's ` · <sid8>`; it is read as a `/rename` and never follows the lock.
+- **F19 — non-blocking, the plan's.** `session-title.sh:41` the codename is not compared, so a `/rename` shaped
+  `x [home] · <sid8>` is replaced; comparing against `"$codename [...]"` would be exact.
+- **F20 — non-blocking, deliberate.** `window-title.sh:26` `issue: 44abc` gives `[#44]`, `issue: 4 4` gives `[#4]`;
+  Round 3 chose leading digits on purpose. Recorded, no action needed.
+- **F21 — non-blocking, the plan's.** Both merges replace the inode with `mv`: only the mode is copied
+  (`chmod --reference`), so an owner other than `dev` and hard links of `settings.json` are not kept.
+- **F22 — non-blocking, the plan's.** `devcontainer-start.sh:126` a non-regular `~/.claude/settings.json` (a
+  directory, or a link to one) is skipped with no TODO.
+- **F23 — non-blocking, the plan's.** `devcontainer-start.sh:84,93` the probe file goes in `git rev-parse --git-dir`
+  and `git config` writes the common config; wrong in a linked worktree on another filesystem. Not this layout.
+- From `implement.md` round 3, non-blocking: the second `git diff … 2>/dev/null` listing in `restore_modes` reads a
+  failure as empty and would turn the setting on (not reproducible without a corrupt index); a missing comma in the
+  changelog line ("with or without a `#` and writes through a symlink"); no test for a file that differs in both mode
+  and content, or the singular "1 tracked file".
+
+No issue filed by this pass. F18-F23 are small enough to fold into the re-plan or be left; the engineer can say which.
+
+**Manual checks still to make** (named in the plan, the suite cannot see them): rebuild the container, set the
+identity once, confirm a second container prints no identity TODO; take the lock and send a prompt (titles say
+`[#N]`), release it (`[home]` at the next prompt), `/rename` a session (kept); read `/home/dev/.config/git/config`
+for a VS Code credential helper naming `/tmp/vscode-remote-containers-*.js` (Q5). If Claude Code does not apply a
+`sessionTitle` to a session that already has one, that is a send-back to `/codeo:plan`.
+
+**Verdict: back to `/codeo:plan`.**
+
 ## Log
 
 - 2026-11-09 — qc round 1: back to plan · 1 blocking, 6 non-blocking · no issue filed · opus reviewer · cost: 6m · opus-5-5 397k in + 2.8M cached / 20k out
 - 2026-11-09 — qc round 2: back to plan · 1 blocking, 7 non-blocking · no issue filed · opus reviewer · cost: 5m · opus-5-5 550k in + 2.2M cached / 19k out · sonnet-5-5 28k in + 456k cached / 2k out
 - 2026-11-09 — qc round 3: Q1-Q2 raised, no verdict yet · opus reviewer · cost: 4m · opus-5-5 271k in + 2M cached / 17k out · sonnet-5-5 195k in + 29k cached / 1k out
+- 2026-11-09 — qc round 3: back to plan · 1 blocking, 7 non-blocking · no issue filed · opus reviewer · Q1-Q2 answered · cost: 25m · opus-5-5 271k in + 2M cached / 17k out · sonnet-5-5 204k in + 1.2M cached / 8k out
