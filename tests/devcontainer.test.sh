@@ -789,7 +789,7 @@ start_sets_file_mode_so_new_scripts_are_executable() {
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true after the start script'
     grep -q 'core.fileMode' <<<"$ds_out" || fail "stdout does not mention core.fileMode: $ds_out"
-    ! ls "$ds_dir/repo/.git" | grep -q '^filemode\.' || fail 'a filemode probe file was left in the git dir'
+    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
     printf '#!/bin/sh\n' > "$ds_dir/repo/new.sh" && chmod +x "$ds_dir/repo/new.sh" && git -C "$ds_dir/repo" add new.sh
     [[ $(git -C "$ds_dir/repo" ls-files -s new.sh) == 100755* ]] || fail "new.sh was not staged as 100755: $(git -C "$ds_dir/repo" ls-files -s new.sh)"
 }
@@ -820,7 +820,7 @@ start_file_mode_that_cannot_stick_is_a_todo() {
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed although the executable bit cannot stick'
     n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
-    ! ls "$ds_dir/repo/.git" | grep -q '^filemode\.' || fail 'a filemode probe file was left in the git dir'
+    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
 }
 
 start_file_mode_that_cannot_clear_is_a_todo() {
@@ -828,13 +828,16 @@ start_file_mode_that_cannot_clear_is_a_todo() {
     ds_setup filemode-sticky || return 0
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     git -C "$ds_dir/repo" config core.fileMode false
-    printf '#!/usr/bin/env bash\nexec /usr/bin/chmod u+x -- "${@: -1}"\n' > "$ds_dir/bin/chmod"
+    cat > "$ds_dir/bin/chmod" <<'STUB'
+#!/usr/bin/env bash
+exec /usr/bin/chmod u+x -- "${@: -1}"
+STUB
     chmod +x "$ds_dir/bin/chmod"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed although the executable bit cannot be cleared'
     n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
-    ! ls "$ds_dir/repo/.git" | grep -q '^filemode\.' || fail 'a filemode probe file was left in the git dir'
+    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
 }
 
 # wt_setup <name>: a scratch git repo (committed) holding the real window-title.sh and a config naming the
