@@ -1179,6 +1179,9 @@ session_title_treats_a_leading_newline_as_a_title() {
     st_setup newline || return 0
     st_run "$(st_json UserPromptSubmit $st_sid $'\nmy name')"
     st_silent 'leading newline'
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid $'\nfoo · a21b9973')"
+    st_silent 'newline before the sid suffix'
 }
 
 session_title_replaces_its_own_title_when_the_lock_changes() {
@@ -1200,6 +1203,10 @@ session_title_keeps_a_renamed_title() {
     st_silent 'renamed'
     st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · ffffffff')"
     st_silent "another session's id"
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name · a21b9973')"
+    st_silent 'sid suffix only'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [x] · a21b9973')"
+    st_silent 'unknown bracket'
 }
 
 session_title_refreshes_the_window_title() {
