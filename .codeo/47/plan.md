@@ -48,6 +48,7 @@ changes, what the `UserPromptSubmit` hook may write, and how `/rename` is told a
   untouched.
 
 **Answer:**
+The prompt hook owns both titles (the recommendation; answered in the conversation, 2026-11-09).
 
 ### Q2 — Where does the persisted git identity live, and how does `git config --global` reach it?
 
@@ -80,6 +81,8 @@ gains an environment line, what the Dockerfile creates, and what the identity TO
   per container.
 
 **Answer:**
+Volume `codeo-git` at `/home/dev/.config/git` (the recommendation, read as including
+`containerEnv.GIT_CONFIG_GLOBAL=/home/dev/.config/git/config`; answered in the conversation, 2026-11-09).
 
 ### Q3 — One pull request, or split the bundle?
 
@@ -103,6 +106,7 @@ reviews on its own.
   and #45 fixes edit the same `window-title.sh`, so the second PR would rebase over the first.
 
 **Answer:**
+One PR (the recommendation; answered in the conversation, 2026-11-09).
 
 ## Notes
 
@@ -133,6 +137,14 @@ Decisions this plan makes without asking, stated so they can be rejected:
 - `inflight.sh --except 47`: no other workflow in flight, so the draft footprint overlaps nothing.
 - The `engineering` plugin (`system-design`, `architecture`) is not installed here; its Options Considered
   structure is applied directly in the plan's table, as the #44 and #45 plans did.
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/session-title.sh, .devcontainer/devcontainer.json, .devcontainer/Dockerfile, .claude/settings.json, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
+wiki:       none
+exclusive:  none
+```
 
 ## Outcome
 
