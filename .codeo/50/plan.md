@@ -10,7 +10,7 @@
 
 Q1-Q3 answered. The rebuilt container is named `codeo-home-031er97u1o8nfhn55jo8tkvqb43vvn3483bfpgnn92fj540pqokb`:
 on a Docker-volume clone `${localWorkspaceFolderBasename}` resolves to `codeo-home` and `${devcontainerId}` is 52
-characters (`[0-9a-v]`), 63 in all. Draft plan written to `.codeo/50/plan-draft.md`, awaiting review. No open question.
+characters (`[0-9a-v]`), 63 in all. Plan approved and written to `docs/plans/2026-11-09-name-dev-container-after-its-clone.md` (unstaged). No open question; next is `/codeo:implement`.
 
 ## Questions
 
@@ -72,7 +72,17 @@ anywhere I could find. The suite can pin the `runArgs` text; it cannot show what
 
 **Answer:** `codeo-home-031er97u1o8nfhn55jo8tkvqb43vvn3483bfpgnn92fj540pqokb` (2026-11-09). The folder part resolves correctly for a clone on a Docker volume, and the suffix is 52 characters, as expected; the name is 63 characters long.
 
-## Notes
+## Outcome
+
+**Plan:** `docs/plans/2026-11-09-name-dev-container-after-its-clone.md` — an executable plan under `docs/plans/` (four tasks, one PR); no reference doc, since nothing here is a standing decision.
+
+**Decisions.** The container is named by one `runArgs` entry, `--name=${localWorkspaceFolderBasename}-${devcontainerId}` (Q1). Rejected: the bare folder name (collides for same-named clones) and a real short hash through Docker Compose and an `initializeCommand` (rewrites the container's definition for a name). The issue's word "short" is dropped — the suffix is the 52-character `${devcontainerId}`. The engineer ran the host check (Q2, Q3): the rebuilt container is `codeo-home-031er97u1o8nfhn55jo8tkvqb43vvn3483bfpgnn92fj540pqokb`, so both variables resolve for a clone on a Docker volume. The `runArgs` edit is already in the working tree; the plan pins it in the suite, loosens the memory/cpu case to "has both caps", and adds a CHANGELOG bullet that says a rebuild is needed and that a leftover same-named container must be `docker rm`ed.
+
+**Documentation moved:** `CHANGELOG.md` only; no page under `docs/`, no wiki module.
+
+**Manual checks for the engineer** (Task 4): rebuild again and see the same name; start a second clone with the same folder name and see a different suffix.
+
+No intake question was resolved here. `overlap.sh 50` printed nothing; no other workflow in flight; no exclusive resource, so no lock was taken.
 
 ### Footprint
 
@@ -83,13 +93,9 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-09 — Q3 answered (host check passed); plan drafted for review
-
+- 2026-11-09 — planned: docs/plans/2026-11-09-name-dev-container-after-its-clone.md · cost: 2m · sonnet-5-5 32k in + 657k cached / 9k out · `engineering` plugin unavailable, its structure applied directly
 - 2026-11-09 — Q1-Q2 answered, Q3 raised (host check) · cost: see the line below (same session)
 - 2026-11-09 — Q1-Q2 raised · cost: 2m · fable-5-2 139k in + 779k cached / 8k out · sonnet-5-5 32k in + 4k cached / 3k out
