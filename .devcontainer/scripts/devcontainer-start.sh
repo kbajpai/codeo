@@ -55,7 +55,8 @@ bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fi
 bash .devcontainer/scripts/window-title.sh || add_todo "window-title.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/window-title.sh"
 
 # 3c. Remote Control: merge {"remoteControlAtStartup": true} into the user-scope Claude settings, keeping every other key.
-# A file that is not valid JSON is left untouched.
+# A symlinked settings.json is written through (readlink -f), and the file keeps its mode. A file that is not valid
+# JSON, or not a JSON object, is left untouched. The merge goes through a temp file beside the target, removed on failure.
 claude_dir=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
 claude_settings=$claude_dir/settings.json
 mkdir -p "$claude_dir" || add_todo "could not create $claude_dir: Remote Control was not enabled"
@@ -63,11 +64,24 @@ if [[ ! -e $claude_settings ]]; then
     echo '{}' > "$claude_settings" || add_todo "could not create $claude_settings: Remote Control was not enabled"
 fi
 if [[ -f $claude_settings ]]; then
-    if jq -n '([inputs][0] // {}) + {remoteControlAtStartup: true}' "$claude_settings" > "$claude_settings.tmp" 2>/dev/null && [[ -s $claude_settings.tmp ]]; then
-        mv "$claude_settings.tmp" "$claude_settings" || add_todo "could not write $claude_settings: Remote Control was not enabled"
-    else
-        rm -f "$claude_settings.tmp"
+    claude_target=$(readlink -f -- "$claude_settings")
+    claude_kind=$(jq -rn '[inputs][0] // {} | type' "$claude_target" 2>/dev/null || true)
+    if [[ -z $claude_kind ]]; then
         add_todo "$claude_settings is not valid JSON and was left alone: fix it, then add \"remoteControlAtStartup\": true"
+    elif [[ $claude_kind != object ]]; then
+        add_todo "$claude_settings is not a JSON object and was left alone: fix it, then add \"remoteControlAtStartup\": true"
+    elif claude_tmp=$(mktemp "$(dirname "$claude_target")/.settings.XXXXXX" 2>/dev/null); then
+        if jq -n '([inputs][0] // {}) + {remoteControlAtStartup: true}' "$claude_target" > "$claude_tmp" 2>/dev/null \
+            && [[ -s $claude_tmp ]] \
+            && chmod --reference="$claude_target" -- "$claude_tmp" 2>/dev/null \
+            && mv -- "$claude_tmp" "$claude_target"; then
+            :
+        else
+            rm -f "$claude_tmp"
+            add_todo "could not write $claude_target: Remote Control was not enabled"
+        fi
+    else
+        add_todo "could not write $claude_target: Remote Control was not enabled"
     fi
 fi
 

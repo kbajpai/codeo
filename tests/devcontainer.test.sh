@@ -623,6 +623,60 @@ start_fills_an_empty_settings_file() {
     [[ $(ds_todos 'settings.json') == 0 ]] || fail "unexpected TODO naming settings.json: $ds_err"
 }
 
+start_settings_that_are_not_an_object_are_a_todo() {
+    local n
+    ds_setup notobj || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '[]' > "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/settings.json") == '[]' ]] || fail 'a non-object settings.json was changed'
+    n=$(ds_todos 'settings.json.*not a JSON object'); ((n == 1)) || fail "wanted one 'not a JSON object' TODO, got $n: $ds_err"
+}
+
+start_settings_symlink_is_kept() {
+    ds_setup symlink || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    echo '{"autoUpdatesChannel":"stable"}' > "$ds_dir/real-claude-settings.json"
+    ln -sf "$ds_dir/real-claude-settings.json" "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ -L $ds_dir/claude/settings.json ]] || fail 'settings.json is no longer a symlink'
+    jq -e '.remoteControlAtStartup == true and .autoUpdatesChannel == "stable"' "$ds_dir/real-claude-settings.json" >/dev/null \
+        || fail "the link target was not merged: $(cat "$ds_dir/real-claude-settings.json")"
+}
+
+start_settings_keep_their_mode() {
+    local mode
+    ds_setup mode || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    for mode in 644 600; do
+        mkdir -p "$ds_dir/claude"
+        echo '{"autoUpdatesChannel":"stable"}' > "$ds_dir/claude/settings.json"
+        chmod "$mode" "$ds_dir/claude/settings.json"
+        ds_ready_run
+        ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+        [[ $(stat -c %a "$ds_dir/claude/settings.json") == "$mode" ]] \
+            || fail "$mode became $(stat -c %a "$ds_dir/claude/settings.json")"
+    done
+}
+
+start_leaves_no_temp_file_when_mv_fails() {
+    local n
+    ds_setup mvfail || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    echo '{"autoUpdatesChannel":"stable"}' > "$ds_dir/claude/settings.json"
+    printf '#!/bin/sh\nexit 1\n' > "$ds_dir/bin/mv"
+    chmod +x "$ds_dir/bin/mv"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'could not write'); ((n == 1)) || fail "wanted one 'could not write' TODO, got $n: $ds_err"
+    [[ $(ls -A "$ds_dir/claude") == settings.json ]] || fail "leftover files: $(ls -A "$ds_dir/claude")"
+}
+
 start_writes_the_title() {
     local n
     ds_setup title || return 0
@@ -1077,6 +1131,10 @@ cases=(
     start_keeps_other_settings
     start_malformed_settings_is_a_todo
     start_fills_an_empty_settings_file
+    start_settings_that_are_not_an_object_are_a_todo
+    start_settings_symlink_is_kept
+    start_settings_keep_their_mode
+    start_leaves_no_temp_file_when_mv_fails
     start_writes_the_title
     start_env_vars_are_todos
     start_credential_variables_hide_the_login_advice
