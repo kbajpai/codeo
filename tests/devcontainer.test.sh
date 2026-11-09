@@ -17,7 +17,9 @@
 # window title) on every start; the start script's login checks are the ones listed just above.
 # It also runs .devcontainer/scripts/session-title.sh against hook fixtures on stdin (home and lock titles,
 # the prompt hook, an existing title kept, silent outside a dev container and on every failure) and
-# checks that .claude/settings.json registers it.
+# checks that .claude/settings.json registers it. It also checks the scripts are committed executable, the
+# settings-merge cases (not an object, symlink, mode, no temp file), the credential-variable advice, the
+# core.fileMode probe, the prompt hook's retitling, the guarded hook command and the codeo-git volume.
 #
 #   bash tests/devcontainer.test.sh
 #
@@ -69,9 +71,14 @@ post_start_command_reruns_the_title() {
         || fail 'postStartCommand is not "bash .devcontainer/scripts/window-title.sh || true"'
 }
 
-gh_login_is_one_named_volume() {
-    jq -e '.mounts == ["source=codeo-gh,target=/home/dev/.config/gh,type=volume"]' "$(dc_json)" >/dev/null \
-        || fail 'mounts is not the single codeo-gh volume at /home/dev/.config/gh'
+volumes_hold_the_gh_login_and_the_git_config() {
+    jq -e '.mounts == ["source=codeo-gh,target=/home/dev/.config/gh,type=volume","source=codeo-git,target=/home/dev/.config/git,type=volume"]' "$(dc_json)" >/dev/null \
+        || fail 'mounts is not the codeo-gh volume at /home/dev/.config/gh then the codeo-git volume at /home/dev/.config/git'
+}
+
+git_config_global_points_into_the_git_volume() {
+    jq -e '.containerEnv == {"GIT_CONFIG_GLOBAL":"/home/dev/.config/git/config"}' "$(dc_json)" >/dev/null \
+        || fail 'containerEnv is not {"GIT_CONFIG_GLOBAL":"/home/dev/.config/git/config"}'
 }
 
 no_bind_mounts_or_secrets() {
@@ -116,6 +123,25 @@ dockerfile_creates_dev_uid_1000_and_the_gh_dir() {
     grep -q '^ARG USERNAME=dev$' <<<"$code" || fail 'no ARG USERNAME=dev'
     grep -q 'userdel.* ubuntu' <<<"$code" || fail 'no userdel of the ubuntu user'
     grep -q 'install -d -o.*\.config/gh' <<<"$code" || fail 'no install -d -o for .config/gh'
+}
+
+dockerfile_creates_the_git_config_dir() {
+    local code
+    code=$(dockerfile_code) || { fail 'Dockerfile is missing or unreadable'; return 0; }
+    grep -q 'install -d -o.*\.config/git' <<<"$code" || fail 'no install -d -o for .config/git'
+}
+
+# Pins the premise the volume design rests on: with GIT_CONFIG_GLOBAL set, git --global writes there and leaves an existing ~/.gitconfig alone.
+git_global_writes_land_in_the_volume_file() {
+    local h
+    h=$(mktemp -d) || { fail 'mktemp failed'; return 0; }
+    mkdir -p "$h/.config/git"
+    : > "$h/.gitconfig"
+    HOME="$h" GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$h/.config/git/config" git config --global user.name X \
+        || fail 'git config --global failed'
+    [[ $(git config --file "$h/.config/git/config" user.name 2>/dev/null || true) == X ]] || fail 'user.name did not land in the volume file'
+    [[ ! -s "$h/.gitconfig" ]] || fail 'the home .gitconfig was written to'
+    rm -rf "$h"
 }
 
 dockerfile_has_none_of_the_excluded_tools() {
@@ -391,7 +417,8 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 ds_run() {
     ds_rc=0
     env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL \
-        PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
+        ${DS_SET:+"$DS_SET"} \
+        PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="${DS_GITCONFIG:-$ds_dir/gitconfig}" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
         bash "${DS_REPO:-$ds_dir/repo}/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
@@ -465,6 +492,8 @@ ds_mountinfo() {
     done
     CODEO_MOUNTINFO=$f
 }
+
+ds_on_volume() { ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo"; }
 
 ds_sudo_calls() { grep -c '^sudo' "$ds_dir/calls" || true; }
 ds_safe_dir_set() { git config --file "$ds_dir/gitconfig" --get-all safe.directory | grep -qxF -- "$1"; }
@@ -578,6 +607,33 @@ start_setup_git_failure_is_a_todo() {
 # ds_ready_run: a run with every login configured (the "ready" baseline); extra STUB_* come from the caller.
 ds_ready_run() { STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run; }
 
+start_trusts_the_clone_once() {
+    local got want
+    ds_setup trustonce || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    git config --file "$ds_dir/gitconfig" --add safe.directory /elsewhere
+    ds_ready_run
+    ds_ready_run
+    got=$(git config --file "$ds_dir/gitconfig" --get-all safe.directory)
+    want=$'/elsewhere\n'$(cd "$ds_dir/repo" && pwd -P)
+    [[ "$got" == "$want" ]] || fail "safe.directory is not /elsewhere then the clone, once: $got"
+}
+
+# Pins that the start script reads whatever GIT_CONFIG_GLOBAL names; the wiring itself is pinned by
+# git_config_global_points_into_the_git_volume and volumes_hold_the_gh_login_and_the_git_config.
+start_reads_the_identity_from_the_global_config_file() {
+    local n last
+    ds_setup volfile || return 0
+    mkdir -p "$ds_dir/home/.config/git"
+    git config --file "$ds_dir/home/.config/git/config" user.name Dev
+    git config --file "$ds_dir/home/.config/git/config" user.email dev@example.com
+    DS_GITCONFIG="$ds_dir/home/.config/git/config" ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'git identity'); ((n == 0)) || fail "wanted no git identity TODO, got $n: $ds_err"
+    last=$(tail -n1 <<<"$ds_out")
+    [[ "$last" == 'devcontainer-start: ready' ]] || fail "last stdout line is not ready: $last"
+}
+
 start_enables_remote_control() {
     ds_setup rc || return 0
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
@@ -622,6 +678,101 @@ start_fills_an_empty_settings_file() {
     [[ $(ds_todos 'settings.json') == 0 ]] || fail "unexpected TODO naming settings.json: $ds_err"
 }
 
+start_settings_that_are_not_an_object_are_a_todo() {
+    local n leg body want
+    for leg in array false null multi; do
+        case $leg in
+            array) body='[]';          want='settings.json.*not a JSON object' ;;
+            false) body='false';       want='settings.json.*not a JSON object' ;;
+            null)  body='null';        want='settings.json.*not a JSON object' ;;
+            multi) body='{"a":1} [2]'; want='settings.json.*not valid JSON' ;;
+        esac
+        ds_setup "notobj-$leg" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        mkdir -p "$ds_dir/claude"
+        printf '%s' "$body" > "$ds_dir/claude/settings.json"
+        ds_ready_run
+        ((ds_rc == 0)) || fail "$leg: exit $ds_rc, wanted 0"
+        [[ $(cat "$ds_dir/claude/settings.json") == "$body" ]] || fail "$leg: settings.json was changed"
+        n=$(ds_todos "$want"); ((n == 1)) || fail "$leg: wanted one '$want' TODO, got $n: $ds_err"
+    done
+}
+
+start_settings_that_are_not_a_regular_file_are_a_todo() {
+    local n leg
+    for leg in dir link; do
+        ds_setup "notreg-$leg" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        mkdir -p "$ds_dir/claude"
+        case $leg in
+            dir)  mkdir "$ds_dir/claude/settings.json" ;;
+            link) mkdir "$ds_dir/claude/d"; ln -s "$ds_dir/claude/d" "$ds_dir/claude/settings.json" ;;
+        esac
+        ds_ready_run
+        ((ds_rc == 0)) || fail "$leg: exit $ds_rc, wanted 0"
+        n=$(ds_todos 'settings.json.*not a regular file'); ((n == 1)) || fail "$leg: wanted one 'not a regular file' TODO, got $n: $ds_err"
+        [[ -d $ds_dir/claude/settings.json ]] || fail "$leg: settings.json is no longer a directory"
+        [[ $leg != link || -L $ds_dir/claude/settings.json ]] || fail "link: settings.json is no longer a symlink"
+    done
+}
+
+start_settings_that_cannot_be_resolved_are_a_todo() {
+    local n
+    ds_setup noresolve || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '{"a":1}' > "$ds_dir/claude/settings.json"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$ds_dir/bin/readlink"
+    chmod +x "$ds_dir/bin/readlink"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/settings.json") == '{"a":1}' ]] || fail 'settings.json was changed'
+    n=$(ds_todos 'could not resolve'); ((n == 1)) || fail "wanted one 'could not resolve' TODO, got $n: $ds_err"
+    n=$(ds_todos 'not valid JSON'); ((n == 0)) || fail "unexpected 'not valid JSON' TODO: $ds_err"
+}
+
+start_settings_symlink_is_kept() {
+    ds_setup symlink || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    echo '{"autoUpdatesChannel":"stable"}' > "$ds_dir/real-claude-settings.json"
+    ln -sf "$ds_dir/real-claude-settings.json" "$ds_dir/claude/settings.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ -L $ds_dir/claude/settings.json ]] || fail 'settings.json is no longer a symlink'
+    jq -e '.remoteControlAtStartup == true and .autoUpdatesChannel == "stable"' "$ds_dir/real-claude-settings.json" >/dev/null \
+        || fail "the link target was not merged: $(cat "$ds_dir/real-claude-settings.json")"
+}
+
+start_settings_keep_their_mode() {
+    local mode
+    ds_setup mode || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    for mode in 644 600; do
+        mkdir -p "$ds_dir/claude"
+        echo '{"autoUpdatesChannel":"stable"}' > "$ds_dir/claude/settings.json"
+        chmod "$mode" "$ds_dir/claude/settings.json"
+        ds_ready_run
+        ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+        [[ $(stat -c %a "$ds_dir/claude/settings.json") == "$mode" ]] \
+            || fail "$mode became $(stat -c %a "$ds_dir/claude/settings.json")"
+    done
+}
+
+start_leaves_no_temp_file_when_mv_fails() {
+    local n
+    ds_setup mvfail || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    echo '{"autoUpdatesChannel":"stable"}' > "$ds_dir/claude/settings.json"
+    printf '#!/bin/sh\nexit 1\n' > "$ds_dir/bin/mv"
+    chmod +x "$ds_dir/bin/mv"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'could not write'); ((n == 1)) || fail "wanted one 'could not write' TODO, got $n: $ds_err"
+    [[ $(ls -A "$ds_dir/claude") == settings.json ]] || fail "leftover files: $(ls -A "$ds_dir/claude")"
+}
+
 start_writes_the_title() {
     local n
     ds_setup title || return 0
@@ -644,15 +795,34 @@ start_env_vars_are_todos() {
     for v in CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL; do
         ds_setup "env-$v" || return 0
         ds_identity || { fail 'could not set the scratch git identity'; return 0; }
-        # ds_run clears the variables; set this one on the stub claude's way in via a wrapper env
-        ds_rc=0
-        env "$v=x" PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" \
-            GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 STUB_DIR="$ds_dir" STUB_STAT_UID="$(id -u)" \
-            STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 \
-            bash "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
-        ds_err=$(cat "$ds_dir/err")
+        DS_SET="$v=x" STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run
         ((ds_rc == 0)) || fail "$v: exit $ds_rc"
         n=$(ds_todos "$v.*Remote Control"); ((n == 1)) || fail "$v: wanted one TODO, got $n: $ds_err"
+    done
+}
+
+start_credential_variables_hide_the_login_advice() {
+    local v n method
+    for v in ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN; do
+        ds_setup "cred-$v" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        DS_SET="$v=x" STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=1 ds_run
+        ((ds_rc == 0)) || fail "$v: exit $ds_rc"
+        n=$(grep -c 'claude auth login' <<<"$ds_err" || true)
+        ((n == 0)) || fail "$v: claude auth login is advised: $ds_err"
+        n=$(ds_todos "$v.*unset"); ((n == 1)) || fail "$v: wanted one unset TODO, got $n: $ds_err"
+        if grep -q 'what is left to do' <<<"$ds_out$ds_err"; then fail "$v: a what-is-left list is printed: $ds_err"; fi
+        ds_setup "cred-ok-$v" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        method=oauth_token
+        [[ $v == ANTHROPIC_API_KEY ]] && method=api_key
+        DS_SET="$v=x" STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 \
+            STUB_CLAUDE_OUT="{\"loggedIn\":true,\"authMethod\":\"$method\"}" ds_run
+        ((ds_rc == 0)) || fail "$v (logged in): exit $ds_rc"
+        n=$(grep -c 'claude auth login' <<<"$ds_err" || true)
+        ((n == 0)) || fail "$v (logged in): claude auth login is advised: $ds_err"
+        n=$(ds_todos "$v.*unset"); ((n == 1)) || fail "$v (logged in): wanted one unset TODO, got $n: $ds_err"
+        if grep -q 'what is left to do' <<<"$ds_out$ds_err"; then fail "$v (logged in): a what-is-left list is printed: $ds_err"; fi
     done
 }
 
@@ -665,6 +835,194 @@ start_non_claude_ai_login_is_a_todo() {
     n=$(ds_todos 'claude auth login'); ((n == 1)) || fail "api_key: wanted one TODO, got $n: $ds_err"
     STUB_CLAUDE_OUT='{"loggedIn":true,"authMethod":"claude.ai"}' ds_ready_run
     n=$(ds_todos 'claude auth login'); ((n == 0)) || fail "claude.ai: wanted none, got $n: $ds_err"
+}
+
+start_sets_file_mode_so_new_scripts_are_executable() {
+    ds_setup filemode || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    git -C "$ds_dir/repo" config core.fileMode false
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true after the start script'
+    grep -q 'core.fileMode' <<<"$ds_out" || fail "stdout does not mention core.fileMode: $ds_out"
+    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
+    printf '#!/bin/sh\n' > "$ds_dir/repo/new.sh" && chmod +x "$ds_dir/repo/new.sh" && git -C "$ds_dir/repo" add new.sh
+    [[ $(git -C "$ds_dir/repo" ls-files -s new.sh) == 100755* ]] || fail "new.sh was not staged as 100755: $(git -C "$ds_dir/repo" ls-files -s new.sh)"
+}
+
+start_leaves_file_mode_alone_when_it_is_fine() {
+    local before
+    ds_setup filemode-fine || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    before=$(git -C "$ds_dir/repo" config --list --local)
+    ds_ready_run
+    [[ $(git -C "$ds_dir/repo" config --list --local) == "$before" ]] || fail 'the local git config changed although core.fileMode was fine'
+    ! grep -q 'core.fileMode' <<<"$ds_out$ds_err" || fail "output mentions core.fileMode: $ds_out $ds_err"
+    git -C "$ds_dir/repo" config --unset core.filemode
+    before=$(git -C "$ds_dir/repo" config --list --local)
+    ds_ready_run
+    [[ $(git -C "$ds_dir/repo" config --list --local) == "$before" ]] || fail 'the local git config changed with core.fileMode unset'
+    ! grep -q 'core.fileMode' <<<"$ds_out$ds_err" || fail "unset: output mentions core.fileMode: $ds_out $ds_err"
+}
+
+start_file_mode_that_cannot_stick_is_a_todo() {
+    local n
+    ds_setup filemode-stuck || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    git -C "$ds_dir/repo" config core.fileMode false
+    printf '#!/usr/bin/env bash\nexit 0\n' > "$ds_dir/bin/chmod"
+    chmod +x "$ds_dir/bin/chmod"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed although the executable bit cannot stick'
+    n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
+    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
+}
+
+start_file_mode_that_cannot_clear_is_a_todo() {
+    local n
+    ds_setup filemode-sticky || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    git -C "$ds_dir/repo" config core.fileMode false
+    cat > "$ds_dir/bin/chmod" <<'STUB'
+#!/usr/bin/env bash
+exec /usr/bin/chmod u+x -- "${@: -1}"
+STUB
+    chmod +x "$ds_dir/bin/chmod"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed although the executable bit cannot be cleared'
+    n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
+    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
+}
+
+# ds_modes_repo: commit everything in the scratch repo (bin/run.sh at 100755, data.txt at 100644), turn core.fileMode
+# off, then flip both modes on disk.
+ds_modes_repo() {
+    local r="$ds_dir/repo"
+    mkdir -p "$r/bin" || return 1
+    printf '#!/bin/sh\n' > "$r/bin/run.sh" && chmod 755 "$r/bin/run.sh" || return 1
+    printf 'data\n' > "$r/data.txt" && chmod 644 "$r/data.txt" || return 1
+    git -C "$r" add -A && git -C "$r" -c user.name=Dev -c user.email=dev@example.com commit -q -m base || return 1
+    git -C "$r" config core.fileMode false
+    chmod 644 "$r/bin/run.sh" && chmod 755 "$r/data.txt"
+}
+
+start_restores_tracked_modes_before_turning_file_mode_on() {
+    local r
+    ds_setup restore-modes || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
+    [[ -x $r/bin/run.sh ]] || fail 'bin/run.sh is not executable'
+    [[ -x $r/data.txt ]] || fail 'data.txt lost its executable bit'
+    [[ $(git -C "$r" status --porcelain) == ' M data.txt' ]] || fail "git status is not exactly ' M data.txt': $(git -C "$r" status --porcelain)"
+    grep -q 'restored the modes of 1 tracked file (bin/run.sh)' <<<"$ds_out" || fail "stdout does not say it restored the modes of 1 tracked file (bin/run.sh): $ds_out"
+}
+
+start_keeps_an_executable_bit_the_index_does_not_record() {
+    local r
+    ds_setup keeps-exec || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    r="$ds_dir/repo"
+    { printf "#!/bin/sh\n" > "$r/tool.sh"; chmod 644 "$r/tool.sh"; } || { fail "could not build the scratch repo"; return 0; }
+    { git -C "$r" add -A; git -C "$r" -c user.name=Dev -c user.email=dev@example.com commit -q -m base; } || { fail "could not commit"; return 0; }
+    chmod +x "$r/tool.sh"
+    git -C "$r" config core.fileMode false
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
+    [[ -x $r/tool.sh ]] || fail 'tool.sh lost its executable bit'
+    git -C "$r" diff --summary | grep -q 'mode change 100644 => 100755 tool.sh' || fail "git diff --summary does not show the mode change: $(git -C "$r" diff --summary)"
+    ! grep -q 'restored' <<<"$ds_out" || fail "stdout mentions a restore: $ds_out"
+}
+
+start_keeps_file_mode_off_when_the_mode_listing_fails() {
+    local r n real_git
+    ds_setup listing-fails || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    real_git=$(command -v git)
+    cat > "$ds_dir/bin/git" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+    *"diff --raw"*) exit 1 ;;
+esac
+exec $real_git "\$@"
+STUB
+    chmod +x "$ds_dir/bin/git"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was turned on although the modes could not be listed'
+    n=$(ds_todos 'could not be listed'); ((n == 1)) || fail "wanted one TODO saying the modes could not be listed, got $n: $ds_err"
+    grep 'could not be listed' <<<"$ds_err" | grep -q 'update-index --chmod' || fail "the TODO does not name update-index --chmod: $ds_err"
+    ! compgen -G "$r/.git/modes.*" >/dev/null || fail 'a modes temp file was left in the git dir'
+}
+
+start_keeps_file_mode_off_when_a_mode_cannot_be_restored() {
+    local r n
+    ds_setup restore-fails || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    cat > "$ds_dir/bin/chmod" <<'STUB'
+#!/usr/bin/env bash
+case "$*" in
+    *filemode.* | *--reference*) exec /usr/bin/chmod "$@" ;;
+esac
+exit 1
+STUB
+    chmod +x "$ds_dir/bin/chmod"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was turned on although a mode could not be restored'
+    [[ $(stat -c %a "$r/bin/run.sh") == 644 ]] || fail 'bin/run.sh mode changed'
+    n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
+    grep 'update-index --chmod' <<<"$ds_err" | grep -q 'bin/run.sh' || fail "the TODO does not name bin/run.sh: $ds_err"
+}
+
+start_ignores_content_edits_when_restoring_modes() {
+    local r n
+    ds_setup content-edit || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    if ! { printf 'edited\n' > "$r/data.txt" && chmod 644 "$r/data.txt"; }; then fail 'could not edit data.txt'; return 0; fi
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
+    n=$(ds_todos 'update-index --chmod'); ((n == 0)) || fail "wanted no update-index --chmod TODO, got $n: $ds_err"
+    [[ $(<"$r/data.txt") == edited ]] || fail 'data.txt content changed'
+}
+
+start_leaves_a_bind_mounted_clone_alone() {
+    local r n
+    ds_setup bind-modes || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    ds_mountinfo /home/u/src/codeo "$ds_dir/repo"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed on a clone that is not on a volume'
+    [[ $(stat -c %a "$r/bin/run.sh") == 644 ]] || fail 'bin/run.sh mode changed'
+    [[ $(stat -c %a "$r/data.txt") == 755 ]] || fail 'data.txt mode changed'
+    ! compgen -G "$r/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
+    n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "wanted one 'not on a Docker volume' TODO, got $n: $ds_err"
+    grep 'not on a Docker volume' <<<"$ds_err" | grep -q 'update-index --chmod' || fail "the TODO does not name update-index --chmod: $ds_err"
+    ! grep -q 'core.fileMode' <<<"$ds_out" || fail "stdout mentions core.fileMode: $ds_out"
 }
 
 # wt_setup <name>: a scratch git repo (committed) holding the real window-title.sh and a config naming the
@@ -688,7 +1046,7 @@ wt_run() {
     local root=${wt_clone:-$wt_dir} errf
     errf=$(mktemp -p "$pl_root")
     wt_rc=0
-    wt_out=$(bash "$root/.devcontainer/scripts/window-title.sh" "$@" 2>"$errf") || wt_rc=$?
+    wt_out=$(PATH="${wt_path:+$wt_path:}$PATH" bash "$root/.devcontainer/scripts/window-title.sh" "$@" 2>"$errf") || wt_rc=$?
     wt_err=$(<"$errf")
 }
 
@@ -700,6 +1058,7 @@ title_is_home_without_a_lock() {
     [[ $wt_out == 'codeo [home]' ]] || fail "--print gave '$wt_out'"
     wt_run
     ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ $wt_out == 'window-title: codeo [home]' ]] || fail "a plain run printed '$wt_out'"
     [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail 'settings.json lacks window.title "codeo [home]"'
 }
 
@@ -753,14 +1112,98 @@ title_follows_the_lock_on_a_rerun() {
     [[ $(wt_title "$wt_dir") == 'codeo [#44]' ]] || fail "title is '$(wt_title "$wt_dir")'"
 }
 
-title_leaves_malformed_settings_alone() {
-    wt_setup bad || return 0
+title_rejects_settings_that_are_not_an_object() {
+    local leg body want
+    for leg in array false null multi broken jsonc; do
+        case $leg in
+            array)  body='[]';                want='not a JSON object' ;;
+            false)  body='false';             want='not a JSON object' ;;
+            null)   body='null';              want='not a JSON object' ;;
+            multi)  body='{"a":1} [2]';       want='not valid JSON' ;;
+            broken) body='{not json';         want='not valid JSON' ;;
+            jsonc)  body=$'{ // c\n"a": 1 }'; want='not valid JSON' ;;
+        esac
+        wt_setup "bad-$leg" || return 0
+        mkdir -p "$wt_dir/.vscode"
+        printf '%s' "$body" > "$wt_dir/.vscode/settings.json"
+        wt_run
+        ((wt_rc == 1)) || fail "$leg: exit $wt_rc, wanted 1"
+        [[ $(<"$wt_dir/.vscode/settings.json") == "$body" ]] || fail "$leg: the file was changed"
+        [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "$leg: stderr was: $wt_err"
+        [[ $wt_err == *"$want"* ]] || fail "$leg: stderr lacks '$want': $wt_err"
+    done
+}
+
+title_writes_through_a_symlink() {
+    wt_setup link || return 0
     mkdir -p "$wt_dir/.vscode"
-    printf '{not json' > "$wt_dir/.vscode/settings.json"
+    echo '{"a":1}' > "$pl_root/real-settings.json"
+    ln -s "$pl_root/real-settings.json" "$wt_dir/.vscode/settings.json"
     wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ -L $wt_dir/.vscode/settings.json ]] || fail 'the symlink was replaced'
+    jq -e '.a == 1 and .["window.title"] == "codeo [home]"' "$pl_root/real-settings.json" >/dev/null \
+        || fail 'the target lacks a or the title'
+    wt_setup dangling || return 0
+    mkdir -p "$wt_dir/.vscode"
+    ln -s "$pl_root/dangling-target.json" "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 0)) || fail "dangling: exit $wt_rc: $wt_err"
+    [[ -L $wt_dir/.vscode/settings.json ]] || fail 'dangling: the symlink was replaced'
+    [[ $(jq -r '.["window.title"]' "$pl_root/dangling-target.json") == 'codeo [home]' ]] \
+        || fail 'dangling: the target was not created with the title'
+}
+
+title_keeps_the_settings_mode() {
+    local mode
+    for mode in 644 600; do
+        wt_setup "mode$mode" || return 0
+        mkdir -p "$wt_dir/.vscode"
+        echo '{"a":1}' > "$wt_dir/.vscode/settings.json"
+        chmod "$mode" "$wt_dir/.vscode/settings.json"
+        wt_run
+        ((wt_rc == 0)) || fail "$mode: exit $wt_rc: $wt_err"
+        [[ $(stat -c %a "$wt_dir/.vscode/settings.json") == "$mode" ]] \
+            || fail "$mode became $(stat -c %a "$wt_dir/.vscode/settings.json")"
+    done
+}
+
+title_leaves_no_temp_file_when_mv_fails() {
+    local stubs
+    wt_setup mvfail || return 0
+    mkdir -p "$wt_dir/.vscode"
+    echo '{"a":1}' > "$wt_dir/.vscode/settings.json"
+    stubs="$pl_root/mv-stub"
+    mkdir -p "$stubs"
+    printf '#!/bin/sh\necho "mv: boom" >&2\nexit 1\n' > "$stubs/mv"
+    chmod +x "$stubs/mv"
+    wt_path=$stubs wt_run
     ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
-    [[ $(<"$wt_dir/.vscode/settings.json") == '{not json' ]] || fail 'the malformed file was changed'
     [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
+    [[ $(ls -A "$wt_dir/.vscode") == settings.json ]] || fail ".vscode holds: $(ls -A "$wt_dir/.vscode")"
+}
+
+title_does_not_rewrite_a_current_title() {
+    local before after
+    wt_setup current || return 0
+    wt_run
+    before=$(stat -c %i "$wt_dir/.vscode/settings.json")
+    wt_run
+    after=$(stat -c %i "$wt_dir/.vscode/settings.json")
+    [[ $before == "$after" ]] || fail "inode changed $before -> $after"
+    [[ $wt_out == 'window-title: codeo [home]' ]] || fail "second run printed '$wt_out'"
+}
+
+title_follows_a_released_lock() {
+    wt_setup release || return 0
+    wt_run
+    [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail "first title is '$(wt_title "$wt_dir")'"
+    printf 'issue:   47\n' > "$wt_dir/.codeo/active"
+    wt_run
+    [[ $(wt_title "$wt_dir") == 'codeo [#47]' ]] || fail "locked title is '$(wt_title "$wt_dir")'"
+    rm -f "$wt_dir/.codeo/active"
+    wt_run
+    [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail "released title is '$(wt_title "$wt_dir")'"
 }
 
 title_fills_an_empty_settings_file() {
@@ -771,6 +1214,72 @@ title_fills_an_empty_settings_file() {
     ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
     jq -e '.["window.title"] == "codeo [home]"' "$wt_dir/.vscode/settings.json" >/dev/null \
         || fail "an empty settings.json was not filled: '$(cat "$wt_dir/.vscode/settings.json")'"
+}
+
+title_strips_a_hash_from_the_lock_line() {
+    wt_setup hash || return 0
+    printf 'issue: #44\nbranch: feat/x\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "--print gave '$wt_out'"
+    wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ $(wt_title "$wt_dir") == 'codeo [#44]' ]] || fail "title is '$(wt_title "$wt_dir")'"
+    printf 'issue:\t44\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "issue:<TAB>44 gave '$wt_out'"
+    printf 'issue:#44\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "issue:#44 gave '$wt_out'"
+    printf 'issue: ##44\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "issue: ##44 gave '$wt_out'"
+    printf 'issue: x\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    ((wt_rc == 0)) || fail "issue: x exited $wt_rc: $wt_err"
+    [[ $wt_out == 'codeo [home]' ]] || fail "issue: x gave '$wt_out'"
+}
+
+title_reports_an_unwritable_exclude() {
+    local exclude
+    wt_setup noexcl || return 0
+    exclude=$(git -C "$wt_dir" rev-parse --path-format=absolute --git-path info/exclude)
+    rm -f "$exclude"
+    mkdir "$exclude"
+    wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
+    [[ ! -e $wt_dir/.vscode/settings.json ]] || fail 'settings.json was written before the exclude entry'
+    if (( $(id -u) != 0 )); then   # root ignores mode bits
+        wt_setup noexcl-ro || return 0
+        exclude=$(git -C "$wt_dir" rev-parse --path-format=absolute --git-path info/exclude)
+        mkdir -p "$(dirname "$exclude")"
+        : > "$exclude"
+        chmod 444 "$exclude"
+        wt_run
+        chmod 644 "$exclude"
+        ((wt_rc == 1)) || fail "read-only exclude: exit $wt_rc, wanted 1"
+        [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "read-only exclude: stderr was: $wt_err"
+        [[ ! -e $wt_dir/.vscode/settings.json ]] || fail 'read-only exclude: settings.json was written'
+    fi
+}
+
+title_reports_an_unwritable_vscode_dir() {
+    wt_setup novscode || return 0
+    touch "$wt_dir/.vscode"
+    wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
+}
+
+title_outside_a_repository_says_so() {
+    local d
+    wt_setup norepo || return 0
+    d="$pl_root/not-a-repo"
+    mkdir -p "$d/.devcontainer/scripts"
+    cp "$wt_dir/.devcontainer/scripts/window-title.sh" "$d/.devcontainer/scripts/"
+    wt_clone=$d wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
 }
 
 # st_setup <name>: like wt_setup, plus the real session-title.sh. Sets st_dir, the clone's root.
@@ -822,7 +1331,7 @@ session_title_names_home_and_the_id() {
     st_run "$(st_json SessionStart $st_sid)"
     ((st_rc == 0)) || fail "exit $st_rc"
     [[ -z $st_err ]] || fail "stderr '$st_err'"
-    (($(wc -l <<<"$st_out") == 1)) || fail "not one line: '$st_out'"
+    [[ -n $st_out && $st_out != *$'\n'* ]] || fail "not one line: '$st_out'"
     [[ $(st_event) == SessionStart ]] || fail "event '$(st_event)'"
     [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
 }
@@ -886,16 +1395,113 @@ session_title_escapes_the_codename() {
     [[ $(st_title) == 'co"de\o [home]'* ]] || fail "title '$(st_title)'"
 }
 
+session_title_treats_a_leading_newline_as_a_title() {
+    st_setup newline || return 0
+    st_run "$(st_json UserPromptSubmit $st_sid $'\nmy name')"
+    st_silent 'leading newline'
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid $'\nfoo · a21b9973')"
+    st_silent 'newline before the sid suffix'
+}
+
+session_title_replaces_its_own_title_when_the_lock_changes() {
+    st_setup own || return 0
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
+    [[ $(st_title) == 'codeo [#47] · a21b9973' ]] || fail "title '$(st_title)'"
+    rm -f "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [#47] · a21b9973')"
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
+    st_silent 'current title'
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · ffffffff')"
+    [[ $(st_title) == 'codeo [#47] · a21b9973' ]] || fail "forked title '$(st_title)'"
+}
+
+session_title_keeps_a_renamed_title() {
+    st_setup renamed || return 0
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name')"
+    st_silent 'renamed'
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name · a21b9973')"
+    st_silent 'sid suffix only'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [x] · a21b9973')"
+    st_silent 'unknown bracket'
+    st_run "$(st_json UserPromptSubmit $st_sid $'\ncodeo [home] · a21b9973')"
+    st_silent 'multi-line title'
+    st_run "$(st_json UserPromptSubmit $st_sid 'x [home] · a21b9973')"
+    st_silent 'another codename'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b997')"
+    st_silent 'short suffix'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · A21B9973')"
+    st_silent 'upper-case suffix'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b997g')"
+    st_silent 'non-hex suffix'
+}
+
+session_title_refreshes_the_window_title() {
+    st_setup window || return 0
+    local f=$st_dir/.vscode/settings.json
+    st_run "$(st_json UserPromptSubmit $st_sid)"
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [home]' ]] || fail "no lock: $(jq -r '."window.title"' "$f")"
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name')"
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [#47]' ]] || fail "lock: $(jq -r '."window.title"' "$f")"
+    rm -f "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'my name')"
+    st_silent 'renamed'
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [home]' ]] || fail "released: $(jq -r '."window.title"' "$f")"
+}
+
 session_title_hooks_are_registered() {
     local f=$repo/.claude/settings.json
-    local cmd='bash "${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh"' hook
+    local cmd='f="${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh"; [ -f "$f" ] && bash "$f" || true' hook
     hook="$(jq -cn --arg c "$cmd" '{type:"command",command:$c,timeout:10}')"
     jq -e '.enabledPlugins["codeo@codeo"] == true' "$f" >/dev/null || fail "codeo plugin not enabled"
-    jq -e '.hooks | keys == ["SessionStart","UserPromptSubmit"]' "$f" >/dev/null || fail "hook events differ"
+    jq -e '.hooks | has("SessionStart") and has("UserPromptSubmit") and length == 2' "$f" >/dev/null || fail "hook events differ"
     jq -e --argjson hook "$hook" '.hooks.SessionStart == [{matcher:"startup|resume|fork", hooks:[$hook]}]' "$f" >/dev/null \
         || fail "SessionStart hook differs"
     jq -e --argjson hook "$hook" '.hooks.UserPromptSubmit == [{hooks:[$hook]}]' "$f" >/dev/null \
         || fail "UserPromptSubmit hook differs"
+}
+
+# The registered command runs the script when it is there and is silent, exit 0, when it is not.
+session_title_hook_command_survives_a_missing_script() {
+    local cmd rc out err errf
+    st_setup missing-script || return 0
+    cmd=$(jq -r '.hooks.UserPromptSubmit[0].hooks[0].command' "$repo/.claude/settings.json")
+    errf=$(mktemp -p "$pl_root")
+    rc=0
+    out=$(cd / && env -u REMOTE_CONTAINERS REMOTE_CONTAINERS=true CLAUDE_PROJECT_DIR="$st_dir" bash -c "$cmd" \
+        <<<"$(st_json SessionStart $st_sid)" 2>"$errf") || rc=$?
+    err=$(<"$errf")
+    ((rc == 0)) || fail "with the script present: exit $rc"
+    [[ -z $err ]] || fail "with the script present: stderr '$err'"
+    [[ $(jq -r '.hookSpecificOutput.sessionTitle' <<<"$out") == 'codeo [home] · a21b9973' ]] \
+        || fail "with the script present: stdout '$out'"
+    rm "$st_dir/.devcontainer/scripts/session-title.sh"
+    rc=0
+    out=$(cd / && env -u REMOTE_CONTAINERS REMOTE_CONTAINERS=true CLAUDE_PROJECT_DIR="$st_dir" bash -c "$cmd" \
+        </dev/null 2>"$errf") || rc=$?
+    err=$(<"$errf")
+    ((rc == 0)) || fail "with the script removed: exit $rc"
+    [[ -z $out ]] || fail "with the script removed: stdout '$out'"
+    [[ -z $err ]] || fail "with the script removed: stderr '$err'"
+}
+
+# Every dev container script is committed 100755 (a file git does not track yet needs the bit on disk).
+scripts_are_committed_executable() {
+    local f rel mode
+    for f in "$repo"/.devcontainer/scripts/*.sh; do
+        rel=${f#"$repo"/}
+        mode=$(git -C "$repo" ls-files -s -- "$rel" | cut -d' ' -f1)
+        if [[ -z $mode ]]; then
+            [[ -x $f ]] || fail "$rel is untracked and not executable"
+        else
+            [[ $mode == 100755 ]] || fail "$rel is committed with mode $mode, not 100755"
+        fi
+    done
 }
 
 cases=(
@@ -903,10 +1509,13 @@ cases=(
     devcontainer_json_is_valid_and_runs_as_dev
     run_args_cap_memory_and_cpus
     post_start_command_reruns_the_title
-    gh_login_is_one_named_volume
+    volumes_hold_the_gh_login_and_the_git_config
+    git_config_global_points_into_the_git_volume
     no_bind_mounts_or_secrets
     dockerfile_is_ubuntu_2404_with_the_tools
     dockerfile_creates_dev_uid_1000_and_the_gh_dir
+    dockerfile_creates_the_git_config_dir
+    git_global_writes_land_in_the_volume_file
     dockerfile_has_none_of_the_excluded_tools
     dockerfile_env_uses_the_username_arg
     dockerfile_does_not_create_workspaces
@@ -931,21 +1540,49 @@ cases=(
     start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
     start_setup_git_failure_is_a_todo
+    start_trusts_the_clone_once
+    start_reads_the_identity_from_the_global_config_file
     start_enables_remote_control
     start_keeps_other_settings
     start_malformed_settings_is_a_todo
     start_fills_an_empty_settings_file
+    start_settings_that_are_not_an_object_are_a_todo
+    start_settings_that_are_not_a_regular_file_are_a_todo
+    start_settings_that_cannot_be_resolved_are_a_todo
+    start_settings_symlink_is_kept
+    start_settings_keep_their_mode
+    start_leaves_no_temp_file_when_mv_fails
     start_writes_the_title
     start_env_vars_are_todos
+    start_credential_variables_hide_the_login_advice
     start_non_claude_ai_login_is_a_todo
+    start_sets_file_mode_so_new_scripts_are_executable
+    start_leaves_file_mode_alone_when_it_is_fine
+    start_file_mode_that_cannot_stick_is_a_todo
+    start_file_mode_that_cannot_clear_is_a_todo
+    start_restores_tracked_modes_before_turning_file_mode_on
+    start_keeps_an_executable_bit_the_index_does_not_record
+    start_keeps_file_mode_off_when_a_mode_cannot_be_restored
+    start_keeps_file_mode_off_when_the_mode_listing_fails
+    start_ignores_content_edits_when_restoring_modes
+    start_leaves_a_bind_mounted_clone_alone
     title_is_home_without_a_lock
     title_names_the_issue_with_a_lock
     title_falls_back_to_the_clone_name
     title_keeps_other_keys
     title_rerun_and_worktree
     title_follows_the_lock_on_a_rerun
-    title_leaves_malformed_settings_alone
+    title_rejects_settings_that_are_not_an_object
+    title_writes_through_a_symlink
+    title_keeps_the_settings_mode
+    title_leaves_no_temp_file_when_mv_fails
+    title_does_not_rewrite_a_current_title
+    title_follows_a_released_lock
     title_fills_an_empty_settings_file
+    title_strips_a_hash_from_the_lock_line
+    title_reports_an_unwritable_exclude
+    title_reports_an_unwritable_vscode_dir
+    title_outside_a_repository_says_so
     session_title_names_home_and_the_id
     session_title_names_the_issue_with_a_lock
     session_title_on_a_prompt_after_clear
@@ -954,7 +1591,13 @@ cases=(
     session_title_is_silent_on_bad_input
     session_title_is_silent_when_the_title_script_fails
     session_title_escapes_the_codename
+    session_title_treats_a_leading_newline_as_a_title
+    session_title_replaces_its_own_title_when_the_lock_changes
+    session_title_keeps_a_renamed_title
+    session_title_refreshes_the_window_title
     session_title_hooks_are_registered
+    session_title_hook_command_survives_a_missing_script
+    scripts_are_committed_executable
 )
 
 for current in "${cases[@]}"; do

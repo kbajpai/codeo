@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh\"",
+            "command": "f=\"${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh\"; [ -f \"$f\" ] && bash \"$f\" || true",
             "timeout": 10
           }
         ]
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh\"",
+            "command": "f=\"${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh\"; [ -f \"$f\" ] && bash \"$f\" || true",
             "timeout": 10
           }
         ]

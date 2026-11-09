@@ -5,7 +5,13 @@
   },
   "remoteUser": "dev",
   "runArgs": ["--memory=4g", "--cpus=2"],
-  "mounts": ["source=codeo-gh,target=/home/dev/.config/gh,type=volume"],
+  "mounts": [
+    "source=codeo-gh,target=/home/dev/.config/gh,type=volume",
+    "source=codeo-git,target=/home/dev/.config/git,type=volume"
+  ],
+  "containerEnv": {
+    "GIT_CONFIG_GLOBAL": "/home/dev/.config/git/config"
+  },
   "postCreateCommand": "bash .devcontainer/scripts/devcontainer-start.sh",
   "postStartCommand": "bash .devcontainer/scripts/window-title.sh || true",
   "customizations": {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The dev container's postCreateCommand. Trusts the clone (and takes ownership of it when it is on a Docker volume), installs the Claude Code
 # plugins, writes the window title, turns on Claude Code Remote Control (remoteControlAtStartup in the user
-# settings), wires git to the GitHub login, and prints what is still left for the engineer to do
+# settings), restores the executable bit the index records on tracked files and turns core.fileMode back on, only on a clone on a Docker volume where the filesystem keeps the bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
 # (the GitHub and Claude logins, a git identity, credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
 #
@@ -35,7 +35,9 @@ clone_on_named_volume() {
 # handed to this user; but only a clone on a Docker volume is: a bind-mounted host checkout looks
 # root-owned under rootless Docker and Podman, and changing it would change the engineer's files on the host.
 clone=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)
-git config --global --add safe.directory "$clone" || add_todo "git was not told to trust the clone: run git config --global --add safe.directory $clone"
+trusted=$(git config --global --get-all safe.directory 2>/dev/null || true)
+grep -qxF -- "$clone" <<<"$trusted" ||
+    git config --global --add safe.directory "$clone" || add_todo "git was not told to trust the clone: run git config --global --add safe.directory $clone"
 if [[ $(stat -c %u "$clone" 2>/dev/null || true) != "$(id -u)" ]]; then
     if clone_on_named_volume "$clone"; then
         sudo chown -R "$(id -u):$(id -g)" "$clone" ||
@@ -48,6 +50,92 @@ fi
 # 2. Work from the top of the clone.
 cd "$(git -C "$clone" rev-parse --show-toplevel)" || { add_todo "could not enter the clone at $clone"; }
 
+# 2b. Executable scripts. Some container filesystems (a Windows or macOS host mount) set core.fileMode=false, and then
+# `git add` records every new script as 100644. This runs only on a clone that is on a Docker volume, as step 1
+# does: a bind-mounted host checkout's config and file modes are the host's, so it gets a TODO and nothing else. On a
+# volume, when it is false, probe the git dir: only if the fresh probe file is not
+# executable, chmod u+x makes it executable and chmod u-x makes it not executable again does the filesystem keep the
+# executable bit as set. Then the files the index records as executable but the disk has as not are made executable
+# again (only that direction: an executable bit the index does not record is left, and shows as a mode change), the
+# files named in the message, and only when that worked does core.fileMode go back on for this clone; if a file could
+# not be restored or the modes could not be listed, say how to stage by hand.
+
+# restore_modes: chmod +x each tracked file the index records as 100755 but the disk has as 100644 (what a filesystem
+# that dropped the bit did), then list again. Only that direction: a file the disk has executable and the index does
+# not record is the developer's, and stays. The listing (`git -c core.fileMode=true diff --raw -z --no-renames`) goes
+# through a temp file in the git dir, because bash drops NUL bytes from a command substitution. Prints nothing; sets
+# restored_count, restored_paths and left_paths (the paths still differing). Returns 0 when none are left, 1 when
+# some are, 2 when a listing failed (the temp file is removed on every path).
+restore_modes() {
+    local meta path old new list
+    restored_count=0
+    restored_paths=()
+    left_paths=()
+    list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX" 2>/dev/null) || return 2
+    if ! git -c core.fileMode=true diff --raw -z --no-renames >"$list" 2>/dev/null; then
+        rm -f -- "$list"
+        return 2
+    fi
+    while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
+        read -r old new _ <<<"${meta#:}"
+        [[ $old == 100755 && $new == 100644 ]] || continue
+        if chmod +x -- "$path" 2>/dev/null; then
+            restored_count=$((restored_count + 1))
+            restored_paths+=("$path")
+        fi
+    done <"$list"
+    if ! git -c core.fileMode=true diff --raw -z --no-renames >"$list" 2>/dev/null; then
+        rm -f -- "$list"
+        return 2
+    fi
+    while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
+        read -r old new _ <<<"${meta#:}"
+        [[ $old == 100755 && $new == 100644 ]] || continue
+        left_paths+=("$path")
+    done <"$list"
+    rm -f -- "$list"
+    ((${#left_paths[@]} == 0)) || return 1
+}
+
+if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
+    if ! clone_on_named_volume "$clone"; then
+        add_todo "core.fileMode is false and the clone is not on a Docker volume, so it was left alone (its config and file modes are the host's): stage each new script with git update-index --chmod=+x <file>"
+    else
+        if filemode_probe=$(mktemp "$(git rev-parse --git-dir)/filemode.XXXXXX" 2>/dev/null); then
+            if [[ ! -x $filemode_probe ]] && chmod u+x -- "$filemode_probe" 2>/dev/null && [[ -x $filemode_probe ]] \
+                && chmod u-x -- "$filemode_probe" 2>/dev/null && [[ ! -x $filemode_probe ]]; then
+                rm -f -- "$filemode_probe"
+                restore_rc=0
+                restore_modes || restore_rc=$?
+                if ((restore_rc == 2)); then
+                    add_todo "core.fileMode is false and the tracked files' modes could not be listed: stage each new script with git update-index --chmod=+x <file>"
+                elif ((restore_rc == 1)); then
+                    left_list=$(printf '%s, ' "${left_paths[@]:0:5}")
+                    left_list=${left_list%, }
+                    ((${#left_paths[@]} <= 5)) || left_list+=" and $((${#left_paths[@]} - 5)) more"
+                    add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
+                elif git config core.fileMode true; then
+                    if ((restored_count > 0)); then
+                        restored_list=$(printf '%s, ' "${restored_paths[@]:0:5}")
+                        restored_list=${restored_list%, }
+                        ((${#restored_paths[@]} <= 5)) || restored_list+=" and $((${#restored_paths[@]} - 5)) more"
+                        say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) ($restored_list) to the index's and set it to true for this clone"
+                    else
+                        say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
+                    fi
+                else
+                    add_todo "core.fileMode is false and could not be turned on: run git config core.fileMode true, or stage new scripts with git update-index --chmod=+x"
+                fi
+            else
+                rm -f -- "$filemode_probe"
+                add_todo "core.fileMode is false and this filesystem does not keep the executable bit as set: stage each new script with git update-index --chmod=+x <file>"
+            fi
+        else
+            add_todo "core.fileMode is false and the git dir is not writable to probe it: stage each new script with git update-index --chmod=+x <file>"
+        fi
+    fi
+fi
+
 # 3. Plugins.
 bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/plugins.sh"
 
@@ -55,7 +143,8 @@ bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fi
 bash .devcontainer/scripts/window-title.sh || add_todo "window-title.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/window-title.sh"
 
 # 3c. Remote Control: merge {"remoteControlAtStartup": true} into the user-scope Claude settings, keeping every other key.
-# A file that is not valid JSON is left untouched.
+# A symlinked settings.json is written through (readlink -f), and the file keeps its mode. A file that is not valid
+# JSON, or not a JSON object, is left untouched; a path that exists but is not a regular file is reported as a TODO and left alone. The merge goes through a temp file beside the target, removed on failure.
 claude_dir=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
 claude_settings=$claude_dir/settings.json
 mkdir -p "$claude_dir" || add_todo "could not create $claude_dir: Remote Control was not enabled"
@@ -63,12 +152,30 @@ if [[ ! -e $claude_settings ]]; then
     echo '{}' > "$claude_settings" || add_todo "could not create $claude_settings: Remote Control was not enabled"
 fi
 if [[ -f $claude_settings ]]; then
-    if jq -n '([inputs][0] // {}) + {remoteControlAtStartup: true}' "$claude_settings" > "$claude_settings.tmp" 2>/dev/null && [[ -s $claude_settings.tmp ]]; then
-        mv "$claude_settings.tmp" "$claude_settings" || add_todo "could not write $claude_settings: Remote Control was not enabled"
-    else
-        rm -f "$claude_settings.tmp"
+    claude_target=$(readlink -f -- "$claude_settings" 2>/dev/null || true)
+    claude_kind=
+    [[ -z $claude_target ]] || claude_kind=$(jq -rn '[inputs] | if length == 0 then "object" elif length == 1 then (.[0] | type) else "multi" end' "$claude_target" 2>/dev/null || true)
+    if [[ -z $claude_target ]]; then
+        add_todo "could not resolve $claude_settings: Remote Control was not enabled"
+    elif [[ -z $claude_kind || $claude_kind == multi ]]; then
         add_todo "$claude_settings is not valid JSON and was left alone: fix it, then add \"remoteControlAtStartup\": true"
+    elif [[ $claude_kind != object ]]; then
+        add_todo "$claude_settings is not a JSON object and was left alone: fix it, then add \"remoteControlAtStartup\": true"
+    elif claude_tmp=$(mktemp "$(dirname "$claude_target")/.settings.XXXXXX" 2>/dev/null); then
+        if jq -n '([inputs][0] // {}) + {remoteControlAtStartup: true}' "$claude_target" > "$claude_tmp" 2>/dev/null \
+            && [[ -s $claude_tmp ]] \
+            && chmod --reference="$claude_target" -- "$claude_tmp" 2>/dev/null \
+            && mv -- "$claude_tmp" "$claude_target"; then
+            :
+        else
+            rm -f "$claude_tmp"
+            add_todo "could not write $claude_target: Remote Control was not enabled"
+        fi
+    else
+        add_todo "could not write $claude_target: Remote Control was not enabled"
     fi
+elif [[ -e $claude_settings ]]; then
+    add_todo "$claude_settings is not a regular file and was left alone: fix it, then add \"remoteControlAtStartup\": true"
 fi
 
 # 4. GitHub: wire git to the login, and check the project scope the board needs.
@@ -91,15 +198,19 @@ fi
 
 # 6. Claude Code login.
 # Remote Control needs a claude.ai login, so these credentials must not be set. The output is captured before it is read.
-if claude_status=$(claude auth status 2>&1); then
-    auth_method=$(jq -r '.authMethod // empty' <<<"$claude_status" 2>/dev/null || true)
-    if [[ -n $auth_method && $auth_method != "claude.ai" ]]; then
-        add_todo "Claude Code is logged in with $auth_method, not claude.ai, and Remote Control needs claude.ai: run claude auth login"
+# While CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY is set the check is skipped: the variable overrides any login, so
+# `claude auth login` would not help, and the "unset it" TODO below is the advice.
+if [[ -z ${CLAUDE_CODE_OAUTH_TOKEN:-} && -z ${ANTHROPIC_API_KEY:-} ]]; then
+    if claude_status=$(claude auth status 2>&1); then
+        auth_method=$(jq -r '.authMethod // empty' <<<"$claude_status" 2>/dev/null || true)
+        if [[ -n $auth_method && $auth_method != "claude.ai" ]]; then
+            add_todo "Claude Code is logged in with $auth_method, not claude.ai, and Remote Control needs claude.ai: run claude auth login"
+            need_login+=("claude auth login")
+        fi
+    else
+        add_todo "Claude Code is not logged in: run claude auth login"
         need_login+=("claude auth login")
     fi
-else
-    add_todo "Claude Code is not logged in: run claude auth login"
-    need_login+=("claude auth login")
 fi
 for var in CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL; do
     if [[ -n ${!var:-} ]]; then

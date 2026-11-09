@@ -28,12 +28,12 @@ RUN install -d -m 0755 /etc/apt/keyrings \
     && rm -rf /var/lib/apt/lists/*
 
 # Ubuntu 24.04 ships a user named ubuntu that holds UID 1000; remove it so dev can have that UID.
-# The gh directory is created here, owned by dev, so an empty named volume mounted over it takes dev's
+# The gh and git directories are created here, owned by dev, so an empty named volume mounted over either takes dev's
 # ownership. dev gets passwordless sudo because the start script uses it to take ownership of a
 # repository clone that a named volume holds as root.
 RUN userdel -r ubuntu \
     && useradd --uid "${USER_UID}" --create-home --shell /bin/bash "${USERNAME}" \
-    && install -d -o "${USERNAME}" -g "${USERNAME}" /home/${USERNAME}/.config /home/${USERNAME}/.config/gh /home/${USERNAME}/.claude \
+    && install -d -o "${USERNAME}" -g "${USERNAME}" /home/${USERNAME}/.config /home/${USERNAME}/.config/gh /home/${USERNAME}/.config/git /home/${USERNAME}/.claude \
     && echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
     && chmod 0440 /etc/sudoers.d/${USERNAME}
 
