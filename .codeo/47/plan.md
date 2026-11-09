@@ -8,11 +8,9 @@
 
 ## Where this stands
 
-Round 1. The lock is held in this container (`codeo-47`). Read `init.md`, `issue.md`, the #44 and #45
-plans, dossiers and QC findings, the three scripts under `.devcontainer/scripts/`, `.claude/settings.json`,
-`devcontainer.json`, the Dockerfile and `tests/devcontainer.test.sh`. Ten of the thirteen criteria are
-edge-case fixes whose shape the QC findings already dictate; three need a decision before the plan can be
-drafted — Q1-Q3 below. Nothing is drafted past them.
+Round 1 done: Q1-Q3 answered, the plan approved and written to
+`docs/plans/2026-11-09-dev-container-hardening.md` (unstaged — the engineer commits it). Next step:
+`/codeo:implement`.
 
 ## Questions
 
@@ -138,6 +136,38 @@ Decisions this plan makes without asking, stated so they can be rejected:
 - The `engineering` plugin (`system-design`, `architecture`) is not installed here; its Options Considered
   structure is applied directly in the plan's table, as the #44 and #45 plans did.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-09-dev-container-hardening.md` — approved 2026-11-09, left unstaged for the
+engineer to commit. Shape: an executable plan under `docs/plans/` (ten TDD tasks, one commit each); no
+reference doc, because no standing architectural decision outlives the work.
+
+**Decisions** (Q1-Q3 answered in the conversation, recorded above):
+- *Q1:* `session-title.sh` owns both titles. On every prompt it refreshes the window title through
+  `window-title.sh` (a no-op when current) and replaces a session title it set itself — one ending in
+  ` · <first eight of this session's id>` — when the lock changed; any other title (`/rename`) is kept.
+  Rejected: window only; a `PostToolUse` hook; hooking `lock.sh` and `close` in the plugin core.
+- *Q2:* volume `codeo-git` at `/home/dev/.config/git` with `containerEnv.GIT_CONFIG_GLOBAL` pointing at its
+  `config`, so every `--global` write lands in the volume. Rejected: the volume alone (depends on whether
+  `~/.gitconfig` exists first); an `include.path` volume.
+- *Q3:* one PR. Rejected: two or three PRs.
+- Without asking: the `claude auth login` check is skipped while `ANTHROPIC_API_KEY` or
+  `CLAUDE_CODE_OAUTH_TOKEN` is set; the settings-merge code is duplicated in the two scripts, not shared;
+  `core.fileMode` is probed and set by the start script and every `.devcontainer/scripts/*.sh` is pinned to
+  mode 100755 by a suite case; the hook command is guarded in `.claude/settings.json`.
+
+**Documentation moved:** `CHANGELOG.md` only (Task 10; rewords the #45 line and adds a #47 entry saying the
+container must be rebuilt once for the volume). No page under `docs/` describes the dev container; no wiki.
+
+**Intake questions resolved:** the one open at intake — how a running session is retitled — is Q1.
+
+**Manual checks for the engineer** (named at the end of the plan, to go in `qc.md`): the identity survives a
+rebuild and a second container; session and window titles follow `/codeo:init` and `/codeo:close`; a
+`/rename` is kept. If Claude Code does not apply a `sessionTitle` to a session that already has one, that is
+a send-back to this plan.
+
+`overlap.sh 47` printed nothing; no exclusive resource is configured, so no lock was taken.
+
 ### Footprint
 
 ```
@@ -146,10 +176,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-09 — Q1-Q3 raised · cost: 5m · fable-5-1 78k in + 487k cached / 19k out
+- 2026-11-09 — planned: docs/plans/2026-11-09-dev-container-hardening.md · cost: 134m · fable-5-1 97k in + 1.1M cached / 25k out · sonnet-5-5 169k in + 900k cached / 36k out · `engineering` plugin unavailable, its structure applied directly
