@@ -55,31 +55,46 @@ cd "$(git -C "$clone" rev-parse --show-toplevel)" || { add_todo "could not enter
 # does: a bind-mounted host checkout's config and file modes are the host's, so it gets a TODO and nothing else. On a
 # volume, when it is false, probe the git dir: only if the fresh probe file is not
 # executable, chmod u+x makes it executable and chmod u-x makes it not executable again does the filesystem keep the
-# executable bit as set. Then the tracked files' modes on disk are restored to the index's (so turning the setting on
-# shows no mode-only change), and only when that worked does core.fileMode go back on for this clone; if not, say how
-# to stage by hand.
+# executable bit as set. Then the files the index records as executable but the disk has as not are made executable
+# again (only that direction: an executable bit the index does not record is left, and shows as a mode change), the
+# files named in the message, and only when that worked does core.fileMode go back on for this clone; if a file could
+# not be restored or the modes could not be listed, say how to stage by hand.
 
-# restore_modes: chmod each tracked file whose mode differs from the index's (as if core.fileMode were on) to the
-# index's mode, then list again. Prints nothing; sets restored_count and left_paths (the paths still differing).
-# Returns non-zero when any remain.
+# restore_modes: chmod +x each tracked file the index records as 100755 but the disk has as 100644 (what a filesystem
+# that dropped the bit did), then list again. Only that direction: a file the disk has executable and the index does
+# not record is the developer's, and stays. The listing (`git -c core.fileMode=true diff --raw -z --no-renames`) goes
+# through a temp file in the git dir, because bash drops NUL bytes from a command substitution. Prints nothing; sets
+# restored_count, restored_paths and left_paths (the paths still differing). Returns 0 when none are left, 1 when
+# some are, 2 when a listing failed (the temp file is removed on every path).
 restore_modes() {
-    local meta path old new
+    local meta path old new list
     restored_count=0
+    restored_paths=()
     left_paths=()
+    list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX" 2>/dev/null) || return 2
+    if ! git -c core.fileMode=true diff --raw -z --no-renames >"$list" 2>/dev/null; then
+        rm -f -- "$list"
+        return 2
+    fi
     while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
         read -r old new _ <<<"${meta#:}"
-        [[ ($old == 100644 || $old == 100755) && ($new == 100644 || $new == 100755) ]] || continue
-        [[ $old != "$new" ]] || continue
-        if [[ $old == 100755 ]]; then chmod +x -- "$path" 2>/dev/null; else chmod -x -- "$path" 2>/dev/null; fi
-        restored_count=$((restored_count + 1))
-    done < <(git -c core.fileMode=true diff --raw -z --no-renames 2>/dev/null)
+        [[ $old == 100755 && $new == 100644 ]] || continue
+        if chmod +x -- "$path" 2>/dev/null; then
+            restored_count=$((restored_count + 1))
+            restored_paths+=("$path")
+        fi
+    done <"$list"
+    if ! git -c core.fileMode=true diff --raw -z --no-renames >"$list" 2>/dev/null; then
+        rm -f -- "$list"
+        return 2
+    fi
     while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
         read -r old new _ <<<"${meta#:}"
-        [[ ($old == 100644 || $old == 100755) && ($new == 100644 || $new == 100755) ]] || continue
-        [[ $old != "$new" ]] || continue
+        [[ $old == 100755 && $new == 100644 ]] || continue
         left_paths+=("$path")
-    done < <(git -c core.fileMode=true diff --raw -z --no-renames 2>/dev/null)
-    ((${#left_paths[@]} == 0))
+    done <"$list"
+    rm -f -- "$list"
+    ((${#left_paths[@]} == 0)) || return 1
 }
 
 if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
@@ -90,14 +105,21 @@ if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; t
             if [[ ! -x $filemode_probe ]] && chmod u+x -- "$filemode_probe" 2>/dev/null && [[ -x $filemode_probe ]] \
                 && chmod u-x -- "$filemode_probe" 2>/dev/null && [[ ! -x $filemode_probe ]]; then
                 rm -f -- "$filemode_probe"
-                if ! restore_modes; then
+                restore_rc=0
+                restore_modes || restore_rc=$?
+                if ((restore_rc == 2)); then
+                    add_todo "core.fileMode is false and the tracked files' modes could not be listed: stage each new script with git update-index --chmod=+x <file>"
+                elif ((restore_rc == 1)); then
                     left_list=$(printf '%s, ' "${left_paths[@]:0:5}")
                     left_list=${left_list%, }
                     ((${#left_paths[@]} <= 5)) || left_list+=" and $((${#left_paths[@]} - 5)) more"
                     add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
                 elif git config core.fileMode true; then
                     if ((restored_count > 0)); then
-                        say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) to the index's and set it to true for this clone"
+                        restored_list=$(printf '%s, ' "${restored_paths[@]:0:5}")
+                        restored_list=${restored_list%, }
+                        ((${#restored_paths[@]} <= 5)) || restored_list+=" and $((${#restored_paths[@]} - 5)) more"
+                        say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) ($restored_list) to the index's and set it to true for this clone"
                     else
                         say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
                     fi

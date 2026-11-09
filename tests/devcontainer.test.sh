@@ -904,9 +904,51 @@ start_restores_tracked_modes_before_turning_file_mode_on() {
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
     [[ -x $r/bin/run.sh ]] || fail 'bin/run.sh is not executable'
-    [[ ! -x $r/data.txt ]] || fail 'data.txt is executable'
-    [[ -z $(git -C "$r" status --porcelain) ]] || fail "git status is not clean: $(git -C "$r" status --porcelain)"
-    grep -q 'restored the modes of 2 tracked files' <<<"$ds_out" || fail "stdout does not say it restored the modes of 2 tracked files: $ds_out"
+    [[ -x $r/data.txt ]] || fail 'data.txt lost its executable bit'
+    [[ $(git -C "$r" status --porcelain) == ' M data.txt' ]] || fail "git status is not exactly ' M data.txt': $(git -C "$r" status --porcelain)"
+    grep -q 'restored the modes of 1 tracked file (bin/run.sh)' <<<"$ds_out" || fail "stdout does not say it restored the modes of 1 tracked file (bin/run.sh): $ds_out"
+}
+
+start_keeps_an_executable_bit_the_index_does_not_record() {
+    local r
+    ds_setup keeps-exec || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    r="$ds_dir/repo"
+    { printf "#!/bin/sh\n" > "$r/tool.sh"; chmod 644 "$r/tool.sh"; } || { fail "could not build the scratch repo"; return 0; }
+    { git -C "$r" add -A; git -C "$r" -c user.name=Dev -c user.email=dev@example.com commit -q -m base; } || { fail "could not commit"; return 0; }
+    chmod +x "$r/tool.sh"
+    git -C "$r" config core.fileMode false
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
+    [[ -x $r/tool.sh ]] || fail 'tool.sh lost its executable bit'
+    git -C "$r" diff --summary | grep -q 'mode change 100644 => 100755 tool.sh' || fail "git diff --summary does not show the mode change: $(git -C "$r" diff --summary)"
+    ! grep -q 'restored' <<<"$ds_out" || fail "stdout mentions a restore: $ds_out"
+}
+
+start_keeps_file_mode_off_when_the_mode_listing_fails() {
+    local r n real_git
+    ds_setup listing-fails || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    real_git=$(command -v git)
+    cat > "$ds_dir/bin/git" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+    *"diff --raw"*) exit 1 ;;
+esac
+exec $real_git "\$@"
+STUB
+    chmod +x "$ds_dir/bin/git"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was turned on although the modes could not be listed'
+    n=$(ds_todos 'could not be listed'); ((n == 1)) || fail "wanted one TODO saying the modes could not be listed, got $n: $ds_err"
+    grep 'could not be listed' <<<"$ds_err" | grep -q 'update-index --chmod' || fail "the TODO does not name update-index --chmod: $ds_err"
+    ! compgen -G "$r/.git/modes.*" >/dev/null || fail 'a modes temp file was left in the git dir'
 }
 
 start_keeps_file_mode_off_when_a_mode_cannot_be_restored() {
@@ -1491,7 +1533,9 @@ cases=(
     start_file_mode_that_cannot_stick_is_a_todo
     start_file_mode_that_cannot_clear_is_a_todo
     start_restores_tracked_modes_before_turning_file_mode_on
+    start_keeps_an_executable_bit_the_index_does_not_record
     start_keeps_file_mode_off_when_a_mode_cannot_be_restored
+    start_keeps_file_mode_off_when_the_mode_listing_fails
     start_ignores_content_edits_when_restoring_modes
     start_leaves_a_bind_mounted_clone_alone
     title_is_home_without_a_lock
