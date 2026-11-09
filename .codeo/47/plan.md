@@ -137,6 +137,7 @@ on, so what the script does next decides whether the criterion is met by the scr
   clone, which is the case the criterion was written for.
 
 **Answer:**
+Accepted the recommendation (answered in the conversation, 2026-11-09): flip, then restore the index's modes.
 
 ### Q5 — `GIT_CONFIG_GLOBAL` makes git ignore `~/.gitconfig`: document it, or guard against what VS Code writes there?
 
@@ -163,6 +164,8 @@ without rebuilding.
   helper are per-container again.
 
 **Answer:**
+Accepted the recommendation (answered in the conversation, 2026-11-09): document it in the changelog, verify by
+hand after the rebuild, file a follow-up if it bites.
 
 ## Notes
 
@@ -193,6 +196,15 @@ Decisions this plan makes without asking, stated so they can be rejected:
 - `inflight.sh --except 47`: no other workflow in flight, so the draft footprint overlaps nothing.
 - The `engineering` plugin (`system-design`, `architecture`) is not installed here; its Options Considered
   structure is applied directly in the plan's table, as the #44 and #45 plans did.
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
