@@ -8,10 +8,10 @@
 
 ## Where this stands
 
-Round 2 done, answering `qc.md` round 1: Tasks 11-15 of `docs/plans/2026-11-09-dev-container-hardening.md`
-(`## Round 2`) are implemented and committed (`8988cea`..`e59e859`), each passed its own spec and quality review
-(Task 11 after one fix round), and the round's whole review found no Critical or Important issue. The `shell`
-suite's build (`true`) exits 0. Ready for `/codeo:qc` round 2.
+Round 3 done, answering `qc.md` round 2: Tasks 16-20 of `docs/plans/2026-11-09-dev-container-hardening.md`
+(`## Round 3`) are implemented and committed (`b1e21ca`..`8ef25ff`), each passed its own spec and quality review
+(Task 16 after one fix round), and the round's whole review found no Critical or Important issue. The `shell`
+suite's build (`true`) exits 0. Ready for `/codeo:qc` round 3.
 
 ## Questions
 
@@ -117,7 +117,57 @@ set the identity once, a second container prints no identity TODO; titles follow
 a bind-mounted host checkout keeps `core.fileMode` false). If Claude Code does not apply a `sessionTitle` to a
 session that already has one, that is a send-back to `/codeo:plan`.
 
+### Round 3
+
+2026-11-09
+(send-back from qc.md round 2)
+
+Round 2's findings were answered by the round 3 plan (F8-F15 were checked there against the code; none was argued
+back). `sync-main.sh`: the branch already contained `origin/main`; `overlap.sh 47`: nothing. One sonnet
+implementer and one sonnet reviewer per task (`models.subagent` unset), and a sonnet whole-round review.
+
+**Built.** One commit per task, plus one fix commit:
+
+| Task | Commit | What |
+|---|---|---|
+| 16 (F8) | `b1e21ca`, then `44783f8` | `devcontainer-start.sh` restores tracked files' modes to the index's (`restore_modes`: `git -c core.fileMode=true diff --raw -z --no-renames`, `chmod ±x --`, list again) before `git config core.fileMode true`; leftover files keep it `false` with one TODO naming up to five. `44783f8` (fix round 1): entries whose old and new mode are equal (content-only edits) are skipped in both listings, "1 tracked file" is singular, the count assertion matches the message |
+| 17 (F11, F13) | `42dea00` | both scripts classify settings by the number of top-level values: `false`, `null` and other non-objects are "not a JSON object", several values "not valid JSON"; a failed `readlink -f` in step 3c is its own TODO ("could not resolve …") |
+| 18 (F12, F14) | `4ad09a7` | `window-title.sh` discards stderr of `mkdir`, `mktemp` and `mv`, so a failure prints one `window-title:` line; `[[:space:]]*` after `issue:` (TAB works); header says "the digits after `issue:`" |
+| 19 (F15) | `49556eb` | newline-before-valid-suffix leg, `authMethod` legs with `claude auth status` succeeding, identity test renamed `start_reads_the_identity_from_the_global_config_file`; also the SC2015 note Task 16 introduced is rewritten |
+| 20 (F9, F10) | `8ef25ff` | `CHANGELOG.md` #47 line: number read from the lock, modes restored first, the host `~/.gitconfig` no longer applies |
+
+**Documentation changed:** `CHANGELOG.md` only, as the plan says; no page under `docs/`, no wiki module.
+
+**Build:** `shell` suite `build` = `true`: exit 0. No shared environment, so no lease and no deploy. The
+implementers and the whole-round reviewer reported `bash tests/run.sh devcontainer` passing and
+`shellcheck .devcontainer/scripts/*.sh` printing nothing; `shellcheck tests/devcontainer.test.sh` prints only the
+one pre-existing `SC2016` info note. The full suite and the criteria are `/codeo:qc`'s.
+
+**Deviations from the plan, and why:**
+- Task 16 needed a fix round: the plan's filter ("both modes 100644 or 100755") did not say the modes must differ,
+  so a content-only edit counted as a restore and kept `core.fileMode` off with a bogus TODO; found by the task
+  review, fixed, re-reviewed clean.
+- Task 17 added `2>/dev/null || true` to the step-3c `readlink -f` (not in the plan): under `set -e` a failing
+  resolve aborted the script before the new TODO could be reached. Reviewed and approved.
+- Task 18: the plan's "unwritable-exclude-style" `.vscode` leg is a new case, `title_reports_an_unwritable_vscode_dir`.
+- Task 19 also rewrote the SC2015-flagged line from Task 16 (the plan's Task 20 proof allows one `SC2016` note only).
+
+**Deferred minors** (none blocks):
+- `restore_modes` reads `git diff … 2>/dev/null` into the loop, so a failed second listing would read as empty and
+  turn the setting on; the whole-round reviewer could not trigger it (it needs a corrupt index, which fails earlier).
+  Capturing each listing with `|| return 1` would close it.
+- `CHANGELOG.md` #47 line: no comma before "and writes through a symlink" after the new "with or without a `#`".
+- No test for a file that differs in both mode and content, or for the singular "1 tracked file"; the `authMethod`
+  legs repeat the four assertions of the first run. Paths with spaces and newlines were checked by hand by the
+  whole-round reviewer.
+
+**For `/codeo:qc` and the engineer:** the manual checks at the end of the plan still stand: a clone with
+`core.fileMode false` and `644` scripts ends `true`, executable, `git status` clean (with a `chmod`-protected file
+it stays `false` with a TODO); after the rebuild, read `/home/dev/.config/git/config` for a VS Code credential
+helper naming `/tmp/vscode-remote-containers-*.js` (Q5); the earlier checks on the identity volume and the titles.
+
 ## Log
 
 - 2026-11-09 — implemented: 10 tasks, 10 commits · sonnet-5-5 subagents for every dispatch · build `true` passed · cost: 73m · sonnet-5-5 979k in + 18.6M cached / 125k out
 - 2026-11-09 — implemented (round 2, send-back from qc.md round 1): 5 tasks, 7 commits (one fix round on Task 11) · sonnet-5-5 subagents for every dispatch · build `true` passed · cost: 32m · sonnet-5-5 507k in + 17.9M cached / 65k out
+- 2026-11-09 — implemented (round 3, send-back from qc.md round 2): 5 tasks, 6 commits (one fix round on Task 16) · sonnet-5-5 subagents for every dispatch · build `true` passed · cost: 12m · sonnet-5-5 538k in + 9.7M cached / 68k out
