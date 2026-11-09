@@ -3,11 +3,12 @@
 # clone, "<codename> [#<N>]" while .codeo/active holds issue N (written "issue: 44" or "issue: #44").
 # The codename is .codeo/config.json's, else the clone directory's name. Keeps .vscode/settings.json
 # out of git status through the clone's info/exclude first, then merges window.title into it (every
-# other key stays). Safe to re-run.
+# other key stays). Safe to re-run: a symlinked settings.json is written through (a dangling one is
+# created at its target), its mode is kept, and a title already current is not rewritten.
 # Prints "window-title: <title>" on stdout. Every failure (not a repository, an unwritable
-# info/exclude or .vscode, a settings.json that is not valid JSON, which is left untouched) exits 1
-# with one "window-title: ..." line on stderr. With --print it prints the title alone and writes
-# nothing.
+# info/exclude or .vscode, a settings.json that is not valid JSON, JSONC with comments included, or
+# not a JSON object, which is left untouched) exits 1 with one "window-title: ..." line on stderr.
+# With --print it prints the title alone and writes nothing.
 #
 #   bash .devcontainer/scripts/window-title.sh [--print]
 set -euo pipefail
@@ -37,14 +38,33 @@ touch "$exclude" 2>/dev/null || die "$msg"
 grep -qxF '.vscode/settings.json' "$exclude" 2>/dev/null \
     || { echo '.vscode/settings.json' >> "$exclude"; } 2>/dev/null || die "$msg"
 
-settings="$root/.vscode/settings.json"
 mkdir -p "$root/.vscode" || die "could not create $root/.vscode"
-[[ -f $settings ]] || echo '{}' > "$settings" || die "could not write $settings"
-tmp=$(mktemp "$root/.vscode/.settings.XXXXXX") || die "could not write in $root/.vscode"
-if ! jq -n --arg t "$title" '([inputs][0] // {}) + {"window.title": $t}' "$settings" > "$tmp" 2>/dev/null || [[ ! -s $tmp ]]; then
-    rm -f "$tmp"
-    die "$settings is not valid JSON; left untouched"
+# Write through a symlink: the resolved path is the file we read and replace (a dangling link is created
+# at its target).
+target=$(readlink -f -- "$root/.vscode/settings.json") || die "could not resolve $root/.vscode/settings.json"
+src=$target
+if [[ -e $target ]]; then
+    kind=$(jq -rn '[inputs][0] // {} | type' "$target" 2>/dev/null || true)
+    [[ -n $kind ]] || die "$target is not valid JSON; left untouched"
+    [[ $kind == object ]] || die "$target is not a JSON object; left untouched"
+    current=$(jq -r '.["window.title"] // empty | strings' "$target" 2>/dev/null || true)
+    if [[ $current == "$title" ]]; then
+        echo "window-title: $title"
+        exit 0
+    fi
+else
+    src=/dev/null
 fi
-mv "$tmp" "$settings" || { rm -f "$tmp"; die "could not write $settings"; }
+tmp=$(mktemp "$(dirname "$target")/.settings.XXXXXX") || die "could not write in $(dirname "$target")"
+if ! jq -n --arg t "$title" '([inputs][0] // {}) + {"window.title": $t}' "$src" > "$tmp" 2>/dev/null || [[ ! -s $tmp ]]; then
+    rm -f "$tmp"
+    die "could not merge window.title into $target; left untouched"
+fi
+if [[ -e $target ]]; then
+    chmod --reference="$target" -- "$tmp" 2>/dev/null || { rm -f "$tmp"; die "could not keep the mode of $target"; }
+else
+    chmod 644 -- "$tmp" 2>/dev/null || { rm -f "$tmp"; die "could not write $target"; }
+fi
+mv -- "$tmp" "$target" || { rm -f "$tmp"; die "could not write $target"; }
 
 echo "window-title: $title"

@@ -754,14 +754,95 @@ title_follows_the_lock_on_a_rerun() {
     [[ $(wt_title "$wt_dir") == 'codeo [#44]' ]] || fail "title is '$(wt_title "$wt_dir")'"
 }
 
-title_leaves_malformed_settings_alone() {
-    wt_setup bad || return 0
+title_rejects_settings_that_are_not_an_object() {
+    local leg body want
+    for leg in array broken jsonc; do
+        case $leg in
+            array)  body='[]';                want='not a JSON object' ;;
+            broken) body='{not json';         want='not valid JSON' ;;
+            jsonc)  body=$'{ // c\n"a": 1 }'; want='not valid JSON' ;;
+        esac
+        wt_setup "bad-$leg" || return 0
+        mkdir -p "$wt_dir/.vscode"
+        printf '%s' "$body" > "$wt_dir/.vscode/settings.json"
+        wt_run
+        ((wt_rc == 1)) || fail "$leg: exit $wt_rc, wanted 1"
+        [[ $(<"$wt_dir/.vscode/settings.json") == "$body" ]] || fail "$leg: the file was changed"
+        [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "$leg: stderr was: $wt_err"
+        [[ $wt_err == *"$want"* ]] || fail "$leg: stderr lacks '$want': $wt_err"
+    done
+}
+
+title_writes_through_a_symlink() {
+    wt_setup link || return 0
     mkdir -p "$wt_dir/.vscode"
-    printf '{not json' > "$wt_dir/.vscode/settings.json"
+    echo '{"a":1}' > "$pl_root/real-settings.json"
+    ln -s "$pl_root/real-settings.json" "$wt_dir/.vscode/settings.json"
     wt_run
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ -L $wt_dir/.vscode/settings.json ]] || fail 'the symlink was replaced'
+    jq -e '.a == 1 and .["window.title"] == "codeo [home]"' "$pl_root/real-settings.json" >/dev/null \
+        || fail 'the target lacks a or the title'
+    wt_setup dangling || return 0
+    mkdir -p "$wt_dir/.vscode"
+    ln -s "$pl_root/dangling-target.json" "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 0)) || fail "dangling: exit $wt_rc: $wt_err"
+    [[ -L $wt_dir/.vscode/settings.json ]] || fail 'dangling: the symlink was replaced'
+    [[ $(jq -r '.["window.title"]' "$pl_root/dangling-target.json") == 'codeo [home]' ]] \
+        || fail 'dangling: the target was not created with the title'
+}
+
+title_keeps_the_settings_mode() {
+    local mode
+    for mode in 644 600; do
+        wt_setup "mode$mode" || return 0
+        mkdir -p "$wt_dir/.vscode"
+        echo '{"a":1}' > "$wt_dir/.vscode/settings.json"
+        chmod "$mode" "$wt_dir/.vscode/settings.json"
+        wt_run
+        ((wt_rc == 0)) || fail "$mode: exit $wt_rc: $wt_err"
+        [[ $(stat -c %a "$wt_dir/.vscode/settings.json") == "$mode" ]] \
+            || fail "$mode became $(stat -c %a "$wt_dir/.vscode/settings.json")"
+    done
+}
+
+title_leaves_no_temp_file_when_mv_fails() {
+    local stubs
+    wt_setup mvfail || return 0
+    mkdir -p "$wt_dir/.vscode"
+    echo '{"a":1}' > "$wt_dir/.vscode/settings.json"
+    stubs="$pl_root/mv-stub"
+    mkdir -p "$stubs"
+    printf '#!/bin/sh\nexit 1\n' > "$stubs/mv"
+    chmod +x "$stubs/mv"
+    wt_path=$stubs wt_run
     ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
-    [[ $(<"$wt_dir/.vscode/settings.json") == '{not json' ]] || fail 'the malformed file was changed'
     [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
+    [[ $(ls -A "$wt_dir/.vscode") == settings.json ]] || fail ".vscode holds: $(ls -A "$wt_dir/.vscode")"
+}
+
+title_does_not_rewrite_a_current_title() {
+    local before after
+    wt_setup current || return 0
+    wt_run
+    before=$(stat -c %i "$wt_dir/.vscode/settings.json")
+    wt_run
+    after=$(stat -c %i "$wt_dir/.vscode/settings.json")
+    [[ $before == "$after" ]] || fail "inode changed $before -> $after"
+    [[ $wt_out == 'window-title: codeo [home]' ]] || fail "second run printed '$wt_out'"
+}
+
+title_follows_a_released_lock() {
+    wt_setup release || return 0
+    wt_run
+    [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail "first title is '$(wt_title "$wt_dir")'"
+    printf 'issue:   47\n' > "$wt_dir/.codeo/active"
+    wt_run
+    [[ $(wt_title "$wt_dir") == 'codeo [#47]' ]] || fail "locked title is '$(wt_title "$wt_dir")'"
+    rm -f "$wt_dir/.codeo/active"
+    wt_run
+    [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail "released title is '$(wt_title "$wt_dir")'"
 }
 
 title_fills_an_empty_settings_file() {
@@ -992,7 +1073,12 @@ cases=(
     title_keeps_other_keys
     title_rerun_and_worktree
     title_follows_the_lock_on_a_rerun
-    title_leaves_malformed_settings_alone
+    title_rejects_settings_that_are_not_an_object
+    title_writes_through_a_symlink
+    title_keeps_the_settings_mode
+    title_leaves_no_temp_file_when_mv_fails
+    title_does_not_rewrite_a_current_title
+    title_follows_a_released_lock
     title_fills_an_empty_settings_file
     title_strips_a_hash_from_the_lock_line
     title_reports_an_unwritable_exclude
