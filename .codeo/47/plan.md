@@ -8,9 +8,11 @@
 
 ## Where this stands
 
-Round 3 planned, answering `/codeo:qc` round 2 (F8 blocking, F9-F15 non-blocking): Tasks 16-20 of
-`docs/plans/2026-11-09-dev-container-hardening.md` (`## Round 3`), approved and left unstaged for the engineer
-to commit. Q4 and Q5 are answered. Next: commit the plan, then `/codeo:implement`.
+Round 4, after a send-back from `/codeo:qc` round 3 (F16 blocking, F17-F23 non-blocking). F16 and F17 are
+settled: `qc.md` Q1 and Q2 decided how the start script must change (restore only the `100755`-in-index direction
+and name the files; run step 2b only on a clone on a Docker named volume). One thing needs a decision before the
+round is drafted: Q6, which of the minor findings F18-F23 and the two deferred minors from `implement.md` round 3
+this round folds in. Nothing is drafted past Q6.
 
 ## Questions
 
@@ -166,6 +168,40 @@ without rebuilding.
 Accepted the recommendation (answered in the conversation, 2026-11-09): document it in the changelog, verify by
 hand after the rebuild, file a follow-up if it bites.
 
+### Q6 — Which of the round 3 minors (F18-F23, and the two deferred in `implement.md`) does round 4 fold in?
+
+**Why it matters:** `qc.md` round 3 left it to you ("the engineer can say which"). Each one folded in is a task
+with a test and a review; each one left stays recorded in `qc.md` as debt. The round already changes
+`devcontainer-start.sh` step 2b (F16, F17), `tests/devcontainer.test.sh` and the `CHANGELOG.md` #47 line, so
+anything that sits in those lines is nearly free; the two in `session-title.sh` are the only ones that open another
+file. The findings: **F18** a forked or resumed session (new id) inherits `codeo [#N] · <old sid8>`, which the
+own-title rule reads as a `/rename`, so it never follows the lock again and shows another session's id; **F19** the
+rule does not compare the codename, so a `/rename` shaped `x [home] · <sid8>` is replaced; **F20** `issue: 44abc`
+→ `[#44]` (deliberate, round 3); **F21** the settings merges keep the mode but not the owner or hard links (`mv`
+swaps the inode); **F22** a non-regular `~/.claude/settings.json` (a directory, or a link to one) is skipped with no
+TODO; **F23** the probe file and `git config` target the common git dir, wrong for a linked worktree on another
+filesystem; plus, from `implement.md`: the second `git diff` listing in `restore_modes` reads a failure as empty
+(`2>/dev/null`, no exit check), and the changelog line is missing a comma before "and writes through a symlink".
+
+**Options:**
+- *Fold in what the round already touches, plus the two title-rule fixes (my recommendation):* F18 and F19 as
+  one task — the own-title rule becomes "no newline, exactly `<codename> [home|#digits] · <8 hex>`" (any session id
+  in the suffix, so a fork inherits a title it may replace; the codename compared, so a rename of that shape is
+  kept); F22 as one small task (an `add_todo` naming the file plus a test); the `git diff` exit check and the
+  changelog comma inside the F16 and changelog tasks. Leave F20 (deliberate), F21 (preserving the inode means
+  giving up the atomic `mv`, and `settings.json` owned by another user is not a case this container has) and F23
+  (not this layout; a worktree-aware probe is a different feature). Pro: closes everything a user of this container
+  could meet, in two extra small tasks. Con: round 4 edits `session-title.sh`, a third script.
+- *Fold in only what the round already touches:* F16, F17, the `git diff` exit check and the comma; leave
+  F18-F23 recorded. Pro: smallest round, two scripts. Con: a forked session keeps a stale title until someone files it.
+- *Fold in all of F18-F23:* also F20 (tighten the lock parse to `intake.sh`'s form), F21 (write in place with
+  `cat >` after a successful `jq` to a temp, losing atomicity) and F23 (probe in `git rev-parse --git-common-dir`
+  vs the worktree). Pro: nothing left. Con: F20 reverses a round 3 decision, F21 trades atomicity for an edge case,
+  F23 adds code for a layout this repository does not use.
+
+**Answer:**
+_Pending._
+
 ## Notes
 
 Decisions this plan makes without asking, stated so they can be rejected:
@@ -301,3 +337,4 @@ sequenced:  none
 - 2026-11-09 — planned (round 2, send-back from qc.md round 1): docs/plans/2026-11-09-dev-container-hardening.md · cost: 37m · fable-5-1 354k in + 1.5M cached / 13k out · sonnet-5-5 28k in + 737k cached / 2k out · `engineering` plugin unavailable, its structure applied directly
 - 2026-11-09 — Q4-Q5 raised (round 3, send-back from qc.md round 2) · cost: 1m · fable-5-1 478k in + 525k cached / 7k out
 - 2026-11-09 — planned (round 3, send-back from qc.md round 2): docs/plans/2026-11-09-dev-container-hardening.md · cost: 71m · fable-5-1 481k in + 1.5M cached / 9k out · sonnet-5-5 112k in + 2.3M cached / 9k out · `engineering` plugin unavailable, its structure applied directly
+- 2026-11-09 — Q6 raised (round 4, send-back from qc.md round 3) · cost: 1m · fable-5-1 231k in + 778k cached / 5k out
