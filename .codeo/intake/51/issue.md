@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/51 |
 | Branch | none (intake) |
 | Updated | 2026-11-09 |
 
