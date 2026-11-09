@@ -8,11 +8,9 @@
 
 ## Where this stands
 
-Round 4, after a send-back from `/codeo:qc` round 3 (F16 blocking, F17-F23 non-blocking). F16 and F17 are
-settled: `qc.md` Q1 and Q2 decided how the start script must change (restore only the `100755`-in-index direction
-and name the files; run step 2b only on a clone on a Docker named volume). One thing needs a decision before the
-round is drafted: Q6, which of the minor findings F18-F23 and the two deferred minors from `implement.md` round 3
-this round folds in. Nothing is drafted past Q6.
+Round 4 planned, answering `/codeo:qc` round 3 (F16 blocking, F17-F23 non-blocking): Tasks 21-25 of
+`docs/plans/2026-11-09-dev-container-hardening.md` (`## Round 4`), approved and left unstaged for the engineer
+to commit. Q6 is answered. Next: commit the plan, then `/codeo:implement`.
 
 ## Questions
 
@@ -233,15 +231,6 @@ Decisions this plan makes without asking, stated so they can be rejected:
 - The `engineering` plugin (`system-design`, `architecture`) is not installed here; its Options Considered
   structure is applied directly in the plan's table, as the #44 and #45 plans did.
 
-### Footprint
-
-```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-09-dev-container-hardening.md` — approved 2026-11-09, left unstaged for the
@@ -331,10 +320,42 @@ and new modes are both `100644` or `100755`, so symlinks and submodules are left
 
 `overlap.sh 47` printed nothing; no exclusive resource, so no lock was taken.
 
+### Round 4
+
+2026-11-09
+(send-back from qc.md round 3)
+
+**Plan:** `docs/plans/2026-11-09-dev-container-hardening.md`, `## Round 4` (Tasks 21-25), appended to the same
+plan so the issue keeps one plan; approved 2026-11-09, left unstaged for the engineer to commit. Tasks 1-20 stand.
+
+**What it answers.** F16 (blocking, the plan's; qc Q1): the mode restore stripped an executable bit the engineer set
+on a file the index records as `100644`, hiding the very mistake `core.fileMode=false` causes. Task 22 restores only
+the `100755`-in-index direction, leaves an executable `100644`-in-index file for git to show as a mode change, names
+the files it changed, and keeps `core.fileMode` false with a TODO when the listing itself fails (deferred minor).
+F17 (qc Q2), Task 21: step 2b runs only on a clone on a Docker named volume; a bind-mounted host checkout gets a
+"left alone" TODO and nothing is written to its config or modes. F18 and F19, Task 23: the hook replaces a title it
+set in any session (a fork's inherited one) and only for its own codename. F22, Task 24: a Claude settings path that
+is not a regular file is a TODO. Task 25: the changelog line (volume clone, the restore direction, the missing comma).
+
+**Decisions** (Q6 answered in the conversation, recorded above): fold in F18+F19, F22, the `git diff` exit check and
+the changelog comma. Rejected: leaving F18-F23 all recorded; folding in all of F18-F23. F20 (leading digits of the
+lock line), F21 (owner and hard links of `settings.json`) and F23 (linked worktrees) stay recorded in `qc.md`.
+Without asking: the listing goes through a temp file in the git dir because bash drops NULs from a variable; the
+seven existing `core.fileMode` tests get a `ds_on_volume` helper so the volume gate does not break them.
+
+**Documentation moved:** `CHANGELOG.md` only (Task 25); no page under `docs/`, no wiki module.
+
+**Manual checks for the engineer:** those of rounds 1-3, plus: on the `codeo-47` volume with `core.fileMode false`, a
+script made executable and committed as `100644` is still executable after the start script and `git status`
+shows it as a mode change; in a bind-mounted host checkout the start script prints the "left alone" TODO and
+changes nothing in the host's `.git/config`.
+
+`overlap.sh 47` printed nothing; no exclusive resource, so no lock was taken.
+
 ### Footprint
 
 ```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -348,3 +369,4 @@ sequenced:  none
 - 2026-11-09 — Q4-Q5 raised (round 3, send-back from qc.md round 2) · cost: 1m · fable-5-1 478k in + 525k cached / 7k out
 - 2026-11-09 — planned (round 3, send-back from qc.md round 2): docs/plans/2026-11-09-dev-container-hardening.md · cost: 71m · fable-5-1 481k in + 1.5M cached / 9k out · sonnet-5-5 112k in + 2.3M cached / 9k out · `engineering` plugin unavailable, its structure applied directly
 - 2026-11-09 — Q6 raised (round 4, send-back from qc.md round 3) · cost: 1m · fable-5-1 231k in + 778k cached / 5k out
+- 2026-11-09 — planned (round 4, send-back from qc.md round 3): docs/plans/2026-11-09-dev-container-hardening.md · cost: 46m · fable-5-1 234k in + 1M cached / 6k out · sonnet-5-5 41k in + 1.6M cached / 14k out · `engineering` plugin unavailable, its structure applied directly
