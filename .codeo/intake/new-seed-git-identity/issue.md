@@ -12,7 +12,7 @@ Drafting. Problem restated: since #47 the dev container points `GIT_CONFIG_GLOBA
 volume, so git ignores the host `~/.gitconfig` VS Code copies in. A fresh volume has no
 `user.name`/`user.email` and `devcontainer-start.sh` step 5 only prints a TODO telling the engineer to
 run `git config --global` by hand. The issue asks the start script to seed the identity on first start.
-Blocked on Q1-Q4 below. Related: #47 (closed), #40 (open, dev container follow-ups) — checked, neither
+Q1-Q4 answered; the draft below awaits approval. Related: #47 (closed), #40 (open, dev container follow-ups) — checked, neither
 covers seeding.
 
 ## Questions
