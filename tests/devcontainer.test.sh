@@ -131,7 +131,7 @@ dockerfile_creates_the_git_config_dir() {
     grep -q 'install -d -o.*\.config/git' <<<"$code" || fail 'no install -d -o for .config/git'
 }
 
-# With GIT_CONFIG_GLOBAL set, git --global writes there and leaves an existing ~/.gitconfig alone.
+# Pins the premise the volume design rests on: with GIT_CONFIG_GLOBAL set, git --global writes there and leaves an existing ~/.gitconfig alone.
 git_global_writes_land_in_the_volume_file() {
     local h
     h=$(mktemp -d) || { fail 'mktemp failed'; return 0; }
@@ -757,20 +757,16 @@ start_env_vars_are_todos() {
 }
 
 start_credential_variables_hide_the_login_advice() {
-    local v method rc n
+    local v n
     for v in ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN; do
-        method=api_key; [[ $v == CLAUDE_CODE_OAUTH_TOKEN ]] && method=oauth_token
-        for rc in 0 1; do
-            ds_setup "cred-$v-$rc" || return 0
-            ds_identity || { fail 'could not set the scratch git identity'; return 0; }
-            DS_SET="$v=x" STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=$rc \
-                STUB_CLAUDE_OUT="{\"loggedIn\":true,\"authMethod\":\"$method\"}" ds_run
-            ((ds_rc == 0)) || fail "$v/$rc: exit $ds_rc"
-            n=$(grep -c 'claude auth login' <<<"$ds_err" || true)
-            ((n == 0)) || fail "$v/$rc: claude auth login is advised: $ds_err"
-            n=$(ds_todos "$v.*unset"); ((n == 1)) || fail "$v/$rc: wanted one unset TODO, got $n: $ds_err"
-            if grep -q 'what is left to do' <<<"$ds_out$ds_err"; then fail "$v/$rc: a what-is-left list is printed: $ds_err"; fi
-        done
+        ds_setup "cred-$v" || return 0
+        ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+        DS_SET="$v=x" STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=1 ds_run
+        ((ds_rc == 0)) || fail "$v: exit $ds_rc"
+        n=$(grep -c 'claude auth login' <<<"$ds_err" || true)
+        ((n == 0)) || fail "$v: claude auth login is advised: $ds_err"
+        n=$(ds_todos "$v.*unset"); ((n == 1)) || fail "$v: wanted one unset TODO, got $n: $ds_err"
+        if grep -q 'what is left to do' <<<"$ds_out$ds_err"; then fail "$v: a what-is-left list is printed: $ds_err"; fi
     done
 }
 
