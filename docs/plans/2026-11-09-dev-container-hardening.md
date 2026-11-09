@@ -686,3 +686,208 @@ The manual checks of *After the tasks* above still stand, plus two for this roun
 TODO); and after the rebuild read `/home/dev/.config/git/config` for a VS Code credential helper naming a
 `/tmp/vscode-remote-containers-*.js` (Q5) — if one is there and a second container prints helper errors, file
 the follow-up.
+
+---
+
+## Round 4 — after `qc.md` round 3 (2026-11-09)
+
+Tasks 1-20 above are done (`d963bfa`..`8ef25ff`). `/codeo:qc` round 3 sent the branch back with one blocking
+finding, F16, and seven non-blocking ones, F17-F23 (`.codeo/47/qc.md`). `qc.md` Q1 and Q2 decided F16 and F17;
+`plan.md` Q6 chose which minors to fold in. This round is five tasks, appended here so the issue keeps one plan.
+The constraints below amend the matching bullets of Round 3's amended constraints; everything else there still binds.
+
+**Amended constraints**
+
+- **`core.fileMode` runs only on a named volume (F17, qc Q2).** Step 2b does nothing at all to a clone that is
+  not on a Docker named volume: it tests `clone_on_named_volume "$clone"` (the function step 1 already uses; `$clone`
+  is set there) before the probe. A `core.fileMode=false` clone that is not on a volume — a bind-mounted host
+  checkout, or a mountinfo that cannot be read — gets one TODO, "core.fileMode is false and the clone is not on a
+  Docker volume, so it was left alone (its config and file modes are the host's): stage each new script with git
+  update-index --chmod=+x <file>", and no probe, no `chmod`, no `git config`. A clone on a volume is handled as
+  Round 3 says, amended by the next bullet.
+- **Restore only the `100755` direction (F16, qc Q1).** `restore_modes` acts only on a listing entry whose index
+  mode (the first mode of the `:<old> <new>` record) is `100755` and whose disk mode (the second) is `100644`: it
+  runs `chmod +x -- <path>`. An entry with index `100644` and disk `100755` — executable on disk, recorded without
+  the bit, which is what `git add` leaves under `core.fileMode=false` — is never touched: it is left for git to
+  show as `mode change 100644 => 100755` once the setting is on, ready to commit. Entries with any other mode
+  (symlinks, submodules) or equal modes (content-only edits) are still skipped. The second listing counts only the
+  `100755`→`100644` entries still left.
+- **Name what was changed (qc Q1).** `restore_modes` keeps the paths it changed in `restored_paths` (alongside
+  `restored_count` and `left_paths`). The success line names up to five of them, then "and N more": `…restored the
+  modes of 2 tracked files (a.sh, b.sh) to the index's and set it to true for this clone`. Nothing restored → the
+  existing "set it to true" line.
+- **A failed listing stops the flip (deferred minor).** Each `git -c core.fileMode=true diff --raw -z --no-renames`
+  is written to a temp file in the git dir (a `-z` stream cannot be held in a shell variable: bash drops the NULs)
+  and read from there; if either `git diff` exits non-zero, `restore_modes` returns 2, removes the temp file, and
+  the caller adds one TODO "core.fileMode is false and the tracked files' modes could not be listed: stage each new
+  script with git update-index --chmod=+x <file>", leaving `core.fileMode` false. `restore_modes` returns 1 when
+  entries are left and 0 when none are; the temp file is removed on every path.
+- **The hook's own title (F18, F19).** `session-title.sh` treats an existing session title as its own only when it
+  has no newline and matches `^<codename> \[(home|#[0-9]+)\] · [0-9a-f]{8}$`, where `<codename>` is
+  `window-title.sh --print`'s output without its ` [home]`/` [#N]` tail. The id in the suffix is *any* eight hex
+  digits, not only this session's: a forked or resumed session inherits the old session's title, and now gets this
+  session's. A title is still replaced only when it differs from the new one. Everything else — a `/rename`,
+  another codename, a non-hex or short suffix, a newline — is kept. Header comment updated.
+- **A settings file that is not a regular file (F22).** In step 3c, when `$claude_settings` exists but is not a
+  regular file (a directory, or a link to one), the step adds one TODO "$claude_settings is not a regular file
+  and was left alone: fix it, then add \"remoteControlAtStartup\": true" instead of skipping silently. A missing
+  file is still created; a link to a regular file is still written through.
+- **Changelog (F16/F17 wording, deferred comma).** The #47 line says `core.fileMode` is turned back on "on a clone
+  that sits on a Docker volume, restoring the executable bit the index records on tracked files first and leaving
+  any executable file the index records without it for git to show"; "with or without a `#`" gains the missing
+  comma ("…with or without a `#`, and writes through a symlink"); "retitles the window and its own session title"
+  gains "(a forked session's inherited one included)".
+- Files that change this round: `.devcontainer/scripts/devcontainer-start.sh`, `.devcontainer/scripts/session-title.sh`,
+  `tests/devcontainer.test.sh`, `CHANGELOG.md`. No other file. Left alone on purpose, recorded in `qc.md`: F20
+  (the lock parse), F21 (owner and hard links of `settings.json`), F23 (linked worktrees).
+
+```mermaid
+flowchart TD
+    A["core.fileMode == false"] --> V{"clone on a Docker named volume?"}
+    V -- no --> T0["TODO: left alone; stage with update-index --chmod=+x"]
+    V -- yes --> B{"probe: not-x, u+x, u-x as set and cleared"}
+    B -- no --> T1["TODO: stage with update-index --chmod=+x"]
+    B -- yes --> C["list modes that differ, as if fileMode were on"]
+    C -- git diff failed --> T3["TODO: could not list; fileMode stays false"]
+    C --> D["chmod +x only where index 100755 and disk 100644; name the files"]
+    D --> E{"list again: any 100755 to 100644 left?"}
+    E -- yes --> T2["TODO: name the files left; fileMode stays false"]
+    E -- no --> F["git config core.fileMode true; executable 100644 files show as mode changes"]
+```
+
+### Task 21: Step 2b only on a Docker named volume (F17, qc Q2)
+
+**Files:**
+- Modify: `.devcontainer/scripts/devcontainer-start.sh` (step 2b and its comment)
+- Test: `tests/devcontainer.test.sh`
+
+**Interfaces:**
+- Consumes: `clone_on_named_volume <path>` and `$clone` from step 1; the test helper `ds_mountinfo <root> <mountpoint>...`.
+- Produces: the test helper `ds_on_volume() { ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo"; }`; after a run on a non-volume clone with `core.fileMode=false`, the setting is still `false`, no tracked file's mode changed, and exactly one TODO says it was left alone.
+
+- [ ] **Step 1: Write the tests.** Add `ds_on_volume` next to `ds_mountinfo` and call it, after `ds_setup`, in the seven cases that
+  exercise a `core.fileMode=false` clone — `start_sets_file_mode_so_new_scripts_are_executable`,
+  `start_file_mode_that_cannot_stick_is_a_todo`, `start_file_mode_that_cannot_clear_is_a_todo`,
+  `start_restores_tracked_modes_before_turning_file_mode_on`, `start_keeps_file_mode_off_when_a_mode_cannot_be_restored`,
+  `start_ignores_content_edits_when_restoring_modes` (and any other that sets `core.fileMode false`; find them with
+  `grep -n 'core.fileMode false\|ds_modes_repo' tests/devcontainer.test.sh`). Those still pass before the change.
+  Add `start_leaves_a_bind_mounted_clone_alone`: `ds_setup`, `ds_identity`, `ds_modes_repo`,
+  `ds_mountinfo /home/u/src/codeo "$ds_dir/repo"`, `ds_ready_run`; `ds_rc == 0`; `core.fileMode` still `false`;
+  `bin/run.sh` still `644` and `data.txt` still `755`; no `filemode.*` file left in the git dir; exactly one TODO
+  matching `not on a Docker volume` and it contains `update-index --chmod`; no stdout line mentioning `core.fileMode`.
+- [ ] **Step 2: Run to verify it fails.** Run: `bash tests/run.sh devcontainer`. Expected: `FAIL start_leaves_a_bind_mounted_clone_alone`
+  (the setting is turned on, modes changed); every other case passes.
+- [ ] **Step 3: Implement** in step 2b: wrap the probe in `if clone_on_named_volume "$clone"; then … else add_todo "…not on a
+  Docker volume…" fi` as the amended constraint words it (the TODO text is fixed there); update the step comment
+  ("only on a clone that is on a Docker volume, as step 1 does: a bind-mounted host checkout's config and file modes
+  are the host's").
+- [ ] **Step 4: Run to verify they pass.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh`.
+  Expected: `all cases passed`; shellcheck prints only the one pre-existing `SC2016` info note (on the test file).
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): leave core.fileMode and tracked modes alone on a clone that is not on a Docker volume (#47)"
+```
+
+### Task 22: Restore only the `100755` direction, name the files, stop on a failed listing (F16, qc Q1; deferred minor)
+
+**Files:**
+- Modify: `.devcontainer/scripts/devcontainer-start.sh` (`restore_modes`, step 2b and their comments)
+- Test: `tests/devcontainer.test.sh`
+
+**Interfaces:**
+- Consumes: Task 21's `ds_on_volume`; `ds_modes_repo` (unchanged: `bin/run.sh` `755` in the index and `644` on disk, `data.txt` `644` in the index and `755` on disk, `core.fileMode false`).
+- Produces: `restore_modes` returns 0 (nothing left), 1 (entries left, in `left_paths`) or 2 (a listing failed); sets `restored_count` and `restored_paths`; after a run `bin/run.sh` is executable and `data.txt` is still executable.
+
+- [ ] **Step 1: Write the tests.**
+  - Change `start_restores_tracked_modes_before_turning_file_mode_on`: `core.fileMode` `true`; `bin/run.sh` executable; **`data.txt` still executable**; `git status --porcelain` is exactly ` M data.txt` (the mode change git now shows); stdout matches `restored the modes of 1 tracked file (bin/run.sh)`.
+  - Add `start_keeps_an_executable_bit_the_index_does_not_record`: `ds_setup`, `ds_on_volume`, `ds_identity`, a repo with only `tool.sh` committed at `100644` then `chmod +x tool.sh`, `core.fileMode false`; `ds_ready_run`; `ds_rc == 0`; `core.fileMode` `true`; `tool.sh` still executable; `git diff --summary` contains `mode change 100644 => 100755 tool.sh`; stdout does not contain `restored`.
+  - `start_keeps_file_mode_off_when_a_mode_cannot_be_restored`: unchanged assertions (the TODO names `bin/run.sh`, not `data.txt`).
+  - Add `start_keeps_file_mode_off_when_the_mode_listing_fails`: a `$ds_dir/bin/git` stub that exits 1 when its arguments contain `diff --raw` and otherwise `exec`s the real git (the path `command -v git` gave before the stub dir was put on `PATH`); `ds_modes_repo`, `ds_on_volume`, `ds_ready_run`; `ds_rc == 0`; `core.fileMode` still `false`; exactly one TODO matching `could not be listed` containing `update-index --chmod`; no `modes.*` temp file left in the git dir.
+- [ ] **Step 2: Run to verify they fail.** Run: `bash tests/run.sh devcontainer`. Expected: FAIL for the changed restore case (`data.txt` lost its bit), `start_keeps_an_executable_bit_the_index_does_not_record` (`tool.sh` lost its bit) and `start_keeps_file_mode_off_when_the_mode_listing_fails` (the setting was turned on); the rest pass.
+- [ ] **Step 3: Implement** the three amended constraints ("Restore only the `100755` direction", "Name what was changed", "A failed listing stops the flip") in `restore_modes` and the step 2b branch: the listing goes to `list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX")` with a non-zero `git diff` returning 2 (remove the file first), the loops read from `"$list"`, `restored_paths+=("$path")` beside the count, and the success line names up to five. Update the function comment and the step comment.
+- [ ] **Step 4: Run to verify they pass.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh`.
+  Expected: `all cases passed`; shellcheck prints only the one pre-existing `SC2016` info note.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): restore only the executable bit the index records, name the files, stop when the listing fails (#47)"
+```
+
+### Task 23: The hook replaces a title it set, whichever session set it, and only for its own codename (F18, F19)
+
+**Files:**
+- Modify: `.devcontainer/scripts/session-title.sh` (the own-title test and the header)
+- Test: `tests/devcontainer.test.sh`
+
+**Interfaces:**
+- Consumes: `base` (the output of `window-title.sh --print`), `title="$base · ${sid:0:8}"`, `existing`.
+- Produces: `codename=${base% \[*\]}` (the part of `base` before its final ` [home]`/` [#N]`); an existing title is replaceable iff it has no newline, matches `^(.+) \[(home|#[0-9]+)\] · [0-9a-f]{8}$` with the captured codename equal to `$codename`, and differs from `$title`.
+
+- [ ] **Step 1: Write the tests.** In `session_title_keeps_a_renamed_title` (lock present, `st_sid` `a21b9973`): change the leg
+  `codeo [home] · ffffffff` ("another session's id") out of that case and add it to
+  `session_title_replaces_its_own_title_when_the_lock_changes` as a fork: the hook prints `codeo [#47] · a21b9973`
+  for an existing `codeo [home] · ffffffff`. In `session_title_keeps_a_renamed_title` add silent legs: `x [home] · a21b9973`
+  (another codename), `codeo [home] · a21b997` (short suffix), `codeo [home] · A21B9973` and `codeo [home] · a21b997g`
+  (non-hex suffix). Keep the existing legs (`my name`, `my name · a21b9973`, `codeo [x] · a21b9973`, the multi-line one).
+- [ ] **Step 2: Run to verify they fail.** Run: `bash tests/run.sh devcontainer`. Expected: FAIL for the fork leg (silent today) and for the
+  `x [home] · a21b9973` leg (replaced today); the rest pass.
+- [ ] **Step 3: Implement** the amended constraint ("The hook's own title"): replace the `rest=${existing% · …}` test with the
+  regex-and-codename test; update the header paragraph ("one line, `<codename> [home]` or `<codename> [#<N>]` then ` · ` and
+  any eight hex digits").
+- [ ] **Step 4: Run to verify they pass.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/session-title.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/session-title.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): the hook retitles a title it set in another session and keeps one of another codename (#47)"
+```
+
+### Task 24: A Claude settings path that is not a regular file is a TODO (F22)
+
+**Files:**
+- Modify: `.devcontainer/scripts/devcontainer-start.sh` (step 3c)
+- Test: `tests/devcontainer.test.sh`
+
+- [ ] **Step 1: Write the test** `start_settings_that_are_not_a_regular_file_are_a_todo`: `ds_setup`, `ds_identity`, `mkdir -p "$ds_dir/claude/settings.json"` (a directory); `ds_ready_run`; `ds_rc == 0`; exactly one TODO matching `settings.json.*not a regular file`; the directory still a directory. A second leg: a link to a directory (`ln -s "$ds_dir/claude/d" "$ds_dir/claude/settings.json"` with `d` a directory), same assertions.
+- [ ] **Step 2: Run to verify it fails.** Run: `bash tests/run.sh devcontainer`. Expected: FAIL (no TODO today); the rest pass.
+- [ ] **Step 3: Implement:** an `elif [[ -e $claude_settings ]]` branch after the `if [[ -f $claude_settings ]]` block of step 3c adding the TODO of the amended constraint ("A settings file that is not a regular file").
+- [ ] **Step 4: Run to verify it passes.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/devcontainer-start.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): a Claude settings path that is not a regular file is a TODO, not silence (#47)"
+```
+
+### Task 25: Changelog and the whole suite
+
+**Files:**
+- Modify: `CHANGELOG.md`
+
+- [ ] **Step 1: Edit the #47 line** as the "Changelog" amended constraint says: the `core.fileMode` clause ("turns `core.fileMode` back on where the
+  filesystem keeps the executable bit as set, restoring the tracked files' modes to the index's first") becomes "turns `core.fileMode`
+  back on, on a clone that sits on a Docker volume and where the filesystem keeps the executable bit as set, restoring the executable bit
+  the index records on tracked files first and leaving any executable file the index records without it for git to show"; add the comma
+  before "and writes through a symlink"; "retitles the window and its own session title when the lock changes" gains "(a forked
+  session's inherited one included)". Quote before/after in the report; change nothing else.
+- [ ] **Step 2: Prove the whole change.** Run: `bash tests/run.sh && shellcheck .devcontainer/scripts/*.sh tests/devcontainer.test.sh`.
+  Expected: `all cases passed`; no shellcheck output apart from the one pre-existing `SC2016` info note on the single-quoted hook-command
+  string in `session_title_hooks_are_registered`.
+- [ ] **Step 3: Commit.**
+
+```bash
+git add CHANGELOG.md
+git commit -m "docs: changelog says the mode restore is for a volume clone and keeps an executable bit the index lacks (#47)"
+```
+
+### After the tasks (not a plan task): checks only the engineer can make
+
+The manual checks of *After the tasks* above and in Round 3 still stand, plus: in a clone on the `codeo-47` volume with
+`core.fileMode false`, a script made executable and committed (so recorded `100644`) is still executable after the start script and
+`git status` shows it as a mode change to stage; and in a bind-mounted host checkout with `core.fileMode false` the start script
+prints the "left alone" TODO and changes nothing in the host's `.git/config`.
