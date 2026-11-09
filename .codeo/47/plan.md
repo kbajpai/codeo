@@ -8,8 +8,8 @@
 
 ## Where this stands
 
-Round 1 done: Q1-Q3 answered, the plan approved and written to
-`docs/plans/2026-11-09-dev-container-hardening.md` (unstaged — the engineer commits it). Next step:
+Round 2 done, after a send-back from `/codeo:qc` round 1: the plan gained Tasks 11-15 (`## Round 2` of
+`docs/plans/2026-11-09-dev-container-hardening.md`, unstaged — the engineer commits it). Next step:
 `/codeo:implement`.
 
 ## Questions
@@ -136,15 +136,6 @@ Decisions this plan makes without asking, stated so they can be rejected:
 - The `engineering` plugin (`system-design`, `architecture`) is not installed here; its Options Considered
   structure is applied directly in the plan's table, as the #44 and #45 plans did.
 
-### Footprint
-
-```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/session-title.sh, .devcontainer/devcontainer.json, .devcontainer/Dockerfile, .claude/settings.json, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-09-dev-container-hardening.md` — approved 2026-11-09, left unstaged for the
@@ -177,15 +168,43 @@ a send-back to this plan.
 
 `overlap.sh 47` printed nothing; no exclusive resource is configured, so no lock was taken.
 
+### Round 2
+
+2026-11-09
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-09-dev-container-hardening.md`, `## Round 2` (Tasks 11-15), appended to the same
+plan so the issue keeps one plan; approved 2026-11-09, left unstaged for the engineer to commit. Tasks 1-10 stand.
+No question was raised: `qc.md` round 1 dictates every fix.
+
+**What it answers.** F1 (blocking, the plan's): the `core.fileMode` probe only checked that `chmod u+x` made a
+file executable, so a filesystem that reports every file as executable (a host checkout bind-mounted into the
+container) passed it and `core.fileMode` was switched on, showing every tracked file as a mode change. The
+probe now needs the bit to set *and* clear (Task 11). F2-F7, all non-blocking, are folded in rather than filed:
+`safe.directory` added once (Task 12); the hook retitles only a title of its own shape, no newline and
+`… [home|#N] · <sid8>` (Task 13); the lock line read like `intake.sh` does, and a read-only `info/exclude` leg
+(Task 14); changelog wording for #45, #44 and #47, and a credential test that checks what it says (Task 15).
+
+**Decisions without asking:** F3 takes the stricter shape rule, not just "reject newlines", so a rename that
+happens to end in the session id is also kept; `git_global_writes_land_in_the_volume_file` stays, with a comment
+that it pins the premise the volume design rests on; the `SC2016` info note on the test file's hook-command string
+is left (it is on `main`).
+
+**Documentation moved:** `CHANGELOG.md` only (Task 15); no page under `docs/`, no wiki module.
+
+`overlap.sh 47` and `overlap.sh --outside 47` printed nothing; no exclusive resource, so no lock was taken.
+
 ### Footprint
 
 ```
 files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/session-title.sh, .devcontainer/devcontainer.json, .devcontainer/Dockerfile, .claude/settings.json, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
 wiki:       none
 exclusive:  none
+sequenced:  none
 ```
 
 ## Log
 
 - 2026-11-09 — Q1-Q3 raised · cost: 5m · fable-5-1 78k in + 487k cached / 19k out
 - 2026-11-09 — planned: docs/plans/2026-11-09-dev-container-hardening.md · cost: 134m · fable-5-1 97k in + 1.1M cached / 25k out · sonnet-5-5 169k in + 900k cached / 36k out · `engineering` plugin unavailable, its structure applied directly
+- 2026-11-09 — planned (round 2, send-back from qc.md round 1): docs/plans/2026-11-09-dev-container-hardening.md · cost: 37m · fable-5-1 354k in + 1.5M cached / 13k out · sonnet-5-5 28k in + 737k cached / 2k out · `engineering` plugin unavailable, its structure applied directly
