@@ -840,6 +840,55 @@ STUB
     ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
 }
 
+# ds_modes_repo: commit everything in the scratch repo (bin/run.sh at 100755, data.txt at 100644), turn core.fileMode
+# off, then flip both modes on disk.
+ds_modes_repo() {
+    local r="$ds_dir/repo"
+    mkdir -p "$r/bin" || return 1
+    printf '#!/bin/sh\n' > "$r/bin/run.sh" && chmod 755 "$r/bin/run.sh" || return 1
+    printf 'data\n' > "$r/data.txt" && chmod 644 "$r/data.txt" || return 1
+    git -C "$r" add -A && git -C "$r" -c user.name=Dev -c user.email=dev@example.com commit -q -m base || return 1
+    git -C "$r" config core.fileMode false
+    chmod 644 "$r/bin/run.sh" && chmod 755 "$r/data.txt"
+}
+
+start_restores_tracked_modes_before_turning_file_mode_on() {
+    local r
+    ds_setup restore-modes || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
+    [[ -x $r/bin/run.sh ]] || fail 'bin/run.sh is not executable'
+    [[ ! -x $r/data.txt ]] || fail 'data.txt is executable'
+    [[ -z $(git -C "$r" status --porcelain) ]] || fail "git status is not clean: $(git -C "$r" status --porcelain)"
+    grep 'core.fileMode' <<<"$ds_out" | grep -q '2' || fail "stdout does not mention core.fileMode and 2: $ds_out"
+}
+
+start_keeps_file_mode_off_when_a_mode_cannot_be_restored() {
+    local r n
+    ds_setup restore-fails || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    cat > "$ds_dir/bin/chmod" <<'STUB'
+#!/usr/bin/env bash
+case "$*" in
+    *filemode.* | *--reference*) exec /usr/bin/chmod "$@" ;;
+esac
+exit 1
+STUB
+    chmod +x "$ds_dir/bin/chmod"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was turned on although a mode could not be restored'
+    [[ $(stat -c %a "$r/bin/run.sh") == 644 ]] || fail 'bin/run.sh mode changed'
+    n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
+    grep 'update-index --chmod' <<<"$ds_err" | grep -q 'bin/run.sh' || fail "the TODO does not name bin/run.sh: $ds_err"
+}
+
 # wt_setup <name>: a scratch git repo (committed) holding the real window-title.sh and a config naming the
 # codename "codeo". Sets wt_dir, the clone's root.
 wt_setup() {
@@ -1348,6 +1397,8 @@ cases=(
     start_leaves_file_mode_alone_when_it_is_fine
     start_file_mode_that_cannot_stick_is_a_todo
     start_file_mode_that_cannot_clear_is_a_todo
+    start_restores_tracked_modes_before_turning_file_mode_on
+    start_keeps_file_mode_off_when_a_mode_cannot_be_restored
     title_is_home_without_a_lock
     title_names_the_issue_with_a_lock
     title_falls_back_to_the_clone_name
