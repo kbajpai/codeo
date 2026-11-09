@@ -8,15 +8,66 @@
 
 ## Where this stands
 
-Round 2 done: back to `/codeo:plan` again. Round 1's seven findings are all fixed, the build and the whole suite
-pass and every criterion is met as written, but one blocking finding remains of the same class as round 1's F1
-(F8): the `core.fileMode` flip still dirties the working tree where tracked files' modes on disk differ from the
-index, which is the very state a `core.fileMode=false` clone is usually in. The code does what the round 2 plan
-says; the plan's check (probing a new file) cannot see it. F9-F15 are non-blocking and fold into the re-plan.
+Round 3 in progress, **no verdict yet**: two questions (Q1, Q2) are open, so the round is not written (see
+`## Questions`). Pass so far: sync (branch already contains `origin/main`), `overlap.sh 47` nothing, build `true`
+exit 0, `bash tests/run.sh` prints `all cases passed` (exit 0), `shellcheck .devcontainer/scripts/*.sh
+tests/devcontainer.test.sh` prints only the one pre-existing `SC2016` note. F8 (round 2, blocking) is fixed as
+planned: I re-ran it by hand in a scratch repo (`core.fileMode false`, `bin/run.sh` 755 in the index and 644 on disk,
+`data.txt` content-edited): `restore_modes` restored `bin/run.sh` to 755, left `data.txt` alone, and `git status`
+then shows only the content edit. The opus review found no Critical issue and two Important ones about that same
+step; both are design questions the engineer must settle before a verdict.
 
 ## Questions
 
-None.
+### Q1 — Should the start script strip an executable bit the engineer set on a file the index records as `100644`?
+
+**Why it matters:** F16 below (opus review, reproduced by reading `restore_modes` and Q4's own text). Round 3 did
+what Q4 decided: restore each tracked file's mode on disk to the index's before turning `core.fileMode` on. Q4's
+option text said the restore only touches files "that differ from the index, which with the setting off could
+neither be seen nor staged, so nothing of yours is lost" — that is true for the direction `100755` in the index and
+`644` on disk (the clone's artefact), but not for the other: with `core.fileMode=false`, `git add` records every
+new script as `100644` even after `chmod +x`, which is the very mistake criterion 11 exists to fix. In that state
+the file is `755` on disk and `100644` in the index, `restore_modes` runs `chmod -x` on it, `git status` goes clean,
+and the wrong `100644` record is hidden for good (the files are only counted in the message, never named). The
+engineer's script then fails with "Permission denied". Whether that is acceptable decides if F16 is blocking and
+whether it goes back to `/codeo:plan` (Q4's rule was wrong in one direction) or stands as decided.
+
+**Options:**
+- *Restore only the `100755`-in-index direction (my recommendation):* `chmod +x` where the index says `100755` and
+  the file is not executable (what a clone on a bit-dropping mount leaves). Where the file is executable on disk but
+  `100644` in the index, leave it, turn `core.fileMode` on, and let git show `mode change 100644 => 100755`, ready
+  to commit. The second listing then ignores that direction. The message names the files it changed (or the first
+  five), not just a count. Pro: nothing the engineer set is removed; criterion 11 still holds. Con: `git status`
+  is not always clean afterwards — it shows the changes that were really made.
+- *Keep Q4 as decided, but name every file changed and say how to undo it:* a TODO/line listing the paths that
+  lost their `x`. Pro: no logic change. Con: still removes bits the engineer set; the hidden wrong records remain.
+- *Do not touch modes at all:* only flip when the tree already shows no mode difference, else the TODO (Q4's
+  rejected second option).
+
+**Answer:**
+_Pending._
+
+### Q2 — Should step 2b (the `core.fileMode` flip and the mode restore) apply to a bind-mounted host checkout, as step 1 deliberately does not?
+
+**Why it matters:** F17 below (opus review). Step 1 leaves a bind-mounted host checkout alone because changing it
+"would change the engineer's files on the host". Step 2b has no such guard: when the filesystem keeps the bit
+(a Linux or WSL host bind-mounted into the container, which passes the probe), it writes `core.fileMode true` into
+the shared `.git/config` and `chmod`s tracked files on the host, overriding an explicit `core.fileMode=false` the
+engineer may have set on purpose. The plan's manual check says "a bind-mounted host checkout keeps `core.fileMode`
+false", which holds only where the probe fails (a Docker Desktop mount that drops the bit), not on a Linux bind mount.
+
+**Options:**
+- *Apply 2b only to a clone on a Docker named volume (my recommendation):* reuse `clone_on_named_volume`, as step 1
+  does. A bind-mounted checkout gets the existing "stage with `git update-index --chmod=+x`" TODO instead. Pro: the
+  script never writes the host's config or modes; this repository's own clone (named volume `codeo-47`) is unaffected.
+  Con: on a bind mount criterion 11 is met only by the TODO's manual step.
+- *Keep it as is:* the probe is the only guard. Pro: simplest. Con: the host's config and file modes change.
+- *Apply it on a bind mount only when `core.fileMode` was never set explicitly:* distinguishes "unset/inherited" from
+  "set false on purpose". Pro: respects intent. Con: git cannot tell a clone-time autodetected `false` from a
+  deliberate one without reading the config's origin; more code for an edge case.
+
+**Answer:**
+_Pending._
 
 ## Notes
 
@@ -32,6 +83,30 @@ None.
   into the shared `codeo-git` config (F9).
 - Pre-existing, not a finding: `shellcheck tests/devcontainer.test.sh` prints one `SC2016` info note on the
   single-quoted hook-command string; `origin/main`'s test file prints the same note for its older form.
+
+- Round 3 findings so far (classification waits on Q1/Q2). Opus review of `162720b..HEAD` (code only), `tests/run.sh
+  devcontainer` passing: **F16** (`devcontainer-start.sh:63-81,88`, the Q1 behaviour) — `restore_modes` strips the
+  executable bit from files that are `755` on disk and `100644` in the index; the test `ds_modes_repo` (`data.txt`
+  755 on disk → back to 644) codifies it. Provisionally blocking, the plan's (Q4's rule was stated wrongly), pending
+  Q1. **F17** (`devcontainer-start.sh:83-109`, the Q2 behaviour) — step 2b flips `core.fileMode` and chmods on a
+  bind-mounted host checkout. Provisionally non-blocking unless Q2 says otherwise; the plan's. Minor,
+  non-blocking, mostly the code's own edges and none needing a send-back on its own: **F18** `session-title.sh:40-41`
+  a forked or resumed session (new id) keeps a stale `· <old sid8>` title because the suffix must be this
+  session's id; **F19** `session-title.sh:41` the codename is not compared, so a `/rename` of the shape
+  `x [home] · <sid8>` is replaced; **F20** `window-title.sh:26` `issue: 44abc` → `[#44]`, `issue: 4 4` → `[#4]`
+  (deliberate, Round 3 plan); **F21** both merges: `mv` replaces the inode, so owner and hard links of
+  `settings.json` are not kept (only the mode); **F22** `devcontainer-start.sh:126` a non-regular
+  `~/.claude/settings.json` is skipped with no TODO; **F23** `devcontainer-start.sh:84,93` the probe file goes in
+  `git rev-parse --git-dir` and `git config` writes the common config, wrong in a linked worktree on another
+  filesystem (not this layout). Deferred minors from `implement.md` round 3 (swallowed `git diff` error in the second
+  listing; changelog comma) stand. The reviewer could not check: whether Claude Code applies `sessionTitle` to a
+  session that already has one, what VS Code writes into `~/.config/git/config`, and the two fresh-container
+  criteria (11, 13) — those stay the manual checks above.
+- Criteria 1-9, 12 are met by named tests (e.g. `start_credential_variables_hide_the_login_advice`,
+  `title_reports_an_unwritable_exclude`, `title_strips_a_hash_from_the_lock_line`,
+  `title_rejects_settings_that_are_not_an_object`, `*_symlink_*`, `scripts_are_committed_executable`,
+  `*_leaves_no_temp_file_when_mv_fails`, `session_title_hook_command_survives_a_missing_script`,
+  `session_title_treats_a_leading_newline_as_a_title`); the final table is written with the round.
 
 ## Outcome
 
@@ -266,3 +341,4 @@ No issue filed by this pass. F9-F15 fold into the re-plan; none needs an issue o
 
 - 2026-11-09 — qc round 1: back to plan · 1 blocking, 6 non-blocking · no issue filed · opus reviewer · cost: 6m · opus-5-5 397k in + 2.8M cached / 20k out
 - 2026-11-09 — qc round 2: back to plan · 1 blocking, 7 non-blocking · no issue filed · opus reviewer · cost: 5m · opus-5-5 550k in + 2.2M cached / 19k out · sonnet-5-5 28k in + 456k cached / 2k out
+- 2026-11-09 — qc round 3: Q1-Q2 raised, no verdict yet · opus reviewer · cost: 4m · opus-5-5 271k in + 2M cached / 17k out · sonnet-5-5 195k in + 29k cached / 1k out
