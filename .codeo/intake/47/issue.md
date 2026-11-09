@@ -77,3 +77,9 @@ Label: `bug`. No Issue Type.
 At the engineer's request, a requirement and criterion for persisting the git identity across dev
 containers (`~/.config/git` volume) were folded into #47 and its title extended; found when container
 `codeo-45` printed the "git identity is not set" TODO again. Edited on GitHub with `gh api -X PATCH`.
+
+## Amendment — 2026-11-09
+
+Triage run 2 folded four #45 follow-ups into #47 at the engineer's request: the unguarded hook command and
+changelog wording (qc:45 F1-F2), the hook-test minors, titles that follow the lock, and `core.fileMode=false`
+in the container (the cause of F7). Title extended. Edited on GitHub with `gh api -X PATCH`.
