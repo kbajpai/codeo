@@ -69,9 +69,14 @@ post_start_command_reruns_the_title() {
         || fail 'postStartCommand is not "bash .devcontainer/scripts/window-title.sh || true"'
 }
 
-gh_login_is_one_named_volume() {
-    jq -e '.mounts == ["source=codeo-gh,target=/home/dev/.config/gh,type=volume"]' "$(dc_json)" >/dev/null \
-        || fail 'mounts is not the single codeo-gh volume at /home/dev/.config/gh'
+volumes_hold_the_gh_login_and_the_git_config() {
+    jq -e '.mounts == ["source=codeo-gh,target=/home/dev/.config/gh,type=volume","source=codeo-git,target=/home/dev/.config/git,type=volume"]' "$(dc_json)" >/dev/null \
+        || fail 'mounts is not the codeo-gh volume at /home/dev/.config/gh then the codeo-git volume at /home/dev/.config/git'
+}
+
+git_config_global_points_into_the_git_volume() {
+    jq -e '.containerEnv == {"GIT_CONFIG_GLOBAL":"/home/dev/.config/git/config"}' "$(dc_json)" >/dev/null \
+        || fail 'containerEnv is not {"GIT_CONFIG_GLOBAL":"/home/dev/.config/git/config"}'
 }
 
 no_bind_mounts_or_secrets() {
@@ -116,6 +121,25 @@ dockerfile_creates_dev_uid_1000_and_the_gh_dir() {
     grep -q '^ARG USERNAME=dev$' <<<"$code" || fail 'no ARG USERNAME=dev'
     grep -q 'userdel.* ubuntu' <<<"$code" || fail 'no userdel of the ubuntu user'
     grep -q 'install -d -o.*\.config/gh' <<<"$code" || fail 'no install -d -o for .config/gh'
+}
+
+dockerfile_creates_the_git_config_dir() {
+    local code
+    code=$(dockerfile_code) || { fail 'Dockerfile is missing or unreadable'; return 0; }
+    grep -q 'install -d -o.*\.config/git' <<<"$code" || fail 'no install -d -o for .config/git'
+}
+
+# With GIT_CONFIG_GLOBAL set, git --global writes there and leaves an existing ~/.gitconfig alone.
+git_global_writes_land_in_the_volume_file() {
+    local h
+    h=$(mktemp -d) || { fail 'mktemp failed'; return 0; }
+    mkdir -p "$h/.config/git"
+    : > "$h/.gitconfig"
+    HOME="$h" GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$h/.config/git/config" git config --global user.name X \
+        || fail 'git config --global failed'
+    [[ $(git config --file "$h/.config/git/config" user.name 2>/dev/null || true) == X ]] || fail 'user.name did not land in the volume file'
+    [[ ! -s "$h/.gitconfig" ]] || fail 'the home .gitconfig was written to'
+    rm -rf "$h"
 }
 
 dockerfile_has_none_of_the_excluded_tools() {
@@ -392,7 +416,7 @@ ds_run() {
     ds_rc=0
     env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL \
         ${DS_SET:+"$DS_SET"} \
-        PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
+        PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="${DS_GITCONFIG:-$ds_dir/gitconfig}" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
         bash "${DS_REPO:-$ds_dir/repo}/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
@@ -578,6 +602,19 @@ start_setup_git_failure_is_a_todo() {
 
 # ds_ready_run: a run with every login configured (the "ready" baseline); extra STUB_* come from the caller.
 ds_ready_run() { STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run; }
+
+start_finds_the_identity_in_the_git_volume_file() {
+    local n last
+    ds_setup volfile || return 0
+    mkdir -p "$ds_dir/home/.config/git"
+    git config --file "$ds_dir/home/.config/git/config" user.name Dev
+    git config --file "$ds_dir/home/.config/git/config" user.email dev@example.com
+    DS_GITCONFIG="$ds_dir/home/.config/git/config" ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'git identity'); ((n == 0)) || fail "wanted no git identity TODO, got $n: $ds_err"
+    last=$(tail -n1 <<<"$ds_out")
+    [[ "$last" == 'devcontainer-start: ready' ]] || fail "last stdout line is not ready: $last"
+}
 
 start_enables_remote_control() {
     ds_setup rc || return 0
@@ -1204,10 +1241,13 @@ cases=(
     devcontainer_json_is_valid_and_runs_as_dev
     run_args_cap_memory_and_cpus
     post_start_command_reruns_the_title
-    gh_login_is_one_named_volume
+    volumes_hold_the_gh_login_and_the_git_config
+    git_config_global_points_into_the_git_volume
     no_bind_mounts_or_secrets
     dockerfile_is_ubuntu_2404_with_the_tools
     dockerfile_creates_dev_uid_1000_and_the_gh_dir
+    dockerfile_creates_the_git_config_dir
+    git_global_writes_land_in_the_volume_file
     dockerfile_has_none_of_the_excluded_tools
     dockerfile_env_uses_the_username_arg
     dockerfile_does_not_create_workspaces
@@ -1232,6 +1272,7 @@ cases=(
     start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
     start_setup_git_failure_is_a_todo
+    start_finds_the_identity_in_the_git_volume_file
     start_enables_remote_control
     start_keeps_other_settings
     start_malformed_settings_is_a_todo
