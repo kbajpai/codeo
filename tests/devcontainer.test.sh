@@ -17,7 +17,9 @@
 # window title) on every start; the start script's login checks are the ones listed just above.
 # It also runs .devcontainer/scripts/session-title.sh against hook fixtures on stdin (home and lock titles,
 # the prompt hook, an existing title kept, silent outside a dev container and on every failure) and
-# checks that .claude/settings.json registers it.
+# checks that .claude/settings.json registers it. It also checks the scripts are committed executable, the
+# settings-merge cases (not an object, symlink, mode, no temp file), the credential-variable advice, the
+# core.fileMode probe, the prompt hook's retitling, the guarded hook command and the codeo-git volume.
 #
 #   bash tests/devcontainer.test.sh
 #
