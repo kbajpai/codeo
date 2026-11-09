@@ -8,10 +8,9 @@
 
 ## Where this stands
 
-Round 3, after a send-back from `/codeo:qc` round 2 (F8 blocking, F9-F15 non-blocking). Two things need a
-decision before the round can be drafted: Q4 (what to do about `core.fileMode=false`, the point both earlier
-rounds got wrong) and Q5 (the host `~/.gitconfig` that `GIT_CONFIG_GLOBAL` now ignores). F10-F15 are dictated
-fixes and need no question. Nothing is drafted past Q4-Q5.
+Round 3 planned, answering `/codeo:qc` round 2 (F8 blocking, F9-F15 non-blocking): Tasks 16-20 of
+`docs/plans/2026-11-09-dev-container-hardening.md` (`## Round 3`), approved and left unstaged for the engineer
+to commit. Q4 and Q5 are answered. Next: commit the plan, then `/codeo:implement`.
 
 ## Questions
 
@@ -197,15 +196,6 @@ Decisions this plan makes without asking, stated so they can be rejected:
 - The `engineering` plugin (`system-design`, `architecture`) is not installed here; its Options Considered
   structure is applied directly in the plan's table, as the #44 and #45 plans did.
 
-### Footprint
-
-```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-09-dev-container-hardening.md` — approved 2026-11-09, left unstaged for the
@@ -264,10 +254,41 @@ is left (it is on `main`).
 
 `overlap.sh 47` and `overlap.sh --outside 47` printed nothing; no exclusive resource, so no lock was taken.
 
+### Round 3
+
+2026-11-09
+(send-back from qc.md round 2)
+
+**Plan:** `docs/plans/2026-11-09-dev-container-hardening.md`, `## Round 3` (Tasks 16-20), appended to the same
+plan so the issue keeps one plan; approved 2026-11-09, left unstaged for the engineer to commit. Tasks 1-15 stand.
+
+**What it answers.** F8 (blocking, the plan's; Q4): the start script turned `core.fileMode` on over a tree whose
+tracked scripts were `644` on disk but `100755` in the index, so `git status` showed every one as a mode change.
+Round 2's probe tested a fresh file, which says nothing about the files already there. Task 16 keeps the probe,
+then restores each tracked file's mode to the index's *before* setting `core.fileMode true`, and sets it only when
+a second listing is empty; otherwise it stays `false` with one TODO naming the files left. F11 and F13 (Task 17):
+a settings file holding `false`, `null` or several top-level values is classified correctly and left alone, and a
+failed `readlink -f` gets its own TODO. F12 and F14 (Task 18): `window-title.sh` prints exactly one line per
+failure and accepts a TAB after `issue:`. F15 (Task 19): three tests now pin what they claim. F9 and F10 (Task 20):
+the changelog says the number is read from the lock, that tracked modes are restored, and that the host
+`~/.gitconfig` no longer applies (Q5: documented, verified by hand after the rebuild, a follow-up only if it bites).
+
+**Decisions without asking:** F14 keeps taking the leading digits of the lock line (looser than `intake.sh`, on
+purpose: a title is cosmetic) and only the header sentence changes; the mode restore touches only entries whose old
+and new modes are both `100644` or `100755`, so symlinks and submodules are left alone.
+
+**Documentation moved:** `CHANGELOG.md` only (Task 20); no page under `docs/`, no wiki module.
+
+**Manual checks for the engineer:** a clone with `core.fileMode false` and `644` scripts ends `true`, executable,
+`git status` clean; with a `chmod`-protected file it stays `false` with a TODO; after the rebuild, read
+`/home/dev/.config/git/config` for a VS Code credential helper naming `/tmp/vscode-remote-containers-*.js`.
+
+`overlap.sh 47` printed nothing; no exclusive resource, so no lock was taken.
+
 ### Footprint
 
 ```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/session-title.sh, .devcontainer/devcontainer.json, .devcontainer/Dockerfile, .claude/settings.json, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -279,3 +300,4 @@ sequenced:  none
 - 2026-11-09 — planned: docs/plans/2026-11-09-dev-container-hardening.md · cost: 134m · fable-5-1 97k in + 1.1M cached / 25k out · sonnet-5-5 169k in + 900k cached / 36k out · `engineering` plugin unavailable, its structure applied directly
 - 2026-11-09 — planned (round 2, send-back from qc.md round 1): docs/plans/2026-11-09-dev-container-hardening.md · cost: 37m · fable-5-1 354k in + 1.5M cached / 13k out · sonnet-5-5 28k in + 737k cached / 2k out · `engineering` plugin unavailable, its structure applied directly
 - 2026-11-09 — Q4-Q5 raised (round 3, send-back from qc.md round 2) · cost: 1m · fable-5-1 478k in + 525k cached / 7k out
+- 2026-11-09 — planned (round 3, send-back from qc.md round 2): docs/plans/2026-11-09-dev-container-hardening.md · cost: 71m · fable-5-1 481k in + 1.5M cached / 9k out · sonnet-5-5 112k in + 2.3M cached / 9k out · `engineering` plugin unavailable, its structure applied directly
