@@ -1151,14 +1151,38 @@ session_title_refreshes_the_window_title() {
 
 session_title_hooks_are_registered() {
     local f=$repo/.claude/settings.json
-    local cmd='bash "${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh"' hook
+    local cmd='f="${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh"; [ -f "$f" ] && bash "$f" || true' hook
     hook="$(jq -cn --arg c "$cmd" '{type:"command",command:$c,timeout:10}')"
     jq -e '.enabledPlugins["codeo@codeo"] == true' "$f" >/dev/null || fail "codeo plugin not enabled"
-    jq -e '.hooks | keys == ["SessionStart","UserPromptSubmit"]' "$f" >/dev/null || fail "hook events differ"
+    jq -e '.hooks | has("SessionStart") and has("UserPromptSubmit") and length == 2' "$f" >/dev/null || fail "hook events differ"
     jq -e --argjson hook "$hook" '.hooks.SessionStart == [{matcher:"startup|resume|fork", hooks:[$hook]}]' "$f" >/dev/null \
         || fail "SessionStart hook differs"
     jq -e --argjson hook "$hook" '.hooks.UserPromptSubmit == [{hooks:[$hook]}]' "$f" >/dev/null \
         || fail "UserPromptSubmit hook differs"
+}
+
+# The registered command runs the script when it is there and is silent, exit 0, when it is not.
+session_title_hook_command_survives_a_missing_script() {
+    local cmd rc out err errf
+    st_setup missing-script || return 0
+    cmd=$(jq -r '.hooks.UserPromptSubmit[0].hooks[0].command' "$repo/.claude/settings.json")
+    errf=$(mktemp -p "$pl_root")
+    rc=0
+    out=$(cd / && env -u REMOTE_CONTAINERS REMOTE_CONTAINERS=true CLAUDE_PROJECT_DIR="$st_dir" bash -c "$cmd" \
+        <<<"$(st_json SessionStart $st_sid)" 2>"$errf") || rc=$?
+    err=$(<"$errf")
+    ((rc == 0)) || fail "with the script present: exit $rc"
+    [[ -z $err ]] || fail "with the script present: stderr '$err'"
+    [[ $(jq -r '.hookSpecificOutput.sessionTitle' <<<"$out") == 'codeo [home] · a21b9973' ]] \
+        || fail "with the script present: stdout '$out'"
+    rm "$st_dir/.devcontainer/scripts/session-title.sh"
+    rc=0
+    out=$(cd / && env -u REMOTE_CONTAINERS REMOTE_CONTAINERS=true CLAUDE_PROJECT_DIR="$st_dir" bash -c "$cmd" \
+        </dev/null 2>"$errf") || rc=$?
+    err=$(<"$errf")
+    ((rc == 0)) || fail "with the script removed: exit $rc"
+    [[ -z $out ]] || fail "with the script removed: stdout '$out'"
+    [[ -z $err ]] || fail "with the script removed: stderr '$err'"
 }
 
 # Every dev container script is committed 100755 (a file git does not track yet needs the bit on disk).
@@ -1252,6 +1276,7 @@ cases=(
     session_title_keeps_a_renamed_title
     session_title_refreshes_the_window_title
     session_title_hooks_are_registered
+    session_title_hook_command_survives_a_missing_script
     scripts_are_committed_executable
 )
 
