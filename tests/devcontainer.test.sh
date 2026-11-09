@@ -1076,7 +1076,7 @@ title_leaves_no_temp_file_when_mv_fails() {
     echo '{"a":1}' > "$wt_dir/.vscode/settings.json"
     stubs="$pl_root/mv-stub"
     mkdir -p "$stubs"
-    printf '#!/bin/sh\nexit 1\n' > "$stubs/mv"
+    printf '#!/bin/sh\necho "mv: boom" >&2\nexit 1\n' > "$stubs/mv"
     chmod +x "$stubs/mv"
     wt_path=$stubs wt_run
     ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
@@ -1125,6 +1125,9 @@ title_strips_a_hash_from_the_lock_line() {
     wt_run
     ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
     [[ $(wt_title "$wt_dir") == 'codeo [#44]' ]] || fail "title is '$(wt_title "$wt_dir")'"
+    printf 'issue:\t44\n' > "$wt_dir/.codeo/active"
+    wt_run --print
+    [[ $wt_out == 'codeo [#44]' ]] || fail "issue:<TAB>44 gave '$wt_out'"
     printf 'issue:#44\n' > "$wt_dir/.codeo/active"
     wt_run --print
     [[ $wt_out == 'codeo [#44]' ]] || fail "issue:#44 gave '$wt_out'"
@@ -1159,6 +1162,14 @@ title_reports_an_unwritable_exclude() {
         [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "read-only exclude: stderr was: $wt_err"
         [[ ! -e $wt_dir/.vscode/settings.json ]] || fail 'read-only exclude: settings.json was written'
     fi
+}
+
+title_reports_an_unwritable_vscode_dir() {
+    wt_setup novscode || return 0
+    touch "$wt_dir/.vscode"
+    wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
 }
 
 title_outside_a_repository_says_so() {
@@ -1456,6 +1467,7 @@ cases=(
     title_fills_an_empty_settings_file
     title_strips_a_hash_from_the_lock_line
     title_reports_an_unwritable_exclude
+    title_reports_an_unwritable_vscode_dir
     title_outside_a_repository_says_so
     session_title_names_home_and_the_id
     session_title_names_the_issue_with_a_lock
