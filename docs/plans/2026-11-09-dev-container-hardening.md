@@ -290,3 +290,186 @@ git commit -m "docs: changelog entry for the dev container hardening (#47)"
 ### After the tasks (not a plan task): checks only the engineer can make
 
 The suite cannot see Claude Code or VS Code. Rebuild this container (the new volume and `containerEnv` need it), set the identity once (`git config --global user.name …`, `user.email …`) and confirm it is in the `codeo-git` volume; create a second container and confirm the start script prints no identity TODO. In a container, open a Claude Code session, run `/codeo:init` (or `lock.sh take container`), send a prompt: the picker and claude.ai/code title and the VS Code window title should now say `[#N]`; after `/codeo:close`, `[home]` at the next prompt; a `/rename`d session keeps its name. If Claude Code does not apply a `sessionTitle` on a session that already has one, that comes back as a send-back to this plan (the window title would still follow). Results go in `qc.md` as manual checks.
+
+---
+
+## Round 2 — after `qc.md` round 1 (2026-11-09)
+
+Tasks 1-10 above are done (`d963bfa`..`dbccb2c`). `/codeo:qc` round 1 sent the branch back with one blocking
+finding, F1, and six non-blocking ones, F2-F7 (`.codeo/47/qc.md`). This round fixes all seven in five tasks,
+appended here so the issue keeps one plan. The constraints below amend the matching bullets of Global
+Constraints; everything else there still binds.
+
+**Amended constraints**
+
+- **`core.fileMode` probe (F1).** The probe passes only when the filesystem honours the executable bit *both
+  ways*: the fresh `mktemp` file (`0600`) is not executable, `chmod u+x` makes it executable, and `chmod u-x`
+  makes it not executable again. Any step failing means the bit is not honoured — a filesystem that reports
+  every file as executable (a Windows bind mount) fails the first or the last step — and `core.fileMode` is
+  left `false` with the existing TODO naming `git update-index --chmod=+x`. The probe file is removed on every
+  path. Wording: "keeps the executable bit as set".
+- **`safe.directory` (F2).** Step 1 adds the clone to `safe.directory` only when
+  `git config --global --get-all safe.directory` does not already list it, so a re-run and a second container
+  on the shared `codeo-git` volume add nothing; the header's "each step checks before it acts" is then true.
+- **The hook's own title (F3).** A `session_title` is the hook's own only when it contains no newline *and* is
+  `<anything> [home] · <sid8>` or `<anything> [#<digits>] · <sid8>` for this session's `<sid8>`. Anything else —
+  `my name`, `my name · <sid8>`, `codeo [x] · <sid8>`, a title with a newline — is kept.
+- **The lock line (F5).** `window-title.sh` reads the issue as the digits after `issue:`, any number of spaces
+  and any number of `#` (`issue:   44`, `issue: #44`, `issue:#44`, `issue: ##44` all give `[#44]`); a line with
+  no digits gives `[home]`. This matches `scripts/intake.sh`'s parser.
+- **Changelog (F4, F7).** The #45 line says "A `/rename`d title is kept." (not "a session that already has a
+  title … keeps it"); the #44 line's "follows the lock at the next container start or when … is run" gains "or
+  at the next Claude Code prompt in the container".
+- Files that change this round: `.devcontainer/scripts/devcontainer-start.sh`, `.devcontainer/scripts/session-title.sh`,
+  `.devcontainer/scripts/window-title.sh`, `tests/devcontainer.test.sh`, `CHANGELOG.md`. No other file.
+
+```mermaid
+flowchart LR
+    A["mktemp probe (0600)"] --> B{"! -x ?"}
+    B -- no --> T["TODO: stage with update-index --chmod=+x"]
+    B -- yes --> C["chmod u+x"] --> D{"-x ?"}
+    D -- no --> T
+    D -- yes --> E["chmod u-x"] --> F{"! -x ?"}
+    F -- no --> T
+    F -- yes --> G["git config core.fileMode true"]
+```
+
+### Task 11: The `core.fileMode` probe checks both directions (F1)
+
+**Files:**
+- Modify: `.devcontainer/scripts/devcontainer-start.sh` (step 2b and its comment)
+- Test: `tests/devcontainer.test.sh`
+
+**Interfaces:**
+- Produces: `core.fileMode` is set to `true` only on a filesystem where the bit can be both set and cleared; the
+  success line and the TODOs keep their current wording except "keeps the executable bit" → "keeps the
+  executable bit as set".
+
+- [ ] **Step 1: Write the failing test** `start_file_mode_that_cannot_clear_is_a_todo` (add to `cases`): like
+  `start_file_mode_that_cannot_stick_is_a_todo`, but the stub `$ds_dir/bin/chmod` is
+  `#!/usr/bin/env bash` / `exec /usr/bin/chmod u+x -- "${@: -1}"` — whatever mode is asked, the file ends up
+  executable, as on a filesystem that reports every file executable. Assert: `ds_rc == 0`, `core.fileMode` still
+  `false`, exactly one TODO matching `update-index --chmod`, and `ls "$ds_dir/repo/.git"` has no `filemode.*`
+  entry. Also add that last assertion (no `filemode.*` left) to `start_sets_file_mode_so_new_scripts_are_executable`
+  and `start_file_mode_that_cannot_stick_is_a_todo`.
+- [ ] **Step 2: Run to verify it fails.** Run: `bash tests/run.sh devcontainer`. Expected:
+  `FAIL start_file_mode_that_cannot_clear_is_a_todo` (`core.fileMode` was changed); the other cases pass.
+- [ ] **Step 3: Implement** the three-step probe in step 2b, one `if` chain:
+  `[[ ! -x $p ]] && chmod u+x -- "$p" 2>/dev/null && [[ -x $p ]] && chmod u-x -- "$p" 2>/dev/null && [[ ! -x $p ]]`,
+  `rm -f` the probe before either branch's message. Reword the step comment and the header to "keeps the
+  executable bit as set", and the TODO to "does not keep the executable bit as set".
+- [ ] **Step 4: Run to verify it passes.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/devcontainer-start.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): the core.fileMode probe requires the bit to clear as well as set (#47)"
+```
+
+### Task 12: `safe.directory` is added once (F2)
+
+**Files:**
+- Modify: `.devcontainer/scripts/devcontainer-start.sh` (step 1)
+- Test: `tests/devcontainer.test.sh`
+
+- [ ] **Step 1: Write the failing test** `start_trusts_the_clone_once` (add to `cases`): seed the scratch global
+  config (`$ds_dir/gitconfig`, which `ds_run` passes as `GIT_CONFIG_GLOBAL`) with `safe.directory = /elsewhere`;
+  `ds_ready_run` twice; then `git config --file "$ds_dir/gitconfig" --get-all safe.directory` prints exactly two
+  lines, `/elsewhere` and the clone's resolved path (`cd "$ds_dir/repo" && pwd -P`), in that order.
+- [ ] **Step 2: Run to verify it fails.** Run: `bash tests/run.sh devcontainer`. Expected:
+  `FAIL start_trusts_the_clone_once` (three lines).
+- [ ] **Step 3: Implement:** `git config --global --get-all safe.directory 2>/dev/null | grep -qxF -- "$clone" ||
+  git config --global --add safe.directory "$clone" || add_todo …` (the existing TODO text). The pipeline ends in
+  `grep -q` only on a `git config` whose output is a few lines — acceptable here, or capture first as step 4 does
+  for `gh auth status`.
+- [ ] **Step 4: Run to verify it passes.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/devcontainer-start.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): start script adds safe.directory once, not on every container (#47)"
+```
+
+### Task 13: The hook recognises only a title of its own shape (F3)
+
+**Files:**
+- Modify: `.devcontainer/scripts/session-title.sh`
+- Test: `tests/devcontainer.test.sh`
+
+**Interfaces:**
+- Consumes: `window-title.sh --print` → `<codename> [home]` or `<codename> [#N]`.
+- Produces: the own-title rule of the amended constraints; output contract unchanged.
+
+- [ ] **Step 1: Write the failing tests.** Extend `session_title_treats_a_leading_newline_as_a_title`: with the
+  lock `issue:   47`, `st_json UserPromptSubmit $st_sid $'\nfoo · a21b9973'` → `st_silent`. Extend
+  `session_title_keeps_a_renamed_title` (lock present): `'my name · a21b9973'` and `'codeo [x] · a21b9973'` → both
+  `st_silent`. `session_title_replaces_its_own_title_when_the_lock_changes` stays as it is (home ↔ #47).
+- [ ] **Step 2: Run to verify they fail.** Run: `bash tests/run.sh devcontainer`. Expected: FAIL for the two
+  extended cases (a `sessionTitle` is printed).
+- [ ] **Step 3: Implement** the rule in `session-title.sh` where `existing` is judged: no newline, and after
+  stripping the suffix ` · ${sid:0:8}` the rest ends in ` [home]` or ` [#<digits>]` (parameter expansion or one
+  `[[ =~ ]]`; the implementer chooses). Update the header's sentence on the own title.
+- [ ] **Step 4: Run to verify they pass.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/session-title.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/session-title.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): the prompt hook retitles only a title of its own shape (#47)"
+```
+
+### Task 14: `window-title.sh` — the lock line like `intake.sh`, and a read-only exclude (F5, F6)
+
+**Files:**
+- Modify: `.devcontainer/scripts/window-title.sh`
+- Test: `tests/devcontainer.test.sh`
+
+- [ ] **Step 1: Write the failing tests.** Extend `title_strips_a_hash_from_the_lock_line`: `issue:#44` and
+  `issue: ##44` each give `codeo [#44]` from `--print`; `issue: x` gives `codeo [home]`. Extend
+  `title_reports_an_unwritable_exclude` with a second leg, run only when `(( $(id -u) != 0 ))`: a fresh scratch
+  clone (`wt_setup noexcl-ro`), `info/exclude` created empty and `chmod 444`, a plain run → `wt_rc == 1`, one
+  `window-title:` line, no `.vscode/settings.json`.
+- [ ] **Step 2: Run to verify they fail.** Run: `bash tests/run.sh devcontainer`. Expected:
+  `FAIL title_strips_a_hash_from_the_lock_line` (`issue:#44` gives `[home]`, `##44` gives `[##44]`); the
+  read-only leg passes already (the behaviour exists — it is pinned, not fixed).
+- [ ] **Step 3: Implement:** replace the `awk` + `${issue#\#}` pair with
+  `issue=$(sed -n 's/^issue: *#*\([0-9]\{1,\}\).*/\1/p' "$root/.codeo/active" | head -n 1)`; update the header's
+  parenthesis on the lock line.
+- [ ] **Step 4: Run to verify they pass.** Run: `bash tests/run.sh devcontainer && shellcheck .devcontainer/scripts/window-title.sh`.
+  Expected: `all cases passed`, no shellcheck output.
+- [ ] **Step 5: Commit.**
+
+```bash
+git add .devcontainer/scripts/window-title.sh tests/devcontainer.test.sh
+git commit -m "fix(devcontainer): window-title.sh reads the lock line as intake.sh does (#47)"
+```
+
+### Task 15: Changelog wording, a test that says what it checks, the whole suite (F4, F7)
+
+**Files:**
+- Modify: `CHANGELOG.md`, `tests/devcontainer.test.sh`
+
+- [ ] **Step 1: Tighten `start_credential_variables_hide_the_login_advice`:** one run per variable with
+  `STUB_CLAUDE_RC=1` (a status that fails is exactly what used to advise `claude auth login`); drop the `rc`
+  loop and the `method`/`STUB_CLAUDE_OUT` lines, keep the four assertions. Leave
+  `git_global_writes_land_in_the_volume_file` (it pins the premise the volume design rests on) but give it a
+  one-line comment saying so.
+- [ ] **Step 2: Edit `CHANGELOG.md`:** the #45 line's "A session that already has a title, such as a resumed
+  or `/rename`d one, keeps it." → "A `/rename`d title is kept."; the #44 line's "The title follows the lock at
+  the next container start or when `bash .devcontainer/scripts/window-title.sh` is run." → "The title follows
+  the lock at the next container start, at the next Claude Code prompt in the container, or when
+  `bash .devcontainer/scripts/window-title.sh` is run."; the #47 line's "turns `core.fileMode` back on where the
+  filesystem keeps the executable bit" → "… keeps the executable bit as set".
+- [ ] **Step 3: Prove the whole change.** Run: `bash tests/run.sh && shellcheck .devcontainer/scripts/*.sh`.
+  Expected: `all cases passed`, no shellcheck output. (`shellcheck tests/devcontainer.test.sh` prints its one
+  pre-existing `SC2016` info note and nothing else.)
+- [ ] **Step 4: Commit.**
+
+```bash
+git add CHANGELOG.md tests/devcontainer.test.sh
+git commit -m "docs: changelog wording for the dev container titles; credential test says what it checks (#47)"
+```
+
+The manual checks in *After the tasks* above still stand for `/codeo:qc` round 2.
