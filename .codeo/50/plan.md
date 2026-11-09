@@ -72,6 +72,17 @@ anywhere I could find. The suite can pin the `runArgs` text; it cannot show what
 
 **Answer:** `codeo-home-031er97u1o8nfhn55jo8tkvqb43vvn3483bfpgnn92fj540pqokb` (2026-11-09). The folder part resolves correctly for a clone on a Docker volume, and the suffix is 52 characters, as expected; the name is 63 characters long.
 
+## Notes
+
+### Footprint
+
+```
+files:      .devcontainer/devcontainer.json, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-name-dev-container-after-its-clone.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
