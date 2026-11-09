@@ -91,15 +91,19 @@ fi
 
 # 6. Claude Code login.
 # Remote Control needs a claude.ai login, so these credentials must not be set. The output is captured before it is read.
-if claude_status=$(claude auth status 2>&1); then
-    auth_method=$(jq -r '.authMethod // empty' <<<"$claude_status" 2>/dev/null || true)
-    if [[ -n $auth_method && $auth_method != "claude.ai" ]]; then
-        add_todo "Claude Code is logged in with $auth_method, not claude.ai, and Remote Control needs claude.ai: run claude auth login"
+# While CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY is set the check is skipped: the variable overrides any login, so
+# `claude auth login` would not help, and the "unset it" TODO below is the advice.
+if [[ -z ${CLAUDE_CODE_OAUTH_TOKEN:-} && -z ${ANTHROPIC_API_KEY:-} ]]; then
+    if claude_status=$(claude auth status 2>&1); then
+        auth_method=$(jq -r '.authMethod // empty' <<<"$claude_status" 2>/dev/null || true)
+        if [[ -n $auth_method && $auth_method != "claude.ai" ]]; then
+            add_todo "Claude Code is logged in with $auth_method, not claude.ai, and Remote Control needs claude.ai: run claude auth login"
+            need_login+=("claude auth login")
+        fi
+    else
+        add_todo "Claude Code is not logged in: run claude auth login"
         need_login+=("claude auth login")
     fi
-else
-    add_todo "Claude Code is not logged in: run claude auth login"
-    need_login+=("claude auth login")
 fi
 for var in CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL; do
     if [[ -n ${!var:-} ]]; then

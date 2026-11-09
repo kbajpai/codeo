@@ -391,6 +391,7 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 ds_run() {
     ds_rc=0
     env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL \
+        ${DS_SET:+"$DS_SET"} \
         PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
@@ -644,15 +645,27 @@ start_env_vars_are_todos() {
     for v in CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL; do
         ds_setup "env-$v" || return 0
         ds_identity || { fail 'could not set the scratch git identity'; return 0; }
-        # ds_run clears the variables; set this one on the stub claude's way in via a wrapper env
-        ds_rc=0
-        env "$v=x" PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" \
-            GIT_CONFIG_GLOBAL="$ds_dir/gitconfig" GIT_CONFIG_NOSYSTEM=1 STUB_DIR="$ds_dir" STUB_STAT_UID="$(id -u)" \
-            STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 \
-            bash "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
-        ds_err=$(cat "$ds_dir/err")
+        DS_SET="$v=x" STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run
         ((ds_rc == 0)) || fail "$v: exit $ds_rc"
         n=$(ds_todos "$v.*Remote Control"); ((n == 1)) || fail "$v: wanted one TODO, got $n: $ds_err"
+    done
+}
+
+start_credential_variables_hide_the_login_advice() {
+    local v method rc n
+    for v in ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN; do
+        method=api_key; [[ $v == CLAUDE_CODE_OAUTH_TOKEN ]] && method=oauth_token
+        for rc in 0 1; do
+            ds_setup "cred-$v-$rc" || return 0
+            ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+            DS_SET="$v=x" STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=$rc \
+                STUB_CLAUDE_OUT="{\"loggedIn\":true,\"authMethod\":\"$method\"}" ds_run
+            ((ds_rc == 0)) || fail "$v/$rc: exit $ds_rc"
+            n=$(grep -c 'claude auth login' <<<"$ds_err" || true)
+            ((n == 0)) || fail "$v/$rc: claude auth login is advised: $ds_err"
+            n=$(ds_todos "$v.*unset"); ((n == 1)) || fail "$v/$rc: wanted one unset TODO, got $n: $ds_err"
+            if grep -q 'what is left to do' <<<"$ds_out$ds_err"; then fail "$v/$rc: a what-is-left list is printed: $ds_err"; fi
+        done
     done
 }
 
@@ -1066,6 +1079,7 @@ cases=(
     start_fills_an_empty_settings_file
     start_writes_the_title
     start_env_vars_are_todos
+    start_credential_variables_hide_the_login_advice
     start_non_claude_ai_login_is_a_todo
     title_is_home_without_a_lock
     title_names_the_issue_with_a_lock
