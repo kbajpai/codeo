@@ -8,9 +8,8 @@
 
 ## Where this stands
 
-Explored and stopped on Q1-Q2. The issue asks for `<clone folder>-<short hash of the clone's absolute path>`;
-the dev container format cannot produce a *short* hash without a much larger change, so Q1 asks which name
-to build. Q2 asks who proves the three criteria that need `docker ps` on the host. Nothing is drafted past them.
+Q1 and Q2 answered (name = folder + `${devcontainerId}`; the engineer runs the host check first). Waiting on Q3:
+the engineer applies the one-line `runArgs` change, rebuilds, and reports the `docker ps` names. Nothing is drafted past it.
 
 ## Questions
 
@@ -41,7 +40,7 @@ One more fact bears on how much the suffix is worth: clones here are already nam
   (`mounts`, `runArgs` caps, build), needs the script to run on every host OS, and puts most of
   `tests/devcontainer.test.sh`'s `devcontainer.json` cases in play. I would not do this for a name.
 
-**Answer:**
+**Answer:** Folder name plus `${devcontainerId}` (recommendation accepted, 2026-11-09). The Key Requirement's word "short" is dropped; the plan says so.
 
 ### Q2 — Who proves the criteria that need the host, and when?
 
@@ -62,6 +61,14 @@ anywhere I could find. The suite can pin the `runArgs` text; it cannot show what
   when `/codeo:qc` asks. Faster now; if the variables resolve differently on a volume clone, the plan comes
   back for another round.
 
+**Answer:** The engineer runs the short manual check before the plan is final (recommendation accepted, 2026-11-09).
+
+### Q3 — What name did the rebuilt container get?
+
+**Why it matters:** it settles how `${localWorkspaceFolderBasename}` and `${devcontainerId}` resolve for a clone on a Docker volume, and the suffix's real length, before any task is written.
+
+**To do (engineer):** set `runArgs` to `["--name=${localWorkspaceFolderBasename}-${devcontainerId}", "--memory=4g", "--cpus=2"]` in `.devcontainer/devcontainer.json`, rebuild the container, then on the host run `docker ps --format '{{.Names}}'` and paste the line for this container.
+
 **Answer:**
 
 ## Outcome
@@ -70,4 +77,5 @@ _Pending — written at the hand-off._
 
 ## Log
 
+- 2026-11-09 — Q1-Q2 answered, Q3 raised (host check) · cost: see the line below (same session)
 - 2026-11-09 — Q1-Q2 raised · cost: 2m · fable-5-2 139k in + 779k cached / 8k out · sonnet-5-5 32k in + 4k cached / 3k out
