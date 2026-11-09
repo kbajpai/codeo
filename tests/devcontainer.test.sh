@@ -864,7 +864,7 @@ start_restores_tracked_modes_before_turning_file_mode_on() {
     [[ -x $r/bin/run.sh ]] || fail 'bin/run.sh is not executable'
     [[ ! -x $r/data.txt ]] || fail 'data.txt is executable'
     [[ -z $(git -C "$r" status --porcelain) ]] || fail "git status is not clean: $(git -C "$r" status --porcelain)"
-    grep 'core.fileMode' <<<"$ds_out" | grep -q '2' || fail "stdout does not mention core.fileMode and 2: $ds_out"
+    grep -q 'restored the modes of 2 tracked files' <<<"$ds_out" || fail "stdout does not say it restored the modes of 2 tracked files: $ds_out"
 }
 
 start_keeps_file_mode_off_when_a_mode_cannot_be_restored() {
@@ -887,6 +887,20 @@ STUB
     [[ $(stat -c %a "$r/bin/run.sh") == 644 ]] || fail 'bin/run.sh mode changed'
     n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
     grep 'update-index --chmod' <<<"$ds_err" | grep -q 'bin/run.sh' || fail "the TODO does not name bin/run.sh: $ds_err"
+}
+
+start_ignores_content_edits_when_restoring_modes() {
+    local r n
+    ds_setup content-edit || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/repo"
+    printf 'edited\n' > "$r/data.txt" && chmod 644 "$r/data.txt" || { fail 'could not edit data.txt'; return 0; }
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
+    n=$(ds_todos 'update-index --chmod'); ((n == 0)) || fail "wanted no update-index --chmod TODO, got $n: $ds_err"
+    [[ $(<"$r/data.txt") == edited ]] || fail 'data.txt content changed'
 }
 
 # wt_setup <name>: a scratch git repo (committed) holding the real window-title.sh and a config naming the
@@ -1399,6 +1413,7 @@ cases=(
     start_file_mode_that_cannot_clear_is_a_todo
     start_restores_tracked_modes_before_turning_file_mode_on
     start_keeps_file_mode_off_when_a_mode_cannot_be_restored
+    start_ignores_content_edits_when_restoring_modes
     title_is_home_without_a_lock
     title_names_the_issue_with_a_lock
     title_falls_back_to_the_clone_name

@@ -67,12 +67,14 @@ restore_modes() {
     while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
         read -r old new _ <<<"${meta#:}"
         [[ ($old == 100644 || $old == 100755) && ($new == 100644 || $new == 100755) ]] || continue
+        [[ $old != "$new" ]] || continue
         if [[ $old == 100755 ]]; then chmod +x -- "$path" 2>/dev/null; else chmod -x -- "$path" 2>/dev/null; fi
         restored_count=$((restored_count + 1))
     done < <(git -c core.fileMode=true diff --raw -z --no-renames 2>/dev/null)
     while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
         read -r old new _ <<<"${meta#:}"
         [[ ($old == 100644 || $old == 100755) && ($new == 100644 || $new == 100755) ]] || continue
+        [[ $old != "$new" ]] || continue
         left_paths+=("$path")
     done < <(git -c core.fileMode=true diff --raw -z --no-renames 2>/dev/null)
     ((${#left_paths[@]} == 0))
@@ -90,7 +92,7 @@ if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; t
                 add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
             elif git config core.fileMode true; then
                 if ((restored_count > 0)); then
-                    say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked files to the index's and set it to true for this clone"
+                    say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) to the index's and set it to true for this clone"
                 else
                     say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
                 fi
