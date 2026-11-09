@@ -8,9 +8,10 @@
 
 ## Where this stands
 
-Round 2 done, after a send-back from `/codeo:qc` round 1: the plan gained Tasks 11-15 (`## Round 2` of
-`docs/plans/2026-11-09-dev-container-hardening.md`, unstaged — the engineer commits it). Next step:
-`/codeo:implement`.
+Round 3, after a send-back from `/codeo:qc` round 2 (F8 blocking, F9-F15 non-blocking). Two things need a
+decision before the round can be drafted: Q4 (what to do about `core.fileMode=false`, the point both earlier
+rounds got wrong) and Q5 (the host `~/.gitconfig` that `GIT_CONFIG_GLOBAL` now ignores). F10-F15 are dictated
+fixes and need no question. Nothing is drafted past Q4-Q5.
 
 ## Questions
 
@@ -105,6 +106,63 @@ reviews on its own.
 
 **Answer:**
 One PR (the recommendation; answered in the conversation, 2026-11-09).
+
+### Q4 — What should the start script do when it finds `core.fileMode=false`?
+
+**Why it matters:** this is the second send-back on the same point (`qc.md` round 1 F1, round 2 F8), and
+both fixes so far were probes of a *fresh* file, which say nothing about the files already checked out. A clone
+has `core.fileMode=false` precisely when git could not trust the modes at clone time, so its tracked scripts
+usually sit on disk without the executable bit while the index says `100755`. Round 2's probe passes on such a
+tree (the filesystem honours the bit), flips the setting on, and `git status` at once shows every such script as
+` M … mode change 100755 => 100644` — reproduced by `qc` in a scratch repo. Criterion 11 ("a script added in a
+fresh container is staged with mode 100755 without `git update-index --chmod`") is only met with the setting
+on, so what the script does next decides whether the criterion is met by the script or handed to you as a TODO.
+
+**Options:**
+- *Flip, then restore the index's modes (my recommendation):* after the two-way probe and
+  `git config core.fileMode true`, read `git diff --summary` for `mode change` lines and `chmod` each listed
+  file back to the mode the index records (`+x` for `100755`, `-x` for `100644`) — exactly what `git checkout`
+  would have written had the setting been on; then confirm `git status --porcelain` lists no mode-only change.
+  If any `chmod` fails, set the setting back to `false` and add a TODO naming the files. Pro: criterion 11 holds
+  on every filesystem that honours the bit, and the tree is clean; a start script that already `chown -R`s the
+  clone is in character touching modes. Con: it writes to tracked files' modes — only the ones that differ from
+  the index, which with the setting off could neither be seen nor staged, so nothing of yours is lost.
+- *Flip only when the tree is already clean:* flip, check `git diff --summary`; any `mode change` means set it
+  back to `false` and a TODO listing the files and the two commands (the `chmod`s, then
+  `git config core.fileMode true`). Pro: never touches a file. Con: in the realistic case the flip is undone
+  every time and criterion 11 is met only after you run the TODO by hand.
+- *Never flip:* a TODO naming the setting and the suite's `scripts_are_committed_executable` as the guard.
+  Pro: simplest, no probe at all. Con: criterion 11 is met only where the clone already has the setting on —
+  true for this container (`clone` on the `codeo-47` volume), false for whatever produced the `#45` container's
+  clone, which is the case the criterion was written for.
+
+**Answer:**
+
+### Q5 — `GIT_CONFIG_GLOBAL` makes git ignore `~/.gitconfig`: document it, or guard against what VS Code writes there?
+
+**Why it matters:** `qc` round 2 F9. VS Code Dev Containers copies the host's `~/.gitconfig` into the container
+and injects a credential helper that names a per-container path (`/tmp/vscode-remote-containers-<id>.js`).
+With `GIT_CONFIG_GLOBAL` pointing into the shared `codeo-git` volume, the copy is ignored (host aliases and
+signing settings stop applying), and if VS Code's injection uses `git config --global` it lands in the shared
+file, where every other container would find a helper whose script does not exist. In this container the helper
+sits in `/etc/gitconfig` too, so `gh`'s helper still serves GitHub either way; the expected harm is a stderr
+message per credential call, not a failure. Neither the reviewer nor I could confirm what VS Code writes
+without rebuilding.
+
+**Options:**
+- *Document, verify by hand after the rebuild, file a follow-up if it bites (my recommendation):* the changelog
+  says the host `~/.gitconfig` no longer applies inside the container; the manual check after the rebuild reads
+  `/home/dev/.config/git/config` and notes whether a VS Code helper landed there. Pro: no code written against an
+  unverified behaviour. Con: a second container may print helper errors until the follow-up lands.
+- *Document and prune:* the start script also removes any `credential.helper` whose value names a
+  `/tmp/vscode-remote-containers-*.js` that does not exist on this machine. Pro: self-healing. Con: code (and a
+  test with a fake stale helper) for a behaviour we have not seen.
+- *Switch mechanisms:* drop `GIT_CONFIG_GLOBAL`; the start script writes `[include] path = ~/.config/git/config`
+  into `~/.gitconfig` and the identity TODO says `git config --file ~/.config/git/config …`. Pro: the host copy
+  and VS Code's helper keep working. Con: reopens plan Q2, an awkward TODO, and `safe.directory` and `gh`'s
+  helper are per-container again.
+
+**Answer:**
 
 ## Notes
 
@@ -208,3 +266,4 @@ sequenced:  none
 - 2026-11-09 — Q1-Q3 raised · cost: 5m · fable-5-1 78k in + 487k cached / 19k out
 - 2026-11-09 — planned: docs/plans/2026-11-09-dev-container-hardening.md · cost: 134m · fable-5-1 97k in + 1.1M cached / 25k out · sonnet-5-5 169k in + 900k cached / 36k out · `engineering` plugin unavailable, its structure applied directly
 - 2026-11-09 — planned (round 2, send-back from qc.md round 1): docs/plans/2026-11-09-dev-container-hardening.md · cost: 37m · fable-5-1 354k in + 1.5M cached / 13k out · sonnet-5-5 28k in + 737k cached / 2k out · `engineering` plugin unavailable, its structure applied directly
+- 2026-11-09 — Q4-Q5 raised (round 3, send-back from qc.md round 2) · cost: 1m · fable-5-1 478k in + 525k cached / 7k out
