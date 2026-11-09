@@ -8,14 +8,11 @@
 
 ## Where this stands
 
-Round 3 done: back to `/codeo:plan`. Q1 and Q2 are answered and both change what the start script must do, so
-F16 (blocking) and F17 are the plan's. Pass: sync (branch already contains `origin/main`), `overlap.sh 47` nothing, build `true`
-exit 0, `bash tests/run.sh` prints `all cases passed` (exit 0), `shellcheck .devcontainer/scripts/*.sh
-tests/devcontainer.test.sh` prints only the one pre-existing `SC2016` note. F8 (round 2, blocking) is fixed as
-planned: I re-ran it by hand in a scratch repo (`core.fileMode false`, `bin/run.sh` 755 in the index and 644 on disk,
-`data.txt` content-edited): `restore_modes` restored `bin/run.sh` to 755, left `data.txt` alone, and `git status`
-then shows only the content edit. The opus review found no Critical issue and two Important ones about that same
-step; both are design questions the engineer must settle before a verdict.
+Round 4 done: clear, forward to `/codeo:close`. The blocking finding of round 3 (F16) and F17 are fixed, the build
+and the whole suite pass, every criterion is met as written (criteria 10, 11 and 13 in the suite; a real container
+is a manual check), and no blocking finding remains. One Important point from the opus review (the start script does
+not say that executable-on-disk, `100644`-in-index files will now show as mode changes) is a consequence of the
+engineer's own Q1 answer and non-blocking; it and five minors are recorded for `/codeo:triage` or a follow-up.
 
 ## Questions
 
@@ -444,9 +441,115 @@ for a VS Code credential helper naming `/tmp/vscode-remote-containers-*.js` (Q5)
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 4 — 2026-11-09
+
+(implement.md round 4, `e5b219b`..`dbc051e` and the fix commit `9788c68`; plus the dossier commit `35aa413`)
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`.
+`overlap.sh 47`: nothing. `overlap.sh --outside 47`: `.claude/settings.json`, `.devcontainer/Dockerfile`,
+`.devcontainer/devcontainer.json`, `.devcontainer/scripts/window-title.sh` — files rounds 1-3 touched that this
+round's footprint (four files) does not list; non-blocking, the round 1-3 footprints covered them. `scope.sh origin/main HEAD`:
+
+```
+scope: suite shell needed for unclassified paths:
+  .claude/settings.json
+  .codeo/47/implement.md  .codeo/47/init.md  .codeo/47/issue.md  .codeo/47/plan.md  .codeo/47/qc.md
+  CHANGELOG.md
+suite.shell=true
+```
+
+No `deploy=` line: no shared environment is configured. `git diff origin/main...HEAD --stat`: 14 files changed,
+2956 insertions, 73 deletions.
+
+**Build.** `shell` suite `build` = `true`: exit 0.
+
+**Suites.** `bash tests/run.sh` (whole `shell` suite): `all cases passed`, exit 0.
+`shellcheck .devcontainer/scripts/*.sh tests/devcontainer.test.sh`: only the one `SC2016` info note on the
+single-quoted hook-command string in `session_title_hooks_are_registered`.
+
+**Round 3's findings.** F16 (blocking in round 3) — fixed by `f7a64dc`: `restore_modes` acts only on index `100755` /
+disk `100644`, leaves an executable file the index records `100644`, names the restored files, and a failed listing
+keeps `core.fileMode` false. Re-run by hand in a scratch repo (`core.fileMode false`; `bin/run.sh` `755` in the index
+and `644` on disk, `tool.sh` `644` in the index and `755` on disk): `restore_modes` returned 0 with
+`restored=1 paths=bin/run.sh left=`, `bin/run.sh` is `755`, `tool.sh` is still `755`, no `modes.*` file is left in
+`.git`, and after `git config core.fileMode true` `git status --short` is ` M tool.sh` with `git diff --summary`
+`mode change 100644 => 100755 tool.sh`. F17 — fixed by `e5b219b` (step 2b only on a Docker named volume; the
+bind-mount case prints one TODO and changes nothing). F18, F19 — fixed by `906d7b1` (a fork's inherited title is
+replaced, another codename or a bad suffix is kept; the opus review ran both). F22 — fixed by `3ee872d` and
+`9788c68`. The deferred minors of `implement.md` round 3 (`git diff` exit check, changelog comma) — fixed by `f7a64dc`
+and `dbc051e`. F20, F21, F23 were left recorded by the engineer's choice (`plan.md` Q6) and stay non-blocking.
+
+**Criteria**
+
+| # | Criterion (abbreviated) | Verdict | Settled by |
+|---|---|---|---|
+| 1 | No `claude auth login` line with `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` set | met | `start_credential_variables_hide_the_login_advice` |
+| 2 | Unwritable `info/exclude` still prints a `window-title:` line | met | `title_reports_an_unwritable_exclude`, `title_reports_an_unwritable_vscode_dir` |
+| 3 | `issue: #44` gives `[#44]` exactly once | met | `title_strips_a_hash_from_the_lock_line` |
+| 4 | `settings.json` holding `[]` is reported as not an object | met | `title_rejects_settings_that_are_not_an_object`, `start_settings_that_are_not_an_object_are_a_todo` |
+| 5 | Symlinked `settings.json` still a symlink | met | `title_writes_through_a_symlink`, `start_settings_symlink_is_kept` |
+| 6 | `window-title.sh` is mode 100755 in the index | met | `scripts_are_committed_executable` |
+| 7 | Failed `mv` leaves no `.tmp`; mode not 0600 unless the original's was | met | `title_leaves_no_temp_file_when_mv_fails`, `start_leaves_no_temp_file_when_mv_fails`, `title_keeps_the_settings_mode`, `start_settings_keep_their_mode` |
+| 8 | Registered hook command exits 0, no output, with `session-title.sh` removed | met | `session_title_hook_command_survives_a_missing_script` |
+| 9 | `session_title` beginning with a newline prints nothing | met | `session_title_treats_a_leading_newline_as_a_title`, `session_title_keeps_a_renamed_title` |
+| 10 | Lock taken/released changes `--print` and the window title follows without a restart | met on the script side; whether Claude Code fires the hook and VS Code applies the rewritten file live is a manual check | `title_follows_the_lock_on_a_rerun`, `title_follows_a_released_lock`, `session_title_refreshes_the_window_title`, `session_title_replaces_its_own_title_when_the_lock_changes` |
+| 11 | A script added in a fresh container is staged 100755 without `update-index --chmod` | met as written for a clone on a Docker volume; a bind mount gets the TODO by design (Q2) | `start_sets_file_mode_so_new_scripts_are_executable`, `start_restores_tracked_modes_before_turning_file_mode_on`, `start_keeps_an_executable_bit_the_index_does_not_record`, `start_leaves_a_bind_mounted_clone_alone` |
+| 12 | `bash tests/run.sh` prints `all cases passed` | met | output above |
+| 13 | Fresh container with the volume already holding an identity: no identity TODO | met in the suite; a real fresh container is a manual check | `start_reads_the_identity_from_the_global_config_file`, `volumes_hold_the_gh_login_and_the_git_config`, `git_config_global_points_into_the_git_volume`, `dockerfile_creates_the_git_config_dir` |
+
+**Documentation.** The plan names `CHANGELOG.md` only; no page under `docs/` describes the dev container and there is
+no wiki module. The #47 line says what the code does now: the number read from the lock, `core.fileMode` back on only
+on a clone on a Docker volume, only the executable bit the index records restored, an executable file recorded without
+it left for git to show, a forked session's inherited title retitled, the host `~/.gitconfig` no longer applying.
+The script header comments match the code after `9788c68`.
+
+**Review.** Independent code review (opus, `QC review:`) of `162720b..HEAD`, code only, given the acceptance
+criteria and the issue line. Its assessment, in plain text: ready to merge with fixes — no Critical, one Important, five Minor.
+
+**Findings**
+
+- **F24 — non-blocking, the plan's.** `devcontainer-start.sh:118-130` (step 2b success branch): when `core.fileMode`
+  goes on, files that are executable on disk but recorded `100644` start to show as mode changes, and the script says
+  nothing about them. Reproduced by the reviewer: 20 such tracked files plus one `100755` file at `644`; `git status`
+  was clean before, the only message was "restored the modes of 1 tracked file (run.sh) … set it to true", afterwards
+  `git status --porcelain` listed 20 ` M` lines, which a `git add -A` would commit. Leaving those bits alone is the
+  engineer's own Q1 answer ("let git show `mode change 100644 => 100755`, ready to commit"), so this is the
+  message, not the behaviour: count the reverse-direction paths in the second listing and name them in the `say`
+  line or a TODO. Not blocking: nothing is lost or changed, and `git status` shows the cause.
+- **F25 — non-blocking.** `window-title.sh:38` `touch "$exclude"` runs on every call before the grep that shows
+  the line is already there; through the prompt hook that updates the exclude file's mtime on every prompt, which
+  makes `session-title.sh`'s header claim "a no-op when it is current" untrue for that file, and an exclude file
+  `touch` cannot update makes the script die without writing a title although nothing needed writing.
+- **F26 — non-blocking.** `window-title.sh:34-41` with an unwritable `info/exclude` the title is no longer written
+  at all (the criterion asks only that a `window-title:` line be printed, and `title_reports_an_unwritable_exclude`
+  pins this on purpose); noted as a trade-off.
+- **F27 — non-blocking.** `window-title.sh:47-49` a `settings.json` path that resolves to a directory or an
+  unreadable file is reported as "is not valid JSON"; the behaviour (left untouched, exit 1) is fine, the wording is not.
+- **F28 — non-blocking.** `devcontainer-start.sh:99` the step fires on `core.fileMode=false` from any scope, a global
+  `false` in the shared `codeo-git` config included, and sets a local `true`; the message does not say it overrode one.
+- **F29 — non-blocking.** `devcontainer-start.sh:38-40` `safe.directory` entries now accumulate in the shared
+  `codeo-git` volume, one per clone path ever created, unpruned. Harmless.
+- Earlier rounds' non-blocking findings F18-F23 that stay recorded: F20 (leading digits of the lock line), F21 (owner
+  and hard links of `settings.json`), F23 (linked worktrees); and from `implement.md`: the stderr of a failed listing
+  is discarded; no test for a file differing in both mode and content.
+
+No issue filed by this pass. F24 is the one worth a follow-up (`/codeo:triage` will find it here); F25-F29 are small.
+
+**Manual checks still to make** (named in the plan, the suite cannot see them): rebuild the container, set the
+identity once, confirm a second container prints no identity TODO; take the lock and send a prompt (titles say
+`[#N]`), release it (`[home]` at the next prompt), `/rename` a session (kept); on the `codeo-47` volume with
+`core.fileMode false`, a script made executable and committed as `100644` is still executable after the start script
+and `git status` shows it as a mode change; in a bind-mounted host checkout the start script prints the "left alone"
+TODO and changes nothing in the host's `.git/config`; read `/home/dev/.config/git/config` for a VS Code credential
+helper naming `/tmp/vscode-remote-containers-*.js` (Q5). If Claude Code does not apply a `sessionTitle` to a session
+that already has one, that is a send-back to `/codeo:plan`.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-09 — qc round 1: back to plan · 1 blocking, 6 non-blocking · no issue filed · opus reviewer · cost: 6m · opus-5-5 397k in + 2.8M cached / 20k out
 - 2026-11-09 — qc round 2: back to plan · 1 blocking, 7 non-blocking · no issue filed · opus reviewer · cost: 5m · opus-5-5 550k in + 2.2M cached / 19k out · sonnet-5-5 28k in + 456k cached / 2k out
 - 2026-11-09 — qc round 3: Q1-Q2 raised, no verdict yet · opus reviewer · cost: 4m · opus-5-5 271k in + 2M cached / 17k out · sonnet-5-5 195k in + 29k cached / 1k out
 - 2026-11-09 — qc round 3: back to plan · 1 blocking, 7 non-blocking · no issue filed · opus reviewer · Q1-Q2 answered · cost: 25m · opus-5-5 271k in + 2M cached / 17k out · sonnet-5-5 204k in + 1.2M cached / 8k out
+- 2026-11-09 — qc round 4: clear · 0 blocking, 6 non-blocking · no issue filed · opus reviewer · no shared environment · cost: 6m · opus-5-5 445k in + 1.5M cached / 20k out · sonnet-5-5 22k in + 363k cached / 821 out
