@@ -7,8 +7,8 @@
 # Only inside a dev container (REMOTE_CONTAINERS=true), and only for those two events. On every such run it
 # first refreshes the VS Code window title through window-title.sh (a no-op when it is current), even for a
 # session that was renamed. It then prints a session title only when the session has none, or when its title
-# is one this hook set (one line, "<codename> [home]" or "<codename> [#<N>]" then " · <first eight of this
-# session id>") and differs from the new one, so a
+# is one this hook set (one line, this container's "<codename> [home]" or "<codename> [#<N>]" then " · " and
+# any eight hex digits, so a forked session's inherited title counts) and differs from the new one, so a
 # lock change retitles the session and a /rename'd title is left alone. Otherwise, and when the session id is
 # shorter than eight characters or window-title.sh fails or prints nothing, it prints nothing. Stderr stays
 # empty and the exit status is 0 on every path.
@@ -36,9 +36,11 @@ base=$(bash "$here/window-title.sh" --print 2>/dev/null) || exit 0
 [[ -n $base ]] || exit 0
 title="$base · ${sid:0:8}"
 if [[ -n $existing ]]; then
-    # Its own shape: one line, "<codename> [home]" or "<codename> [#<digits>]" before " · <sid8>".
-    rest=${existing% · "${sid:0:8}"}
-    [[ $existing != *$'\n'* && $rest != "$existing" && $rest =~ ^.+\ \[(home|#[0-9]+)\]$ && $existing != "$title" ]] || exit 0
+    # Its own shape: one line, "<codename> [home]" or "<codename> [#<digits>]" before " · " and any eight
+    # hex digits (a forked or resumed session inherits another session's id), with this container's codename.
+    codename=${base% \[*\]}
+    [[ $existing != *$'\n'* && $existing =~ ^(.+)\ \[(home|#[0-9]+)\]\ ·\ [0-9a-f]{8}$ \
+        && ${BASH_REMATCH[1]} == "$codename" && $existing != "$title" ]] || exit 0
 fi
 jq -cn --arg e "$event" --arg t "$title" '{hookSpecificOutput:{hookEventName:$e,sessionTitle:$t}}' 2>/dev/null
 exit 0

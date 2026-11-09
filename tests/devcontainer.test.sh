@@ -1396,6 +1396,9 @@ session_title_replaces_its_own_title_when_the_lock_changes() {
     [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
     st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
     st_silent 'current title'
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · ffffffff')"
+    [[ $(st_title) == 'codeo [#47] · a21b9973' ]] || fail "forked title '$(st_title)'"
 }
 
 session_title_keeps_a_renamed_title() {
@@ -1403,14 +1406,20 @@ session_title_keeps_a_renamed_title() {
     printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
     st_run "$(st_json UserPromptSubmit $st_sid 'my name')"
     st_silent 'renamed'
-    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · ffffffff')"
-    st_silent "another session's id"
     st_run "$(st_json UserPromptSubmit $st_sid 'my name · a21b9973')"
     st_silent 'sid suffix only'
     st_run "$(st_json UserPromptSubmit $st_sid 'codeo [x] · a21b9973')"
     st_silent 'unknown bracket'
     st_run "$(st_json UserPromptSubmit $st_sid $'\ncodeo [home] · a21b9973')"
     st_silent 'multi-line title'
+    st_run "$(st_json UserPromptSubmit $st_sid 'x [home] · a21b9973')"
+    st_silent 'another codename'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b997')"
+    st_silent 'short suffix'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · A21B9973')"
+    st_silent 'upper-case suffix'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b997g')"
+    st_silent 'non-hex suffix'
 }
 
 session_title_refreshes_the_window_title() {
