@@ -200,7 +200,8 @@ filesystem; plus, from `implement.md`: the second `git diff` listing in `restore
   F23 adds code for a layout this repository does not use.
 
 **Answer:**
-_Pending._
+Accepted the recommendation (answered in the conversation, 2026-11-09): fold in F18+F19, F22, the `git diff` exit
+check and the changelog comma; leave F20, F21 and F23 recorded.
 
 ## Notes
 
@@ -231,6 +232,15 @@ Decisions this plan makes without asking, stated so they can be rejected:
 - `inflight.sh --except 47`: no other workflow in flight, so the draft footprint overlaps nothing.
 - The `engineering` plugin (`system-design`, `architecture`) is not installed here; its Options Considered
   structure is applied directly in the plan's table, as the #44 and #45 plans did.
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-09-dev-container-hardening.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
