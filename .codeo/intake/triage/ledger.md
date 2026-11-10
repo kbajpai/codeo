@@ -30,3 +30,8 @@
 | `implement:45:title-after-lock` | Window and session titles do not follow the lock taken mid-session | folded into #47 | 2026-11-09 |
 | `implement:45:filemode` | Container has `core.fileMode=false`, new scripts commit as 100644 | folded into #47 | 2026-11-09 |
 | `issue:50` | Filed 2026-11-09, no branch, board Status `unset` | ready | 2026-11-09 |
+| `qc:47:F24` | `core.fileMode` flip leaves silent mode changes | filed #54 | 2026-11-10 |
+| `qc:47:F25-F29` | Small `window-title.sh` / `devcontainer-start.sh` edges and `implement:47` deferred minors (F26, F20, F21, F23 recorded, not done; F29 left to #40) | filed #54 | 2026-11-10 |
+| `qc:50:F1-F2` | Container name from a folder Docker rejects; looser `runArgs` test | filed #54 | 2026-11-10 |
+| `issue:51` | Filed 2026-11-09, no branch, board Status `unset` | ready | 2026-11-10 |
+| `issue:52` | Filed 2026-11-10, no branch, board Status `none` | ready | 2026-11-10 |
