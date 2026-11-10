@@ -1,4 +1,4 @@
-# New issue — a container for each issue (from roadmaster)
+# Issue #55 — issue
 
 | | |
 |---|---|
@@ -140,3 +140,4 @@ Today a codeo dev container is one container per clone and its start script take
 - roadmaster: `.codeo/overlays/init.md`, `.codeo/codeo-root.sh`, `.codeo/project.sh`, `.devcontainer/devcontainer.json`, `.devcontainer/scripts/{devcontainer-start,container-name,folder-check,window-title}.sh`, `.devcontainer/README.md`.
 - codeo: #50 (current container name, superseded in part), #54 (container-name limits, requirement folded in; the engineer decides what happens to #54), #51 (shares `devcontainer-start.sh`; this issue goes first), #36.
 - Plugin `docs/handoff.md → The lock`.
+- 2026-11-10 — filed as #55 · cost: unavailable
