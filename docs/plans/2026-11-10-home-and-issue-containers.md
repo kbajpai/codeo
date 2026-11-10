@@ -8,14 +8,14 @@
 
 **Tech Stack:** bash, jq, git; the shell suite (`tests/*.test.sh`, run by `tests/run.sh`).
 
-**Spec:** GitHub issue #55 as restated in `.codeo/55/init.md` → `## Outcome`; decisions in `.codeo/55/plan.md` Q1–Q4; the reference is `/workspaces/roadmaster` (`.devcontainer/scripts/{container-name,folder-check}.sh`, `.codeo/codeo-root.sh`, `.codeo/overlays/init.md`).
+**Spec:** GitHub issue #55 as restated in `.codeo/55/init.md` → `## Outcome`; decisions in `.codeo/55/plan.md` Q1–Q4; the reference is `/workspaces/the reference project` (`.devcontainer/scripts/{container-name,folder-check}.sh`, `.codeo/codeo-root.sh`, `.codeo/overlays/init.md`).
 
 ## Options considered
 
 | Decision | Chosen | Rejected | Why |
 |---|---|---|---|
 | Folders Docker rejects (Q1) | valid by construction (`codeo-home`, `codeo-<N>`) and the reason in the README and CHANGELOG | a script fallback name; keeping `-${devcontainerId}` | `devcontainer.json` cannot sanitise a variable and no host script runs for a volume clone; a suffix does not make an invalid folder valid |
-| Name logic (Q2) | `container-name.sh` + `folder-check.sh` + `codeo-root.sh`, codename read with `jq` from `.codeo/config.json` | porting roadmaster's `.codeo/project.sh` | codeo has no secrets store; `window-title.sh` already reads the codename this way |
+| Name logic (Q2) | `container-name.sh` + `folder-check.sh` + `codeo-root.sh`, codename read with `jq` from `.codeo/config.json` | porting the reference project's `.codeo/project.sh` | codeo has no secrets store; `window-title.sh` already reads the codename this way |
 | Where the how-to lives (Q3) | `.devcontainer/README.md`, linked from `README.md` | a `README.md` section; nothing | the rebuild and folder-name notes belong beside the container definition |
 | Overlays (Q4) | `init` only | `init` + `close` | the criteria ask for `init`; the `close` overlay is its own issue |
 | Taking the lock | call the installed plugin's `lock.sh take container` | writing `.codeo/active` in the start script | one writer for the lock format |
@@ -118,7 +118,7 @@
 
 - [ ] **Step 1: Write `tests/codeo-root.test.sh`.** Cases: `override_wins`; `bad_override_fails_without_falling_through` (valid registry present, `CODEO_ROOT` pointing at an empty dir → exit 1); `registry_install_path`; `registry_path_without_lock_sh_fails`; `no_registry_fails`; each with `HOME` or `CLAUDE_CONFIG_DIR` pointed at a scratch directory.
 - [ ] **Step 2: Run to see it fail.** `bash tests/run.sh codeo-root` → `FAIL`.
-- [ ] **Step 3: Implement `codeo-root.sh`** per the contract above (roadmaster's `.codeo/codeo-root.sh` with the probe changed from `scripts/scope.sh` to `scripts/lock.sh`).
+- [ ] **Step 3: Implement `codeo-root.sh`** per the contract above (the reference project's `.codeo/codeo-root.sh` with the probe changed from `scripts/scope.sh` to `scripts/lock.sh`).
 - [ ] **Step 4: Run** `bash tests/run.sh codeo-root` → exit 0. Commit: `feat: codeo-root.sh finds the installed plugin (#55)`.
 
 **Proof of done:** `bash tests/run.sh codeo-root` exits 0 with no `FAIL`; `shellcheck` clean on both files.
@@ -143,7 +143,7 @@
   - `start_reports_a_wrong_folder`: clone folder named `scratch` on `main` → a TODO containing `'codeo-home'`; and a stub `folder-check.sh` that exits 1 → a TODO containing `the folder check failed` (Review Focus 5).
   Adjust the existing `ds_setup` so its scratch repo has the new scripts and a `.codeo/config.json` with `baseBranch`.
 - [ ] **Step 2: Run to see them fail.** `bash tests/run.sh devcontainer` → `FAIL start_…` lines for the new cases only.
-- [ ] **Step 3: Implement the two steps** in `devcontainer-start.sh`, modelled on roadmaster's (`.devcontainer/scripts/devcontainer-start.sh` lines 197–235): base branch from `jq -r '.baseBranch // "main"' .codeo/config.json`; the lock step is skipped when `.codeo/active` is non-empty or the branch is the base branch; `lock.sh`'s `lock: TODO` lines go to `add_todo`, every other line is printed unchanged; `|| rc=$?` guards a crash. The folder check runs `folder-check.sh "$(basename "$clone")"` captured, with `todo:` lines to `add_todo` and a failing check to one TODO. Update the header comment (the home container takes no lock; an issue container takes it from the `init.md` on its branch).
+- [ ] **Step 3: Implement the two steps** in `devcontainer-start.sh`, modelled on the reference project's (`.devcontainer/scripts/devcontainer-start.sh` lines 197–235): base branch from `jq -r '.baseBranch // "main"' .codeo/config.json`; the lock step is skipped when `.codeo/active` is non-empty or the branch is the base branch; `lock.sh`'s `lock: TODO` lines go to `add_todo`, every other line is printed unchanged; `|| rc=$?` guards a crash. The folder check runs `folder-check.sh "$(basename "$clone")"` captured, with `todo:` lines to `add_todo` and a failing check to one TODO. Update the header comment (the home container takes no lock; an issue container takes it from the `init.md` on its branch).
 - [ ] **Step 4: Run** `bash tests/run.sh devcontainer` → exit 0. Commit: `feat: the dev container takes the issue's lock and checks its clone folder (#55)`.
 
 **Proof of done:** `bash tests/run.sh devcontainer` exits 0 with no `FAIL`; `shellcheck .devcontainer/scripts/devcontainer-start.sh tests/devcontainer.test.sh` is clean.
@@ -167,7 +167,7 @@
 
 - [ ] **Step 1: Write `tests/init-overlay.test.sh`**: `bash scripts/overlay.sh init host-workflow` (the repo's own, from the repo root) exits 0 and the output contains each of: `home container`; `.codeo/active`; `Clone Repository in Named Container Volume`; `https://github.com/kbajpai/codeo/tree/`; `codeo-<N>`; `git worktree remove`; `git branch -D`; `/codeo:plan`; and does **not** contain `claude --cloud`. Also `bash scripts/overlay.sh init no-such-point` exits 2 (the registry still guards typos).
 - [ ] **Step 2: Run to see it fail.** `bash tests/run.sh init-overlay` → exit 3 from `overlay.sh`, `FAIL`.
-- [ ] **Step 3: Write the overlay** (`Project overlay text adds to or narrows a step…` line, then `## host-workflow`), adapted from roadmaster's: runs in the home container; a `.codeo/active` here means the session is inside an issue's container — stop and say to run `init` in the home container; nothing is switched or stashed here; the lock is not written here; after the claim `git worktree remove <scratch>` and `git branch -D <branch>`; hand off by printing the clone instructions — *Dev Containers: Clone Repository in **Named** Container Volume…*, the URL `https://github.com/kbajpai/codeo/tree/<branch>`, volume `codeo-<N>`, folder `codeo-<N>` — and that the issue container's start script reports `lock: took the lock for #<N>`, after which `/codeo:plan` runs there; if the start script lists a TODO, that comes first. No `claude --cloud` launch.
+- [ ] **Step 3: Write the overlay** (`Project overlay text adds to or narrows a step…` line, then `## host-workflow`), adapted from the reference project's: runs in the home container; a `.codeo/active` here means the session is inside an issue's container — stop and say to run `init` in the home container; nothing is switched or stashed here; the lock is not written here; after the claim `git worktree remove <scratch>` and `git branch -D <branch>`; hand off by printing the clone instructions — *Dev Containers: Clone Repository in **Named** Container Volume…*, the URL `https://github.com/kbajpai/codeo/tree/<branch>`, volume `codeo-<N>`, folder `codeo-<N>` — and that the issue container's start script reports `lock: took the lock for #<N>`, after which `/codeo:plan` runs there; if the start script lists a TODO, that comes first. No `claude --cloud` launch.
 - [ ] **Step 4: Run** `bash tests/run.sh init-overlay` → exit 0. Commit: `feat: /codeo:init runs in the home container and hands off to the issue's container (#55)`.
 
 **Proof of done:** `bash tests/run.sh init-overlay` exits 0, no `FAIL`; `bash scripts/overlay.sh init host-workflow; echo $?` prints the text and `0`.

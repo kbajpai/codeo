@@ -22,7 +22,7 @@ None.
 | Branch | `feat/dev-container-home-container-starting` off `main` at `15bac0b8341ba0b14dd765d389c9f03de3091305` |
 | Board | Ready → In progress |
 
-**Problem.** codeo's dev container is one container per clone and takes no lock, so `/codeo:init` binds whichever checkout it runs in and a second issue needs a hand-built clone with nothing naming it. The issue brings roadmaster's shape: a home container (clone on `main`, no lock, where `/codeo:issue`, `/codeo:init` and `/codeo:triage` run) and one container per issue (clone of the pushed branch, lock taken at start, where plan → implement → qc → close run). It covers the `init` host-workflow overlay, lock-taking in the start script, lock-derived name/title/folder check, and the `devcontainer.json` naming, with #54's name-validity requirement folded in.
+**Problem.** codeo's dev container is one container per clone and takes no lock, so `/codeo:init` binds whichever checkout it runs in and a second issue needs a hand-built clone with nothing naming it. The issue brings the reference project's shape: a home container (clone on `main`, no lock, where `/codeo:issue`, `/codeo:init` and `/codeo:triage` run) and one container per issue (clone of the pushed branch, lock taken at start, where plan → implement → qc → close run). It covers the `init` host-workflow overlay, lock-taking in the start script, lock-derived name/title/folder check, and the `devcontainer.json` naming, with #54's name-validity requirement folded in.
 
 **Acceptance criteria** — verbatim from the issue, unchecked:
 - [ ] With the home container open, `/codeo:init #<N>` pushes the branch, assigns the issue, moves the card, writes no `.codeo/active` and leaves the home checkout on `main`.
@@ -35,7 +35,7 @@ None.
 - [ ] Two containers (`codeo-home` and `codeo-<N>`, or two issue containers) run at once in separate VS Code windows without touching each other's lock.
 - [ ] Each new script has a test under `tests/`; `bash tests/run.sh` passes and `CHANGELOG.md` records the change.
 
-**Out of scope.** Launching `claude --cloud "/codeo:plan"` from `init` and web-session hosting; roadmaster's project-specific parts (secrets store, DEV lease, `agy`, per-project mounts); any change under `scripts/`, `lib/`, `hooks/` or `skills/` of the plugin itself; a host script that clones or opens VS Code.
+**Out of scope.** Launching `claude --cloud "/codeo:plan"` from `init` and web-session hosting; the reference project's project-specific parts (secrets store, DEV lease, `agy`, per-project mounts); any change under `scripts/`, `lib/`, `hooks/` or `skills/` of the plugin itself; a host script that clones or opens VS Code.
 
 **Open at intake.** None. #54 stays open in Backlog although its name-validity requirement is folded in here; its fate is the engineer's. #51 shares `devcontainer-start.sh` and is to follow this issue.
 

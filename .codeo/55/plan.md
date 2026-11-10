@@ -11,9 +11,9 @@
 Plan approved and written to `docs/plans/2026-11-10-home-and-issue-containers.md` (unstaged). No open question; next is `/codeo:implement`.
 
 What exploration found, which shapes the questions:
-- **No plugin change is needed.** The installed 1.0.3 `lock.sh take container` already writes the lock from the `init.md` naming the checked-out branch, records the volume, and takes none on `main`. The start script only has to call it, as roadmaster's does.
-- **`window-title.sh` already derives `codeo [#N]` / `codeo [home]` from `.codeo/active`**, reading the codename from `.codeo/config.json`. What is missing is the Docker-name form, the folder check, and one source for all three so they cannot drift (roadmaster's `container-name.sh`).
-- **#50's name `${localWorkspaceFolderBasename}-${devcontainerId}` resolves to the clone folder plus 52 characters** (its plan, Q3), so the folder part already works on a volume clone. The new name drops the suffix and uses `${containerWorkspaceFolderBasename}`, as roadmaster does.
+- **No plugin change is needed.** The installed 1.0.3 `lock.sh take container` already writes the lock from the `init.md` naming the checked-out branch, records the volume, and takes none on `main`. The start script only has to call it, as the reference project's does.
+- **`window-title.sh` already derives `codeo [#N]` / `codeo [home]` from `.codeo/active`**, reading the codename from `.codeo/config.json`. What is missing is the Docker-name form, the folder check, and one source for all three so they cannot drift (the reference project's `container-name.sh`).
+- **#50's name `${localWorkspaceFolderBasename}-${devcontainerId}` resolves to the clone folder plus 52 characters** (its plan, Q3), so the folder part already works on a volume clone. The new name drops the suffix and uses `${containerWorkspaceFolderBasename}`, as the reference project does.
 - **`init`'s default already stops on a `.codeo/active`**; the overlay narrows it to "run it in the home container" and stops it from switching the checkout or taking the lock.
 - **No other workflow in flight**, so no footprint overlap to raise now. #51 and #52 are Ready but not started.
 
@@ -23,7 +23,7 @@ Decisions taken without a question, to be shown as such in the plan: one PR; the
 
 ### Q1 — Acceptance criterion 7 (a folder Docker rejects) cannot be met by a script for a clone-in-volume. What do we build?
 
-**Why it matters:** AC7 says a clone folder with a space, `+`, `@`, non-ASCII or a leading `.`/`_` "starts, with a valid name or a stated reason". With `--name ${containerWorkspaceFolderBasename}` the Docker name is the folder, and Docker refuses an invalid name when it creates the container, before the start script (or any script) runs. `devcontainer.json` has no variable that sanitises, and roadmaster's own comment records that `initializeCommand` does not run on the host for a volume clone, so nothing can compute a fallback name. I have not been able to test this here (no `docker`); it rests on roadmaster's comment and on the dev container reference.
+**Why it matters:** AC7 says a clone folder with a space, `+`, `@`, non-ASCII or a leading `.`/`_` "starts, with a valid name or a stated reason". With `--name ${containerWorkspaceFolderBasename}` the Docker name is the folder, and Docker refuses an invalid name when it creates the container, before the start script (or any script) runs. `devcontainer.json` has no variable that sanitises, and the reference project's own comment records that `initializeCommand` does not run on the host for a volume clone, so nothing can compute a fallback name. I have not been able to test this here (no `docker`); it rests on the reference project's comment and on the dev container reference.
 
 What can be done:
 - **A. Valid by construction, reason stated in writing.** The folders `init` prints are always `codeo-home` and `codeo-<N>`, which are valid. The new `.devcontainer/README.md` states the allowed characters (`[a-zA-Z0-9][a-zA-Z0-9_.-]+`) and that Docker, not codeo, refuses anything else, with the fix (re-clone with a valid folder). The CHANGELOG says the same. When the start script does run, `folder-check.sh` names the folder it expects. "A stated reason" is met in documentation, not at the moment of failure.
@@ -38,11 +38,11 @@ I recommend A, with B's reporting folded into `folder-check.sh` as it is anyway.
 
 ### Q2 — How is the name logic shared, and does codeo get a `.codeo/project.sh`?
 
-**Why it matters:** roadmaster has `.codeo/project.sh` (codename and secrets resolution), `.codeo/codeo-root.sh` (finds the installed plugin) and `.devcontainer/scripts/{container-name,folder-check}.sh`. codeo needs only some of that: it has no secrets store, and `window-title.sh` already reads the codename with `jq` from `.codeo/config.json`.
+**Why it matters:** the reference project has `.codeo/project.sh` (codename and secrets resolution), `.codeo/codeo-root.sh` (finds the installed plugin) and `.devcontainer/scripts/{container-name,folder-check}.sh`. codeo needs only some of that: it has no secrets store, and `window-title.sh` already reads the codename with `jq` from `.codeo/config.json`.
 
 What can be built:
-- **A. Two new scripts, no `project.sh`.** `.devcontainer/scripts/container-name.sh [--docker] [dir]` prints `codeo [#N]` / `codeo [home]` or `codeo-<N>` / `codeo-home` from the lock; `window-title.sh` calls it instead of deriving the title itself, so there is one source. `folder-check.sh <folder>` as roadmaster's. `codeo-root.sh` lives beside them in `.devcontainer/scripts/` (only the start script uses it). The codename is read from `.codeo/config.json` with `jq` in `container-name.sh`, falling back to the clone directory's name as `window-title.sh` does today.
-- **B. Port roadmaster's four files as they are**, including `.codeo/project.sh`, with the codename check it brings. More code to keep, most of it unused here.
+- **A. Two new scripts, no `project.sh`.** `.devcontainer/scripts/container-name.sh [--docker] [dir]` prints `codeo [#N]` / `codeo [home]` or `codeo-<N>` / `codeo-home` from the lock; `window-title.sh` calls it instead of deriving the title itself, so there is one source. `folder-check.sh <folder>` as the reference project's. `codeo-root.sh` lives beside them in `.devcontainer/scripts/` (only the start script uses it). The codename is read from `.codeo/config.json` with `jq` in `container-name.sh`, falling back to the clone directory's name as `window-title.sh` does today.
+- **B. Port the reference project's four files as they are**, including `.codeo/project.sh`, with the codename check it brings. More code to keep, most of it unused here.
 
 I recommend A: it keeps the diff to what the criteria need, and `window-title.sh`'s present behaviour (including its codename fallback) is kept and tested.
 
@@ -52,7 +52,7 @@ I recommend A: it keeps the diff to what the criteria need, and `window-title.sh
 
 ### Q3 — Where does the how-to for the two kinds of container live?
 
-**Why it matters:** the criteria need the clone-in-named-volume steps in two places: printed by `init` (the overlay) and written down for someone who has not run it yet. codeo has no page about the dev container today (`README.md` and `docs/` never mention it); roadmaster keeps `.devcontainer/README.md`.
+**Why it matters:** the criteria need the clone-in-named-volume steps in two places: printed by `init` (the overlay) and written down for someone who has not run it yet. codeo has no page about the dev container today (`README.md` and `docs/` never mention it); the reference project keeps `.devcontainer/README.md`.
 
 What can be built:
 - **A. `.devcontainer/README.md`**, short: the home and issue container names, the exact "Clone Repository in Named Container Volume…" values, the allowed folder characters (Q1), rebuild note, and the one-time `docker rm` for a leftover container of the same name. Linked from `README.md` in one line. The overlay's printed text stays the source for the per-issue values.
@@ -67,7 +67,7 @@ I recommend A, because the rebuild and folder-name notes belong next to the cont
 
 ### Q4 — Which overlays does this issue add?
 
-**Why it matters:** roadmaster has overlays for `init`, `close`, `plan`, `implement`, `qc` and `triage`; most are about its shared DEV environment. Two bear on this change: `init` (the issue, AC1-3) and `close`'s `host-workflow` (tells the engineer how to remove the issue's container and volume at the end, using the lock's `volume:` line). Without a `close` overlay the plugin's default report names the lock's host and says whether anything is left to remove, which is correct but gives no commands.
+**Why it matters:** the reference project has overlays for `init`, `close`, `plan`, `implement`, `qc` and `triage`; most are about its shared DEV environment. Two bear on this change: `init` (the issue, AC1-3) and `close`'s `host-workflow` (tells the engineer how to remove the issue's container and volume at the end, using the lock's `volume:` line). Without a `close` overlay the plugin's default report names the lock's host and says whether anything is left to remove, which is correct but gives no commands.
 
 What can be built:
 - **A. `init` only**, as the criteria say. `close`'s default report stands.
