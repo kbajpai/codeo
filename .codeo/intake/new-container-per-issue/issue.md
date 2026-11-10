@@ -59,7 +59,7 @@ the name no longer says `codeo-52` vs `codeo-home`. Changing it supersedes part 
 **Options.** *adopt roadmaster's form and fold #54's name-validity requirement in* · *adopt it, leave #54
 separate* · *keep #50's form; name the issue container some other way*.
 
-**Answer:**
+**Answer:** yes — adopt roadmaster's folder-only name and fold #54's name-validity requirement in (engineer, 2026-11-10)
 
 ### Q3 — Hand-off: include roadmaster's `claude --cloud "/codeo:plan"` launch?
 
@@ -72,7 +72,7 @@ not use today. Leaving it out keeps the issue to the local-container flow.
 
 **Options.** *leave it out (print the clone instructions only)* · *include it as roadmaster has it*.
 
-**Answer:** yes — adopt roadmaster's folder-only name and fold #54's name-validity requirement in (engineer, 2026-11-10)
+**Answer:** accepted: leave `claude --cloud` out; print the clone instructions only (engineer, 2026-11-10)
 
 ### Q4 — Order against #51 and #54, and how is "done" shown?
 
@@ -87,7 +87,7 @@ would flag it, but you may want an order up front.
 For "done": *a test per new script plus a manual check of two containers open at once* is my proposal;
 say if you want it narrower.
 
-**Answer:**
+**Answer:** go first, ahead of #51 and #54; done = a test per new script plus a manual check with two containers open at once (engineer, 2026-11-10)
 
 ## Log
 
