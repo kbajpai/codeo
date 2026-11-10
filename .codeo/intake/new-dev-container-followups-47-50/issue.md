@@ -12,7 +12,7 @@ QC F29: "`safe.directory` entries now accumulate in the shared `codeo-git` volum
 
 **Options.** *leave it out, #40 covers the neighbouring part* · *include pruning here*.
 
-**Answer:**
+**Answer:** leave it out, #40 covers the neighbouring part (engineer accepted the recommendation, 2026-11-10).
 
 ### Q2 — F1: what should a clone folder Docker rejects do?
 
@@ -20,7 +20,7 @@ QC F1: Docker accepts only `[a-zA-Z0-9][a-zA-Z0-9_.-]+`, and the container is no
 
 **Options.** *start must still work for any folder name (the name falls back to something valid)* · *document the limit in the CHANGELOG and README only* · *both: document it and give a clear failure message*.
 
-**Answer:**
+**Answer:** start must still work for any folder name, the name falling back to something valid (first option; engineer accepted "all recommendations", 2026-11-10).
 
 ### Q3 — Which small items are in, which are recorded and left?
 
@@ -29,7 +29,7 @@ Proposed **recorded in Out of Scope, not done**: F26 (unwritable `info/exclude` 
 
 **Options.** *as proposed* · *move these: …* · *everything in*.
 
-**Answer:**
+**Answer:** as proposed (engineer accepted the recommendation, 2026-11-10).
 
 ## Draft (for the review gate, once Q1-Q3 are answered)
 
@@ -51,7 +51,7 @@ Each finding was classified non-blocking and recorded in an archived dossier (`.
 - `window-title.sh` does not touch `info/exclude` when the line is already present, so `session-title.sh`'s "no-op when current" is true. (F25.)
 - A `settings.json` path that is a directory or unreadable is reported as that, not as "not valid JSON". (F27.)
 - The `core.fileMode` step says when it overrode a `false` set in a wider scope. (F28.)
-- A clone folder name Docker rejects: *(per Q2)*. (QC #50 F1.)
+- A clone folder name Docker rejects: the container name falls back to a valid one, so start works for any clone folder name. (QC #50 F1.)
 - `run_args_cap_memory_and_cpus` pins the exact `runArgs` array so an extra or duplicate entry is caught. (QC #50 F2.)
 - The failed `git diff` listing's stderr reaches the TODO; a test covers a file differing in both mode and content; no `modes.*` temp file survives an interrupted run. (`implement.md` #47.)
 
@@ -61,15 +61,15 @@ Each finding was classified non-blocking and recorded in an archived dossier (`.
 - [ ] Calling `window-title.sh` twice leaves `info/exclude`'s mtime unchanged on the second call.
 - [ ] A `settings.json` that is a directory is reported as not a regular file, not as invalid JSON.
 - [ ] With `core.fileMode=false` set globally, the start script's message says it overrode that value.
-- [ ] *(per Q2: the checkable outcome for a folder such as `my project` or `_x`.)*
+- [ ] A dev container for a clone in a folder named `my project` or `_x` starts, with a valid container name.
 - [ ] A second `--memory` or `--cpus` entry in `runArgs` fails `tests/devcontainer.test.sh`.
 - [ ] A failed mode listing's reason appears in the TODO; the both-changed case has a test; an interrupted run leaves no `modes.*` file.
 - [ ] `bash tests/run.sh` passes and `CHANGELOG.md` records the change.
 
 ### Out of Scope
 
-- Pruning or deduplicating `safe.directory` entries *(per Q1; duplicates are #40)*.
-- Findings recorded and left *(per Q3)*: F26 (title skipped when `info/exclude` is unwritable, pinned by a test on purpose), F20, F21, F23.
+- Pruning or deduplicating `safe.directory` entries (the duplicate entry is #40).
+- Findings recorded and left : F26 (title skipped when `info/exclude` is unwritable, pinned by a test on purpose), F20, F21, F23.
 - Any change under `scripts/`, `lib/`, `hooks/` or `skills/`.
 
 ### Reference
@@ -78,7 +78,7 @@ Each finding was classified non-blocking and recorded in an archived dossier (`.
 
 ## Outcome
 
-(Open — Q1-Q3 await the engineer.)
+Q1-Q3 answered; the final draft awaits approval.
 
 ## Log
 
