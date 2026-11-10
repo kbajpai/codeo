@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored `/workspaces/roadmaster` and codeo's container files. Q1-Q4 answered (all A, the recommendations). Drafting the plan.
+Plan approved and written to `docs/plans/2026-11-10-home-and-issue-containers.md` (unstaged). No open question; next is `/codeo:implement`.
 
 What exploration found, which shapes the questions:
 - **No plugin change is needed.** The installed 1.0.3 `lock.sh take container` already writes the lock from the `init.md` naming the checked-out branch, records the volume, and takes none on `main`. The start script only has to call it, as roadmaster's does.
@@ -79,7 +79,20 @@ I recommend A, and filing the `close` overlay as its own small issue through `/c
 
 **Answer:** A — init overlay only; the close overlay is a separate issue (engineer, 2026-11-10)
 
-## Notes
+## Outcome
+
+**Plan.** `docs/plans/2026-11-10-home-and-issue-containers.md` (unstaged, awaiting your commit). Shape: an executable plan under `docs/plans/` — eight test-first tasks, each ending in a `bash tests/run.sh <pattern>` proof; no reference doc, because the standing decisions fit the plan's options table.
+
+**Decisions** (Q1-Q4 all A):
+- Q1 — a folder Docker rejects is handled by construction (`codeo-home`, `codeo-<N>`) and by stating the rule and fix in `.devcontainer/README.md` and the CHANGELOG; AC7 is read as "starts, or the reason is stated in writing". Rejected: a script fallback name (nothing runs before Docker refuses), keeping `-${devcontainerId}`.
+- Q2 — `container-name.sh` (title, Docker name, `--codename`), `folder-check.sh`, `codeo-root.sh` in `.devcontainer/scripts/`; no `.codeo/project.sh`. `window-title.sh` calls `container-name.sh`.
+- Q3 — `.devcontainer/README.md`, linked from `README.md`.
+- Q4 — `init` overlay only; the `close` overlay is a separate issue.
+- Own calls: the start script takes the lock with the installed plugin's `lock.sh take container` (no plugin change) and prints its lines verbatim; no lock on the base branch; `runArgs` pinned exactly; `.codeo/overlays/**` added to the shell suite's paths; AC1-5 and AC8 are proved by the engineer on the host (no `docker` here).
+
+**Documentation the plan changes:** `.devcontainer/README.md` (new), `README.md` (one link), `CHANGELOG.md`. `docs/extension-points.md` already covers `init/host-workflow`.
+
+**Intake questions resolved:** none open at intake.
 
 ### Footprint
 
@@ -89,10 +102,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-10 — plan dossier opened with Q1-Q4 · cost: unavailable
+- 2026-11-10 — planned: docs/plans/2026-11-10-home-and-issue-containers.md · cost: 14m · sonnet-5-5 82k in + 3.3M cached / 33k out
