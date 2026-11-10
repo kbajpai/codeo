@@ -48,7 +48,7 @@ Round 1 is in progress and stopped at step 10 with Q1-Q3 open; no verdict is wri
 - `sync-main.sh --abort-on-conflict`: "sync-main: the branch already contains origin/main". `overlap.sh 55`: nothing. `overlap.sh --outside 55`: nothing.
 - `scope.sh origin/main HEAD`: "scope: suite shell needed for unclassified paths: .codeo/55/implement.md, .codeo/55/init.md, .codeo/55/issue.md, .codeo/55/plan.md, .codeo/config.json, CHANGELOG.md, README.md" then `suite.shell=true`. No `deploy=` line: no shared environment is configured.
 - Build (`true`): exit 0.
-- Test (`bash tests/run.sh`): exit 1; 37 of 38 files pass; "=== FAIL: agnostic.test.sh / FAIL: tracked files mention a project-specific word (/roadmaster/):" with hits in `.codeo/55/init.md` (2), `.codeo/55/issue.md` (16), `.codeo/55/plan.md` (9) and `docs/plans/2026-11-10-home-and-issue-containers.md` (5); "failed: agnostic.test.sh".
+- Test (`bash tests/run.sh`): exit 1; 37 of 38 files pass; "=== FAIL: agnostic.test.sh / FAIL: tracked files mention a project-specific word (a pattern naming the private reference project):" with hits in `.codeo/55/init.md` (2), `.codeo/55/issue.md` (16), `.codeo/55/plan.md` (9) and `docs/plans/2026-11-10-home-and-issue-containers.md` (5); "failed: agnostic.test.sh".
 - `overlay.sh qc invariants-extra` and `qc wiki-rules`: exit 3 (none). No invariants file, no wiki module, no environment.
 
 **Criteria, preliminary (the table is written into the round once Q1-Q3 are answered):**
