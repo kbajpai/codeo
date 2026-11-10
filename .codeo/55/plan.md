@@ -79,6 +79,16 @@ I recommend A, and filing the `close` overlay as its own small issue through `/c
 
 **Answer:** A — init overlay only; the close overlay is a separate issue (engineer, 2026-11-10)
 
+## Notes
+
+### Footprint
+
+```
+files:      .devcontainer/**, .codeo/overlays/**, .codeo/config.json, tests/**, README.md, CHANGELOG.md, docs/plans/2026-11-10-home-and-issue-containers.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
