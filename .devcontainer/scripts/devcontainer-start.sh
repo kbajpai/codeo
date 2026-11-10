@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# The dev container's postCreateCommand. The home container (on the base branch) takes no workflow lock; an issue container takes
-# it with codeo's lock.sh from the init.md on its branch, and its clone folder is checked against it. Trusts the clone (and takes ownership of it when it is on a Docker volume), installs the Claude Code
+# The dev container's postCreateCommand. Trusts the clone (and takes ownership of it when it is on a Docker volume), installs the Claude Code
 # plugins, writes the window title, turns on Claude Code Remote Control (remoteControlAtStartup in the user
 # settings), restores the executable bit the index records on tracked files and turns core.fileMode back on, only on a clone on a Docker volume where the filesystem keeps the bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
 # (the GitHub and Claude logins, a git identity, credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
+# The home container (on the base branch) takes no workflow lock; an issue container takes it with codeo's lock.sh from the init.md
+# on its branch, and its clone folder is checked against the lock.
 #
 #   bash .devcontainer/scripts/devcontainer-start.sh
 set -euo pipefail

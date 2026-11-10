@@ -471,6 +471,7 @@ ds_branch() { git -C "$ds_dir/codeo-home" checkout -q -b "$1"; }
 ds_lock_ready() { ds_identity; STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run; }
 
 start_takes_the_lock_on_an_issue_branch() {
+    local n
     ds_setup lock || return 0
     ds_lock_stub; ds_branch feat/x
     ds_lock_ready
@@ -500,6 +501,7 @@ start_rerun_with_a_lock_does_not_take_another() {
 }
 
 start_detached_head_is_a_todo() {
+    local n
     ds_setup lockdetached || return 0
     ds_lock_stub
     git -C "$ds_dir/codeo-home" -c user.name=T -c user.email=t@example.com commit -q --allow-empty -m c || { fail 'commit failed'; return 0; }
@@ -511,6 +513,7 @@ start_detached_head_is_a_todo() {
 }
 
 start_lock_todo_lines_become_todos() {
+    local n
     ds_setup locktodo || return 0
     ds_lock_stub; ds_branch feat/x
     STUB_LOCK_OUT='lock: TODO — no single init.md names branch feat/x (found 0)' ds_lock_ready
@@ -520,6 +523,7 @@ start_lock_todo_lines_become_todos() {
 }
 
 start_lock_crash_is_a_todo() {
+    local n
     ds_setup lockcrash || return 0
     ds_lock_stub; ds_branch feat/x
     STUB_LOCK_RC=3 STUB_LOCK_OUT='boom' ds_lock_ready
@@ -528,6 +532,7 @@ start_lock_crash_is_a_todo() {
 }
 
 start_without_codeo_installed_is_a_todo() {
+    local n
     ds_setup locknone || return 0
     ds_branch feat/x
     ds_lock_ready
@@ -536,6 +541,7 @@ start_without_codeo_installed_is_a_todo() {
 }
 
 start_reports_a_wrong_folder() {
+    local n
     ds_setup folder || return 0
     mv "$ds_dir/codeo-home" "$ds_dir/scratch"
     DS_REPO="$ds_dir/scratch" ds_lock_ready
@@ -681,10 +687,10 @@ start_mount_prefix_needs_a_path_boundary() {
     local mine other n
     ds_setup boundary || return 0
     mine=$(id -u); other=$((mine + 1))
-    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo2"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-home2"
     STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 0)) || fail "a volume at <clone>2 counted: $(cat "$ds_dir/calls")"
-    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/rep"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-hom"
     : > "$ds_dir/calls"
     STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 0)) || fail "a volume at a string prefix of the clone counted: $(cat "$ds_dir/calls")"
