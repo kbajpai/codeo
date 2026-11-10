@@ -92,3 +92,51 @@ say if you want it narrower.
 ## Log
 
 - 2026-11-10 — dossier opened with Q1-Q4 · cost: unavailable
+
+## Draft
+
+**Title:** Dev container: a home container for starting work and one container per issue
+
+**Issue Type:** none (`issue-types` printed nothing) · **Labels:** `enhancement`
+
+### Description
+
+Give codeo's dev container the shape roadmaster already uses: a **home container** (a clone on `main`, no lock, where `/codeo:issue`, `/codeo:init` and `/codeo:triage` run) and **one container per issue** (a clone of the branch `init` pushed, holding that issue's lock, where plan → implement → qc → close run). Several issues can then be worked at once, each in its own container and VS Code window.
+
+### Motivation / Context
+
+Today a codeo dev container is one container per clone and its start script takes no lock, so `/codeo:init` binds the checkout it runs in and a second issue needs a second clone set up by hand with nothing naming it. Starting #51 and #52 together showed it. roadmaster (`/workspaces/roadmaster`) already works this way; this brings the same workflow to codeo.
+
+### Key Requirements
+
+- `init` runs in the home container through a project `host-workflow` overlay (`.codeo/overlays/init.md`): it writes no lock, never checks the issue branch out there, stops when `.codeo/active` shows the session is inside an issue's container, and tells the engineer how to open the issue's container (VS Code "Dev Containers: Clone Repository in Named Container Volume…", the branch URL, volume and folder `codeo-<N>`). It prints the clone instructions only; it does not launch `claude --cloud`.
+- In an issue's container the start script takes the lock from the `init.md` on the pushed branch (`lock.sh take container`), finding the installed plugin through a `.codeo/codeo-root.sh`; the home container gets no lock.
+- The container's name, window title and Docker name come from the lock: `codeo [#N]` / `codeo-<N>`, or `codeo [home]` / `codeo-home`. A clone folder that disagrees with the lock is reported by the start script.
+- `devcontainer.json` names the container from the clone folder alone (`${containerWorkspaceFolderBasename}`), replacing #50's `<folder>-<devcontainerId>`; one definition serves the home and issue containers.
+- A clone folder name Docker rejects does not stop the container from starting: it falls back to a valid name or is reported with the cause (the requirement from #54, folded in).
+- The home container's folder and volume are `codeo-home`; an issue's are `codeo-<N>`.
+
+### Acceptance Criteria
+
+- [ ] With the home container open, `/codeo:init #<N>` pushes the branch, assigns the issue, moves the card, writes no `.codeo/active` and leaves the home checkout on `main`.
+- [ ] The same command prints the clone-in-named-volume instructions with the branch URL and `codeo-<N>` filled in, and does not launch `claude --cloud`.
+- [ ] Running `/codeo:init` inside an issue container (a `.codeo/active` present) stops and says to run it in the home container.
+- [ ] A container cloned from the pushed branch ends its start script with `lock: took the lock for #<N>`, and `.codeo/active` names that issue and branch.
+- [ ] The home container's start script takes no lock, and `docker ps` and the window title show `codeo-home` / `codeo [home]`; the issue container shows `codeo-<N>` / `codeo [#<N>]`.
+- [ ] A clone folder whose name disagrees with the lock gets a `todo:` line naming the correct folder.
+- [ ] A clone folder with a space, `+`, `@`, non-ASCII or a leading `.`/`_` starts, with a valid name or a stated reason.
+- [ ] Two containers (`codeo-home` and `codeo-<N>`, or two issue containers) run at once in separate VS Code windows without touching each other's lock.
+- [ ] Each new script has a test under `tests/`; `bash tests/run.sh` passes and `CHANGELOG.md` records the change.
+
+### Out of Scope
+
+- Launching `claude --cloud "/codeo:plan"` from `init`, and web-session hosting.
+- roadmaster's project-specific parts: secrets store, DEV lease, `agy`, per-project mounts.
+- Any change under `scripts/`, `lib/`, `hooks/` or `skills/` of the plugin itself; the overlay is the project's, in `.codeo/overlays/`.
+- A host script that clones or opens VS Code (not possible from inside a container).
+
+### Reference
+
+- roadmaster: `.codeo/overlays/init.md`, `.codeo/codeo-root.sh`, `.codeo/project.sh`, `.devcontainer/devcontainer.json`, `.devcontainer/scripts/{devcontainer-start,container-name,folder-check,window-title}.sh`, `.devcontainer/README.md`.
+- codeo: #50 (current container name, superseded in part), #54 (container-name limits, requirement folded in; the engineer decides what happens to #54), #51 (shares `devcontainer-start.sh`; this issue goes first), #36.
+- Plugin `docs/handoff.md → The lock`.
