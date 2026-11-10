@@ -4,7 +4,7 @@
 # Today it checks .codeo/config.json: the codename, the plugin pin, and that the shell suite's paths
 # cover .devcontainer/**. It also checks .devcontainer/devcontainer.json: it is valid JSON that runs as
 # the dev user and names the Dockerfile and start script, caps memory and cpus, names the container after its
-# clone folder, mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
+# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that, memory and cpus), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
 # It also checks .devcontainer/Dockerfile
 # (over its non-comment lines): Ubuntu 24.04 with the tools codeo needs, user dev at UID 1000 with the
 # gh config directory, and none of the tools the image deliberately leaves out. Finally it runs
@@ -48,6 +48,8 @@ config_has_codename_pin_and_suite_path() {
         || fail 'plugin.ref is not a non-empty string without whitespace'
     jq -e '.suites[] | select(.name == "shell") | .paths | index(".devcontainer/**")' "$cfg" >/dev/null \
         || fail 'shell suite paths lack .devcontainer/**'
+    jq -e '.suites[] | select(.name == "shell") | .paths | index(".codeo/overlays/**")' "$cfg" >/dev/null \
+        || fail 'shell suite paths lack .codeo/overlays/**'
 }
 
 dc_json() { printf '%s' "$repo/.devcontainer/devcontainer.json"; }
@@ -69,8 +71,8 @@ run_args_cap_memory_and_cpus() {
 
 run_args_name_the_container_after_its_clone() {
     # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
-    jq -e '.runArgs | index("--name=${localWorkspaceFolderBasename}-${devcontainerId}") != null' "$(dc_json)" >/dev/null \
-        || fail 'runArgs has no --name=${localWorkspaceFolderBasename}-${devcontainerId}'
+    jq -e '.runArgs == ["--name=${containerWorkspaceFolderBasename}","--memory=4g","--cpus=2"]' "$(dc_json)" >/dev/null \
+        || fail 'runArgs is not exactly --name=${containerWorkspaceFolderBasename}, --memory=4g, --cpus=2'
 }
 
 post_start_command_reruns_the_title() {
