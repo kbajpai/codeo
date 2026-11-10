@@ -382,6 +382,8 @@ ds_setup() {
         || { fail 'devcontainer-start.sh is missing'; return 1; }
     cp "$repo/.devcontainer/scripts/window-title.sh" "$ds_dir/repo/.devcontainer/scripts/window-title.sh" \
         || { fail 'window-title.sh is missing'; return 1; }
+    cp "$repo/.devcontainer/scripts/container-name.sh" "$ds_dir/repo/.devcontainer/scripts/container-name.sh" \
+        || { fail 'container-name.sh is missing'; return 1; }
     mkdir -p "$ds_dir/repo/.codeo"
     echo '{"codename":"codeo"}' > "$ds_dir/repo/.codeo/config.json"
     cat > "$ds_dir/repo/.devcontainer/scripts/plugins.sh" <<'STUB'
@@ -1042,6 +1044,8 @@ wt_setup() {
     git -C "$wt_dir" init -q || { fail 'git init failed'; return 1; }
     cp "$repo/.devcontainer/scripts/window-title.sh" "$wt_dir/.devcontainer/scripts/window-title.sh" \
         || { fail 'window-title.sh is missing'; return 1; }
+    cp "$repo/.devcontainer/scripts/container-name.sh" "$wt_dir/.devcontainer/scripts/container-name.sh" \
+        || { fail 'container-name.sh is missing'; return 1; }
     echo '{"codename":"codeo"}' > "$wt_dir/.codeo/config.json"
     git -C "$wt_dir" add -A
     git -C "$wt_dir" -c user.name=Dev -c user.email=dev@example.com commit -q -m fixture \
