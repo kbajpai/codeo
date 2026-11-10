@@ -7,7 +7,7 @@
 
 ## Where this stands
 
-Draft, awaiting the engineer's approval. Branch `feat/dev-container-home-container-starting` off `main` at `15bac0b8341ba0b14dd765d389c9f03de3091305`. Not yet pushed.
+Initialized. Branch `feat/dev-container-home-container-starting` off `main` at `15bac0b8341ba0b14dd765d389c9f03de3091305`, pushed.
 
 ## Questions
 
