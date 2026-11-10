@@ -44,7 +44,7 @@ a bigger change to review.
 
 **Options.** *all four, one issue* · *(a)+(b) now, (c)+(d) as a follow-up issue* · *other*.
 
-**Answer:**
+**Answer:** all four pieces, one issue (engineer, 2026-11-10)
 
 ### Q2 — Container name: replace #50's `<folder>-<devcontainerId>`?
 
@@ -72,7 +72,7 @@ not use today. Leaving it out keeps the issue to the local-container flow.
 
 **Options.** *leave it out (print the clone instructions only)* · *include it as roadmaster has it*.
 
-**Answer:**
+**Answer:** yes — adopt roadmaster's folder-only name and fold #54's name-validity requirement in (engineer, 2026-11-10)
 
 ### Q4 — Order against #51 and #54, and how is "done" shown?
 
