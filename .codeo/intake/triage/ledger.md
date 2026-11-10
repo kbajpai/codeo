@@ -36,3 +36,4 @@
 | `issue:51` | Filed 2026-11-09, no branch, board Status `unset` | ready | 2026-11-10 |
 | `issue:52` | Filed 2026-11-10, no branch, board Status `none` | ready | 2026-11-10 |
 | `issue:54` | Filed 2026-11-10, no branch, board Status `unset` | leave in the backlog | 2026-11-10 |
+| `issue:55` | Filed 2026-11-10, no branch, board Status `none` | ready | 2026-11-10 |
