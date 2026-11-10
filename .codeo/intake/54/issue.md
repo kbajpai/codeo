@@ -1,4 +1,4 @@
-# Issue (new) — dev container follow-ups from #47 and #50
+# Issue #54 — issue
 
 ## Where this stands
 
@@ -31,7 +31,7 @@ Proposed **recorded in Out of Scope, not done**: F26 (unwritable `info/exclude` 
 
 **Answer:** as proposed (engineer accepted the recommendation, 2026-11-10).
 
-## Draft (for the review gate, once Q1-Q3 are answered)
+## Draft (approved and filed as #54)
 
 **Title:** Dev container follow-ups from #47 and #50: mode-change message, title-hook edges, container-name limits
 
@@ -78,8 +78,9 @@ Each finding was classified non-blocking and recorded in an archived dossier (`.
 
 ## Outcome
 
-Q1-Q3 answered; the final draft awaits approval.
+Filed as #54 (https://github.com/kbajpai/codeo/issues/54), engineer approved 2026-11-10.
 
 ## Log
 
 - 2026-11-10 — issue dossier drafted, Q1-Q3 raised
+- 2026-11-10 — approved and filed as #54
