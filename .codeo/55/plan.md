@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored `/workspaces/roadmaster` (the reference) and codeo's `.devcontainer/`, `tests/devcontainer.test.sh`, `docs/extension-points.md` and the installed plugin's `lock.sh`. Q1-Q4 are open; nothing is drafted past them.
+Explored `/workspaces/roadmaster` and codeo's container files. Q1-Q4 answered (all A, the recommendations). Drafting the plan.
 
 What exploration found, which shapes the questions:
 - **No plugin change is needed.** The installed 1.0.3 `lock.sh take container` already writes the lock from the `init.md` naming the checked-out branch, records the volume, and takes none on `main`. The start script only has to call it, as roadmaster's does.
@@ -34,7 +34,7 @@ I recommend A, with B's reporting folded into `folder-check.sh` as it is anyway.
 
 **Options:** A (recommended), reading AC7 as stated-in-writing · A, and you will reword AC7 in the issue first · something else.
 
-**Answer:**
+**Answer:** A — valid by construction, reason stated in writing; AC7 read as "starts, or the reason is stated in the README and CHANGELOG" (engineer, 2026-11-10)
 
 ### Q2 — How is the name logic shared, and does codeo get a `.codeo/project.sh`?
 
@@ -48,7 +48,7 @@ I recommend A: it keeps the diff to what the criteria need, and `window-title.sh
 
 **Options:** A (recommended) · B · something else.
 
-**Answer:**
+**Answer:** A — two new scripts plus codeo-root.sh in .devcontainer/scripts/, no .codeo/project.sh (engineer, 2026-11-10)
 
 ### Q3 — Where does the how-to for the two kinds of container live?
 
@@ -63,7 +63,7 @@ I recommend A, because the rebuild and folder-name notes belong next to the cont
 
 **Options:** A (recommended) · B · C.
 
-**Answer:**
+**Answer:** A — .devcontainer/README.md, linked from README.md (engineer, 2026-11-10)
 
 ### Q4 — Which overlays does this issue add?
 
@@ -77,7 +77,7 @@ I recommend A, and filing the `close` overlay as its own small issue through `/c
 
 **Options:** A (recommended), `close` overlay as a separate issue · B · A and no follow-up.
 
-**Answer:**
+**Answer:** A — init overlay only; the close overlay is a separate issue (engineer, 2026-11-10)
 
 ## Outcome
 
