@@ -3,12 +3,12 @@
 | | |
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/55 |
-| Branch | `feat/dev-container-home-container-starting` at `29ff750` |
-| Updated | 2026-11-10 |
+| Branch | `feat/dev-container-home-container-starting` at `eaa0102` |
+| Updated | 2026-11-11 |
 
 ## Where this stands
 
-Round 1 is in progress and stopped at step 10; Q1 and Q3 are answered, Q2 (the host checks) is open and no verdict is written. The build and the suite ran, the independent review is back, and the findings are classified under `## Notes`.
+Round 1 is written: Q1-Q3 are answered, the suite passes, and nothing blocking is left. The verdict is clear, forward to `/codeo:close`. The criteria that need Docker are recorded `untestable here — host check` (Q2) and are the engineer's to run on the host.
 
 ## Questions
 
@@ -79,8 +79,49 @@ Round 1 is in progress and stopped at step 10; Q1 and Q3 are answered, Q2 (the h
 
 ## Outcome
 
-_Pending — written at the hand-off._
+### Round 1 — 2026-11-11
+
+Resumed after Q1-Q3 were answered; steps 2-6 re-run on `eaa0102`.
+
+**Commands and output (this pass):**
+- `sync-main.sh --abort-on-conflict`: "sync-main: the branch already contains origin/main". `overlap.sh 55`: nothing. `overlap.sh --outside 55`: nothing.
+- `scope.sh origin/main HEAD`: "scope: suite shell needed for unclassified paths: .codeo/55/implement.md, .codeo/55/init.md, .codeo/55/issue.md, .codeo/55/plan.md, .codeo/55/qc.md, .codeo/config.json, CHANGELOG.md, README.md" then `suite.shell=true`. No `deploy=` line; no shared environment is configured, so step 9 does not apply.
+- Build (`true`): exit 0.
+- Test (`bash tests/run.sh`, 38 files): exit 0, "all cases passed".
+- `overlay.sh qc invariants-extra` and `qc wiki-rules`: exit 3 (none). No invariants file, no wiki module.
+- Since the review at `29ff750`, the diff changed only in `f6a84f5` (the engineer's rewording of `.codeo/55/init.md`, `.codeo/55/issue.md`, `.codeo/55/plan.md`, `docs/plans/2026-11-10-home-and-issue-containers.md`; `git diff --word-diff` shows only the project name replaced by "the reference project") and in this dossier. No script, test, config or documentation page changed, so the independent review of this round (`QC review: issue #55`, on Opus, against `29ff750`) still covers the code under review.
+
+**Criteria:**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | home `/codeo:init` pushes, assigns, moves the card, writes no `.codeo/active`, stays on `main` | untestable here — host check (Q2) | overlay text checked by `tests/init-overlay.test.sh`; needs a live `/codeo:init` |
+| 2 | prints the clone-in-named-volume instructions, no `claude --cloud` | untestable here — host check (Q2) | text: `.codeo/overlays/init.md`, `tests/init-overlay.test.sh` |
+| 3 | `/codeo:init` with a `.codeo/active` present stops | untestable here — host check (Q2) | text: `.codeo/overlays/init.md` first paragraph, `tests/init-overlay.test.sh` |
+| 4 | an issue container's start prints `lock: took the lock for #<N>`; `.codeo/active` names issue and branch | untestable here — host check (Q2) | start script with a stub `lock.sh`: `start_takes_the_lock_on_an_issue_branch` in `tests/devcontainer.test.sh` |
+| 5 | home takes no lock; `docker ps` and title show `codeo-home` / `codeo [home]`, issue `codeo-<N>` / `codeo [#<N>]` | untestable here — host check (Q2) | scripts: `start_takes_no_lock_on_the_base_branch`, `tests/container-name.test.sh`; `docker ps` needs the host |
+| 6 | a folder that disagrees with the lock gets a `todo:` naming the right one | met | `tests/folder-check.test.sh`; `start_reports_a_wrong_folder` in `tests/devcontainer.test.sh` |
+| 7 | a folder Docker rejects starts with a valid name or a stated reason | untestable here — host check (Q2) | the reason is stated in `.devcontainer/README.md` "The folder rule" and the CHANGELOG (plan Q1=A) |
+| 8 | two containers run at once without touching each other's lock | untestable here — host check (Q2) | needs Docker |
+| 9 | each new script has a test; `bash tests/run.sh` passes; CHANGELOG records it | met | `tests/container-name.test.sh`, `tests/folder-check.test.sh`, `tests/codeo-root.test.sh`, `tests/devcontainer.test.sh`; suite exit 0 above; CHANGELOG bullet |
+
+**Documentation check:** `.devcontainer/README.md` (new), `README.md` and `CHANGELOG.md` describe the behaviour in the present tense and match the code except F5 and F7; nothing under `docs/` described the dev container, as the plan said.
+
+**Findings:**
+- F1 (blocking in round 1) — fixed by `f6a84f5`: the four tracked files no longer name the private project; `bash tests/run.sh` passes.
+- **F2 — non-blocking, `/codeo:implement`'s.** `.devcontainer/scripts/folder-check.sh:42` hard-codes `main` where the start script honours `.baseBranch`.
+- **F3 — non-blocking, `/codeo:plan`'s.** `.devcontainer/scripts/codeo-root.sh:24` takes registry entry `[0]` of `codeo@codeo`, which can be another project's install.
+- **F4 — non-blocking, `/codeo:plan`'s.** With the Docker name the folder alone, two open-folder checkouts sharing a basename cannot run at once; the README and CHANGELOG explain "name already in use" only as a leftover container.
+- **F5 — non-blocking, `/codeo:implement`'s.** `container-name.sh:3-5` and the CHANGELOG say the Docker name comes from that script; it comes from the folder via `runArgs`.
+- **F6 — non-blocking, `/codeo:implement`'s.** An empty `.codeo/active` gives neither a lock nor a TODO from the start script.
+- **F7 — non-blocking, `/codeo:implement`'s.** `.devcontainer/README.md` names `scripts/devcontainer-start.sh`; the file is `.devcontainer/scripts/devcontainer-start.sh`.
+- **F8 — non-blocking, `/codeo:plan`'s (new this pass).** The rewording in `f6a84f5` turned a path into `/workspaces/the reference project` at `docs/plans/2026-11-10-home-and-issue-containers.md:11` (and in `.codeo/55/issue.md:108`), a path that does not exist; the plan text was the one changed.
+
+Issues filed by this pass: none. F2-F8 are left for `/codeo:triage` (Q3).
+
+**Verdict: clear — forward to `/codeo:close`.**
 
 ## Log
 
 - 2026-11-10 — qc round 1 stopped with Q1-Q3 open · cost: unavailable
+- 2026-11-11 — qc round 1 written: verdict clear, forward to /codeo:close · cost: 2m · opus-5-5 54k in + 632k cached / 6k out
