@@ -37,3 +37,4 @@
 | `issue:52` | Filed 2026-11-10, no branch, board Status `none` | ready | 2026-11-10 |
 | `issue:54` | Filed 2026-11-10, no branch, board Status `unset` | leave in the backlog | 2026-11-10 |
 | `issue:55` | Filed 2026-11-10, no branch, board Status `none` | ready | 2026-11-10 |
+| `qc:50:F3` | `tests/devcontainer.test.sh:6-8` header comment leaves "It also checks .devcontainer/Dockerfile" alone on a line (cosmetic) | dismissed — cosmetic, nothing breaks | 2026-11-11 |
