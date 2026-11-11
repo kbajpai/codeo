@@ -4,6 +4,8 @@
 # settings), restores the executable bit the index records on tracked files and turns core.fileMode back on, only on a clone on a Docker volume where the filesystem keeps the bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
 # (the GitHub and Claude logins, a git identity, credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
+# The home container (on the base branch) takes no workflow lock; an issue container takes it with codeo's lock.sh from the init.md
+# on its branch, and its clone folder is checked against the lock.
 #
 #   bash .devcontainer/scripts/devcontainer-start.sh
 set -euo pipefail
@@ -138,6 +140,51 @@ fi
 
 # 3. Plugins.
 bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/plugins.sh"
+
+# 3a. The workflow lock: .codeo/active, taken by codeo's own lock.sh from the .codeo/<N>/init.md that
+# names this branch. The home container is on the base branch (.codeo/config.json's baseBranch, else
+# main) and takes none; a container that already holds the lock (a re-run) takes none again; a
+# detached HEAD names no branch, so it is a TODO. lock.sh's output is printed unchanged, except that
+# its `lock: TODO — …` lines become TODOs. The plugin is pinned and not ours: the `|| rc=$?` guard is
+# for a crash or a changed interface after a pin bump, where a non-zero exit would otherwise end this
+# script under set -e before its TODO list.
+branch=$(git branch --show-current 2>/dev/null || true)
+base=$(jq -r '.baseBranch // "main"' .codeo/config.json 2>/dev/null || true)
+[[ -n $base ]] || base=main
+if [[ -s .codeo/active ]]; then
+    : # a lock means the checkout is already bound to an issue, whatever HEAD is
+elif [[ -z $branch ]]; then
+    add_todo "HEAD is detached, so no branch names an issue: check out the issue's branch, then re-run this script"
+elif [[ $branch != "$base" ]]; then
+    if codeo_root=$(bash .devcontainer/scripts/codeo-root.sh 2>/dev/null); then
+        lock_rc=0
+        lock_out=$(bash "$codeo_root/scripts/lock.sh" take container 2>&1) || lock_rc=$?
+        while IFS= read -r line; do
+            case $line in
+                "lock: TODO — "*) add_todo "${line#lock: TODO — }" ;;
+                '') ;;
+                *) echo "$line" ;;
+            esac
+        done <<<"$lock_out"
+        ((lock_rc == 0)) || add_todo "codeo's lock.sh failed (exit $lock_rc): ${lock_out//$'\n'/ / }"
+    else
+        add_todo "codeo is not installed, so no lock was taken: fix what plugins.sh printed above, then re-run this script"
+    fi
+fi
+
+# 3a'. The clone folder is the container's Docker name (devcontainer.json runArgs --name), so it
+# should say what the lock does; folder-check.sh judges it. Captured, not read through `< <(…)`,
+# which would swallow its exit status: a check that itself fails is one TODO, never a stray error.
+# Its `todo:` lines become TODOs; it prints nothing else this script passes on.
+if folder_out=$(bash .devcontainer/scripts/folder-check.sh "$(basename "$clone")" 2>&1); then
+    while IFS= read -r line; do
+        case $line in
+            todo:*) add_todo "${line#todo: }" ;;
+        esac
+    done <<<"$folder_out"
+else
+    add_todo "the folder check failed: ${folder_out//$'\n'/ / } — fix it and re-run this script"
+fi
 
 # 3b. Window title: write this clone's title into .vscode/settings.json.
 bash .devcontainer/scripts/window-title.sh || add_todo "window-title.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/window-title.sh"

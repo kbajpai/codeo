@@ -4,7 +4,7 @@
 # Today it checks .codeo/config.json: the codename, the plugin pin, and that the shell suite's paths
 # cover .devcontainer/**. It also checks .devcontainer/devcontainer.json: it is valid JSON that runs as
 # the dev user and names the Dockerfile and start script, caps memory and cpus, names the container after its
-# clone folder, mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
+# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that, memory and cpus), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
 # It also checks .devcontainer/Dockerfile
 # (over its non-comment lines): Ubuntu 24.04 with the tools codeo needs, user dev at UID 1000 with the
 # gh config directory, and none of the tools the image deliberately leaves out. Finally it runs
@@ -48,6 +48,8 @@ config_has_codename_pin_and_suite_path() {
         || fail 'plugin.ref is not a non-empty string without whitespace'
     jq -e '.suites[] | select(.name == "shell") | .paths | index(".devcontainer/**")' "$cfg" >/dev/null \
         || fail 'shell suite paths lack .devcontainer/**'
+    jq -e '.suites[] | select(.name == "shell") | .paths | index(".codeo/overlays/**")' "$cfg" >/dev/null \
+        || fail 'shell suite paths lack .codeo/overlays/**'
 }
 
 dc_json() { printf '%s' "$repo/.devcontainer/devcontainer.json"; }
@@ -69,8 +71,8 @@ run_args_cap_memory_and_cpus() {
 
 run_args_name_the_container_after_its_clone() {
     # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
-    jq -e '.runArgs | index("--name=${localWorkspaceFolderBasename}-${devcontainerId}") != null' "$(dc_json)" >/dev/null \
-        || fail 'runArgs has no --name=${localWorkspaceFolderBasename}-${devcontainerId}'
+    jq -e '.runArgs == ["--name=${containerWorkspaceFolderBasename}","--memory=4g","--cpus=2"]' "$(dc_json)" >/dev/null \
+        || fail 'runArgs is not exactly --name=${containerWorkspaceFolderBasename}, --memory=4g, --cpus=2'
 }
 
 post_start_command_reruns_the_title() {
@@ -376,15 +378,22 @@ ds_setup() {
     local name=$1
     [[ -n $pl_root ]] || pl_root=$(mktemp -d)
     ds_dir="$pl_root/ds-$name"
-    mkdir -p "$ds_dir/repo/.devcontainer/scripts" "$ds_dir/bin" "$ds_dir/home"
-    git -C "$ds_dir/repo" init -q || { fail 'git init failed'; return 1; }
-    cp "$repo/.devcontainer/scripts/devcontainer-start.sh" "$ds_dir/repo/.devcontainer/scripts/devcontainer-start.sh" \
+    mkdir -p "$ds_dir/codeo-home/.devcontainer/scripts" "$ds_dir/bin" "$ds_dir/home"
+    DS_CODEO_ROOT=
+    git -C "$ds_dir/codeo-home" init -q && git -C "$ds_dir/codeo-home" symbolic-ref HEAD refs/heads/main || { fail 'git init failed'; return 1; }
+    cp "$repo/.devcontainer/scripts/devcontainer-start.sh" "$ds_dir/codeo-home/.devcontainer/scripts/devcontainer-start.sh" \
         || { fail 'devcontainer-start.sh is missing'; return 1; }
-    cp "$repo/.devcontainer/scripts/window-title.sh" "$ds_dir/repo/.devcontainer/scripts/window-title.sh" \
+    cp "$repo/.devcontainer/scripts/window-title.sh" "$ds_dir/codeo-home/.devcontainer/scripts/window-title.sh" \
         || { fail 'window-title.sh is missing'; return 1; }
-    mkdir -p "$ds_dir/repo/.codeo"
-    echo '{"codename":"codeo"}' > "$ds_dir/repo/.codeo/config.json"
-    cat > "$ds_dir/repo/.devcontainer/scripts/plugins.sh" <<'STUB'
+    cp "$repo/.devcontainer/scripts/container-name.sh" "$ds_dir/codeo-home/.devcontainer/scripts/container-name.sh" \
+        || { fail 'container-name.sh is missing'; return 1; }
+    mkdir -p "$ds_dir/codeo-home/.codeo"
+    echo '{"codename":"codeo","baseBranch":"main"}' > "$ds_dir/codeo-home/.codeo/config.json"
+    cp "$repo/.devcontainer/scripts/folder-check.sh" "$ds_dir/codeo-home/.devcontainer/scripts/folder-check.sh" \
+        || { fail 'folder-check.sh is missing'; return 1; }
+    cp "$repo/.devcontainer/scripts/codeo-root.sh" "$ds_dir/codeo-home/.devcontainer/scripts/codeo-root.sh" \
+        || { fail 'codeo-root.sh is missing'; return 1; }
+    cat > "$ds_dir/codeo-home/.devcontainer/scripts/plugins.sh" <<'STUB'
 #!/usr/bin/env bash
 exit "${STUB_PLUGINS_RC:-0}"
 STUB
@@ -423,18 +432,128 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 # ds_run: run the scratch start script (through $DS_REPO when set, else the repo itself); sets ds_rc, ds_out and ds_err.
 ds_run() {
     ds_rc=0
-    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL \
+    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT \
+        ${DS_CODEO_ROOT:+CODEO_ROOT="$DS_CODEO_ROOT"} \
         ${DS_SET:+"$DS_SET"} \
         PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="${DS_GITCONFIG:-$ds_dir/gitconfig}" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
-        bash "${DS_REPO:-$ds_dir/repo}/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
+        bash "${DS_REPO:-$ds_dir/codeo-home}/.devcontainer/scripts/devcontainer-start.sh" > "$ds_dir/out" 2> "$ds_dir/err" || ds_rc=$?
     ds_out=$(cat "$ds_dir/out")
     ds_err=$(cat "$ds_dir/err")
 }
 
 # ds_todos <pattern>: how many TODO lines on stderr match the pattern.
 ds_todos() { local n; n=$(grep -c "devcontainer-start: TODO.*$1" <<<"$ds_err" || true); echo "$n"; }
+
+# ds_lock_stub: a stub plugin root at $ds_dir/plugin (set as DS_CODEO_ROOT) whose scripts/lock.sh logs its
+# arguments to $ds_dir/lock-calls and, on a branch other than main, writes .codeo/active for issue 55 and
+# prints the lock line. STUB_LOCK_OUT replaces that output and STUB_LOCK_RC is its exit status.
+ds_lock_stub() {
+    mkdir -p "$ds_dir/plugin/scripts"
+    cat > "$ds_dir/plugin/scripts/lock.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >> "$STUB_DIR/lock-calls"
+branch=$(git branch --show-current)
+if [[ -n ${STUB_LOCK_OUT:-} ]]; then
+    echo "$STUB_LOCK_OUT"
+elif [[ $branch != main ]]; then
+    printf 'issue:   55\nbranch:  %s\n' "$branch" > .codeo/active
+    echo "lock: took the lock for #55 on $branch"
+fi
+exit "${STUB_LOCK_RC:-0}"
+STUB
+    : > "$ds_dir/lock-calls"
+    DS_CODEO_ROOT="$ds_dir/plugin"
+}
+ds_lock_calls() { wc -l < "$ds_dir/lock-calls" | tr -d ' '; }
+# ds_branch <name>: put the scratch clone on a new branch.
+ds_branch() { git -C "$ds_dir/codeo-home" checkout -q -b "$1"; }
+# ds_lock_ready: ds_run with everything else in order, so only lock and folder TODOs can appear.
+ds_lock_ready() { ds_identity; STUB_GH_RC=0 STUB_GH_OUT="'project'" STUB_CLAUDE_RC=0 ds_run; }
+
+start_takes_the_lock_on_an_issue_branch() {
+    local n
+    ds_setup lock || return 0
+    ds_lock_stub; ds_branch feat/x
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(ds_lock_calls) == 1 ]] || fail "lock.sh was not called once: $(cat "$ds_dir/lock-calls")"
+    [[ $(cat "$ds_dir/lock-calls") == 'take container' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
+    grep -qxF 'lock: took the lock for #55 on feat/x' <<<"$ds_out" || fail "lock line not printed verbatim: $ds_out"
+    grep -q '^issue: *55' "$ds_dir/codeo-home/.codeo/active" || fail "no lock written"
+}
+
+start_takes_no_lock_on_the_base_branch() {
+    ds_setup lockbase || return 0
+    ds_lock_stub
+    ds_lock_ready
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called on the base branch"
+    [[ ! -e $ds_dir/codeo-home/.codeo/active ]] || fail "a lock was written on the base branch"
+}
+
+start_rerun_with_a_lock_does_not_take_another() {
+    ds_setup lockrerun || return 0
+    ds_lock_stub; ds_branch feat/x
+    printf 'issue:   55\nbranch:  feat/x\n' > "$ds_dir/codeo-home/.codeo/active"
+    mv "$ds_dir/codeo-home" "$ds_dir/codeo-55"
+    DS_REPO="$ds_dir/codeo-55" ds_lock_ready
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called although a lock is held"
+    [[ -z $ds_err ]] || fail "stderr is not empty: $ds_err"
+}
+
+start_detached_head_is_a_todo() {
+    local n
+    ds_setup lockdetached || return 0
+    ds_lock_stub
+    git -C "$ds_dir/codeo-home" -c user.name=T -c user.email=t@example.com commit -q --allow-empty -m c || { fail 'commit failed'; return 0; }
+    git -C "$ds_dir/codeo-home" checkout -q --detach
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc"
+    n=$(ds_todos 'detached'); ((n == 1)) || fail "wanted one detached-HEAD TODO, got $n: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called on a detached HEAD"
+}
+
+start_lock_todo_lines_become_todos() {
+    local n
+    ds_setup locktodo || return 0
+    ds_lock_stub; ds_branch feat/x
+    STUB_LOCK_OUT='lock: TODO — no single init.md names branch feat/x (found 0)' ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos 'no single init.md names branch feat/x (found 0)'); ((n == 1)) || fail "wanted one lock TODO, got $n: $ds_err"
+    ! grep -q 'lock: TODO' <<<"$ds_out" || fail "the TODO line was also printed: $ds_out"
+}
+
+start_lock_crash_is_a_todo() {
+    local n
+    ds_setup lockcrash || return 0
+    ds_lock_stub; ds_branch feat/x
+    STUB_LOCK_RC=3 STUB_LOCK_OUT='boom' ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos 'lock.sh failed (exit 3)'); ((n == 1)) || fail "wanted one crash TODO, got $n: $ds_err"
+}
+
+start_without_codeo_installed_is_a_todo() {
+    local n
+    ds_setup locknone || return 0
+    ds_branch feat/x
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos 'codeo is not installed'); ((n == 1)) || fail "wanted one not-installed TODO, got $n: $ds_err"
+}
+
+start_reports_a_wrong_folder() {
+    local n
+    ds_setup folder || return 0
+    mv "$ds_dir/codeo-home" "$ds_dir/scratch"
+    DS_REPO="$ds_dir/scratch" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos "'codeo-home'"); ((n == 1)) || fail "wanted one wrong-folder TODO, got $n: $ds_err"
+    printf '#!/usr/bin/env bash\necho "folder-check: nope" >&2\nexit 1\n' > "$ds_dir/scratch/.devcontainer/scripts/folder-check.sh"
+    DS_REPO="$ds_dir/scratch" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos 'the folder check failed'); ((n == 1)) || fail "wanted one failed-check TODO, got $n: $ds_err"
+}
 
 start_todo_when_nothing_is_set_up() {
     local n list want got
@@ -500,7 +619,7 @@ ds_mountinfo() {
     CODEO_MOUNTINFO=$f
 }
 
-ds_on_volume() { ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo"; }
+ds_on_volume() { ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-home"; }
 
 ds_sudo_calls() { grep -c '^sudo' "$ds_dir/calls" || true; }
 ds_safe_dir_set() { git config --file "$ds_dir/gitconfig" --get-all safe.directory | grep -qxF -- "$1"; }
@@ -508,7 +627,7 @@ ds_safe_dir_set() { git config --file "$ds_dir/gitconfig" --get-all safe.directo
 start_chowns_the_clone_on_a_named_volume() {
     local mine other clone
     ds_setup volume || return 0
-    mine=$(id -u); other=$((mine + 1)); clone="$ds_dir/repo"
+    mine=$(id -u); other=$((mine + 1)); clone="$ds_dir/codeo-home"
     ds_mountinfo /var/lib/docker/volumes/v1/_data "$clone"
     STUB_STAT_UID=$other ds_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
@@ -521,22 +640,22 @@ start_never_chowns_a_bind_mount() {
     local mine other n
     ds_setup bind || return 0
     mine=$(id -u); other=$((mine + 1))
-    ds_mountinfo /home/u/src/codeo "$ds_dir/repo"
+    ds_mountinfo /home/u/src/codeo "$ds_dir/codeo-home"
     STUB_STAT_UID=$other ds_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     n=$(ds_sudo_calls); ((n == 0)) || fail "sudo ran for a bind mount: $(cat "$ds_dir/calls")"
     n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "wanted one bind-mount TODO, got $n: $ds_err"
-    ds_safe_dir_set "$ds_dir/repo" || fail 'safe.directory was not set'
+    ds_safe_dir_set "$ds_dir/codeo-home" || fail 'safe.directory was not set'
 }
 
 start_longest_mount_wins() {
     local mine other n
     ds_setup longest || return 0
     mine=$(id -u); other=$((mine + 1))
-    ds_mountinfo /home/u/src "$(dirname "$ds_dir")" /var/lib/docker/volumes/v1/_data "$ds_dir/repo"
+    ds_mountinfo /home/u/src "$(dirname "$ds_dir")" /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-home"
     STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 1)) || fail "volume under a bind mount: wanted one chown, got $n: $(cat "$ds_dir/calls")"
-    ds_mountinfo /var/lib/docker/volumes/v1/_data "$(dirname "$ds_dir")" /home/u/src/codeo "$ds_dir/repo"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$(dirname "$ds_dir")" /home/u/src/codeo "$ds_dir/codeo-home"
     : > "$ds_dir/calls"
     STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 0)) || fail "bind mount under a volume: wanted no chown, got $n: $(cat "$ds_dir/calls")"
@@ -545,22 +664,22 @@ start_longest_mount_wins() {
 start_own_clone_runs_nothing_privileged() {
     local n
     ds_setup own || return 0
-    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-home"
     STUB_STAT_UID=$(id -u) ds_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     n=$(ds_sudo_calls); ((n == 0)) || fail "sudo ran for a clone we own: $(cat "$ds_dir/calls")"
-    ds_safe_dir_set "$ds_dir/repo" || fail 'safe.directory was not set'
+    ds_safe_dir_set "$ds_dir/codeo-home" || fail 'safe.directory was not set'
 }
 
 start_last_mount_at_the_same_point_wins() {
     local mine other n
     ds_setup lastwins || return 0
     mine=$(id -u); other=$((mine + 1))
-    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo" /home/u/src/codeo "$ds_dir/repo"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-home" /home/u/src/codeo "$ds_dir/codeo-home"
     STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 0)) || fail "bind mount last: wanted no chown, got $n: $(cat "$ds_dir/calls")"
     n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "bind mount last: wanted one bind-mount TODO, got $n: $ds_err"
-    ds_mountinfo /home/u/src/codeo "$ds_dir/repo" /var/lib/docker/volumes/v1/_data "$ds_dir/repo"
+    ds_mountinfo /home/u/src/codeo "$ds_dir/codeo-home" /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-home"
     : > "$ds_dir/calls"
     STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 1)) || fail "volume last: wanted one chown, got $n: $(cat "$ds_dir/calls")"
@@ -570,10 +689,10 @@ start_mount_prefix_needs_a_path_boundary() {
     local mine other n
     ds_setup boundary || return 0
     mine=$(id -u); other=$((mine + 1))
-    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/repo2"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-home2"
     STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 0)) || fail "a volume at <clone>2 counted: $(cat "$ds_dir/calls")"
-    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/rep"
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir/codeo-hom"
     : > "$ds_dir/calls"
     STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 0)) || fail "a volume at a string prefix of the clone counted: $(cat "$ds_dir/calls")"
@@ -583,9 +702,9 @@ start_resolves_symlinks_before_matching() {
     local mine other n
     ds_setup symlink || return 0
     mine=$(id -u); other=$((mine + 1))
-    ln -s "$ds_dir/repo" "$ds_dir/link" || { fail 'could not make the symlink'; return 0; }
-    # The logical path $ds_dir/link sits under the volume; the physical path $ds_dir/repo is a bind mount.
-    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir" /home/u/src/codeo "$ds_dir/repo"
+    ln -s "$ds_dir/codeo-home" "$ds_dir/link" || { fail 'could not make the symlink'; return 0; }
+    # The logical path $ds_dir/link sits under the volume; the physical path $ds_dir/codeo-home is a bind mount.
+    ds_mountinfo /var/lib/docker/volumes/v1/_data "$ds_dir" /home/u/src/codeo "$ds_dir/codeo-home"
     DS_REPO="$ds_dir/link" STUB_STAT_UID=$other ds_run
     n=$(ds_sudo_calls); ((n == 0)) || fail "matched the logical path: $(cat "$ds_dir/calls")"
 }
@@ -622,7 +741,7 @@ start_trusts_the_clone_once() {
     ds_ready_run
     ds_ready_run
     got=$(git config --file "$ds_dir/gitconfig" --get-all safe.directory)
-    want=$'/elsewhere\n'$(cd "$ds_dir/repo" && pwd -P)
+    want=$'/elsewhere\n'$(cd "$ds_dir/codeo-home" && pwd -P)
     [[ "$got" == "$want" ]] || fail "safe.directory is not /elsewhere then the clone, once: $got"
 }
 
@@ -785,9 +904,9 @@ start_writes_the_title() {
     ds_setup title || return 0
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_ready_run
-    [[ $(jq -r '.["window.title"]' "$ds_dir/repo/.vscode/settings.json" 2>&1) == 'codeo [home]' ]] \
-        || fail "no home title: $(cat "$ds_dir/repo/.vscode/settings.json" 2>&1)"
-    printf '#!/usr/bin/env bash\nexit 1\n' > "$ds_dir/repo/.devcontainer/scripts/window-title.sh"
+    [[ $(jq -r '.["window.title"]' "$ds_dir/codeo-home/.vscode/settings.json" 2>&1) == 'codeo [home]' ]] \
+        || fail "no home title: $(cat "$ds_dir/codeo-home/.vscode/settings.json" 2>&1)"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$ds_dir/codeo-home/.devcontainer/scripts/window-title.sh"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     n=$(ds_todos 'window-title.sh'); ((n == 1)) || fail "wanted one TODO naming window-title.sh, got $n: $ds_err"
@@ -848,28 +967,28 @@ start_sets_file_mode_so_new_scripts_are_executable() {
     ds_setup filemode || return 0
     ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
-    git -C "$ds_dir/repo" config core.fileMode false
+    git -C "$ds_dir/codeo-home" config core.fileMode false
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
-    [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true after the start script'
+    [[ $(git -C "$ds_dir/codeo-home" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true after the start script'
     grep -q 'core.fileMode' <<<"$ds_out" || fail "stdout does not mention core.fileMode: $ds_out"
-    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
-    printf '#!/bin/sh\n' > "$ds_dir/repo/new.sh" && chmod +x "$ds_dir/repo/new.sh" && git -C "$ds_dir/repo" add new.sh
-    [[ $(git -C "$ds_dir/repo" ls-files -s new.sh) == 100755* ]] || fail "new.sh was not staged as 100755: $(git -C "$ds_dir/repo" ls-files -s new.sh)"
+    ! compgen -G "$ds_dir/codeo-home/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
+    printf '#!/bin/sh\n' > "$ds_dir/codeo-home/new.sh" && chmod +x "$ds_dir/codeo-home/new.sh" && git -C "$ds_dir/codeo-home" add new.sh
+    [[ $(git -C "$ds_dir/codeo-home" ls-files -s new.sh) == 100755* ]] || fail "new.sh was not staged as 100755: $(git -C "$ds_dir/codeo-home" ls-files -s new.sh)"
 }
 
 start_leaves_file_mode_alone_when_it_is_fine() {
     local before
     ds_setup filemode-fine || return 0
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
-    before=$(git -C "$ds_dir/repo" config --list --local)
+    before=$(git -C "$ds_dir/codeo-home" config --list --local)
     ds_ready_run
-    [[ $(git -C "$ds_dir/repo" config --list --local) == "$before" ]] || fail 'the local git config changed although core.fileMode was fine'
+    [[ $(git -C "$ds_dir/codeo-home" config --list --local) == "$before" ]] || fail 'the local git config changed although core.fileMode was fine'
     ! grep -q 'core.fileMode' <<<"$ds_out$ds_err" || fail "output mentions core.fileMode: $ds_out $ds_err"
-    git -C "$ds_dir/repo" config --unset core.filemode
-    before=$(git -C "$ds_dir/repo" config --list --local)
+    git -C "$ds_dir/codeo-home" config --unset core.filemode
+    before=$(git -C "$ds_dir/codeo-home" config --list --local)
     ds_ready_run
-    [[ $(git -C "$ds_dir/repo" config --list --local) == "$before" ]] || fail 'the local git config changed with core.fileMode unset'
+    [[ $(git -C "$ds_dir/codeo-home" config --list --local) == "$before" ]] || fail 'the local git config changed with core.fileMode unset'
     ! grep -q 'core.fileMode' <<<"$ds_out$ds_err" || fail "unset: output mentions core.fileMode: $ds_out $ds_err"
 }
 
@@ -878,14 +997,14 @@ start_file_mode_that_cannot_stick_is_a_todo() {
     ds_setup filemode-stuck || return 0
     ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
-    git -C "$ds_dir/repo" config core.fileMode false
+    git -C "$ds_dir/codeo-home" config core.fileMode false
     printf '#!/usr/bin/env bash\nexit 0\n' > "$ds_dir/bin/chmod"
     chmod +x "$ds_dir/bin/chmod"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
-    [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed although the executable bit cannot stick'
+    [[ $(git -C "$ds_dir/codeo-home" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed although the executable bit cannot stick'
     n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
-    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
+    ! compgen -G "$ds_dir/codeo-home/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
 }
 
 start_file_mode_that_cannot_clear_is_a_todo() {
@@ -893,7 +1012,7 @@ start_file_mode_that_cannot_clear_is_a_todo() {
     ds_setup filemode-sticky || return 0
     ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
-    git -C "$ds_dir/repo" config core.fileMode false
+    git -C "$ds_dir/codeo-home" config core.fileMode false
     cat > "$ds_dir/bin/chmod" <<'STUB'
 #!/usr/bin/env bash
 exec /usr/bin/chmod u+x -- "${@: -1}"
@@ -901,15 +1020,15 @@ STUB
     chmod +x "$ds_dir/bin/chmod"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
-    [[ $(git -C "$ds_dir/repo" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed although the executable bit cannot be cleared'
+    [[ $(git -C "$ds_dir/codeo-home" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed although the executable bit cannot be cleared'
     n=$(ds_todos 'update-index --chmod'); ((n == 1)) || fail "wanted one TODO naming update-index --chmod, got $n: $ds_err"
-    ! compgen -G "$ds_dir/repo/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
+    ! compgen -G "$ds_dir/codeo-home/.git/filemode.*" >/dev/null || fail 'a filemode probe file was left in the git dir'
 }
 
 # ds_modes_repo: commit everything in the scratch repo (bin/run.sh at 100755, data.txt at 100644), turn core.fileMode
 # off, then flip both modes on disk.
 ds_modes_repo() {
-    local r="$ds_dir/repo"
+    local r="$ds_dir/codeo-home"
     mkdir -p "$r/bin" || return 1
     printf '#!/bin/sh\n' > "$r/bin/run.sh" && chmod 755 "$r/bin/run.sh" || return 1
     printf 'data\n' > "$r/data.txt" && chmod 644 "$r/data.txt" || return 1
@@ -924,7 +1043,7 @@ start_restores_tracked_modes_before_turning_file_mode_on() {
     ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
-    r="$ds_dir/repo"
+    r="$ds_dir/codeo-home"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(git -C "$r" config --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true'
@@ -939,7 +1058,7 @@ start_keeps_an_executable_bit_the_index_does_not_record() {
     ds_setup keeps-exec || return 0
     ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
-    r="$ds_dir/repo"
+    r="$ds_dir/codeo-home"
     { printf "#!/bin/sh\n" > "$r/tool.sh"; chmod 644 "$r/tool.sh"; } || { fail "could not build the scratch repo"; return 0; }
     { git -C "$r" add -A; git -C "$r" -c user.name=Dev -c user.email=dev@example.com commit -q -m base; } || { fail "could not commit"; return 0; }
     chmod +x "$r/tool.sh"
@@ -958,7 +1077,7 @@ start_keeps_file_mode_off_when_the_mode_listing_fails() {
     ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
-    r="$ds_dir/repo"
+    r="$ds_dir/codeo-home"
     real_git=$(command -v git)
     cat > "$ds_dir/bin/git" <<STUB
 #!/usr/bin/env bash
@@ -982,7 +1101,7 @@ start_keeps_file_mode_off_when_a_mode_cannot_be_restored() {
     ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
-    r="$ds_dir/repo"
+    r="$ds_dir/codeo-home"
     cat > "$ds_dir/bin/chmod" <<'STUB'
 #!/usr/bin/env bash
 case "$*" in
@@ -1005,7 +1124,7 @@ start_ignores_content_edits_when_restoring_modes() {
     ds_on_volume
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
-    r="$ds_dir/repo"
+    r="$ds_dir/codeo-home"
     if ! { printf 'edited\n' > "$r/data.txt" && chmod 644 "$r/data.txt"; }; then fail 'could not edit data.txt'; return 0; fi
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
@@ -1019,8 +1138,8 @@ start_leaves_a_bind_mounted_clone_alone() {
     ds_setup bind-modes || return 0
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
-    r="$ds_dir/repo"
-    ds_mountinfo /home/u/src/codeo "$ds_dir/repo"
+    r="$ds_dir/codeo-home"
+    ds_mountinfo /home/u/src/codeo "$ds_dir/codeo-home"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was changed on a clone that is not on a volume'
@@ -1042,6 +1161,8 @@ wt_setup() {
     git -C "$wt_dir" init -q || { fail 'git init failed'; return 1; }
     cp "$repo/.devcontainer/scripts/window-title.sh" "$wt_dir/.devcontainer/scripts/window-title.sh" \
         || { fail 'window-title.sh is missing'; return 1; }
+    cp "$repo/.devcontainer/scripts/container-name.sh" "$wt_dir/.devcontainer/scripts/container-name.sh" \
+        || { fail 'container-name.sh is missing'; return 1; }
     echo '{"codename":"codeo"}' > "$wt_dir/.codeo/config.json"
     git -C "$wt_dir" add -A
     git -C "$wt_dir" -c user.name=Dev -c user.email=dev@example.com commit -q -m fixture \
@@ -1535,6 +1656,14 @@ cases=(
     plugins_offline_keeps_codeo
     plugins_no_pin_fails
     plugins_large_plugin_list_does_not_break_the_pipe
+    start_takes_the_lock_on_an_issue_branch
+    start_takes_no_lock_on_the_base_branch
+    start_rerun_with_a_lock_does_not_take_another
+    start_detached_head_is_a_todo
+    start_lock_todo_lines_become_todos
+    start_lock_crash_is_a_todo
+    start_without_codeo_installed_is_a_todo
+    start_reports_a_wrong_folder
     start_todo_when_nothing_is_set_up
     start_ready_when_everything_is_set_up
     start_project_scope_missing_is_a_todo

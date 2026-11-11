@@ -20,7 +20,8 @@
         "skills/**",
         "docs/**",
         "tests/**",
-        ".devcontainer/**"
+        ".devcontainer/**",
+        ".codeo/overlays/**"
       ],
       "build": "true",
       "test": "bash tests/run.sh",

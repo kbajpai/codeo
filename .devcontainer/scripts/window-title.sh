@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Names the VS Code window after the clone's state: "<codename> [home]" when no workflow holds the
-# clone, "<codename> [#<N>]" while .codeo/active holds issue N (the digits after "issue:", with or without
-# spaces, tabs or "#").
-# The codename is .codeo/config.json's, else the clone directory's name. Keeps .vscode/settings.json
-# out of git status through the clone's info/exclude first, then merges window.title into it (every
-# other key stays). Safe to re-run: a symlinked settings.json is written through (a dangling one is
-# created at its target), its mode is kept, and a title already current is not rewritten.
+# clone, "<codename> [#<N>]" while .codeo/active holds issue N. The name comes from container-name.sh
+# (the codename is .codeo/config.json's, else the clone directory's name).
+# Keeps .vscode/settings.json out of git status through the clone's info/exclude first, then merges
+# window.title into it (every other key stays). Safe to re-run: a symlinked settings.json is written
+# through (a dangling one is created at its target), its mode is kept, and a title already current is
+# not rewritten.
 # Prints "window-title: <title>" on stdout. Every failure (not a repository, an unwritable
 # info/exclude or .vscode, a settings.json that is not valid JSON, JSONC with comments included, or
 # not a JSON object, which is left untouched) exits 1 with one "window-title: ..." line on stderr.
@@ -19,12 +19,8 @@ die() { echo "window-title: $*" >&2; exit 1; }
 root=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null) \
     || die "not inside a git repository"
 
-codename=$(jq -r '.codename // empty' "$root/.codeo/config.json" 2>/dev/null || true)
-[[ -n $codename ]] || codename=$(basename "$root")
-issue=""
-[[ ! -f $root/.codeo/active ]] \
-    || issue=$(sed -n 's/^issue:[[:space:]]*#*\([0-9]\{1,\}\).*/\1/p' "$root/.codeo/active" | head -n 1) || true
-if [[ -n $issue ]]; then title="$codename [#$issue]"; else title="$codename [home]"; fi
+title=$(bash "$(dirname "${BASH_SOURCE[0]}")/container-name.sh" "$root" 2>&1) \
+    || die "could not name the container: ${title#container-name: }"
 
 if [[ ${1:-} == --print ]]; then
     echo "$title"
