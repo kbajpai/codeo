@@ -49,3 +49,4 @@
 | `doc:issue-bodies:private-name-55` | #55's GitHub body still names the private reference project | engineer will edit | 2026-11-11 |
 | `issue:57` | Filed 2026-11-11, no branch, board Status unset | not yet decided | 2026-11-11 |
 | `issue:58` | Filed 2026-11-11, no branch, board Status unset | ready | 2026-11-11 |
+| `issue:59` | Throwaway target for #58 host checks; filed 2026-11-11, no branch, board Status unset | ready | 2026-11-11 |
