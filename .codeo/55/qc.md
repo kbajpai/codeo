@@ -32,7 +32,7 @@ Round 1 is in progress and stopped at step 10; Q1 and Q3 are answered, Q2 (the h
 - *Record them `untestable here — host check`* and let the verdict rest on the rest; the host checks happen before or after the merge, your call.
 - *Hold the verdict* until the host checks are done.
 
-**Answer:**
+**Answer:** untestable here — host check; the verdict rests on the rest, and the host checks happen before or after the merge (engineer, 2026-11-11)
 
 ### Q3 — Do the non-blocking findings F2-F6 ride along if this goes back to `/codeo:implement` for Q1?
 
