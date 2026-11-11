@@ -1,8 +1,8 @@
-# New issue — throwaway target for #58's host checks
+# Issue #59 — issue
 
 | | |
 |---|---|
-| Issue | _not filed yet_ |
+| Issue | https://github.com/kbajpai/codeo/issues/59 |
 | Branch | _none — this skill cuts none_ |
 | Updated | 2026-11-11 |
 
