@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is in progress and stopped at step 10 with Q1-Q3 open; no verdict is written. The build and the suite ran, the independent review is back, and the findings are classified under `## Notes`.
+Round 1 is in progress and stopped at step 10; Q1 and Q3 are answered, Q2 (the host checks) is open and no verdict is written. The build and the suite ran, the independent review is back, and the findings are classified under `## Notes`.
 
 ## Questions
 
@@ -21,7 +21,7 @@ Round 1 is in progress and stopped at step 10 with Q1-Q3 open; no verdict is wri
 - *You reword them yourself* before the next `qc` round.
 - *Exempt `.codeo/` dossiers and `docs/plans/` in `tests/agnostic.test.sh`* — a change to a test that guards the public repo; a different issue's decision.
 
-**Answer:**
+**Answer:** reworded by the engineer in f6a84f5; `bash tests/run.sh` now passes (engineer, 2026-11-11)
 
 ### Q2 — The criteria that need Docker (1-5, 7, 8): how do you want them recorded?
 
@@ -40,7 +40,7 @@ Round 1 is in progress and stopped at step 10 with Q1-Q3 open; no verdict is wri
 
 **Options:** *blocking only* · *blocking and F2, F5, F6, F7* (implement's, small) · *all of F2-F7, F3 and F4 meaning a plan amendment you approve* · *no send-back: Q1 is settled another way*.
 
-**Answer:**
+**Answer:** no send-back; F2-F7 are recorded as non-blocking (engineer, 2026-11-11)
 
 ## Notes
 
