@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 done: back to `/codeo:implement` for one blocking finding (F7). No open question.
+Round 3 done: clear, forward to `/codeo:close`, with F1 and F8 carried as non-blocking. No open question.
 
 ## Questions
 
@@ -99,7 +99,48 @@ No issue filed for this pass.
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-13
+
+**Commands and output**
+- `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`. `overlap.sh 58` and `overlap.sh --outside 58`: nothing.
+- `scope.sh origin/main HEAD`: `suite.shell=true` (the `.codeo/58/*` files are unclassified paths). No `deploy=` line: no shared environment.
+- Build (`shell`): `true`, exit 0. Test (`bash tests/run.sh`): `all cases passed`, exit 0. No code changed; regression run only.
+- Overlays `qc/invariants-extra` and `qc/wiki-rules`: exit 3 (none). No invariants file, no wiki module, no environment.
+- Range reviewed: `b92f9e0..1621cad` (six files, 414 lines, all dossier or plan text).
+- Checks of the round 2 fixes: `grep -c 'is still open'` on comment 6839269538 printed `0`; `grep -c 'own cleanup criterion'` on comment 6842434127 printed `0`.
+
+**Acceptance criteria**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| 1 init from home pushes branch, assigns, moves card, no `.codeo/active`, stays on `main` | untestable — #59's timeline shows an `assigned` event and a card status change 7 and 11 seconds after the init commit `b4e75e5`, consistent with init but not proof; the push (branch since deleted), no `.codeo/active` and on-`main` are engineer-attested | comments 6839269538 and 6842434127 |
+| 2 clone instructions printed, no `claude --cloud` | untestable — engineer-attested, output not kept | comment 6839269538 |
+| 3 init inside an issue container stops | untestable — engineer-attested, output not kept | comment 6839269538 |
+| 4 `lock:` line and `.codeo/active` | untestable — engineer-attested, output not kept | comment 6839269538 |
+| 5 container names, titles, home takes no lock | untestable — engineer-attested, output not kept | comment 6839269538 |
+| 7 odd folder names start or give a stated reason | untestable — engineer-attested, no per-name result kept | comment 6839269538 |
+| 8 both containers at once, locks untouched | untestable — engineer-attested, output not kept | comment 6839269538 |
+| Any failing criterion filed as its own issue | untestable — rests on the attestation that none failed | comment 6839269538 |
+
+A clear verdict below means no blocking finding. It does not mean these criteria are proved: every one is `untestable`, and the engineer accepted that at plan Q1 = A.
+
+**Documentation check.** The change moves no page and the plan says so; no page under `docs/` other than the new plan file is touched.
+
+**Independent review (opus).** Quoted in plain text: assessment "Ready to merge? No". It re-ran the commands in comment 6842434127 and its timeline table, and confirmed that comment 6839269538 was created at 23:43:34Z, after #59 closed and its card was Done, so the round 3 correction is true. Its Critical finding is the one carried below as F1. It set aside: whether the checks held on the host, the choice of attestation (plan Q1 = A), and process metadata.
+
+**Findings**
+- **F2 (blocking in round 1) — fixed by `66dc007`.** Comment 6842434127 no longer says init "put it on the board".
+- **F7 (blocking in round 2) — fixed by `1621cad`.** Comment 6839269538 no longer says the #59 cleanup "is still open", and 6842434127 no longer credits #59's criteria with the card. The reviewer found both comments honest and consistent now.
+- **F1 (carried, non-blocking) — the central requirement is unmet, and #58 reads as satisfied.** Engineer's decision, plan Q1 = A. No output exists for criteria 2, 3, 4, 5, 7 and 8, and criterion 1 has only indirect support. The issue body shows all 8 boxes ticked, and so is runbook step 18, although no output was attached; the runbook was last edited about 23 hours before any record comment existed. The reviewer rates this Critical. I keep it non-blocking only because the engineer made the call knowingly and the record discloses it; the engineer can overrule that. Before `/codeo:close`, either re-run criteria 4, 5 and 8 with captured output (plan Q1 option B), or state in `close.md` an override that qualifies the ticks, so a reader of #58, or a later #51 regression check, does not take them as proved.
+- **F8 (carried, non-blocking, `/codeo:plan`'s dossier) — `.codeo/58/plan.md` has untrue lines that will reach `main`.** Line 15 repeats the overclaim that init "pushed a branch and assigned the issue". Lines 7, 11, 45 and 59 say `Updated 2026-11-12`, that the draft is `plan-draft.md` "(not committed)", that the plan file is `2026-11-12-…`, and that the plan is "(unstaged, …)". The plan is committed as `c1cee25` and the file is dated 2026-11-13. This skill does not edit it; I recommend fixing these by hand or with `/codeo:plan` before `/codeo:close`.
+- **F10 (non-blocking, minor).** The plan file says "two comments" where there are three. Its Review Focus asked for a command that could no longer be run (F5, carried). Criterion 7 and 8 have no per-item detail (F6, carried); the reviewer notes that "all six names refused by Docker" would have been a cheap line to record. Per the reviewer, #59's own two boxes are unticked, so #59 does not corroborate itself; this changes no claim in #58's record. The runbook's ticks for steps 9-17 sit in an 11-minute window after the init commit, which is no evidence of a problem but lowers the weight an attestation can bear.
+
+No issue filed for this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-13 — qc round 1: build and suites pass; back to implement for F2 · cost: 4m · opus-5-5 185k in + 1.2M cached / 8k out · sonnet-5-5 130k in + 29k cached / 1k out
 - 2026-11-13 — qc round 2: build and suites pass; F2 fixed; back to implement for F7 · cost: 3m · opus-5-5 233k in + 668k cached / 10k out · sonnet-5-5 21k in + 183k cached / 1k out
+- 2026-11-13 — qc round 3: build and suites pass; F2 and F7 fixed; clear · cost: 3m · opus-5-5 277k in + 806k cached / 8k out · sonnet-5-5 21k in + 225k cached / 4k out
