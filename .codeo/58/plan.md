@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Stopped on Q1 and Q2. Nothing is drafted yet.
+Q1 and Q2 answered (both A). Draft plan written to `.codeo/58/plan-draft.md` (not committed), awaiting review.
 
 What exploration found, which shapes the questions:
 - **The checks were run, and only an attestation records them.** The runbook comment on #58 (`issuecomment-6808714302`) has all 19 steps ticked. A second comment (`issuecomment-6839269538`) records criteria 1, 2, 3, 4, 5, 7 and 8 as "held" on the engineer's word, and says the terminal output was not kept. The issue's requirement is "for each criterion, the command run and what it printed".
@@ -35,6 +35,7 @@ I recommend A if #51 is not about to start, and B if it is: the lock and name ou
 **Options:** A (attestation, recorded as such) · B (re-run 4, 5 and 8 with output) · C (re-run everything) · something else.
 
 **Answer:**
+A — attestation, recorded as such (engineer, 2026-11-13)
 
 ### Q2 — Does this get a plan file under `docs/plans/`, or does the dossier carry it?
 
@@ -45,6 +46,7 @@ I recommend A if #51 is not about to start, and B if it is: the lock and name ou
 - **B. No plan file.** You close #58 by hand and the workflow is stashed or abandoned with `/codeo:close`. Faster, and it leaves the branch unmerged, so the dossier never reaches `main`.
 
 **Answer:**
+A — a short plan file (engineer, 2026-11-13, after the recommendation)
 
 ## Notes
 
