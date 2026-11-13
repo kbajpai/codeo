@@ -52,6 +52,14 @@ A — a short plan file (engineer, 2026-11-13, after the recommendation)
 
 `superpowers:brainstorming` ran before these questions. The `engineering` plugin is not installed; steps 6 and 7 do not apply to a recording-only issue.
 
+### Footprint
+
+```
+files:      docs/plans/2026-11-13-record-host-checks-55.md, .codeo/58/**
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
