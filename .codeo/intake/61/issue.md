@@ -1,8 +1,8 @@
-# Issue — release from `main`
+# Issue #61 — issue
 
 | | |
 |---|---|
-| Issue | not yet filed |
+| Issue | https://github.com/kbajpai/codeo/issues/61 |
 | Updated | 2026-11-13 |
 
 ## Where this stands
@@ -106,3 +106,4 @@ The latest release is v1.0.3 (2026-11-07). Ten PRs have merged to `main` since (
 2026-11-13 — dossier opened; Q1-Q4 raised
 2026-11-13 — Q1-Q4 answered; draft recorded, awaiting approval
 2026-11-13 — scope widened: this project must run the new release; draft updated, awaiting approval
+2026-11-13 — filed as #61
