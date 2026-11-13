@@ -66,7 +66,7 @@ Issue Type: none (repository has none). Labels: none (none exist).
 
 ### Description
 
-Cut release v1.0.4 from `main`: version bump and changelog PR, a clean-clone test of the merged commit, the `v1.0.4` tag, and a GitHub Release for it. Then move this project's own plugin pin to the new tag.
+Cut release v1.0.4 from `main`: version bump and changelog PR, a clean-clone test of the merged commit, the `v1.0.4` tag, and a GitHub Release for it. Then make this project's own codeo installation run it: move the plugin pin to the new tag and update the installed plugin.
 
 ### Motivation / Context
 
@@ -79,6 +79,7 @@ The latest release is v1.0.3 (2026-11-07). Ten PRs have merged to `main` since (
 - The merged commit the tag names is tested from a clean clone.
 - A GitHub Release exists for the tag, as for v1.0.0, v1.0.2 and v1.0.3.
 - Pinning this project to the new tag is a second pull request, because the tag must exist first.
+- This project's dev container and Claude Code sessions run the installed v1.0.4, not the cached v1.0.3: the start script installs at the pin, and the session sees the new plugin version after a restart.
 - `main` is released as it stands; open issues (#40, #41, #43, #51, #52, #54, #57) ship in a later version.
 
 ### Acceptance Criteria
@@ -88,6 +89,7 @@ The latest release is v1.0.3 (2026-11-07). Ten PRs have merged to `main` since (
 - [ ] `git ls-remote --tags origin` lists `v1.0.4` pointing at that merged commit.
 - [ ] `gh release view v1.0.4` shows a release for the tag.
 - [ ] `.codeo/config.json` `plugin.ref` is `v1.0.4`, merged through its own pull request.
+- [ ] After a dev container rebuild or restart, the installed codeo plugin reports v1.0.4 and `bash "$CODEO_ROOT/scripts/board.sh" set <N> ready` (lowercase) is accepted instead of failing with `no option 'ready'`.
 
 ### Out of Scope
 
@@ -103,3 +105,4 @@ The latest release is v1.0.3 (2026-11-07). Ten PRs have merged to `main` since (
 
 2026-11-13 — dossier opened; Q1-Q4 raised
 2026-11-13 — Q1-Q4 answered; draft recorded, awaiting approval
+2026-11-13 — scope widened: this project must run the new release; draft updated, awaiting approval
