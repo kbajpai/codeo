@@ -52,6 +52,21 @@ A — a short plan file (engineer, 2026-11-13, after the recommendation)
 
 `superpowers:brainstorming` ran before these questions. The `engineering` plugin is not installed; steps 6 and 7 do not apply to a recording-only issue.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-13-record-host-checks-55.md` (unstaged, approved 2026-11-13) |
+| Shape | Plan under `docs/plans/`; no reference doc, since nothing is a standing decision |
+
+**Decisions.** Results are recorded in the issue, as intake Q1 settled. Evidence level is attestation, recorded as such (Q1 = A); the plan has a short file (Q2 = A). The plan has two tasks: confirm the attestation comment on #58, and post a comment of what GitHub still shows for criterion 1, from commands run in that task.
+
+**Rejected.** Re-running criteria 4, 5 and 8 with captured output (Q1 B) and re-running everything (Q1 C). No plan file and a hand-closed issue (Q2 B), which would leave the dossier off `main`.
+
+**Documentation pages the plan changes:** none. No code, test, script or `.devcontainer/` change. No criterion failed, so no follow-up issue is filed. No `/codeo:issue` was called. The `engineering` plugin was not installed, so steps 6 and 7 did not apply.
+
+**Risk for `/codeo:qc`.** Criteria 1-5, 7 and 8 rest on attestation, so it may mark them `untestable`; the way past it is an override the engineer states at `/codeo:close`.
+
 ### Footprint
 
 ```
@@ -60,10 +75,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-12 — Q1-Q2 raised · cost: 0m · fable-5-2 80k in + 218k cached / 2k out
+- 2026-11-13 — planned: docs/plans/2026-11-13-record-host-checks-55.md · cost: 191m · fable-5-2 83k in + 431k cached / 5k out · sonnet-5-5 92k in + 820k cached / 5k out; engineering plugin unavailable, steps 6-7 skipped
