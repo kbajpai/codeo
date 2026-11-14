@@ -841,6 +841,18 @@ start_does_not_wait_when_the_volume_has_the_identity() {
     [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' ]] || fail "stdout does not end with ready: $ds_out"
 }
 
+start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero() {
+    local limit
+    ds_setup badwait || return 0
+    for limit in abc 5s 1.5 08; do
+        : > "$ds_dir/gitconfig"
+        DS_GITCONFIG_WAIT=$limit DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+        ((ds_rc == 0)) || fail "CODEO_GITCONFIG_WAIT=$limit: exit $ds_rc, wanted 0: $ds_err"
+        [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "CODEO_GITCONFIG_WAIT=$limit: the identity was not seeded: $(ds_global user.name)"
+        if grep -qE 'unbound variable|syntax error|too great' <<<"$ds_err"; then fail "CODEO_GITCONFIG_WAIT=$limit: the limit was evaluated as arithmetic: $ds_err"; fi
+    done
+}
+
 start_setup_git_failure_is_a_todo() {
     local n
     ds_setup setupgit || return 0
@@ -1806,6 +1818,7 @@ cases=(
     start_malformed_host_gitconfig_falls_through
     start_waits_for_the_host_gitconfig_to_arrive
     start_does_not_wait_when_the_volume_has_the_identity
+    start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero
     start_setup_git_failure_is_a_todo
     start_trusts_the_clone_once
     start_reads_the_identity_from_the_global_config_file

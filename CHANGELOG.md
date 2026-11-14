@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1
+Shared state: unchanged from v1.0.6.
+Safe to bump mid-workflow: yes
+
+- The dev container's start script now seeds the git identity. For a `user.name` or `user.email` the `codeo-git` volume's config lacks, each on its own, it takes the value from the host's `~/.gitconfig` (which VS Code copies into the container) first and then from `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL`, and prints which key it set and from where, never the value. It never changes a value already in the volume and copies no other host setting. VS Code's copy can arrive after the script starts, so when a value is missing and the file is absent the script waits up to 10 seconds for it (`CODEO_GITCONFIG_WAIT`, where a value that is not a whole number counts as 10); a volume that already has the identity never waits. With no source the TODO stays, now naming the missing keys and the sources tried. An existing container needs no rebuild: run `bash .devcontainer/scripts/devcontainer-start.sh` in it to fill a missing identity (a restart does not run the script; creating or rebuilding a container does). Nothing in `scripts/`, `lib/`, `hooks/` or `skills/` changes (#51).
+
 ## v1.0.6 — 2026-11-14
 
 Config schema: 1
@@ -8,7 +16,6 @@ Safe to bump mid-workflow: yes
 
 - The dev container image is now built on `ubuntu:26.04` (Ubuntu 26.04 LTS) instead of `ubuntu:24.04`. The same tools are installed; bash, git, jq and shellcheck come from 26.04 (bash 5.3, git 2.53, jq 1.8.1, shellcheck 0.11) while `gh` and Claude Code come from their own sources, not 26.04's; the coreutils are the Rust implementation, `stat`, `readlink`, `install`, `chmod`, `chown`, `mv`, `mktemp` and `ls` among them; and the `dev` user at UID 1000 with passwordless sudo and the start scripts are unchanged; `tests/devcontainer.test.sh` pins the new tag. Rebuild an existing container once to get the new image. Nothing in `scripts/`, `lib/`, `hooks/` or `skills/` changes (#67).
 - Every closing block now names only a command that can run in the state its exit leaves. `docs/handoff.md` states the rule under *Closing block*. `/codeo:close` names `/codeo:close` while it keeps the lock, and `/codeo:close --stash` names itself for an interrupted stash (a failed board move gets the manual Ready repair before `/codeo:init`). `/codeo:init` after `lock: TODO` names a recovery and not `/codeo:plan`. `/codeo:issue` reads the new issue's board Status and names `/codeo:triage` before `/codeo:init #<N>` when it is not Ready. `/codeo:plan` marks the tasks the engineer runs on their own host (`Runs on: the engineer's host`) and writes their commands shell-neutral. `tests/closing-exits.test.sh` fails when an exit names the command that cannot run (#69).
-- The dev container's start script now seeds the git identity. For a `user.name` or `user.email` the `codeo-git` volume's config lacks, each on its own, it takes the value from the host's `~/.gitconfig` (which VS Code copies into the container) first and then from `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL`, and prints which key it set and from where, never the value. It never changes a value already in the volume and copies no other host setting. VS Code's copy can arrive after the script starts, so when a value is missing and the file is absent the script waits up to 10 seconds for it (`CODEO_GITCONFIG_WAIT`); a volume that already has the identity never waits. With no source the TODO stays, now naming the missing keys and the sources tried. An existing container needs no rebuild: run `bash .devcontainer/scripts/devcontainer-start.sh` in it to fill a missing identity (a restart does not run the script; creating or rebuilding a container does). Nothing in `scripts/`, `lib/`, `hooks/` or `skills/` changes (#51).
 
 ## v1.0.5 — 2026-11-14
 
