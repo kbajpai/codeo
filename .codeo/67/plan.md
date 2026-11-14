@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1 (host build, A) and Q2 (suite inside the image) answered. Plan drafted in .codeo/67/plan-draft.md and waiting for the engineer's approval.
+Plan approved and written to docs/plans/2026-11-14-ubuntu-2604-dev-container.md (left unstaged for your review).
 The change itself is small (the `FROM` line, two comments, one test case, the README and the
 changelog); criteria 2 and 3 are proved by the engineer on a Docker host in the plan's Task 3.
 Nothing is open.
@@ -81,6 +81,23 @@ released entry and stays.
 - No other workflow is in flight (`inflight.sh --except 67`), so there is no overlap to raise.
   No invariants document, shared environment, `wiki` module or exclusive resources are configured.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-14-ubuntu-2604-dev-container.md`, an executable plan under `docs/plans/` (no reference doc: the decision is a one-tag pin, already settled at intake).
+
+**Tasks:** (1) re-pin `tests/devcontainer.test.sh` to `ubuntu:26.04` and watch it fail, then move the Dockerfile's `FROM` and its two version comments; (2) `.devcontainer/README.md` *Rebuilding* paragraph and a `CHANGELOG.md` `## Unreleased` entry; (3) the engineer builds the image on a Docker host, checks the tools, the `dev` user, sudo and locale in it, and runs the whole `shell` suite inside it.
+
+**Decisions:**
+- Intake's open questions, resolved by reading the published `ubuntu:26.04` base layer and package index: `ubuntu` still holds UID 1000, so `userdel -r ubuntu` stays; every apt package exists under the same name; `gh`'s repository suite is `stable`. Only the `FROM` line and comments change.
+- Q1 = A: this container has no `docker` and CI does not build the image, so the engineer runs the build and checks on a host (Task 3); no CI job is added (`.github/workflows/ci.yml` is out of scope). Rejected: B (a CI job) and C (A plus a follow-up issue).
+- Q2 = yes: the suite also runs inside the image, because 26.04's default coreutils are the Rust rewrite and bash, jq, git and shellcheck are newer.
+- The test case is renamed `dockerfile_is_ubuntu_2604_with_the_tools`; the README names "the move to Ubuntu 26.04" and never the old number, so criterion 5 holds.
+- One pull request. No overlap with another workflow, no exclusive resource, no lease, no `Needs lease:` task.
+
+**Documentation pages the plan changes:** `.devcontainer/README.md` only. No page under `docs/` names the image's version.
+
+**Intake questions resolved here:** both (the `ubuntu` user; the apt package names). `init.md` is unchanged.
+
 ### Footprint
 
 ```
@@ -89,10 +106,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-14 — explored; intake's two open questions settled by evidence; Q1-Q2 raised · cost: 2m · fable-5-2 97k in + 589k cached / 5k out
+- 2026-11-14 — Q1-Q2 answered, plan approved and written: docs/plans/2026-11-14-ubuntu-2604-dev-container.md · cost: 7m · fable-5-2 105k in + 968k cached / 10k out · sonnet-5-5 121k in + 1.4M cached / 12k out (engineering:system-design and engineering:architecture not used: no new components and no technology choice open)
