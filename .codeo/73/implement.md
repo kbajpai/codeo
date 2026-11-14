@@ -10,7 +10,7 @@
 
 Task 1 is done and committed (`9bddbbc`): `docs/dev-environment-sbx-evaluation.md` has 28 rows (10 drivers, 18 duties), every one `cited` with a Docker URL, and trials T1-T12. `bash tests/run.sh` exits 0, no evidence cell is blank, and `.devcontainer/` and `skills/` are unchanged.
 
-Tasks 2-5 are the engineer's, on their own host, and are stopped on Q1 below: the docs show two install routes and the plan assumed one. After Q1 is answered, run the trials T1-T12 in `docs/dev-environment-sbx-evaluation.md` → `## Trials` in order, and paste each output (tokens and account names redacted) into the conversation. Tasks 6-7 follow.
+Q1 is answered (route A, Windows native) and T1 is run. Nothing is open. Next is the engineer's T2 (install `sbx`), then T3-T12 in `docs/dev-environment-sbx-evaluation.md` → `## Trials` in order, each output pasted into the conversation with tokens and account names redacted. Tasks 6-7 follow.
 
 ## Questions
 
@@ -23,8 +23,19 @@ Tasks 2-5 are the engineer's, on their own host, and are stopped on Q1 below: th
 - **C — run T1 first and decide from its output.** T1 is five read-only commands; paste them and I pick the route.
 
 **Answer:**
+C — run T1 first (given in the conversation, 2026-11-14). T1's output came back; the route it points to is A, Windows native (see Notes).
 
 ## Notes
+
+- **T1 output, as pasted** (WSL2 bash on the engineer's host, 2026-11-14; `cmd.exe` printed its UNC-path warning first, harmless):
+  ```
+  Microsoft Windows [Version 10.0.26300.9818]
+  Default Distribution: Ubuntu-24.04
+  Default Version: 2
+  Docker version 29.9.3, build 5457199
+  ```
+  `command -v sbx` and `lsmod | grep kvm` printed nothing: `sbx` is not installed, and the distribution has no `kvm` module loaded.
+- **Route chosen: A (Windows native).** The distribution is Ubuntu 24.04 (the version Docker's Linux route needs) but shows no KVM, so route B has no basis on this machine; Windows is build 26300 and Docker reaches the distribution at 29.9.3. Whether Windows Hypervisor Platform is enabled is not known from T1; T2 finds out. Row D5 and `## Host` in the page take these facts in Task 6.
 
 - The Docker pages did not say: whether WSL2 is supported (the one mention is a troubleshooting entry about `sbx run --clone` failing on a WSL filesystem over Git's dubious-ownership check), whether a Claude login survives `sbx rm`, how to install Claude plugins in a sandbox, git identity handling, and whether a clone keeps the executable bit. Those rows say `not documented`, and the trials are what settle them.
 - `--clone` follows whatever ref is checked out on the host and makes no branch, so a sandbox on an issue branch needs that branch checked out first (row U2).
@@ -36,4 +47,5 @@ _Pending — written at the hand-off._
 
 ## Log
 
+- 2026-11-14 — Q1 answered (C), T1 run, route A chosen · cost: unavailable until the hand-off
 - 2026-11-14 — Task 1 done, Q1 raised · cost: 13m · sonnet-5-5 122k in + 2.2M cached / 24k out
