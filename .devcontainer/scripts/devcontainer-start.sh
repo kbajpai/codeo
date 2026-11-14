@@ -243,6 +243,16 @@ fi
 # already in the volume config is never changed, a source counts only when it holds a non-empty value, and
 # nothing but these two keys is read from the host file. A seeded value is not printed.
 identity_missing() { [[ -z $(git config --global --get "$1" 2>/dev/null || true) ]]; }
+# VS Code copies the host ~/.gitconfig in alongside postCreateCommand, so it can land after this step starts: when a
+# value is missing and the file is not there yet, wait for it, once a second, for at most CODEO_GITCONFIG_WAIT seconds
+# (default 10). A volume that already holds the identity never waits.
+if identity_missing user.name || identity_missing user.email; then
+    waited=0
+    while [[ ! -e $HOME/.gitconfig ]] && ((waited < ${CODEO_GITCONFIG_WAIT:-10})); do
+        sleep 1
+        waited=$((waited + 1))
+    done
+fi
 for pair in user.name:GIT_AUTHOR_NAME user.email:GIT_AUTHOR_EMAIL; do
     key=${pair%%:*}
     var=${pair#*:}

@@ -819,6 +819,25 @@ start_malformed_host_gitconfig_falls_through() {
     [[ $(ds_global user.email) == 'grace@example.com' ]] || fail "user.email: $(ds_global user.email)"
 }
 
+start_waits_for_the_host_gitconfig_to_arrive() {
+    ds_setup waithost || return 0
+    ( sleep 1; git config --file "$ds_dir/home/.gitconfig" user.name "Ada O'Neil"; git config --file "$ds_dir/home/.gitconfig" user.email ada@example.com ) &
+    DS_GITCONFIG_WAIT=5 ds_ready_run
+    wait
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+    grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+}
+
+start_does_not_wait_when_the_volume_has_the_identity() {
+    local start=$SECONDS
+    ds_setup nowait || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    DS_GITCONFIG_WAIT=30 ds_ready_run
+    ((SECONDS - start < 5)) || fail "the run took $((SECONDS - start))s: it waited with the identity in place"
+    [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' ]] || fail "stdout does not end with ready: $ds_out"
+}
+
 start_setup_git_failure_is_a_todo() {
     local n
     ds_setup setupgit || return 0
@@ -1782,6 +1801,8 @@ cases=(
     start_copies_nothing_but_the_identity
     start_empty_host_value_falls_through_to_the_environment
     start_malformed_host_gitconfig_falls_through
+    start_waits_for_the_host_gitconfig_to_arrive
+    start_does_not_wait_when_the_volume_has_the_identity
     start_setup_git_failure_is_a_todo
     start_trusts_the_clone_once
     start_reads_the_identity_from_the_global_config_file
