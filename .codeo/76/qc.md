@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is checked and has no verdict yet: Q1 decides whether the trial's result stands, and the verdict waits for it. Build and suite pass; the comment on #76 matches the saved runs; two wording defects in `CHANGELOG.md` are recorded below and will be classified with the verdict.
+Round 1 is checked. Q1 is answered A; Q2 (the #57 overlap on `CHANGELOG.md`, new at this resume) is open, so the verdict waits for it.
 
 ## Questions
 
@@ -19,6 +19,14 @@ Round 1 is checked and has no verdict yet: Q1 decides whether the trial's result
 - **A — keep "exactly one Bash call" (what the plan approved at the gate said).** Both skills stay on `sonnet`; the verdict follows the existing changelog entry and comment, after the `CHANGELOG.md` wording fixes below. Strict; the miss is about how the template is read, not what is reported.
 - **B — "the script ran exactly once, with the right arguments" (what Q2 said).** Item 1 is re-scored from the saved streams, which needs no new runs: Haiku then passes all 24 runs' items. Both `model:` lines move to `haiku`, and the comment on #76 and the changelog are corrected to say so. This sends the change back to `/codeo:implement`.
 - **C — switch neither now, and file a follow-up** that tells `doctor` and `setup` to read the template with Read (or relaxes item 1) and re-runs the trial. Same result as A for this branch, plus an issue through `/codeo:issue`.
+
+**Answer:**
+A (answered in the conversation): keep "exactly one Bash call"; both skills stay on `sonnet`.
+
+### Q2 — #57 overlaps on `CHANGELOG.md`: proceed, sequence or re-scope?
+
+**Why it matters:** `overlap.sh 76` printed `57	CHANGELOG.md` and `57	glob:CHANGELOG.md` at this resume. #57 (`feat/dev-container-follow-ups-55`, assignee kbajpai, at `init`, no commits yet) lists `CHANGELOG.md` in its footprint and its plan's Q5 answered *proceed and coordinate* about #76 (`sequenced:  none — CHANGELOG.md overlaps #76`). Both add a bullet under `## Unreleased`; whichever merges second hits a one-hunk conflict in a file where each bullet is independent. This round is about to send #76 back to `/codeo:implement` to fix the sentence in its own bullet, so the file is touched again either way.
+**Options:** proceed and coordinate · sequence after #57 · re-scope (not available: criterion 4 requires the entry).
 
 **Answer:**
 
@@ -45,3 +53,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-14 — Q1 raised · cost: 4m · opus-5-5 241k in + 1.5M cached / 7k out · sonnet-5-5 27k in + 619k cached / 2k out
+- 2026-11-14 — Q1 answered A; Q2 raised (overlap with #57) · cost: 0m · sonnet-5-5 2k in + 662k cached / 2k out
