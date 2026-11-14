@@ -8,11 +8,11 @@
 
 ## Where this stands
 
-Explored and checked; nothing drafted yet. Every alias already resolves to the latest model in
-Claude Code 2.1.325 (table under `## Notes`), so no skill or default has to change for the
-upgrade itself. The work is the example text and fixtures (79 old names: 2 in `docs/dossier.md`,
-77 across 66 files under `tests/fixtures/`), one `sed` in `tests/replay.test.sh` that must move
-with them, and the changelog. Q1-Q4 are open; the plan is drafted once they are answered.
+Q1-Q5 are answered. The plan is drafted in `.codeo/52/plan-draft.md` and waits for the engineer's
+approval; the file under `docs/plans/` is written only after it. Five tasks: the rename in
+`docs/` and the fixtures, the test input IDs, one comment on #52 with the alias record and the
+Haiku evaluation, a follow-up issue for the Haiku trial, and the changelog entry last, waiting for
+#51 (Q5). No skill or default changes.
 
 ## Questions
 
@@ -31,6 +31,8 @@ whether the plan has a task that posts to GitHub, or a task that stops and waits
   release notes as well as sitting on the issue.
 
 **Answer:**
+A — `/codeo:implement` posts one comment on #52 (answered in the conversation: accept the
+recommendation).
 
 ### Q2 — What should the Haiku 5.5 evaluation produce?
 
@@ -56,6 +58,8 @@ My desk evaluation, from reading the skills:
 - **C — record the evaluation and stop.** No change, no follow-up issue.
 
 **Answer:**
+A — record the evaluation, change nothing, file a follow-up (answered in the conversation: accept
+the recommendation).
 
 ### Q3 — Should the old model IDs in the tests outside `tests/fixtures/` move too?
 
@@ -69,6 +73,7 @@ IDs are arbitrary strings to those tests. The answer adds or drops one small tas
 - **B — leave them.** They are outside the criterion and prove the same thing either way.
 
 **Answer:**
+A — update them (answered in the conversation: accept the recommendation).
 
 ### Q4 — #69 also changes `CHANGELOG.md`: proceed, sequence or re-scope?
 
@@ -86,6 +91,20 @@ IDs are arbitrary strings to those tests. The answer adds or drops one small tas
 - **re-scope.** Not available: criterion 4 requires the changelog entry.
 
 **Answer:**
+#69 is already merged to main and done (answered in the conversation). Nothing to coordinate; the
+changelog overlap that remains is #51's, Q5.
+
+### Q5 — #51 also changes `CHANGELOG.md`: proceed, sequence or re-scope?
+
+**Why it matters:** raised after Q4 was answered. #51 (`feat/seed-dev-container-git-identity`,
+assignee kbajpai, step `plan`) has `CHANGELOG.md` in its footprint, as this plan does. Nothing else
+overlaps. The answer decides whether the changelog task waits for #51.
+**Options:** proceed and coordinate · sequence after #51 · re-scope (not available: criterion 4
+requires the entry).
+
+**Answer:**
+Sequence after #51 (answered in the conversation). The changelog task goes last and waits for #51
+to merge.
 
 ## Notes
 
@@ -122,7 +141,17 @@ does not change. No skill frontmatter or default changes unless Q2 is answered B
 standing decision. No invariants document, no shared environment and no wiki are configured. The
 `shell` suite has no `filter`, so each task's proof is `bash tests/run.sh`.
 
-**Other workflows in flight.** Only #69; its overlap is Q4.
+**Other workflows in flight.** #69 was the only one at Q4 and has since merged; #51 (at `plan`)
+shares `CHANGELOG.md`, which is Q5.
+
+### Footprint
+
+```
+files:      docs/dossier.md, tests/fixtures/**, tests/replay.test.sh, tests/usage.test.sh, tests/subagent-model.test.sh, CHANGELOG.md, docs/plans/2026-11-14-latest-claude-models.md
+wiki:       none
+exclusive:  none
+sequenced:  after #51 — both add a CHANGELOG.md bullet under Unreleased (Q5)
+```
 
 ## Outcome
 
@@ -131,3 +160,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-14 — Q1-Q4 raised · cost: 2m · fable-5-2 77k in + 257k cached / 5k out
+- 2026-11-14 — Q1-Q5 answered, draft written for review (.codeo/52/plan-draft.md); engineering plugin unavailable, steps 6-7 skipped (no new component or technology choice) · cost: 29m · fable-5-2 83k in + 570k cached / 10k out · sonnet-5-5 92k in + 574k cached / 10k out
