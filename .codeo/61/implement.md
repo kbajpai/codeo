@@ -9,9 +9,9 @@
 
 ## Where this stands
 
-Round 1, paused at Task 2 for the engineer. Task 1 is done: PR #62 (`release/v1.0.4` → `main`) is open, changes only `.claude-plugin/plugin.json` and `CHANGELOG.md`, and `tests` and `qc-verdict` both pass on it. Worktree `/workspaces/codeo-61-release` still exists; Task 2 removes it after the merge.
+Round 1, paused at Task 4 for the engineer. Tasks 1-3 are done. Release PR #62 merged as `cf4618eed5d3c5f083db6b8f723ec4f02f5a7f38`, which is also the tip of `origin/main`. The release worktree is removed. The clean-clone test at that commit (fresh `git clone`, `git checkout --detach`) printed the commit, `1.0.4`, `## v1.0.4 — 2026-11-14` as the newest changelog heading, and ended `all cases passed`.
 
-Next, in order: the engineer merges #62 (Task 2) → I record the merge commit and run the clean-clone test (Task 3) → the engineer tags and publishes the Release (Task 4) → I pin `.codeo/config.json` (Task 5) → the engineer rebuilds the container and I check the version and the board (Task 6). Re-invoke `/codeo:implement` after each of the engineer's steps.
+Next: the engineer tags and publishes the Release (Task 4) → I check criteria 3 and 4 and pin `.codeo/config.json` (Task 5) → the engineer rebuilds the container and I check the version and the board (Task 6).
 
 ## Questions
 
