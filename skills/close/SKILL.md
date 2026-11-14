@@ -502,7 +502,9 @@ the step carries on.
     close.
 
 17. **Report** that the workflow is finished. Read the lock's `host` line, and its `volume:` or
-    `session:` line, before step 16 deletes it, and say what is left of this checkout.
+    `session:` line, before step 16 deletes it. When step 16 deleted `.codeo/active`, say what is
+    left of this checkout; when it kept the lock, say nothing of the checkout's clean-up: it still
+    holds the lock.
     <!-- point: close/host-workflow -->
     Fetch the project's host workflow with
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow`: on exit 0, relay the
@@ -521,8 +523,15 @@ the step carries on.
     easiest to lose. `superpowers:verification-before-completion` applies to every claim: each
     comes from a tool's output in this invocation — the merge from `github.sh`, the deletion from
     `git ls-remote`, the leases from `lease list`, the lock from `.codeo/active` being gone — never
-    from a step having been attempted. End with the closing block: the goal is the loose ends found,
-    the first step `/codeo:triage`, then the host's checkout clean-up above.
+    from a step having been attempted. End with the closing block for the exit step 16 took:
+
+    **Closing block — finished:** when step 16 deleted `.codeo/active`. The goal is the loose ends
+    found; the first step is `/codeo:triage`, then the host's checkout clean-up above.
+
+    **Closing block — lock kept:** when step 16 kept `.codeo/active`. The goal is a finished close;
+    the first step is `/codeo:close` again, in this checkout, because it holds the lock that run
+    needs; the later steps name what failed — the release, the deletion or the push — and what
+    the engineer does about it before or after that run.
 
 ## Stash, and closed unmerged
 
