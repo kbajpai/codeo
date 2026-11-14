@@ -47,12 +47,12 @@ asst() { # timestamp id model in out
     # A another plugin's invocation later in the transcript must not move the start.
     jq -nc --arg t "$t_rm" '{type:"user",timestamp:$t,message:{content:"<command-name>/otherplugin:plan</command-name>"}}'
 } >"$main"
-asst "$t_after" s1 claude-opus-4-7 3000 700 >"$CLAUDE_CONFIG_DIR/projects/p/sess-1/subagents/a.jsonl"
+asst "$t_after" s1 claude-opus-5-5 3000 700 >"$CLAUDE_CONFIG_DIR/projects/p/sess-1/subagents/a.jsonl"
 
 case_desc=usage_matches_codeo_invocations_and_ignores_other_plugins_ones
 out=$("$usage" qc)
 assert_contains "sonnet counted since /codeo:qc" "sonnet-5-5 2k in" "$out"
-assert_contains "subagent counted" "opus-4-7 3k in" "$out"
+assert_contains "subagent counted" "opus-5-5 3k in" "$out"
 if [[ $out == *"100k"* ]]; then
     echo "FAIL: $case_desc — usage before the invocation was counted: $out"
     failures=$((failures + 1))
