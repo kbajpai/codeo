@@ -10,10 +10,10 @@
 
 Explored the start script, its tests, the container config and the two other workflows in flight.
 The change itself is small: step 5 of `.devcontainer/scripts/devcontainer-start.sh`, new cases in
-`tests/devcontainer.test.sh`, a paragraph in `.devcontainer/README.md` and a changelog line. One
-thing found in this container changes how it has to be built: VS Code's copy of the host
-`~/.gitconfig` is not guaranteed to be there when step 5 runs (Q1). Q1-Q3 are open; nothing is
-drafted until they are answered.
+`tests/devcontainer.test.sh`, a paragraph in `.devcontainer/README.md` and a changelog line.
+Q1-Q3 are answered (wait for the file; a last task the engineer runs; #69 already merged as #72, so
+no overlap). The draft is at `.codeo/51/plan-draft.md`, awaiting the engineer's approval; nothing is
+open and `## Outcome` stays pending until it is approved and written to `docs/plans/`.
 
 ## Questions
 
@@ -43,6 +43,7 @@ few lines in the start script, gains a wait, or becomes its own script that othe
   decides whether the first start works.
 
 **Answer:**
+A — wait briefly for the file (answered in the conversation).
 
 ### Q2 — Should the plan end with a check you run in a real container?
 
@@ -58,6 +59,7 @@ your output (the form #67's plan used), or leaves the suite as the whole proof.
 suite only.
 
 **Answer:**
+A last task you run, whose output `/codeo:qc` reads as evidence (recommendation accepted, answered in the conversation).
 
 ### Q3 — This plan and #69 both change `CHANGELOG.md` and `.devcontainer/README.md`. How should they be ordered?
 
@@ -75,6 +77,9 @@ merges second resolves a small conflict. The answer decides whether the plan car
   out: the acceptance criteria require it).
 
 **Answer:**
+Proceed and coordinate (recommendation accepted), with a correction: #69 is done. It merged as #72
+(`2a86915`, 2026-11-14 18:40), so there is nothing left to coordinate with; this branch merges
+`origin/main` first and no `sequenced:` line is written.
 
 ## Notes
 
@@ -126,4 +131,5 @@ _Pending — written at the hand-off._
 
 ## Log
 
+- 2026-11-14 — Q1-Q3 answered; draft written to .codeo/51/plan-draft.md for review · cost: unavailable until the hand-off
 - 2026-11-14 — Q1-Q3 raised · cost: 2m · fable-5-2 91k in + 400k cached / 5k out
