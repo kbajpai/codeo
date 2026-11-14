@@ -14,7 +14,7 @@ captures the *what and why* — problem, requirements, acceptance criteria — n
 diagrams, and design belong to `/codeo:plan`; sketching them here duplicates work it will redo
 properly with the codebase open in front of it. **It hands off to nobody**: it files the issue,
 reports the number, and stops. Don't cut a branch and don't start the next skill — the engineer
-decides when. It does end with the closing block, whose next goal is starting the issue.
+decides when. It does end with the closing block, whose next goal is starting the issue, or marking it Ready first when the board says it is not.
 
 **Other skills call it.** When `/codeo:plan` or `/codeo:implement` hits work that is real
 but out of scope for what it is doing, it delegates here rather than widening its own scope or
@@ -162,10 +162,26 @@ The repository is read from the project's config, never typed into a command:
    rewrite its first line to `# Issue #<N> — issue`, the title every dossier carries
    (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The shape of a file`). Commit the rename in one step:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit <N> "docs(codeo): issue dossier for #<N> — filed" --drop new-<slug>`.
-   Then report the created issue's URL and number, and end with the closing block
-   (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next goal is starting the issue,
-   the first step `/codeo:init #<N>`. No branch is cut. If another skill delegated here, hand the
-   number back to it with no block and let it resume what it was doing.
+   Then, with a board (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .board` succeeds; exit 1
+   with nothing printed means no board), read the new issue's Status once:
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`, with `<N>` from the created issue's
+   response. With no board, make no `board.sh` call. The Ready name is
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.board.statuses.ready // "Ready"'`, as
+   `/codeo:init` reads it. `board.sh status` prints the gate project's Status name, `unset`, `none`
+   (not on the board) or `unavailable` (a hosted web session); it exits non-zero on a real failure.
+
+   Report the created issue's URL and number, then end with the closing block
+   (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`), chosen by what was read. `/codeo:init`
+   gates on Ready, so a card that is not Ready cannot start until it is marked.
+
+   **Closing block — Ready, no board or unavailable:** the Status equals the Ready name, there is no board, or it printed `unavailable` (then say above the block that the Status could not be read in a web session): the next goal is starting the issue, the first step `/codeo:init #<N>`.
+
+   **Closing block — not Ready:** it printed `none`, `unset` or any other column, which is what a new issue normally gets: the next goal is getting the issue to Ready, the first step `/codeo:triage` (its *mark Ready* moves the card), then `/codeo:init #<N>`.
+
+   **Closing block — Status unreadable:** `board.sh status` exited non-zero: quote its line, then the first step is the fix it names (for example `gh auth refresh -s project` when the token lacks the `project` scope), then `/codeo:triage`, then `/codeo:init #<N>`.
+
+   No branch is cut. If another skill delegated here, hand the number back to it with no block and
+   let it resume what it was doing.
 
 ## Hand-off
 
