@@ -8,10 +8,10 @@
 
 ## Where this stands
 
-Explored and checked the two questions intake left open; both are settled by evidence (Notes). The
-change itself is small: the `FROM` line, two comments, one test case, the README and the changelog.
-What is not settled is how the image gets proved. This container has no `docker`, and CI does not
-build the image, so no later step can run acceptance criteria 2 and 3 here. Blocked on Q1 and Q2.
+Q1 (host build, A) and Q2 (suite inside the image) answered. Plan drafted in .codeo/67/plan-draft.md and waiting for the engineer's approval.
+The change itself is small (the `FROM` line, two comments, one test case, the README and the
+changelog); criteria 2 and 3 are proved by the engineer on a Docker host in the plan's Task 3.
+Nothing is open.
 
 ## Questions
 
@@ -33,6 +33,7 @@ stops and waits for you, or grows a CI job.
 - **C — A now, and I file B as its own issue** through `/codeo:issue`.
 
 **Answer:**
+A — you run it on the host (answered in the conversation).
 
 ### Q2 — Should the `shell` suite also be run inside the built 26.04 image?
 
@@ -47,6 +48,7 @@ where 26.04 requires it") and comes back as another round.
 **Options:** run the suite inside the image as well (recommended) · this checkout only.
 
 **Answer:**
+Yes — run the suite inside the image as well (answered in the conversation).
 
 ## Notes
 
