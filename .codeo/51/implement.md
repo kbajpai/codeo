@@ -8,9 +8,9 @@
 
 ## Where this stands
 
-Plan tasks 1-5 are done and committed (`8937dbc`, `e7e58f1`, `4c61919`, `6d79619`), and the whole `shell`
-suite passes (`bash tests/run.sh`: `all cases passed`). Q1 is answered: part 1 of the real-container check
-passed and part 2 was skipped. Nothing is open; the next step is `/codeo:qc`.
+Round 2 answers qc.md round 1 (F1 the untrue changelog sentence, F2 the racy wait test): both are fixed in
+`8f1e166`, and the whole `shell` suite passes (`bash tests/run.sh`: `all cases passed`). Nothing is open;
+the next step is `/codeo:qc`.
 
 ## Questions
 
@@ -92,7 +92,26 @@ Built from `docs/plans/2026-11-14-seed-dev-container-git-identity.md`, tasks 1-5
 **Build result:** the `shell` suite's `build` is `true`; `bash tests/run.sh` passed (`all cases passed`) after Task 1 and after Task 4, and `shellcheck` is clean on the start script.
 **Deviations from the plan:** the four rulings under `## Notes`, plus the skipped Task 5 part 2.
 
+### Round 2
+
+2026-11-14
+(send-back from qc.md round 1)
+
+Merge of `origin/main` at the start of the round: none needed (the branch already contained it); `overlap.sh 51` printed nothing.
+
+Each finding was checked against the code before it was acted on:
+
+- **F1 (blocking) held.** `.devcontainer/devcontainer.json` runs the start script as `postCreateCommand` (line 15) and only `window-title.sh` as `postStartCommand` (line 16), so a restart never reaches step 5. `CHANGELOG.md:11` now reads "An existing container needs no rebuild: run `bash .devcontainer/scripts/devcontainer-start.sh` in it to fill a missing identity (a restart does not run the script; creating or rebuilding a container does)." `.devcontainer/README.md` already said "runs when the container is created" and needed no change.
+- **F2 (non-blocking) held and was fixed.** In `start_waits_for_the_host_gitconfig_to_arrive` the background writer now writes both keys to `$ds_dir/home/.gitconfig.new` and `mv`s it onto `.gitconfig`, so the file never exists half-written. A timing race has no reliable red run; the case passed on four consecutive runs of `bash tests/devcontainer.test.sh` after the change.
+- **F3 and F4 (non-blocking)** ask for no change, and none was made.
+
+**Deviation from the plan, and why.** The plan's Task 4 step 2 (`docs/plans/2026-11-14-seed-dev-container-git-identity.md:161`) told the changelog to say that "the next container start" fills a missing identity. That is untrue, so the changelog says the opposite. The plan file is not edited here, and it still carries the untrue phrase as history; `.codeo/51/plan.md`'s notes carry it too. No other deviation.
+
+**Documentation pages changed:** `CHANGELOG.md`.
+**Build result:** the `shell` suite's `build` is `true`; `bash tests/run.sh` also passed (`all cases passed`) after the fix commit `8f1e166`.
+
 ## Log
 
 - 2026-11-14 — tasks 1-4 built; Q1 raised (Task 5, the engineer's real-container check) · cost: 8m · sonnet-5-5 36k in + 3.4M cached / 13k out
 - 2026-11-14 — Q1 answered (part 1 passed, part 2 skipped); outcome written · cost: 13m · sonnet-5-5 39k in + 4M cached / 17k out
+- 2026-11-14 — round 2 (send-back from qc.md round 1): fixed F1 and F2; outcome written · cost: 5m · sonnet-5-5 17k in + 2M cached / 3k out
