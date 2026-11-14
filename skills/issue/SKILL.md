@@ -211,7 +211,7 @@ lifecycle — it runs before an issue number or a branch exists, and it hands of
   unrelated PR and never shows up in `git status`.
 - Doesn't cut a branch, open a dossier on a feature branch, or hand off to another skill —
   `/codeo:init` is a separate thing the engineer runs when they are ready for it; the closing
-  block only names it.
+  block names it, after `/codeo:triage` when the board says the issue is not Ready.
 
 ## Tips
 

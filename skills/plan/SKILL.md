@@ -171,15 +171,15 @@ answer too: each task then names its own proof command in full (step 8).
    no shell variable or substitution (`$PWD`, `$(…)`), no nested quotes, no `&&` or line
    continuation, nothing but one command a shell passes through unchanged; anything longer becomes
    a script in the repository, run as one command. When a command cannot be neutral, the plan asks
-   which shell they use: it is a numbered question in plan.md, added to `.codeo/<N>/plan.md`, and
-   repeat step 4's stop (commit, push, end the turn; resume from the file), then label the command
-   `Shell: <name>`.
+   which shell they use: it asks as a numbered question in plan.md (`.codeo/<N>/plan.md`), then
+   repeats step 4's stop (commit, push, end the turn; resume from the file), and labels the
+   command `Shell: <name>`.
    A `host: local` lock needs no question, because the session's own shell is the engineer's. The
    reason: the session's shell tells nothing about the machine the engineer types on (#67's
    Task 3 wrote bash that failed in their PowerShell). `Runs on:` and `Needs lease:` are
    independent: a task on the engineer's own machine against the environment
-   carries both markers, each on its own line, and a `Needs lease:` task is not a host task by
-   itself.
+   carries both markers, each on its own line, in either order, and a `Needs lease:` task is not a
+   host task by itself.
 
    **Name the documentation the change moves.** A change to what the application does — an
    endpoint, a flow, a status, a configuration key, a screen, a deployment step — makes some page

@@ -37,7 +37,7 @@ para() {
 # $1 text, $2 fixed string it must contain.
 has() { [[ $1 == *"$2"* ]] || fail "no [$2]"; }
 # $1 text, $2 fixed string it must not contain.
-lacks() { [[ $1 != *"$2"* ]] || fail "has [$2], which this exit cannot run"; }
+lacks() { [[ $1 != *"$2"* ]] || fail "has [$2], which this exit must not name"; }
 
 # $1 text, $2 a, $3 b. True when $2 occurs and $3 occurs only after it; fails the case otherwise.
 before() {
@@ -105,7 +105,7 @@ case_init_no_lock() {
     lacks "$p" '/codeo:plan'
 }
 
-# $1 case's label; both Ready cases also need step 8 to read the board.
+# Reads step 8 of the issue skill; both Ready cases also need it to read the board.
 issue_step8() {
     local s
     s=$(step "$issue" 8)

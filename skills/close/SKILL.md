@@ -497,14 +497,16 @@ the step carries on.
 16. **Release the lock.**
     <!-- rule: close-10 -->
     Delete `.codeo/active` — last, so a failure anywhere above leaves the workflow intact and
-    re-invokable rather than orphaned with no lock. When step 14's release or deletion failed,
-    keep it: say what failed, and that running `/codeo:close` again in this checkout finishes the
-    close.
+    re-invokable rather than orphaned with no lock. When a release, a branch deletion or a
+    push failed above, keep it: say what failed, and that running `/codeo:close` again in this
+    checkout finishes the close.
 
 17. **Report** that the workflow is finished. Read the lock's `host` line, and its `volume:` or
-    `session:` line, before step 16 deletes it. When step 16 deleted `.codeo/active`, say what is
-    left of this checkout; when it kept the lock, say nothing of the checkout's clean-up: it still
-    holds the lock.
+    `session:` line, before step 16 deletes it. When step 16 deleted `.codeo/active`, fetch the
+    project's host workflow, relay it, then the nothing-is-lost sentence and the `/codeo:triage`
+    suggestion below. When it kept the lock, skip that fetch and say nothing of the checkout or
+    of `/codeo:triage`: the checkout still holds the lock, and the first step is `/codeo:close`
+    again.
     <!-- point: close/host-workflow -->
     Fetch the project's host workflow with
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow`: on exit 0, relay the
@@ -518,9 +520,9 @@ the step carries on.
     - **`host: local`** — nothing to remove: the checkout is the engineer's own, the local branch
       still in it, theirs to delete or keep.
 
-    Everything in it is merged or on origin, so nothing is lost either way. Suggest
-    `/codeo:triage`: the moment a dossier is archived is when what it noticed but did not file is
-    easiest to lose. `superpowers:verification-before-completion` applies to every claim: each
+    On the finished exit only: everything in it is merged or on origin, so nothing is lost either
+    way. Suggest `/codeo:triage`: the moment a dossier is archived is when what it noticed but did
+    not file is easiest to lose. `superpowers:verification-before-completion` applies to every claim: each
     comes from a tool's output in this invocation — the merge from `github.sh`, the deletion from
     `git ls-remote`, the leases from `lease list`, the lock from `.codeo/active` being gone — never
     from a step having been attempted. End with the closing block for the exit step 16 took:

@@ -194,6 +194,7 @@ step_contains "a container host names the volume" 17 '`host: container`'
 step_contains "the container's volume line is named" 17 '`volume:`'
 step_contains "a local host has nothing to remove" 17 '`host: local`'
 step_contains "triage is suggested" 17 '/codeo:triage'
+step_contains "step 17 conditions its body on the finished exit" 17 'When step 16 deleted `.codeo/active`, fetch'
 
 # Each point marker sits once, and the point it marks is fetched.
 for point in ci-publish-check host-workflow; do
