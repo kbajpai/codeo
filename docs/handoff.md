@@ -351,6 +351,10 @@ for the engineer, who should never have to work out where they stand or what to 
 - **A skill with several exits states the one it took.** `/codeo:qc` is clear, back to
   `/codeo:implement` or back to `/codeo:plan`; `/codeo:close` is waiting on a merge, sent back,
   finished or stashed. The block describes that exit and no other.
+- **It names only a command that can run.** The first step is the command that can run in the
+  state the exit leaves behind. A lock a failed step kept, a lock never taken and a Ready gate not
+  yet passed each change which command that is. The block never names the command the state
+  refuses, nor, while the lock is kept, a clean-up that destroys the checkout the lock lives in.
 - **It reports state; it is not a hand-off.** The hand-off's four parts above still happen first.
   The block is what the engineer reads once they have.
 - **A call returns no block.** When `/codeo:issue` runs because another skill called it (see *A
@@ -369,6 +373,16 @@ The default next goal of each skill:
 | `qc` | by verdict: a pull request (`/codeo:close`), fixes (`/codeo:implement`) or a re-plan (`/codeo:plan`) |
 | `close` | by exit: the PR merged, review fixed, or loose ends found (`/codeo:triage`) |
 | `triage` | the next issue started — `/codeo:init #<N>` |
+
+Exits whose next command is not the default:
+
+| Exit | First step |
+|---|---|
+| `close — lock kept` | `/codeo:close` |
+| `stash — interrupted` | `/codeo:close --stash` |
+| `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed |
+| `init — no lock` | the recovery, then the default (`/codeo:plan`) |
+| `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
 
 ## Spinning out subagents
 
