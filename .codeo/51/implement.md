@@ -8,9 +8,10 @@
 
 ## Where this stands
 
-Round 2 answers qc.md round 1 (F1 the untrue changelog sentence, F2 the racy wait test): both are fixed in
-`8f1e166`, and the whole `shell` suite passes (`bash tests/run.sh`: `all cases passed`). Nothing is open;
-the next step is `/codeo:qc`.
+Round 3 answers qc.md round 2 (F5, a non-numeric `CODEO_GITCONFIG_WAIT` made the start script exit 1) and
+the v1.0.6 release merged from main (the changelog bullet now sits under a new `## Unreleased`): both are
+fixed in `537ee3c`, and the whole `shell` suite passes (`bash tests/run.sh`: `all cases passed`). Nothing is
+open; the next step is `/codeo:qc`.
 
 ## Questions
 
@@ -110,8 +111,28 @@ Each finding was checked against the code before it was acted on:
 **Documentation pages changed:** `CHANGELOG.md`.
 **Build result:** the `shell` suite's `build` is `true`; `bash tests/run.sh` also passed (`all cases passed`) after the fix commit `8f1e166`.
 
+### Round 3
+
+2026-11-14
+(send-back from qc.md round 2)
+
+Merge of `origin/main` at the start of the round: `sync-main.sh` merged one commit (`2714a17`), the v1.0.6 release (#77), cleanly. Also changed on main: `CHANGELOG.md` (and `.claude-plugin/plugin.json`). The release moved the old *Unreleased* entries into a `## v1.0.6 — 2026-11-14` section, and the clean merge left this branch's bullet inside that released section, where it does not belong, because the change is not in v1.0.6. `sync-main.sh` also printed `comm: ... not in sorted order` and exited 1 while listing the changed files; the merge itself is committed, as in round 1. `overlap.sh 51` printed nothing.
+
+Each QC finding was checked against the code before it was acted on:
+
+- **F5 (blocking) held.** Under `set -euo pipefail` the loop condition `((waited < ${CODEO_GITCONFIG_WAIT:-10}))` evaluated the value as arithmetic: `abc` stopped the script with `abc: unbound variable` and exit 1 (reproduced in a scratch shell first). A new case, `start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero`, passes `abc`, `5s`, `1.5` and `08` and expects exit 0, the identity seeded from the environment and no arithmetic error on stderr; it failed on the old code (exit 1 for `abc`, arithmetic errors for the others) before the fix. The script now reads the limit into `wait_max`, takes any value that is not whole digits as 10, and compares with `10#$wait_max` so a leading zero is not read as octal. The README and the changelog say a value that is not a whole number counts as 10.
+- **F3 and F4 (non-blocking)** ask for no change, and none was made.
+
+**Placement fix after the release.** `CHANGELOG.md` now has a new `## Unreleased` section above `## v1.0.6` (Config schema 1, Shared state unchanged from v1.0.6, Safe to bump mid-workflow yes) holding this change's bullet, and `## v1.0.6` is as `main` has it. This is the change the engineer's report that #75 had merged called for.
+
+**Deviations from the plan, and why.** The plan has no task for validating the wait limit or for placing the changelog bullet under a section the release created; both follow from QC round 2 and the release. No other deviation. The plan file is not edited.
+
+**Documentation pages changed:** `CHANGELOG.md` and `.devcontainer/README.md`.
+**Build result:** the `shell` suite's `build` is `true`; `bash tests/run.sh` also passed (`all cases passed`) after the fix commit `537ee3c`.
+
 ## Log
 
 - 2026-11-14 — tasks 1-4 built; Q1 raised (Task 5, the engineer's real-container check) · cost: 8m · sonnet-5-5 36k in + 3.4M cached / 13k out
 - 2026-11-14 — Q1 answered (part 1 passed, part 2 skipped); outcome written · cost: 13m · sonnet-5-5 39k in + 4M cached / 17k out
 - 2026-11-14 — round 2 (send-back from qc.md round 1): fixed F1 and F2; outcome written · cost: 5m · sonnet-5-5 17k in + 2M cached / 3k out
+- 2026-11-14 — round 3 (send-back from qc.md round 2): merged main (v1.0.6), fixed F5, moved the changelog bullet under Unreleased; outcome written · cost: 1m · sonnet-5-5 28k in + 1.3M cached / 928 out
