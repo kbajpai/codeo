@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The issue, `init.md`, `.devcontainer/` (README, `devcontainer.json`, `Dockerfile`, `plugins.sh`, the start script) and the recent plans are read. Nothing is drafted: Q1-Q5 decide where the comparison lives, how much of it is tried on a real host, and what the recommendation is weighed against.
+Round 2. Q1-Q5 are answered (in the conversation, recorded below as given); the plan is drafted in `.codeo/73/plan-draft.md` and awaits the engineer's approval. Round 1 had read the issue, `init.md`, `.devcontainer/` and the recent plans.
 
 ## Questions
 
@@ -21,6 +21,7 @@ Round 1. The issue, `init.md`, `.devcontainer/` (README, `devcontainer.json`, `D
 - **C — somewhere else you name** (a `docs/dev/` folder for pages about developing codeo itself, say).
 
 **Answer:**
+A — `docs/dev-environment-sbx-evaluation.md`. (Given in the conversation, 2026-11-14.)
 
 ### Q2 — How much of the comparison is tried on your machine, and how much is cited?
 
@@ -31,6 +32,7 @@ Round 1. The issue, `init.md`, `.devcontainer/` (README, `devcontainer.json`, `D
 - **C — cited only.** Nothing is installed. Host support is answered from Docker's stated requirements, and the comparison says plainly that nothing was tried.
 
 **Answer:**
+A — hands-on. (Given in the conversation, 2026-11-14.)
 
 ### Q3 — What is the host, and may `sbx` be installed on it?
 
@@ -44,6 +46,7 @@ Round 1. The issue, `init.md`, `.devcontainer/` (README, `devcontainer.json`, `D
 **Options:** none to pick from; the facts as you have them. "Don't know" for any line is fine, and the plan then starts with a task that finds it out.
 
 **Answer:**
+"As you recommend" (given in the conversation, 2026-11-14). Q3 offered no options, so this is read as: host facts unknown, and willing to do what Q2 A needs. The plan starts with a task that finds the facts out.
 
 ### Q4 — Which shell do you type in on the host?
 
@@ -51,6 +54,7 @@ Round 1. The issue, `init.md`, `.devcontainer/` (README, `devcontainer.json`, `D
 **Options:** PowerShell · a WSL2 distribution's bash (say which distribution) · Git Bash · something else.
 
 **Answer:**
+"I can use BASH on WSL if that makes it easier" (given in the conversation, 2026-11-14). Host tasks are written for bash in a WSL2 distribution.
 
 ### Q5 — What would have to be true for you to actually move, and what would rule it out?
 
@@ -58,6 +62,7 @@ Round 1. The issue, `init.md`, `.devcontainer/` (README, `devcontainer.json`, `D
 **Options:** none; your own words.
 
 **Answer:**
+"As you recommend" (given in the conversation, 2026-11-14). Q5 offered no options, so this is read as: weigh the four drivers as the issue lists them; a lost VS Code window or a lost Remote Control is a cost to record, not a veto.
 
 ## Notes
 
