@@ -381,7 +381,7 @@ Exits whose next command is not the default:
 | `close — lock kept` | `/codeo:close` |
 | `stash — interrupted` | `/codeo:close --stash` |
 | `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed |
-| `init — no lock` | the recovery, then the default (`/codeo:plan`) |
+| `init — no lock` | the fix the `lock: TODO` line names, then `lock.sh take local` again |
 | `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
 
 ## Spinning out subagents

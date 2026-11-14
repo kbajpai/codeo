@@ -69,6 +69,11 @@ case_rule() {
     done
     has "$block" 'Exits whose next command is not the default'
     has "$block" 'stash — completed'
+    # The init row names the recovery and lock.sh take local, never the default /codeo:plan.
+    local row
+    row=$(grep -F '`init — no lock`' <<<"$block" || true)
+    has "$row" 'lock.sh take local'
+    lacks "$row" '/codeo:plan'
 }
 
 case_close_lock_kept() {
@@ -103,6 +108,10 @@ case_init_no_lock() {
     para "$init" '**Closing block — no lock:**' || return 0
     has "$p" 'lock.sh" take local'
     lacks "$p" '/codeo:plan'
+    # Step 11 once ended both exits with one sentence naming /codeo:plan; it must not return.
+    local s
+    s=$(step "$init" 11)
+    lacks "$s" 'Either way, end with the closing block'
 }
 
 # Reads step 8 of the issue skill; both Ready cases also need it to read the board.
