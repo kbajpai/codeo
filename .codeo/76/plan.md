@@ -8,8 +8,7 @@
 
 ## Where this stands
 
-Explored and probed; nothing is drafted. Q1-Q3 decide what the trial runs, what "matched" means and
-where the record lives. The plan gets drafted once they are answered.
+Q1-Q3 answered A, A, A. The plan is drafted at `.codeo/76/plan-draft.md` and waits for review.
 
 ## Questions
 
@@ -32,6 +31,7 @@ Notes), less on Haiku.
 - **C — the passing case only, three runs per model.** 12 runs. Leaves the failure branch untried.
 
 **Answer:**
+A (answered in the conversation).
 
 ### Q2 — What counts as "matched"?
 
@@ -61,6 +61,7 @@ for a skill whose Haiku runs pass some of the time.
   reading.
 
 **Answer:**
+A (answered in the conversation).
 
 ### Q3 — Where is the comparison recorded?
 
@@ -77,6 +78,7 @@ record is a comment or a file changes the plan's tasks and its footprint.
 - **C — a page under `docs/` only**, linked from the issue.
 
 **Answer:**
+A (answered in the conversation).
 
 ## Notes
 
