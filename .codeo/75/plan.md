@@ -96,6 +96,15 @@ A — add v1.0.5's Release to this plan (engineer: "accept all your recommendati
 
 `inflight.sh --except 75` printed two workflows, #51 and #52. The only path shared with either is `CHANGELOG.md`.
 
+### Footprint
+
+```
+files:      .claude-plugin/plugin.json, CHANGELOG.md, .codeo/config.json, docs/plans/2026-11-14-release-v1-0-6.md, .codeo/75/**
+wiki:       none
+exclusive:  none
+sequenced:  none (CHANGELOG.md shared with #51 and #52: proceed and coordinate, Q1-Q2)
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
