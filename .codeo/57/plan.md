@@ -8,7 +8,11 @@
 
 ## Where this stands
 
-Round 1. The code, the tests and #55's `qc.md` and `implement.md` are read; nothing is drafted. Q1-Q5 are open. Each carries a recommendation, so an answer can be one word. The plan is drafted once all five are answered.
+Round 1. Q1-Q5 are answered (the engineer accepted every recommendation in the conversation, and the answers are recorded under each). The plan is drafted in `.codeo/57/plan-draft.md` and waits for approval; the plan file under `docs/plans/` is written only after it.
+
+Two things the drafting turned up, both reflected in the draft:
+- **F2 does not reproduce as `qc.md` states it.** On a project whose base is `develop`, the home clone in the folder `codeo-home` already gets no TODO today. The real defects are the ones next to it: the folder `codeo-12` on the home clone is silent, and a wrong folder gets the issue-or-home wording and not the home wording. Task 1 fixes those and still pins the criterion's case.
+- **No CHANGELOG sentence says "all three names come from `container-name.sh`".** The F5 claim is in the script's header only. Q4's edit therefore makes line 42's description of `container-name.sh` say what it does (the names; the Docker name comes from the folder through `runArgs`), and the Unreleased bullet states the correction.
 
 Settled without a question (say so under any answer if one is wrong):
 
@@ -36,6 +40,7 @@ What I found: the clash only happens when a folder on the host is opened in a co
 - *Fix*: `--name=${containerWorkspaceFolderBasename}-${devcontainerId}`; names get long again and every container is rebuilt once.
 
 **Answer:**
+Document only. Go with the recommendation (engineer, in the conversation, 2026-11-14).
 
 ### Q2 — F6, an empty `.codeo/active`: remove it and take the lock, or leave it and print a TODO?
 
@@ -48,6 +53,7 @@ What I found: the clash only happens when a folder on the host is opened in a co
 Either way only a zero-byte file is covered. A file with content that names no issue is left as it is today (it reads as a held lock); I would file that separately if you want it handled.
 
 **Answer:**
+Remove it and carry on. Go with the recommendation (engineer, in the conversation, 2026-11-14).
 
 ### Q3 — F3, which registry entry is "this project's" codeo, and what happens when none is?
 
@@ -62,6 +68,7 @@ If neither exists, or the chosen entry has no `scripts/lock.sh`, the script fail
 **Options:** *the proposed rule* · *the user-scope entry first, then this project's* · *something else (say what)*.
 
 **Answer:**
+The proposed rule. Go with the recommendation (engineer, in the conversation, 2026-11-14).
 
 ### Q4 — The wrong CHANGELOG sentence is in the released v1.0.4 section. Edit it there, or correct it under Unreleased?
 
@@ -72,6 +79,7 @@ If neither exists, or the chosen entry has no `scripts/lock.sh`, the script fail
 - *Leave v1.0.4 as released*: only the Unreleased bullet states the correction.
 
 **Answer:**
+Edit the v1.0.4 bullet in place and say so under Unreleased. Go with the recommendation (engineer, in the conversation, 2026-11-14).
 
 ### Q5 — #76 also plans to edit `CHANGELOG.md`. Proceed and coordinate, sequence after #76, or re-scope?
 
@@ -83,6 +91,7 @@ If neither exists, or the chosen entry has no `scripts/lock.sh`, the script fail
 - *Re-scope*: this plan leaves `CHANGELOG.md` alone, which fails criteria 5 and 7.
 
 **Answer:**
+Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-14).
 
 ## Notes
 
