@@ -29,3 +29,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-14 — Task 1 done, PR #62 opened, waiting for the engineer's merge · cost: 6m · sonnet-5-5 20k in + 1.1M cached / 3k out
+- 2026-11-14 — Tasks 2-3 done: #62 merged as cf4618e, clean-clone test passed, waiting for the engineer's tag and Release · cost: 2m · sonnet-5-5
