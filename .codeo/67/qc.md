@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written and clear. Nothing is open. Criteria 2 and 3 cannot be run in this container (no `docker`); they rest on the engineer's pasted Docker output in `implement.md` Q1, which this pass cites and did not reproduce.
+Round 2 is written and clear (round 1 was clear too; the notes it raised were fixed, so the pass ran again). Nothing is open. Criteria 2 and 3 cannot be run in this container (no `docker`); they rest on the engineer's pasted Docker output in `implement.md` Q1, which this pass cites and did not reproduce.
 
 ## Questions
 
@@ -62,6 +62,48 @@ None of the three sends the change back on its own. They are recorded, not fixed
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+### Round 2 — 2026-11-14
+
+Round 1's notes F1-F3 were fixed in `5c844b4` at the engineer's request (`implement.md` round 2, not a send-back), so the whole pass ran again, as `qc-12` asks. Head `c1a8aef`. The branch already contained `origin/main` (`sync-main`: nothing merged, no `also changed on main:` lines); `overlap.sh 67` and `overlap.sh --outside 67` printed nothing.
+
+**Commands run and their output**
+
+- `bash scripts/scope.sh origin/main HEAD` printed `suite.shell=true` (`shell needed for unclassified paths`: the dossier files under `.codeo/67/` and `CHANGELOG.md`).
+- Build: the `shell` suite's `build` is `true`; exit 0.
+- Suite: `bash tests/run.sh` printed `all cases passed`, exit 0. The reviewer ran it again with the same result.
+- `grep -v '^[[:space:]]*#' .devcontainer/Dockerfile | grep -m1 '^FROM '` printed `FROM ubuntu:26.04`.
+- `grep -n "ubuntu:26.04'\|dockerfile_is_ubuntu_2604" tests/devcontainer.test.sh` printed lines 111, 115 and 1644.
+- `git grep -n -i -E '24\.04|2404|noble' -- .devcontainer tests` printed nothing, exit 1.
+- `sed -n 3,9p CHANGELOG.md` shows `## Unreleased` at line 3, `Shared state: unchanged from v1.0.5.` at line 6, and the entry at line 9.
+- `git grep -n -i -E 'ubuntu|dev container image' -- docs README.md ':!docs/plans'` printed nothing.
+- The `qc` overlays (`invariants-extra`, `wiki-rules`) exit 3: none.
+
+**Criteria**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| The first `FROM` in `.devcontainer/Dockerfile` is `ubuntu:26.04` | met | `.devcontainer/Dockerfile:6`, the grep above |
+| `docker build` of `.devcontainer/Dockerfile` succeeds | untestable here — no `docker` in this container; the engineer's build on a Docker host finished (`implement.md` Q1) | engineer's pasted output, not reproduced here |
+| In the built image `bash`, `git`, `jq`, `shellcheck`, `gh` and `claude --version` run, and `id dev` reports UID 1000 | untestable here — no `docker`; the engineer's run printed bash 5.3.9, git 2.53.0, jq 1.8.1, shellcheck 0.11.0, gh 2.104.0, Claude Code 2.1.325 and `uid=1000(dev)` (`implement.md` Q1) | engineer's pasted output, not reproduced here |
+| `tests/devcontainer.test.sh` asserts `ubuntu:26.04` and passes, along with the rest of the `shell` suite | met | `tests/devcontainer.test.sh:115`; `bash tests/run.sh` printed `all cases passed`; the engineer's run of the suite inside the image printed it too (Q1) |
+| No current file in `.devcontainer/` or the tests still names Ubuntu 24.04 | met | `git grep -n -i -E '24\.04\|2404\|noble' -- .devcontainer tests` printed nothing |
+| `CHANGELOG.md` has an `## Unreleased` entry for the change | met | `CHANGELOG.md:3` |
+
+**Documentation check.** The diff since round 1 is `CHANGELOG.md` and `.devcontainer/README.md` only. Each claim in the README's *Rebuilding* paragraph was checked against the code: the `codeo-gh` and `codeo-git` volumes are the named mounts in `.devcontainer/devcontainer.json` (lines 9-10); `~/.claude` has no mount, and `CLAUDE_CONFIG_DIR` sits in the image layer (`.devcontainer/Dockerfile`); `claude auth login` is the command the start script advises (`devcontainer-start.sh:254-259`); and `plugins.sh` is run at `devcontainer-start.sh:142` from `postCreateCommand`. The tool versions in the changelog entry match the engineer's in-image output. No other page names the image. No diagram applies.
+
+**Findings.** Round 1's F1, F2 and F3 (all non-blocking) — fixed by `5c844b4`; the reviewer re-read each fixed sentence against the code and found it accurate. The reviewer's verdict, quoted in plain text: "Ready to merge: Yes", with no Critical and no Important findings. One new finding:
+
+- F4 (non-blocking) — `CHANGELOG.md:9` lists the new tool versions but not that the default coreutils in the image are the Rust rewrite, which the plan and F1 both named as the likelier surprise for someone's own shell work. Nothing in the entry is false, and the suite passes in the image. The reviewer also suggested saying `sudo` may resolve to sudo-rs; that part has no evidence here, since the Dockerfile installs the `sudo` package and the engineer's run printed `sudo: ok`, so only the coreutils clause is worth adding, and only if the engineer wants it. Whose: `/codeo:implement`'s, wording only.
+
+F4 does not send the change back on its own, and no round is opened for it.
+
+**Evidence not reproduced here.** Criteria 2 and 3, the in-image suite run and the amd64-only build rest on the engineer's pasted Docker output, as in round 1. The suite run in this container uses 24.04's tools and proves nothing about 26.04 by itself.
+
+**Issues filed:** none.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-14 — round 1: build, `shell` suite, criteria, documentation and footprint checked; opus review found nothing blocking; verdict clear · cost: 5m · opus-5-5 271k in + 1.5M cached / 8k out
+- 2026-11-14 — round 2: the whole pass re-run after the notes were fixed; opus review found nothing blocking; verdict clear · cost: 5m · opus-5-5 307k in + 973k cached / 8k out
