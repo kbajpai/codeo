@@ -328,6 +328,48 @@ caller with a number, and the caller — not `/codeo:issue` — records it in it
 even when called mid-flow; its own file lives under `.codeo/intake/`. `/codeo:triage` records the
 number in its ledger.
 
+## Closing block
+
+Every skill's final message ends with the same three-part block, and nothing comes after it. It is
+for the engineer, who should never have to work out where they stand or what to type next:
+
+```
+---
+**Done:** <what this run did, in plain words>
+**Next goal:** <the one outcome to reach next, and the skill that gets there>
+**Steps:**
+1. <the first action — the exact command to run>
+2. <the action after it>
+3. <…>
+```
+
+- **Done** is one to three short sentences, in plain words. Detail (findings, URLs, tables) goes
+  above the rule, not inside it.
+- **Next goal** is one sentence naming the outcome, not the command.
+- **Steps** are two to five numbered actions, each one thing the engineer or a skill can do. The
+  first names the exact command. No step is "decide what to do".
+- **A skill with several exits states the one it took.** `/codeo:qc` is clear, back to
+  `/codeo:implement` or back to `/codeo:plan`; `/codeo:close` is waiting on a merge, sent back,
+  finished or stashed. The block describes that exit and no other.
+- **It reports state; it is not a hand-off.** The hand-off's four parts above still happen first.
+  The block is what the engineer reads once they have.
+- **A call returns no block.** When `/codeo:issue` runs because another skill called it (see *A
+  call is not a hand-off*), it returns the number and the caller's own block closes the turn.
+
+The default next goal of each skill:
+
+| Skill | Next goal |
+|---|---|
+| `setup` | a working install — `/codeo:doctor` |
+| `doctor` | everything green, or failures fixed — then `/codeo:issue` or `/codeo:init #<N>` |
+| `issue` | the issue started — `/codeo:init #<N>` |
+| `init` | a reviewed plan — `/codeo:plan` |
+| `plan` | the plan built — `/codeo:implement` |
+| `implement` | the build graded — `/codeo:qc` |
+| `qc` | by verdict: a pull request (`/codeo:close`), fixes (`/codeo:implement`) or a re-plan (`/codeo:plan`) |
+| `close` | by exit: the PR merged, review fixed, or loose ends found (`/codeo:triage`) |
+| `triage` | the next issue started — `/codeo:init #<N>` |
+
 ## Spinning out subagents
 
 Every flow delegates some work to subagents, and **every subagent runs on the configured subagent

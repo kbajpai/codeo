@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1
+Shared state: unchanged from v1.0.4.
+Safe to bump mid-workflow: yes
+
+- Every skill now ends with the same closing block: **Done** (what this run did), **Next goal**, and numbered **Steps** to reach it, the first naming the exact command. `docs/handoff.md` defines it under *Closing block*; each `SKILL.md` cites it, and `/codeo:qc` and `/codeo:close` give the block for the exit they took. `/codeo:issue`, `/codeo:setup` and `/codeo:doctor` no longer end with nothing: `issue` points at `/codeo:init #<N>`, the other two append the block after the script output. `tests/closing-block.test.sh` fails when a skill does not cite it.
+
 ## v1.0.4 — 2026-11-14
 
 Config schema: 1

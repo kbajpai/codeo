@@ -455,6 +455,11 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
     - **Back to `/codeo:implement`** — name the findings and what specifically must change.
     - **Back to `/codeo:plan`** — name what the plan got wrong and why the code cannot fix it.
 
+    **End with the closing block** (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`) for
+    the route taken: clear → the goal is the pull request, first step `/codeo:close`; back to
+    implement → the goal is the named fixes, first step `/codeo:implement`; back to plan → the
+    goal is the corrected plan, first step `/codeo:plan`.
+
     A verdict that is not clear does not release the lease: the environment stays with this issue,
     which may still owe it a redeploy. A send-back is a hand-off: write the round, name what must
     change, route it, and stop (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A send-back`).
