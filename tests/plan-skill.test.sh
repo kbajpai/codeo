@@ -37,6 +37,8 @@ must_contain 'a host-run task opens with the Runs on line' "Runs on: the enginee
 must_contain 'a host-run command is neutral' 'no shell variable or substitution'
 must_contain 'a command that cannot be neutral is labelled with its shell' '`Shell: <name>`'
 must_contain 'the shell is asked as a numbered question' 'a numbered question in plan.md'
+must_contain 'a local lock needs no shell question' 'A `host: local` lock needs no question, because the session'\''s own shell is the engineer'\''s.'
+must_contain 'a host task on the environment carries both markers' 'carries both markers, each on its own line'
 
 if ((failures)); then
     echo "$failures case(s) failed"
