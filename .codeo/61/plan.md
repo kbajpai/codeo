@@ -42,6 +42,7 @@ I recommend A: every criterion gets checked and recorded inside the workflow, an
 **Options:** A · B · C (say what).
 
 **Answer:**
+A (engineer, 2026-11-14, in the conversation)
 
 ### Q2 — Who runs the clean-clone test of the merged commit?
 
@@ -55,6 +56,7 @@ I recommend A: it leaves command and output in the dossier for `/codeo:qc`, and 
 **Options:** A · B.
 
 **Answer:**
+A (engineer, 2026-11-14, in the conversation)
 
 ### Q3 — Does `Shared state: unchanged from v1.0.3.` stay as written?
 
@@ -69,6 +71,7 @@ I recommend A: the forms are unchanged, which is what the line has meant in ever
 **Options:** A · B · C.
 
 **Answer:**
+A (engineer, 2026-11-14, in the conversation)
 
 ## Notes
 
