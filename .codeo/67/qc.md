@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written and clear (round 1 was clear too; the notes it raised were fixed, so the pass ran again). Nothing is open. Criteria 2 and 3 cannot be run in this container (no `docker`); they rest on the engineer's pasted Docker output in `implement.md` Q1, which this pass cites and did not reproduce.
+Round 3 is written and clear (rounds 1 and 2 were clear too; the notes each raised were fixed, so the pass ran again). Three new wording notes, F5-F7, are recorded and non-blocking. Nothing is open. Criteria 2 and 3 cannot be run in this container (no `docker`); they rest on the engineer's pasted Docker output in `implement.md` Q1, which this pass cites and did not reproduce.
 
 ## Questions
 
@@ -103,7 +103,50 @@ F4 does not send the change back on its own, and no round is opened for it.
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+### Round 3 — 2026-11-14
+
+Round 2's note F4 was fixed in `47b0207` (`implement.md` round 3, not a send-back), so the whole pass ran again. Head `bc2131d`. The branch already contained `origin/main` (`sync-main`: nothing merged); `overlap.sh 67` and `overlap.sh --outside 67` printed nothing.
+
+**Commands run and their output**
+
+- `bash scripts/scope.sh origin/main HEAD` printed `suite.shell=true` (`shell needed for unclassified paths`: the dossier files under `.codeo/67/` and `CHANGELOG.md`).
+- Build: the `shell` suite's `build` is `true`; exit 0.
+- Suite: `bash tests/run.sh` printed `all cases passed`, exit 0. The reviewer ran `tests/devcontainer.test.sh` and the whole suite again with the same result and a clean tree afterwards.
+- `grep -v '^[[:space:]]*#' .devcontainer/Dockerfile | grep -m1 '^FROM '` printed `FROM ubuntu:26.04`.
+- `grep -n "ubuntu:26.04'\|dockerfile_is_ubuntu_2604" tests/devcontainer.test.sh` printed lines 111, 115 and 1644.
+- `git grep -n -i -E '24\.04|2404|noble' -- .devcontainer tests` printed nothing, exit 1.
+- `grep -n '^## Unreleased' CHANGELOG.md` printed `3:## Unreleased`.
+- `git grep -n -i -E 'ubuntu|dev container image' -- docs README.md ':!docs/plans'` printed nothing. The `qc` overlays exit 3: none.
+
+**Criteria**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| The first `FROM` in `.devcontainer/Dockerfile` is `ubuntu:26.04` | met | `.devcontainer/Dockerfile:6`, the grep above |
+| `docker build` of `.devcontainer/Dockerfile` succeeds | untestable here — no `docker` in this container; the engineer's build on a Docker host finished (`implement.md` Q1) | engineer's pasted output, not reproduced here |
+| In the built image `bash`, `git`, `jq`, `shellcheck`, `gh` and `claude --version` run, and `id dev` reports UID 1000 | untestable here — no `docker`; the engineer's run printed bash 5.3.9, git 2.53.0, jq 1.8.1, shellcheck 0.11.0, gh 2.104.0, Claude Code 2.1.325 and `uid=1000(dev)` (`implement.md` Q1) | engineer's pasted output, not reproduced here |
+| `tests/devcontainer.test.sh` asserts `ubuntu:26.04` and passes, along with the rest of the `shell` suite | met | `tests/devcontainer.test.sh:115`; `bash tests/run.sh` printed `all cases passed`; the engineer's run of the suite inside the image printed it too (Q1) |
+| No current file in `.devcontainer/` or the tests still names Ubuntu 24.04 | met | `git grep -n -i -E '24\.04\|2404\|noble' -- .devcontainer tests` printed nothing |
+| `CHANGELOG.md` has an `## Unreleased` entry for the change | met | `CHANGELOG.md:3` |
+
+**Documentation check.** The diff since round 2 is one sentence in `CHANGELOG.md`. The reviewer checked its claim against the published base layer: `usr/bin/stat`, `readlink` and `install` are symlinks into `../lib/cargo/bin/coreutils/`, `rust-coreutils 0.10.0` is installed, and bash is 5.3. It also re-checked the README's *Rebuilding* paragraph against `devcontainer.json` and the start script, and found each claim true. No other page names the image. No diagram applies.
+
+**Findings.** Round 2's F4 (non-blocking) — fixed by `47b0207`. The reviewer's verdict, quoted in plain text: "With fixes (the minor wording fixes above are optional)", with no Critical and no Important findings. Three new findings, all wording:
+
+- F5 (non-blocking) — `CHANGELOG.md:9` says "The same tools are installed, at 26.04's versions (…)", but `gh` comes from GitHub's apt repository and Claude Code from its installer, so neither is at 26.04's version; the parenthesis lists only the apt tools. True, and checked: the engineer's run printed gh 2.104.0 from GitHub's repository. Whose: `/codeo:implement`'s, wording only.
+- F6 (non-blocking) — the same line names only `stat`, `readlink` and `install` as Rust coreutils; the reviewer found `chmod`, `chown`, `mv`, `mktemp` and `ls` are too, and the start scripts use `chmod --reference` (`devcontainer-start.sh:214`, `window-title.sh:61`). The sentence is not false; a reader could take the list as complete. Whose: `/codeo:implement`'s, wording only.
+- F7 (non-blocking) — `.devcontainer/README.md:38` says "The Claude Code login is not kept"; a rebuild loses all of `~/.claude` (past sessions and user settings too), not only the login. True, since `~/.claude` has no volume. Whose: `/codeo:implement`'s, wording only.
+
+None of the three sends the change back, and no round is opened for them. Each fix has so far produced a further wording note on the sentence it touched (round 1's three, then F4, now F5-F7); the change itself has been correct since round 1, and a fourth pass would be paying for polish. The engineer can fold F5-F7 into the pull request's review, or send them to `/codeo:implement`.
+
+**Evidence not reproduced here.** Criteria 2 and 3, the in-image suite run and the amd64-only build rest on the engineer's pasted Docker output, as in rounds 1 and 2.
+
+**Issues filed:** none.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-14 — round 1: build, `shell` suite, criteria, documentation and footprint checked; opus review found nothing blocking; verdict clear · cost: 5m · opus-5-5 271k in + 1.5M cached / 8k out
 - 2026-11-14 — round 2: the whole pass re-run after the notes were fixed; opus review found nothing blocking; verdict clear · cost: 5m · opus-5-5 307k in + 973k cached / 8k out
+- 2026-11-14 — round 3: the whole pass re-run after F4 was fixed; opus review found nothing blocking, three wording notes; verdict clear · cost: 6m · opus-5-5 361k in + 1.2M cached / 12k out
