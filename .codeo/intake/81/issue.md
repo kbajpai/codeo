@@ -1,4 +1,4 @@
-# Issue — issue
+# Issue #81 — issue
 
 ## Questions
 
@@ -55,8 +55,9 @@ Found by `/codeo:qc` and triaged in `/codeo:triage` run 9, where the engineer ch
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Filed as #81: https://github.com/kbajpai/codeo/issues/81 (label enhancement).
 
 ## Log
 
 - 2026-11-14 — draft written for review, delegated from /codeo:triage run 9
+- 2026-11-14 — approved at the gate and filed as #81
