@@ -244,7 +244,10 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
    moved to Ready (each with `/codeo:init #<N>` as its next step), the commands the engineer chose
    to run, and what was deferred. `superpowers:verification-before-completion` applies: each issue
    number comes from `/codeo:issue`'s result, each "Ready" from `board.sh`'s output, and
-   "committed" from `intake.sh`'s output.
+   "committed" from `intake.sh`'s output. End with the closing block
+   (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next goal is the engineer's pick
+   of what to start, the first step `/codeo:init #<N>` for the top Ready issue (or `/codeo:issue`
+   when nothing is filed yet).
 
 ## Hand-off
 
@@ -259,7 +262,7 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
 - **Never touches** the issues themselves, any other board Status, any branch, the lock, the
   project's docs or wiki, code, or any other skill's dossier — including the archived ones it reads.
 - **Calls** `/codeo:issue` for every item the engineer chooses to file, and records the number
-  it returns. **Hands off to** nobody: what to resume, and when, is the engineer's.
+  it returns. **Hands off to** nobody: what to resume, and when, is the engineer's — the closing block only names the next issue.
 - **Spins out subagents** on the configured subagent model (`models.subagent`, sonnet when unset),
   passed explicitly, and prefers a direct `grep`/`Read`/`git show` over an agent when the target is
   already known — see `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Spinning out subagents`.

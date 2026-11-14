@@ -13,8 +13,8 @@ This skill drafts and files a GitHub issue in this project's repository, and tha
 captures the *what and why* — problem, requirements, acceptance criteria — not the *how*. Contracts,
 diagrams, and design belong to `/codeo:plan`; sketching them here duplicates work it will redo
 properly with the codebase open in front of it. **It hands off to nobody**: it files the issue,
-reports the number, and stops. Don't suggest a next skill and don't cut a branch — the engineer
-decides what happens to the issue next.
+reports the number, and stops. Don't cut a branch and don't start the next skill — the engineer
+decides when. It does end with the closing block, whose next goal is starting the issue.
 
 **Other skills call it.** When `/codeo:plan` or `/codeo:implement` hits work that is real
 but out of scope for what it is doing, it delegates here rather than widening its own scope or
@@ -162,13 +162,15 @@ The repository is read from the project's config, never typed into a command:
    rewrite its first line to `# Issue #<N> — issue`, the title every dossier carries
    (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The shape of a file`). Commit the rename in one step:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit <N> "docs(codeo): issue dossier for #<N> — filed" --drop new-<slug>`.
-   Then report the created issue's URL and number. No next step, no suggested skill, no branch. If
-   another skill delegated here, hand the number back to it and let it resume what it was doing.
+   Then report the created issue's URL and number, and end with the closing block
+   (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next goal is starting the issue,
+   the first step `/codeo:init #<N>`. No branch is cut. If another skill delegated here, hand the
+   number back to it with no block and let it resume what it was doing.
 
 ## Hand-off
 
 `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md` is the protocol. This skill sits outside the workflow's
-lifecycle — it runs before an issue number or a branch exists, and it hands off to nobody.
+lifecycle — it runs before an issue number or a branch exists, and it hands off to nobody, though it ends with a closing block naming the next step.
 
 - **Reads** existing issues, the relevant code, and whatever context a calling skill passes.
 - **Writes** the GitHub issue, and `.codeo/intake/<N>/issue.md` — drafted under
@@ -192,7 +194,8 @@ lifecycle — it runs before an issue number or a branch exists, and it hands of
   is the GitHub issue; its dossier goes only to the intake branch, so it never lands in an
   unrelated PR and never shows up in `git status`.
 - Doesn't cut a branch, open a dossier on a feature branch, or hand off to another skill —
-  `/codeo:init` is a separate thing the engineer runs when they are ready for it.
+  `/codeo:init` is a separate thing the engineer runs when they are ready for it; the closing
+  block only names it.
 
 ## Tips
 

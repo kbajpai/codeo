@@ -284,8 +284,10 @@ pages under `$DOCS`).
    by name, and push as at step 4, with the subject `docs(codeo): implement dossier for #<N>`
    (`— round <n>` for a later round; `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`).
 
-9. **Report** which checklist tasks completed, the build result, and hand off to `/codeo:qc`.
-   This skill does not declare the change good — it declares the plan's tasks done.
+9. **Report** which checklist tasks completed and the build result, and hand off to `/codeo:qc`.
+   End with the closing block (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next
+   goal is grading the change, the first step `/codeo:qc`. This skill does not declare the change
+   good — it declares the plan's tasks done.
 
 ## Hand-off
 

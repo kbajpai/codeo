@@ -31,7 +31,7 @@ The skill drafts and files the issue and does nothing else. It captures the what
 
 ### Hand-offs and non-goals
 
-- Hands off to nobody. It sits outside the workflow's lifecycle, before an issue number or a branch exists.
+- Hands off to nobody: it sits outside the workflow's lifecycle, before an issue number or a branch exists. It still ends with the closing block, whose next goal is starting the issue with `/codeo:init #<N>`.
 - Never touches the project's docs, code, the branch, the lock, or another skill's dossier file. When another skill calls it, that caller records the new number in its own outcome and log line.
 - Does not design a solution, request/response contract, or architecture diagram; that is `/codeo:plan`'s purview.
 - Does not write code or plan docs.
@@ -215,7 +215,7 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 ### Hand-offs and non-goals
 
-- Hands off to nobody: what to resume, and when, is the engineer's.
+- Hands off to nobody: what to resume, and when, is the engineer's. It ends with the closing block naming the next issue to start.
 - Calls `/codeo:issue` for every item the engineer chooses to file, and records the number it returns.
 - Never touches the issues themselves, any other board Status, any branch, the lock, the project's docs or wiki, code, or any other skill's dossier, including the archived ones it reads.
 - Does not file, edit, label or close issues; `/codeo:issue` files and the rest is the engineer's. Its board writes are Ready and Backlog only: In progress is `/codeo:init`'s, and In review and Done are `/codeo:close`'s.
@@ -243,7 +243,7 @@ The script reads the repository owner and name from the `origin` remote and the 
 
 ### Hand-offs and non-goals
 
-- Hands off to nobody. The skill reports the script's output verbatim and adds nothing; if the script exits non-zero, it says so and stops.
+- Hands off to nobody. The skill reports the script's output verbatim, then ends with the closing block and adds nothing else; if the script exits non-zero, it says so and stops.
 
 ### Extension points
 
@@ -264,7 +264,7 @@ The script runs eleven checks: config, schema, codename, gh-auth, gh-scopes, boa
 
 ### Hand-offs and non-goals
 
-- Hands off to nobody. The skill reports the script's output verbatim and adds nothing; if the script exits non-zero, it says so and stops.
+- Hands off to nobody. The skill reports the script's output verbatim, then ends with the closing block and adds nothing else; if the script exits non-zero, it says so and stops.
 
 ### Extension points
 

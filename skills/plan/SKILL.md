@@ -307,8 +307,9 @@ answer too: each task then names its own proof command in full (step 8).
        run `overlap.sh --outside <N>` and add every path it prints to `files:` before committing,
        then run `overlap.sh <N>` again if you added any and raise what it prints as at sub-step 2.
 
-11. **Report** the file path and a one-line summary, and suggest `/codeo:implement` to execute
-    the plan once the engineer has committed it. If this plan tracks a GitHub issue but no branch
+11. **Report** the file path and a one-line summary, then end with the closing block
+    (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next goal is building the plan,
+    the steps are to review and commit it and then run `/codeo:implement`. If this plan tracks a GitHub issue but no branch
     exists yet, `/codeo:init #<number>` is the step that was skipped — it runs upstream of this
     one.
 

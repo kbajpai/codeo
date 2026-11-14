@@ -287,7 +287,9 @@ the step carries on.
 8. **Hand the pull request to the engineer, and keep the lock.** Report its URL and say plainly
    that the workflow stays open until it merges, that merging is the engineer's, and that running
    `/codeo:close` again afterwards — in this checkout, or any checkout holding the lock — finishes
-   it.
+   it. Every exit of this skill ends with the closing block
+   (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`) for the exit taken. Here: the goal is
+   the merged pull request; the steps are to review and merge it, then run `/codeo:close` again.
 
    **Offer a background watch** rather than only ending the turn: the Monitor tool on an
    until-loop,
@@ -403,7 +405,8 @@ the step carries on.
       round reaches `/codeo:implement` once `git push` from this checkout succeeds.
     - Hand off to `/codeo:implement` and stop. It works the feedback, `/codeo:qc` runs its whole
       pass again, and this skill comes back through Phase 1's return path
-      (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A send-back`).
+      (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A send-back`). End with the closing block: the
+      goal is the requested changes, then `/codeo:implement`, `/codeo:qc`, `/codeo:close`.
 
 ## Phase 3 — merged: verify and clean up
 
@@ -518,7 +521,8 @@ the step carries on.
     easiest to lose. `superpowers:verification-before-completion` applies to every claim: each
     comes from a tool's output in this invocation — the merge from `github.sh`, the deletion from
     `git ls-remote`, the leases from `lease list`, the lock from `.codeo/active` being gone — never
-    from a step having been attempted.
+    from a step having been attempted. End with the closing block: the goal is the loose ends found,
+    the first step `/codeo:triage`, then the host's checkout clean-up above.
 
 ## Stash, and closed unmerged
 
@@ -603,7 +607,8 @@ last; when the release or a push failed, keep it, say what failed, and that runn
 `/codeo:close --stash` again in this checkout finishes the stash. Report that `/codeo:init #<N>`
 resumes it, on any machine. Everything is pushed, so this checkout holds nothing the branch lacks:
 say what is left of it as step 17 does, by the lock's host, read before the lock goes. An open pull
-request stays open; say so.
+request stays open; say so. End with the closing block: the goal is resuming the work, the first
+step `/codeo:init #<N>`.
 
 **Closed unmerged** is the engineer's decision to read, not this skill's: ask, as a numbered
 question in `close.md` (step 0), whether to reopen it (theirs to do on GitHub; running

@@ -320,7 +320,9 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
     `lock: took the lock for #<N> on <branch>`; quote that line. It never fails its caller: what
     it could not do it prints on stderr as a `lock: TODO — …` line, and then there is no lock —
     quote the line and stop rather than hand off, because `plan` would refuse to start. With the
-    lock taken, `/codeo:plan` runs next in this same session.
+    lock taken, `/codeo:plan` runs next in this same session. Either way, end with the closing block
+    (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next goal is a reviewed plan,
+    the first step `/codeo:plan` (with a host workflow, the step that opens the checkout it names).
 
 
 ## The outcome
