@@ -73,7 +73,7 @@ flowchart TD
   Run: `bash tests/closing-exits.test.sh`
   Expected: exit 1, with a `FAIL:` line for every case (each label is absent, and `rule`'s bullet is absent).
 
-- [ ] **Step 3: Write the rule into `docs/handoff.md`.** In the *Closing block* bullets, add after "A skill with several exits states the one it took": `**It names only a command that can run.**` — the first step is the command that can run in the state the exit leaves behind; a lock a failed step kept, a lock never taken, a Ready gate not yet passed each change which command that is, and the block never names the command the state refuses nor, while the lock is kept, a clean-up that destroys the checkout the lock lives in. In the table of default next goals, add a second table, "Exits whose next command is not the default", with one row per exception: `close — lock kept` (`/codeo:close`), `stash — interrupted` (`/codeo:close --stash`), `stash — completed` (`/codeo:init #<N>`, after the manual Ready repair when the board move failed), `init — no lock` (the recovery, then the default), `issue — not Ready` (`/codeo:triage`, then `/codeo:init #<N>`).
+- [ ] **Step 3: Write the rule into `docs/handoff.md`.** In the *Closing block* bullets, add after "A skill with several exits states the one it took": `**It names only a command that can run.**` — the first step is the command that can run in the state the exit leaves behind; a lock a failed step kept, a lock never taken, a Ready gate not yet passed each change which command that is, and the block never names the command the state refuses nor, while the lock is kept, a clean-up that destroys the checkout the lock lives in. In the table of default next goals, add a second table, "Exits whose next command is not the default", with one row per exception: `close — lock kept` (`/codeo:close`), `stash — interrupted` (`/codeo:close --stash`), `stash — completed` (`/codeo:init #<N>`, after the manual Ready repair when the board move failed), `init — no lock` (the fix the `lock: TODO` line names, then `lock.sh take local` again; never `/codeo:plan`), `issue — not Ready` (`/codeo:triage`, then `/codeo:init #<N>`).
 
 - [ ] **Step 4: Run `rule` on its own.**
   Run: `bash tests/closing-exits.test.sh rule`
@@ -240,8 +240,71 @@ flowchart TD
 
 ---
 
+## Round 2 — send-back from QC round 1
+
+Tasks 1-8 are built. QC round 1 found one blocking defect the plan caused (Task 1 Step 3 dictated a
+table cell that names `/codeo:plan` for the no-lock exit, F1) and five non-blocking ones (F2-F6),
+all taken in (plan dossier Q4 = A). Tasks 9 and 10 are the work; Task 1 Step 3's cell is corrected
+above.
+
+### Task 9: The `init — no lock` table row, and the tests that hold it (QC round 1 F1, F5)
+
+**Files:**
+- Modify: `docs/handoff.md` (the `init — no lock` row of "Exits whose next command is not the default", line 384)
+- Test: `tests/closing-exits.test.sh`
+
+**Interfaces:**
+- Consumes: `has`, `lacks` and `step` from `tests/closing-exits.test.sh`; the labelled paragraph `**Closing block — no lock:**` already in `skills/init/SKILL.md`.
+
+- [ ] **Step 1: Add the failing check to `case_rule`.** From `$block`, take the line holding `` `init — no lock` `` into `row`; `has "$row" 'lock.sh take local'` and `lacks "$row" '/codeo:plan'`.
+  Run: `bash tests/closing-exits.test.sh rule`
+  Expected: exit 1, two `FAIL:` lines (the row lacks `lock.sh take local` and names `/codeo:plan`).
+
+- [ ] **Step 2: Add the F5 guard to `case_init_no_lock`.** With `s=$(step "$init" 11)`, `lacks "$s" 'Either way, end with the closing block'` — the old unconditional sentence that named `/codeo:plan` on both exits.
+  Run: `bash tests/closing-exits.test.sh init-no-lock`
+  Expected: `all cases passed` at once (the sentence is already gone; the check guards against its return). Prove it bites by running the case against a copy of `skills/init/SKILL.md` with the sentence restored: exit 1.
+
+- [ ] **Step 3: Fix the row.** The first-step cell reads: the fix the `lock: TODO` line names, then `lock.sh take local` again.
+  Run: `bash tests/closing-exits.test.sh`
+  Expected: `all cases passed`, exit 0.
+
+- [ ] **Step 4: Commit** `docs/handoff.md` and `tests/closing-exits.test.sh`, subject `fix: the no-lock row names the recovery, not /codeo:plan (#69)`.
+
+---
+
+### Task 10: `/codeo:plan` — host-task wording (QC round 1 F2, F3, F4)
+
+**Files:**
+- Modify: `skills/plan/SKILL.md` step 8, the host-task paragraph and the `Needs lease:` paragraph (lines 168-181 and 204)
+- Test: `tests/plan-skill.test.sh`
+
+**Interfaces:**
+- Consumes: `must_contain` in `tests/plan-skill.test.sh`; the existing pins on `Runs on: the engineer's host` and `carries both markers, each on its own line`, which stay.
+
+- [ ] **Step 1: Change the pins first.** Replace the pin on `A \`host: local\` lock needs no question, because the session's own shell is the engineer's.` with one on `unless the session runs on Windows`. Add `must_contain` lines for: `is marked with a line \`Runs on: the engineer's host\``, `carries a line \`Needs lease:`, and `in a language the engineer's host is known to have`.
+  Run: `bash tests/plan-skill.test.sh`
+  Expected: exit 1, four `FAIL:` lines naming those strings.
+
+- [ ] **Step 2: Reword the paragraph** (the signature of each change; the text is yours):
+  - F2: a host task "is marked with a line `Runs on: the engineer's host`" and a lease task "carries a line `Needs lease: <the value of $ENV_RESOURCE>`", so a task with both is consistent; "carries both markers, each on its own line, in either order" stays.
+  - F3: the scope reads "when the lock's `host` is not `local`, or is `local` on Windows"; the exemption becomes "A `host: local` lock needs no question, unless the session runs on Windows: Claude Code then runs commands in Git Bash while the engineer may type in PowerShell, so ask as for any other host." The "reason" sentence about #67 stays.
+  - F4: after "anything longer becomes a script in the repository, run as one command": the script is "in a language the engineer's host is known to have"; where none is known, the task is labelled `Shell: <name>` and asked like any command that cannot be neutral.
+
+- [ ] **Step 3: Run the test.**
+  Run: `bash tests/plan-skill.test.sh`
+  Expected: `all cases passed`, exit 0.
+
+- [ ] **Step 4: Prove the round.**
+  Run: `bash tests/run.sh`
+  Expected: `all cases passed`, exit 0.
+
+- [ ] **Step 5: Commit** `skills/plan/SKILL.md` and `tests/plan-skill.test.sh`, subject `fix: plan's host-task rule — markers carried, Windows hosts asked, scripts on a known interpreter (#69)`.
+
+---
+
 ## Self-review
 
 - **Coverage.** Criterion 1 → Task 2; 2 → Task 3; 3 → Task 4; 4 → Task 5; 5 → Task 1 plus Tasks 2-5; 6 → Task 6; 7 → Task 8 steps 1 and 3; 8 → Task 8 steps 2 and 4. Intake Q1 (Status read) → Task 5; intake Q2 (where the rule lives) → Task 1.
 - **Consistency.** The labels and case names are those of Global Constraints and Task 1, used unchanged in Tasks 2-5.
+- **Round 2 coverage.** F1 → Task 9 steps 1 and 3; F5 → Task 9 step 2; F2-F4 → Task 10; F6 → the footprint (`tests/close-skill.test.sh` added). `docs/skills.md`, `CHANGELOG.md` and `.devcontainer/README.md` need nothing: none describes the rows or sentences changed.
 - **Proportion.** Eight tasks for four skills, one rule, one rule-paragraph, two docs; tests are the tasks' first steps.

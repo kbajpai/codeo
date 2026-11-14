@@ -8,9 +8,9 @@
 
 ## Where this stands
 
-Q4 answered A (F1 and all of F2-F6). The round-2 draft is in `.codeo/69/plan-draft.md` (Tasks 9
-and 10, one correction to Task 1 Step 3, a footprint with `tests/close-skill.test.sh`), awaiting
-approval; the plan file is untouched until then.
+Round 2 is planned and approved (Q4 = A): Tasks 9 and 10 are appended to the plan file and
+Task 1 Step 3 is corrected; the plan is committed on the engineer's say-so. Nothing is
+open. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -160,10 +160,24 @@ A — F1 and all of F2-F6 (answered in the conversation: "A, as recommended").
 
 **Filed through `/codeo:issue`:** none. **Optional skills unavailable:** `engineering:system-design` and `engineering:architecture` were not used; the change adds no component and decides no technology, so their structure did not apply.
 
+### Round 2 — 2026-11-14
+(send-back from qc.md round 1)
+
+**Plan:** the same file, `docs/plans/2026-11-14-closing-blocks-that-can-run.md`, with a `## Round 2` section (Tasks 9 and 10) and Task 1 Step 3's `init — no lock` cell corrected — approved 2026-11-14, left unstaged for the engineer's review. Shape unchanged.
+
+**What QC found.** F1 (blocking, the plan's): Task 1 Step 3 dictated the table cell "the recovery, then the default", which put `/codeo:plan` in the `init — no lock` row of `docs/handoff.md` against criterion 3. F2-F6 (non-blocking) taken in too.
+
+**Decisions.**
+- Q4 = A: F1 and all of F2-F6 are fixed in this round. Task 9: the row, a test that the row names `lock.sh take local` and not `/codeo:plan`, and a guard that init's old unconditional sentence stays gone (F1, F5). Task 10: the host-task wording in `skills/plan/SKILL.md` (F2 markers "carried" not "started with", F3 a Windows `host: local` session is asked, F4 a replacement script is in a language the host is known to have) (F2-F4). F6: `tests/close-skill.test.sh` joins the footprint. Rejected: B (F3 and F4 to `/codeo:triage`) and C (F1 only).
+
+**Documentation the round moves.** `docs/handoff.md` (the table row). `docs/skills.md`, `CHANGELOG.md` and `.devcontainer/README.md` need nothing.
+
+**Filed through `/codeo:issue`:** none.
+
 ### Footprint
 
 ```
-files:      skills/close/SKILL.md, skills/init/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, docs/handoff.md, docs/skills.md, docs/plans/2026-11-14-closing-blocks-that-can-run.md, tests/closing-exits.test.sh, tests/plan-skill.test.sh, CHANGELOG.md, .devcontainer/README.md
+files:      skills/close/SKILL.md, skills/init/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, docs/handoff.md, docs/skills.md, docs/plans/2026-11-14-closing-blocks-that-can-run.md, tests/closing-exits.test.sh, tests/plan-skill.test.sh, tests/close-skill.test.sh, CHANGELOG.md, .devcontainer/README.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -176,3 +190,4 @@ sequenced:  none
 - 2026-11-14 — planned: docs/plans/2026-11-14-closing-blocks-that-can-run.md · cost: 9m · fable-5-2 95k in + 693k cached / 10k out · sonnet-5-5 118k in + 1.2M cached / 19k out
 - 2026-11-14 — send-back from qc.md round 1 (F1) read; Q4 raised · cost: 0m · fable-5-2 124k in + 26k cached / 1k out
 - 2026-11-14 — Q4 answered A, round-2 draft written to plan-draft.md, awaiting approval · cost: 3m · sonnet-5-5
+- 2026-11-14 — planned round 2: docs/plans/2026-11-14-closing-blocks-that-can-run.md Tasks 9-10 (send-back from qc round 1) · cost: 4m · sonnet-5-5
