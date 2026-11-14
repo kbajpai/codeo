@@ -8,8 +8,10 @@
 
 ## Where this stands
 
-Q1-Q3 answered as recommended; the plan is approved and written to
-`docs/plans/2026-11-14-closing-blocks-that-can-run.md`, unstaged. Nothing is open.
+Sent back by `qc.md` round 1 for one blocking finding (F1): the plan's Task 1 dictated a
+`docs/handoff.md` table cell that names `/codeo:plan` for the no-lock exit. Q4 is open: how much
+of round 1's non-blocking findings this round takes with it. The round-2 tasks are drafted once
+Q4 is answered.
 
 ## Questions
 
@@ -85,6 +87,38 @@ decides whether this is skill text and a test, or also a config key.
 **Answer:**
 A — a rule in `skills/plan/SKILL.md`, no config (answered in the conversation: "as recommended for all three").
 
+### Q4 — Which of QC round 1's non-blocking findings does this round fix along with F1?
+
+**Why it matters:** F1 must be fixed (the `init — no lock` row of `docs/handoff.md`'s table,
+plus a test that the row does not name `/codeo:plan`). `qc.md` round 1 also recorded F2-F6 as
+non-blocking. Four of them are the plan's and sit in the paragraph this branch wrote in
+`skills/plan/SKILL.md`; left out, they go to `/codeo:triage` after the merge and become a second
+issue editing the same lines. Taken in, they widen what QC round 2 has to grade. F3 and F4 change
+what the host-task rule says, not only how it is worded:
+- F2: a task cannot "start with" both `Runs on:` and `Needs lease:`. Wording: "carries".
+- F3: "`host: local` needs no shell question" is false where Claude Code on native Windows runs
+  commands in Git Bash while the engineer types in PowerShell. Fix: with `host: local` no question
+  is asked unless the session runs on Windows, where the plan asks as for any other host.
+- F4: "anything longer becomes a script in the repository" does not say the script must run on
+  the engineer's host. Fix: the script is in a language the engineer's host is known to have, or
+  the task is labelled `Shell: <name>` like any command that cannot be neutral.
+- F5: `tests/closing-exits.test.sh` does not check that init's old unconditional sentence
+  ("Either way, end with the closing block … `/codeo:plan`") stays gone. Fix: one case.
+- F6: `tests/close-skill.test.sh` is missing from the footprint. Fix: add it (the footprint is
+  rewritten this round in any case).
+
+**Options:**
+- **A — F1 and all of F2-F6 (recommended).** One more task in `skills/plan/SKILL.md` and
+  `tests/plan-skill.test.sh`, one more test case, the footprint line. Each is a sentence or a
+  case in text this branch already owns, and nothing is left for a follow-up issue.
+- **B — F1, F2, F5 and F6 only.** Wording, a test and the footprint; no change to what the
+  host-task rule decides. F3 and F4 are left for `/codeo:triage` to offer as an issue.
+- **C — F1 only (and F6, which costs nothing).** The smallest round 2; F2-F5 all go to
+  `/codeo:triage`.
+
+**Answer:**
+_Pending._
+
 ## Notes
 
 - Decided by the plan, as intake delegated it: **one pull request.** A codeo workflow is one
@@ -141,3 +175,4 @@ sequenced:  none
 - 2026-11-14 — explored, Q1-Q3 raised · cost: 2m · fable-5-2 91k in + 576k cached / 10k out
 - 2026-11-14 — Q1-Q3 answered as recommended, plan drafted in plan-draft.md, awaiting approval · cost: 8m · fable-5-2 95k in + 693k cached / 10k out · sonnet-5-5 106k in + 399k cached / 14k out
 - 2026-11-14 — planned: docs/plans/2026-11-14-closing-blocks-that-can-run.md · cost: 9m · fable-5-2 95k in + 693k cached / 10k out · sonnet-5-5 118k in + 1.2M cached / 19k out
+- 2026-11-14 — send-back from qc.md round 1 (F1) read; Q4 raised · cost: 0m · fable-5-2 124k in + 26k cached / 1k out
