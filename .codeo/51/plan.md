@@ -125,11 +125,19 @@ which is not the same as knowing it will not touch these files.
   apply. The `shell` suite has no `filter`, so each task's proof is `bash tests/run.sh`, with
   `bash tests/devcontainer.test.sh` as the quick loop.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, tests/devcontainer.test.sh, .devcontainer/README.md, CHANGELOG.md, docs/plans/2026-11-14-seed-dev-container-git-identity.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-14 — Q1-Q3 answered; draft written to .codeo/51/plan-draft.md for review · cost: unavailable until the hand-off
 - 2026-11-14 — Q1-Q3 raised · cost: 2m · fable-5-2 91k in + 400k cached / 5k out
+- 2026-11-14 — Q1-Q3 answered; draft written to .codeo/51/plan-draft.md for review · cost: unavailable until the hand-off
