@@ -1,4 +1,4 @@
-# Issue (draft) — issue
+# Issue #75 — issue
 
 | | |
 |---|---|
@@ -7,9 +7,8 @@
 
 ## Where this stands
 
-Round 1. The problem restated: v1.0.5 (2026-11-14) is the latest release. Two PRs have merged to `main` since — #68 (dev container on `ubuntu:26.04`, #67) and #72 (closing blocks name only a command that can run, #69) — and `CHANGELOG.md` collects them under `## Unreleased` (Config schema 1, shared state unchanged, safe to bump mid-workflow). This project's own pin (`.codeo/config.json` `plugin.ref`) is still `v1.0.5`, so its sessions and dev containers run without #69's closing-block fixes. The ask is to cut the next release from `main` and move the pin to it, the same shape as #61 (v1.0.4) and #65/#66 (v1.0.5). No duplicate: the only release issue, #61, is closed; no open issue covers a release or the pin.
+Approved and filed as #75 (https://github.com/kbajpai/codeo/issues/75). The problem restated: v1.0.5 (2026-11-14) is the latest release. Two PRs have merged to `main` since — #68 (dev container on `ubuntu:26.04`, #67) and #72 (closing blocks name only a command that can run, #69) — and `CHANGELOG.md` collects them under `## Unreleased` (Config schema 1, shared state unchanged, safe to bump mid-workflow). This project's own pin (`.codeo/config.json` `plugin.ref`) is still `v1.0.5`, so its sessions and dev containers run without #69's closing-block fixes. The ask is to cut the next release from `main` and move the pin to it, the same shape as #61 (v1.0.4) and #65/#66 (v1.0.5). No duplicate: the only release issue, #61, is closed; no open issue covers a release or the pin.
 
-Q1-Q3 raised. A provisional draft built on the recommended answers is under Notes.
 
 ## Questions
 
@@ -21,6 +20,7 @@ Q1-Q3 raised. A provisional draft built on the recommended answers is under Note
 - **B — v1.1.0.** If you want the two `feat:`/behaviour changes to read as a minor.
 
 **Answer:**
+A — v1.0.6 (answered in the conversation: "A, A, A, approved")
 
 ### Q2 — Release `main` as it stands, or wait for open work?
 
@@ -30,6 +30,7 @@ Q1-Q3 raised. A provisional draft built on the recommended answers is under Note
 - **B — exactly `2a86915`.** Anything merged after filing waits for the next release.
 
 **Answer:**
+A — `main` at the time the release PR is opened; open issues ship later (answered in the conversation: "A, A, A, approved")
 
 ### Q3 — One issue for the release and the pin, or two?
 
@@ -39,6 +40,7 @@ Q1-Q3 raised. A provisional draft built on the recommended answers is under Note
 - **B — two issues.** The pin is filed separately and started after the tag exists.
 
 **Answer:**
+A — one issue, two PRs (answered in the conversation: "A, A, A, approved")
 
 ## Notes
 
@@ -91,8 +93,9 @@ The latest release is v1.0.5 (2026-11-14). Since then #68 (dev container on `ubu
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Filed as #75, Issue Type none, no labels. Approved as drafted.
 
 ## Log
 
 - 2026-11-14 — Q1-Q3 raised, provisional draft written
+- 2026-11-14 — Q1-Q3 answered A/A/A, draft approved, filed as #75
