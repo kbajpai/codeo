@@ -153,6 +153,7 @@ shape: no standing decision, so no reference doc under `docs/`). Left unstaged f
 files:      .devcontainer/scripts/devcontainer-start.sh, tests/devcontainer.test.sh, .devcontainer/README.md, CHANGELOG.md, docs/plans/2026-11-14-seed-dev-container-git-identity.md
 wiki:       none
 exclusive:  none
+sequenced:  none
 ```
 
 ## Log
