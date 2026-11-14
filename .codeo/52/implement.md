@@ -27,4 +27,4 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-14 — Tasks 1-4 done, Task 5 waiting for #51 · cost: PLACEHOLDER
+- 2026-11-14 — Tasks 1-4 done, Task 5 waiting for #51 · cost: 7m · sonnet-5-5 159k in + 5.6M cached / 22k out
