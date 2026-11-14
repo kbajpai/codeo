@@ -1,13 +1,13 @@
-# Issue — new issues land in Backlog
+# Issue #71 — issue
 
 | | |
 |---|---|
-| Status | draft, waiting for approval |
+| Status | filed #71 |
 | Updated | 2026-11-14 |
 
 ## Where this stands
 
-Q1-Q3 answered in the conversation. Draft below, waiting for the engineer's approval before filing.
+Q1-Q3 answered; draft approved and filed as #71 (https://github.com/kbajpai/codeo/issues/71), label `enhancement`.
 
 ## Questions
 
