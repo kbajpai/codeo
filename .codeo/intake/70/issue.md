@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/70 |
 | Called from | the engineer, in the conversation after `/codeo:init #69` ran in a finished issue container; not from triage |
 | Updated | 2026-11-14 |
 
