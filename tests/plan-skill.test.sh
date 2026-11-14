@@ -37,7 +37,10 @@ must_contain 'a host-run task opens with the Runs on line' "Runs on: the enginee
 must_contain 'a host-run command is neutral' 'no shell variable or substitution'
 must_contain 'a command that cannot be neutral is labelled with its shell' '`Shell: <name>`'
 must_contain 'the shell is asked as a numbered question' 'a numbered question in plan.md'
-must_contain 'a local lock needs no shell question' 'A `host: local` lock needs no question, because the session'\''s own shell is the engineer'\''s.'
+must_contain 'a local lock needs no shell question unless on Windows' 'unless the session runs on Windows'
+must_contain 'a host task is marked with a Runs on line' "is marked with a line \`Runs on: the engineer's host\`"
+must_contain 'a lease task carries a Needs lease line' 'carries a line `Needs lease:'
+must_contain 'a script is in a language the host is known to have' "in a language the engineer's host is known to have"
 must_contain 'a host task on the environment carries both markers' 'carries both markers, each on its own line'
 
 if ((failures)); then
