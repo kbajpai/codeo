@@ -319,10 +319,20 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
     (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → The lock`). It prints
     `lock: took the lock for #<N> on <branch>`; quote that line. It never fails its caller: what
     it could not do it prints on stderr as a `lock: TODO — …` line, and then there is no lock —
-    quote the line and stop rather than hand off, because `plan` would refuse to start. With the
-    lock taken, `/codeo:plan` runs next in this same session. Either way, end with the closing block
-    (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next goal is a reviewed plan,
-    the first step `/codeo:plan` (with a host workflow, the step that opens the checkout it names).
+    quote the line and do not hand off to `/codeo:plan`; the closing block below names the
+    recovery, because `plan` would refuse to start. With the lock taken, `/codeo:plan` runs next in
+    this same session, and the closing block
+    (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`) has a reviewed plan as its goal and
+    `/codeo:plan` as its first step (with a host workflow, the step that opens the checkout it
+    names).
+
+    After a `lock: TODO — …` line there is no lock, and `/codeo:plan` would refuse, so the block
+    names the recovery instead, in this paragraph:
+
+    **Closing block — no lock:** goal, the lock taken. First step, fix what the `lock: TODO` line
+    says; second step, run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" take local` again (with a
+    host workflow, the recovery its text names, such as re-running the devcontainer start script).
+    The plan is named only once the lock was taken.
 
 
 ## The outcome

@@ -497,12 +497,16 @@ the step carries on.
 16. **Release the lock.**
     <!-- rule: close-10 -->
     Delete `.codeo/active` — last, so a failure anywhere above leaves the workflow intact and
-    re-invokable rather than orphaned with no lock. When step 14's release or deletion failed,
-    keep it: say what failed, and that running `/codeo:close` again in this checkout finishes the
-    close.
+    re-invokable rather than orphaned with no lock. When a release, a branch deletion or a
+    push failed above, keep it: say what failed, and that running `/codeo:close` again in this
+    checkout finishes the close.
 
 17. **Report** that the workflow is finished. Read the lock's `host` line, and its `volume:` or
-    `session:` line, before step 16 deletes it, and say what is left of this checkout.
+    `session:` line, before step 16 deletes it. When step 16 deleted `.codeo/active`, fetch the
+    project's host workflow, relay it, then the nothing-is-lost sentence and the `/codeo:triage`
+    suggestion below. When it kept the lock, skip that fetch and say nothing of the checkout or
+    of `/codeo:triage`: the checkout still holds the lock, and the first step is `/codeo:close`
+    again.
     <!-- point: close/host-workflow -->
     Fetch the project's host workflow with
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow`: on exit 0, relay the
@@ -516,13 +520,20 @@ the step carries on.
     - **`host: local`** — nothing to remove: the checkout is the engineer's own, the local branch
       still in it, theirs to delete or keep.
 
-    Everything in it is merged or on origin, so nothing is lost either way. Suggest
-    `/codeo:triage`: the moment a dossier is archived is when what it noticed but did not file is
-    easiest to lose. `superpowers:verification-before-completion` applies to every claim: each
+    On the finished exit only: everything in it is merged or on origin, so nothing is lost either
+    way. Suggest `/codeo:triage`: the moment a dossier is archived is when what it noticed but did
+    not file is easiest to lose. `superpowers:verification-before-completion` applies to every claim: each
     comes from a tool's output in this invocation — the merge from `github.sh`, the deletion from
     `git ls-remote`, the leases from `lease list`, the lock from `.codeo/active` being gone — never
-    from a step having been attempted. End with the closing block: the goal is the loose ends found,
-    the first step `/codeo:triage`, then the host's checkout clean-up above.
+    from a step having been attempted. End with the closing block for the exit step 16 took:
+
+    **Closing block — finished:** when step 16 deleted `.codeo/active`. The goal is the loose ends
+    found; the first step is `/codeo:triage`, then the host's checkout clean-up above.
+
+    **Closing block — lock kept:** when step 16 kept `.codeo/active`. The goal is a finished close;
+    the first step is `/codeo:close` again, in this checkout, because it holds the lock that run
+    needs; the later steps name what failed — the release, the deletion or the push — and what
+    the engineer does about it before or after that run.
 
 ## Stash, and closed unmerged
 
@@ -604,11 +615,21 @@ was recorded, and append this invocation's `## Log` line — the date, the stash
 result, then ` · cost: ` with what `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints —
 and commit `close.md`, staged by name, with the same subject, and push. Delete `.codeo/active`
 last; when the release or a push failed, keep it, say what failed, and that running
-`/codeo:close --stash` again in this checkout finishes the stash. Report that `/codeo:init #<N>`
-resumes it, on any machine. Everything is pushed, so this checkout holds nothing the branch lacks:
-say what is left of it as step 17 does, by the lock's host, read before the lock goes. An open pull
-request stays open; say so. End with the closing block: the goal is resuming the work, the first
-step `/codeo:init #<N>`.
+`/codeo:close --stash` again in this checkout finishes the stash. Once the lock is gone, everything
+is pushed, so this checkout holds nothing the branch lacks: say what is left of it as step 17
+does, by the lock's host, read before the lock goes. An open pull request stays open; say so. End
+with the closing block that matches how the stash ended.
+
+**Closing block — stash interrupted:** `.codeo/active` is kept, because the release or a push
+failed. The goal is a finished stash; the first step is `/codeo:close --stash`, run again in this
+checkout. Say what failed. Name no other command: the lock is still held, so anything else would
+stop at it.
+
+**Closing block — stash completed:** `.codeo/active` is deleted. The goal is resuming the work.
+When the board move failed (the failure `close.md`'s outcome records), the first step is to move
+`#<N>` to the Ready status (`$READY`) by hand, naming the status the way the failure line does,
+and the next is `/codeo:init #<N>`; otherwise the first step is `/codeo:init #<N>`, on any
+machine.
 
 **Closed unmerged** is the engineer's decision to read, not this skill's: ask, as a numbered
 question in `close.md` (step 0), whether to reopen it (theirs to do on GitHub; running

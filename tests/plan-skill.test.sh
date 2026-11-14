@@ -32,6 +32,16 @@ must_contain 'the one sanctioned edit of an answered round' 'That removal is the
 must_contain 'a block written after a send-back covers the branch' 'A block written after a send-back covers the branch, not only this round'
 must_contain 'the outside check adds every path to files' 'run `overlap.sh --outside <N>` and add every path it prints to `files:` before committing'
 must_contain 'the pair check runs again after an addition' 'run `overlap.sh <N>` again if you added any'
+must_contain 'the host-run rule has its heading' '**Mark the tasks the engineer runs on their own host.**'
+must_contain 'a host-run task opens with the Runs on line' "Runs on: the engineer's host"
+must_contain 'a host-run command is neutral' 'no shell variable or substitution'
+must_contain 'a command that cannot be neutral is labelled with its shell' '`Shell: <name>`'
+must_contain 'the shell is asked as a numbered question' 'a numbered question in plan.md'
+must_contain 'a local lock needs no shell question unless on Windows' 'unless the session runs on Windows'
+must_contain 'a host task is marked with a Runs on line' "is marked with a line \`Runs on: the engineer's host\`"
+must_contain 'a lease task carries a Needs lease line' 'carries a line `Needs lease:'
+must_contain 'a script is in a language the host is known to have' "in a language the engineer's host is known to have"
+must_contain 'a host task on the environment carries both markers' 'carries both markers, each on its own line'
 
 if ((failures)); then
     echo "$failures case(s) failed"
