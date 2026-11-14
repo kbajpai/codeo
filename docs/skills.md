@@ -27,11 +27,12 @@ The skill drafts and files the issue and does nothing else. It captures the what
 ### Reads and writes
 
 - Reads existing issues, the relevant code, and whatever context a calling skill passes.
+- Reads the new issue's board Status (`board.sh status`) when a board is configured.
 - Writes the GitHub issue, and `.codeo/intake/<N>/issue.md`, drafted under `new-<slug>/` and renamed once the number exists. The dossier is committed only to the intake branch, through `scripts/intake.sh`, which never checks that branch out. Nothing goes on the default branch or on a feature branch: no branch is cut and no commit is made where a PR could pick it up.
 
 ### Hand-offs and non-goals
 
-- Hands off to nobody: it sits outside the workflow's lifecycle, before an issue number or a branch exists. It still ends with the closing block, whose next goal is starting the issue with `/codeo:init #<N>`.
+- Hands off to nobody: it sits outside the workflow's lifecycle, before an issue number or a branch exists. It still ends with the closing block, whose next command is `/codeo:init #<N>`, or `/codeo:triage` first when the project has a board and the new issue is not Ready (the Status read with `board.sh status`; see `docs/handoff.md` → Closing block), or the fix first when that Status cannot be read because the script failed.
 - Never touches the project's docs, code, the branch, the lock, or another skill's dossier file. When another skill calls it, that caller records the new number in its own outcome and log line.
 - Does not design a solution, request/response contract, or architecture diagram; that is `/codeo:plan`'s purview.
 - Does not write code or plan docs.
@@ -61,6 +62,7 @@ The skill turns a filed issue into a place to work: a pushed branch carrying a d
 ### Hand-offs and non-goals
 
 - Hands off to `/codeo:plan`, naming `.codeo/<N>/init.md` as the thing to read first, and only once nothing in that file is still open. It tells `plan` to read the dossier rather than re-fetch the issue or re-ask the engineer what it already answers.
+- After a `lock: TODO` its closing block names the recovery, not `/codeo:plan` (see `docs/handoff.md` → Closing block).
 - Never touches the issue's text, the project's docs or wiki, any code, or another skill's dossier file.
 - Does not draft, refine, or re-scope the issue's content; that is `/codeo:issue`'s purview.
 - Does not design anything or write a plan doc; that is `/codeo:plan`'s purview.
@@ -86,6 +88,7 @@ The skill produces a reviewed planning artifact and never edits application code
 - Reads `.codeo/<N>/init.md` and `issue.md`, the pages under the docs directory (and the wiki pages, with the `wiki` module), the plans under the plans directory, the invariants document when one is configured, the codebase, the project's overlay sections for this skill, and every other in-flight workflow's footprint through `inflight.sh` and `overlap.sh`.
 - Writes `<plansDir>/YYYY-MM-DD-<slug>.md` or `<docsDir>/<slug>.md`, and `.codeo/<N>/plan.md` (its questions, its `## Outcome`, and one `## Log` line per invocation), committed and pushed on every turn it writes it. The plan doc itself stays unstaged while it awaits the engineer's approval; the dossier does not.
 - Writes the leases on the exclusive resources its footprint names, through `intake.sh lease`.
+- Marks a task the engineer runs on their own host `Runs on: the engineer's host` and writes its commands shell-neutral, or asks which shell the engineer uses (the host-task rule in `skills/plan/SKILL.md`).
 
 ### Hand-offs and non-goals
 
@@ -183,6 +186,7 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 ### Hand-offs and non-goals
 
 - Hands off to `/codeo:implement` when review asks for changes or the branch conflicts with the base branch (a send-back); otherwise to nobody. The workflow ends when the merged branch is cleaned up and the lock released.
+- Its closing block is per exit (see `docs/handoff.md` → Closing block): `/codeo:close` while the lock is kept, `/codeo:close --stash` for an interrupted stash, and, once finished, `/codeo:triage` then the host clean-up. A completed stash names `/codeo:init #<N>`, with a manual Ready repair first when the board move failed.
 - Never touches code, tests, documentation pages, the plan's text, the issue's text, another skill's dossier file, or the base branch.
 - Does not merge, approve or review the pull request, and does not answer review comments on the implementer's behalf beyond a summary of what changed.
 - Does not re-run the build, the suites or the acceptance criteria; that is `/codeo:qc`'s.
