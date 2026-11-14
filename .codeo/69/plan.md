@@ -133,6 +133,7 @@ A — a rule in `skills/plan/SKILL.md`, no config (answered in the conversation:
 files:      skills/close/SKILL.md, skills/init/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, docs/handoff.md, docs/skills.md, docs/plans/2026-11-14-closing-blocks-that-can-run.md, tests/closing-exits.test.sh, tests/plan-skill.test.sh, CHANGELOG.md, .devcontainer/README.md
 wiki:       none
 exclusive:  none
+sequenced:  none
 ```
 
 ## Log
