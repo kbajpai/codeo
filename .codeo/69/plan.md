@@ -8,9 +8,8 @@
 
 ## Where this stands
 
-Explored the four closing blocks, `docs/handoff.md → Closing block`, `scripts/board.sh`, the
-skill wording tests and #67's Task 3. Q1-Q3 are open; nothing is drafted until they are answered.
-Each has a recommendation, so "as recommended" for all three is a complete answer.
+Q1-Q3 answered as recommended. The plan is drafted in `.codeo/69/plan-draft.md` and waits for the
+engineer's approval; nothing is open.
 
 ## Questions
 
@@ -33,6 +32,7 @@ table gives `init → /codeo:plan` and `issue → /codeo:init #<N>` with no exce
   checks the four exits only. The rule stays unwritten, so the next skill can repeat the fault.
 
 **Answer:**
+A — the rule once in `docs/handoff.md`, the exits in the skills (answered in the conversation: "as recommended for all three").
 
 ### Q2 — What does `/codeo:issue`'s closing block say when it cannot read the new issue's board Status?
 
@@ -57,6 +57,7 @@ holds no lock. The clear cases follow from the acceptance criteria: no board (`c
   refuses there, and after a script failure to a triage that fails the same way.
 
 **Answer:**
+A — mirror what `/codeo:init` would do (answered in the conversation: "as recommended for all three").
 
 ### Q3 — How does `/codeo:plan` decide what shell a host-run command is written for?
 
@@ -82,6 +83,7 @@ decides whether this is skill text and a test, or also a config key.
   doubles each host task, and the variant nobody ran is unproved.
 
 **Answer:**
+A — a rule in `skills/plan/SKILL.md`, no config (answered in the conversation: "as recommended for all three").
 
 ## Notes
 
@@ -116,3 +118,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-14 — explored, Q1-Q3 raised · cost: 2m · fable-5-2 91k in + 576k cached / 10k out
+- 2026-11-14 — Q1-Q3 answered as recommended, plan drafted in plan-draft.md, awaiting approval · cost: 8m · fable-5-2 95k in + 693k cached / 10k out · sonnet-5-5 106k in + 399k cached / 14k out
