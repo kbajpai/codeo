@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Task 1 done: release PR #77 (`release/v1.0.6`, two files) is open; its `tests` and `qc-verdict` checks were still pending when this was written. **Waiting for the engineer to merge #77 (Task 2).** Then Task 3 (clean-clone test), Task 4 (the engineer tags), Task 5 (Releases), Task 6 (pin) and Task 7 (rebuild) follow. The plan is committed as `4dedec6`; `sync-main.sh` found nothing to merge and `overlap.sh 75` printed nothing. Tasks run inline from this session (plan banner allows `superpowers:executing-plans`), no subagent was dispatched.
+Tasks 1-3 done: release PR #77 merged as `041446924a2b81331b9b7cb22e073d590e85a4cc`; the clean-clone test at that commit ended `all cases passed` (version `1.0.6`). **Waiting for the engineer to tag (Task 4).**
 
 ## Questions
 
@@ -20,6 +20,8 @@ None.
 - Task 1 evidence: before the edit `jq -e '.version == "1.0.6"'` printed `false` and exited 1. After it: `true`, one `## v1.0.6 — 2026-11-14` heading, no `## Unreleased`, `git diff --name-only origin/main` listed exactly `.claude-plugin/plugin.json` and `CHANGELOG.md`, and `bash tests/run.sh` in the release worktree ended `all cases passed`. `gh pr view 77` printed `["main",[".claude-plugin/plugin.json","CHANGELOG.md"]]`. Release branch cut from `origin/main` at `2a86915`; worktree `../codeo-75-release`.
 - The PR body carries the #51/#52 changelog coordination note (plan Q1, Q2, Q5).
 
+- Task 2-3 evidence: `gh pr view 77` → `["MERGED","041446924a2b81331b9b7cb22e073d590e85a4cc"]`; worktree removed. Clean clone, `git rev-parse HEAD` printed that SHA, version `1.0.6`, `bash tests/run.sh | tail -1` printed `all cases passed`. `origin/main` tip is that commit.
+
 ## Outcome
 
 _Pending — written at the hand-off._
@@ -27,3 +29,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-14 — Task 1 done, PR #77 opened, waiting for the engineer's merge · cost: 3m · sonnet-5-5 15k in + 843k cached / 4k out
+- 2026-11-14 — Tasks 2-3 done: #77 merged, clean-clone test passed, waiting for the engineer's tag
