@@ -823,7 +823,8 @@ start_malformed_host_gitconfig_falls_through() {
 
 start_waits_for_the_host_gitconfig_to_arrive() {
     ds_setup waithost || return 0
-    ( sleep 1; git config --file "$ds_dir/home/.gitconfig" user.name "Ada O'Neil"; git config --file "$ds_dir/home/.gitconfig" user.email ada@example.com ) &
+    # The file appears whole, as a one-step copy would: both keys go to a temporary file that is then moved into place.
+    ( sleep 1; git config --file "$ds_dir/home/.gitconfig.new" user.name "Ada O'Neil"; git config --file "$ds_dir/home/.gitconfig.new" user.email ada@example.com; mv "$ds_dir/home/.gitconfig.new" "$ds_dir/home/.gitconfig" ) &
     DS_GITCONFIG_WAIT=5 ds_ready_run
     wait
     [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
