@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q5 are answered (the engineer accepted every recommendation in the conversation, and the answers are recorded under each). The plan is drafted in `.codeo/57/plan-draft.md` and waits for approval; the plan file under `docs/plans/` is written only after it.
+Round 1. Q1-Q5 are answered (the engineer accepted every recommendation in the conversation, and the answers are recorded under each). The plan was approved and is written, unstaged, to `docs/plans/2026-11-14-dev-container-follow-ups.md`. The footprint is under `## Notes`. `overlap.sh 57` then printed `76 glob:CHANGELOG.md`, which Q5 did not quote verbatim, so Q6 restates it; `## Outcome` stays pending until Q6 is answered.
 
 Two things the drafting turned up, both reflected in the draft:
 - **F2 does not reproduce as `qc.md` states it.** On a project whose base is `develop`, the home clone in the folder `codeo-home` already gets no TODO today. The real defects are the ones next to it: the folder `codeo-12` on the home clone is silent, and a wrong folder gets the issue-or-home wording and not the home wording. Task 1 fixes those and still pins the criterion's case.
@@ -92,6 +92,16 @@ Edit the v1.0.4 bullet in place and say so under Unreleased. Go with the recomme
 
 **Answer:**
 Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-14).
+
+### Q6 — Overlap with #76 on `glob:CHANGELOG.md`: proceed and coordinate, sequence after #76, or re-scope?
+
+**Why it matters:** this is Q5's overlap restated in the form `overlap.sh` reads. After the plan was approved and its footprint written, `overlap.sh 57` printed `76<TAB>glob:CHANGELOG.md`, and it counts a pair as raised only when a `### Q` block quotes `#M` and that exact token; Q5 named the file but not the token, so the hand-off stays blocked until this is answered. Nothing else changes: your answer to Q5 stands and my recommendation is the same.
+
+The other workflow is #76, branch `feat/trial-doctor-setup-haiku-5`, assignee kbajpai, step `plan` (working). What overlaps is `glob:CHANGELOG.md` and nothing else.
+
+**Options:** *proceed and coordinate* (recommended) · *sequence after #76* · *re-scope*.
+
+**Answer:**
 
 ## Notes
 
