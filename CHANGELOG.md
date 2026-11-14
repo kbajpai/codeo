@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1
+Shared state: unchanged
+Safe to bump mid-workflow: yes
+
+- The dev container image is now built on `ubuntu:26.04` (Ubuntu 26.04 LTS) instead of `ubuntu:24.04`. The tools, the `dev` user at UID 1000 with passwordless sudo and the start scripts are unchanged; `tests/devcontainer.test.sh` pins the new tag. Rebuild an existing container once to get the new image. Nothing in `scripts/`, `lib/`, `hooks/` or `skills/` changes (#67).
+
 ## v1.0.5 — 2026-11-14
 
 Config schema: 1
