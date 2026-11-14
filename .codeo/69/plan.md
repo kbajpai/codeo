@@ -8,10 +8,9 @@
 
 ## Where this stands
 
-Sent back by `qc.md` round 1 for one blocking finding (F1): the plan's Task 1 dictated a
-`docs/handoff.md` table cell that names `/codeo:plan` for the no-lock exit. Q4 is open: how much
-of round 1's non-blocking findings this round takes with it. The round-2 tasks are drafted once
-Q4 is answered.
+Q4 answered A (F1 and all of F2-F6). The round-2 draft is in `.codeo/69/plan-draft.md` (Tasks 9
+and 10, one correction to Task 1 Step 3, a footprint with `tests/close-skill.test.sh`), awaiting
+approval; the plan file is untouched until then.
 
 ## Questions
 
@@ -117,7 +116,7 @@ what the host-task rule says, not only how it is worded:
   `/codeo:triage`.
 
 **Answer:**
-_Pending._
+A — F1 and all of F2-F6 (answered in the conversation: "A, as recommended").
 
 ## Notes
 
@@ -176,3 +175,4 @@ sequenced:  none
 - 2026-11-14 — Q1-Q3 answered as recommended, plan drafted in plan-draft.md, awaiting approval · cost: 8m · fable-5-2 95k in + 693k cached / 10k out · sonnet-5-5 106k in + 399k cached / 14k out
 - 2026-11-14 — planned: docs/plans/2026-11-14-closing-blocks-that-can-run.md · cost: 9m · fable-5-2 95k in + 693k cached / 10k out · sonnet-5-5 118k in + 1.2M cached / 19k out
 - 2026-11-14 — send-back from qc.md round 1 (F1) read; Q4 raised · cost: 0m · fable-5-2 124k in + 26k cached / 1k out
+- 2026-11-14 — Q4 answered A, round-2 draft written to plan-draft.md, awaiting approval · cost: 3m · sonnet-5-5
