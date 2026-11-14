@@ -1,0 +1,75 @@
+# Issue #51 — implement
+
+| | |
+|---|---|
+| Issue | https://github.com/kbajpai/codeo/issues/51 |
+| Branch | `feat/seed-dev-container-git-identity` |
+| Updated | 2026-11-14 |
+
+## Where this stands
+
+Plan tasks 1-4 are built and committed (`8937dbc`, `e7e58f1`, `4c61919`, `6d79619`), and the whole `shell`
+suite passes (`bash tests/run.sh`: `all cases passed`). The build step has nothing to run: the suite's
+`build` is `true`. Task 5 of the plan is the engineer's check in a real container; it is the only thing
+left, and it is Q1 below. `## Outcome` stays pending until it is answered.
+
+## Questions
+
+### Q1 — What do the Task 5 checks print in a real container?
+
+**Why it matters:** the suite proves the lookup order and the wait against stubs, not that VS Code's copy
+of `~/.gitconfig` lands in time in a real container. If the container log shows the identity TODO although
+the host has an identity, Task 3's wait is too short or the copy lands later than the script runs, and the
+plan goes back to Task 3 (a re-plan, not a guess here). `/codeo:qc` reads your answer as the evidence for
+the first acceptance criterion in a real container. The checks remove and restore your identity in the
+shared `codeo-git` volume.
+
+Run these in this container's terminal, one command at a time:
+
+```
+git config --global --unset user.name
+git config --global --unset user.email
+bash .devcontainer/scripts/devcontainer-start.sh
+git config --global user.name
+git config --file /home/dev/.gitconfig user.name
+```
+
+Expected: the script prints `devcontainer-start: git identity: user.name set from ~/.gitconfig` and the
+same for `user.email`, with no `git identity` TODO; the last two commands print the same name.
+
+Then unset both values again as above, run **Dev Containers: Rebuild Container** in VS Code, and when it
+has started run **Dev Containers: Show Container Log**, and `git config --global user.email` in the new terminal.
+
+Expected: the log holds both `git identity: ... set from ~/.gitconfig` lines and no `git identity` TODO;
+the email printed is the host's. Paste the output of both parts, or say "skip" to leave the real-container
+proof to review.
+
+**Answer:**
+
+## Notes
+
+**Rulings** (deviations from the plan, and why):
+
+- `sync-main.sh` merged `origin/main` (1 commit, #72) but exited 1 with `comm: file 2 is not in sorted
+  order` while listing what else changed on main. The merge is committed (`d394c97`). The #72 files that
+  matter here are `CHANGELOG.md` and `.devcontainer/README.md` and both merged without conflict; no work
+  of this branch touches the other files of #72. The `comm` complaint is the script's own listing on this
+  image's coreutils (Rust `comm`), not a merge failure; it is outside this plan, so not filed here.
+- The plan's Task 2 said `start_copies_nothing_but_the_identity` would pass before the code. It failed
+  red too, because with no seeding the volume file lacked `user.name` and `user.email`, which that case
+  expects. It is a guard that passes once seeding exists, and does.
+- The plan has `bash tests/run.sh` at the end of every task; it takes over two minutes here, so it was
+  run after Task 1 and after Task 4, with `bash tests/devcontainer.test.sh` as the loop in between, and
+  `shellcheck` on the start script. Both full runs passed.
+- The plan's final step says "a single review of the whole branch"; this session ran the tasks itself and
+  did not dispatch a fresh reviewer. The independent code review is `/codeo:qc`'s step.
+- Code detail the plan left open: the loop's variable for the source label is `from`, not `source`
+  (a bash builtin), and carries `# shellcheck disable=SC2088` because `'~/.gitconfig'` is a label.
+
+## Outcome
+
+_Pending — written at the hand-off._
+
+## Log
+
+- 2026-11-14 — tasks 1-4 built; Q1 raised (Task 5, the engineer's real-container check) · cost: 8m · sonnet-5-5 36k in + 3.4M cached / 13k out
