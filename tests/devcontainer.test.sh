@@ -21,6 +21,8 @@
 # checks that .claude/settings.json registers it. It also checks the scripts are committed executable, the
 # settings-merge cases (not an object, symlink, mode, no temp file), the credential-variable advice, the
 # core.fileMode probe, the prompt hook's retitling, the guarded hook command and the codeo-git volume.
+# The identity step is covered too: the volume's missing user.name and user.email are filled from the host ~/.gitconfig, else GIT_AUTHOR_*, each on its own and never over a value already there, nothing else
+# is copied, an empty or malformed host value falls through, the script waits for the host file only while a value is missing, and the TODO names the sources tried.
 #
 #   bash tests/devcontainer.test.sh
 #
@@ -373,7 +375,9 @@ plugins_large_plugin_list_does_not_break_the_pipe() {
 # ds_setup <name>: a scratch git repo holding devcontainer-start.sh and a stub plugins.sh, with stub gh,
 # claude, sudo and stat first on PATH and an empty global git config. Sets ds_dir. `calls` logs every
 # stubbed gh setup-git and sudo call. A case sets STUB_* variables before ds_run: STUB_GH_RC, STUB_GH_OUT,
-# STUB_CLAUDE_RC, STUB_CLAUDE_OUT, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO.
+# STUB_CLAUDE_RC, STUB_CLAUDE_OUT, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO,
+# DS_AUTHOR_NAME and DS_AUTHOR_EMAIL (passed to the script as GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL; both are unset otherwise) and DS_GITCONFIG_WAIT
+# (seconds the script may wait for the host ~/.gitconfig, as CODEO_GITCONFIG_WAIT; default 0). The host file of a case is $ds_dir/home/.gitconfig, the volume file $ds_dir/gitconfig.
 ds_setup() {
     local name=$1
     [[ -n $pl_root ]] || pl_root=$(mktemp -d)
@@ -432,9 +436,11 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 # ds_run: run the scratch start script (through $DS_REPO when set, else the repo itself); sets ds_rc, ds_out and ds_err.
 ds_run() {
     ds_rc=0
-    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT \
+    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
         ${DS_CODEO_ROOT:+CODEO_ROOT="$DS_CODEO_ROOT"} \
         ${DS_SET:+"$DS_SET"} \
+        ${DS_AUTHOR_NAME:+GIT_AUTHOR_NAME="$DS_AUTHOR_NAME"} ${DS_AUTHOR_EMAIL:+GIT_AUTHOR_EMAIL="$DS_AUTHOR_EMAIL"} \
+        CODEO_GITCONFIG_WAIT="${DS_GITCONFIG_WAIT:-0}" \
         PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="${DS_GITCONFIG:-$ds_dir/gitconfig}" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
@@ -719,6 +725,132 @@ start_identity_todo_when_only_one_is_set() {
     git config --file "$ds_dir/gitconfig" user.email dev@example.com
     ds_run
     n=$(ds_todos 'git identity'); ((n == 1)) || fail "only user.email set: wanted a TODO, got $n: $ds_err"
+}
+
+# ds_host_identity: give the scratch host ~/.gitconfig (what VS Code copies in) a name and email.
+ds_host_identity() {
+    git config --file "$ds_dir/home/.gitconfig" user.name "Ada O'Neil" && git config --file "$ds_dir/home/.gitconfig" user.email ada@example.com
+}
+
+# ds_global <key>: the value in the scratch volume config (GIT_CONFIG_GLOBAL), empty when unset.
+ds_global() { git config --file "$ds_dir/gitconfig" --get "$1" 2>/dev/null || true; }
+
+start_seeds_the_identity_from_the_host_gitconfig() {
+    ds_setup seedhost || return 0
+    ds_host_identity || { fail 'could not write the scratch host config'; return 0; }
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+    grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+    if grep -qE 'ada@example.com|Neil' <<<"$ds_out$ds_err"; then fail "a seeded value was printed: $ds_out$ds_err"; fi
+    [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' ]] || fail "stdout does not end with ready: $ds_out"
+}
+
+start_seeds_the_identity_from_the_environment() {
+    ds_setup seedenv || return 0
+    DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "user.name is not the environment's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'grace@example.com' ]] || fail "user.email is not the environment's: $(ds_global user.email)"
+    grep -qF 'user.name set from GIT_AUTHOR_NAME' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+    grep -qF 'user.email set from GIT_AUTHOR_EMAIL' <<<"$ds_out" || fail "no report of user.email: $ds_out"
+}
+
+start_host_gitconfig_wins_over_the_environment() {
+    ds_setup hostwins || return 0
+    ds_host_identity || { fail 'could not write the scratch host config'; return 0; }
+    DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+}
+
+start_keeps_an_identity_already_in_the_volume() {
+    ds_setup keep || return 0
+    ds_host_identity || { fail 'could not write the scratch host config'; return 0; }
+    git config --file "$ds_dir/gitconfig" user.name 'Keep Me'
+    ds_ready_run
+    [[ $(ds_global user.name) == 'Keep Me' ]] || fail "user.name was changed: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "the missing user.email was not filled: $(ds_global user.email)"
+    ds_ready_run
+    [[ $(ds_global user.name) == 'Keep Me' && $(ds_global user.email) == 'ada@example.com' ]] || fail 'a second run changed the identity'
+    if grep -qF 'user.name set from' <<<"$ds_out"; then fail "a second run reported seeding user.name: $ds_out"; fi
+}
+
+start_todo_names_the_sources_tried() {
+    local n todo
+    ds_setup sources || return 0
+    ds_run
+    n=$(ds_todos 'git identity'); ((n == 1)) || fail "no source: wanted one TODO, got $n: $ds_err"
+    todo=$(grep 'devcontainer-start: TODO.*git identity' <<<"$ds_err" || true)
+    for want in '~/.gitconfig' GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL user.name user.email; do
+        grep -qF -- "$want" <<<"$todo" || fail "the TODO does not name $want: $todo"
+    done
+    : > "$ds_dir/gitconfig"
+    DS_AUTHOR_NAME='Grace Hopper' ds_run
+    todo=$(grep 'devcontainer-start: TODO.*git identity' <<<"$ds_err" || true)
+    [[ -n $todo ]] || fail "only the name was found: wanted a TODO: $ds_err"
+    grep -qF 'missing: user.email;' <<<"$todo" || fail "the TODO does not name user.email as the missing key: $todo"
+    [[ $(ds_global user.name) == 'Grace Hopper' && -z $(ds_global user.email) ]] || fail 'the volume config is not name only'
+}
+
+start_copies_nothing_but_the_identity() {
+    local keys
+    ds_setup onlyident || return 0
+    ds_host_identity || { fail 'could not write the scratch host config'; return 0; }
+    git config --file "$ds_dir/home/.gitconfig" init.defaultBranch trunk
+    git config --file "$ds_dir/home/.gitconfig" pull.rebase true
+    git config --file "$ds_dir/home/.gitconfig" credential.helper osxkeychain
+    ds_ready_run
+    keys=$(git config --file "$ds_dir/gitconfig" --name-only --list | sort -u | paste -sd' ')
+    [[ $keys == 'safe.directory user.email user.name' ]] || fail "the volume config holds more than the identity: $keys"
+}
+
+start_empty_host_value_falls_through_to_the_environment() {
+    ds_setup emptyhost || return 0
+    printf '[user]\n\tname =\n' > "$ds_dir/home/.gitconfig"
+    DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "an empty host name did not fall through: $(ds_global user.name)"
+}
+
+start_malformed_host_gitconfig_falls_through() {
+    ds_setup badhost || return 0
+    printf '[user\n' > "$ds_dir/home/.gitconfig"
+    DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "a malformed host file did not fall through: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'grace@example.com' ]] || fail "user.email: $(ds_global user.email)"
+}
+
+start_waits_for_the_host_gitconfig_to_arrive() {
+    ds_setup waithost || return 0
+    # The file appears whole, as a one-step copy would: both keys go to a temporary file that is then moved into place.
+    ( sleep 1; git config --file "$ds_dir/home/.gitconfig.new" user.name "Ada O'Neil"; git config --file "$ds_dir/home/.gitconfig.new" user.email ada@example.com; mv "$ds_dir/home/.gitconfig.new" "$ds_dir/home/.gitconfig" ) &
+    DS_GITCONFIG_WAIT=5 ds_ready_run
+    wait
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+    grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+}
+
+start_does_not_wait_when_the_volume_has_the_identity() {
+    local start=$SECONDS
+    ds_setup nowait || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    DS_GITCONFIG_WAIT=30 ds_ready_run
+    ((SECONDS - start < 5)) || fail "the run took $((SECONDS - start))s: it waited with the identity in place"
+    [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' ]] || fail "stdout does not end with ready: $ds_out"
+}
+
+start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero() {
+    local limit
+    ds_setup badwait || return 0
+    for limit in abc 5s 1.5 08; do
+        : > "$ds_dir/gitconfig"
+        DS_GITCONFIG_WAIT=$limit DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+        ((ds_rc == 0)) || fail "CODEO_GITCONFIG_WAIT=$limit: exit $ds_rc, wanted 0: $ds_err"
+        [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "CODEO_GITCONFIG_WAIT=$limit: the identity was not seeded: $(ds_global user.name)"
+        if grep -qE 'unbound variable|syntax error|too great' <<<"$ds_err"; then fail "CODEO_GITCONFIG_WAIT=$limit: the limit was evaluated as arithmetic: $ds_err"; fi
+    done
 }
 
 start_setup_git_failure_is_a_todo() {
@@ -1676,6 +1808,17 @@ cases=(
     start_mount_prefix_needs_a_path_boundary
     start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
+    start_seeds_the_identity_from_the_host_gitconfig
+    start_seeds_the_identity_from_the_environment
+    start_host_gitconfig_wins_over_the_environment
+    start_keeps_an_identity_already_in_the_volume
+    start_todo_names_the_sources_tried
+    start_copies_nothing_but_the_identity
+    start_empty_host_value_falls_through_to_the_environment
+    start_malformed_host_gitconfig_falls_through
+    start_waits_for_the_host_gitconfig_to_arrive
+    start_does_not_wait_when_the_volume_has_the_identity
+    start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero
     start_setup_git_failure_is_a_todo
     start_trusts_the_clone_once
     start_reads_the_identity_from_the_global_config_file
