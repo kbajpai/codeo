@@ -8,10 +8,9 @@
 
 ## Where this stands
 
-Plan tasks 1-4 are built and committed (`8937dbc`, `e7e58f1`, `4c61919`, `6d79619`), and the whole `shell`
-suite passes (`bash tests/run.sh`: `all cases passed`). The build step has nothing to run: the suite's
-`build` is `true`. Task 5 of the plan is the engineer's check in a real container; it is the only thing
-left, and it is Q1 below. `## Outcome` stays pending until it is answered.
+Plan tasks 1-5 are done and committed (`8937dbc`, `e7e58f1`, `4c61919`, `6d79619`), and the whole `shell`
+suite passes (`bash tests/run.sh`: `all cases passed`). Q1 is answered: part 1 of the real-container check
+passed and part 2 was skipped. Nothing is open; the next step is `/codeo:qc`.
 
 ## Questions
 
@@ -45,6 +44,19 @@ the email printed is the host's. Paste the output of both parts, or say "skip" t
 proof to review.
 
 **Answer:**
+Part 1 passed. Pasted by the engineer (answered in the conversation):
+
+```
+devcontainer-start: git identity: user.name set from ~/.gitconfig
+devcontainer-start: git identity: user.email set from ~/.gitconfig
+devcontainer-start: ready
+$ git config --global user.name        -> Kunal Bajpai
+$ git config --file /home/dev/.gitconfig user.name   -> Kunal Bajpai
+```
+
+Part 2 (rebuild the container with an empty identity) skipped, by the engineer's choice. The first-start
+timing is therefore evidenced only by the stubbed wait cases and by this container's observed timing
+(VS Code's copy appeared about a second after the start script began, within the 10-second wait).
 
 ## Notes
 
@@ -68,8 +80,20 @@ proof to review.
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Built from `docs/plans/2026-11-14-seed-dev-container-git-identity.md`, tasks 1-5.
+
+- **Task 1** (`8937dbc`): `ds_run` in `tests/devcontainer.test.sh` unsets `GIT_AUTHOR_*`, passes `DS_AUTHOR_NAME` / `DS_AUTHOR_EMAIL` through, and sets `CODEO_GITCONFIG_WAIT` from `DS_GITCONFIG_WAIT` (default 0). `origin/main` (#72) was merged first by `sync-main.sh` (`d394c97`).
+- **Task 2** (`e7e58f1`): step 5 of `.devcontainer/scripts/devcontainer-start.sh` fills each missing key from the host `~/.gitconfig`, then `GIT_AUTHOR_*`; the TODO names the missing keys and the sources tried. Eight cases cover criteria 1-5, the copy-nothing-else guard, an empty host value and a malformed host file.
+- **Task 3** (`4c61919`): the wait for the host file, up to `CODEO_GITCONFIG_WAIT` seconds (default 10), only while a value is missing and the file is absent; two cases.
+- **Task 4** (`6d79619`): `.devcontainer/README.md` (*What the start script does*), `CHANGELOG.md` (*Unreleased*) and the test file's header comment.
+- **Task 5**: part 1 passed in this container; part 2 (rebuild) skipped by the engineer, see Q1.
+
+**Documentation pages changed:** `.devcontainer/README.md` and `CHANGELOG.md`.
+**Build result:** the `shell` suite's `build` is `true`; `bash tests/run.sh` passed (`all cases passed`) after Task 1 and after Task 4, and `shellcheck` is clean on the start script.
+**Deviations from the plan:** the four rulings under `## Notes`, plus the skipped Task 5 part 2.
+**Deployed revision:** none; there is no shared environment.
 
 ## Log
 
 - 2026-11-14 — tasks 1-4 built; Q1 raised (Task 5, the engineer's real-container check) · cost: 8m · sonnet-5-5 36k in + 3.4M cached / 13k out
+- 2026-11-14 — Q1 answered (part 1 passed, part 2 skipped); outcome written · cost: 13m · sonnet-5-5 39k in + 4M cached / 17k out
