@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q4 answered (engineer accepted every recommendation, 2026-11-14). Draft written to `.codeo/75/plan-draft.md` and presented for approval; the plan file under `docs/plans/` is written only after it.
+Planned: `docs/plans/2026-11-14-release-v1-0-6.md` approved. See `## Outcome`.
 
 What exploration found, which shapes the questions:
 - **The release change is two files**, as in #62 and #65: `.claude-plugin/plugin.json` `version` `1.0.5` → `1.0.6`, and `CHANGELOG.md:3` `## Unreleased` → `## v1.0.6 — <date>`. `origin/main` is at `2a86915`; `## Unreleased` holds two bullets (#67, #69).
@@ -90,11 +90,34 @@ I recommend A: it is one command, in the same task and by the same hand, and a s
 **Answer:**
 A — add v1.0.5's Release to this plan (engineer: "accept all your recommendations", 2026-11-14).
 
+### Q5 — The footprint overlaps #51 and #52 on `glob:CHANGELOG.md`. How is that handled?
+
+**Why it matters:** `overlap.sh` compares the written footprint with every other pushed branch and prints `51 glob:CHANGELOG.md` and `52 glob:CHANGELOG.md`; it recognises a pair as raised only when a question names both the issue and that token. Q1 and Q2 raised both in substance and were answered; this question records the pairs in the form the script reads. #51 is `feat/seed-dev-container-git-identity` (kbajpai, step `qc`, last verdict back to implement), #52 is `feat/run-codeo-latest-claude-models` (kbajpai, step `plan`, sequenced after #51).
+**Options:** proceed and coordinate · sequence after #51 and #52 · re-scope.
+
+**Answer:**
+Proceed and coordinate, as Q1 and Q2 (engineer: "accept all your recommendations", 2026-11-14; the same overlap, now named as the script reads it).
+
 ## Notes
 
 `superpowers:brainstorming` ran before these questions. The plan overlays `plan-shape`, `proof-of-done` and `wiki-rules` are not set (exit 3), so the generic shape and the default proof apply. No invariants document, no shared environment, no `wiki` module and no exclusive resources are configured.
 
 `inflight.sh --except 75` printed two workflows, #51 and #52. The only path shared with either is `CHANGELOG.md`.
+
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-14-release-v1-0-6.md` (unstaged, approved 2026-11-14) |
+| Shape | Plan under `docs/plans/`; no reference doc, since nothing is a standing decision |
+
+**Decisions.** Two pull requests: the release PR comes from `release/v1.0.6`, cut from `origin/main` in a worktree and opened by `/codeo:implement`, because `qc-verdict` fails a head carrying a live dossier; this branch carries the pin and the dossier. `main` is released as it stands. #51 and #52 also change `CHANGELOG.md` and are not waited for (Q1, Q2, Q5 = proceed and coordinate): whichever merges `main` after the release writes its bullet under a new `## Unreleased`, which the release PR body says. The engineer tags and pushes with three single commands, the agent verifies and publishes the GitHub Releases (Q3 = A). The v1.0.5 Release, which was never published, is added to this plan and published not as latest (Q4 = A). The tag is lightweight, as the checklist writes it. The agent never merges or tags.
+
+**Rejected.** Waiting for #51 or #52. Both release steps by the engineer (Q3 B, C). Filing the v1.0.5 Release as its own issue or leaving it (Q4 B, C). An annotated tag.
+
+**Documentation pages the plan changes:** none. No page names a version or the pin, and changing the release checklist is out of scope.
+
+**Risk for `/codeo:qc`.** Criteria 2-4 and 6 depend on the engineer's merge, tag and rebuild; criterion 5 is met when `/codeo:close`'s PR merges. Task 7 records a project-scope `codeo@codeo` entry that does not report 1.0.6 as a finding.
 
 ### Footprint
 
@@ -102,14 +125,11 @@ A — add v1.0.5's Release to this plan (engineer: "accept all your recommendati
 files:      .claude-plugin/plugin.json, CHANGELOG.md, .codeo/config.json, docs/plans/2026-11-14-release-v1-0-6.md, .codeo/75/**
 wiki:       none
 exclusive:  none
-sequenced:  none (CHANGELOG.md shared with #51 and #52: proceed and coordinate, Q1-Q2)
+sequenced:  none (CHANGELOG.md shared with #51 and #52: proceed and coordinate, Q1-Q2, Q5)
 ```
-
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 
 - 2026-11-14 — Q1-Q4 raised · cost: 2m · fable-5-2 78k in + 316k cached / 8k out
 - 2026-11-14 — Q1-Q4 answered, draft presented for review · cost: 1m · sonnet-5-5 7k in + 344k cached / 8k out
+- 2026-11-14 — planned: docs/plans/2026-11-14-release-v1-0-6.md; Q5 raised and recorded for the script's overlap token; engineering plugin skills not used · cost: 2m · sonnet-5-5 18k in + 978k cached / 12k out
