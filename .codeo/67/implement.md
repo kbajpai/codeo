@@ -48,7 +48,23 @@ Plan: `docs/plans/2026-11-14-ubuntu-2604-dev-container.md`, all three tasks done
 
 **For `/codeo:qc`:** criteria 2 and 3 and the in-image suite are evidenced by Q1's pasted output, not by anything runnable here.
 
+### Round 2
+
+2026-11-14
+
+`/codeo:qc` round 1 was clear; this round is not a send-back. The engineer asked for its three non-blocking notes to be fixed (answered in the conversation), so these are edits the plan has no task for, in the two files the plan's File Structure already names. A deviation from the plan, recorded as such. Branch already contained `origin/main`; no overlap.
+
+**Built (`5c844b4`):**
+- F1: `CHANGELOG.md` `## Unreleased` entry now says the same tools are installed at 26.04's versions (bash 5.3, git 2.53, jq 1.8.1, shellcheck 0.11), not that "the tools are unchanged"; the versions are the ones the engineer's Docker run printed.
+- F3: its `Shared state:` line reads `unchanged from v1.0.5.`, like the released entries.
+- F2: `.devcontainer/README.md` *Rebuilding* gains the sentence that the Claude Code login is not kept, because `~/.claude` is not on a volume, so `claude auth login` is run again and the start script reinstalls the plugins.
+
+**Documentation pages changed:** `.devcontainer/README.md`; the changelog.
+**Build result:** the configured `shell` build is `true`, exit 0. `git grep -n -i -E '24\.04|2404' -- .devcontainer tests` still prints nothing. The suite was not re-run: grading is `/codeo:qc`'s, which runs it whole on the next pass.
+**Deployed:** nothing; no shared environment is configured.
+
 ## Log
 
 - 2026-11-14 — Tasks 1-2 implemented and reviewed; Task 3 waiting on Q1 · cost: 9m · sonnet-5-5 201k in + 4.6M cached / 18k out
 - 2026-11-14 — Q1 answered (image build, tools check, suite in the image all passed); outcome written · cost: 23m · sonnet-5-5 209k in + 6M cached / 25k out
+- 2026-11-14 — round 2: qc round 1 non-blocking notes F1-F3 fixed at the engineer's request, outside the plan's tasks · cost: 1m · sonnet-5-5 13k in + 996k cached / 3k out
