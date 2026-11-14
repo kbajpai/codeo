@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 answered A, A, A. The plan is drafted at `.codeo/76/plan-draft.md` and waits for review.
+Plan approved and written to `docs/plans/2026-11-14-trial-doctor-setup-haiku.md`, unstaged. Nothing is open.
 
 ## Questions
 
@@ -105,6 +105,21 @@ of `doctor` or `setup`, so the only documentation the change moves is `CHANGELOG
 **Other workflows.** #73 (`docs/evaluate-docker-sandboxes-sbx-against`, kbajpai) is at `init` and
 has no footprint yet; its branch has changed nothing. Nothing to compare so far.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-14-trial-doctor-setup-haiku.md` (unstaged, awaiting your commit) |
+| Shape | an executable plan under `docs/plans/`, four tasks; no reference doc, as no architectural choice is made |
+
+**Decisions.** Q1 = A: four cases (`doctor` passing and failing, `setup` fresh with `--stack node` and refused), three runs per model, 24 runs. Q2 = A: a six-item checklist; Haiku must pass every item on every run, one miss keeps that skill on `sonnet`; a Sonnet miss is recorded, not counted against Haiku. Q3 = A: one comment on #76, with the one-line result in `CHANGELOG.md`; the raw reports are not kept.
+
+**Rejected.** One run per model (one sample decides); the passing case only (leaves the failure branch untried); judging paired reports by reading (no fixed bar); committing the raw reports or a page under `docs/`.
+
+**My calls.** The trial script stays in the scratchpad, uncommitted. `setup` runs in scratch repositories so the project is never changed (the question intake left for this step). Item 6 compares `setup`'s files with what `setup.sh` itself writes. If the skill's `model: haiku` line does not switch the model, the Haiku runs add `--model haiku` and the comment says so.
+
+**Documentation.** Only `CHANGELOG.md`; no page under `docs/` names the model of `doctor` or `setup`. No intake question was resolved here.
+
 ### Footprint
 
 ```
@@ -113,10 +128,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-14 — Q1-Q3 raised · cost: 2m · fable-5-2 60k in + 534k cached / 7k out
+- 2026-11-14 — planned: docs/plans/2026-11-14-trial-doctor-setup-haiku.md · cost: 2m · sonnet-5-5 87k in + 626k cached / 17k out
