@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2. Q1-Q5 are answered (in the conversation, recorded below as given); the plan is drafted in `.codeo/73/plan-draft.md` and awaits the engineer's approval. Round 1 had read the issue, `init.md`, `.devcontainer/` and the recent plans.
+Round 2, finished. Q1-Q5 are answered (in the conversation, recorded below as given); the plan was approved and written to `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md`, unstaged. Nothing is open. Round 1 had read the issue, `init.md`, `.devcontainer/` and the recent plans.
 
 ## Questions
 
@@ -74,6 +74,29 @@ A — hands-on. (Given in the conversation, 2026-11-14.)
 - **Other workflows in flight:** none (`inflight.sh --except 73`, 2026-11-14), so there is no footprint overlap to raise at this point.
 - **Overlays:** `plan-shape`, `proof-of-done` and `wiki-rules` are not set (exit 3); the generic shape and the default proof apply. No invariants document, no shared environment, no wiki module, no exclusive resources.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md` (unstaged, awaiting the engineer's commit) |
+| Shape | a plan under `docs/plans/`; its product is the reference page `docs/dev-environment-sbx-evaluation.md`, written by the plan's Task 1 and filled in by Tasks 6-7 |
+| Approved | 2026-11-14 |
+
+**Decisions.**
+- The comparison lives at `docs/dev-environment-sbx-evaluation.md` (Q1 A), reviewed in the pull request.
+- Hands-on evaluation (Q2 A): seven tasks, four of them run by the engineer on their own host (Tasks 2-5), in bash on WSL2 (Q4); each trial's output is pasted, secrets masked, and each row is marked `tried` or `cited`.
+- Host facts are unknown (Q3), so Task 2 finds them out first. If `sbx` cannot run on this host, Tasks 3-5 shrink to recording why.
+- The drivers are weighed as the issue lists them; a lost VS Code window or Remote Control is a recorded cost, not a veto (Q5).
+- The recommendation (migrate, hybrid or stay) is written in Task 7; follow-up issues are filed through `/codeo:issue` only for migrate or hybrid.
+
+**Options rejected.** The comparison as comments on #73 only (not reviewed as a diff); cited only; a host check only.
+
+**Documentation pages the plan changes.** Only the new page. No existing page moves.
+
+**Intake questions resolved here.** The three open at intake (home/issue split and the lock; editor attach; login persistence) are not answered by this plan; Task 7 answers each in the recommendation.
+
+**Plugin skills unavailable.** `engineering:system-design` and `engineering:architecture` were not used: the work adds no component or data flow, and its decision is the recommendation itself, which Task 7 writes in that structure.
+
 ### Footprint
 
 ```
@@ -82,10 +105,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-14 — Q1-Q5 raised · cost: 1m · fable-5-2 50k in + 221k cached / 2k out
+- 2026-11-14 — planned: docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md · cost: 12m · fable-5-2 69k in + 478k cached / 8k out · sonnet-5-5 89k in + 1.2M cached / 13k out
