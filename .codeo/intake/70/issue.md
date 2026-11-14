@@ -1,4 +1,4 @@
-# Issue #new-home-only-guard-and-cleanup — issue
+# Issue #70 — issue
 
 | | |
 |---|---|
@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Request restated, duplicates searched (none), facts checked against `main`. The one question the engineer had not answered is answered (Q1). Draft written below and waiting for the engineer's approval before filing.
+Q1 answered; draft approved and filed as #70. The engineer confirmed at the approval gate that a hosted web session and a plain local checkout are exempt from the guard.
 
 **Problem as I understand it.** `/codeo:issue`, `/codeo:init` and `/codeo:triage` are meant to run in the home container (`.devcontainer/README.md`: "Where these run"), but the only thing that keeps them out of an issue container is `.codeo/active`, and `/codeo:close` deletes that file at the end. On 2026-11-14 `/codeo:triage` and `/codeo:init #69` ran in the finished container `codeo-67` (folder `codeo-67`, a stale feature branch, no lock) and nothing stopped them. Separately, `/codeo:close` ends by saying the container and volume are "the engineer's to remove" without saying how, and nothing lists the containers that are left. The engineer asked for a guard, for exact removal commands at the end of `close`, and for a new `/codeo:cleanup` that is print-only, because the home container has no container engine.
 
@@ -27,7 +27,7 @@ Strictly home-only (answered in the conversation).
 - Duplicate search (`github.sh issue search`): "home container" finds #57, #40, #51 (dev container follow-ups); "cleanup" finds only #58 (closed); "stale container" finds #69; "guard" finds #41, #43, #34. None covers a home-only guard or a cleanup skill. #57 is the nearest: it includes `folder-check.sh` hard-coding `main` and shared folder names, so a role script touches the same area.
 - Checked on `origin/main`: `.devcontainer/README.md` lists "Where these run" as `/codeo:issue`, `/codeo:init`, `/codeo:triage` for home and `/codeo:plan` through `/codeo:close` for issue containers; `skills/` holds `close doctor implement init issue plan qc setup triage`, so `doctor` and `setup` have no stated role; `skills/close/SKILL.md` line 513 reads "**`host: container`** — the checkout is a container, which this skill cannot remove from…"; `container-name.sh` names a clone "home" whenever `.codeo/active` is absent, and `folder-check.sh` leaves a `codeo-<digits>` folder alone, which is why a finished container reads as home.
 - The home container cannot remove containers: its Dockerfile leaves out a container engine on purpose and `tests/devcontainer.test.sh` forbids bind mounts and secrets. The engineer decided: print only, never mount the Docker socket.
-- Proposed (not asked, goes to the approval gate): the guard is the project's, so it lives in overlays and a script, and applies only where the checkout is this project's dev container; a hosted web session or a plain local checkout runs as it does today. How a skill detects "this is a dev container" is `/codeo:plan`'s.
+- Confirmed by the engineer at the approval gate: the guard is the project's, so it lives in overlays and a script, and applies only where the checkout is this project's dev container; a hosted web session or a plain local checkout runs as it does today. How a skill detects "this is a dev container" is `/codeo:plan`'s.
 - Proposed: no Issue Type (a user-owned repository has none); label `enhancement`.
 
 ## Draft
@@ -95,8 +95,9 @@ At the end of a workflow `/codeo:close` says only that the container and its vol
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Filed as #70 with label `enhancement` and no Issue Type (user-owned repository). Scope as the engineer approved: a role script and a strict home-only guard for `issue`, `init`, `triage` and the new `cleanup` (no override); a folder-matches-lock check for `plan`, `implement`, `qc`, `close`; `close`'s final report prints the host removal commands; a print-only `/codeo:cleanup` that re-proves each finished issue on GitHub and never prints `codeo-home`, `codeo-gh` or `codeo-git`. Hosted web sessions and plain local checkouts are exempt. Sequenced after #69 (shared `skills/close/SKILL.md`, `docs/handoff.md`, `tests/closing-block.test.sh`). Four open questions for `/codeo:plan` are in the issue.
 
 ## Log
 
 - 2026-11-14 — request restated, duplicates searched, Q1 answered in the conversation, draft written · cost: 1m · sonnet-5-5 18k in + 2.4M cached / 10k out
+- 2026-11-14 — draft approved (web and local exemption confirmed), filed as #70 · cost: 9m · sonnet-5-5 21k in + 3.8M cached / 13k out
