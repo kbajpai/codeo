@@ -77,6 +77,14 @@ A (engineer, 2026-11-14, in the conversation)
 
 `superpowers:brainstorming` ran before these questions. The plan overlays `plan-shape`, `proof-of-done` and `wiki-rules` are not set (exit 3), so the generic shape and the default proof apply. No invariants document, no shared environment, no `wiki` module and no exclusive resources are configured.
 
+### Footprint
+
+```
+files:      .claude-plugin/plugin.json, CHANGELOG.md, .codeo/config.json, docs/plans/2026-11-14-release-v1-0-4.md, .codeo/61/**
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
