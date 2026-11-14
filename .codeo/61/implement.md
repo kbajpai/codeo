@@ -9,11 +9,7 @@
 
 ## Where this stands
 
-Round 1, paused at Task 6 for the engineer's container rebuild. Tasks 1-5 are done. Task 4, checked 2026-11-14: `git ls-remote --tags origin 'v1.0.4' 'v1.0.4^{}'` printed `032b435f9b401c699328a5aa3ec9186300444d8f	refs/tags/v1.0.4` and `cf4618eed5d3c5f083db6b8f723ec4f02f5a7f38	refs/tags/v1.0.4^{}`, so the tag is annotated and names the merge commit. `gh release view v1.0.4` shows `release: v1.0.4`, not a draft, published 2026-11-14T01:28:38Z, with the changelog section and generated notes. The engineer's `git push origin v1.0.4` was rejected because the tag already existed on the remote; the engineer's checkout also has a local `v1.0.4` made by that command, which may be a different tag object from the remote's. Task 5: `.codeo/config.json` `plugin.ref` is `v1.0.4`, the only change, committed, and `bash tests/run.sh` ended `all cases passed`.
-
-Earlier: Tasks 1-3 are done. Release PR #62 merged as `cf4618eed5d3c5f083db6b8f723ec4f02f5a7f38`, which is also the tip of `origin/main`. The release worktree is removed. The clean-clone test at that commit (fresh `git clone`, `git checkout --detach`) printed the commit, `1.0.4`, `## v1.0.4 — 2026-11-14` as the newest changelog heading, and ended `all cases passed`.
-
-Next: the engineer tags and publishes the Release (Task 4) → I check criteria 3 and 4 and pin `.codeo/config.json` (Task 5) → the engineer rebuilds the container and I check the version and the board (Task 6).
+Round 1 complete. Tasks 1-6 are done; see `## Outcome`.
 
 ## Questions
 
@@ -26,10 +22,21 @@ None.
 
 ## Outcome
 
-_Pending — written at the hand-off._
+### Round 1
+
+**Built.** Release PR #62 (`release/v1.0.4`, two files: `.claude-plugin/plugin.json` version `1.0.4`, `CHANGELOG.md` heading `## v1.0.4 — 2026-11-14`) merged as `cf4618e`. The clean-clone test at that commit ended `all cases passed`. The annotated tag `v1.0.4` and the GitHub Release `release: v1.0.4` exist on the remote and name `cf4618e` (the engineer's own push was rejected because the tag already existed; their local `v1.0.4` may be a different object). This branch carries the pin: `.codeo/config.json` `plugin.ref` `v1.0.4`, plus the plan and dossier.
+
+**Task 6 (criterion 6), checked 2026-11-14 in a session started after the rebuild.** `claude plugin list` shows `codeo@codeo` at `Version: 1.0.4` for both the user-scope and the project-scope entries, so the risk the plan raised did not occur. `board.sh set 61 ready` printed `#61 In progress → Ready on #3 Codeo` (exit 0), `board.sh set 61 inProgress` printed `#61 Ready → In progress on #3 Codeo` (exit 0), and `board.sh status 61` printed `In progress`. The card is back where it started.
+
+**Build.** The one configured suite (`shell`) has build command `true`; it exited 0. `bash tests/run.sh` ended `all cases passed` after the board check.
+
+**Documentation pages:** none, as planned. **Shared environment:** none configured; no lease, no deploy.
+
+**Deviations from the plan:** none. The engineer's tag push was rejected because the tag already existed; Task 4 verified the remote tag and Release directly.
 
 ## Log
 
 - 2026-11-14 — Task 1 done, PR #62 opened, waiting for the engineer's merge · cost: 6m · sonnet-5-5 20k in + 1.1M cached / 3k out
 - 2026-11-14 — Tasks 2-3 done: #62 merged as cf4618e, clean-clone test passed, waiting for the engineer's tag and Release · cost: 2m · sonnet-5-5
 - 2026-11-14 — Tasks 4-5 done: v1.0.4 tag and Release verified, plugin.ref pinned to v1.0.4, waiting for the container rebuild · cost: 3m · sonnet-5-5
+- 2026-11-14 — Task 6 done, round 1 complete, handing off to /codeo:qc · cost: 3m · sonnet-5-5 45k in + 420k cached / 2k out
