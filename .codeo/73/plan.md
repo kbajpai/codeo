@@ -74,6 +74,14 @@ A — hands-on. (Given in the conversation, 2026-11-14.)
 - **Other workflows in flight:** none (`inflight.sh --except 73`, 2026-11-14), so there is no footprint overlap to raise at this point.
 - **Overlays:** `plan-shape`, `proof-of-done` and `wiki-rules` are not set (exit 3); the generic shape and the default proof apply. No invariants document, no shared environment, no wiki module, no exclusive resources.
 
+### Footprint
+
+```
+files:      docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
