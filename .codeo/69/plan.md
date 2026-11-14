@@ -8,8 +8,8 @@
 
 ## Where this stands
 
-Q1-Q3 answered as recommended. The plan is drafted in `.codeo/69/plan-draft.md` and waits for the
-engineer's approval; nothing is open.
+Q1-Q3 answered as recommended; the plan is approved and written to
+`docs/plans/2026-11-14-closing-blocks-that-can-run.md`, unstaged. Nothing is open.
 
 ## Questions
 
@@ -111,6 +111,22 @@ A — a rule in `skills/plan/SKILL.md`, no config (answered in the conversation:
     `issue-skill.test.sh`, `plan-skill.test.sh`) share a `must_contain` / `step_contains` /
     `text_order` form the new cases can follow.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-14-closing-blocks-that-can-run.md` — approved 2026-11-14, left unstaged for the engineer's review. Shape: an executable plan under `$PLANS` (eight tasks), no separate reference doc; the decisions live in this dossier and in `docs/handoff.md`.
+
+**Decisions.**
+- One pull request (intake delegated the split): a workflow is one issue, one branch, one PR, and both parts write the same `CHANGELOG.md` entry.
+- Q1 = A: the closing-block rule is written once in `docs/handoff.md → Closing block`; each skill labels its exits `**Closing block — <exit>:**`; `tests/closing-exits.test.sh` reads those paragraphs. Rejected: four skill edits with no written rule.
+- Q2 = A: `/codeo:issue` reads `board.sh status <N>` when a board is configured. Ready, no board or `unavailable` names `/codeo:init #<N>`; not Ready names `/codeo:triage` first; a script failure names its fix first. Rejected: anything but a Ready read names `/codeo:triage`, which sends a web session to a *mark Ready* that `board.sh set` refuses.
+- Q3 = A: a rule in `skills/plan/SKILL.md`, no config. Host-run tasks are marked `Runs on: the engineer's host` and written shell-neutral, or the plan asks the shell and labels the command `Shell: <name>`. Rejected: a `hostShell` config key; every host command written twice.
+
+**Documentation the plan moves.** `docs/handoff.md` (Closing block and its table), `docs/skills.md` (the `issue`, `init`, `close` and `plan` sections), `.devcontainer/README.md` and `CHANGELOG.md`. No wiki module.
+
+**Intake questions resolved.** Both: where the rule lives (Q1) and whether `/codeo:issue` can read the Status (Q2).
+
+**Filed through `/codeo:issue`:** none. **Optional skills unavailable:** `engineering:system-design` and `engineering:architecture` were not used; the change adds no component and decides no technology, so their structure did not apply.
+
 ### Footprint
 
 ```
@@ -119,11 +135,8 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-14 — explored, Q1-Q3 raised · cost: 2m · fable-5-2 91k in + 576k cached / 10k out
 - 2026-11-14 — Q1-Q3 answered as recommended, plan drafted in plan-draft.md, awaiting approval · cost: 8m · fable-5-2 95k in + 693k cached / 10k out · sonnet-5-5 106k in + 399k cached / 14k out
+- 2026-11-14 — planned: docs/plans/2026-11-14-closing-blocks-that-can-run.md · cost: 9m · fable-5-2 95k in + 693k cached / 10k out · sonnet-5-5 118k in + 1.2M cached / 19k out
