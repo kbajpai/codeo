@@ -1,4 +1,4 @@
-# Issue — issue
+# Issue #76 — issue
 
 ## Questions
 
@@ -44,8 +44,9 @@ None open. The scope was settled by #52's plan Q2 (answered A): record the evalu
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Filed as #76: https://github.com/kbajpai/codeo/issues/76 (label enhancement).
 
 ## Log
 
 - 2026-11-14 — draft written for review, delegated from /codeo:implement for #52
+- 2026-11-14 — approved at the gate and filed as #76
