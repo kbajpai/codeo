@@ -72,3 +72,4 @@
 | `issue:71` | File new issues straight into Backlog; board Status `Backlog` | leave in the backlog | 2026-11-14 |
 | `issue:73` | Evaluate Docker Sandboxes; filed 2026-11-14, no branch, board Status `none` | leave in the backlog | 2026-11-14 |
 | `issue:74` | Follow-ups #69 left; filed 2026-11-14, no branch, board Status `none` | leave in the backlog | 2026-11-14 |
+| `issue:75` | Release v1.0.6 from main and pin codeo to it; filed 2026-11-14, no branch, board Status `none` | ready | 2026-11-14 |
