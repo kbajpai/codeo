@@ -373,7 +373,9 @@ plugins_large_plugin_list_does_not_break_the_pipe() {
 # ds_setup <name>: a scratch git repo holding devcontainer-start.sh and a stub plugins.sh, with stub gh,
 # claude, sudo and stat first on PATH and an empty global git config. Sets ds_dir. `calls` logs every
 # stubbed gh setup-git and sudo call. A case sets STUB_* variables before ds_run: STUB_GH_RC, STUB_GH_OUT,
-# STUB_CLAUDE_RC, STUB_CLAUDE_OUT, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO.
+# STUB_CLAUDE_RC, STUB_CLAUDE_OUT, STUB_PLUGINS_RC, STUB_SETUP_GIT_RC, STUB_STAT_UID (default: the real uid), CODEO_MOUNTINFO,
+# DS_AUTHOR_NAME and DS_AUTHOR_EMAIL (passed to the script as GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL; both are unset otherwise) and DS_GITCONFIG_WAIT
+# (seconds the script may wait for the host ~/.gitconfig, as CODEO_GITCONFIG_WAIT; default 0). The host file of a case is $ds_dir/home/.gitconfig, the volume file $ds_dir/gitconfig.
 ds_setup() {
     local name=$1
     [[ -n $pl_root ]] || pl_root=$(mktemp -d)
@@ -432,9 +434,11 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 # ds_run: run the scratch start script (through $DS_REPO when set, else the repo itself); sets ds_rc, ds_out and ds_err.
 ds_run() {
     ds_rc=0
-    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT \
+    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
         ${DS_CODEO_ROOT:+CODEO_ROOT="$DS_CODEO_ROOT"} \
         ${DS_SET:+"$DS_SET"} \
+        ${DS_AUTHOR_NAME:+GIT_AUTHOR_NAME="$DS_AUTHOR_NAME"} ${DS_AUTHOR_EMAIL:+GIT_AUTHOR_EMAIL="$DS_AUTHOR_EMAIL"} \
+        CODEO_GITCONFIG_WAIT="${DS_GITCONFIG_WAIT:-0}" \
         PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="${DS_GITCONFIG:-$ds_dir/gitconfig}" GIT_CONFIG_NOSYSTEM=1 \
         STUB_DIR="$ds_dir" STUB_STAT_UID="${STUB_STAT_UID:-$(id -u)}" \
         ${CODEO_MOUNTINFO:+CODEO_MOUNTINFO="$CODEO_MOUNTINFO"} \
