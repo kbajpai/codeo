@@ -21,6 +21,8 @@
 # checks that .claude/settings.json registers it. It also checks the scripts are committed executable, the
 # settings-merge cases (not an object, symlink, mode, no temp file), the credential-variable advice, the
 # core.fileMode probe, the prompt hook's retitling, the guarded hook command and the codeo-git volume.
+# The identity step is covered too: the volume's missing user.name and user.email are filled from the host ~/.gitconfig, else GIT_AUTHOR_*, each on its own and never over a value already there, nothing else
+# is copied, an empty or malformed host value falls through, the script waits for the host file only while a value is missing, and the TODO names the sources tried.
 #
 #   bash tests/devcontainer.test.sh
 #
