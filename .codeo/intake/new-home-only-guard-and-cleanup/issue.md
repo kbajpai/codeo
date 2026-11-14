@@ -99,4 +99,4 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-14 — request restated, duplicates searched, Q1 answered in the conversation, draft written · cost: PENDING
+- 2026-11-14 — request restated, duplicates searched, Q1 answered in the conversation, draft written · cost: 1m · sonnet-5-5 18k in + 2.4M cached / 10k out
