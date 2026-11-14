@@ -6,7 +6,7 @@
 # the dev user and names the Dockerfile and start script, caps memory and cpus, names the container after its
 # clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that, memory and cpus), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
 # It also checks .devcontainer/Dockerfile
-# (over its non-comment lines): Ubuntu 24.04 with the tools codeo needs, user dev at UID 1000 with the
+# (over its non-comment lines): Ubuntu 26.04 with the tools codeo needs, user dev at UID 1000 with the
 # gh config directory, and none of the tools the image deliberately leaves out. Finally it runs
 # .devcontainer/scripts/plugins.sh in a scratch repo against stub claude and git executables: a fresh
 # machine gets both plugins, a re-run changes nothing, a new pin reinstalls codeo, an unreachable pin
@@ -108,11 +108,11 @@ dockerfile_code() {
     grep -v '^[[:space:]]*#' "$f" || true
 }
 
-dockerfile_is_ubuntu_2404_with_the_tools() {
+dockerfile_is_ubuntu_2604_with_the_tools() {
     local code first tool
     code=$(dockerfile_code) || { fail 'Dockerfile is missing or unreadable'; return 0; }
     first=$(grep -m1 '^FROM ' <<<"$code" || true)
-    [[ "$first" == 'FROM ubuntu:24.04' ]] || fail "first FROM is not ubuntu:24.04 (got: $first)"
+    [[ "$first" == 'FROM ubuntu:26.04' ]] || fail "first FROM is not ubuntu:26.04 (got: $first)"
     # git, jq and shellcheck must sit in the apt package list: a bare word, not part of a path or URL.
     for tool in git jq shellcheck; do
         if ! grep -qE "^[[:space:]]+[a-z0-9. -]*[[:space:]]$tool([[:space:]]|\\\\|$)" <<<"$code"; then
@@ -1641,7 +1641,7 @@ cases=(
     volumes_hold_the_gh_login_and_the_git_config
     git_config_global_points_into_the_git_volume
     no_bind_mounts_or_secrets
-    dockerfile_is_ubuntu_2404_with_the_tools
+    dockerfile_is_ubuntu_2604_with_the_tools
     dockerfile_creates_dev_uid_1000_and_the_gh_dir
     dockerfile_creates_the_git_config_dir
     git_global_writes_land_in_the_volume_file

@@ -1,9 +1,9 @@
-# Development image for codeo itself: Ubuntu 24.04 with the tools codeo's shell suites and its own
+# Development image for codeo itself: Ubuntu 26.04 with the tools codeo's shell suites and its own
 # workflow need (bash, git, jq, shellcheck, gh) plus Claude Code, running as the non-root user dev.
 #
 # Left out on purpose: language runtimes and SDKs, cloud CLIs, database clients, Kubernetes tooling and
 # a container engine. codeo is plain bash; nothing here builds or deploys anything beyond it.
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ARG USERNAME=dev
 ARG USER_UID=1000
@@ -27,7 +27,7 @@ RUN install -d -m 0755 /etc/apt/keyrings \
     && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Ubuntu 24.04 ships a user named ubuntu that holds UID 1000; remove it so dev can have that UID.
+# Ubuntu 26.04 ships a user named ubuntu that holds UID 1000; remove it so dev can have that UID.
 # The gh and git directories are created here, owned by dev, so an empty named volume mounted over either takes dev's
 # ownership. dev gets passwordless sudo because the start script uses it to take ownership of a
 # repository clone that a named volume holds as root.
