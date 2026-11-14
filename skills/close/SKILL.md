@@ -613,11 +613,21 @@ was recorded, and append this invocation's `## Log` line — the date, the stash
 result, then ` · cost: ` with what `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints —
 and commit `close.md`, staged by name, with the same subject, and push. Delete `.codeo/active`
 last; when the release or a push failed, keep it, say what failed, and that running
-`/codeo:close --stash` again in this checkout finishes the stash. Report that `/codeo:init #<N>`
-resumes it, on any machine. Everything is pushed, so this checkout holds nothing the branch lacks:
-say what is left of it as step 17 does, by the lock's host, read before the lock goes. An open pull
-request stays open; say so. End with the closing block: the goal is resuming the work, the first
-step `/codeo:init #<N>`.
+`/codeo:close --stash` again in this checkout finishes the stash. Once the lock is gone, everything
+is pushed, so this checkout holds nothing the branch lacks: say what is left of it as step 17
+does, by the lock's host, read before the lock goes. An open pull request stays open; say so. End
+with the closing block that matches how the stash ended.
+
+**Closing block — stash interrupted:** `.codeo/active` is kept, because the release or a push
+failed. The goal is a finished stash; the first step is `/codeo:close --stash`, run again in this
+checkout. Say what failed. Name no other command: the lock is still held, so anything else would
+stop at it.
+
+**Closing block — stash completed:** `.codeo/active` is deleted. The goal is resuming the work.
+When the board move failed (the failure `close.md`'s outcome records), the first step is to move
+`#<N>` to the Ready status (`$READY`) by hand, naming the status the way the failure line does,
+and the next is `/codeo:init #<N>`; otherwise the first step is `/codeo:init #<N>`, on any
+machine.
 
 **Closed unmerged** is the engineer's decision to read, not this skill's: ask, as a numbered
 question in `close.md` (step 0), whether to reopen it (theirs to do on GitHub; running
