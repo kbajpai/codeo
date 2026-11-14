@@ -1,4 +1,4 @@
-# Issue (new) — Close #69's follow-ups: the abandon exit's closing block, the guards that miss a partial revert, and the wording gaps
+# Issue #74 — issue
 
 | | |
 |---|---|
@@ -7,7 +7,7 @@
 
 ## Where this stands
 
-Q1 and Q2 are answered A and A; the draft below awaits approval. The problem restated: #69 (merged as PR #72) made every closing block name only a command that can run, but its QC left five non-blocking groups of follow-ups. The one that matters is that `/codeo:close`'s abandon exit still has no closing block and borrows the stash blocks by analogy, so the rule #69 wrote does not cover every `/codeo:close` exit. The rest are test guards that miss a partial revert, two incomplete rows in `docs/handoff.md`'s exceptions table, wording gaps in `skills/plan/SKILL.md` and `CHANGELOG.md`, and left minors. No duplicate: searches for the abandon block, the closing-exits test, the exceptions table and the shell-neutral rule found only #69 itself (closed).
+Approved and filed as #74 (https://github.com/kbajpai/codeo/issues/74). The problem restated: #69 (merged as PR #72) made every closing block name only a command that can run, but its QC left five non-blocking groups of follow-ups. The one that matters is that `/codeo:close`'s abandon exit still has no closing block and borrows the stash blocks by analogy, so the rule #69 wrote does not cover every `/codeo:close` exit. The rest are test guards that miss a partial revert, two incomplete rows in `docs/handoff.md`'s exceptions table, wording gaps in `skills/plan/SKILL.md` and `CHANGELOG.md`, and left minors. No duplicate: searches for the abandon block, the closing-exits test, the exceptions table and the shell-neutral rule found only #69 itself (closed).
 
 ## Questions
 
@@ -34,7 +34,7 @@ A — a list the plan takes or dismisses, each with a reason (answered in the co
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Filed as #74, Issue Type none, labels `enhancement` and `documentation`. Status on the board: not yet read.
 
 ## Log
 
@@ -89,3 +89,4 @@ _Pending — written at the hand-off._
 - Surfaced by `/codeo:qc` round 2 of #69 (`.codeo/done/69/qc.md`, G1-G7) and `.codeo/done/69/implement.md` (left minors), merged as PR #72; filed from `/codeo:triage` run 2026-11-14-6, Q1-Q5.
 - `docs/handoff.md → Closing block`; `skills/close/SKILL.md` (step 17, *Stash*, *Closed unmerged*); `skills/init/SKILL.md` (step 11); `skills/plan/SKILL.md` (step 8); `tests/closing-exits.test.sh`; `tests/close-skill.test.sh`; `tests/plan-skill.test.sh`; `scripts/lock.sh`.
 - #70, the overlapping open issue; #69, closed.
+- 2026-11-14 — approved and filed as #74 · cost: 4m · sonnet-5-5 18k in + 2.5M cached / 11k out
