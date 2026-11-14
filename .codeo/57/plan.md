@@ -106,6 +106,15 @@ Where each finding lives:
 - F5: `.devcontainer/scripts/container-name.sh:2-7`; F7: `.devcontainer/README.md:25`.
 - Minors: `.devcontainer/scripts/window-title.sh:22`; `.devcontainer/scripts/devcontainer-start.sh:162-169`; `tests/init-overlay.test.sh:18`.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/folder-check.sh, .devcontainer/scripts/codeo-root.sh, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/container-name.sh, .devcontainer/README.md, tests/folder-check.test.sh, tests/codeo-root.test.sh, tests/devcontainer.test.sh, tests/init-overlay.test.sh, CHANGELOG.md, docs/plans/2026-11-14-dev-container-follow-ups.md
+wiki:       none
+exclusive:  none
+sequenced:  none — CHANGELOG.md overlaps #76; proceed and coordinate (Q5)
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
