@@ -165,6 +165,25 @@ answer too: each task then names its own proof command in full (step 8).
    way `superpowers:test-driven-development` runs them — the failing test first, its expected
    failure, then the code that makes it pass — so that check exists before the code it proves.
 
+   **Mark the tasks the engineer runs on their own host.** A task the engineer runs outside this
+   session's checkout — a build or run on their own machine, when the lock's `host` is not
+   `local`, or is `local` on Windows — is marked with a line `Runs on: the engineer's host`. Its
+   command is neutral: no shell variable or substitution (`$PWD`, `$(…)`), no nested quotes, no
+   `&&` or line continuation, nothing but one command a shell passes through unchanged; anything
+   longer becomes a script in the repository, run as one command,
+   in a language the engineer's host is known to have. Where none is known, the task is labelled `Shell: <name>` and asked like
+   any command that cannot be neutral. When a command cannot be neutral, the plan asks
+   which shell they use: it asks as a numbered question in plan.md (`.codeo/<N>/plan.md`), then
+   repeats step 4's stop (commit, push, end the turn; resume from the file), and labels the
+   command `Shell: <name>`.
+   A `host: local` lock needs no question, unless the session runs on Windows: Claude Code then
+   runs commands in Git Bash while the engineer may type in PowerShell, so ask as for any other
+   host. The reason: the session's shell tells nothing about the machine the engineer types on
+   (#67's Task 3 wrote bash that failed in their PowerShell). `Runs on:` and `Needs lease:` are
+   independent: a task on the engineer's own machine against the environment
+   carries both markers, each on its own line, in either order, and a `Needs lease:` task is not a
+   host task by itself.
+
    **Name the documentation the change moves.** A change to what the application does — an
    endpoint, a flow, a status, a configuration key, a screen, a deployment step — makes some page
    under `$DOCS` (and, with the `wiki` module, some wiki page) wrong the moment it merges. Find
@@ -185,7 +204,7 @@ answer too: each task then names its own proof command in full (step 8).
    configured. With `$ENV_RESOURCE` empty there is no shared environment: no task carries a lease
    marker, and every task is proved in the issue's own checkout. With one, a task that runs against
    the environment rather than in this checkout — deploys to it, runs something there, changes it
-   — starts with `Needs lease: <the value of $ENV_RESOURCE>`. Everything else runs in the issue's
+   — carries a line `Needs lease: <the value of $ENV_RESOURCE>`. Everything else runs in the issue's
    own checkout — builds and the configured suites, in parallel with every other issue — so order
    the plan with every task the suites can prove first, and the environment tasks after them, and
    say so under Global Constraints. The reason is the lease: `/codeo:implement` takes it at the
