@@ -8,9 +8,9 @@
 
 ## Where this stands
 
-Round 1 is written: the build and the full `shell` suite pass and all six criteria are met, but one
-documentation sentence is untrue (F1, blocking), so the change goes back to `/codeo:implement`.
-Q1 (the overlap with #52) is answered; nothing is open.
+Round 2 is written: the build and the full `shell` suite pass and all six criteria are met, but F5 (a
+non-numeric `CODEO_GITCONFIG_WAIT` makes the start script exit 1) is blocking, so the change goes back to
+`/codeo:implement`. Q1 and Q2 (the overlaps with #52 and #75) are answered; nothing is open.
 
 ## Questions
 
@@ -22,6 +22,19 @@ Q1 (the overlap with #52) is answered; nothing is open.
 Unreleased (Q5)`. Sequencing #51 after #52 would make the two wait on each other; re-scoping cannot drop
 the changelog line, which acceptance criterion 6 requires.
 **Options:** proceed and coordinate · sequence after #52 · re-scope.
+
+**Answer:**
+Proceed and coordinate (recommendation accepted, answered in the conversation).
+
+### Q2 — #75 also changes `CHANGELOG.md`: proceed, sequence or re-scope?
+
+**Why it matters:** `overlap.sh 51` printed `75	CHANGELOG.md` and `75	glob:CHANGELOG.md`. #75 (branch
+`chore/release-v1-0-6-main`, assignee kbajpai, step plan) is the v1.0.6 release; it turns the *Unreleased*
+section into the release entry, and its footprint already says `proceed and coordinate` with #51 and #52.
+If #51 merges first, its bullet ships in v1.0.6; if the release merges first, the bullet lands under a fresh
+*Unreleased*. Sequencing after #75 would hold #51 for a release it does not need; re-scoping cannot drop the
+changelog line, which criterion 6 requires.
+**Options:** proceed and coordinate · sequence after #75 · re-scope.
 
 **Answer:**
 Proceed and coordinate (recommendation accepted, answered in the conversation).
@@ -39,6 +52,18 @@ Commands this pass ran, from `/workspaces/codeo-51`:
 - Independent review: `QC review:` subagent on opus (the `models.reviewer` default), given the acceptance criteria and the diff range `2a86915..80ef15a`, not the implementer's account. Its verdict, quoted in plain text: "With fixes — the code meets every acceptance criterion and the suite passes, but the CHANGELOG says a restart fills a missing identity, and a restart does not run this script."
 
 **Documentation check.** `.devcontainer/README.md` (*What the start script does*) says what the script does in the present tense and matches the code (the two sources and their order, fill-only-if-missing, nothing else copied, the 10-second wait, the TODO naming the sources). No page under `docs/` describes the identity step (`grep` for `git identity`, `user.name` and `GIT_AUTHOR` over `docs/*.md` and `README.md` finds nothing). `CHANGELOG.md` has the one inaccuracy in F1.
+
+**Round 2 commands**, from `/workspaces/codeo-51` at `c0bebc6`:
+
+- `bash scripts/sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main` (exit 0).
+- `bash scripts/overlap.sh 51` → the two #75 lines of Q2 (#52's pair from round 1 is already raised); `bash scripts/overlap.sh --outside 51` → nothing.
+- `bash scripts/scope.sh origin/main HEAD` → `suite.shell=true` (unclassified paths `.codeo/51/*.md` and `CHANGELOG.md`); no `deploy=` line, no shared environment.
+- Build: the `shell` suite's `build` is `true` → exit 0. Test: `bash tests/run.sh` → `all cases passed` (exit 0).
+- `overlay.sh qc invariants-extra` and `qc wiki-rules` → exit 3 (none) in round 1, unchanged.
+- Independent review: a `QC review:` subagent on opus, given the criteria and the range `2a86915..c0bebc6`. Its verdict, in plain text: "With fixes — all acceptance criteria are met and tested, and the suite passes; the one real defect is that a non-numeric `CODEO_GITCONFIG_WAIT` makes the script exit 1, which breaks the always-exit-0 requirement."
+- Reproduced here in a scratch shell under `set -euo pipefail` with the script's own loop condition `((waited < ${CODEO_GITCONFIG_WAIT:-10}))`: `abc` → `abc: unbound variable`, exit 1; `5s` → an arithmetic error on stderr, then it carries on, exit 0; `1.5` → the same; an empty value → exit 0.
+
+**Documentation check, round 2.** `CHANGELOG.md:11` now says an existing container runs the script by hand and that a restart does not run it, which matches `devcontainer.json` (the script is `postCreateCommand`, `postStartCommand` is `window-title.sh`). `.devcontainer/README.md` is unchanged and still true. The changelog and the README both present `CODEO_GITCONFIG_WAIT` as a setting an engineer can change, which F5 turns on.
 
 ## Outcome
 
@@ -68,6 +93,33 @@ No issue was filed by this pass. #52's CHANGELOG overlap was answered at Q1.
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-14
+
+Merge of `origin/main` at the start of the round: none needed (already contained).
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| With an empty volume config and an identity in the host `~/.gitconfig`, `git config --global user.name` and `user.email` return the host's values after the start script runs | met | `start_seeds_the_identity_from_the_host_gitconfig`; the engineer's real-container run (implement Q1 part 1) |
+| With an empty volume config, no host identity, and `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` set, those values land in the volume config | met | `start_seeds_the_identity_from_the_environment` |
+| With the host file and the environment both set, the host file's values win | met | `start_host_gitconfig_wins_over_the_environment` |
+| A `user.name` or `user.email` already in the volume config is unchanged after a run, and a missing one beside it is still filled | met | `start_keeps_an_identity_already_in_the_volume` |
+| With no source holding an identity, the TODO still appears and lists the sources that were tried | met | `start_todo_names_the_sources_tried` |
+| `tests/devcontainer.test.sh` covers each case above and the suite passes; `CHANGELOG.md` records the change | met | the five cases above are in `cases=( ... )`; `bash tests/run.sh` → `all cases passed`; `CHANGELOG.md:11`, now accurate |
+
+**Findings.**
+
+- F1 (blocking in round 1) — fixed by `8f1e166`: the changelog now says a restart does not run the script. F2 (non-blocking in round 1) — fixed by `8f1e166`: the wait test places the host file whole.
+- **F5 (blocking) — `.devcontainer/scripts/devcontainer-start.sh:251`, a non-numeric `CODEO_GITCONFIG_WAIT` makes the script exit 1.** The loop condition `((waited < ${CODEO_GITCONFIG_WAIT:-10}))` evaluates the value as arithmetic, and under `set -u` a word such as `abc` is read as an unset variable, so the script stops with `unbound variable` and exit 1 (reproduced above). The script's header and the plan's Global Constraints say it always exits 0 so it never fails the container's creation; the README and the changelog both offer the variable as a setting, so a typo is a realistic way to hit it, and the cost is a container that fails to create. Whose it is: `/codeo:implement`'s, because the plan's constraint "the start script still always exits 0" was not kept; the cause is the unvalidated expansion, found by reading the diff and reproducing it, with no debugging needed. The wait's limit must be checked as a whole number before the loop and fall back to the default 10 when it is not, with a case in `tests/devcontainer.test.sh` that passes a non-numeric value and expects exit 0 and the identity still seeded.
+- **F4 (non-blocking, unchanged from round 1; the reviewer's Minor) — the wait stops when `~/.gitconfig` exists, not when it has content.** A copy created and then written leaves a window where the key reads empty and falls through to `GIT_AUTHOR_*` or the TODO; the script only runs on create, so it stays missing until a re-run. Waiting while the file is empty (`! -s`) would close most of it. Recorded; no change asked, as in round 1.
+- **F3 (non-blocking, unchanged)** — an engineer with no host `~/.gitconfig` and no `GIT_AUTHOR_*` waits the full 10 seconds at every container creation; documented.
+
+Not a finding: the rebuild check (implement Q1 part 2) is still the engineer's skipped proof, as in round 1.
+
+No issue was filed by this pass. #75's overlap was answered at Q2.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-14 — Round 1: build and suite pass, six criteria met, F1 blocking; back to implement · cost: 4m · opus-5-5 256k in + 1.7M cached / 10k out · sonnet-5-5 204k in + 724k cached / 2k out
+- 2026-11-14 — Round 2: build and suite pass, six criteria met, F5 blocking (a non-numeric wait exits 1); back to implement · cost: 3m · opus-5-5 304k in + 1.3M cached / 9k out · sonnet-5-5 23k in + 1.1M cached / 2k out
