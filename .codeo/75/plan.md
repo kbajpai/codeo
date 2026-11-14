@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q4 raised, waiting for answers. Nothing is drafted yet.
+Q1-Q4 answered (engineer accepted every recommendation, 2026-11-14). Draft written to `.codeo/75/plan-draft.md` and presented for approval; the plan file under `docs/plans/` is written only after it.
 
 What exploration found, which shapes the questions:
 - **The release change is two files**, as in #62 and #65: `.claude-plugin/plugin.json` `version` `1.0.5` → `1.0.6`, and `CHANGELOG.md:3` `## Unreleased` → `## v1.0.6 — <date>`. `origin/main` is at `2a86915`; `## Unreleased` holds two bullets (#67, #69).
@@ -43,6 +43,7 @@ I recommend *proceed and coordinate* if #51 still has review rounds ahead of it,
 **Options:** proceed and coordinate · sequence after #51 · re-scope.
 
 **Answer:**
+Proceed and coordinate (engineer: "accept all your recommendations", 2026-11-14). #51's latest QC verdict is back to `/codeo:implement` with no PR open, so its merge is not minutes away.
 
 ### Q2 — #52 also declares `CHANGELOG.md`. Same treatment?
 
@@ -57,6 +58,7 @@ I recommend *proceed and coordinate*: #52 is only at `plan`, and waiting for it 
 **Options:** proceed and coordinate · sequence after #52 · re-scope.
 
 **Answer:**
+Proceed and coordinate (engineer: "accept all your recommendations", 2026-11-14).
 
 ### Q3 — Who publishes the GitHub Release, and where do you run the tag commands?
 
@@ -71,6 +73,7 @@ I recommend A: the tag stays yours, as the issue requires, and the step that was
 **Options:** A · B · C (name the shell).
 
 **Answer:**
+A — you tag, the agent publishes the Release (engineer: "accept all your recommendations", 2026-11-14).
 
 ### Q4 — v1.0.5 has no GitHub Release. What should happen to that?
 
@@ -85,6 +88,7 @@ I recommend A: it is one command, in the same task and by the same hand, and a s
 **Options:** A · B · C.
 
 **Answer:**
+A — add v1.0.5's Release to this plan (engineer: "accept all your recommendations", 2026-11-14).
 
 ## Notes
 
@@ -99,3 +103,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-14 — Q1-Q4 raised · cost: 2m · fable-5-2 78k in + 316k cached / 8k out
+- 2026-11-14 — Q1-Q4 answered, draft presented for review · cost: 1m · sonnet-5-5 7k in + 344k cached / 8k out
