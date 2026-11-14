@@ -111,6 +111,14 @@ A — a rule in `skills/plan/SKILL.md`, no config (answered in the conversation:
     `issue-skill.test.sh`, `plan-skill.test.sh`) share a `must_contain` / `step_contains` /
     `text_order` form the new cases can follow.
 
+### Footprint
+
+```
+files:      skills/close/SKILL.md, skills/init/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, docs/handoff.md, docs/skills.md, docs/plans/2026-11-14-closing-blocks-that-can-run.md, tests/closing-exits.test.sh, tests/plan-skill.test.sh, CHANGELOG.md, .devcontainer/README.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
