@@ -725,6 +725,100 @@ start_identity_todo_when_only_one_is_set() {
     n=$(ds_todos 'git identity'); ((n == 1)) || fail "only user.email set: wanted a TODO, got $n: $ds_err"
 }
 
+# ds_host_identity: give the scratch host ~/.gitconfig (what VS Code copies in) a name and email.
+ds_host_identity() {
+    git config --file "$ds_dir/home/.gitconfig" user.name "Ada O'Neil" && git config --file "$ds_dir/home/.gitconfig" user.email ada@example.com
+}
+
+# ds_global <key>: the value in the scratch volume config (GIT_CONFIG_GLOBAL), empty when unset.
+ds_global() { git config --file "$ds_dir/gitconfig" --get "$1" 2>/dev/null || true; }
+
+start_seeds_the_identity_from_the_host_gitconfig() {
+    ds_setup seedhost || return 0
+    ds_host_identity || { fail 'could not write the scratch host config'; return 0; }
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+    grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+    if grep -qE 'ada@example.com|Neil' <<<"$ds_out$ds_err"; then fail "a seeded value was printed: $ds_out$ds_err"; fi
+    [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' ]] || fail "stdout does not end with ready: $ds_out"
+}
+
+start_seeds_the_identity_from_the_environment() {
+    ds_setup seedenv || return 0
+    DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "user.name is not the environment's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'grace@example.com' ]] || fail "user.email is not the environment's: $(ds_global user.email)"
+    grep -qF 'user.name set from GIT_AUTHOR_NAME' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+    grep -qF 'user.email set from GIT_AUTHOR_EMAIL' <<<"$ds_out" || fail "no report of user.email: $ds_out"
+}
+
+start_host_gitconfig_wins_over_the_environment() {
+    ds_setup hostwins || return 0
+    ds_host_identity || { fail 'could not write the scratch host config'; return 0; }
+    DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+}
+
+start_keeps_an_identity_already_in_the_volume() {
+    ds_setup keep || return 0
+    ds_host_identity || { fail 'could not write the scratch host config'; return 0; }
+    git config --file "$ds_dir/gitconfig" user.name 'Keep Me'
+    ds_ready_run
+    [[ $(ds_global user.name) == 'Keep Me' ]] || fail "user.name was changed: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "the missing user.email was not filled: $(ds_global user.email)"
+    ds_ready_run
+    [[ $(ds_global user.name) == 'Keep Me' && $(ds_global user.email) == 'ada@example.com' ]] || fail 'a second run changed the identity'
+    if grep -qF 'user.name set from' <<<"$ds_out"; then fail "a second run reported seeding user.name: $ds_out"; fi
+}
+
+start_todo_names_the_sources_tried() {
+    local n todo
+    ds_setup sources || return 0
+    ds_run
+    n=$(ds_todos 'git identity'); ((n == 1)) || fail "no source: wanted one TODO, got $n: $ds_err"
+    todo=$(grep 'devcontainer-start: TODO.*git identity' <<<"$ds_err" || true)
+    for want in '~/.gitconfig' GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL user.name user.email; do
+        grep -qF -- "$want" <<<"$todo" || fail "the TODO does not name $want: $todo"
+    done
+    : > "$ds_dir/gitconfig"
+    DS_AUTHOR_NAME='Grace Hopper' ds_run
+    todo=$(grep 'devcontainer-start: TODO.*git identity' <<<"$ds_err" || true)
+    [[ -n $todo ]] || fail "only the name was found: wanted a TODO: $ds_err"
+    grep -qF 'missing: user.email;' <<<"$todo" || fail "the TODO does not name user.email as the missing key: $todo"
+    [[ $(ds_global user.name) == 'Grace Hopper' && -z $(ds_global user.email) ]] || fail 'the volume config is not name only'
+}
+
+start_copies_nothing_but_the_identity() {
+    local keys
+    ds_setup onlyident || return 0
+    ds_host_identity || { fail 'could not write the scratch host config'; return 0; }
+    git config --file "$ds_dir/home/.gitconfig" init.defaultBranch trunk
+    git config --file "$ds_dir/home/.gitconfig" pull.rebase true
+    git config --file "$ds_dir/home/.gitconfig" credential.helper osxkeychain
+    ds_ready_run
+    keys=$(git config --file "$ds_dir/gitconfig" --name-only --list | sort -u | paste -sd' ')
+    [[ $keys == 'safe.directory user.email user.name' ]] || fail "the volume config holds more than the identity: $keys"
+}
+
+start_empty_host_value_falls_through_to_the_environment() {
+    ds_setup emptyhost || return 0
+    printf '[user]\n\tname =\n' > "$ds_dir/home/.gitconfig"
+    DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "an empty host name did not fall through: $(ds_global user.name)"
+}
+
+start_malformed_host_gitconfig_falls_through() {
+    ds_setup badhost || return 0
+    printf '[user\n' > "$ds_dir/home/.gitconfig"
+    DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "a malformed host file did not fall through: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'grace@example.com' ]] || fail "user.email: $(ds_global user.email)"
+}
+
 start_setup_git_failure_is_a_todo() {
     local n
     ds_setup setupgit || return 0
@@ -1680,6 +1774,14 @@ cases=(
     start_mount_prefix_needs_a_path_boundary
     start_resolves_symlinks_before_matching
     start_identity_todo_when_only_one_is_set
+    start_seeds_the_identity_from_the_host_gitconfig
+    start_seeds_the_identity_from_the_environment
+    start_host_gitconfig_wins_over_the_environment
+    start_keeps_an_identity_already_in_the_volume
+    start_todo_names_the_sources_tried
+    start_copies_nothing_but_the_identity
+    start_empty_host_value_falls_through_to_the_environment
+    start_malformed_host_gitconfig_falls_through
     start_setup_git_failure_is_a_todo
     start_trusts_the_clone_once
     start_reads_the_identity_from_the_global_config_file

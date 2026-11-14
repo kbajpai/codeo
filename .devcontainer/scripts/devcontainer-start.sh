@@ -2,7 +2,7 @@
 # The dev container's postCreateCommand. Trusts the clone (and takes ownership of it when it is on a Docker volume), installs the Claude Code
 # plugins, writes the window title, turns on Claude Code Remote Control (remoteControlAtStartup in the user
 # settings), restores the executable bit the index records on tracked files and turns core.fileMode back on, only on a clone on a Docker volume where the filesystem keeps the bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
-# (the GitHub and Claude logins, a git identity, credentials that block Remote Control). Safe to re-run: each step checks before it acts.
+# (the GitHub and Claude logins, a git identity (filled from the host ~/.gitconfig or GIT_AUTHOR_* when the volume lacks it), credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
 # The home container (on the base branch) takes no workflow lock; an issue container takes it with codeo's lock.sh from the init.md
 # on its branch, and its clone folder is checked against the lock.
@@ -238,9 +238,34 @@ else
     need_login+=("gh auth login -s project")
 fi
 
-# 5. Git identity.
-if [[ -z $(git config user.email || true) || -z $(git config user.name || true) ]]; then
-    add_todo "git identity is not set: run git config --global user.name 'Your Name' and git config --global user.email you@example.com"
+# 5. Git identity: fill what the volume's config lacks, each key on its own, from the host's ~/.gitconfig
+# (which VS Code copies into the container) first and then GIT_AUTHOR_NAME / GIT_AUTHOR_EMAIL. A value
+# already in the volume config is never changed, a source counts only when it holds a non-empty value, and
+# nothing but these two keys is read from the host file. A seeded value is not printed.
+identity_missing() { [[ -z $(git config --global --get "$1" 2>/dev/null || true) ]]; }
+for pair in user.name:GIT_AUTHOR_NAME user.email:GIT_AUTHOR_EMAIL; do
+    key=${pair%%:*}
+    var=${pair#*:}
+    identity_missing "$key" || continue
+    value=$(git config --file "$HOME/.gitconfig" --get "$key" 2>/dev/null || true)
+    # shellcheck disable=SC2088 # a label for the report, not a path
+    from='~/.gitconfig'
+    if [[ -z $value ]]; then
+        value=${!var:-}
+        from=$var
+    fi
+    [[ -n $value ]] || continue
+    if git config --global "$key" "$value"; then
+        say "git identity: $key set from $from"
+    fi
+done
+# What is still missing is judged on the effective identity, as before: a repository-level one counts.
+missing_keys=()
+[[ -n $(git config user.name || true) ]] || missing_keys+=(user.name)
+[[ -n $(git config user.email || true) ]] || missing_keys+=(user.email)
+if ((${#missing_keys[@]} > 0)); then
+    missing_list=$(printf '%s, ' "${missing_keys[@]}")
+    add_todo "git identity is not set (missing: ${missing_list%, }; tried ~/.gitconfig, then GIT_AUTHOR_NAME / GIT_AUTHOR_EMAIL): run git config --global user.name 'Your Name' and git config --global user.email you@example.com"
 fi
 
 # 6. Claude Code login.
