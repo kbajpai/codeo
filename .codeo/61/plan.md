@@ -77,6 +77,21 @@ A (engineer, 2026-11-14, in the conversation)
 
 `superpowers:brainstorming` ran before these questions. The plan overlays `plan-shape`, `proof-of-done` and `wiki-rules` are not set (exit 3), so the generic shape and the default proof apply. No invariants document, no shared environment, no `wiki` module and no exclusive resources are configured.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-14-release-v1-0-4.md` (unstaged, approved 2026-11-14) |
+| Shape | Plan under `docs/plans/`; no reference doc, since nothing is a standing decision |
+
+**Decisions.** Two pull requests (Q1 = A): the release PR comes from its own branch `release/v1.0.4`, cut from `origin/main` in a git worktree and opened by `/codeo:implement`, because the required `qc-verdict` check fails a head carrying a live dossier. This branch carries the pin change and the dossier, and `/codeo:close` opens its PR after the tag exists. The agent runs the clean-clone test and records it (Q2 = A). The changelog's `Shared state: unchanged from v1.0.3.` line stays as written (Q3 = A). The tag is annotated, as v1.0.3's is. The tag, the GitHub Release, both merges and the container rebuild are the engineer's, so the plan has wait tasks for them.
+
+**Rejected.** Release PR from this branch with the pin outside the workflow (Q1 B). The engineer running the clean-clone test (Q2 B). Rewording or adding a sentence to the Shared state line (Q3 B, C).
+
+**Documentation pages the plan changes:** none. No page names a version, and changing the release checklist is out of scope.
+
+**Risk for `/codeo:qc`.** `claude plugin list` shows a user-scope and a project-scope `codeo@codeo`; `plugins.sh` reinstalls only the user scope, so the project-scope entry may still report 1.0.3 after the rebuild. Task 6 records that as a finding rather than hiding it. Criteria 2-4 depend on the engineer's merge and tag.
+
 ### Footprint
 
 ```
@@ -85,10 +100,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-14 — Q1-Q3 raised · cost: 2m · fable-5-2 81k in + 614k cached / 6k out
+- 2026-11-14 — planned: docs/plans/2026-11-14-release-v1-0-4.md · cost: 11m · fable-5-2 86k in + 939k cached / 11k out · sonnet-5-5 97k in + 613k cached / 10k out; engineering plugin unavailable, steps 6-7 skipped
