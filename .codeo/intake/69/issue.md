@@ -1,14 +1,14 @@
-# Issue #new-closing-blocks-and-loose-ends — issue
+# Issue #69 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/69 |
 | Called from | `/codeo:triage`, run 2026-11-14 (second run), Q1-Q7, consolidated into one issue at the engineer's request |
 | Updated | 2026-11-14 |
 
 ## Where this stands
 
-Q1 and Q2 answered. Draft written below and waiting for the engineer's approval before filing.
+Q1 and Q2 answered; draft approved and filed as #69.
 
 **Problem as I understand it.** Four skills print a closing block (`docs/handoff.md → Closing block`) that names the next command. On several exits that command cannot run: `/codeo:close` after a failed cleanup tells the engineer to remove the checkout that still holds the lock, a stash that failed halfway points at `/codeo:init`, which stops on the lock the stash kept, `/codeo:init` after `lock: TODO` points at `/codeo:plan`, which refuses without a lock, and `/codeo:issue` points a new issue at `/codeo:init` where the board's Ready gate refuses it. Around that, a plan's host-run commands were written for bash and failed on the engineer's PowerShell, and three wording notes and two stale archive lines are left over from #67 and #61. All of it is small, text-level work in the skills, their tests and two docs; none of it changes what the pipeline decides.
 
@@ -107,8 +107,9 @@ The closing block exists so the engineer never has to work out where they stand 
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Filed as #69 with label `enhancement` and no Issue Type (user-owned repository). One issue for all of `/codeo:triage` run 2026-11-14 Q1-Q7, as the engineer asked: the four closing-block fixes, the host-shell note for plan commands, the #67 wording notes. `/codeo:plan` decides how to split it (Q1); the stale lines in archived `.codeo/done/61/plan.md` and the local-only `v1.0.4` tag are listed as known and left (Q2). Two open questions for the plan are in the issue.
 
 ## Log
 
 - 2026-11-14 — request restated, duplicates searched, Q1-Q2 raised · cost: 1m · sonnet-5-5 11k in + 1.2M cached / 3k out
+- 2026-11-14 — Q1-Q2 answered, draft approved, filed as #69 · cost: 6m · sonnet-5-5 23k in + 5M cached / 14k out
