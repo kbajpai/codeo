@@ -81,6 +81,14 @@ released entry and stays.
 - No other workflow is in flight (`inflight.sh --except 67`), so there is no overlap to raise.
   No invariants document, shared environment, `wiki` module or exclusive resources are configured.
 
+### Footprint
+
+```
+files:      .devcontainer/Dockerfile, .devcontainer/README.md, tests/devcontainer.test.sh, CHANGELOG.md, docs/plans/2026-11-14-ubuntu-2604-dev-container.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
