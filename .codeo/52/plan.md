@@ -8,8 +8,7 @@
 
 ## Where this stands
 
-Q1-Q5 are answered. The plan is drafted in `.codeo/52/plan-draft.md` and waits for the engineer's
-approval; the file under `docs/plans/` is written only after it. Five tasks: the rename in
+Plan approved and written to `docs/plans/2026-11-14-latest-claude-models.md` (left unstaged for your review). Nothing is open. Five tasks: the rename in
 `docs/` and the fixtures, the test input IDs, one comment on #52 with the alias record and the
 Haiku evaluation, a follow-up issue for the Haiku trial, and the changelog entry last, waiting for
 #51 (Q5). No skill or default changes.
@@ -106,6 +105,14 @@ requires the entry).
 Sequence after #51 (answered in the conversation). The changelog task goes last and waits for #51
 to merge.
 
+### Q6 — `#51` overlaps on `glob:CHANGELOG.md`: proceed, sequence or re-scope?
+
+**Why it matters:** `overlap.sh` prints `51<TAB>glob:CHANGELOG.md` for the footprint as written, and drops a pair only when a question names both tokens verbatim. Q5 raised this same overlap in prose; this restates it in the form the script reads. It changes nothing in the plan.
+**Options:** proceed and coordinate · sequence after #51 · re-scope (not available).
+
+**Answer:**
+Sequence after #51, as Q5 (answered in the conversation). The changelog task stays last and waits for #51 to merge.
+
 ## Notes
 
 **Alias resolution, checked 2026-11-14 in Claude Code 2.1.325.** For each alias,
@@ -144,6 +151,21 @@ standing decision. No invariants document, no shared environment and no wiki are
 **Other workflows in flight.** #69 was the only one at Q4 and has since merged; #51 (at `plan`)
 shares `CHANGELOG.md`, which is Q5.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-14-latest-claude-models.md` (unstaged, for your review) |
+| Shape | a plan under `docs/plans/`; no reference doc, since nothing here is a standing decision |
+
+**Decisions.** The aliases `fable`, `opus` and `sonnet` already resolve to `claude-fable-5-2`, `claude-opus-5-5` and `claude-sonnet-5-5` in Claude Code 2.1.325, so no skill, hook or default changes (issue Q1). Old names move `fable-5-1` → `fable-5-2`, `sonnet-5` → `sonnet-5-5`, `opus-5` → `opus-5-5` in `docs/dossier.md`, `tests/fixtures/**` and `tests/replay.test.sh`; criterion 2 is read as the grep in the plan, since the new names contain the old. Q1: `/codeo:implement` posts the alias record as one comment on #52. Q2: the Haiku 5.5 evaluation is recorded, nothing switches (`doctor` and `setup` are the candidates), and the trial is filed as its own issue. Q3: three test-input IDs move too. Q4-Q6: #69 merged; the changelog task waits for #51.
+
+**Options rejected.** Pinning model IDs (out of scope); switching `doctor` and `setup` to Haiku here (no trial run behind it); leaving the test-input IDs (outside the criterion but left a stale name); proceeding past #51 on `CHANGELOG.md` (the engineer chose to sequence).
+
+**Documentation the plan changes.** `docs/dossier.md` (its example log line) only; no wiki. No other page names a model version.
+
+**Intake questions resolved.** The Haiku question left open at intake (Q2 above).
+
 ### Footprint
 
 ```
@@ -153,11 +175,8 @@ exclusive:  none
 sequenced:  after #51 — both add a CHANGELOG.md bullet under Unreleased (Q5)
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-14 — Q1-Q4 raised · cost: 2m · fable-5-2 77k in + 257k cached / 5k out
 - 2026-11-14 — Q1-Q5 answered, draft written for review (.codeo/52/plan-draft.md); engineering plugin unavailable, steps 6-7 skipped (no new component or technology choice) · cost: 29m · fable-5-2 83k in + 570k cached / 10k out · sonnet-5-5 92k in + 574k cached / 10k out
+- 2026-11-14 — planned: docs/plans/2026-11-14-latest-claude-models.md; Q6 restated the #51 overlap for overlap.sh · cost: 30m · fable-5-2 83k in + 570k cached / 10k out · sonnet-5-5 95k in + 1.1M cached / 13k out
