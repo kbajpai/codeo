@@ -8,9 +8,9 @@
 
 ## Where this stands
 
-Round 2 is written: the build and the full `shell` suite pass and all six criteria are met, but F5 (a
-non-numeric `CODEO_GITCONFIG_WAIT` makes the start script exit 1) is blocking, so the change goes back to
-`/codeo:implement`. Q1 and Q2 (the overlaps with #52 and #75) are answered; nothing is open.
+Round 3 is written: the build and the full `shell` suite pass, all six criteria are met and nothing is
+blocking (F5 is fixed; F4 and F6 are non-blocking). The verdict is clear, forward to `/codeo:close`. Q1 and
+Q2 (the overlaps with #52 and #75) are answered; nothing is open.
 
 ## Questions
 
@@ -64,6 +64,17 @@ Commands this pass ran, from `/workspaces/codeo-51`:
 - Reproduced here in a scratch shell under `set -euo pipefail` with the script's own loop condition `((waited < ${CODEO_GITCONFIG_WAIT:-10}))`: `abc` → `abc: unbound variable`, exit 1; `5s` → an arithmetic error on stderr, then it carries on, exit 0; `1.5` → the same; an empty value → exit 0.
 
 **Documentation check, round 2.** `CHANGELOG.md:11` now says an existing container runs the script by hand and that a restart does not run it, which matches `devcontainer.json` (the script is `postCreateCommand`, `postStartCommand` is `window-title.sh`). `.devcontainer/README.md` is unchanged and still true. The changelog and the README both present `CODEO_GITCONFIG_WAIT` as a setting an engineer can change, which F5 turns on.
+
+**Round 3 commands**, from `/workspaces/codeo-51` at `6d9a41f`:
+
+- `bash scripts/sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main` (exit 0; `main` is at `0414469`, the v1.0.6 release, already merged by implement round 3).
+- `bash scripts/overlap.sh 51` → nothing (Q1 and Q2 stay answered); `bash scripts/overlap.sh --outside 51` → nothing.
+- `bash scripts/scope.sh origin/main HEAD` → `suite.shell=true` (unclassified paths `.codeo/51/*.md` and `CHANGELOG.md`); no `deploy=` line, no shared environment.
+- Build: the `shell` suite's `build` is `true` → exit 0. Test: `bash tests/run.sh` → `all cases passed` (exit 0).
+- `git diff origin/main...HEAD --stat` → the start script, `tests/devcontainer.test.sh`, `.devcontainer/README.md` and `CHANGELOG.md` (plus the plan file and the dossiers).
+- Independent review: a `QC review:` subagent on opus, given the criteria, the base `0414469` and head `6d9a41f`, and asked to check the changelog section. Its verdict, in plain text: "Ready to merge: Yes — every acceptance criterion is implemented, tested and passing; the script still always exits 0 and is safe to re-run, the docs describe what the code does, and the changelog entry is under Unreleased above v1.0.6." It also ran `bash tests/devcontainer.test.sh` itself (all cases passed).
+
+**Documentation check, round 3.** `CHANGELOG.md` has a `## Unreleased` section (Config schema 1, Shared state unchanged from v1.0.6, Safe to bump mid-workflow yes) above the untouched `## v1.0.6` section, and the identity bullet sits only under `Unreleased`. Its sentences match `.devcontainer/devcontainer.json` (the script is `postCreateCommand`, so a restart does not run it) and the script (the two sources and their order, fill-only-if-missing, the 10-second wait, a non-whole-number limit counting as 10, the TODO naming the sources). `.devcontainer/README.md` says the same. No page under `docs/` describes the identity step.
 
 ## Outcome
 
@@ -119,7 +130,34 @@ No issue was filed by this pass. #75's overlap was answered at Q2.
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-14
+
+Merge of `origin/main` at the start of the round: none needed (the v1.0.6 release was merged in implement round 3).
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| With an empty volume config and an identity in the host `~/.gitconfig`, `git config --global user.name` and `user.email` return the host's values after the start script runs | met | `start_seeds_the_identity_from_the_host_gitconfig`; the engineer's real-container run (implement Q1 part 1) |
+| With an empty volume config, no host identity, and `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` set, those values land in the volume config | met | `start_seeds_the_identity_from_the_environment` |
+| With the host file and the environment both set, the host file's values win | met | `start_host_gitconfig_wins_over_the_environment` |
+| A `user.name` or `user.email` already in the volume config is unchanged after a run, and a missing one beside it is still filled | met | `start_keeps_an_identity_already_in_the_volume` |
+| With no source holding an identity, the TODO still appears and lists the sources that were tried | met | `start_todo_names_the_sources_tried` |
+| `tests/devcontainer.test.sh` covers each case above and the suite passes; `CHANGELOG.md` records the change | met | the five cases above are in `cases=( ... )`; `bash tests/run.sh` → `all cases passed`; the `CHANGELOG.md` bullet under `## Unreleased` |
+
+**Findings.**
+
+- F5 (blocking in round 2) — fixed by `537ee3c`: the wait limit is checked as a whole number (anything else counts as 10) and compared as `10#$wait_max`; `start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero` covers `abc`, `5s`, `1.5` and `08`. The bullet's placement under `## Unreleased` was checked in the documentation check above.
+- **F4 (non-blocking, unchanged from rounds 1 and 2; the reviewer's Minor 1) — the wait stops when `~/.gitconfig` exists, not when it has content,** so a copy that is created and then written could be read half-done; with `GIT_AUTHOR_*` set, the environment's value would then fill the volume and, never being overwritten, would keep the host's value out. Whether VS Code writes the copy in one step is unverified (the wait test places the file whole). Non-blocking by effect: it needs a timing window of a few milliseconds and affects a first start only. Implement's, if the engineer wants it closed (wait while the file is empty, or re-read once after a second).
+- **F6 (non-blocking, new; the reviewer's Minor 2) — `[include]` / `[includeIf]` in the host file are not followed,** because `git config --file` ignores includes by default (confirmed by the reviewer with a scratch file). A host that keeps its identity in an included file gets the environment's value or the TODO. The effect is small: an included file is usually a host path VS Code does not copy in. The README could say that only values written directly in `~/.gitconfig` count. Plan's, if at all: the plan chose to read the two keys from the host file alone.
+- **F3 (non-blocking, unchanged)** — an engineer with no host `~/.gitconfig` and no `GIT_AUTHOR_*` waits the full 10 seconds at every container creation; documented.
+
+Not a finding: the rebuild check (implement Q1 part 2) is still the engineer's skipped proof, as in rounds 1 and 2.
+
+No issue was filed by this pass; F4 and F6 may be worth `/codeo:triage`.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-14 — Round 1: build and suite pass, six criteria met, F1 blocking; back to implement · cost: 4m · opus-5-5 256k in + 1.7M cached / 10k out · sonnet-5-5 204k in + 724k cached / 2k out
 - 2026-11-14 — Round 2: build and suite pass, six criteria met, F5 blocking (a non-numeric wait exits 1); back to implement · cost: 3m · opus-5-5 304k in + 1.3M cached / 9k out · sonnet-5-5 23k in + 1.1M cached / 2k out
+- 2026-11-14 — Round 3: build and suite pass, six criteria met, no blocking finding; clear · cost: 4m · opus-5-5 90k in + 1.2M cached / 8k out · sonnet-5-5 22k in + 1.1M cached / 648 out
