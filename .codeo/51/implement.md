@@ -91,7 +91,6 @@ Built from `docs/plans/2026-11-14-seed-dev-container-git-identity.md`, tasks 1-5
 **Documentation pages changed:** `.devcontainer/README.md` and `CHANGELOG.md`.
 **Build result:** the `shell` suite's `build` is `true`; `bash tests/run.sh` passed (`all cases passed`) after Task 1 and after Task 4, and `shellcheck` is clean on the start script.
 **Deviations from the plan:** the four rulings under `## Notes`, plus the skipped Task 5 part 2.
-**Deployed revision:** none; there is no shared environment.
 
 ## Log
 
