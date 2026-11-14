@@ -185,7 +185,7 @@ replay: 2 dossiers, 2 recorded drifts, all as expected" "$out"
 
 case_desc="an extra finding nobody recorded fails"
 dir=$(fresh extra)
-sed -i 's/ · cost: 2m · sonnet-5 40k in + 200k cached \/ 3k out//' "$dir/case-a/close.md"
+sed -i 's/ · cost: 2m · sonnet-5-5 40k in + 200k cached \/ 3k out//' "$dir/case-a/close.md"
 run_replay "$dir"
 assert_eq rc 1 "$rc"
 assert_eq out "replay: unexpected case-a${tab}FAIL${tab}close.md${tab}log-cost" "$out"

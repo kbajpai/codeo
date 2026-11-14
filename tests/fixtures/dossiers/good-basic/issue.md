@@ -36,5 +36,5 @@ Filed as #12, Issue Type Feature, labels `export`.
 
 ## Log
 
-- 2026-03-02 — Q1 raised · cost: 6m · opus-5 40k in + 210k cached / 5k out
-- 2026-03-02 — Q1 answered, issue filed as #12 · cost: 3m · opus-5 22k in + 150k cached / 2k out
+- 2026-03-02 — Q1 raised · cost: 6m · opus-5-5 40k in + 210k cached / 5k out
+- 2026-03-02 — Q1 answered, issue filed as #12 · cost: 3m · opus-5-5 22k in + 150k cached / 2k out

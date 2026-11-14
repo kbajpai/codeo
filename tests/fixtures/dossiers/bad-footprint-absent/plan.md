@@ -43,5 +43,5 @@ nightly job under its own read-only role (Q1), and the export page in the docs.
 
 ## Log
 
-- 2026-03-04 — Q1 raised · cost: 9m · fable-5-1 80k in + 900k cached / 14k out
-- 2026-03-04 — Q1 answered, plan written · cost: 12m · fable-5-1 96k in + 1.2M cached / 18k out
+- 2026-03-04 — Q1 raised · cost: 9m · fable-5-2 80k in + 900k cached / 14k out
+- 2026-03-04 — Q1 answered, plan written · cost: 12m · fable-5-2 96k in + 1.2M cached / 18k out

@@ -94,7 +94,7 @@ case_desc=hook_honours_configured_models
 p=$(project custom '{"subagent":"haiku","reviewer":"sonnet"}' x)
 out=$(run_hook "$p" '{"model":"haiku"}')
 assert_eq "configured subagent" allow "$(decision "$out")"
-out=$(run_hook "$p" '{"model":"claude-haiku-4-5"}')
+out=$(run_hook "$p" '{"model":"claude-haiku-5-5"}')
 assert_eq "configured full id" allow "$(decision "$out")"
 out=$(run_hook "$p" '{"model":"sonnet"}')
 assert_eq "default no longer allowed" deny "$(decision "$out")"

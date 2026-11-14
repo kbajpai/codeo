@@ -33,4 +33,4 @@ All three criteria met: the paid-only case, the file-name case and the bucket wr
 
 ## Log
 
-- 2026-03-06 — round 1 · cost: 7m · opus-5 120k in + 1.1M cached / 9k out
+- 2026-03-06 — round 1 · cost: 7m · opus-5-5 120k in + 1.1M cached / 9k out

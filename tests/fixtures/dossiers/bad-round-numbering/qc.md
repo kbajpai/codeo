@@ -26,4 +26,4 @@ Build and tests green; nothing blocking.
 
 ## Log
 
-- 2026-03-09 — round 2: clear · cost: 5m · opus-5 90k in + 800k cached / 6k out
+- 2026-03-09 — round 2: clear · cost: 5m · opus-5-5 90k in + 800k cached / 6k out

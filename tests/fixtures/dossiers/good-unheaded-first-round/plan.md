@@ -54,6 +54,6 @@ sequenced:  none
 
 ## Log
 
-- 2026-03-04 — Q1 answered, plan written · cost: 12m · fable-5-1 96k in + 1.2M cached / 18k out
-- 2026-03-08 — round 2: Q2 raised · cost: 4m · fable-5-1 40k in + 600k cached / 6k out
+- 2026-03-04 — Q1 answered, plan written · cost: 12m · fable-5-2 96k in + 1.2M cached / 18k out
+- 2026-03-08 — round 2: Q2 raised · cost: 4m · fable-5-2 40k in + 600k cached / 6k out
 - 2026-03-08 — round 2: Q2 answered, task 2 rewritten · cost: unavailable — the session was resumed

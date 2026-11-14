@@ -22,4 +22,4 @@ Four tasks done as planned.
 
 ## Log
 
-- 2026-03-05 — tasks 1-4 done · cost: 30m · sonnet-5 41k in + 380k cached / 4k out
+- 2026-03-05 — tasks 1-4 done · cost: 30m · sonnet-5-5 41k in + 380k cached / 4k out

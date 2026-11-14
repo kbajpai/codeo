@@ -24,4 +24,4 @@ Stashed at the engineer's request; the branch and dossier stay as they are.
 
 ## Log
 
-- 2026-03-09 — stashed · cost: 1m · sonnet-5 20k in + 90k cached / 1k out
+- 2026-03-09 — stashed · cost: 1m · sonnet-5-5 20k in + 90k cached / 1k out
