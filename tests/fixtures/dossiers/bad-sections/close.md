@@ -24,4 +24,4 @@ None.
 
 ## Log
 
-- 2026-03-07 — opened the pull request · cost: 2m · sonnet-5 40k in + 200k cached / 3k out
+- 2026-03-07 — opened the pull request · cost: 2m · sonnet-5-5 40k in + 200k cached / 3k out

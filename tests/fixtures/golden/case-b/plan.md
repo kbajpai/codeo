@@ -38,5 +38,5 @@ sequenced:  none
 
 ## Log
 
-- 2026-04-02 — Q1 raised · cost: 8m · fable-5-1 70k in + 800k cached / 12k out
+- 2026-04-02 — Q1 raised · cost: 8m · fable-5-2 70k in + 800k cached / 12k out
 - 2026-04-02 — Q1 answered, plan written

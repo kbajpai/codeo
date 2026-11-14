@@ -36,4 +36,4 @@ sequenced:  none
 
 ## Log
 
-- 2026-03-04 — plan written · cost: 12m · fable-5-1 96k in + 1.2M cached / 18k out
+- 2026-03-04 — plan written · cost: 12m · fable-5-2 96k in + 1.2M cached / 18k out

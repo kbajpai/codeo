@@ -191,7 +191,7 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-03-04 — Q1-Q2 raised · cost: 14m · fable-5-1 96k in + 1.2M cached / 18k out · sonnet-5 41k in + 380k cached / 4k out
+- 2026-03-04 — Q1-Q2 raised · cost: 14m · fable-5-2 96k in + 1.2M cached / 18k out · sonnet-5-5 41k in + 380k cached / 4k out
 ```
 
 - `## Where this stands` is rewritten each round; it is the skill's own summary of what it has

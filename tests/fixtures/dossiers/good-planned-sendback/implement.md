@@ -27,4 +27,4 @@ Task 2 rebuilt to the new plan.
 
 ## Log
 
-- 2026-03-05 — tasks 1-4 implemented and reviewed · cost: 31m · sonnet-5 210k in + 3.1M cached / 40k out
+- 2026-03-05 — tasks 1-4 implemented and reviewed · cost: 31m · sonnet-5-5 210k in + 3.1M cached / 40k out

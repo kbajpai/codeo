@@ -26,4 +26,4 @@ Open at intake: none.
 ## Log
 
 - initialized: branch `feat/order-export` off `main` at
-  `0a1b2c3d` · cost: 2m · sonnet-5 30k in + 400k cached / 3k out
+  `0a1b2c3d` · cost: 2m · sonnet-5-5 30k in + 400k cached / 3k out

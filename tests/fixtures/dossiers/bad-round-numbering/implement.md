@@ -27,5 +27,5 @@ The file writer names the day covered.
 
 ## Log
 
-- 2026-03-05 — tasks 1-4 implemented · cost: 31m · sonnet-5 210k in + 3.1M cached / 40k out
-- 2026-03-08 — round 3: file writer fixed · cost: 6m · sonnet-5 50k in + 700k cached / 8k out
+- 2026-03-05 — tasks 1-4 implemented · cost: 31m · sonnet-5-5 210k in + 3.1M cached / 40k out
+- 2026-03-08 — round 3: file writer fixed · cost: 6m · sonnet-5-5 50k in + 700k cached / 8k out
