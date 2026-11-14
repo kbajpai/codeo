@@ -1,8 +1,8 @@
-# new-devcontainer-ubuntu-2604 — issue
+# Issue #67 — issue
 
 | | |
 |---|---|
-| Issue | _not filed yet_ |
+| Issue | https://github.com/kbajpai/codeo/issues/67 |
 | Updated | 2026-11-14 |
 
 ## Where this stands
@@ -107,7 +107,7 @@ supposed to change.
 
 ## Outcome
 
-_Pending — written when the issue is filed._
+Filed as #67 with label `enhancement` and no Issue Type (user-owned repository). Pinned `ubuntu:26.04`; dev container only, CI out of scope. Two open questions (the `ubuntu` UID 1000 user, apt package names) went into the issue for `/codeo:plan`.
 
 ## Log
 
