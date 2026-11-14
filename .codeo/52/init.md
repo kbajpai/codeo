@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Draft, waiting for the engineer's approval. Branch `feat/run-codeo-latest-claude-models` would be cut off `main` at 91894c1. Nothing is open; the next step is `/codeo:plan`.
+Branch `feat/run-codeo-latest-claude-models` cut off `main` at 91894c1, claimed and pushed. Nothing is open; the next step is `/codeo:plan`.
 
 ## Questions
 
@@ -37,4 +37,4 @@ None.
 
 ## Log
 
-- 2026-11-14 — draft, not yet initialized
+- 2026-11-14 — initialized: branch feat/run-codeo-latest-claude-models off main at 91894c1 · cost: 1m · sonnet-5-5 17k in + 827k cached / 3k out
