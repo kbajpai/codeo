@@ -64,3 +64,11 @@
 | `qc:61:F1-F3` | Stale lines in archived `.codeo/done/61/plan.md`; local-only tag `v1.0.4` | filed #69 — listed there as known and left (out of scope) | 2026-11-14 |
 | `issue:69` | Closing blocks, plan host commands and #67 wording; filed 2026-11-14, no branch, board Status `none` | ready | 2026-11-14 |
 | `issue:70` | Home-only skill guard, close-time removal commands, print-only /codeo:cleanup; filed 2026-11-14, no branch, board Status `none` | ready | 2026-11-14 |
+| `qc:69:G1` | `/codeo:close`'s abandon exit has no closing block and borrows the stash blocks | filed #74 | 2026-11-14 |
+| `qc:69:G2` | `tests/closing-exits.test.sh` misses old sentences restored beside the labelled paragraphs | filed #74 | 2026-11-14 |
+| `qc:69:G3-G4` | `docs/handoff.md` exceptions table: over-general `init — no lock` row, no "Status unreadable" row | filed #74 | 2026-11-14 |
+| `qc:69:G5-G7` | Plan skill host-task paragraph contradictions, incomplete "neutral" list, changelog omits the ask-and-label branch | filed #74 | 2026-11-14 |
+| `implement:69:left-minors` | Minors left by the #69 implementers and reviewers | filed #74 | 2026-11-14 |
+| `issue:71` | File new issues straight into Backlog; board Status `Backlog` | leave in the backlog | 2026-11-14 |
+| `issue:73` | Evaluate Docker Sandboxes; filed 2026-11-14, no branch, board Status `none` | leave in the backlog | 2026-11-14 |
+| `issue:74` | Follow-ups #69 left; filed 2026-11-14, no branch, board Status `none` | leave in the backlog | 2026-11-14 |
