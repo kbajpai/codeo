@@ -12,8 +12,8 @@ Explored the start script, its tests, the container config and the two other wor
 The change itself is small: step 5 of `.devcontainer/scripts/devcontainer-start.sh`, new cases in
 `tests/devcontainer.test.sh`, a paragraph in `.devcontainer/README.md` and a changelog line.
 Q1-Q3 are answered (wait for the file; a last task the engineer runs; #69 already merged as #72, so
-no overlap). The draft is at `.codeo/51/plan-draft.md`, awaiting the engineer's approval; nothing is
-open and `## Outcome` stays pending until it is approved and written to `docs/plans/`.
+no overlap). The plan was approved and written to `docs/plans/2026-11-14-seed-dev-container-git-identity.md`
+(left unstaged for your review). Nothing is open; the next step is `/codeo:implement`.
 
 ## Questions
 
@@ -124,6 +124,28 @@ which is not the same as knowing it will not touch these files.
 - No overlay text exists for `plan-shape`, `proof-of-done` or `wiki-rules`, so the generic shapes
   apply. The `shell` suite has no `filter`, so each task's proof is `bash tests/run.sh`, with
   `bash tests/devcontainer.test.sh` as the quick loop.
+## Outcome
+
+Plan: `docs/plans/2026-11-14-seed-dev-container-git-identity.md`, a scoped, executable plan (step 5
+shape: no standing decision, so no reference doc under `docs/`). Left unstaged for review.
+
+**Decisions.**
+- Step 5 of `devcontainer-start.sh` fills each of `user.name` / `user.email` on its own, only when
+  the volume file lacks it, from `~/.gitconfig` first and then `GIT_AUTHOR_*`; empty or malformed
+  sources count as no value; a seeded value is never printed.
+- Q1 = A: it waits up to `CODEO_GITCONFIG_WAIT` seconds (default 10) for VS Code's copy of the host
+  file, only when a value is missing and the file is absent. Rejected: seeding again on later starts
+  through its own script (B, C) and a single read with a re-run hint (D). The wait is needed because
+  in this container the copy landed about a second after `postCreateCommand` began.
+- Q2: the last task is the engineer's, run in a real container; `/codeo:qc` reads the pasted output.
+- Q3: no overlap. #69 merged as #72, so the branch merges `origin/main` first and no `sequenced:` is
+  written; `overlap.sh 51` printed nothing. #52 is at `init` with no footprint yet.
+- Tasks: 1 hermetic harness, 2 seed cases and code, 3 the wait, 4 documentation, 5 the engineer's check.
+
+**Documentation the plan changes:** `.devcontainer/README.md` (*What the start script does*) and
+`CHANGELOG.md` (*Unreleased*); no wiki module; no page under `docs/` describes this step.
+
+**Intake questions resolved here:** none; intake left none open.
 
 ### Footprint
 
@@ -133,11 +155,8 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-14 — Q1-Q3 raised · cost: 2m · fable-5-2 91k in + 400k cached / 5k out
 - 2026-11-14 — Q1-Q3 answered; draft written to .codeo/51/plan-draft.md for review · cost: unavailable until the hand-off
+- 2026-11-14 — planned: docs/plans/2026-11-14-seed-dev-container-git-identity.md · cost: 17m · fable-5-2 101k in + 760k cached / 12k out · sonnet-5-5 126k in + 1.5M cached / 21k out
