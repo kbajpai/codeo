@@ -63,8 +63,21 @@ Plan: `docs/plans/2026-11-14-ubuntu-2604-dev-container.md`, all three tasks done
 **Build result:** the configured `shell` build is `true`, exit 0. `git grep -n -i -E '24\.04|2404' -- .devcontainer tests` still prints nothing. The suite was not re-run: grading is `/codeo:qc`'s, which runs it whole on the next pass.
 **Deployed:** nothing; no shared environment is configured.
 
+### Round 3
+
+2026-11-14
+
+`/codeo:qc` round 2 was clear; this round is not a send-back. The engineer invoked `/codeo:implement` again after QC's non-blocking F4, so the round fixes F4. Like round 2 it is outside the plan's tasks, in a file the plan's File Structure names: a deviation, recorded as such. Branch already contained `origin/main`; no overlap.
+
+**Built (`47b0207`):** `CHANGELOG.md`'s `## Unreleased` entry now says the coreutils behind `stat`, `readlink` and `install` are the Rust implementation. Checked before writing it: in the published `ubuntu:26.04` base layer all three are symlinks into `../lib/cargo/bin/coreutils/`. The reviewer's other suggestion, that `sudo` may resolve to sudo-rs, was left out: the Dockerfile installs the `sudo` package and the engineer's run printed `sudo: ok`, so there is no evidence for it.
+
+**Documentation pages changed:** the changelog only.
+**Build result:** the configured `shell` build is `true`, exit 0. `git grep -n -i -E '24\.04|2404' -- .devcontainer tests` still prints nothing. The suite was not re-run: grading is `/codeo:qc`'s.
+**Deployed:** nothing; no shared environment is configured.
+
 ## Log
 
 - 2026-11-14 — Tasks 1-2 implemented and reviewed; Task 3 waiting on Q1 · cost: 9m · sonnet-5-5 201k in + 4.6M cached / 18k out
 - 2026-11-14 — Q1 answered (image build, tools check, suite in the image all passed); outcome written · cost: 23m · sonnet-5-5 209k in + 6M cached / 25k out
 - 2026-11-14 — round 2: qc round 1 non-blocking notes F1-F3 fixed at the engineer's request, outside the plan's tasks · cost: 1m · sonnet-5-5 13k in + 996k cached / 3k out
+- 2026-11-14 — round 3: qc round 2 non-blocking note F4 fixed (coreutils clause in the changelog), outside the plan's tasks · cost: 0m · sonnet-5-5 11k in + 581k cached / 2k out
