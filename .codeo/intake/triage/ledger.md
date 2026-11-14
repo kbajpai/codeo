@@ -73,3 +73,8 @@
 | `issue:73` | Evaluate Docker Sandboxes; filed 2026-11-14, no branch; left in the backlog in run 6, then moved to Ready by hand by the engineer (board unreadable from the web session) | ready | 2026-11-14 |
 | `issue:74` | Follow-ups #69 left; filed 2026-11-14, no branch, board Status `none` | leave in the backlog | 2026-11-14 |
 | `issue:75` | Release v1.0.6 from main and pin codeo to it; filed 2026-11-14, no branch, board Status `none` | ready | 2026-11-14 |
+| `issue:76` | Trial `doctor` and `setup` on Haiku 5.5; filed 2026-11-14, no branch, board Status `none` | ready | 2026-11-14 |
+| `qc:51:F4-F6` | Host `~/.gitconfig` wait stops at existence not content; `[include]` / `[includeIf]` not followed | filed #81 | 2026-11-14 |
+| `qc:52:F1-F3` | Plan quotes old model names; changelog clause omits the replay `sed`; plan's `gh --comments --json` command | filed #81 (F2 as a requirement; F1, F3 in Reference only) | 2026-11-14 |
+| `qc:75:F1` | v1.0.6 Release body has auto-generated notes appended, unlike v1.0.5's | filed #81 | 2026-11-14 |
+| `issue:81` | Small follow-ups from #51, #52 and #75; filed 2026-11-14, no branch, board Status `none` | leave in the backlog | 2026-11-14 |
