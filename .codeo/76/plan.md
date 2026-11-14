@@ -105,6 +105,14 @@ of `doctor` or `setup`, so the only documentation the change moves is `CHANGELOG
 **Other workflows.** #73 (`docs/evaluate-docker-sandboxes-sbx-against`, kbajpai) is at `init` and
 has no footprint yet; its branch has changed nothing. Nothing to compare so far.
 
+### Footprint
+
+```
+files:      skills/doctor/SKILL.md, skills/setup/SKILL.md, CHANGELOG.md, docs/plans/2026-11-14-trial-doctor-setup-haiku.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
