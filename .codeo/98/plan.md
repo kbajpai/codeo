@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1 (proceed and coordinate with #70) and Q2 (a byte-order `comm` wrapper in the test) are answered; nothing is open. The plan is drafted to `.codeo/98/plan-draft.md` and waits for the engineer's review.
+Round 1, done. Q1 and Q2 are answered, the plan was approved and written to `docs/plans/2026-11-15-sync-main-collation-and-sequenced-none.md`; nothing is open. The next step is `/codeo:implement`.
 
 ## Questions
 
@@ -54,6 +54,18 @@ Read before drafting, so the plan does not re-ask it:
 - No overlay section for `plan` (`plan-shape`, `proof-of-done`, `wiki-rules` all exit 3); no invariants document, no shared environment, no `wiki` module, no `resources[]`.
 - `superpowers:brainstorming` was invoked before these questions, as the skill requires.
 
+## Outcome
+
+2026-11-15
+
+**Plan:** `docs/plans/2026-11-15-sync-main-collation-and-sequenced-none.md`, a scoped executable plan (three tasks) under `docs/plans/`, approved by the engineer and left unstaged. No reference doc under `docs/`: there is no standing decision here.
+
+**Decisions.** The cause is both a tool difference and the locale: this container's uutils `sort` follows `LC_COLLATE` while its `comm` always compares bytes, so `comm` reports unsorted input and `pipefail` ends the script after the merge (settles intake's open question from #92). Fix: `LC_ALL=C` on the two `sort` calls and the `comm` of `sync-main.sh:51` only. Q1 = proceed and coordinate with #70 (`CHANGELOG.md`, `skills/**`, `tests/**`): Task 3 merges `origin/main` first and keeps both sides. Q2 = (b): the new case puts a byte-order `comm` first on `PATH`, so it fails on the unfixed script on GNU coreutils too; it prints `skip:` where `en_US.UTF-8` is not installed. The `sequenced:` half changes the plan skill (step 8, step 10 sub-step 1) and `docs/dossier.md` to match `dossier-check.sh`, which is untouched. No new fixture: `good-open-pending` and `bad-footprint` already show both outcomes.
+
+**Rejected.** `export LC_ALL=C` for the whole script (it changes the locale `git merge` runs in); `grep -Fxf` in place of `comm`; loosening `dossier-check.sh`; a test on the real tools only (Q2 a).
+
+**Documentation.** `docs/dossier.md → The footprint` (Task 2) and `CHANGELOG.md` (Task 3). No page under `docs/` describes the ordering in `sync-main.sh`, so none else moves. No intake question beyond #92's was resolved here.
+
 ### Footprint
 
 ```
@@ -63,11 +75,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-15 — Q1-Q2 raised (Q1: #70, glob:CHANGELOG.md, glob:skills/**, glob:tests/**) · cost: 2m · fable-5-2 72k in + 508k cached / 7k out
 - 2026-11-15 — Q1-Q2 answered in the conversation (Q1: proceed and coordinate; Q2: b); plan drafted as .codeo/98/plan-draft.md, awaiting review · cost: unavailable, usage.sh not run before the review gate
+- 2026-11-15 — planned: docs/plans/2026-11-15-sync-main-collation-and-sequenced-none.md · cost: 22m · fable-5-2 79k in + 807k cached / 13k out · sonnet-5-5 103k in + 957k cached / 22k out
