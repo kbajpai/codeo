@@ -1,6 +1,6 @@
 # Evaluation: Docker Sandboxes (`sbx`) against the dev container
 
-> **Status: draft, trials recorded, recommendation not written.** Trials T1 to T12 were run by the engineer on 2026-11-14 and 2026-11-15; rows they settled say `tried T<n>`, the rest still rest on Docker's documentation (`cited`). The recommendation and follow-up issues are not written yet.
+> **Status: draft, trials recorded, recommendation written (hybrid), follow-up issues not yet filed.** Trials T1 to T12 were run by the engineer on 2026-11-14 and 2026-11-15; rows they settled say `tried T<n>`, the rest still rest on Docker's documentation (`cited`).
 
 ## Contents
 
@@ -413,8 +413,34 @@ hello
 
 ## Recommendation
 
-_Pending — written in Task 7._
+**Recommendation:** hybrid. Keep the dev container for the home container and for editor-centred work, and move the per-issue containers to `sbx` once a start script replaces `devcontainer-start.sh`.
+
+**Why not stay.** Two of the issue's costs are removed by what was tried, not just by what Docker says. The Claude login was still working in a sandbox that had been removed and recreated, with no login step (T8): the dev container loses it on every rebuild. A sandbox is created in 13 s once the image is cached and restarts in about 6 s (T3, T5, T8), with no volume or folder-naming rule, so the lifecycle cost of `codeo-<N>` naming goes away. Isolation is a microVM with a deny-by-default network (T11: a host outside the allow list got a 403 at once), and CPU and memory limits work as `--cpus=2 --memory=4g` does today (T10). Two sandboxes ran the suite at the same time and both passed, each about 23% slower than alone (T9).
+
+**Why not migrate everything.**
+- **The editor.** VS Code connects over Remote-SSH after `sbx setup ssh` and a terminal runs `claude` there, but the window opened with no folder, and none of the three extensions in `devcontainer.json` was present (T12). There is no window title (U13).
+- **Duties that exist only as scripts.** `sbx` has no create-time hook, the sandbox has no git identity (T7), and the workflow lock, folder check and TODO lines are untried: they would be the same shell scripts run through `sbx exec`. `plugins.sh` ran unchanged and installed both plugins (T7), and has to be rerun in every new sandbox because plugins do not survive a recreate (T8).
+- **Windows friction.** Each clone needs its own `safe.directory` entry in Windows Git before `sbx` will use it (T3, T9), and `sbx` is run as `sbx.exe`, and SSH as `ssh.exe`, from WSL (Host).
+- **Fragility.** The other sandbox was stopped twice without a command and the cause is not shown (T9). The `claude` image moved between creates (T10). `sbx setup` is experimental. A `--clone` sandbox loses its commits on removal unless they were fetched or pushed first (T8).
+- **Credentials.** The sandbox's `gh` carries the host token's full scopes, including `delete_repo` (T6), so the isolation gain is for the filesystem and the network, not for that token.
+
+**The three questions open at intake.**
+- *Home/issue split and the lock:* `sbx` has no notion of either. Two named kinds of sandbox is a convention, and the lock would be taken by running `lock.sh` through `sbx exec` (U1, U5: cited, not tried).
+- *Editor attach:* yes by Remote-SSH; the folder and extensions are manual (T12).
+- *Logins:* `gh` and Claude both survive a restart and a recreate (T6, T7, T8); git identity does not exist in a sandbox (T7).
+
+**What the hybrid means.** The home container (`/codeo:issue`, `/codeo:init`, `/codeo:triage`) stays as it is. Issue work moves to a sandbox per issue, created by a start script that does what `devcontainer-start.sh` does for an issue container (lock, identity, plugins, folder check). The dev container stays as the fallback and for anyone who works in VS Code with its extensions.
+
+**What this does not show.** The lock, identity and `--kit` workarounds, `sbx env`, Remote Control inside a sandbox, and how many sandboxes can run at once beyond two were not tried. Docker's cloud sandboxes were not evaluated (out of scope). The result is for this machine: Windows build 10.0.26300 with WSL2 and Docker Desktop.
 
 ## Follow-up issues
 
-_Pending — filled in Task 7._
+The hybrid needs these, each its own issue. They are filed through `/codeo:issue` with the engineer; the numbers go here when they are.
+
+1. A start script for an `sbx` issue sandbox: takes the lock, seeds the git identity, installs the plugins, checks the sandbox name against the lock (U5, U7, U9, U12).
+2. Starting a sandbox on the branch `/codeo:init` pushed, and the Windows `safe.directory` step per clone (U2, U3).
+3. Opening a sandbox in VS Code with the folder and the extensions in place (D2, U13, U18).
+4. Ending an issue's sandbox without losing work: fetch or push before `sbx rm`, and how it relates to #70 (D3).
+5. Pinning the `claude` image and finding why a running sandbox was stopped when another started (D3, D4, T9, T10).
+
+_Not yet filed: pending the engineer's go-ahead (implement dossier Q2)._

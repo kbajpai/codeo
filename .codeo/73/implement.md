@@ -10,7 +10,7 @@
 
 Task 1 is done and committed (`9bddbbc`): `docs/dev-environment-sbx-evaluation.md` has 28 rows (10 drivers, 18 duties), every one `cited` with a Docker URL, and trials T1-T12. `bash tests/run.sh` exits 0, no evidence cell is blank, and `.devcontainer/` and `skills/` are unchanged.
 
-Q1 is answered (route A, Windows native) and T1 is run. Nothing is open. Next is the engineer's T2 (install `sbx`), then T3-T12 in `docs/dev-environment-sbx-evaluation.md` → `## Trials` in order, each output pasted into the conversation with tokens and account names redacted. Tasks 6-7 follow.
+Tasks 1-6 are done and committed: the page has all 28 rows marked (22 `tried`, 6 `cited`), the Host verdict (`yes, partly`), and the trial results T1-T12. Task 7 is written but not finished: the page's `## Recommendation` says `hybrid` with its rationale and the three intake questions answered, and `## Follow-up issues` lists five proposed issues, not yet filed. **Q2 is open**: the engineer confirms the verdict and the list before any issue is filed. Then `/codeo:issue` files each one, the numbers go into the page and a comment on #73, the scope proof runs, and `## Outcome` is written. Also still the engineer's: remove the three test sandboxes and clones when done (`sbx.exe rm codeo-lim codeo-a codeo-b`; `~/Source/codeo-sbx-a`, `-b`, `-lim`), and optionally undo the three Windows Git `safe.directory` lines and `sbx.exe setup ssh remove`.
 
 ## Questions
 
@@ -24,6 +24,16 @@ Q1 is answered (route A, Windows native) and T1 is run. Nothing is open. Next is
 
 **Answer:**
 C — run T1 first (given in the conversation, 2026-11-14). T1's output came back; the route it points to is A, Windows native (see Notes).
+
+### Q2 — Is the recommendation right, and may the five follow-up issues be filed?
+
+**Why it matters:** the page now recommends `hybrid` (`docs/dev-environment-sbx-evaluation.md` → `## Recommendation`), and criterion 5 requires the follow-up issues to be filed and linked on #73 when it is migrate or hybrid. Filing is outward-facing (five issues on the public repository, each through `/codeo:issue` with you), so I will not file them on my own reading. If you disagree with the verdict, the page's recommendation changes first, and the follow-ups follow it.
+**Options:**
+- **A — agree: file the five** listed under `## Follow-up issues` (start script; branch and `safe.directory`; VS Code folder and extensions; ending a sandbox without losing work; pinning the image and the unexplained stops). Recommended, as written.
+- **B — agree with hybrid, change the list** (say which to drop, merge or add).
+- **C — disagree with the verdict** (`migrate` or `stay`, and why); I rewrite the section, and the follow-ups change with it (`stay` files none).
+
+**Answer:**
 
 ## Notes
 
