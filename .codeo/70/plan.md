@@ -87,6 +87,14 @@ What exploration found, so the plan does not re-ask it:
 - **Sequencing.** #69, which the issue says to follow, is closed and merged, so `skills/close/SKILL.md` and `docs/handoff.md` are free to edit.
 - **Documentation lookup (hooks).** Read only for Q2: a typed `/skill` bypasses `PreToolUse`, while `UserPromptSubmit` and `UserPromptExpansion` see it; hooks fire in the terminal, the VS Code extension and cloud sessions alike, but whether a hosted session reads the project's `.claude/settings.json` was not confirmed.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, .codeo/overlays/**, skills/**, scripts/cleanup.sh, lib/extension-points.tsv, docs/skills.md, docs/skills-inventory.md, docs/extension-points.md, docs/handoff.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-15-guard-home-only-skills.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
