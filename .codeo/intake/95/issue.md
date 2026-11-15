@@ -1,4 +1,4 @@
-# Issue new-plan-footprint-sequenced — issue
+# Issue #95 — issue
 
 ## Questions
 
@@ -28,4 +28,4 @@ _Pending._
 
 **Labels:** bug · **Type:** none (user-owned repository)
 
-Body in `body.md` beside this file. Presented to the engineer in the conversation.
+Filed as #95 (approved by the engineer, 2026-11-15) with the body presented in the conversation.
