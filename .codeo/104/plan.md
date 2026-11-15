@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2. Q1-Q7 are answered (all as recommended; Q2's reading is stated under it). The plan is drafted at `.codeo/104/plan-draft.md` (7 tasks, uncommitted by design) and its footprint checked against the other workflows in flight, which raised one question, Q8 (#71). The draft is not up for approval until Q8 is answered; reading it meanwhile is welcome. After Q8, re-run `/codeo:plan`: it writes the plan to `docs/plans/2026-11-15-live-session-signal.md` for review.
+Round 2. Q1-Q8 are answered (all as recommended; Q2's reading is stated under it). The plan is drafted at `.codeo/104/plan-draft.md` (7 tasks, uncommitted by design). Re-checking the other workflows before the review gate found that #107 has published a footprint naming `CHANGELOG.md`, so one question is open: Q9. The draft is not up for approval until Q9 is answered; reading it meanwhile is welcome. After Q9, re-run `/codeo:plan`: the draft is presented for approval, and once approved it is written to `docs/plans/2026-11-15-live-session-signal.md`.
 
 ## Questions
 
@@ -100,6 +100,18 @@ One sentence in triage, as recommended (engineer, in the conversation, 2026-11-1
 - **Re-scope** — drop the triage sentence and its docs clause (Q7's recommendation), leaving `CHANGELOG.md` and `docs/handoff.md` as the only shared files.
 
 **Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommended").
+
+### Q9 — #107 has since published a footprint that names `CHANGELOG.md`; how do the two branches proceed?
+
+**Why it matters:** #107 had no footprint when Q8 was raised, so there was nothing to compare; it has one now, and `overlap.sh` reports it. A changelog is the file every change appends to, so the real risk is a merge conflict in `## Unreleased` and not a clash of ideas.
+**What overlaps:** #107, branch `feat/dev-container-follow-ups-96`, assignee kbajpai, last finished step `init` (working), no file changed yet. `overlap.sh` names it as `glob:CHANGELOG.md`: its footprint lists `CHANGELOG.md` among `.devcontainer/scripts/devcontainer-start.sh`, `.devcontainer/scripts/codeo-root.sh`, `.devcontainer/README.md`, `tests/devcontainer.test.sh`, `tests/codeo-root.test.sh` and its plan. This plan's `CHANGELOG.md` edits are the `Shared state:` line and one bullet (Task 6); nothing else overlaps.
+**Options:**
+- **Proceed and coordinate (recommended)** — keep the plan as drafted. Task 6 re-reads `## Unreleased` after merging `origin/main`, and keeps every existing bullet of whichever branch landed first.
+- **Sequence after #107** — this issue's `/codeo:implement` waits for #107's merge. #107 has not started its plan, so the wait is open-ended.
+- **Re-scope** — move this plan's changelog edit to the end of the work, in its own pull request after the others merge.
+
+**Answer:**
 
 ## Notes
 
@@ -125,3 +137,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-15 — Q1-Q7 raised · cost: 3m · fable-5-2 115k in + 1M cached / 14k out
 - 2026-11-15 — Q1-Q7 answered and recorded; plan drafted (.codeo/104/plan-draft.md); footprint overlap with #71 raised as Q8 · cost: 6m · sonnet-5-5 192k in + 2.6M cached / 43k out
+- 2026-11-15 — Q8 answered and recorded; footprint re-checked before the gate, #107 now overlaps on CHANGELOG.md, raised as Q9 · cost: 1m · sonnet-5-5 15k in + 917k cached / 4k out
