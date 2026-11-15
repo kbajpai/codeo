@@ -734,6 +734,7 @@ start_lock_directory_is_not_reported() {
     ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     n=$(ds_todos 'names no issue'); ((n == 0)) || fail "a directory was reported: $ds_err"
+    n=$(ds_todos 'could not be read'); ((n == 0)) || fail "a directory was reported as unreadable: $ds_err"
     [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called"
 }
 
