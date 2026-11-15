@@ -113,7 +113,8 @@ it.
   anyway.
 - **The board.** When the config has a `board`, its Status carries the same claim: `init` starts
   only a **Ready** issue — read on `board.gateProject`, and marked by `/codeo:triage` on the
-  engineer's answer — and moves it to **In progress**.
+  engineer's answer — and moves it to **In progress**. A new issue is in Backlog before that:
+  `/codeo:issue` puts every issue it files in **Backlog**, so marking it Ready moves Backlog → Ready.
   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh"` is the only thing that reads or writes it: `set`
   writes each synced project whose Status has the option, adding the issue only to a project whose
   Status has the option, and removing the card again if the write fails after the add (a failed
@@ -125,14 +126,15 @@ it.
   `In review` and `Done` when the map leaves them out, a configured entry wins, and any other name
   passes through. Every transition moves the card, each write part of its step and never a
   gate on it — a failure is reported with what to do by hand, in the skill's `## Log` line as
-  `board: failed — <reason>` (except `init`, whose dossier is already pushed when the card moves;
-  it reports the failure in the turn), and the step carries on. Where the GraphQL it needs is refused (a
+  `board: failed — <reason>` (except `init`, whose dossier is already pushed when the card moves,
+  and `issue`, whose dossier is committed before the card moves; each reports the failure in the turn), and the step carries on. Where the GraphQL it needs is refused (a
   hosted web session), `set` fails saying to move the card by hand. With no `board` configured,
   every verb prints `board: not configured` and exits 3: the board steps are skipped, and the skill
   says so once.
 
   | Moment | Skill | Status key |
   |---|---|---|
+  | A new issue is filed | `issue` | `backlog` |
   | Engineer routes a never-started issue to *mark Ready*, or parked work to *resume* | `triage` | `ready` |
   | Engineer routes a never-started issue to *leave in the backlog* | `triage` | `backlog` |
   | The issue is claimed (a resume included) | `init` | `inProgress` |
@@ -226,7 +228,7 @@ brings up to date itself: that merge is the one commit it makes that is not its 
 |---|---|
 | The GitHub issue | `/codeo:issue` |
 | The issue's assignee | `/codeo:init`, cleared by `/codeo:close` on a stash or an abandon |
-| The issue's board Status | `ready`: `/codeo:triage`, and `/codeo:close` on a stash; `backlog`: `/codeo:triage`, and `/codeo:close` on an abandon; `inProgress`: `/codeo:init`, and `/codeo:close` on a send-back; `inReview` and `done`: `/codeo:close` |
+| The issue's board Status | `ready`: `/codeo:triage`, and `/codeo:close` on a stash; `backlog`: `/codeo:issue` at filing, `/codeo:triage`, and `/codeo:close` on an abandon; `inProgress`: `/codeo:init`, and `/codeo:close` on a send-back; `inReview` and `done`: `/codeo:close` |
 | The branch | `/codeo:init`; `/codeo:close` deletes it on the engineer's yes once the merge is verified, or on an abandon when the engineer asks in so many words, after the same confirmation |
 | `<plansDir>/YYYY-MM-DD-<slug>.md` and `<docsDir>/<slug>.md` | `/codeo:plan` |
 | Application and test code, and the documentation pages the plan names | `/codeo:implement` |
