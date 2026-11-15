@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 1, stopped at step 2 on Q1: `overlap.sh 98` reported a new overlap with #71. Nothing has been built, run or reviewed yet in this pass. Once Q1 is answered, `/codeo:qc` resumes from step 2.
+Round 1, stopped at step 2 on Q2: a re-sync after Q1 was answered showed a new overlap with #97 on four files. Q1 (#71, `CHANGELOG.md`) is answered: proceed and coordinate. Build, focused runs and the independent review were started before the overlap appeared; they are recorded under Notes, and the verdict waits for Q2.
 
 ## Questions
 
@@ -21,6 +21,15 @@ Round 1, stopped at step 2 on Q1: `overlap.sh 98` reported a new overlap with #7
 
 **Answer:**
 Proceed and coordinate (engineer, in the conversation, 2026-11-15).
+
+
+### Q2 — Overlap with #97 on `CHANGELOG.md`, `docs/dossier.md`, `skills/plan/SKILL.md` and `tests/plan-skill.test.sh`: proceed and coordinate, sequence after #97, or re-scope?
+
+**Why it matters:** #97 (branch `docs/docs-skill-wording-test-guard`, assignee kbajpai, step `init`, working) appeared in `inflight.sh` after Q1 was answered and now declares a footprint that includes four files this branch changes: `CHANGELOG.md`, `docs/dossier.md`, `skills/plan/SKILL.md` and `tests/plan-skill.test.sh` (`overlap.sh 98` printed `97 CHANGELOG.md`, `97 docs/dossier.md`, `97 skills/plan/SKILL.md`, `97 tests/plan-skill.test.sh` and the four `glob:` forms of them). Its branch has changed only its own dossier files so far (`changed: none`), and its plan has Q1-Q5 open. This branch's changes there are small and local: one bullet in `CHANGELOG.md`, one bullet in `docs/dossier.md`'s *The footprint*, two paragraphs of `skills/plan/SKILL.md` (steps 8 and 10), and new lines at the end of `tests/plan-skill.test.sh`. If #97 edits the same paragraphs, whichever branch merges second gets a conflict there. *Proceed* lets this branch merge as it is, with the second branch to merge keeping both sides; *sequence* would hold this branch until #97 has merged, which has not begun implementing; *re-scope* would drop part of acceptance criteria 5-8.
+
+**Options:** proceed and coordinate (recommended: this branch is finished and #97 has not started implementing) · sequence after #97 · re-scope.
+
+**Answer:**
 
 ## Notes
 
@@ -35,6 +44,10 @@ Step 2 so far:
   ```
 
 - No shared environment, no invariants file, no `wiki` module; the `qc` overlays `invariants-extra` and `wiki-rules` both exit 3.
+- `scope.sh origin/main HEAD`: `scope: suite shell needed for unclassified paths: .codeo/98/implement.md, .codeo/98/init.md, .codeo/98/plan.md, CHANGELOG.md` then `suite.shell=true`.
+- Step 3, build: the `shell` suite's `build` is `true`; exit 0.
+- Step 4, focused runs on the pass's tree: `bash tests/run.sh sync-main`, `bash tests/run.sh plan-skill` and `bash tests/run.sh dossier-check` each printed `all cases passed`. The whole `bash tests/run.sh` was started in the background and the independent review (opus, `QC review:`) was dispatched on `git diff origin/main...HEAD` without `.codeo/` and `docs/plans/`; neither had reported when this stopped, so neither is quoted here as evidence. The next invocation starts the pass again from step 2 (`/home/dev/.claude/plugins/cache/codeo/codeo/1.0.6/docs/handoff.md`, qc-12) and runs both afresh.
+- `overlap.sh --outside 98` printed nothing: the branch changed no file outside its footprint.
 
 ## Outcome
 
@@ -43,3 +56,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-15 — Q1 raised (#71, CHANGELOG.md, glob:CHANGELOG.md) · cost: 0m · opus-5-5 183k in + 233k cached / 778 out
+- 2026-11-15 — Q1 answered (proceed and coordinate); Q2 raised (#97, CHANGELOG.md, docs/dossier.md, skills/plan/SKILL.md, tests/plan-skill.test.sh) · cost: 2m · opus-5-5 44k in + 34k cached / 570 out · sonnet-5-5 38k in + 1.9M cached / 8k out
