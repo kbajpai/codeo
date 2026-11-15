@@ -74,6 +74,10 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
 `intake:<dir>`, `issue:<N>`, `lease:<resource>:<N>`, `unclosed:<N>`, `review:<PR>:<comment id>`,
 `doc:<path>:<slug>`, `todo:<path>:<slug of the comment>`.
 
+A filed issue that was never started
+has one fingerprint, `issue:<N>`, whichever source finds it; `intake:<dir>`
+is only for a `new-<slug>/` draft.
+
 ## Workflow
 
 **Check the role first, before anything else.**
@@ -132,7 +136,8 @@ is the container the message names.
         by a newer closed-unmerged one — is not fully covered by this check; this is the same gap
         `/codeo:close` documents, not one this step closes.
       - On `codeo/intake`: a `new-<slug>/` directory is a draft never filed; an `<N>/` whose
-        issue is open with no branch or PR is filed and never started.
+        issue is open with no branch or PR is filed and never started: the same item the next bullet finds,
+        under the same fingerprint `issue:<N>`, never a second one.
       - Open issues with no branch or PR at all
         (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue list-all`, filtered to
         `state == "open"`), for the same reason. For each,
@@ -185,7 +190,7 @@ is the container the message names.
    passed explicitly (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Spinning out subagents`).
 
 2. **Drop what is already decided.** Fingerprint every item and look it up in the ledger. Filed,
-   dismissed and already-tracked items are not shown again. Deferred ones are shown again, marked
+   dismissed, already-tracked and left-in-the-backlog items are not shown again. Deferred ones are shown again, marked
    as such, with the date they were deferred.
 
 3. **Check each against the issues that exist.** Fetch them once —

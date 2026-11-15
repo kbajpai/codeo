@@ -27,6 +27,10 @@ must_contain "a card already in Backlog is not moved" 'make no `board.sh set` ca
 must_contain "the read decides" 'when it prints the Backlog status'
 must_contain "the hand-off bounds the write" 'only when the card is not already in the Backlog'
 must_contain "no board, no call" 'no card move, no `board.sh` call'
+must_contain "one fingerprint whichever source finds it" 'has one fingerprint, `issue:<N>`, whichever source finds it'
+must_contain "intake fingerprints are for drafts" 'is only for a `new-<slug>/` draft'
+must_contain "the intake dossier is not a second item" 'the same item the next bullet finds'
+must_contain "a backlog decision is dropped at step 2" 'left-in-the-backlog items are not shown again'
 
 if ((failures)); then
     echo "$failures case(s) failed"
