@@ -229,7 +229,9 @@ answer too: each task then names its own proof command in full (step 8).
    means none are configured — whose `paths` the plan's files fall under; a parameterised one is
    written `<name>:<suffix>`). `exclusive:` never
    lists `$ENV_RESOURCE`: the later steps lease the environment from its first task, not the plan.
-   A key with nothing under it says `none`. Then run
+   `sequenced:` is the fourth key and reads `none` when nothing was sequenced; step 10 fills it in
+   when an overlap question is answered *sequence after #M*. A key with nothing under it says
+   `none`, and `dossier-check.sh` fails a footprint that lacks any of the four. Then run
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --except <N>` — one block per other workflow:
    its issue, branch, assignee, last finished step, its plan's footprint lines when it has one,
    and the files its branch has changed — and compare. Each overlap becomes a numbered question in
@@ -270,8 +272,9 @@ answer too: each task then names its own proof command in full (step 8).
     (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The gate`).
 
     1. **Write the footprint down.** Put the `### Footprint` block, as step 8 drafted it and the
-       answers since have amended it (with a `sequenced:` line when an overlap question was
-       answered that way), under `plan.md`'s `## Notes`, leaving `## Outcome` pending. Commit it
+       answers since have amended it (its `sequenced:` line names the issue when an overlap
+       question was answered that way, and stays `none` otherwise), under `plan.md`'s `## Notes`,
+       leaving `## Outcome` pending. Commit it
        alone, staged by name, with the subject `docs(codeo): plan dossier for #<N> — footprint`,
        and push.
        On a pass after a send-back, `## Outcome` is not pending: it holds the earlier rounds, which
