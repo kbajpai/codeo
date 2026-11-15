@@ -31,6 +31,9 @@ must_contain "one fingerprint whichever source finds it" 'has one fingerprint, `
 must_contain "intake fingerprints are for drafts" 'is only for a `new-<slug>/` draft'
 must_contain "the intake dossier is not a second item" 'the same item the next bullet finds'
 must_contain "a backlog decision is dropped at step 2" 'left-in-the-backlog items are not shown again'
+must_contain "leave in the backlog records, and moves only when needed" 'records the decision, and moves the card only for an issue that is not there yet'
+must_contain "no move quotes the status line" 'the `status` line when no move was made'
+must_contain "the question says when the card moves" 'the card moves to Backlog when it is not already there'
 
 if ((failures)); then
     echo "$failures case(s) failed"

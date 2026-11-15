@@ -26,7 +26,7 @@ says an issue is: *mark Ready* runs `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.s
 *leave in the backlog* (`set <N> backlog`).
 Those card moves are the only changes it makes outside
 its ledger, each only while acting on the engineer's answer.
-`/codeo:issue` writes the Backlog Status when it files a new issue, so a new issue is already in the Backlog when it reaches this skill; this skill's *leave in the backlog* is for an issue that is not there yet. When the project has no board
+`/codeo:issue` writes the Backlog Status when it files a new issue, so a new issue is already in the Backlog when it reaches this skill; this skill's *leave in the backlog* records the decision, and moves the card only for an issue that is not there yet. When the project has no board
 (`board.sh` exits 3 and prints `board: not configured`), there is nothing to mark: say once, at the
 start of the run, that the board is not configured and that Ready marking and the backlog move are
 skipped, and carry on with every other step.
@@ -214,7 +214,7 @@ is the container the message names.
        `/codeo:close` on its branch — named, never run) · *file it* · *dismiss (why)* · *defer*.
        Deleting a branch is never an option here; it is the engineer's to do.
      - a filed issue never started: *mark Ready* (`board.sh set <N> ready`, run at step 5) ·
-       *leave in the backlog* (the card moves to Backlog, run at step 5) —
+       *leave in the backlog* (the card moves to Backlog when it is not already there, run at step 5) —
        <!-- rule: triage-05 -->
        a backlog decision is recorded once and not shown again, because an issue on the tracker
        is not lost, and a report that re-lists the backlog every run stops being read. Say the
@@ -247,8 +247,8 @@ is the container the message names.
    - **Leave in the backlog** → with no board configured, only record it in the ledger (no
      `board.sh` call). With a board, read `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>` first:
      when it prints the Backlog status (the option `board.statuses.backlog` names, else `Backlog`), record the decision and make no `board.sh set` call; otherwise run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog` as before.
-     Record it, quoting the script's output line in the run's `## Outcome`, and note the backlog move (or its failure and the reason) in the
-     `## Log` line; it does not come back. A
+     Record it, quoting in the run's `## Outcome` the line the script printed — the `status` line when no move was made, else the `set` line — and note in the
+     `## Log` line the backlog move, its failure and the reason, or `already in Backlog`; it does not come back. A
      script failure is reported, and the decision is still recorded — the issue is on the tracker
      either way.
    - **Resume** → with a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready` — the stash already
