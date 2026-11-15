@@ -157,9 +157,10 @@ The skill is the gate between building and merging. It never fixes what it finds
 - Never touches code, tests, the plan's text, the issue's text, a documentation page, or another skill's dossier file. A test it wishes existed, or a page it wishes said something else, is a finding, not something to write.
 - Does not fix anything it finds, not the code, a test, or a typo; that is `/codeo:implement`'s purview.
 - Does not edit the plan or re-scope the work; that is `/codeo:plan`'s purview.
-- Does not open, merge or approve a pull request; opening one on a clear verdict is `/codeo:close`'s. It pushes its own dossier commits and nothing else.
+- Does not open, merge or approve a pull request; opening one on a clear verdict is `/codeo:close`'s. It pushes its own dossier commits and, when step 2's sync merged the base branch, that merge commit on the same push; nothing else.
 - Does not deploy, build for the environment, or take the lease to change what the environment runs; it reads what is deployed and sends back what is stale.
 - Does not invent acceptance criteria. If `init.md` has none to judge against, that is itself the finding, and it routes back to whoever owed them.
+- A changed path outside the plan's footprint is a finding: non-blocking on a first-round plan, blocking once the plan has a second round, because the `qc-verdict` check fails the pull request on it.
 
 ### Extension points
 
@@ -186,7 +187,7 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 ### Hand-offs and non-goals
 
 - Hands off to `/codeo:implement` when review asks for changes or the branch conflicts with the base branch (a send-back); otherwise to nobody. The workflow ends when the merged branch is cleaned up and the lock released.
-- Its closing block is per exit (see `docs/handoff.md` → Closing block): `/codeo:close` while the lock is kept, `/codeo:close --stash` for an interrupted stash, and, once finished, `/codeo:triage` then the host clean-up. A completed stash names `/codeo:init #<N>`, with a manual Ready repair first when the board move failed.
+- Its closing block is per exit (see `docs/handoff.md` → Closing block): `/codeo:close` while the lock is kept, after an interrupted abandon as well, `/codeo:close --stash` for an interrupted stash, and, once finished, `/codeo:triage` then the host clean-up, an abandon that finished included. A completed stash names `/codeo:init #<N>`, with a manual Ready repair first when the board move failed.
 - Never touches code, tests, documentation pages, the plan's text, the issue's text, another skill's dossier file, or the base branch.
 - Does not merge, approve or review the pull request, and does not answer review comments on the implementer's behalf beyond a summary of what changed.
 - Does not re-run the build, the suites or the acceptance criteria; that is `/codeo:qc`'s.
@@ -263,7 +264,7 @@ The script runs eleven checks: config, schema, codename, gh-auth, gh-scopes, boa
 
 ### Reads and writes
 
-- Reads `.codeo/config.json` and the project's overlays, and reads GitHub through `gh api` (the board check's `gh project view` is the one exception, being GraphQL-backed).
+- Reads `.codeo/config.json`, the project's overlays and the extension-point registry `lib/extension-points.tsv` (the `overlays` check), and the installed-plugins file `~/.claude/plugins/installed_plugins.json` (the `superpowers` check). Checks with `command -v` that `gh`, `jq`, `git` and the first word of each suite's build and test commands are on the PATH, and that bash is 4.3 or newer. Reads GitHub through `gh api` (the board check's `gh project view` is the one exception, being GraphQL-backed); when `ci.requiredChecks` is absent the ruleset check compares against `tests` and `qc-verdict`.
 - Writes nothing but its report.
 
 ### Hand-offs and non-goals

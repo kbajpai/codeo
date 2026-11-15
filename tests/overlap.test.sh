@@ -299,6 +299,71 @@ clone=$(scenario none)
 two_block_plan "$clone" 'Terraform/**' 'Clips/Endpoints/Health.cs'
 assert_eq "lines" "" "$(run "$clone" --outside 7)"
 
+# head_repo <files> — a clone checked out at main whose branch feat/h adds a.txt, b.txt and a done/7
+# plan whose only block lists <files> (none: no plan at all). Prints the clone.
+head_repo() {
+    local origin clone
+    origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
+    git -C "$origin" -c init.defaultBranch=main init -q
+    git -C "$origin" config gc.auto 0
+    git -C "$origin" config maintenance.auto false
+    git -C "$origin" config receive.autogc false
+    commit_file "$origin" README.md
+    clone=$(mktemp -d "$scratch_root/clone.XXXXXX")
+    git clone -q "$origin" "$clone"
+    git -C "$clone" checkout -q -b feat/h
+    commit_file "$clone" a.txt
+    commit_file "$clone" b.txt
+    if [[ $1 != none ]]; then
+        mkdir -p "$clone/.codeo/done/7"
+        printf '# Plan\n\n### Footprint\n\n```\nfiles:      %s\nwiki:       none\nexclusive:  none\n```\n' "$1" > "$clone/.codeo/done/7/plan.md"
+        git -C "$clone" add .codeo
+        git -C "$clone" commit -q -m "done plan"
+    fi
+    git -C "$clone" checkout -q main
+    write_config "$clone"
+    printf '%s' "$clone"
+}
+
+case_desc="--outside --base --head reads the plan from the head, not the working tree"
+clone=$(head_repo 'a.txt')
+assert_eq "lines" "b.txt" "$(run "$clone" --outside 7 --base main --head feat/h)"
+
+case_desc="--outside --head with a plan covering both paths prints nothing"
+clone=$(head_repo 'a.txt, b.txt')
+assert_eq "lines" "" "$(run "$clone" --outside 7 --base main --head feat/h)"
+
+case_desc="--outside --head with no plan at the head prints every changed path"
+clone=$(head_repo none)
+assert_eq "lines" "a.txt
+b.txt" "$(run "$clone" --outside 7 --base main --head feat/h)"
+
+case_desc="--outside --head accepts commit SHAs and defaults --base to origin/<base>"
+clone=$(head_repo 'a.txt')
+sha=$(git -C "$clone" rev-parse feat/h)
+assert_eq "sha" "b.txt" "$(run "$clone" --outside 7 --base "$(git -C "$clone" rev-parse main)" --head "$sha")"
+assert_eq "default base" "b.txt" "$(run "$clone" --outside 7 --head "$sha")"
+
+case_desc="--base and --head are valid only with --outside"
+clone=$(head_repo 'a.txt')
+rc=0
+(cd "$clone" && bash "$plugin/scripts/overlap.sh" 7 --base main >/dev/null 2>&1) || rc=$?
+assert_eq "exit without --outside" 1 "$rc"
+rc=0
+(cd "$clone" && bash "$plugin/scripts/overlap.sh" --outside 7 --base >/dev/null 2>&1) || rc=$?
+assert_eq "exit with a missing value" 1 "$rc"
+
+case_desc="--outside with a --base or --head that does not resolve is an error"
+clone=$(head_repo 'a.txt')
+for refs in "--base main --head no-such-ref" "--base no-such-ref --head feat/h"; do
+    rc=0
+    # shellcheck disable=SC2086
+    out=$(cd "$clone" && bash "$plugin/scripts/overlap.sh" --outside 7 $refs 2>"$scratch_root/err") || rc=$?
+    assert_eq "exit ($refs)" 1 "$rc"
+    assert_eq "stdout ($refs)" "" "$out"
+    grep -q 'overlap: cannot resolve no-such-ref' "$scratch_root/err" || { echo "no 'cannot resolve' on stderr ($refs)"; exit 1; }
+done
+
 case_desc="nothing in flight"
 origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
 git -C "$origin" -c init.defaultBranch=main init -q
