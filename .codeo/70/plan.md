@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4, questions open. QC round 3 sent the change back with two blocking findings in the close wording (H1: the abandon closing block, and the stash one, name a home-only skill the guard refuses in that container; H2: the removal command is printed after a stash or an abandon). H1 has one sensible fix and is not a question. Q12 and Q13 are open.
+Round 4, draft at the review gate. Q12 and Q13 are answered (the removal command after a finished close only; H3, H4 and H6 fixed as well). The draft of Tasks 22-25 is in `.codeo/70/plan-draft.md`, waiting for the engineer's approval; nothing is open.
 
 ## Questions
 
@@ -118,7 +118,7 @@ Proceed and coordinate. Go with the recommendation (engineer, in the conversatio
 **Options:** finished close only; a stash or an abandon prints no command and says why (recommended) · every exit except an abandon whose branch was deleted.
 
 **Answer:**
-_Open._
+Finished close only; a stash or an abandon prints no command and says why. Answered with the question tool, in the conversation (engineer, 2026-11-15).
 
 ### Q13 — Round 4: which of QC round 3's non-blocking findings (H3-H6) does this round fix as well?
 
@@ -126,7 +126,7 @@ _Open._
 **Options:** H3, H4 and H6, leaving H5 for triage (recommended) · H1 and H2 only.
 
 **Answer:**
-_Open._
+H3, H4 and H6; H5 stays for `/codeo:triage`. Answered with the question tool, in the conversation (engineer, 2026-11-15).
 
 ## Notes
 
