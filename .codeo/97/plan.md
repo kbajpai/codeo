@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done. Q1-Q6 are answered, the plan was approved and written to `docs/plans/2026-11-15-docs-skill-wording-test-guard.md`; nothing is open. The next step is `/codeo:implement`.
+Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1: back to `/codeo:plan`, findings F1-F3 blocking). The code follows round 1's plan; the plan guarded the wrong text for #74's third criterion and left `skills/qc/SKILL.md` contradicting the new `qc-verdict` rule. Q7 is open; the round-2 tasks are drafted once it is answered.
 
 ## Questions
 
@@ -63,6 +63,16 @@ Proceed and coordinate. Go with the recommendation (engineer, in the conversatio
 **Answer:**
 Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 
+### Q7 — Once a plan has a second round, is a changed path outside the footprint blocking in `/codeo:qc`, and where does the recovery go?
+
+**Why it matters:** round 2, answering the send-back from `qc.md` round 1 (F3). `skills/qc/SKILL.md` step 6 says every path `overlap.sh --outside <N>` prints is "not blocking by rule", but round 1's Task 6 made the required `qc-verdict` check fail a pull request on exactly those paths when the archived `plan.md` has a `### Round 2` or later. As built, `qc` can clear a change, `/codeo:close` opens the pull request, and the required check then fails on a footprint that sits in an answered, archived round, with no skill saying what to do. The answer decides which skill texts this round changes and what `qc-verdict` keeps enforcing.
+**Options:**
+- **(a) `qc` blocks it, recommended.** In `skills/qc/SKILL.md` step 6: when `plan.md` has a `### Round 2` or later, each `--outside` path is a blocking finding, `/codeo:plan`'s, because the pull request cannot merge with it; a one-round plan keeps today's non-blocking rule. The footprint is then corrected by a new plan round (the normal send-back) before any pull request exists, and `qc-verdict` stays as the backstop. Changes `skills/qc/SKILL.md`, its pin in `tests/qc-skill.test.sh` and the `qc` entry of `docs/skills.md`.
+- **(b) (a), plus `/codeo:close` names the recovery** when the check fails anyway (a path added after `qc` cleared): a send-back to `/codeo:plan`. Covers the last gap, but edits `skills/close/SKILL.md` again, where #70 is also working.
+- **(c) Drop the `qc-verdict` rule** and keep only a fixture test. Removes the conflict, and with it the enforcement Q1 chose.
+
+**Answer:**
+
 ## Notes
 
 What exploration found, so the plan does not re-ask it.
@@ -84,6 +94,23 @@ What exploration found, so the plan does not re-ask it.
 - *`init — no lock` and the empty `step` guard.* The guard gets an `-n` check as `issue_step8` has; the missing-row message says the row is gone.
 - *Left minors.* Fixed: the step-17 lead, the empty-`step` guard, the missing-row message, the host-task paragraph's wrapping and overlap (rewritten anyway), `closing-exits.test.sh` FAIL lines to stderr as `closing-block.test.sh` does (no effect on `run.sh`, which merges both streams). Dismissed: long lines in `skills/issue/SKILL.md` (line 3 is frontmatter and cannot wrap; 177-181 are closing-block paragraphs, a rewrap is churn in a file #71 also edits); `docs/skills.md` lines that do not enumerate every exit (the page defers to `docs/handoff.md → Closing block`, which Q3's task completes).
 - *One pull request.* The three parts are separable but share `docs/skills.md`, `docs/handoff.md`, `CHANGELOG.md` and one branch; the issue is one planning pass.
+
+**Round 2 (send-back from `qc.md` round 1).** The code follows round 1's plan; three blocking findings are the plan's.
+
+- *F1.* Task 7 guarded step 17's old lead; the sentence #74 and #69's qc G2 name is the old ending, "End with the closing block: the goal is the loose ends found, the first step `/codeo:triage`, then the host's checkout clean-up above." (`skills/close/SKILL.md` before `2a86915`, lines 524-525). Round 2 guards that sentence too, and keeps the lead guard.
+- *F2.* The old stash text wrapped: "Report that `/codeo:init #<N>`" / "resumes it, on any machine." and ended "End with the closing block: the goal is resuming the work, the first step `/codeo:init #<N>`." (lines 607-611). Round 2 matches both with line breaks joined, and `bites` restores each sentence as it was wrapped.
+- *F3.* Q7.
+- *Non-blocking, taken (small, in files the round already edits):* F4 (restore "where no such language is known, ask and label `Shell: <name>`" in step 8), F5 (drop the repeated "goes under `## Notes` again" sentence in step 10), F6 (the abandon-finished block allows for no board), F7 (`overlap.sh` header says what `--base` alone does), F9 (the changelog entry states when the host-task rule applies).
+- *Non-blocking, left:* F8 (the stub cannot page; a paging stub is a larger rewrite of a file #71 is editing, and the flag assertion already bites); F10 (`skills/init/SKILL.md` saying "there is no lock" after any `lock: TODO` is a behaviour question for `init`, outside this issue; it stays recorded in `qc.md` for `/codeo:triage`); the minors carried from `implement.md`.
+
+### Footprint
+
+```
+files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/overlap.sh, tests/qc-verdict.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, skills/qc/SKILL.md, tests/qc-skill.test.sh, docs/plans/2026-11-15-docs-skill-wording-test-guard.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
@@ -113,3 +140,4 @@ sequenced:  none
 - 2026-11-15 — Q1-Q5 raised · cost: 3m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 292k in + 1.5M cached / 35k out
 - 2026-11-15 — Q1-Q5 answered in the conversation; plan drafted at .codeo/97/plan-draft.md, awaiting approval · engineering:architecture and engineering:system-design not loaded, Q1's Options/Decision structure applied directly · cost: 12m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 372k in + 3.4M cached / 83k out
 - 2026-11-15 — planned: docs/plans/2026-11-15-docs-skill-wording-test-guard.md · engineering:architecture and engineering:system-design not loaded, Q1's Options/Decision structure applied directly · cost: 27m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 378k in + 4.8M cached / 90k out
+- 2026-11-15 — round 2 after qc.md round 1: Q7 raised · cost: 1m · fable-5-2 420k in + 468k cached / 5k out
