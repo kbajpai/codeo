@@ -42,6 +42,15 @@ must_contain 'a host task is marked with a Runs on line' "is marked with a line 
 must_contain 'a lease task carries a Needs lease line' 'carries a line `Needs lease:'
 must_contain 'a script is in a language the host is known to have' "in a language the engineer's host is known to have"
 must_contain 'a host task on the environment carries both markers' 'carries both markers, each on its own line'
+must_contain 'step 8 lists sequenced as the fourth key, none when nothing was sequenced' 'is the fourth key and reads `none` when nothing was sequenced'
+must_contain 'step 8 says a footprint without the key fails' 'fails a footprint that lacks any of the four'
+must_contain 'step 10 keeps sequenced none when nothing was sequenced' 'stays `none` otherwise'
+
+dossier="$plugin_root/docs/dossier.md"
+grep -qF -- 'only when an overlap question was answered that way' "$dossier" &&
+    fail 'docs/dossier.md still says sequenced is written only when something was sequenced'
+grep -qF -- '`sequenced` — `none` unless an overlap question was answered *sequence after #M*' "$dossier" ||
+    fail 'docs/dossier.md does not say sequenced reads none unless something was sequenced'
 
 if ((failures)); then
     echo "$failures case(s) failed"

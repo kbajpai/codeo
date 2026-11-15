@@ -131,6 +131,39 @@ assert_eq "exit" 1 "$status"
 assert_contains "message" "sync-main: the tree is not clean — commit or stash first" "$err"
 assert_eq "HEAD unchanged" "$before" "$(git -C "$clone" rev-parse HEAD)"
 
+setup
+case_desc="clean merge under a collation that sorts paths differently from comm"
+if locale -a 2> /dev/null | grep -qix 'en_US\.utf-\?8'; then
+    mkdir -p "$origin/.codeo" "$origin/.devcontainer"
+    for f in .codeo/x .devcontainer/y CHANGELOG.md; do printf 'one\ntwo\nthree\n' > "$origin/$f"; done
+    git -C "$origin" add .
+    git -C "$origin" commit -q -m "add collation files"
+    git -C "$clone" fetch -q origin
+    git -C "$clone" merge -q --ff-only origin/main
+    commit_in "$origin" .codeo/x main-x "main x"
+    commit_in "$origin" .devcontainer/y main-y "main y"
+    commit_in "$origin" CHANGELOG.md main-c "main c"
+    for f in .codeo/x .devcontainer/y CHANGELOG.md; do
+        sed -i '3s/.*/feat/' "$clone/$f"
+        git -C "$clone" add "$f"
+    done
+    git -C "$clone" commit -q -m "feat lines"
+    # A byte-order comm, which uutils always is and GNU comm is under LC_ALL=C.
+    bindir=$scratch_root/bin
+    mkdir -p "$bindir"
+    printf '#!/usr/bin/env bash\nLC_ALL=C exec %q "$@"\n' "$(command -v comm)" > "$bindir/comm"
+    chmod +x "$bindir/comm"
+    PATH="$bindir:$PATH" LC_ALL=en_US.UTF-8 run_sync
+    assert_eq "exit" 0 "$status"
+    assert_eq "stderr" "" "$err"
+    assert_eq "one line per both-changed path" 3 "$(grep -c 'sync-main: also changed on main:' <<< "$out")"
+    for p in .codeo/x .devcontainer/y CHANGELOG.md; do
+        assert_contains "$p reported" "sync-main: also changed on main: $p" "$out"
+    done
+else
+    echo "skip: $case_desc — no en_US.UTF-8 locale installed"
+fi
+
 base=develop
 setup
 case_desc="sync_main_follows_a_develop_base_branch"
