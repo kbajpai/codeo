@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, built and ready for `/codeo:qc`. All six plan tasks are done; #70 has merged and `sync-main.sh` brought it in, so this branch's rule is now `issue-09`. Nothing is open.
+Round 2 (after plan.md round 2). Tasks 7-9 are built, committed and pushed (`6b32a53`, `9638401`, `2ae9447`), each task review was clean, and the whole-range review said ready to merge; `bash tests/run.sh` printed `all cases passed` in Task 9's run and the suite's `build` is `true`. The hand-off to `/codeo:qc` is held on Q2: #104 pushed a plan footprint after this round's first overlap check (which printed nothing). Round 1's outcome below stays as written.
 
 ## Questions
 
@@ -45,6 +45,17 @@ The answer decides whether this branch merges `main` after #70 and renumbers its
 
 **Answer:**
 Sequence after #70 (answered in the conversation: "Sequence after #70").
+
+### Q2 — #104 now declares four of the same files, `skills/triage/SKILL.md` among them: proceed and coordinate, sequence after #104, or re-scope?
+
+**Why it matters:** #104 (`feat/publish-live-session-signal-so`, assignee kbajpai, step `plan (working)`; its branch has changed only its own plan file) pushed its plan footprint while this round was being built. `overlap.sh 71`, run again at the end of the round, prints for #104: `CHANGELOG.md`, `docs/handoff.md`, `docs/skills.md`, `skills/triage/SKILL.md` and the four matching `glob:` forms. The first check of this round, run before any task was dispatched, printed nothing, so the lines were not seen in time to ask before building; they are raised now, before the hand-off. This round changed `skills/triage/SKILL.md` (the fingerprint paragraph, the step 1.2 intake bullet, step 2, the intro, the step 4 option and the step 5 *leave in the backlog* bullet) and `docs/skills.md` (the `issue` section's first sentence); the branch also carries round 1's edits to all four files (`docs/handoff.md`'s board bullet and tables, `CHANGELOG.md`'s bullet). From #104's file list it adds `scripts/live.sh`, a hook and tests, and edits triage, `docs/handoff.md` and `docs/skills.md` for a live-session signal; the plan is not yet written, so which paragraphs it edits is not known. Whichever branch merges second merges `main` and keeps both sides; a conflict in `skills/triage/SKILL.md` would be resolved by hand because both change the same file's prose.
+**Options:**
+- **Proceed and coordinate (recommended).** Hand off to `/codeo:qc` now. #104 is at `plan`, so this branch is likely to merge first and #104 absorbs the rebase.
+- **Sequence after #104.** The footprint records `sequenced: after #104`, and this branch waits for a branch that has only a plan so far.
+- **Re-scope.** Not possible without dropping a fix QC found blocking.
+
+**Answer:**
+_Open._
 
 ## Notes
 
@@ -90,3 +101,4 @@ Sequence after #70 (answered in the conversation: "Sequence after #70").
 - 2026-11-15 — built all six plan tasks; Q1 raised (overlap and rule-ID collision with #70) · cost: 17m · sonnet-5-5 525k in + 14.5M cached / 64k out
 - 2026-11-15 — Q1 answered: sequence after #70; waiting for it to merge · cost: 19m · sonnet-5-5 529k in + 15.8M cached / 67k out
 - 2026-11-15 — #70 merged; merged main, renumbered the rule to issue-09, regenerated the hash, suite passes; handed off to qc · cost: 4m · sonnet-5-5 34k in + 920k cached / 4k out
+- 2026-11-15 — round 2 built (Tasks 7-9, three task reviews and a range review clean); Q2 raised (overlap with #104, which appeared after the first check) · cost: 13m · sonnet-5-5 288k in + 9.5M cached / 33k out
