@@ -89,6 +89,8 @@ bound checkout is not ambiguous.** The engineer named the issue when they ran `i
 lock honors that rather than guessing at it. The rule that a bare invocation stops and asks still
 holds whenever no workflow is active — which is exactly when there is no lock to read.
 
+A checkout has one role: it is the home checkout, an issue's checkout, or neither. The roles and the guard that keeps a skill out of the wrong checkout are a project's own: each guarded skill reads its `<skill>/role-guard` extension point first and runs whatever check the project's overlay gives it, and the guard applies only where that check says it does. When the check refuses, the step ends there and nothing the engineer says overrides it. `plan`, `implement`, `qc`, `close` and the home-only skills (`issue`, `init`, `triage`, `cleanup`) differ only in what the check allows.
+
 `/codeo:issue` is the exception, as it is to most of this file. It runs before a number exists and
 may be called mid-flow by `plan` or `implement` without disturbing the lock: filing an issue is not
 starting work on it. `/codeo:triage` is outside the lock for the same reason: it reads across every
@@ -332,6 +334,11 @@ caller with a number, and the caller — not `/codeo:issue` — records it in it
 even when called mid-flow; its own file lives under `.codeo/intake/`. `/codeo:triage` records the
 number in its ledger.
 
+When the project's role check refuses the call (the skill is running in an issue container),
+record the finding in this skill's own dossier as a line under `## Notes` that promises the
+later work and carries no issue number — the form `/codeo:triage` collects once the dossier
+is archived — and say to file it with `/codeo:issue` in the home container.
+
 ## Closing block
 
 Every skill's final message ends with the same three-part block, and nothing comes after it. It is
@@ -377,6 +384,7 @@ The default next goal of each skill:
 | `qc` | by verdict: a pull request (`/codeo:close`), fixes (`/codeo:implement`) or a re-plan (`/codeo:plan`) |
 | `close` | by exit: the PR merged, review fixed, or loose ends found (`/codeo:triage`) |
 | `triage` | the next issue started — `/codeo:init #<N>` |
+| `cleanup` | the printed commands run on the host, then the next issue — `/codeo:init #<M>` |
 
 Exits whose next command is not the default:
 
@@ -384,11 +392,11 @@ Exits whose next command is not the default:
 |---|---|
 | `close — lock kept` | `/codeo:close` |
 | `stash — interrupted` | `/codeo:close --stash` |
-| `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed |
+| `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed, in the checkout the project's host workflow names, when it names one |
 | `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again; a `lock: TODO` printed after the lock was taken (the volume name unreadable on `host: container`) needs the fix alone |
 | `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
 | `issue — Status unreadable` | the fix its line names (for example `gh auth refresh -s project`), then `/codeo:triage`, then `/codeo:init #<N>` |
-| `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up |
+| `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up, in the checkout the project's host workflow names, when it names one |
 | `abandon — interrupted` | `/codeo:close` |
 
 ## Spinning out subagents

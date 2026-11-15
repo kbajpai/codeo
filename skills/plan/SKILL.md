@@ -48,6 +48,16 @@ answer too: each task then names its own proof command in full (step 8).
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: plan/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" plan role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: plan-09 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Read `.codeo/active` before anything else.** The lock names the issue this workflow is
    bound to, which is what makes a bare invocation unambiguous here — the engineer named the issue
    when they ran `/codeo:init`. No lock means no workflow here: name `/codeo:init #<N>` as the
@@ -99,6 +109,11 @@ answer too: each task then names its own proof command in full (step 8).
    When exploration turns up real work that doesn't belong in this plan, neither widen the scope
    to absorb it nor drop it: delegate it to `/codeo:issue`, which files it as its own issue and
    hands the number back.
+
+   When the project's role check refuses the call (the skill is running in an issue container),
+   record the finding in this skill's own dossier as a line under `## Notes` that promises the
+   later work and carries no issue number — the form `/codeo:triage` collects once the dossier
+   is archived — and say to file it with `/codeo:issue` in the home container.
 
 5. **Decide the output's shape, and say so before drafting.**
    <!-- point: plan/plan-shape -->

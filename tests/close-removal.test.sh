@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Checks that /codeo:close prints the host commands that remove its container: the overlay's
+# host-workflow section carries the removal command, the role-guard section is still there, and
+# the skill's generic host: container default says the commands run on the host, with no
+# container-engine command in it.
+#
+#   close-removal.test.sh
+#       Exits non-zero and names the first failing case; prints "all cases passed" otherwise.
+set -euo pipefail
+
+plugin_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$plugin_root"
+
+fail() { echo "FAIL: $1" >&2; exit 1; }
+
+rc=0
+out=$(bash scripts/overlay.sh close host-workflow 2>/dev/null) || rc=$?
+[[ "$rc" -eq 0 ]] || fail "overlay.sh close host-workflow exited $rc"
+for needle in 'docker rm -f <volume>; docker volume rm <volume>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
+    'not inside this container' 'git status' 'PowerShell' \
+    'When the lock'"'"'s `host` is `container`' 'nothing to remove' '/codeo:triage' '/codeo:cleanup' 'home container' \
+    'After a finished close' 'After a stash:' 'After an abandon:' \
+    'its number is the lock'"'"'s `issue`' '/codeo:init #<N>' '.devcontainer/README.md'; do
+    [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
+done
+
+# Structural checks on the overlay text, in one function so a scratch copy can be fed to it.
+check_overlay() {
+    local text=$1 fin rest stash aband part name needle cmd='docker rm -f <volume>; docker volume rm <volume>'
+    fin=${text#*'After a finished close'}
+    fin=${fin%%'After a stash:'*}
+    [[ "$fin" == *"$cmd"* ]] \
+        || { echo "check a: finished-close paragraph lacks the removal command"; return 1; }
+    rest='After a stash:'${text#*'After a stash:'}
+    stash=${rest%%'After an abandon:'*}
+    aband='After an abandon:'${rest#*'After an abandon:'}
+    aband=${aband%%'For any other host'*}
+    for name in stash abandon; do
+        part=$stash; [[ $name == abandon ]] && part=$aband
+        if [[ "$part" == *'docker rm'* || "$part" == *'docker volume rm'* ]]; then
+            echo "check b: the $name paragraph names a removal command"; return 1
+        fi
+    done
+    for name in stash abandon; do
+        part=$stash; [[ $name == abandon ]] && part=$aband
+        [[ "$part" == *'print no removal command'* ]] \
+            || { echo "check c: the $name paragraph lacks 'print no removal command'"; return 1; }
+        [[ "$part" == *'home container'* ]] \
+            || { echo "check c: the $name paragraph lacks 'home container'"; return 1; }
+    done
+    for needle in 'the only copy' '.devcontainer/README.md'; do
+        [[ "$aband" == *"$needle"* ]] || { echo "check d: the abandon paragraph lacks $needle"; return 1; }
+    done
+}
+msg=$(check_overlay "$out") || fail "$msg"
+
+# Self-check: each mutant of the real overlay must fail, and from its own check.
+cmd='docker rm -f <volume>; docker volume rm <volume>'
+mutant() { # $1 label, $2 overlay text, $3 expected message prefix
+    local m
+    m=$(check_overlay "$2") && fail "self-check: $1 passed the checks"
+    [[ "$m" == "$3"* ]] || fail "self-check: $1 failed from the wrong check: $m"
+}
+mutant 'a removal command in the abandon paragraph' \
+    "${out/'For any other host'/"$cmd
+For any other host"}" 'check b: the abandon'
+mutant 'a removal command in the stash paragraph' \
+    "${out/'After an abandon:'/"$cmd
+After an abandon:"}" 'check b: the stash'
+mutant 'the removal command deleted from the finished paragraph' \
+    "${out/"$cmd"/'(removed)'}" 'check a:'
+
+rc=0
+bash scripts/overlay.sh close role-guard >/dev/null 2>&1 || rc=$?
+[[ "$rc" -eq 0 ]] || fail "overlay.sh close role-guard exited $rc"
+
+skill=skills/close/SKILL.md
+bullet=$(awk '/^    - \*\*`host: container`\*\*/ {on=1; print; next} on && /^    - \*\*/ {exit} on {print}' "$skill")
+[[ -n "$bullet" ]] || fail "no host: container bullet in $skill"
+for needle in 'on the host' 'git status' 'volume:'; do
+    [[ "$bullet" == *"$needle"* ]] || fail "host: container bullet lacks: $needle"
+done
+fin=$(awk '/\*\*Closing block — finished:\*\*/ {on=1} on && $0 == "" {exit} on {print}' "$skill")
+[[ -n "$fin" ]] || fail "no Closing block — finished paragraph in $skill"
+[[ "$fin" == *"the checkout the project's host workflow names"* ]] \
+    || fail "finished closing block does not name the checkout the host workflow names"
+if grep -qF 'nothing is lost either way' "$skill"; then
+    fail "$skill still says nothing is lost either way"
+fi
+if grep -qi 'docker' "$skill"; then
+    fail "$skill names a container engine: $(grep -i 'docker' "$skill" | head -1)"
+fi
+
+echo "all cases passed"
