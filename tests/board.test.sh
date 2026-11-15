@@ -57,7 +57,12 @@ case "$1 ${2:-}" in
             exit 1
         fi
         echo ITEM_NEW ;;
-    "project view") echo "PROJ_$3" ;;
+    "project view")
+        if [[ -n ${GH_STUB_VIEW_FAILS:-} && $3 == "$GH_STUB_VIEW_FAILS" && $* == *"--jq .title"* ]]; then
+            echo "gh: GraphQL: view failed" >&2
+            exit 1
+        fi
+        echo "PROJ_$3" ;;
     "project item-edit")
         if [[ -n ${GH_STUB_EDIT_FAILS:-} && $* == *"--project-id $GH_STUB_EDIT_FAILS "* ]]; then
             echo "gh: GraphQL: Resource not accessible" >&2
@@ -172,7 +177,7 @@ printf '%s\n' "$with_board" > "$config"
 printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[9],"gateProject":9,"statuses":{}}}' > "$config"
 GH_STUB_ROWS="$url\tITEM_9\tTodo\t9\tOther" run set 7 Blocked
 [[ $rc -ne 0 && $err == *"project #9 Other has no option 'Blocked' — skipped"* ]] || fail "nothing writable names the project: rc=$rc err=$err"
-[[ $err == *"no project #7 is on has the option 'Blocked' (it has: Todo, Doing)"* ]] || fail "nothing writable fails naming the options: rc=$rc err=$err"
+[[ $err == *"no synced project has the option 'Blocked' (it has: Todo, Doing)"* ]] || fail "nothing writable fails naming the options: rc=$rc err=$err"
 ! grep -q "item-edit" "$GH_STUB_LOG" || fail "nothing writable still edited an item"
 printf '%s\n' "$with_board" > "$config"
 
@@ -255,6 +260,28 @@ GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$P1\n$P2" run set 7 "In progress"
 
 GH_STUB_DELETE_FAILS=1 GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$url\t\t\t\t" run set 7 Ready
 [[ $rc -ne 0 && $err == *"remove item ITEM_NEW by hand"* ]] || fail "undo-fails: rc=$rc err=$err"
+grep -q "project item-delete 1 --owner acme --id ITEM_NEW" "$GH_STUB_LOG" || fail "undo-fails: item-delete was not called"
+[[ $err == *"gh: could not delete"* ]] || fail "undo-fails: the delete's reason is missing: err=$err"
+
+# A project whose title cannot be read says so, not that the add failed.
+GH_STUB_VIEW_FAILS=1 GH_STUB_ROWS="$url\t\t\t\t" run set 7 Ready
+[[ $err == *"could not read the title of project #1"* ]] || fail "title-read-fails: err=$err"
+[[ $err != *"could not add #7 to project #1"* ]] || fail "title-read-fails blamed the add: err=$err"
+
+# When no project has the option the closing message does not claim the issue is on any of them.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[9],"gateProject":9,"statuses":{}}}' > "$config"
+GH_STUB_ROWS="$url\t\t\t\t" run set 7 Ready
+[[ $rc -ne 0 ]] || fail "no-board-message: rc=$rc"
+[[ $err != *"is on has the option"* ]] || fail "no-board-message kept the old wording: err=$err"
+[[ $err == *"no synced project has the option 'Ready'"* ]] || fail "no-board-message: err=$err"
+printf '%s\n' "$with_board" > "$config"
+
+# With no `statuses` key at all, a logical key still resolves to its default name.
+printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[1,2],"gateProject":2}}' > "$config"
+GH_STUB_ROWS="$P2" run set 7 inProgress
+[[ $rc -eq 0 && $out == *"Ready → In progress on #2"* ]] || fail "statuses-absent: rc=$rc out=$out err=$err"
+grep -q -- "item-edit .*O_PROG" "$GH_STUB_LOG" || fail "statuses-absent did not write O_PROG"
+printf '%s\n' "$with_board" > "$config"
 
 GH_STUB_ROWS="$P2" run set 7 Blocked
 [[ $rc -ne 0 && $err == *"has the option 'Blocked'"* && $err == *"In progress"* ]] || fail "unknown option: rc=$rc err=$err"
