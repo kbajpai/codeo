@@ -5,7 +5,7 @@
 #
 #   closing-exits.test.sh [case]
 #       Cases: rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-#       issue-ready issue-not-ready issue-unreadable. No argument runs them all; an unknown case
+#       issue-ready issue-not-ready issue-unreadable issue-backlog. No argument runs them all; an unknown case
 #       exits 2. Prints "all cases passed" and exits 0, or a FAIL line per failure and exits 1.
 set -euo pipefail
 
@@ -143,8 +143,17 @@ case_issue_unreadable() {
     before "$p" '/codeo:triage' '/codeo:init #<N>'
 }
 
+case_issue_backlog() {
+    local s
+    s=$(step "$issue" 8)
+    [[ -n $s ]] || { fail "no step 8 in skills/issue/SKILL.md"; return; }
+    has "$s" 'board.sh" set <N> backlog'
+    has "$s" 'board.sh" status <N>'
+    before "$s" 'board.sh" set <N> backlog' 'board.sh" status <N>'
+}
+
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-    issue-ready issue-not-ready issue-unreadable)
+    issue-ready issue-not-ready issue-unreadable issue-backlog)
 
 if (($# > 0)); then
     known=0

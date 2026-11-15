@@ -26,6 +26,7 @@ in prose exist (only the script's existence is checked).
 - [issue-06] File through REST because `gh issue create` cannot set the Issue Type; take the number and URL from
   the response, never reconstruct them.
 - [issue-07] Never set Priority or Effort.
+- [issue-08] A failed Backlog move never fails the filing; report the number and quote the fix.
 
 ## init
 

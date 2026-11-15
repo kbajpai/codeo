@@ -11,7 +11,7 @@ fail=0
 
 check_fail() { printf 'FAIL %s\n' "$1"; fail=1; }
 
-declare -A want=([issue]=7 [init]=9 [plan]=8 [implement]=9 [qc]=13 [close]=13 [triage]=9)
+declare -A want=([issue]=8 [init]=9 [plan]=8 [implement]=9 [qc]=13 [close]=13 [triage]=9)
 
 for skill in issue init plan implement qc close triage; do
     # The bullets of one "## <skill>" section: a section ends at the next "## " heading.

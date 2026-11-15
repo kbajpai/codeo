@@ -29,6 +29,15 @@ must_follow() {
 must_contain "the rename rewrites the title" 'rewrite its first line to `# Issue #<N> — issue`'
 must_follow "the title rewrite is in the rename's commit" 'in the same commit as the rename,' 'rewrite its first line to'
 
+# Step 8: the new issue is filed into the board's Backlog.
+must_contain "step 8 files into the Backlog" 'put the new issue in the Backlog'
+must_contain "step 8 runs the move" 'board.sh" set <N> backlog'
+must_contain "a failed move never fails the filing" 'A failed move never fails the filing'
+must_contain "the failure is quoted with its fix" 'quoted with the fix it names'
+must_contain "no board, no call" 'With no board, make no `board.sh` call at all'
+must_contain "the hand-off names the write" 'its board Status, to Backlog only'
+must_contain "the hand-off bounds the write" 'any board Status other than the Backlog'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
