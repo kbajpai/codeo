@@ -446,8 +446,9 @@ should carry the commit's short sha; report anything else.
 
 **Expected back.** What the engineer does next with this checkout, for instance how to remove it,
 as ordered commands or prose, and, when this checkout can no longer run the follow-up skills, the
-checkout they run in. The skill relays it to the engineer; the commands are theirs to run, never
-the skill's.
+checkout they run in. The returned text may differ by how the close ended (finished, stash or
+abandon), and names, for each, the checkout the follow-up skill runs in. The skill relays it to the
+engineer; the commands are theirs to run, never the skill's.
 
 **Default when absent.** None; the report names the lock's host and says whether anything is left
 to remove.
