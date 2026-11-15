@@ -207,3 +207,105 @@ What each must say afterwards:
 ## Documentation the change moves
 
 `.devcontainer/README.md`, `docs/skills.md`, `docs/extension-points.md`, `docs/skills-inventory.md`, `docs/handoff.md`, `README.md`, `CHANGELOG.md` — all in Tasks 3, 7 and 9.
+
+---
+
+## Round 2 — send-back from QC round 1
+
+QC round 1 (`.codeo/70/qc.md`) found every acceptance criterion met and the suite green, and two blocking findings in the plan itself: **F1**, a finished `/codeo:close` names `/codeo:triage` as its first step in a container that has just become stale, where the guard refuses it; **F2**, a finding the guard refuses to file is "recorded in the dossier" in no stated form, while `/codeo:triage` collects only certain forms. The engineer's answer to Q7 takes in the cheap non-blocking findings too: F4, F5, F6, F7, F8, F10, F13. F9 (Podman), F11 (`CODEO_CLEANUP_REMOVAL` in the production path) and F12 (generic text saying "home container") are left for `/codeo:triage`.
+
+Round 1's Global Constraints still bind, in particular: no `docker`, `codeo-home`, `codeo-gh` or `codeo-git` under `skills/`, `scripts/`, `lib/` or `docs/`; no text under a `<!-- rule -->` marker changes; `.devcontainer/Dockerfile` and `devcontainer.json` do not change; each task's proof is its test file, then `bash tests/run.sh`, both printing `all cases passed`. The existing fail-open ruling stands: when the role check cannot answer, the skill reports and carries on.
+
+### Task 11: Where a finished close sends the engineer (F1, F7)
+
+**Files:**
+- Modify: `skills/close/SKILL.md` (step 17: the `/codeo:triage` suggestion and **Closing block — finished**), `.codeo/overlays/close.md` (`## host-workflow`), `docs/extension-points.md` (`close/host-workflow`, *Expected back*)
+- Test: `tests/close-removal.test.sh`, `tests/closing-exits.test.sh`
+
+**Interfaces:**
+- Produces, in the skill (generic): the finished exit's first step is `/codeo:triage` **run in the checkout the project's host workflow names for it, when it names one** — this checkout holds no lock any more, and a project's role check may refuse the skill here. With no host workflow, the step is `/codeo:triage` as before.
+- Produces, in this repository's overlay: the section opens "When the lock's `host` is `container`:" and keeps the three existing paragraphs under it; adds "For any other host there is nothing to remove: say so."; and adds, for the container case: "This container holds no lock now, so `/codeo:triage` and `/codeo:cleanup` are refused here. Tell the engineer to run them in the home container, `codeo-home`, and make that the closing block's first step."
+- `docs/extension-points.md` → `close/host-workflow` → *Expected back* gains: "and, when this checkout can no longer run the follow-up skills, the checkout they run in".
+
+- [ ] **Step 1: Write the failing assertions.** In `tests/close-removal.test.sh`: the overlay output contains `When the lock's \`host\` is \`container\``, `nothing to remove`, `/codeo:triage`, `/codeo:cleanup` and `home container`; the skill's **Closing block — finished** paragraph contains `the checkout the project's host workflow names`. In `tests/closing-exits.test.sh`, keep the existing finished-exit assertions (`/codeo:triage` present) and add the same needle for the paragraph it already slices.
+- [ ] **Step 2: Run** `bash tests/close-removal.test.sh` → fails with `overlay output lacks: When the lock's`.
+- [ ] **Step 3: Edit** the skill, the overlay and the docs section.
+- [ ] **Step 4: Run** `bash tests/close-removal.test.sh`, `bash tests/closing-exits.test.sh`, `bash tests/close-skill.test.sh`, `bash tests/skills.test.sh close`, `bash tests/skills-doc.test.sh`, then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: a finished close names the checkout its follow-up skills run in (#70)`.
+
+### Task 12: A refused finding is recorded where triage looks (F2)
+
+**Files:**
+- Modify: `skills/plan/SKILL.md`, `skills/implement/SKILL.md`, `skills/qc/SKILL.md`, `docs/handoff.md` (the one sentence round 1's Task 4 added, in each)
+- Test: `tests/plan-skill.test.sh`, `tests/implement-skill.test.sh`, `tests/qc-skill.test.sh`
+
+**Interfaces:**
+- Produces: the sentence, replacing the round-1 one in all four places, verbatim: **"When the project's role check refuses the call (the skill is running in an issue container), record the finding in this skill's own dossier as a line under `## Notes` that promises the later work and carries no issue number — the form `/codeo:triage` collects once the dossier is archived — and say to file it with `/codeo:issue` in the home container."**
+
+Why this form: `skills/triage/SKILL.md` collects, from `.codeo/done/*/` on the base branch, "any `## Outcome` or `## Notes` line promising later work without an issue number next to it". `qc.md` findings and `implement.md` deviations are collected anyway; the `## Notes` line is the one form that works in all three dossiers, `plan.md` included.
+
+- [ ] **Step 1: Write the failing assertions**: each of the three skill tests requires `as a line under \`## Notes\`` and `carries no issue number`, beside the two needles they already have.
+- [ ] **Step 2: Run** `bash tests/plan-skill.test.sh` → fails on the new needle.
+- [ ] **Step 3: Replace the sentence** in the three skills and `docs/handoff.md`; no text under a `rule` marker changes.
+- [ ] **Step 4: Run** the three tests and `bash tests/inventory.test.sh` (the pinned hash must be unchanged), then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: a finding the guard refuses to file is recorded as a Notes line triage collects (#70)`.
+
+### Task 13: Small script and skill corrections (F4, F5, F13)
+
+**Files:**
+- Modify: `scripts/github.sh` (the usage line at the end), `scripts/cleanup.sh` (the issue proof), `skills/cleanup/SKILL.md` (step 4)
+- Test: `tests/github.test.sh`, `tests/cleanup.test.sh`, `tests/cleanup-skill.test.sh`
+
+**Interfaces:**
+- `github.sh`'s usage message lists `pr list-for-branch|view|get|reviews|…`, as its header does.
+- `cleanup.sh`: a failed `github.sh issue view <N>` stops the script with `cleanup: could not read issue #<N>`, exit non-zero, as a failed `pr get` already does; an issue that is read and is not `closed` still prints `<N>\tfailed\tissue`.
+- `skills/cleanup/SKILL.md` step 4: "step 2 `/codeo:init #<M>`, `<M>` being the next issue to start" (`<N>` stays the finished issue everywhere else in the skill).
+
+- [ ] **Step 1: Write the failing tests**: `tests/github.test.sh`, an unknown verb's usage line contains `view|get|reviews`; `tests/cleanup.test.sh`, a case where the stubbed `gh` fails the issue read: exit non-zero, stderr `cleanup: could not read issue #12`, no `proven` and no `failed` line on stdout; `tests/cleanup-skill.test.sh`, the skill contains `/codeo:init #<M>` and no `/codeo:init #<N>`.
+- [ ] **Step 2: Run** `bash tests/cleanup.test.sh` → fails: the case prints `12\tfailed\tissue`.
+- [ ] **Step 3: Implement** the three changes.
+- [ ] **Step 4: Run** the three tests, `bash tests/skills.test.sh cleanup`, then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: cleanup stops on an unreadable issue, github.sh usage names pr get (#70)`.
+
+### Task 14: What the guard says, and what it does on any other exit (F6, F10)
+
+**Files:**
+- Modify: `.devcontainer/scripts/role.sh` (the two `stale:*` refusal lines), `.codeo/overlays/{issue,init,triage,cleanup,plan,implement,qc,close}.md` (`## role-guard`), `.devcontainer/README.md` (the `stale` row of the roles table, and the line on `--check`'s exits)
+- Test: `tests/role.test.sh`, `tests/role-guard.test.sh`
+
+**Interfaces:**
+- `stale:<N>` refusal, one line: `/codeo:<skill> can't run here: this container's workflow for issue #<N> has ended (finished, stashed or abandoned), or its start script took no lock (role stale:<N>); <where>.` `<where>` for a home-only skill: `run it in the home container`. For a lock skill: `if this is still issue #<N>'s container, re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock; otherwise it is done, and the skill runs in the container of the issue it is for`.
+- `stale:?` refusal: same shape without the number (`this clone is on a branch other than the base branch with no lock, so its workflow has ended (finished, stashed or abandoned) or never took a lock (role stale:?)`).
+- Both lines keep the word `finished`, the role, and `#<N>` where there is one (criterion 3 and the existing needles).
+- Each overlay's `## role-guard` body ends, after the exit 2 sentence: "Any other exit (the script is missing, or failed): report what it printed and go on."
+
+- [ ] **Step 1: Write the failing assertions**: `tests/role.test.sh`, the stale refusals contain `stashed or abandoned`, and for a lock skill `devcontainer-start.sh`, for a home-only skill `home container`; `tests/role-guard.test.sh`, each overlay's text contains `Any other exit`.
+- [ ] **Step 2: Run** `bash tests/role.test.sh` → fails on `stashed or abandoned`.
+- [ ] **Step 3: Implement** the script lines, the eight overlay sentences and the README row.
+- [ ] **Step 4: Run** `bash tests/role.test.sh`, `bash tests/role-guard.test.sh`, `bash tests/devcontainer.test.sh`, `bash scripts/doctor.sh` (overlays ok), then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: the stale refusal covers a stashed workflow and names the recovery (#70)`.
+
+### Task 15: Documentation (F1, F8)
+
+**Files:**
+- Modify: `.devcontainer/README.md`, `CHANGELOG.md`
+- Test: `tests/devcontainer.test.sh`, `tests/agnostic.test.sh`
+
+What each says afterwards:
+- `.devcontainer/README.md`, *Removing a finished container*: after `/codeo:close` finishes, the container holds no lock and is `stale`, so `/codeo:triage` and `/codeo:cleanup` run in the home container; the removal commands are printed only for a container-hosted workflow. *Roles and the guard*: a container whose clone lacks the role script and the overlays (one created from a branch cut before the guard existed) is not guarded; it runs every skill as before until it is removed.
+- `CHANGELOG.md`: the `## Unreleased` bullet for this change gains the same two facts (where the follow-up skills run after a close; older containers stay unguarded) and "a refused finding is recorded as a `## Notes` line". No other bullet changes.
+
+- [ ] **Step 1: Write the edits** (present tense, no issue numbers in the README).
+- [ ] **Step 2: Run** `bash tests/devcontainer.test.sh`, `bash tests/agnostic.test.sh`, then `bash tests/run.sh`; `git diff --stat origin/main -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` prints nothing.
+- [ ] **Step 3: Commit** `docs: where the follow-up skills run after a close, and which containers the guard covers (#70)`.
+
+### Task 16: The whole check
+
+- [ ] **Step 1: Run** `bash tests/run.sh` → `all cases passed`; `bash scripts/doctor.sh` → every line `ok`.
+- [ ] **Step 2: By hand, in this container:** `bash .devcontainer/scripts/role.sh --check triage` exits 1 naming `issue:70`; `bash scripts/overlay.sh close host-workflow` prints the home-container sentence.
+
+### Round 2 self-review
+
+- **Coverage.** F1 → Tasks 11 and 15 · F2 → Task 12 · F4, F5, F13 → Task 13 · F6, F10 → Task 14 · F7 → Task 11 · F8 → Task 15. F3 (`scripts/github.sh` outside the footprint) → the footprint gains `scripts/github.sh`. F9, F11, F12 → left in `qc.md` for `/codeo:triage`.
+- **Documentation the round moves.** `.devcontainer/README.md`, `docs/extension-points.md`, `docs/handoff.md`, `CHANGELOG.md`. `docs/skills.md`, `docs/skills-inventory.md` and `README.md` need nothing: none states the sentences or rows changed here.
+- **Consistency.** The F2 sentence is identical in four files; the "Any other exit" sentence is identical in eight overlays; no rule text and no inventory bullet changes, so the pinned hash stays.
