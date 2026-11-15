@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Tasks 1-6 are built and reviewed (commits ce0b13d..a9a689c); `origin/main` (with #98) is merged in. Q1 is answered; Q2 (#70's glob now pairing with four test files this round changed) is open, so Tasks 7-10 wait. See the ledger in `.superpowers/sdd/`, which is git-ignored.
+Round 1. Tasks 1-6 are built and reviewed (commits ce0b13d..a9a689c); `origin/main` (with #98) is merged in. Q1 and Q2 are answered (proceed and coordinate with #70); building Tasks 7-10. See the ledger in `.superpowers/sdd/`, which is git-ignored.
 
 ## Questions
 
@@ -26,6 +26,7 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-15: "go with the 
 **Options:** proceed and coordinate · sequence after #70 · re-scope. **Recommendation:** proceed and coordinate, as Q1.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
