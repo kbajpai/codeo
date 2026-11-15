@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q4 are answered (Q1 option A, Q3 and Q4 proceed and coordinate, Q2 proceed with the guard). The draft plan is at `.codeo/107/plan-draft.md` and waits for the engineer's approval; nothing is open in this file. After approval the plan file is written under `docs/plans/`, the footprint is committed here, `overlap.sh` is run, and the outcome is written.
+The plan was approved and is written at `docs/plans/2026-11-15-dev-container-follow-ups-107.md` (unstaged, for the engineer's review). The footprint is committed under `## Notes`. `overlap.sh` still prints `71	glob:CHANGELOG.md`, because Q4 did not quote the token verbatim; Q5 raises it again in that form. The outcome is written once Q5 is answered.
 
 ## Questions
 
@@ -59,6 +59,15 @@ Proceed and coordinate, as recommended (given in the conversation: "Accept as re
 **Answer:**
 Proceed and coordinate, as recommended (given in the conversation: "Accept as recommended").
 
+### Q5 — `overlap.sh` still reports #71 on `glob:CHANGELOG.md`: proceed and coordinate, as in Q4?
+
+`overlap.sh` recognises an overlap as raised only when a question quotes the other issue and its printed token verbatim. Q4 raised the same overlap but wrote `CHANGELOG.md` without the `glob:` prefix, so it still prints `71	glob:CHANGELOG.md`. The facts are Q4's, updated: #71 is on branch `feat/file-new-issues-straight-board`, assignee kbajpai, now at step `qc` (working); the only shared path is `CHANGELOG.md`, where this plan edits the #96 bullet and adds one bullet under `## Unreleased` in Task 8, after merging `origin/main`.
+
+**Why it matters:** this is Q4 restated in the form the script reads. Nothing changes if the answer is the same: proceed. *Sequence after #71* adds a `sequenced:` line and holds `/codeo:implement` until #71 merges; *re-scope* drops the CHANGELOG task.
+**Options:** proceed and coordinate (recommended, as answered in Q4) · sequence after #71 · re-scope.
+
+**Answer:**
+
 ## Notes
 
 Decisions already made from the issue and the code; they are in the approved plan.
@@ -95,3 +104,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-15 — Q1-Q4 raised · cost: 3m · fable-5-2 106k in + 1M cached / 15k out
 - 2026-11-15 — Q1-Q4 answered in the conversation; draft written to .codeo/107/plan-draft.md, awaiting approval (optional engineering skills not used: the change adds no component or technology choice) · cost: 4m · sonnet-5-5 162k in + 1.3M cached / 37k out
+- 2026-11-15 — plan approved and written to docs/plans/2026-11-15-dev-container-follow-ups-107.md; footprint committed; overlap.sh printed 71 glob:CHANGELOG.md, Q5 raised · cost: 6m · sonnet-5-5 169k in + 2.8M cached / 42k out
