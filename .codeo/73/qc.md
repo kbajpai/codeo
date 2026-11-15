@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written: the build and the suite pass, five of the six criteria are met, and the review found three claims on the page that are stronger than their evidence. The change goes back to `/codeo:implement`.
+Round 2 is written: the build and the suite pass, round 1's three blocking findings are fixed, and the review found three more claims stronger than their evidence (F13 the KVM claim still on #73, F14 the window-title "no equivalent", F15 U6's folder check). The change goes back to `/codeo:implement`.
 
 ## Questions
 
@@ -67,6 +67,52 @@ Declined by the reviewer, and left to the engineer: whether hybrid is the right 
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-15
+
+**Commands run** (project root, on `ac548e9`: the round-2 implement commit with `origin/main` merged in again, #84's `.devcontainer/` follow-ups):
+- `sync-main.sh --abort-on-conflict`: `merged origin/main (1 commit(s))`, then `comm: file 2 is not in sorted order` and exit 1, as in round 1 (the merge was committed first; the `also changed on main:` list was not printed). Main's commit changed `.devcontainer/README.md`, `codeo-root.sh`, `container-name.sh`, `devcontainer-start.sh`, `folder-check.sh`, `window-title.sh`, `CHANGELOG.md`, `docs/plans/2026-11-14-dev-container-follow-ups.md`, four tests and `.codeo/done/57/*`; the page's account of the start script was re-checked against it (step numbers 1, 2, 2b, 3, 3a, 3a', 3b, 3c, 4-7 unchanged; the new empty-lock handling and folder-name note contradict nothing the page says).
+- `overlap.sh 73` and `overlap.sh --outside 73`: no output.
+- `git diff origin/main...HEAD --stat`: 7 files, 1072 insertions: `.codeo/73/{implement,init,issue,plan,qc}.md`, `docs/dev-environment-sbx-evaluation.md`, `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md`.
+- `scope.sh origin/main HEAD`: `suite shell needed for unclassified paths:` the five `.codeo/73/*.md` files, then `suite.shell=true`; no `deploy=` line (no environment).
+- Build (`shell`: `true`): exit 0. `bash tests/run.sh` on `ac548e9`: `all cases passed`, exit 0.
+- `overlay.sh qc invariants-extra` and `wiki-rules`: exit 3 (none). `git diff --stat origin/main...HEAD -- .devcontainer skills`: empty.
+- `gh issue view 85` and `86`: both `OPEN`. #73's last comment links both.
+- Independent review (opus, `QC review:`, given the criteria and the range `aaf4883..ac548e9`): "With fixes", no Critical findings, four Important, six Minor.
+
+**Round 1's blocking findings, rechecked on the page.** F1 (blocking in round 1) — fixed: `lsmod | grep kvm` is recorded as not evidence either way, T1 gained `ls -l /dev/kvm`. F2 (blocking in round 1) — fixed: T3 quotes `(rw)` beside `(ro)`; D1 and U2 are `cited`. F3 (blocking in round 1) — fixed: the page says the printed kit digest differed and the base image was not checked (see F17 on whether that was stricter than the evidence needed). F4-F11 (non-blocking in round 1) — fixed as listed in implement.md round 2.
+
+**Acceptance criteria**
+
+| # | Criterion | Settled by | Verdict |
+|---|---|---|---|
+| 1 | A written comparison exists, covering every driver and requirement, each point marked tried or cited | `docs/dev-environment-sbx-evaluation.md`: D1-D10, U1-U18, 22 `tried` and 6 `cited`, no blank Evidence cell; reviewer confirmed the rows match the trial records | met, except the two overstatements in F14 and F15 |
+| 2 | Every duty has an equivalent, a workaround or "no equivalent" | U1-U18; U3, U4, U13 now begin with the label | not met for U6 (F15: its verdict says "no equivalent needed" while the row describes a workaround) and U13 (F14: "No equivalent" where the mechanism was not tried) |
+| 3 | States whether sbx runs on Windows + WSL2, with evidence | `## Host`: `yes, partly`, with the T1-T3 output | met on the page; the same statement on #73 still carries the removed KVM claim (F13) |
+| 4 | One recommendation and its rationale | one `**Recommendation:** hybrid` line | met, with the U13 dependency in F14 |
+| 5 | Follow-up issues filed and linked | #85 and #86 open; linked in the page and in a comment on #73 | met |
+| 6 | `.devcontainer/` and the skills unchanged | `git diff --stat origin/main...HEAD -- .devcontainer skills` empty | met |
+
+**Documentation check.** The only page is the new one; no existing page describes behaviour this change alters, and the plan said so. The reviewer checked the page's account of `.devcontainer/` at HEAD, including main's new changes, and found the step numbering and the chown, empty-lock and base-branch behaviour accurate, apart from U6 (F15). No account name, email, token, organisation id or one-time code is on the page.
+
+**Findings**
+
+- **F13 — blocking, `/codeo:implement`'s.** The comment posted on #73 (`gh issue view 73 --json comments`, the result comment) says "the Linux-in-WSL2 route has no KVM". That is the claim round 1's F1 removed from the page, and it is the issue-side answer to criterion 3. Edit the comment to say the route was not tried and whether `/dev/kvm` exists was not checked.
+- **F14 — blocking, `/codeo:implement`'s.** `docs/dev-environment-sbx-evaluation.md` U13 (line ~105) and the Recommendation (~423): the row says "No equivalent" for the window title but admits `window.title` in `.vscode/settings.json` was not tried, and `window-title.sh` only writes a workspace setting into the clone, which nothing in it ties to the dev container. The Recommendation then uses "There is no window title (U13)" as a reason against migrating. Mark U13 untried (the script could be run in the sandbox and the folder opened over Remote-SSH) and say in the Recommendation that the window title is not shown to work.
+- **F15 — blocking, `/codeo:implement`'s.** U6 (line ~98): the page says the check is that "the clone folder must equal the container's Docker name" and the verdict is "No equivalent needed: the Docker-name constraint is Docker's rule for container names". At HEAD the folder is the Docker name by construction (`runArgs --name=${containerWorkspaceFolderBasename}`), and `folder-check.sh` checks that the folder names what the lock says (`container-name.sh --docker`: `<codename>-<N>` with a lock, `<codename>-home` on the base branch). The row's own next sentence says the check would compare the sandbox name with the lock, which is what #85 asks for. Describe the real check, and give the verdict as a workaround (untried, #85).
+- **F16 — non-blocking.** D7, U9 and the Recommendation (~82, ~101, ~432): "the sandbox has no git identity" rests on `git config user.name` printing nothing (T7); `user.email` was not checked. Say "no `user.name`", or check both.
+- **F17 — non-blocking, and one reviewer claim not upheld.** The reviewer said #86's body ("the `docker.io/sbx/claude:latest` image changed digest between two creates the same day (T10)") overstates T10 and dates it wrong. Checked against the recorded output: both creates printed an `Image:` line carrying the same digest as the `Kit:` line (`4df39400…` at T3 and again at T8, `0fb3e2c5…` at T10), and T8 and T10 were both on 2026-11-15, so #86's sentence is supported by the printed `Image:` line and is not a defect. The page's more cautious wording ("the printed kit digest differed; whether the base image changed was not checked") is true and stays; round 1's F3 was stricter than the evidence needed, and nothing is routed for it.
+- **F18 — non-blocking.** T4's time: the page has `real 2m37.938s`, the pasted output had `2m37.941s`; use one figure.
+- **F19 — non-blocking.** Evidence cells omit a trial they cite: D3 names T3, T5, T8 but the name-reuse error and the per-clone `safe.directory` come from T9; D2 names T12 but `claude` running interactively from WSL bash is T6.
+- **F20 — non-blocking.** The Recommendation's "Why not stay" opens with costs "removed by what was tried, not just by what Docker says" and then lists microVM isolation, which is cited, and says the `codeo-<N>` naming cost "goes away" while U1 keeps naming as a convention and #85 needs a name-against-lock check. Separate the tried points from the cited ones and soften the naming claim.
+- **F21 — non-blocking.** The code blocks under T3, T7, T8, T9 and T11 are condensed paraphrases, not verbatim output (line ~197 joins two printed lines). Label them "summary of output", or quote the lines as printed.
+- **F22 — non-blocking.** Wording leftovers: line ~114 says "run as `sbx.exe` from WSL bash" twice; line ~21 says "later `tried T<n>, <date>`", left from before the trials; U2 repeats "because the clone follows the host's checked-out ref".
+- **F12 (carried from round 1) — non-blocking, `/codeo:plan`'s.** `.codeo/73/plan.md`'s `### Footprint` lacks `sequenced:`. **F23 — non-blocking, outside this diff:** `sync-main.sh` exits 1 after a clean merge (`comm … not in sorted order`); the plugin's script.
+
+Declined by the reviewer, left to the engineer: whether hybrid is the right choice, the scope and design of #85 and #86, and re-checking the cited Docker claims against the live pages.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
+- 2026-11-15 — round 2: build and suite pass, 4 of 6 criteria met, 3 blocking findings, back to implement · cost: 4m · opus-5-5 428k in + 2.9M cached / 15k out · sonnet-5-5 337k in + 1.8M cached / 4k out
 - 2026-11-15 — round 1: build and suite pass, 5 of 6 criteria met, 3 blocking findings, back to implement · cost: 4m · opus-5-5 347k in + 3.9M cached / 17k out · sonnet-5-5 270k in + 1.5M cached / 3k out
