@@ -8,9 +8,10 @@
 
 ## Where this stands
 
-Q1-Q5 are answered (all as recommended). The plan was approved and written to
-`docs/plans/2026-11-15-file-new-issues-into-backlog.md` (unstaged, for review). Nothing is open
-and no lock is needed. Next: `/codeo:implement`.
+Round 2, after the send-back from `qc.md` round 1 (F1 blocking: criterion 5 rests on a ledger
+fingerprint the plan named only partly; F2-F5 non-blocking). The round-2 draft, Tasks 7-9, is at
+`.codeo/71/plan-draft.md` (not committed) and waits for approval. Q6 is open: an overlap with
+#107 on `CHANGELOG.md`. Round 1's outcome below stays as written.
 
 ## Questions
 
@@ -114,7 +115,33 @@ and whether two small edits are dropped to shrink the overlap.
 **Answer:**
 Proceed and coordinate (answered in the conversation: "as recommended").
 
+### Q6 — #107 also names `CHANGELOG.md`: proceed and coordinate, sequence after #107, or re-scope?
+
+**Why it matters:** #107 (`feat/dev-container-follow-ups-96`, assignee kbajpai, step `init
+(working)`; its branch has changed nothing yet) appeared after round 1. `overlap.sh 71` prints, for
+#107: `CHANGELOG.md` and `glob:CHANGELOG.md`. Nothing else overlaps: its other files are under
+`.devcontainer/` and their tests. This branch's `CHANGELOG.md` bullet is already written and round 2
+does not change it; #107 will add its own bullet under `## Unreleased`, so whichever merges second
+keeps both, as with #96 and #98 (Q3, Q4). The answer decides whether the footprint carries a
+`sequenced:` line.
+**Options:**
+- **Proceed and coordinate (recommended).** Round 2 is built now. The conflict, if any, is two
+  adjacent bullets.
+- **Sequence after #107.** `/codeo:implement` waits for #107 to merge; it is still at `init`, so
+  the wait has no end in sight.
+- **Re-scope.** Not possible: every change is recorded in the changelog.
+
+**Answer:**
+_Open._
+
 ## Notes
+
+- Round 2, decided by the plan, no question needed: a filed, never-started issue has one ledger
+  fingerprint, `issue:<N>`, whichever of triage's sources finds it; `intake:<dir>` is only for a
+  `new-<slug>/` draft. This project's ledger already holds only `issue:<N>` rows for such issues
+  (`issue:36` … `issue:70`) and no `intake:<N>` row, so no decided issue comes back. Rejected:
+  recording both rows, and dropping the intake `<N>/` source. Round 2 adds no file to the
+  footprint.
 
 - Decided by the plan, no question needed:
   - **One pull request.** One issue, one branch; the change is skill text, its tests and the pages
@@ -170,3 +197,4 @@ sequenced:  none
 - 2026-11-15 — Q1-Q4 raised; draft footprint under Notes · cost: 2m · fable-5-2 106k in + 770k cached / 11k out
 - 2026-11-15 — Q1-Q4 answered; plan approved and written; Q5 raised (overlap with #97) · cost: 11m · fable-5-2 109k in + 902k cached / 12k out · sonnet-5-5 143k in + 1.7M cached / 25k out
 - 2026-11-15 — planned: docs/plans/2026-11-15-file-new-issues-into-backlog.md · cost: 12m · fable-5-2 109k in + 902k cached / 12k out · sonnet-5-5 150k in + 2.4M cached / 29k out
+- 2026-11-15 — round 2 (send-back from qc.md round 1): draft Tasks 7-9 written to .codeo/71/plan-draft.md; Q6 raised (overlap with #107) · cost: 2m · fable-5-2 159k in + 721k cached / 9k out
