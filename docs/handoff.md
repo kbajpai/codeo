@@ -301,7 +301,8 @@ The receiving step opens a new round in its own dossier rather than editing the 
 already answered, so the file shows what the send-back changed. One edit is sanctioned: a
 `plan.md` round answering a send-back replaces the earlier round's `### Footprint` block with its
 own, since `overlap.sh` and `inflight.sh` read every block and a stale one goes on producing
-overlaps. The replacing block carries the earlier round's files too, so it covers the whole
+overlaps. The replacing block carries every earlier path the branch still changes, so it covers
+the whole
 branch. A send-back returns to the sender
 once the receiving step is done, and the pass then runs again in full. Re-checking only the part
 that changed is how a regression ships.
@@ -315,6 +316,9 @@ What is enforced is what the project's ruleset on the base branch requires — o
   actually require. `qc-verdict` is the pipeline's own
   (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/qc-verdict.sh" <base> <head>`), and `scope.sh` decides which
   test suites a change needs, for CI and the local quality gate alike.
+  It also fails a pull request that archives a `plan.md` with a `### Round 2` or later whose
+  footprint omits a path `overlap.sh --outside` prints for the branch; an archive the pull request
+  only edits is not judged.
 - **The live-dossier rule.** A send-back moves the dossier back to `.codeo/<N>/`, and the
   `qc-verdict` check fails closed on a live dossier the head still carries, so the open PR stays
   unmergeable until `/codeo:close` archives it to `done/` again.
@@ -357,7 +361,7 @@ for the engineer, who should never have to work out where they stand or what to 
   first names the exact command. No step is "decide what to do".
 - **A skill with several exits states the one it took.** `/codeo:qc` is clear, back to
   `/codeo:implement` or back to `/codeo:plan`; `/codeo:close` is waiting on a merge, sent back,
-  finished or stashed. The block describes that exit and no other.
+  finished, stashed or abandoned. The block describes that exit and no other.
 - **It names only a command that can run.** The first step is the command that can run in the
   state the exit leaves behind. A lock a failed step kept, a lock never taken and a Ready gate not
   yet passed each change which command that is. The block never names the command the state
@@ -389,8 +393,11 @@ Exits whose next command is not the default:
 | `close — lock kept` | `/codeo:close` |
 | `stash — interrupted` | `/codeo:close --stash` |
 | `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed |
-| `init — no lock` | the fix the `lock: TODO` line names, then `lock.sh take local` again |
+| `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again; a `lock: TODO` printed after the lock was taken (the volume name unreadable on `host: container`) needs the fix alone |
 | `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
+| `issue — Status unreadable` | the fix its line names (for example `gh auth refresh -s project`), then `/codeo:triage`, then `/codeo:init #<N>` |
+| `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up |
+| `abandon — interrupted` | `/codeo:close` |
 
 ## Spinning out subagents
 

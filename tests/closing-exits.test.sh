@@ -5,11 +5,13 @@
 #
 #   closing-exits.test.sh [case]
 #       Cases: rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-#       issue-ready issue-not-ready issue-unreadable. No argument runs them all; an unknown case
-#       exits 2. Prints "all cases passed" and exits 0, or a FAIL line per failure and exits 1.
+#       issue-ready issue-not-ready issue-unreadable abandon-finished abandon-interrupted
+#       close-step17-lead stash-prose bites. CLOSING_EXITS_ROOT points the checks at another tree.
+#       No argument runs them all; an unknown case exits 2. Prints "all cases passed" and exits 0, or
+#       a FAIL line per failure and exits 1.
 set -euo pipefail
 
-root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+root=${CLOSING_EXITS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 doc="$root/docs/handoff.md"
 close="$root/skills/close/SKILL.md"
 init="$root/skills/init/SKILL.md"
@@ -19,7 +21,7 @@ failures=0
 p=
 case_name=
 fail() {
-    echo "FAIL: $case_name — $1"
+    echo "FAIL: $case_name — $1" >&2
     failures=$((failures + 1))
 }
 
@@ -60,20 +62,39 @@ step() {
         f { print }' "$1"
 }
 
+# Prints $1 with newlines joined and runs of spaces squeezed, so a phrase wrapped over lines matches.
+flat() { printf '%s' "$1" | tr '\n' ' ' | tr -s ' '; }
+
 case_rule() {
-    local block
+    local block row
     block=$(sed -n '/^## Closing block$/,/^## Spinning out subagents$/p' "$doc")
     has "$block" '**It names only a command that can run.**'
-    for row in 'lock kept' 'stash — interrupted' 'init — no lock' 'issue — not Ready'; do
-        has "$block" "$row"
-    done
     has "$block" 'Exits whose next command is not the default'
-    has "$block" 'stash — completed'
+    has "$block" 'stashed or abandoned'
+    # $1 label. Prints its row of the exceptions table; fails the case when the table has none.
+    row_for() {
+        local r
+        r=$(grep -F "$1\` |" <<<"$block" || true)
+        [[ -n $r ]] || { fail "docs/handoff.md has no row for [$1]"; return 0; }
+        printf '%s\n' "$r"
+    }
+    for row in 'lock kept' 'stash — interrupted' 'stash — completed' 'issue — not Ready'; do
+        row_for "$row" >/dev/null
+    done
+    local nl ai ab ur
+    ab=$(row_for 'abandon — finished')
+    ai=$(row_for 'abandon — interrupted')
+    nl=$(row_for 'init — no lock')
+    ur=$(row_for 'issue — Status unreadable')
     # The init row names the recovery and lock.sh take local, never the default /codeo:plan.
-    local row
-    row=$(grep -F '`init — no lock`' <<<"$block" || true)
-    has "$row" 'lock.sh take local'
-    lacks "$row" '/codeo:plan'
+    has "$nl" 'lock: TODO'
+    has "$nl" 'host workflow'
+    has "$nl" 'lock.sh take local'
+    lacks "$nl" '/codeo:plan'
+    has "$ai" '/codeo:close'
+    lacks "$ai" '--stash'
+    has "$ab" '/codeo:triage'
+    has "$ur" '/codeo:triage'
 }
 
 case_close_lock_kept() {
@@ -112,6 +133,7 @@ case_init_no_lock() {
     # Step 11 once ended both exits with one sentence naming /codeo:plan; it must not return.
     local s
     s=$(step "$init" 11)
+    [[ -n $s ]] || { fail "no step 11 in skills/init/SKILL.md"; return; }
     lacks "$s" 'Either way, end with the closing block'
 }
 
@@ -144,8 +166,97 @@ case_issue_unreadable() {
     before "$p" '/codeo:triage' '/codeo:init #<N>'
 }
 
+case_abandon_finished() {
+    para "$close" '**Closing block — abandon finished:**' || return 0
+    has "$p" '/codeo:triage'
+    has "$p" 'with no board'
+    has "$p" 'the last copy'
+    lacks "$p" '/codeo:init #<N>'
+    lacks "$p" '/codeo:close --stash'
+}
+
+case_abandon_interrupted() {
+    para "$close" '**Closing block — abandon interrupted:**' || return 0
+    has "$p" '/codeo:close'
+    lacks "$p" '/codeo:close --stash'
+    lacks "$p" '/codeo:init #<N>'
+    # /codeo:close must be the first command named: nothing slash-prefixed precedes it.
+    local head=${p%%/codeo:close*}
+    [[ $head != */codeo:* ]] || fail "another command comes before /codeo:close"
+}
+
+case_close_step17_lead() {
+    local s
+    s=$(step "$close" 17)
+    [[ -n $s ]] || { fail "no step 17 in skills/close/SKILL.md"; return; }
+    lacks "$s" 'Report** that the workflow is finished'
+    lacks "$(flat "$s")" 'End with the closing block: the goal is the loose ends found'
+}
+
+case_stash_prose() {
+    local text
+    text=$(awk '/^## Stash, and closed unmerged$/ { f = 1 } f && /^\*\*Closed unmerged\*\*/ { exit } f' "$close")
+    [[ -n $text ]] || { fail "no stash section in skills/close/SKILL.md"; return; }
+    text=$(flat "$text")
+    lacks "$text" 'Report that `/codeo:init #<N>` resumes it'
+    lacks "$text" 'End with the closing block: the goal is resuming the work'
+}
+
+# Puts each old wording back in a scratch copy and checks the named case then fails by name.
+case_bites() {
+    local t out copy pristine
+    t=$(mktemp -d)
+    # shellcheck disable=SC2064
+    trap "rm -rf '$t'" RETURN
+    mkdir -p "$t/skills/close" "$t/skills/init" "$t/skills/issue" "$t/docs"
+    cp "$root/skills/close/SKILL.md" "$t/skills/close/SKILL.md"
+    cp "$root/skills/init/SKILL.md" "$t/skills/init/SKILL.md"
+    cp "$root/skills/issue/SKILL.md" "$t/skills/issue/SKILL.md"
+    cp "$root/docs/handoff.md" "$t/docs/handoff.md"
+    copy=$t/skills/close/SKILL.md
+    pristine=$t/close.orig
+    cp "$copy" "$pristine"
+
+    sed -i 's/^17\. \*\*Report\*\* how the close ended:.*$/17. **Report** that the workflow is finished. Read the lock'"'"'s `host` line, and its `volume:` or/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the step 17 mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" close-step17-lead 2>&1) &&
+        fail "the old step 17 lead passed close-step17-lead"
+    [[ $out == *close-step17-lead* ]] || fail "close-step17-lead failed without naming itself: $out"
+
+    cp "$pristine" "$copy"
+    sed -i 's/^\*\*Closed unmerged\*\*/Report that `\/codeo:init #<N>` resumes it.\n\n&/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the stash mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
+        fail "the old stash sentence passed stash-prose"
+    [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+
+    # The old sentences as they were wrapped (2a86915^), so a line break cannot hide them.
+    cp "$pristine" "$copy"
+    sed -i 's/^    from a step having been attempted\. End with the closing block for the exit step 16 took:$/    from a step having been attempted. End with the closing block: the goal is the loose ends found,\n    the first step `\/codeo:triage`, then the host'"'"'s checkout clean-up above./' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the wrapped step 17 mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" close-step17-lead 2>&1) &&
+        fail "the old step 17 ending passed close-step17-lead"
+    [[ $out == *close-step17-lead* ]] || fail "close-step17-lead failed without naming itself: $out"
+
+    cp "$pristine" "$copy"
+    sed -i 's/^\*\*Closed unmerged\*\*/Report that `\/codeo:init #<N>`\nresumes it, on any machine.\n\n&/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the wrapped stash sentence mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
+        fail "the old stash sentence passed stash-prose"
+    [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+
+    cp "$pristine" "$copy"
+    sed -i 's/^\*\*Closed unmerged\*\*/request stays open; say so. End with the closing block: the goal is resuming the work, the first\nstep `\/codeo:init #<N>`.\n\n&/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the wrapped stash ending mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
+        fail "the old stash ending passed stash-prose"
+    [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+    return 0
+}
+
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-    issue-ready issue-not-ready issue-unreadable)
+    issue-ready issue-not-ready issue-unreadable abandon-finished abandon-interrupted
+    close-step17-lead stash-prose bites)
 
 if (($# > 0)); then
     known=0

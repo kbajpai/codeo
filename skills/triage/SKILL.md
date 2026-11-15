@@ -228,7 +228,7 @@ is the container the message names.
      a time, in the order the engineer ranked them. Then ask, as a follow-up question, whether the
      new issue is ready to work on (with a board); yes is a *mark Ready*.
    - **Mark Ready** → `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`, which adds the
-     issue to the board if it is not on it. Record `ready` and quote the line the script prints (it reports the old status, the new option and the project) in
+     issue to a synced project only where that project's Status has the Ready option, and sets Ready there. Record `ready` and quote the line the script prints (it reports the old status, the new option and the project) in
      the run's `## Outcome`.
      <!-- rule: triage-06 -->
      A script failure — the `project` token scope is the likely one, and the script names the
