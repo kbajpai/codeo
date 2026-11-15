@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1 is answered (proceed and coordinate with #70). Building the plan task by task; tasks 1-8 first, then #98 and #70 are re-read before Task 9.
+Round 1. Tasks 1-6 are built and reviewed (commits ce0b13d..a9a689c); `origin/main` (with #98) is merged in. Q1 is answered; Q2 (#70's glob now pairing with four test files this round changed) is open, so Tasks 7-10 wait. See the ledger in `.superpowers/sdd/`, which is git-ignored.
 
 ## Questions
 
@@ -20,6 +20,13 @@ Round 1. Q1 is answered (proceed and coordinate with #70). Building the plan tas
 **Answer:**
 Proceed and coordinate (engineer, in the conversation, 2026-11-15: "go with the recommendation").
 
+### Q2 — #70's footprint now covers four more test files this issue has changed. Proceed, sequence or re-scope?
+
+**Why it matters:** raised by the overlap check run after Task 6 and the merge of `origin/main` (which brought in #98). #70 (`feat/guard-home-only-skills-against`, assigned to kbajpai, now at `qc`, working) prints as `#70` with `tests/board.test.sh`, `tests/overlap.test.sh`, `tests/qc-verdict.test.sh` and `tests/skills-doc.test.sh`. None of the four is changed on #70's branch: they are paired only because #70's `files` list has the glob `tests/**` and Tasks 1, 3, 4, 5 and 6 here changed them. Q3 of the plan and Q1 here already answered *proceed and coordinate* for #70 and `tests/**`, and its qc is nearly done, so the second to merge rebases. No sequencing is needed unless #70's QC adds edits to those four files.
+**Options:** proceed and coordinate · sequence after #70 · re-scope. **Recommendation:** proceed and coordinate, as Q1.
+
+**Answer:**
+
 ## Notes
 
 ## Outcome
@@ -29,3 +36,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-15 — Q1 raised before dispatch · cost: 3m · sonnet-5-5 11k in + 1M cached / 2k out
+- 2026-11-15 — Tasks 1-6 built and reviewed, origin/main merged; Q2 raised before Task 7 · cost: 17m · sonnet-5-5 525k in + 20.2M cached / 80k out
