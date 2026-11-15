@@ -1,13 +1,13 @@
-# new-inflight-liveness — issue
+# Issue #104 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/104 |
 | Updated | 2026-11-15 |
 
 ## Where this stands
 
-Questions answered in the conversation; the draft below awaits the engineer's approval at the review gate.
+Questions answered in the conversation; the draft below was approved and filed.
 
 ## Questions
 
@@ -65,3 +65,4 @@ The workflow lock `.codeo/active` is local to one checkout and never pushed. No 
 ## Log
 
 - 2026-11-15 — Q1-Q5 answered; draft written
+- 2026-11-15 — filed as #104
