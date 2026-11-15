@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-All four plan tasks are done. Nothing is open; the next step is `/codeo:qc`.
+Round 2 (the `CHANGELOG.md` sentence qc round 1 asked for) is done. Nothing is open; the next step is `/codeo:qc`.
 
 ## Questions
 
@@ -39,6 +39,18 @@ The trial script, its fixtures, the 24 runs and both scorer versions' results ar
 
 **For `/codeo:qc`.** Criterion 2 reads "a skill whose Haiku run differed keeps `model: sonnet`, and the issue says how it differed": the comment says how (Haiku's reports matched; it reads the closing-block template with Bash instead of Read). Whether that counts as "differed" is the plan's Q2 = A rule, answered by the engineer.
 
+### Round 2
+
+2026-11-15
+(send-back from qc.md round 1)
+
+**Built.** `CHANGELOG.md:11`, the one sentence qc round 1 found wrong, rewritten in a single commit (`53aa18f`). F1 (blocking) held: each skill ran 3 times per model on 2 cases (4 in total, 24 runs in all), not "on 4 cases"; checked against the plan's case list and the comment on #76. F2 (non-blocking) held: on `doctor-fail` item 5 Sonnet passed 1 of 3 and Haiku 3 of 3, so "matched on every item but one" was inaccurate; it now says "Haiku passed every item but one". Neither `model:` line, no other file, and no plan text changed. F3 and F4 are the plan's and need no change here. Overlap with #57 on `CHANGELOG.md` stays *proceed and coordinate* (qc.md Q2).
+
+**Build.** The `shell` suite's build `true` exited 0; `bash tests/run.sh` printed `all cases passed` (run as a check on the edit, not as grading).
+
+**Deviations.** None. The edit is one sentence, so no sub-skill dispatch was used: the plan's `subagent-driven-development` loop has nothing to split here.
+
 ## Log
 
 - 2026-11-14 — implemented: 4 tasks, 24 trial runs, comment on #76, `CHANGELOG.md` · cost: 25m · sonnet-5-5 116k in + 6.7M cached / 43k out
+- 2026-11-15 — round 2: fixed the CHANGELOG.md sentence (qc round 1 F1, F2) · cost: 4m · sonnet-5-5 33k in + 778k cached / 1k out
