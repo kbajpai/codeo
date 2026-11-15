@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1: back to `/codeo:plan`, findings F1-F3 blocking). The code follows round 1's plan; the plan guarded the wrong text for #74's third criterion and left `skills/qc/SKILL.md` contradicting the new `qc-verdict` rule. Q7 is open; the round-2 tasks are drafted once it is answered.
+Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1: back to `/codeo:plan`, F1-F3 blocking). Q7 is answered ((a): `qc` blocks a footprint gap from plan round 2); the round-2 plan is drafted at `.codeo/97/plan-draft.md` (five tasks) and waits for the engineer's approval; nothing is written under `docs/plans/` yet.
 
 ## Questions
 
@@ -72,6 +72,7 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 - **(c) Drop the `qc-verdict` rule** and keep only a fixture test. Removes the conflict, and with it the enforcement Q1 chose.
 
 **Answer:**
+(a) `qc` blocks it. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
@@ -106,7 +107,7 @@ What exploration found, so the plan does not re-ask it.
 ### Footprint
 
 ```
-files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/overlap.sh, tests/qc-verdict.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, skills/qc/SKILL.md, tests/qc-skill.test.sh, docs/plans/2026-11-15-docs-skill-wording-test-guard.md
+files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/overlap.sh, tests/qc-verdict.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, skills/qc/SKILL.md, tests/qc-skill.test.sh, docs/plans/2026-11-15-docs-skill-wording-test-guard.md, docs/plans/2026-11-15-docs-skill-wording-test-guard-round-2.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -129,7 +130,7 @@ sequenced:  none
 ### Footprint
 
 ```
-files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/overlap.sh, tests/qc-verdict.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, docs/plans/2026-11-15-docs-skill-wording-test-guard.md
+files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/overlap.sh, tests/qc-verdict.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, docs/plans/2026-11-15-docs-skill-wording-test-guard.md, docs/plans/2026-11-15-docs-skill-wording-test-guard-round-2.md
 wiki:       none
 exclusive:  none
 sequenced:  none
