@@ -22,5 +22,10 @@ for skill in "$root"/skills/*/SKILL.md; do
         fail "docs/skills.md still says $name adds nothing after its output"
 done
 
+for name in doctor setup; do
+    grep -qF 'Read the template with the Read tool, not with a Bash command.' "$root/skills/$name/SKILL.md" ||
+        fail "skills/$name/SKILL.md does not tell the model to read the closing-block template with the Read tool"
+done
+
 [ "$status" -eq 0 ] && echo "all cases passed"
 exit "$status"
