@@ -91,9 +91,9 @@
 | `issue:86` | Work in and end an sbx issue sandbox; filed 2026-11-15, no branch, board Status `none`; depends on #73's evaluation | leave in the backlog | 2026-11-15 |
 | `issue:87` | Dev container start script reports a `.codeo/active` that names no issue; filed 2026-11-15, board Status `none` | ready | 2026-11-15 |
 | `issue:88` | Dev container follow-ups from #57; filed 2026-11-15, board Status `none` | leave in the backlog | 2026-11-15 |
-| `qc:87:F1` | An unreadable `.codeo/active` is reported by the dev container start script as naming no issue | filed #91 | 2026-11-15 |
-| `qc:87:F2-F3` | One comment and one test left unclear in #87's change | filed #91 | 2026-11-15 |
-| `issue:91` | Report an unreadable `.codeo/active` truthfully; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `qc:87:F1` | An unreadable non-empty `.codeo/active` is reported as naming no issue (`grep` exits 2, the `!` fires the TODO) | filed #91 | 2026-11-15 |
+| `qc:87:F2-F3` | Step 3a comment misorders "spaces, tabs or `#`"; `start_hash_issue_line_is_a_held_lock` relies on `DS_REPO` and the `-f &&` in the arm are unexplained | filed #91 (one issue for F1-F3, related to #88) | 2026-11-15 |
+| `issue:91` | Report an unreadable `.codeo/active` truthfully, and clarify two spots from #87; filed 2026-11-15, board Status `none`; touches the same files as #88 | leave in the backlog | 2026-11-15 |
 | `implement:83:sync-main-comm` | `sync-main.sh` exits 1 after a clean merge when `sort` and `comm` order paths differently (`comm: … not in sorted order`) | filed #92 | 2026-11-15 |
 | `issue:92` | sync-main.sh exits 1 after a clean merge (sort/comm order); filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `qc:73:F32-F36` | sbx evaluation page and #86: image-digest wording (F32), doubled naming sentence (F34), missing follow-up rows and trial range (F35), inferred and leftover wording (F36) | filed #94 | 2026-11-15 |
