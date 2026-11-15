@@ -144,13 +144,22 @@ bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fi
 # 3a. The workflow lock: .codeo/active, taken by codeo's own lock.sh from the .codeo/<N>/init.md that
 # names this branch. The home container is on the base branch (.codeo/config.json's baseBranch, else
 # main) and takes none; a container that already holds the lock (a re-run) takes none again; a
-# detached HEAD names no branch, so it is a TODO. lock.sh's output is printed unchanged, except that
-# its `lock: TODO — …` lines become TODOs. The plugin is pinned and not ours: the `|| rc=$?` guard is
+# detached HEAD names no branch, so it is a TODO. A zero-byte .codeo/active holds no lock: it is removed
+# first (and said so), then the step runs as for a clone with no lock; a file with content is left alone.
+# When lock.sh exits 0 its output is printed unchanged, except that its `lock: TODO — …` lines become
+# TODOs; when it exits non-zero its output is not printed, the one failure TODO carries it. The plugin is pinned and not ours: the `|| rc=$?` guard is
 # for a crash or a changed interface after a pin bump, where a non-zero exit would otherwise end this
 # script under set -e before its TODO list.
 branch=$(git branch --show-current 2>/dev/null || true)
 base=$(jq -r '.baseBranch // "main"' .codeo/config.json 2>/dev/null || true)
 [[ -n $base ]] || base=main
+if [[ -f .codeo/active && ! -s .codeo/active ]]; then
+    if rm -f .codeo/active; then
+        say ".codeo/active was empty and held no lock: removed it"
+    else
+        add_todo ".codeo/active is empty and could not be removed: remove it, then re-run this script"
+    fi
+fi
 if [[ -s .codeo/active ]]; then
     : # a lock means the checkout is already bound to an issue, whatever HEAD is
 elif [[ -z $branch ]]; then
@@ -159,13 +168,15 @@ elif [[ $branch != "$base" ]]; then
     if codeo_root=$(bash .devcontainer/scripts/codeo-root.sh 2>/dev/null); then
         lock_rc=0
         lock_out=$(bash "$codeo_root/scripts/lock.sh" take container 2>&1) || lock_rc=$?
-        while IFS= read -r line; do
-            case $line in
-                "lock: TODO — "*) add_todo "${line#lock: TODO — }" ;;
-                '') ;;
-                *) echo "$line" ;;
-            esac
-        done <<<"$lock_out"
+        if ((lock_rc == 0)); then
+            while IFS= read -r line; do
+                case $line in
+                    "lock: TODO — "*) add_todo "${line#lock: TODO — }" ;;
+                    '') ;;
+                    *) echo "$line" ;;
+                esac
+            done <<<"$lock_out"
+        fi
         ((lock_rc == 0)) || add_todo "codeo's lock.sh failed (exit $lock_rc): ${lock_out//$'\n'/ / }"
     else
         add_todo "codeo is not installed, so no lock was taken: fix what plugins.sh printed above, then re-run this script"
