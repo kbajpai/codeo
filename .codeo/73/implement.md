@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is done: qc round 1 sent the change back for three claims on the page that were stronger than their evidence (F1 KVM, F2 read-only mount, F3 image) and eight smaller ones; all are fixed in `docs/dev-environment-sbx-evaluation.md`, and nothing is open. Next is `/codeo:qc`, a full pass from step 0. Still the engineer's: the cleanup of the test sandboxes, clones and Windows Git entries, and optionally `ls -l /dev/kvm` in the Ubuntu-24.04 distribution.
+Round 3 is done: qc round 2 sent the change back for three more claims stronger than their evidence (F13 the KVM sentence on #73, F14 the window-title "no equivalent", F15 U6's folder check) and six smaller ones; all are fixed, and nothing is open. Next is `/codeo:qc`, a full pass from step 0. Still the engineer's: the cleanup of the test sandboxes, clones and Windows Git entries.
 
 ## Questions
 
@@ -118,8 +118,24 @@ Plan: `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md`. Built from `main
 
 **Not changed, and why.** F12 (`plan.md`'s footprint lacks `sequenced:`) is `/codeo:plan`'s file, and F13 (`sync-main.sh` exiting 1 after a clean merge) is the plugin's script; neither is this change's to edit. The engineer may still run `ls -l /dev/kvm` in the Ubuntu-24.04 distribution; the page would then record it and the F1 wording could become a result.
 
+### Round 3
+
+2026-11-15
+(send-back from qc.md round 2)
+
+`sync-main.sh` reported `the branch already contains origin/main` (the round-2 merge `ac548e9` stands); `overlap.sh 73` printed nothing. Each finding was checked against the page, the trial records and `.devcontainer/` before any edit. F13-F16 and F18-F22 held. F17 was not applied: qc's own round 2 found #86's sentence supported by the printed `Image:` line. F12 (`plan.md`'s footprint) and F23 (`sync-main.sh`) are not this change's files.
+
+- **F13.** The result comment on #73 (`gh api repos/kbajpai/codeo/issues/comments/6887700427`, my own earlier comment) said "the Linux-in-WSL2 route has no KVM". Edited it to say the route was not tried, that an empty `lsmod | grep kvm` does not show KVM is unavailable on a WSL2 kernel where it is built in, and that whether `/dev/kvm` exists was not checked; re-read from GitHub afterwards and the new sentence is there.
+- **F14.** U13 now begins `Not tried:` and says `window-title.sh` only writes a workspace setting into the clone's `.vscode/settings.json`, so it could in principle run in the sandbox with the folder opened over Remote-SSH; the Recommendation says "The window title is not shown to work (U13, not tried)"; the T12 Result carries the same note.
+- **F15.** U6 describes the real check (the folder is the Docker name through `runArgs --name=${containerWorkspaceFolderBasename}`, and `folder-check.sh` checks it against the name the lock gives: `<codename>-<N>`, `<codename>-home` on the base branch, else a `todo:` line); the verdict is `Workaround: compare the sandbox name with the lock`, untried, part of #85.
+- **F16.** "no git identity" is now "no `user.name` was set (`user.email` was not checked)" in D7, U9, T7's Result and the Recommendation.
+- **F18-F22.** T4's time is `2m37.941s` as pasted; D2 gains T6 and D3 gains T9 in their Evidence cells; "Why not stay" separates what was tried from what is only cited and softens the naming claim; the condensed output blocks under T3, T7, T8 and T11 are labelled "Summary of the output (lines joined or shortened)"; the leftover wording (a doubled `sbx.exe` sentence, "later `tried T<n>, <date>`", a repeated U2 clause) is cleaned up.
+
+**Documentation pages changed:** only `docs/dev-environment-sbx-evaluation.md`; the other change is the #73 comment. **Build:** the `shell` suite's `build` is `true`. Checks run this round: no blank evidence cell; 28 rows, 22 `tried` and 6 `cited`, every row 7 fields wide; one `**Recommendation:** hybrid` line; no account name, email, token or organisation id on the page; `git diff --stat origin/main...HEAD -- .devcontainer skills` empty; `bash tests/run.sh` `all cases passed`.
+
 ## Log
 
+- 2026-11-15 — round 3: qc round 2 findings F13-F16 and F18-F22 fixed (page and the #73 comment), suite passes · cost: 5m · sonnet-5-5 91k in + 2.7M cached / 15k out
 - 2026-11-15 — round 2: qc round 1 findings F1-F11 fixed on the page, suite passes · cost: 6m · sonnet-5-5 98k in + 2.2M cached / 21k out
 - 2026-11-15 — implemented: tasks 1-7 done, follow-ups #85 and #86 filed · cost: 194m · sonnet-5-5 306k in + 15.9M cached / 118k out
 - 2026-11-14 — Q1 answered (C), T1 run, route A chosen · cost: unavailable until the hand-off
