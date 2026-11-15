@@ -7,8 +7,8 @@
 # through (a dangling one is created at its target), its mode is kept, and a title already current is
 # not rewritten.
 # Prints "window-title: <title>" on stdout. Every failure (not a repository, an unwritable
-# info/exclude or .vscode, a settings.json that is not valid JSON, JSONC with comments included, or
-# not a JSON object, which is left untouched) exits 1 with one "window-title: ..." line on stderr.
+# info/exclude or .vscode, a settings.json that is a directory or unreadable, or not valid JSON,
+# JSONC with comments included, or not a JSON object, which is left untouched) exits 1 with one "window-title: ..." line on stderr.
 # With --print it prints the title alone and writes nothing.
 #
 #   bash .devcontainer/scripts/window-title.sh [--print]
@@ -22,7 +22,7 @@ root=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/
 errf=$(mktemp) || die "could not create a temporary file"
 trap 'rm -f "$errf"' EXIT
 title=$(bash "$(dirname "${BASH_SOURCE[0]}")/container-name.sh" "$root" 2>"$errf") \
-    || die "could not name the container: $(sed ':a;N;$!ba;s/\n/ \/ /g;s/^container-name: //' "$errf")"
+    || die "could not name the container: $(sed 's/^container-name: //' "$errf" | sed ':a;N;$!ba;s/\n/ \/ /g')"
 
 if [[ ${1:-} == --print ]]; then
     echo "$title"
@@ -33,7 +33,7 @@ exclude=$(git -C "$root" rev-parse --git-path info/exclude) || die "could not lo
 [[ $exclude == /* ]] || exclude="$root/$exclude"
 msg="could not add .vscode/settings.json to $exclude"
 mkdir -p "$(dirname "$exclude")" 2>/dev/null || die "$msg"
-touch "$exclude" 2>/dev/null || die "$msg"
+[[ -e $exclude ]] || touch "$exclude" 2>/dev/null || die "$msg"
 grep -qxF '.vscode/settings.json' "$exclude" 2>/dev/null \
     || { echo '.vscode/settings.json' >> "$exclude"; } 2>/dev/null || die "$msg"
 
@@ -42,6 +42,8 @@ mkdir -p "$root/.vscode" 2>/dev/null || die "could not create $root/.vscode"
 # at its target).
 target=$(readlink -f -- "$root/.vscode/settings.json") || die "could not resolve $root/.vscode/settings.json"
 src=$target
+[[ ! -e $target || -f $target ]] || die "$target is not a regular file; left untouched"
+[[ ! -e $target || -r $target ]] || die "$target is not readable; left untouched"
 if [[ -e $target ]]; then
     kind=$(jq -rn '[inputs] | if length == 0 then "object" elif length == 1 then (.[0] | type) else "multi" end' "$target" 2>/dev/null || true)
     [[ -n $kind && $kind != multi ]] || die "$target is not valid JSON; left untouched"

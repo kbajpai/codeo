@@ -5,7 +5,7 @@
 # (the GitHub and Claude logins, a git identity (filled from the host ~/.gitconfig or GIT_AUTHOR_* when the volume lacks it), credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
 # The home container (on the base branch) takes no workflow lock; an issue container takes it with codeo's lock.sh from the init.md
-# on its branch, and its clone folder is checked against the lock. A .codeo/active that names no issue is reported and left alone.
+# on its branch, and its clone folder is checked against the lock. A .codeo/active that names no issue, or cannot be read, or is empty and cannot be removed, is reported and left alone.
 #
 #   bash .devcontainer/scripts/devcontainer-start.sh
 set -euo pipefail
@@ -15,7 +15,6 @@ need_login=()
 say() { echo "devcontainer-start: $*"; }
 add_todo() { todo+=("$1"); }
 
-# (The last of several lines for one mount point is the one in effect, hence >=.)
 # clone_on_named_volume <path>: succeeds when <path> lives on a Docker named volume. It takes the mount
 # that holds <path> (the longest mount point that is <path> or a parent of it) and checks that the mount's
 # root, field 4 of its mountinfo line, is /var/lib/docker/volumes/<name>/_data. A bind mount's root is the
@@ -25,6 +24,7 @@ clone_on_named_volume() {
     info=${CODEO_MOUNTINFO:-/proc/self/mountinfo}
     while read -r _ _ _ root mnt _; do
         [[ -n $mnt ]] || continue
+        # (The last of several lines for one mount point is the one in effect, hence >=.)
         if [[ $path == "$mnt" || $path == "${mnt%/}"/* ]] && ((${#mnt} >= best_len)); then
             best_len=${#mnt}
             best_root=$root
@@ -45,12 +45,21 @@ if [[ $(stat -c %u "$clone" 2>/dev/null || true) != "$(id -u)" ]]; then
         sudo chown -R "$(id -u):$(id -g)" "$clone" ||
             add_todo "the clone is not owned by you and chown failed: run sudo chown -R $(id -u):$(id -g) $clone"
     else
-        add_todo "the clone at $clone is not owned by you and is not on a Docker volume, so it was left alone: run 'sudo chown -R $(id -u):$(id -g) $clone' yourself if that is what you want"
+        add_todo "the clone at $clone is not owned by you and is not on a Docker volume, so it was left alone: under rootless Docker or Podman the user namespace mapping makes host files look owned by another user, changing that ownership would change the host's files, and git is already told to trust the clone"
     fi
 fi
 
 # 2. Work from the top of the clone.
-cd "$(git -C "$clone" rev-parse --show-toplevel)" || { add_todo "could not enter the clone at $clone"; }
+# An empty result is a failure here, not `cd ""`. When git cannot find a top level (no .git in the clone), the clone
+# folder itself is the working directory, so every later step, which uses relative paths, runs there and never in
+# the caller's directory; that is one TODO of its own. Only when the folder cannot be entered either is it "could not enter".
+if top=$(git -C "$clone" rev-parse --show-toplevel 2>/dev/null) && [[ -n $top ]] && cd "$top"; then
+    :
+elif cd "$clone"; then
+    add_todo "git could not find the top level of the clone at $clone, so the steps ran from that folder"
+else
+    add_todo "could not enter the clone at $clone"
+fi
 
 # 2b. Executable scripts. Some container filesystems (a Windows or macOS host mount) set core.fileMode=false, and then
 # `git add` records every new script as 100644. This runs only on a clone that is on a Docker volume, as step 1
@@ -65,17 +74,20 @@ cd "$(git -C "$clone" rev-parse --show-toplevel)" || { add_todo "could not enter
 # restore_modes: chmod +x each tracked file the index records as 100755 but the disk has as 100644 (what a filesystem
 # that dropped the bit did), then list again. Only that direction: a file the disk has executable and the index does
 # not record is the developer's, and stays. The listing (`git -c core.fileMode=true diff --raw -z --no-renames`) goes
-# through a temp file in the git dir, because bash drops NUL bytes from a command substitution. Prints nothing; sets
-# restored_count, restored_paths and left_paths (the paths still differing). Returns 0 when none are left, 1 when
-# some are, 2 when a listing failed (the temp file is removed on every path).
+# through a temp file in the git dir (kept in modes_list, which the EXIT trap removes when the script ends), because bash drops NUL
+# bytes from a command substitution; its stderr goes to list_err. Prints nothing; sets kept_paths (executable on disk,
+# 100644 in the index), restored_count, restored_paths and left_paths (the paths still differing). Returns 0 when none
+# are left, 1 when some are, 2 when a listing failed.
 restore_modes() {
-    local meta path old new list
+    local meta path old new
     restored_count=0
     restored_paths=()
     left_paths=()
-    list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX" 2>/dev/null) || return 2
-    if ! git -c core.fileMode=true diff --raw -z --no-renames >"$list" 2>/dev/null; then
-        rm -f -- "$list"
+    kept_paths=()
+    list_err=
+    modes_list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX" 2>/dev/null) || return 2
+    if ! list_err=$(git -c core.fileMode=true diff --raw -z --no-renames 2>&1 >"$modes_list"); then
+        list_err=${list_err//$'\n'/ / }
         return 2
     fi
     while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
@@ -85,19 +97,25 @@ restore_modes() {
             restored_count=$((restored_count + 1))
             restored_paths+=("$path")
         fi
-    done <"$list"
-    if ! git -c core.fileMode=true diff --raw -z --no-renames >"$list" 2>/dev/null; then
-        rm -f -- "$list"
+    done <"$modes_list"
+    if ! list_err=$(git -c core.fileMode=true diff --raw -z --no-renames 2>&1 >"$modes_list"); then
+        list_err=${list_err//$'\n'/ / }
         return 2
     fi
     while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
         read -r old new _ <<<"${meta#:}"
-        [[ $old == 100755 && $new == 100644 ]] || continue
-        left_paths+=("$path")
-    done <"$list"
-    rm -f -- "$list"
+        if [[ $old == 100755 && $new == 100644 ]]; then
+            left_paths+=("$path")
+        elif [[ $old == 100644 && $new == 100755 ]]; then
+            kept_paths+=("$path")
+        fi
+    done <"$modes_list"
     ((${#left_paths[@]} == 0)) || return 1
 }
+
+# The listing's temp file is removed on every exit, an interrupt included.
+modes_list=
+trap 'rm -f -- "${modes_list:-}"' EXIT
 
 if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
     if ! clone_on_named_volume "$clone"; then
@@ -107,16 +125,20 @@ if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; t
             if [[ ! -x $filemode_probe ]] && chmod u+x -- "$filemode_probe" 2>/dev/null && [[ -x $filemode_probe ]] \
                 && chmod u-x -- "$filemode_probe" 2>/dev/null && [[ ! -x $filemode_probe ]]; then
                 rm -f -- "$filemode_probe"
+                filemode_scope=$(git config --show-scope --get core.fileMode 2>/dev/null) && filemode_scope=${filemode_scope%%[[:space:]]*} || filemode_scope=local
                 restore_rc=0
                 restore_modes || restore_rc=$?
                 if ((restore_rc == 2)); then
-                    add_todo "core.fileMode is false and the tracked files' modes could not be listed: stage each new script with git update-index --chmod=+x <file>"
+                    add_todo "core.fileMode is false and the tracked files' modes could not be listed${list_err:+ ($list_err)}: stage each new script with git update-index --chmod=+x <file>"
                 elif ((restore_rc == 1)); then
                     left_list=$(printf '%s, ' "${left_paths[@]:0:5}")
                     left_list=${left_list%, }
                     ((${#left_paths[@]} <= 5)) || left_list+=" and $((${#left_paths[@]} - 5)) more"
                     add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
                 elif git config core.fileMode true; then
+                    if [[ $filemode_scope != local ]]; then
+                        say "core.fileMode was false from the $filemode_scope config: this clone's config now overrides it with true"
+                    fi
                     if ((restored_count > 0)); then
                         restored_list=$(printf '%s, ' "${restored_paths[@]:0:5}")
                         restored_list=${restored_list%, }
@@ -124,6 +146,12 @@ if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; t
                         say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) ($restored_list) to the index's and set it to true for this clone"
                     else
                         say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
+                    fi
+                    if ((${#kept_paths[@]} > 0)); then
+                        kept_list=$(printf '%s, ' "${kept_paths[@]:0:5}")
+                        kept_list=${kept_list%, }
+                        ((${#kept_paths[@]} <= 5)) || kept_list+=" and $((${#kept_paths[@]} - 5)) more"
+                        say "executable on disk but 100644 in the index, so left as they are: $kept_list; they show as a mode change, and git add -A would commit them as executable"
                     fi
                 else
                     add_todo "core.fileMode is false and could not be turned on: run git config core.fileMode true, or stage new scripts with git update-index --chmod=+x"
@@ -145,8 +173,11 @@ bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fi
 # names this branch. The home container is on the base branch (.codeo/config.json's baseBranch, else
 # main) and takes none; a container that already holds the lock (a re-run) takes none again; a
 # detached HEAD names no branch, so it is a TODO. A zero-byte .codeo/active holds no lock: it is removed
-# first (and said so), then the step runs as for a clone with no lock. A file with content that has no line of the form `issue:`, then spaces, tabs or `#`, then digits
-# (the rule container-name.sh reads the number with) is a TODO on any branch: it is left as it is and takes no lock. A file that does name an issue is a held lock and is left alone.
+# first (and said so), then the step runs as for a clone with no lock; if it cannot be removed that is
+# one TODO and no lock is taken. A file with content that has no line of the form `issue:`, optional
+# whitespace, optional `#`s, then digits (the rule container-name.sh reads the number with) is a TODO on
+# any branch: it is left as it is and takes no lock. So is a file grep cannot read. A file that does name
+# an issue is a held lock and is left alone.
 # When lock.sh exits 0 its output is printed unchanged, except that its `lock: TODO — …` lines become
 # TODOs; when it exits non-zero its output is not printed, the one failure TODO carries it. The plugin is pinned and not ours: the `|| rc=$?` guard is
 # for a crash or a changed interface after a pin bump, where a non-zero exit would otherwise end this
@@ -154,17 +185,32 @@ bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fi
 branch=$(git branch --show-current 2>/dev/null || true)
 base=$(jq -r '.baseBranch // "main"' .codeo/config.json 2>/dev/null || true)
 [[ -n $base ]] || base=main
+# A regular, non-empty .codeo/active is searched once for the rule container-name.sh reads the number with
+# (`issue:`, optional whitespace, optional `#`s, then digits). active_rc stays empty when there is no such
+# file, else it is grep's status: 0 names an issue, 1 does not, 2 cannot be read. The `-f &&` is there because
+# a directory is out of scope of #87: `-f` keeps it out of the new TODO.
+active_rc=
+if [[ -f .codeo/active && -s .codeo/active ]]; then
+    active_rc=0
+    grep -Eq '^issue:[[:space:]]*#*[0-9]+' .codeo/active 2>/dev/null || active_rc=$?
+fi
+empty_stuck=
 if [[ -f .codeo/active && ! -s .codeo/active ]]; then
     if rm -f .codeo/active; then
         say ".codeo/active was empty and held no lock: removed it"
     else
+        empty_stuck=1
         add_todo ".codeo/active is empty and could not be removed: remove it, then re-run this script"
     fi
 fi
-if [[ -f .codeo/active && -s .codeo/active ]] && ! grep -Eq '^issue:[[:space:]]*#*[0-9]+' .codeo/active 2>/dev/null; then
+if [[ $active_rc == 1 ]]; then
     add_todo ".codeo/active names no issue, so it holds no usable lock: look at it, remove it if it is not yours, then re-run this script"
+elif [[ -n $active_rc ]] && ((active_rc >= 2)); then
+    add_todo ".codeo/active could not be read, so it may hold a lock: fix its permissions or remove it, then re-run this script"
 elif [[ -s .codeo/active ]]; then
-    : # a lock means the checkout is already bound to an issue, whatever HEAD is
+    : # a directory, or a held lock: the checkout is already bound to an issue, whatever HEAD is
+elif [[ -n $empty_stuck ]]; then
+    : # the empty file could not be removed and lock.sh would refuse it; its own TODO is already listed
 elif [[ -z $branch ]]; then
     add_todo "HEAD is detached, so no branch names an issue: check out the issue's branch, then re-run this script"
 elif [[ $branch != "$base" ]]; then
@@ -257,16 +303,23 @@ fi
 # already in the volume config is never changed, a source counts only when it holds a non-empty value, and
 # nothing but these two keys is read from the host file. A seeded value is not printed.
 identity_missing() { [[ -z $(git config --global --get "$1" 2>/dev/null || true) ]]; }
-# VS Code copies the host ~/.gitconfig in alongside postCreateCommand, so it can land after this step starts: when a
-# value is missing and the file is not there yet, wait for it, once a second, for at most CODEO_GITCONFIG_WAIT seconds
-# (default 10; a value that is not a whole number is taken as 10, so a typo cannot stop this script). A volume that already holds the identity never waits.
+# VS Code copies the host ~/.gitconfig in alongside postCreateCommand, so it can land after this step starts, and it can
+# exist empty or half-written first: when a value is missing, wait until the file is there, not empty, and its size and
+# mtime are the same on two reads 0.2 s apart, for at most CODEO_GITCONFIG_WAIT seconds (default 10; a value that is not a
+# whole number is taken as 10, so a typo cannot stop this script; 0 does not wait). A file that never fills falls
+# through to the environment. A volume that already holds the identity never waits.
+gitconfig_stamp() { stat -c '%s %y' "$HOME/.gitconfig" 2>/dev/null || true; }
 if identity_missing user.name || identity_missing user.email; then
-    waited=0
+    ticks=0
     wait_max=${CODEO_GITCONFIG_WAIT:-10}
     [[ $wait_max =~ ^[0-9]+$ ]] || wait_max=10
-    while [[ ! -e $HOME/.gitconfig ]] && ((waited < 10#$wait_max)); do
-        sleep 1
-        waited=$((waited + 1))
+    stamp=$(gitconfig_stamp)
+    while ((ticks < 10#$wait_max * 5)); do
+        sleep 0.2
+        ticks=$((ticks + 1))
+        now=$(gitconfig_stamp)
+        if [[ -s $HOME/.gitconfig && $now == "$stamp" ]]; then break; fi
+        stamp=$now
     done
 fi
 for pair in user.name:GIT_AUTHOR_NAME user.email:GIT_AUTHOR_EMAIL; do
@@ -299,7 +352,8 @@ fi
 # While CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY is set the check is skipped: the variable overrides any login, so
 # `claude auth login` would not help, and the "unset it" TODO below is the advice.
 if [[ -z ${CLAUDE_CODE_OAUTH_TOKEN:-} && -z ${ANTHROPIC_API_KEY:-} ]]; then
-    if claude_status=$(claude auth status 2>&1); then
+    # Run from $HOME, the way plugins.sh's claude_out does, so claude does not touch the clone.
+    if claude_status=$(cd "$HOME" && claude auth status 2>&1); then
         auth_method=$(jq -r '.authMethod // empty' <<<"$claude_status" 2>/dev/null || true)
         if [[ -n $auth_method && $auth_method != "claude.ai" ]]; then
             add_todo "Claude Code is logged in with $auth_method, not claude.ai, and Remote Control needs claude.ai: run claude auth login"
