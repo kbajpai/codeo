@@ -3,10 +3,9 @@
 # function named in the final cases=( ... ) array; add a case by writing a function and listing it.
 # Today it checks .codeo/config.json: the codename, the plugin pin, and that the shell suite's paths
 # cover .devcontainer/**. It also checks .devcontainer/devcontainer.json: it is valid JSON that runs as
-# the dev user and names the Dockerfile and start script, caps memory and cpus, names the container after its
-# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that, memory and cpus), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
-# It also checks .devcontainer/Dockerfile
-# (over its non-comment lines): Ubuntu 26.04 with the tools codeo needs, user dev at UID 1000 with the
+# the dev user and names the Dockerfile and start script, caps memory, names the container after its
+# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that and the memory cap), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
+# It also checks .devcontainer/Dockerfile (over its non-comment lines): Ubuntu 26.04 with the tools codeo needs, user dev at UID 1000 with the
 # gh config directory, and none of the tools the image deliberately leaves out. Finally it runs
 # .devcontainer/scripts/plugins.sh in a scratch repo against stub claude and git executables: a fresh
 # machine gets both plugins, a re-run changes nothing, a new pin reinstalls codeo, an unreachable pin
@@ -67,15 +66,32 @@ devcontainer_json_is_valid_and_runs_as_dev() {
         || fail 'postCreateCommand does not run devcontainer-start.sh'
 }
 
-run_args_cap_memory_and_cpus() {
-    jq -e '.runArgs | (index("--memory=4g") != null) and (index("--cpus=2") != null)' "$(dc_json)" >/dev/null \
-        || fail 'runArgs does not carry both --memory=4g and --cpus=2'
+# run_args_are_exact <file>: succeeds only when runArgs is exactly the name and the memory cap, nothing more.
+run_args_are_exact() {
+    # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
+    jq -e '.runArgs == ["--name=${containerWorkspaceFolderBasename}","--memory=4g"]' "$1" >/dev/null
+}
+
+run_args_cap_memory_only() {
+    jq -e '.runArgs | (index("--memory=4g") != null) and (map(select(startswith("--cpus"))) | length == 0)' "$(dc_json)" >/dev/null \
+        || fail 'runArgs does not carry --memory=4g, or it carries a --cpus entry'
 }
 
 run_args_name_the_container_after_its_clone() {
-    # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
-    jq -e '.runArgs == ["--name=${containerWorkspaceFolderBasename}","--memory=4g","--cpus=2"]' "$(dc_json)" >/dev/null \
-        || fail 'runArgs is not exactly --name=${containerWorkspaceFolderBasename}, --memory=4g, --cpus=2'
+    run_args_are_exact "$(dc_json)" \
+        || fail 'runArgs is not exactly --name=${containerWorkspaceFolderBasename}, --memory=4g'
+}
+
+run_args_reject_an_extra_or_duplicate_entry() {
+    local tmp extra
+    tmp=$(mktemp -d)
+    for extra in --memory=8g --cpus=1; do
+        jq --arg e "$extra" '.runArgs += [$e]' "$(dc_json)" >"$tmp/devcontainer.json"
+        if run_args_are_exact "$tmp/devcontainer.json"; then
+            fail "runArgs with $extra appended was accepted as exact"
+        fi
+    done
+    rm -rf "$tmp"
 }
 
 post_start_command_reruns_the_title() {
@@ -1935,8 +1951,9 @@ scripts_are_committed_executable() {
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
-    run_args_cap_memory_and_cpus
+    run_args_cap_memory_only
     run_args_name_the_container_after_its_clone
+    run_args_reject_an_extra_or_duplicate_entry
     post_start_command_reruns_the_title
     volumes_hold_the_gh_login_and_the_git_config
     git_config_global_points_into_the_git_volume
