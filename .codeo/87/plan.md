@@ -32,6 +32,15 @@ Read before drafting, so the plan does not re-ask it:
 - The `shell` suite has no `filter`; the proof of a task is the whole `bash tests/run.sh`.
 - No overlay section for `plan` (`plan-shape`, `proof-of-done`, `wiki-rules` all exit 3); no invariants document, no shared environment, no `wiki` module, no `resources[]`.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, tests/devcontainer.test.sh, .devcontainer/README.md, CHANGELOG.md, docs/plans/2026-11-15-report-lock-file-naming-no-issue.md
+wiki:       none
+exclusive:  none
+sequenced:  none — CHANGELOG.md overlaps #83; proceed and coordinate (Q1)
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
