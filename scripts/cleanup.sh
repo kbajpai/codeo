@@ -10,8 +10,11 @@
 #       Proofs, in order:
 #           issue         the issue's state is closed
 #           pull-request  done/<N>/close.md has a `#<number> <url>` line and that PR has a merged_at
-#           branch        the PR's head branch is gone from origin
+#           branch        the PR's head branch is gone from origin (an empty or null head
+#                         branch fails)
 #           dossier       no origin branch still has a .codeo/<N>/ directory (.codeo/done/<N>/ does not count)
+#           lease         no lease is held and no wait is recorded for the issue on the intake branch
+#                         (intake.sh lease list --tsv, read once after the fetch; unreadable stops the script)
 #           name          the overlay's name template, pattern and command are all present, and the expanded
 #                         name matches the pattern. The only place a command is built.
 #
@@ -36,6 +39,8 @@ git fetch -q --prune origin || die "fetch failed; nothing proven"
 git config --get-all remote.origin.fetch | grep -Eqx '\+?refs/heads/\*:refs/remotes/origin/\*' ||
     die "origin's fetch refspec does not cover every branch; nothing proven"
 base_sha=$(git rev-parse "origin/$base") || die "no origin/$base"
+# Every lease and wait on the intake branch, read once: held|waiting TAB resource TAB issue TAB by TAB since.
+leases=$(bash "$CODEO_PLUGIN_ROOT/scripts/intake.sh" lease list --tsv </dev/null 2>/dev/null) || die "could not read the leases"
 
 # The overlay body, or nothing when there is none.
 overlay=
@@ -68,7 +73,8 @@ first_failed_proof() {
     info=$(bash "$github" pr get "$pr" </dev/null) || die "could not read pull request #$pr"
     [[ -n $(jq -r '.merged_at // empty' <<<"$info") ]] || { echo pull-request; return; }
 
-    ref=$(jq -r '.head_ref' <<<"$info")
+    ref=$(jq -r '.head_ref // empty' <<<"$info")
+    [[ -n $ref && $ref != null ]] || { echo branch; return; }
     # From the refs the fetch above just pruned, never ls-remote: a failed ls-remote prints nothing and would read as "gone".
     ! git rev-parse --verify -q "refs/remotes/origin/$ref" >/dev/null || { echo branch; return; }
 
@@ -76,6 +82,9 @@ first_failed_proof() {
         sha=$(git rev-parse "$ref")
         ! git cat-file -e "$sha:$state_rel/$n" 2>/dev/null || { echo dossier; return; }
     done < <(git for-each-ref --format='%(refname)' refs/remotes/origin | grep -v '^refs/remotes/origin/HEAD$' || true)
+
+    # The workflow let go of its leases: no held lease and no wait names the issue.
+    ! awk -F'\t' -v n="$n" '$3 == n { found = 1 } END { exit !found }' <<<"$leases" || { echo lease; return; }
 
     echo ok
 }

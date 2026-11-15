@@ -19,7 +19,7 @@ host, in a shell.
 The proof and the command both come from `bash "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup.sh"`: it fetches `origin`, lists the
 issues under `.codeo/done/` on the base branch, and checks for each that the issue is closed, the
 pull request in its `close.md` is merged, the pull request's branch is gone from `origin`, and no
-branch on `origin` still carries its dossier.
+branch on `origin` still carries its dossier, and the issue holds no lease and waits for none.
 <!-- point: cleanup/removal-command -->
 The project's `removal-command` point supplies the container's name and the command: the script reads
 it through `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" cleanup removal-command` and alone expands it. With no
@@ -47,7 +47,7 @@ is the container the message names.
    line as the script printed it:
    - **Proven**, with the command to run. A `-` means the issue is finished and the project has no
      removal command for it.
-   - **Not proven**, with the failed proof (`issue`, `pull-request`, `branch`, `dossier` or `name`)
+   - **Not proven**, with the failed proof (`issue`, `pull-request`, `branch`, `dossier`, `lease` or `name`)
      and no command.
    <!-- rule: cleanup-02 -->
    A removal command is printed only for an issue the script proved. An issue that failed a proof
@@ -63,8 +63,7 @@ is the container the message names.
 2. **Say what the proof cannot see.** Every time, even when nothing was proven:
    - Unpushed work in a clone is invisible from here. The proof looks at `origin` only.
    - The proofs need a clone that fetches every branch of `origin`; a clone limited to some branches stops with a message and proves nothing.
-   - The commands rely on `close.md` having recorded a clean tree with the tip equal to the pull
-     request's head; a clone changed after that is not covered.
+   - Nothing `origin` holds records whether a clone was left clean, or whether `/codeo:close` ran to its end there: the lock lives only in that clone. A lease the issue still holds is the one trace this proof can see, and it lists the issue as not proven.
    - The commands run on the host, in a shell, and only after `git status` in that clone shows
      nothing left to lose.
 
@@ -87,7 +86,7 @@ is the container the message names.
   listing, issues and pull requests, through the script.
 - **Writes** `.codeo/intake/cleanup/` — the run's record — committed to `codeo/intake` through
   `intake.sh`, never to the checked-out branch.
-- **Never touches** the lock, any dossier, any branch, issue, board or pull request, or the
+- **Never touches** the lock, any dossier, any branch other than `codeo/intake`, issue, board or pull request, or the
   container engine.
 - **Hands off to** nobody: the printed commands are the engineer's to run, on the host.
 

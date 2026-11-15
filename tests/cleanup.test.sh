@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Exercises scripts/cleanup.sh on a scratch bare origin plus clone and a stubbed `gh api`:
-# each proof failing in turn, the overlay's name check, and that nothing is ever run.
+# each proof failing in turn (issue, pull-request, branch, dossier, lease, name), the overlay's name check, and that nothing is ever run.
 # The overlay body arrives through CODEO_CLEANUP_REMOVAL, which the script reads before overlay.sh.
 # Touches no real git config and makes no network call.
 #
@@ -116,7 +116,7 @@ run_cleanup() {
 body='Opened.
 #41 https://github.com/o/n/pull/41'
 
-case_desc="all four proofs pass"
+case_desc="all five proofs pass"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 CODEO_CLEANUP_REMOVAL=$overlay
@@ -200,6 +200,75 @@ setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 push_branch other/thing 13
 assert_eq "line" "12${tab}proven${tab}$want_cmd" "$(run_cleanup)"
+
+# A lease on origin's codeo/intake branch: push_lease <held|waiting> <resource> <N>
+push_lease() {
+    local kind=$1 resource=$2 n=$3 t file
+    t=$(mktemp -d "$scratch_root/lease.XXXXXX")
+    git clone -q "$(git -C "$REPO_WORK" remote get-url origin)" "$t" 2>/dev/null
+    if git -C "$t" rev-parse -q --verify origin/codeo/intake >/dev/null; then
+        git -C "$t" checkout -q -B codeo/intake origin/codeo/intake
+    else
+        git -C "$t" checkout -q --orphan codeo/intake
+        git -C "$t" rm -rqf . 2>/dev/null || true
+    fi
+    if [[ $kind == held ]]; then file=$t/.codeo/intake/leases/$resource.md; else file=$t/.codeo/intake/leases/waiting/$resource-$n.md; fi
+    mkdir -p "$(dirname "$file")"
+    printf 'issue:   #%s\nbranch:  feat/%s\nby:      someone@example.com\nsince:   2026-01-01T00:00:00Z\npurpose: p\n' "$n" "$n" > "$file"
+    git -C "$t" add -A
+    git -C "$t" commit -q -m "lease $kind"
+    git -C "$t" push -q origin codeo/intake
+}
+
+case_desc="a lease the issue holds on the intake branch"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+push_lease held dev 12
+assert_eq "line" "12${tab}failed${tab}lease" "$(run_cleanup)"
+
+case_desc="a wait the issue has recorded"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+push_lease waiting dev 12
+assert_eq "line" "12${tab}failed${tab}lease" "$(run_cleanup)"
+
+case_desc="another issue's lease does not fail this one; the intake branch is read once"
+setup_repo "12:$body" "13:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+fixture 13 closed 42 2026-01-01T00:00:00Z feat/13
+push_lease held dev 13
+assert_eq "lines" "12${tab}proven${tab}$want_cmd
+13${tab}failed${tab}lease" "$(run_cleanup)"
+
+case_desc="no intake branch at all: the issue is still proven"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+assert_eq "line" "12${tab}proven${tab}$want_cmd" "$(run_cleanup)"
+
+case_desc="an unreadable lease list stops the script"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+fake_plugin=$scratch_root/plugin-no-intake
+rm -rf "$fake_plugin"
+mkdir -p "$fake_plugin"
+cp -r "$plugin_src/scripts" "$plugin_src/lib" "$fake_plugin"/
+printf '#!/usr/bin/env bash\nexit 1\n' > "$fake_plugin/scripts/intake.sh"
+rc=0
+err=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$fake_plugin/scripts/cleanup.sh" 2>&1 >"$scratch_root/out.txt") || rc=$?
+assert_eq "exit non-zero" "yes" "$([[ $rc -ne 0 ]] && echo yes || echo no)"
+assert_eq "stderr" "cleanup: could not read the leases" "$err"
+assert_eq "stdout empty" "" "$(cat "$scratch_root/out.txt")"
+rm -rf "$fake_plugin"
+
+case_desc="a pull request whose head ref is null fails the branch proof"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+printf '{"state":"closed","merged_at":"2026-01-01T00:00:00Z","head":{"ref":null}}' > "$GH_STUB_DIR/GET_repos_o_n_pulls_41.json"
+assert_eq "line" "12${tab}failed${tab}branch" "$(run_cleanup)"
+
+case_desc="a pull request whose head ref is empty fails the branch proof"
+printf '{"state":"closed","merged_at":"2026-01-01T00:00:00Z","head":{"ref":""}}' > "$GH_STUB_DIR/GET_repos_o_n_pulls_41.json"
+assert_eq "line" "12${tab}failed${tab}branch" "$(run_cleanup)"
 
 for bad in codeo-home codeo-gh codeo-git; do
     case_desc="name template expands to $bad"

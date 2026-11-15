@@ -15,6 +15,10 @@ text=$(cat "$skill") || exit 1
 for needle in 'cleanup.sh' 'git status' 'unpushed work' 'intake.sh" commit cleanup'; do
     grep -qF -- "$needle" <<<"$text" || check_fail "the skill does not contain: $needle"
 done
+grep -qF 'the lock lives only in that clone' "$skill" || check_fail "the skill does not say where the lock lives"
+grep -qF 'any branch other than `codeo/intake`' "$skill" || check_fail "the hand-off does not name the intake branch exception"
+! grep -qF 'recorded a clean tree' "$skill" || check_fail "the skill still claims close.md recorded a clean tree"
+grep -qF '`issue`, `pull-request`, `branch`, `dossier`, `lease` or `name`' "$skill" || check_fail "step 1 does not list the five proofs"
 grep -qF '/codeo:init #<M>' "$skill" || check_fail "the closing block does not name /codeo:init #<M>"
 ! grep -qF '/codeo:init #<N>' "$skill" || check_fail "the closing block still names /codeo:init #<N>"
 ! grep -qiw 'docker' "$skill" || check_fail "the skill names the container engine"
