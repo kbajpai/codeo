@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written: the build and the suite pass, round 1's three blocking findings are fixed, and the review found three more claims stronger than their evidence (F13 the KVM claim still on #73, F14 the window-title "no equivalent", F15 U6's folder check). The change goes back to `/codeo:implement`.
+Round 3 is written: the build and the suite pass, round 2's blocking findings are fixed, and the review found two more claims stronger than their evidence (F24 a sandbox name "cannot be reused", F25 U8 marked tried for git wiring that was not run) plus seven smaller ones. The change goes back to `/codeo:implement`.
 
 ## Questions
 
@@ -112,7 +112,50 @@ Declined by the reviewer, left to the engineer: whether hybrid is the right choi
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-15
+
+**Commands run** (project root, on `f414f7f`: the round-3 implement commit; the branch already contained `origin/main`):
+- `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`, exit 0. `overlap.sh 73` and `overlap.sh --outside 73`: no output.
+- `git diff origin/main...HEAD --stat`: 7 files, 1142 insertions: `.codeo/73/{implement,init,issue,plan,qc}.md`, `docs/dev-environment-sbx-evaluation.md`, `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md`.
+- `scope.sh origin/main HEAD`: `suite shell needed for unclassified paths:` the five `.codeo/73/*.md` files, then `suite.shell=true`; no `deploy=` line (no environment).
+- Build (`shell`: `true`): exit 0. `bash tests/run.sh`: `all cases passed`, exit 0.
+- `overlay.sh qc invariants-extra` and `wiki-rules`: exit 3 (none). `git diff --stat origin/main...HEAD -- .devcontainer skills`: empty.
+- Page checks: no blank Evidence cell; 28 rows (22 `tried`, 6 `cited`), each row 7 fields wide; one `**Recommendation:** hybrid` line; no email, token, organisation id or username on the page. `gh issue view 85` and `86`: both `OPEN`. #73's last comment now says the Linux-in-WSL2 route "was not tried" and links #85 and #86.
+- Independent review (opus, `QC review:`, given the criteria, the range `aaf4883..f414f7f` and the instruction to compare the #73 comment with the page): "With fixes", no Critical findings, two Important, seven Minor.
+
+**Round 2's blocking findings, rechecked.** F13 (blocking in round 2) — fixed: the #73 comment no longer asserts "no KVM". F14 (blocking in round 2) — fixed: U13 begins `Not tried:` and the Recommendation says the window title is not shown to work. F15 (blocking in round 2) — fixed: U6 describes the real check and is a workaround. F16, F18-F22 (non-blocking in round 2) — fixed.
+
+**Acceptance criteria**
+
+| # | Criterion | Settled by | Verdict |
+|---|---|---|---|
+| 1 | A written comparison exists, covering every driver and requirement, each point marked tried or cited | `docs/dev-environment-sbx-evaluation.md`: D1-D10, U1-U18, 22 `tried` and 6 `cited`, no blank cell | not met — U8 is marked `tried` for work that was not run (F25), and D3 states a limit that T8 disproves (F24) |
+| 2 | Every duty has an equivalent, a workaround or "no equivalent" | U1-U18 each carry a verdict | met — U8's verdict overstates (F25), and U13 and U16 are worded off the three labels (F27, F29), non-blocking |
+| 3 | States whether sbx runs on Windows + WSL2, with evidence | `## Host`: `yes, partly`, with the T1-T3 output; the #73 comment agrees | met — "partly" is not defined (F31) |
+| 4 | One recommendation and its rationale | one `**Recommendation:** hybrid` line | met |
+| 5 | Follow-up issues filed and linked | #85 and #86 open; linked on the page and in a comment on #73 | met — their wording is stronger than the page in two places (F26) |
+| 6 | `.devcontainer/` and the skills unchanged | `git diff --stat origin/main...HEAD -- .devcontainer skills` empty | met |
+
+**Documentation check.** The only page is the new one; no existing page describes behaviour this change alters. The reviewer checked the page's account of `.devcontainer/` at HEAD (sudo at `Dockerfile:37`, `runArgs`, the volumes, the three extensions, the step numbering, the `REMOTE_CONTAINERS` gate in `session-title.sh`, the `~/.claude` note in the README) and found it accurate.
+
+**Findings**
+
+- **F24 — blocking, `/codeo:implement`'s.** `docs/dev-environment-sbx-evaluation.md` D3 (line ~78) says "A sandbox name cannot be reused (`sandbox 'codeo-b' already exists`)", and the Recommendation counts it as a cost of `codeo-<N>` naming. T8 removed `codeo-a` and then created `codeo-a` again, which worked (`real 0m13.078s`); T9 shows only that `create` with the name of a sandbox that exists fails. A name is unique among existing sandboxes and free again after `sbx rm`. Fix both places, and the T9 Result sentence if it says the same.
+- **F25 — blocking, `/codeo:implement`'s.** U8 (line ~100) is "Equivalent, tried" for a duty that is `gh auth setup-git` followed by a check that the token has the project scope. T6 shows only that `gh auth status` inside the sandbox reports a login with the `project` scope; the row itself says the start script's check was not run, and neither `gh auth setup-git` nor a push or authenticated fetch from inside a sandbox was run. The hybrid depends on getting commits out of a `--clone` sandbox by pushing (D3, T8, #86), so a reader would take "tried" to cover it. Split the verdict: the `gh` login and scope are tried (T6); git-over-HTTPS credential wiring and a push from a sandbox are not tried, and say which issue covers the push check (#85 or #86).
+- **F26 — non-blocking.** #86's body says "There is no window title (T12)" and #85's says "so there is no git identity (T7)"; the page was corrected to "not tried" and "no `user.name` was set (`user.email` was not checked)". Bring both issue bodies in line (`gh issue edit`).
+- **F27 — non-blocking.** U13 opens "Not tried:", which is none of the three labels the criterion names; the row already describes a candidate, so label it "Workaround, untried:". The clause "the sandbox set no window title" appears nowhere in the T12 record (it says only that `window.title` was not tried); drop it.
+- **F28 — non-blocking.** U6 says "otherwise a `todo:` line"; with no lock and off the base branch, `folder-check.sh` leaves a folder shaped `<codename>-<digits>` alone and reports only a folder of neither shape. Add the exception.
+- **F29 — non-blocking.** U16 opens "Observed:" rather than a label; its "no equivalent … other than a kit volume or a saved template" is a cited workaround; its `tried T7, T8` Evidence concerns plugins, not git config. State one verdict and say the git-config persistence is cited only.
+- **F30 — non-blocking.** U14's workaround needs a change to `session-title.sh`'s `REMOTE_CONTAINERS` test, which neither #85 nor #86 lists (#86 covers window titles, not session titles). Add it to one of them, or say on the page that it is deliberately left out.
+- **F31 — non-blocking.** D2 says the container "opens only through" Clone Repository in Named Container Volume and cites the README, which also describes Reopen in Container (README line ~36); say "is opened through … (the README's documented flow)". The Host verdict "yes, partly" never says what "partly" excludes; add one clause naming it, and make the #73 comment say the same.
+- **F12 (carried) — non-blocking, `/codeo:plan`'s.** `.codeo/73/plan.md`'s `### Footprint` lacks `sequenced:`. **F23 (carried) — non-blocking, outside this diff:** `sync-main.sh` exits 1 after a clean merge when main has moved.
+
+Declined by the reviewer, left to the engineer: the accuracy of the cited Docker pages, whether hybrid is the right choice, and the dossier and plan files as records.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
+- 2026-11-15 — round 3: build and suite pass, 5 of 6 criteria met, 2 blocking findings, back to implement · cost: 4m · opus-5-5 482k in + 1.8M cached / 16k out · sonnet-5-5 29k in + 2.1M cached / 3k out
 - 2026-11-15 — round 2: build and suite pass, 4 of 6 criteria met, 3 blocking findings, back to implement · cost: 4m · opus-5-5 428k in + 2.9M cached / 15k out · sonnet-5-5 337k in + 1.8M cached / 4k out
 - 2026-11-15 — round 1: build and suite pass, 5 of 6 criteria met, 3 blocking findings, back to implement · cost: 4m · opus-5-5 347k in + 3.9M cached / 17k out · sonnet-5-5 270k in + 1.5M cached / 3k out
