@@ -119,7 +119,7 @@ Proceed and coordinate (answered in the conversation: "as recommended for all fo
 ### Footprint
 
 ```
-files:      skills/issue/SKILL.md, skills/triage/SKILL.md, scripts/board.sh, tests/issue-skill.test.sh, tests/triage-skill.test.sh, tests/closing-exits.test.sh, tests/inventory.test.sh, docs/handoff.md, docs/skills.md, docs/skills-inventory.md, CHANGELOG.md, docs/plans/2026-11-15-file-new-issues-into-backlog.md
+files:      skills/issue/SKILL.md, skills/triage/SKILL.md, scripts/board.sh, tests/issue-skill.test.sh, tests/triage-skill.test.sh, tests/closing-exits.test.sh, tests/inventory.test.sh, tests/board.test.sh, tests/fixtures/skills-inventory.rules.sha256, docs/handoff.md, docs/skills.md, docs/skills-inventory.md, CHANGELOG.md, docs/plans/2026-11-15-file-new-issues-into-backlog.md
 wiki:       none
 exclusive:  none
 sequenced:  none
