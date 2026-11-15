@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done. QC round 1's two blocking findings (F1, F2) and the cheap non-blocking ones the engineer chose (plan Q7) are fixed and committed (`b40172e` to `0252bf7`), reviewed, and `bash tests/run.sh` prints `all cases passed`. Nothing is open. The next step is `/codeo:qc`.
+Round 3, done. QC round 2's two blocking findings (G1, G2) and G3-G7 are fixed and committed (`53d0234` to `e5bffbf`), reviewed, and `bash tests/run.sh` prints `all cases passed`. Nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -104,8 +104,31 @@ Proceed and coordinate. Go with the recommendation (engineer, in the conversatio
 
 **Deferred minors**, none blocking: the close overlay's home-container paragraph is not scoped to `host: container` in its wording; Task 12's skill assertions grep the whole file and `docs/handoff.md` has no wording test; `stale:?` lock-skill wording says "an issue's container" for a home clone; `cleanup.sh` hides `github.sh`'s stderr behind its one `cleanup:` line; the README's "Both only print" now follows a paragraph not about printing.
 
+### Round 3 — 2026-11-15
+(send-back from qc.md round 2)
+
+**Plan built:** round 3 of `docs/plans/2026-11-15-guard-home-only-skills.md` (Tasks 17-21), commits `53d0234` to `e5bffbf`, on a branch that already contained `origin/main` (no merge needed, no conflict). Each task pair was reviewed; a closing review read the whole round.
+
+**What was built, against QC round 2's findings.**
+- G1 (Task 17, `53d0234`): `role.sh`'s stale refusal reads the clone's own dossier and gives each state its own way back: finished (`.codeo/done/<N>/`, the container is done, `/codeo:cleanup` in the home container prints how to remove it), parked (the last `### Round` of `.codeo/<N>/close.md` is `— stashed` or `— abandoned`, same pattern `claim.sh --stash-live` uses, way back `/codeo:init #<N>` in the home container, "never the start script"), lock lost (a live dossier with no park: re-run the start script) and unknown. A park followed by a later `— pull request opened` round reads as lock lost. The README `stale` row already matched.
+- G2, G4, G7 (Task 18, `f96f877`): `cleanup.sh` gains a fifth proof, `lease` (an issue that holds or waits for any lease in `intake.sh lease list --tsv` is not proven; an unreadable list stops the script with `cleanup: could not read the leases`); an empty or `null` `head_ref` fails the branch proof; the cleanup skill's untrue caveat is replaced by what is true ("the lock lives only in that clone") and its Hand-off says "any branch other than `codeo/intake`".
+- G3, G5, G6 (Task 19, `1d30948`): the close overlay's home-container step opens "After a finished close" and ends "On a stash or an abandon, keep the closing block the skill gives for that exit."; step 17's "nothing is lost either way" is replaced; `docs/handoff.md`'s `cleanup` row names `/codeo:init #<M>`.
+- Task 20 (`e5bffbf`): `.devcontainer/README.md`, `docs/skills.md` and the existing `CHANGELOG.md` bullet describe the four-state refusal and the fifth proof; no "four proofs" is left outside `docs/plans/` and `.codeo/`.
+- Left, as the engineer chose at plan Q7 and recorded in `qc.md`: F9 (Podman), F11 (`CODEO_CLEANUP_REMOVAL`), F12 (generic "home container" wording) for `/codeo:triage`.
+
+**Documentation changed.** `.devcontainer/README.md`, `docs/skills.md`, `docs/handoff.md`, `CHANGELOG.md`; `README.md`, `docs/extension-points.md` and `docs/skills-inventory.md` need nothing.
+
+**Build result.** The `shell` suite's `build` (`true`) ran ok; `bash tests/run.sh` prints `all cases passed` at `e5bffbf` (3m21s); `bash scripts/doctor.sh` (this repository's) all ok, 11 checks; `git diff origin/main -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` is empty; by hand, in a scratch `codeo-67` clone whose `close.md` ends `### Round 2 — stashed`, `role.sh` prints `stale:67`, `--check plan` exits 1 with the `/codeo:init #67 in the home container … never the start script` line and `--check triage` exits 1 with the home-container line; `overlap.sh 70` and `overlap.sh --outside 70` print nothing.
+
+**Deviations from the plan.** None. The `name` check stays the guard on a printed command and is not counted as a proof: "five proofs" are issue, pull-request, branch, dossier and lease, as the plan says; the skill's step 1 lists six failure names.
+
+**Rulings taken while building round 3** (each with what it costs if wrong): (1) the tasks ran as two dispatches (17+18, 19+20) with Task 21 inline, one commit per task and one review per dispatch: costs that tasks were reviewed in pairs. (2) The reviews, including the closing one, ran on sonnet, not a stronger model, because codeo's subagent hook allows only the configured subagent model: costs a weaker review; `/codeo:qc` grades independently on opus. (3) Four small findings of the reviews were left as minor rather than opening a fix round (see below): costs that `/codeo:qc` may raise them again.
+
+**Deferred minors**, none blocking: the cleanup skill's frontmatter `description` lists four proofs and omits the lease; the unknown-state stale refusal names the role but no `#<N>` and its test skips that check; the finished lock-skill line says `/codeo:cleanup` "prints how to remove it" although it prints a command only for a proven issue; `docs/skills.md` writes `/codeo:close` without backticks in the new cleanup sentence, and the new step-17 sentence wraps unevenly.
+
 ## Log
 
 - 2026-11-15 — built Tasks 1-10 and the final-review fix wave; Q1-Q4 raised on overlaps with #71, #96, #97, #98 · cost: 97m · sonnet-5-5 1.2M in + 35M cached / 196k out
 - 2026-11-15 — Q1-Q4 answered; outcome written, handed off to qc · cost: 100m · sonnet-5-5 1.2M in + 37.2M cached / 205k out
 - 2026-11-15 — round 2 after qc round 1: built Tasks 11-16, merged origin/main, handed off to qc · cost: 33m · sonnet-5-5 311k in + 14.1M cached / 56k out
+- 2026-11-15 — round 3 after qc round 2: built Tasks 17-21, handed off to qc · cost: 28m · sonnet-5-5 292k in + 11M cached / 53k out
