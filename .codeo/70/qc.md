@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 done, routed back to `/codeo:plan`. Round 3's H1-H4 and H6 are fixed and the suite is green on the tree merged with main, all eight criteria met; the independent review found two new blocking findings in `role.sh`'s stale refusal (J1: a resumed stash whose container lost its lock is told it was stashed and to avoid the start script; J2: an archived dossier whose pull request is still open is called finished and steered toward removal). Nothing is open.
+Round 5 done, clear: forward to `/codeo:close`. Round 4's J1 and J2 are fixed (and J3, J4, J5, J9), the suite is green on the tree, all eight criteria met, and the independent review found no blocking finding. Nine non-blocking findings are recorded for `/codeo:triage`. Nothing is open.
 
 ## Questions
 
@@ -186,9 +186,52 @@ No issue was filed by this pass. Routing: J1 and J2 are in `role.sh`'s dossier r
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 5 — 2026-11-15
+
+Checked at head `6a3b835`: round 5 of the build (`b99f9b3` to `8fecf13`, dossier `6a3b835`) on a branch that already contains `origin/main` (`896d6d6`).
+
+**Commands and output.**
+- `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0; nothing to re-check against the base. `overlap.sh 70` and `overlap.sh --outside 70`: nothing printed.
+- `scope.sh origin/main HEAD`: `suite.shell=true`, forced by the unclassified paths `.codeo/70/*.md`, `CHANGELOG.md`, `README.md`. No `deploy=` line: no environment is configured.
+- Build (`shell` suite): `true`, exit 0. Test (`bash tests/run.sh`, whole suite): exit 0, output `all cases passed`, 221 s.
+- `bash scripts/doctor.sh`: every line `ok`. `git diff origin/main...HEAD --stat -- .devcontainer/Dockerfile .devcontainer/devcontainer.json`: empty.
+- No invariants file, no `qc/invariants-extra` or `qc/wiki-rules` overlay (both exit 3), no `wiki` module, no shared environment.
+- Round 4's findings re-checked in the code, `.devcontainer/scripts/role.sh:93-160`: J1 (blocking in round 4) — fixed by `b99f9b3`: parked only while parks in `close.md` outnumber resumes in `init.md`, counted with `claim.sh`'s patterns and trim. J2 (blocking in round 4) — fixed by `b99f9b3`: finished only when the base ref (`origin/<base>` if present, else local) carries `.codeo/done/<N>`; an archive the base lacks reads as lock-lost. J3, J4, J5 — fixed by `49bddd1`: the `offbase`, abandoned and stashed lines. J9 — fixed by `0541bab`: `docs/skills.md:260` names the `codeo/intake` exception. J6, J7, J8 stay with `/codeo:triage` by the engineer's answer to plan Q15.
+- Independent review: opus, given the acceptance criteria only. It ran nine test files by hand (role, role-guard, cleanup, cleanup-skill, close-removal, closing-exits, agnostic, inventory, github; `devcontainer.test.sh` timed out for it and is covered by the whole-suite run above). Its verdict, in plain text: ready to merge with fixes, no Critical issue, one Important (recorded as K1, which is round 4's J8 again), seven Minor.
+- Documentation check: the pages the plan named (`.devcontainer/README.md`, `docs/skills.md`, `CHANGELOG.md`) are changed and written in the present tense; a search of the added doc lines for history words and issue numbers found none outside the changelog bullet's trailing `(#70)`. The README row, the changelog sentence and `role.sh`'s refusal lines agree with each other.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Role script prints `home`, `issue:<N>`, `stale:<N>`; a test pins each case | met | `tests/role.test.sh` (`home_on_main`, `issue_container`, `stale_*`, `mismatch_*`); `.devcontainer/scripts/role.sh` |
+| 2 | The four home-only skills stop outside the home container with one line naming the role, no override; a test fails if one drops the check | met | `tests/role-guard.test.sh`; `tests/role.test.sh` `--check` matrix |
+| 3 | plan / implement / qc / close stop on a folder/lock mismatch; every skill stops in a stale container naming the finished issue | met | `tests/role.test.sh` `mismatch_*` and the stale states (finished, finished by the remote base, archived with an open pull request, stashed, resumed stash, abandoned, lock lost, unknown, off the base branch, detached HEAD), each naming `issue #<N>` |
+| 4 | Hosted web session or plain local checkout: the four home-only skills run as today | met | `tests/role.test.sh` `no_dockerenv_is_unguarded`, `remote_is_unguarded`, `other_folders_are_unguarded` |
+| 5 | After a finished workflow in a container, close's final report has the removal command from the lock's `volume:`, says host and `git status` first; a test pins it | met | `tests/close-removal.test.sh`; `.codeo/overlays/close.md:9-13` |
+| 6 | `/codeo:cleanup` prints a command only for an issue passing its proofs, lists others with the failed proof, never prints a name outside the pattern; a test pins each | met | `tests/cleanup.test.sh`; `tests/cleanup-skill.test.sh` |
+| 7 | `/codeo:cleanup` runs no Docker command; Dockerfile and devcontainer.json unchanged | met | `tests/cleanup.test.sh` stub-docker case; the empty diff above; `tests/devcontainer.test.sh` passes in the whole-suite run |
+| 8 | Docs describe the new skill and roles; `CHANGELOG.md` Unreleased entry; `bash tests/run.sh` passes | met | the pages read in this pass; the suite run above |
+
+#### Findings
+- **K1 — non-blocking.** `scripts/cleanup.sh:116-117` proves and prints every issue ever archived under `.codeo/done/`, about 25 today, most from before the dev container existed, so the one or two real leftovers are buried and the list grows with every merge. The reviewer rated it Important; it is round 4's J8, left for `/codeo:triage` by the engineer's answer to plan Q15, and no acceptance criterion asks for a bound. Not raised again as blocking.
+- **K2 — non-blocking.** `role.sh:132`: the finished refusal says "/codeo:cleanup in the home container prints how to remove it", but when the branch was kept at close the `branch` proof fails for good and cleanup prints no command; only close's own final report carries one. Round 3's deferred minor, still open.
+- **K3 — non-blocking.** `role.sh:163-172`: in the folder `codeo-home` holding a lock, a home-only skill is told "/codeo:issue runs in the home container, but this container's role is mismatch:70:codeo-home", to an engineer already in it, and the way out (remove the stray `.codeo/active`, or switch branches) is not named. Rare.
+- **K4 — non-blocking.** `role.sh:96-108`: finished is judged from `origin/<base>` without a fetch, so a clone that never fetched after the merge reads lock-lost and is told to re-run the start script; `lock.sh` fetches and would answer differently. Unlikely, since close fetches before it releases the lock; this is the plan's recorded call that `role.sh` does not fetch.
+- **K5 — non-blocking.** `docs/handoff.md:387`: the `cleanup` row gives one of its two endings (the printed commands, then `/codeo:init #<M>`); with nothing proven `skills/cleanup/SKILL.md:79` makes `/codeo:triage` the first step.
+- **K6 — non-blocking.** `skills/cleanup/SKILL.md:3`: the frontmatter description lists four proofs and omits the lease proof. Round 3's deferred minor, still open.
+- **K7 — non-blocking.** `skills/plan/SKILL.md:113`, `skills/implement/SKILL.md:17`, `skills/qc/SKILL.md:513` and the `docs/skills.md` cleanup section say "an issue container" and "the home container", dev-container words in generic text, where the neutral "the checkout the project's host workflow names" is used elsewhere. Round 2's F12, left for `/codeo:triage`.
+- **K8 — non-blocking.** `skills/close/SKILL.md:3` and `skills/cleanup/SKILL.md:3` share a trigger phrase ("clean up"), so the phrase said in the home container may pick either skill.
+- **K9 — non-blocking.** `scripts/cleanup.sh:47`: `CODEO_CLEANUP_REMOVAL`, a test hook, replaces the overlay in a real run; the name pattern still gates the output. Round 1's F11, round 3's H5, round 4's J7; left for `/codeo:triage`.
+- Own note, non-blocking: `role.sh:98-102` reads a clone with both a live `.codeo/<N>` and a base-carried `done/<N>` as finished, where `lock.sh` finds the live dossier first. Rare, and the plan states finished as the archive plus the base carrying it.
+- Declined to judge (reviewer, plain text): `stale:?` for the home folder off the base branch (the issue's wording assumes a number the home folder lacks; documented and tested); the extra `mismatch` role (criterion 3 asks for the refusal); exit 2 from `role.sh` going on unguarded (documented); containers in other folders running unguarded; the lease proof as a fifth proof (stricter than the criterion); `lock.sh` retaking the lock in a stashed container (existing behaviour, which the refusal tells the engineer to avoid); PowerShell accepting `;` (it does); out-of-scope #40, #51, #54, #57.
+
+No issue was filed by this pass. Routing: no blocking finding. K1-K9 and the own note are non-blocking; they are recorded here for `/codeo:triage`, which collects them after the close.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-15 — qc round 1: build and suite green, 8 of 8 criteria met, 2 blocking plan findings, routed back to plan · cost: 7m · opus-5-5 494k in + 5M cached / 30k out · sonnet-5-5 36k in + 1.6M cached / 7k out
 - 2026-11-15 — qc round 2: build and suite green, 8 of 8 criteria met, round 1's F1 and F2 fixed, 2 new blocking plan findings (G1 stale recovery advice, G2 cleanup caveat and workflow-ended proof), routed back to plan · cost: 7m · opus-5-5 607k in + 4.4M cached / 26k out · sonnet-5-5 28k in + 3.1M cached / 8k out
 - 2026-11-15 — qc round 3: build and suite green, 8 of 8 criteria met, round 2's G1 and G2 fixed, 2 new blocking plan findings (H1 abandon closing block names a refused skill, H2 removal command printed after a stash or abandon), routed back to plan · cost: 6m · opus-5-5 231k in + 3.7M cached / 27k out · sonnet-5-5 114k in + 431k cached / 1k out
 - 2026-11-15 — qc round 4: build and suite green, 8 of 8 criteria met, round 3's H1-H4 and H6 fixed, 2 new blocking plan findings (J1 resumed stash called stashed, J2 archived dossier with an open PR called finished), routed back to plan · cost: 6m · opus-5-5 225k in + 4.1M cached / 28k out · sonnet-5-5 112k in + 439k cached / 1k out
+- 2026-11-15 — qc round 5: build and suite green, 8 of 8 criteria met, round 4's J1 and J2 fixed, no blocking finding (9 non-blocking recorded for triage), clear · cost: 7m · opus-5-5 436k in + 3.9M cached / 29k out · sonnet-5-5 31k in + 1.9M cached / 6k out
