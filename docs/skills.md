@@ -160,6 +160,7 @@ The skill is the gate between building and merging. It never fixes what it finds
 - Does not open, merge or approve a pull request; opening one on a clear verdict is `/codeo:close`'s. It pushes its own dossier commits and, when step 2's sync merged the base branch, that merge commit on the same push; nothing else.
 - Does not deploy, build for the environment, or take the lease to change what the environment runs; it reads what is deployed and sends back what is stale.
 - Does not invent acceptance criteria. If `init.md` has none to judge against, that is itself the finding, and it routes back to whoever owed them.
+- A changed path outside the plan's footprint is a finding: non-blocking on a first-round plan, blocking once the plan has a second round, because the `qc-verdict` check fails the pull request on it.
 
 ### Extension points
 

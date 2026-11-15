@@ -155,8 +155,13 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
 
    Then `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" --outside <N>`. Every path it prints is a
    finding — *the branch changed a file outside its footprint* — classified at step 8 like any
-   other, and not blocking by rule: the footprint is what other workflows were told this one would
-   touch, so the engineer should hear about the gap, but the change may still be right.
+   other. On a first-round plan it is not blocking by rule: the footprint is what other workflows
+   were told this one would touch, so the engineer should hear about the gap, but the change may
+   still be right.
+   Once `plan.md`'s `## Outcome` has a `### Round 2` or later it is blocking, and `/codeo:plan`'s:
+   the `qc-verdict` check fails the pull request on the same paths, and a footprint can only be
+   corrected by a new plan round, so the finding goes back to `/codeo:plan` before any pull
+   request exists.
 
    **Then the documentation.** For every behaviour the diff changes — an interface, a flow, a
    state, a configuration key, a screen, a deployment step — find the page under `$DOCS` (and, with

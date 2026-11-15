@@ -41,6 +41,11 @@ must_contain "each criterion is met, not met or untestable" 'not met, or untesta
 
 # Step 6.
 must_contain "files outside the footprint are listed" 'overlap.sh" --outside <N>'
+must_contain "a footprint gap is non-blocking on a first-round plan" 'On a first-round plan it is not blocking by rule'
+must_contain "a footprint gap is blocking from round 2" 'Once `plan.md`'"'"'s `## Outcome` has a `### Round 2` or later it is blocking'
+if grep -qF 'and not blocking by rule:' "$skill"; then
+    fail "step 6 still calls a footprint gap not blocking by rule on every plan"
+fi
 
 # Step 7: the reviewer.
 must_contain "the reviewer model read" "config.sh\" get '.models.reviewer // \"opus\"'"
