@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done. Q1-Q3 are answered, Tasks 1-10 are built and reviewed (`ce0b13d`..`3fd6bd8`), the build and the full suite pass, and nothing is open. The next step is `/codeo:qc`.
+Round 2, done (after a send-back from `/codeo:qc` round 1). Tasks 1-5 of the round-2 plan are built and reviewed (`eb399da`..`5a1306b`), the build and the full suite pass, and nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -65,9 +65,34 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 
 `Deployed revision:` none: no environment.
 
+
+### Round 2
+
+2026-11-15
+(send-back from qc.md round 1)
+
+**Built.** All five tasks of `docs/plans/2026-11-15-docs-skill-wording-test-guard-round-2.md`, each reviewed by a fresh reviewer on the subagent model, none needing a fix round. Commits `eb399da`..`5a1306b`; `origin/main` had not moved, so nothing was merged.
+
+- Task 1 `tests/closing-exits.test.sh` (F1, F2): `flat` joins a text's lines; `case_close_step17_lead` and `case_stash_prose` now also refuse step 17's old ending ("End with the closing block: the goal is the loose ends found") and the old stash sentence and ending, and `case_bites` restores each of them with the line break the original text had; each mutation fails its case by name before the guard and after.
+- Task 2 `skills/close/SKILL.md`, `tests/closing-exits.test.sh` (F6): the abandon-finished block says the card is at `$BACKLOG` with a board and that with no board there is no card.
+- Task 3 `skills/qc/SKILL.md`, `tests/qc-skill.test.sh`, `docs/skills.md` (F3, Q7 (a)): a changed path outside the footprint is non-blocking on a first-round plan and blocking, `/codeo:plan`'s, once `plan.md`'s `## Outcome` has a `### Round 2` or later; three pins, shown to bite against `origin/main`'s skill; the `qc` entry says so.
+- Task 4 `skills/plan/SKILL.md`, `tests/plan-skill.test.sh` (F4, F5): step 8 says where no language is known the script cannot be neutral and is asked about and labelled; step 10 sub-step 1 no longer repeats where the draft goes.
+- Task 5 `scripts/overlap.sh` (header comment only), `CHANGELOG.md` (F7, F9): `--base` alone is described; the `## Unreleased` bullet says when the host-task rule applies and that `qc` blocks a footprint gap from plan round 2.
+
+**Build.** The `shell` suite's build command is `true` and exits 0; `bash tests/run.sh` prints `all cases passed`. No shared environment: no lease, no deploy.
+
+**Documentation pages changed.** `docs/skills.md` (`qc` entry), `skills/qc/SKILL.md`, `skills/plan/SKILL.md`, `skills/close/SKILL.md`, `scripts/overlap.sh`'s header comment, `CHANGELOG.md`.
+
+**Deviations from the plan.** Task 4's `must_lack` pins the fragment `footprint goes under \`## Notes\` again all the same` instead of the full sentence, because the skill wraps the sentence over two lines and a line-based `grep` for the whole sentence could never fail. Task 2's first edit split "with no board" across a line break; the implementer rewrapped it onto one line before committing.
+
+**Minors left for `/codeo:qc`:** `skills/qc/SKILL.md` step 6 does not say how to detect a second round (look for a `### Round <n>` heading with n ≥ 2 in `plan.md`'s `## Outcome`); the Task 4 sentence is a long single line because its pin is single-line; and the minors round 1 recorded stand. Out of scope, as the plan says: F8 (a paging `gh` stub) and F10 (`skills/init/SKILL.md`'s "there is no lock" after any `lock: TODO`), both for `/codeo:triage`.
+
+`Deployed revision:` none: no environment.
+
 ## Log
 
 - 2026-11-15 — Q1 raised before dispatch · cost: 3m · sonnet-5-5 11k in + 1M cached / 2k out
 - 2026-11-15 — Tasks 1-6 built and reviewed, origin/main merged; Q2 raised before Task 7 · cost: 17m · sonnet-5-5 525k in + 20.2M cached / 80k out
 - 2026-11-15 — Tasks 7-8 built and reviewed; Q3 raised before Task 9 · cost: 32m · sonnet-5-5 694k in + 26.8M cached / 114k out
 - 2026-11-15 — built Tasks 1-10 (two fix rounds), build ok · cost: 74m · sonnet-5-5 918k in + 37.3M cached / 158k out
+- 2026-11-15 — round 2: built the five round-2 tasks (no fix rounds), build ok · cost: 14m · sonnet-5-5 341k in + 18.8M cached / 44k out
