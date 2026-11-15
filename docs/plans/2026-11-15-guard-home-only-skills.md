@@ -492,3 +492,99 @@ What each says afterwards (present tense, no issue numbers outside the changelog
 - **The same hole, looked for elsewhere.** Every exit that deletes the lock in a container now names the home container for its next skill: finished (round 2), stash completed and abandon finished (this round). The interrupted and lock-kept exits keep the lock, so `/codeo:close` runs where it is.
 - **Documentation the round moves.** `.devcontainer/README.md`, `docs/handoff.md`, `docs/extension-points.md`, `CHANGELOG.md`. `docs/skills-inventory.md` needs nothing: no rule and no point changes.
 - **Footprint.** Unchanged: every file above is already in it.
+
+## Round 5 — send-back from QC round 4
+
+QC round 4 (`.codeo/70/qc.md`) found round 4's fixes in place, the suite green on the tree merged with `origin/main`, every criterion met, and two new blocking findings in how `.devcontainer/scripts/role.sh` reads the clone's dossier for a stale container's refusal, which round 3's Task 17 dictated. **J1:** the script calls a workflow parked from the last `### Round` heading of `close.md` alone. A stash that was resumed, whose new container then failed to take the lock, is told it "was stashed" and to use `/codeo:init #<N>`, "never the start script"; `/codeo:init` would answer "already resumed", and the start script is the real fix. **J2:** the script calls a workflow finished as soon as `.codeo/done/<N>` exists. `/codeo:close` archives the dossier there when it opens the pull request, so a container that loses its lock while the pull request awaits review is told it is finished and pointed at removal. The engineer's answers: Q14 the abandoned refusal names no resume command; Q15 fix J3, J4, J5 and J9 too, J6-J8 stay for `/codeo:triage`.
+
+Earlier rounds' Global Constraints still bind: no `docker`, `codeo-home`, `codeo-gh` or `codeo-git` under `skills/`, `scripts/`, `lib/` or `docs/`; no text under a `<!-- rule -->` marker changes; `.devcontainer/Dockerfile` and `devcontainer.json` do not change; each task's proof is its test file, then `bash tests/run.sh`, both printing `all cases passed`. In this round only `role.sh` changes among the scripts; no skill, overlay or extension point changes. `role.sh` still runs no container-engine command and makes no network call: it never fetches.
+
+```mermaid
+flowchart TD
+    S[role stale, no lock] --> Q{folder}
+    Q -->|codeo-home, not on the base branch| OB[off base: switch back to the base branch]
+    Q -->|codeo-N| D{.codeo/done/N in the clone?}
+    D -->|yes| B{does the base branch carry it?<br/>origin/base if the ref exists, else local base}
+    B -->|yes| FIN[finished: nothing more runs here<br/>/codeo:cleanup in the home container]
+    B -->|no: pull request still open| LOST
+    D -->|no| L{.codeo/N in the clone?}
+    L -->|no| UNK[unknown: no dossier says why]
+    L -->|yes| P{parks in close.md > resumes in init.md?}
+    P -->|no| LOST[lock lost, workflow live:<br/>re-run the start script]
+    P -->|yes, last park is a stash| ST[stashed: /codeo:init #N in the home container,<br/>never the start script; remove this container first]
+    P -->|yes, last park is an abandon| AB[abandoned: nothing more runs here;<br/>may hold the only copy; no resume named]
+```
+
+### Task 26: The stale refusal reads the workflow's state the way the rest of codeo does (J1, J2)
+
+**Files:**
+- Modify: `.devcontainer/scripts/role.sh` (the `stale:*` branch of `--check`, and the header comment's `stale` line)
+- Test: `tests/role.test.sh`
+
+**Interfaces.** The state a stale refusal reports, for `stale:<N>`, decided in this order:
+- **finished** only when `$root/.codeo/done/<N>` exists **and the base branch carries it**: `git -C "$root" cat-file -e "<ref>:.codeo/done/<N>"` succeeds, where `<ref>` is `origin/<base>` when `refs/remotes/origin/<base>` exists and the local `<base>` otherwise. This is `lock.sh find_issue`'s rule (`scripts/lock.sh:24-33`), without its fetch.
+- A `.codeo/done/<N>` the base branch does not carry is the archive of an open pull request: the state is **lost** (the workflow is live; the start script retakes the lock from that archive).
+- Otherwise, with `$root/.codeo/<N>`: **parked** while parks > resumes, counted as `scripts/claim.sh --stash-live` counts them (`claim.sh:99-100`), on the working-tree files with trailing whitespace trimmed: parks = lines of `.codeo/<N>/close.md` matching `^### Round [0-9]+ — (.+ — )?(stashed|abandoned)([^[:alnum:]].*)?$`; resumes = lines of `.codeo/<N>/init.md` matching `^- .* — resumed: by .* after the (stash|abandon) of `. The **last park heading** says which kind (`stashed` or `abandoned`). A missing file counts 0. Later close rounds change neither count. Not parked is **lost**.
+- Neither directory: **unknown**, as today.
+- The refusal lines themselves do not change in this task.
+
+- [ ] **Step 1: Write the failing cases** in `tests/role.test.sh` (the `stale_with` helper gains what it needs to write a second file and to commit a path on a branch):
+  - `stale_finished`: the archive `.codeo/done/67/close.md` is committed on `main`; wants the finished needles (as today).
+  - `stale_finished_by_the_remote_base`: the archive is committed on another branch, the clone is on `main` without it, and `refs/remotes/origin/main` points at the commit that has it (`git update-ref`); wants the finished needles.
+  - `stale_archived_with_an_open_pull_request_is_lock_lost`: `.codeo/done/67/close.md` is in the working tree and on no base ref; wants the `lost` needles, and the line must not say `finished` or `/codeo:cleanup`.
+  - `stale_resumed_stash_is_lock_lost`: `67/close.md` holds `### Round 1 — stashed`, `67/init.md` holds `- 2026-11-01 — resumed: by someone after the stash of 2026-10-30`; wants the `lost` needles.
+  - `stale_stashed_twice_resumed_once_is_stashed`: two `stashed` headings, one resume line; wants the stashed needles.
+  - `stale_abandoned_after_a_resumed_stash`: `### Round 1 — stashed`, `### Round 2 — abandoned — closed`, one resume line; wants the abandoned needles.
+  - `stale_parked_then_reopened_is_lock_lost` is replaced by `stale_parked_with_a_later_round_is_still_parked`: `### Round 1 — stashed` then `### Round 2 — pull request opened`, no resume line; wants the stashed needles (the count, not the last heading, decides, as in `claim.sh`).
+- [ ] **Step 2: Run** `bash tests/role.test.sh` → fails, first on `stale_archived_with_an_open_pull_request_is_lock_lost` (the line says `is finished`).
+- [ ] **Step 3: Change** the state block in `role.sh`.
+- [ ] **Step 4: Run** `bash tests/role.test.sh`, `bash tests/role-guard.test.sh`, then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: a stale container's state is read as lock.sh and claim.sh read it (#70)`.
+
+### Task 27: What each stale refusal says (J3, J4, J5)
+
+**Files:**
+- Modify: `.devcontainer/scripts/role.sh` (the refusal lines of the `stale:*` branch)
+- Test: `tests/role.test.sh`
+
+**Interfaces.** Every refusal stays one line, exit 1, starts `/codeo:<skill> can't run here:` and names the role. Lines not listed keep their wording.
+- **Stashed, a lock skill** (J5): `issue #<N>'s workflow was stashed and this container holds no lock (role stale:<N>); /codeo:init #<N> in the home container is the way back, never the start script, and it opens a new container with this one's name, so remove this one on the host first, once git status here shows nothing unpushed (.devcontainer/README.md says how).`
+- **Abandoned, a lock skill** (J4, Q14): `issue #<N>'s workflow was abandoned and this container holds no lock (role stale:<N>); nothing more runs here, and it may hold the only copy of the work, so check that the branch is still on origin before removing it.` It names neither `/codeo:init` nor the start script.
+- **Stashed or abandoned, a home-only skill:** unchanged (`… run it in the home container.`).
+- **`stale:?`** (J3): this role exists only in the folder `<codename>-home` off the base branch (a detached HEAD included). A home-only skill: `this is the home container, but it is not on the base branch <base> (role stale:?); switch back to <base> and run it again.` A lock skill: `this is the home container, off the base branch <base> (role stale:?); the skill runs in the container of the issue it is for.` Neither says `run it in the home container` or `no dossier says why`.
+- **Unknown for `stale:<N>`** (folder `<codename>-<N>`, no dossier): unchanged.
+
+- [ ] **Step 1: Write the failing needles** in `tests/role.test.sh`: split `stale_needles`' `stashed|abandoned` arm in two. Stashed, lock skill: wants `/codeo:init #67`, `never the start script`, `remove this one`, `.devcontainer/README.md`; must not say `re-run` or `finished`. Abandoned, lock skill: wants `was abandoned`, `nothing more runs here`, `the only copy`; must not say `/codeo:init #`, `devcontainer-start.sh`, `re-run` or `the way back`. Add a state `offbase` used by `stale_unknown_issue` (renamed `home_off_the_base_branch`): a home-only skill wants `not on the base branch main` and `switch back to main`, must not say `run it in the home container`; a lock skill wants `off the base branch main` and `container of the issue it is for`; neither says `no dossier says why`. Add `home_on_a_detached_head`: the same needles with the clone's HEAD detached. `check_matrix`'s existing rule that a home-only refusal contains `home container` still holds for every state.
+- [ ] **Step 2: Run** `bash tests/role.test.sh` → fails on the abandoned needle `nothing more runs here`.
+- [ ] **Step 3: Change** the lines.
+- [ ] **Step 4: Run** `bash tests/role.test.sh`, `bash tests/role-guard.test.sh`, then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: the stale refusal for a stash, an abandon and the home container off its base branch (#70)`.
+
+### Task 28: Documentation (J9, and what Tasks 26-27 move)
+
+**Files:**
+- Modify: `.devcontainer/README.md` (*Roles and the guard*: the `stale:<N>`, `stale:?` row), `docs/skills.md` (the `cleanup` section's "Never touches" line), `CHANGELOG.md` (the existing `## Unreleased` bullet, changed in place)
+- Test: `tests/skills-doc.test.sh`, `tests/agnostic.test.sh`, `tests/devcontainer.test.sh`
+
+What each says afterwards (present tense, no issue numbers outside the changelog):
+- `.devcontainer/README.md`, the stale row: the refusal names what happened to the workflow, read from the clone's own dossier and the base branch as the clone last saw it. Finished means the base branch carries the archived dossier (nothing more runs here; `/codeo:cleanup` in the home container prints how to remove it). Stashed means a stash not yet resumed (`/codeo:init #<N>` in the home container is the way back, never the start script; remove this container first). Abandoned means an abandon not taken up again (nothing more runs here; the container may hold the only copy of the work). A live dossier with no lock, which includes a resumed stash and an archived dossier whose pull request is still open, re-runs `bash .devcontainer/scripts/devcontainer-start.sh` to take the lock. In `codeo-home` off the base branch (`stale:?`) the refusal says to switch back to the base branch.
+- `docs/skills.md`, cleanup: `Never touches the lock, any dossier, issue, board or pull request, or any branch other than \`codeo/intake\`.`
+- `CHANGELOG.md`: the sentence on the stale refusal says a finished workflow is one whose archived dossier the base branch carries, a stash is resumed with `/codeo:init #<N>` in the home container after the old container is removed, an abandoned one names no resume and may hold the only copy, a live one that lost its lock (a resumed stash and an open pull request included) re-runs the start script, and the home container off its base branch is told to switch back.
+
+- [ ] **Step 1: Write the edits.**
+- [ ] **Step 2: Run** the tests named above, then `bash tests/run.sh`; `git diff origin/main...HEAD -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` prints nothing.
+- [ ] **Step 3: Commit** `docs: what a stale container's refusal says in each state (#70)`.
+
+### Task 29: The whole check
+
+- [ ] **Step 1: Run** `bash tests/run.sh` → `all cases passed`; `bash scripts/doctor.sh` → every line `ok`.
+- [ ] **Step 2: By hand,** in this container (role `issue:70`): `bash .devcontainer/scripts/role.sh` prints `issue:70`, `--check plan` exits 0 with no output, `--check issue` exits 1 with one line.
+
+### Round 5 self-review
+
+- **Coverage.** J1 → Task 26 (parks against resumes) · J2 → Task 26 (finished only on the base branch) · J3, J4, J5 → Task 27 · J9 → Task 28 · J6, J7, J8 stay with `/codeo:triage` (Q15).
+- **Criteria.** Criterion 3 ("every skill stops in a stale container with a message naming the finished issue") still holds: every `stale:<N>` line names `issue #<N>`, and the finished line is unchanged.
+- **Calls made here.** (1) `role.sh` does not fetch: a guard that runs before every skill stays fast and works offline. The cost is a base ref that is behind; the clone then reads a finished workflow as lock-lost, the start script it names fetches, finds nothing to lock and says so. `/codeo:close` fetches when it proves the merge, so a container it finished in has the ref. (2) The park count follows `claim.sh` exactly, so a stash followed by a later close round with no resume line reads as stashed, where round 3 read it as lock-lost: that state arises only when the start script was re-run by hand over a stash, and `/codeo:init` would call it a live stash too.
+- **The same hole, looked for elsewhere.** `role.sh` now agrees with the two scripts that own these states: `lock.sh` for "finished" and `claim.sh` for "parked". No other script reads them.
+- **Documentation the round moves.** `.devcontainer/README.md`, `docs/skills.md`, `CHANGELOG.md`. `docs/extension-points.md`, `docs/handoff.md` and `docs/skills-inventory.md` need nothing: no point, rule or closing block changes.
+- **Footprint.** Unchanged: every file above is already in it.
