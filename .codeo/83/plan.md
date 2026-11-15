@@ -10,7 +10,8 @@
 
 Read `init.md`, `issue.md`, #76's plan and dossiers, both skills, `docs/handoff.md`'s closing-block
 section and the tests. Q1-Q3 are answered (A, A, proceed and coordinate). The draft is in
-`.codeo/83/plan-draft.md` awaiting the engineer's approval.
+`docs/plans/2026-11-15-rerun-haiku-doctor-setup.md`, approved and unstaged. Q4 (the overlap with #57) is
+answered. Nothing is open; the next step is `/codeo:implement`.
 
 ## Questions
 
@@ -94,6 +95,7 @@ Confirming Q3's answer lets the outcome be written; sequencing would hold Task 5
 · sequence after #57 · re-scope (leave `CHANGELOG.md` out, which criterion 5 does not allow).
 
 **Answer:**
+Proceed and coordinate (answered in the conversation).
 
 ## Notes
 
@@ -122,19 +124,32 @@ throwaway outside the repository; the record is a comment on #83.
 - Only `doctor` and `setup` get the sentence. The other seven skills cite the template the same way
   and are out of scope.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-15-rerun-haiku-doctor-setup.md` (unstaged, awaiting your commit) |
+| Shape | an executable plan under `docs/plans/`, five tasks; no reference doc, as no architectural choice is made |
+
+**Decisions.** Q1 = A: one fixed wording of the Read sentence, one trial; a Haiku miss keeps that skill on `sonnet` and the wording is not revised. Q2 = A: `tests/closing-block.test.sh` asserts both skills carry the sentence, written first and shown failing, kept whether or not a skill switches. Q3 and Q4 = proceed and coordinate: #57 also adds to `CHANGELOG.md`; one bullet under `## Unreleased`.
+
+**Rejected.** Rewording until Haiku passes (a small sample gets fooled); a guard test only for a skill that switches; sequencing after #57; relaxing item 1 instead of changing the skill text (settled in the issue).
+
+**My calls.** The trial script is rebuilt in the scratchpad (#76's is gone) to #76's corrected scorer, and not committed. A `read-handoff` column records how `docs/handoff.md` was opened, so a Haiku run that passes item 1 by skipping the read is visible. The comment's proof uses `gh issue view 83 --json comments`. The plugin copies are archived from `HEAD` after Task 1's commit.
+
+**Documentation.** `CHANGELOG.md` only. `docs/skills.md`'s `doctor` and `setup` sections do not name the template's reader or the model, and stay true. No intake question was resolved here.
+
 ### Footprint
 
 ```
 files:      skills/doctor/SKILL.md, skills/setup/SKILL.md, tests/closing-block.test.sh, CHANGELOG.md, docs/plans/2026-11-15-rerun-haiku-doctor-setup.md
 wiki:       none
 exclusive:  none
-sequenced:  none — CHANGELOG.md overlaps #57; proceed and coordinate (Q3)
+sequenced:  none — CHANGELOG.md overlaps #57; proceed and coordinate (Q3, Q4)
 ```
-
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 
 - 2026-11-15 — Q1-Q3 raised · cost: 1m · fable-5-2 64k in + 220k cached / 2k out
+- 2026-11-15 — plan drafted and approved; footprint raised Q4 (#57, glob:CHANGELOG.md) · cost: 3m · sonnet-5-5 588 in + 256k cached / 547 out
+- 2026-11-15 — planned: docs/plans/2026-11-15-rerun-haiku-doctor-setup.md · cost: 0m · sonnet-5-5 588 in + 256k cached / 547 out
