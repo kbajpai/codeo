@@ -1,4 +1,4 @@
-# Issue new-sbx-page-corrections — issue
+# Issue #94 — issue
 
 ## Questions
 
@@ -28,4 +28,4 @@ _Pending._
 
 **Labels:** documentation · **Type:** none (user-owned repository)
 
-The body is in `body.md` beside this file, as presented to the engineer.
+Filed as #94 (approved by the engineer, 2026-11-15) with the body presented in the conversation.
