@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Guards .devcontainer/scripts/folder-check.sh, which says whether a container's clone folder agrees
 # with its workflow lock. Each case runs the real script (and the real container-name.sh) copied into
-# a scratch git repo whose .codeo/config.json names the codename "codeo": the home folder on main, a
-# wrong folder on main, a locked clone in the right and the wrong folder, an issue branch with no lock
+# a scratch git repo whose .codeo/config.json names the codename "codeo": the home folder on main or a
+# configured base branch, a wrong folder there, a locked clone in the right and the wrong folder, an issue branch with no lock
 # (an issue folder is left alone, any other folder is reported), and the failure outside a clone.
 #
 #   bash tests/folder-check.test.sh
@@ -28,7 +28,8 @@ fail() {
     failures=$((failures + 1))
 }
 
-# fc_setup <name> <branch>: a scratch git repo on <branch> holding the real scripts. Sets fc_dir.
+# fc_setup <name> <branch> [base]: a scratch git repo on <branch> holding the real scripts, its config
+# naming baseBranch <base> when given. Sets fc_dir.
 fc_setup() {
     local name=$1 branch=$2 script
     [[ -n $root ]] || root=$(mktemp -d)
@@ -40,7 +41,7 @@ fc_setup() {
         cp "$repo/.devcontainer/scripts/$script" "$fc_dir/.devcontainer/scripts/$script" \
             || { fail "$script is missing"; return 1; }
     done
-    printf '%s\n' '{"codename":"codeo"}' > "$fc_dir/.codeo/config.json"
+    printf '%s\n' "{\"codename\":\"codeo\"${3:+,\"baseBranch\":\"$3\"}}" >"$fc_dir/.codeo/config.json"
 }
 
 # fc_run <folder> [dir]: runs the scratch copy of the script. Sets fc_rc, fc_out, fc_err.
@@ -96,6 +97,26 @@ issue_branch_without_lock_leaves_an_issue_folder_alone() {
     todo scratch "'codeo-<N>'"
 }
 
+home_folder_on_a_configured_base_is_silent() {
+    fc_setup base develop develop || return 0
+    silent codeo-home
+}
+
+wrong_folder_on_a_configured_base_names_the_home_folder() {
+    fc_setup basewrong develop develop || return 0
+    todo scratch "'codeo-home'"
+}
+
+issue_folder_on_the_home_clone_is_reported() {
+    fc_setup basenum develop develop || return 0
+    todo codeo-12 "'codeo-home'"
+}
+
+home_folder_off_the_base_branch_is_silent() {
+    fc_setup offbase feat/x || return 0
+    silent codeo-home
+}
+
 not_a_clone_fails() {
     fc_setup outside main || return 0
     local plain
@@ -112,6 +133,10 @@ cases=(
     locked_right_folder_is_silent
     locked_wrong_folder_names_the_right_one
     issue_branch_without_lock_leaves_an_issue_folder_alone
+    home_folder_on_a_configured_base_is_silent
+    wrong_folder_on_a_configured_base_names_the_home_folder
+    issue_folder_on_the_home_clone_is_reported
+    home_folder_off_the_base_branch_is_silent
     not_a_clone_fails
 )
 
