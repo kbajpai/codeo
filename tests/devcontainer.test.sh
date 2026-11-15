@@ -506,6 +506,41 @@ start_rerun_with_a_lock_does_not_take_another() {
     DS_REPO="$ds_dir/codeo-55" ds_lock_ready
     [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called although a lock is held"
     [[ -z $ds_err ]] || fail "stderr is not empty: $ds_err"
+    [[ -s $ds_dir/codeo-55/.codeo/active ]] || fail "the held lock file was not kept"
+}
+
+start_empty_lock_file_is_removed_and_the_lock_taken() {
+    ds_setup lockempty || return 0
+    ds_lock_stub; ds_branch feat/x
+    : > "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(ds_lock_calls) == 1 && $(cat "$ds_dir/lock-calls") == 'take container' ]] || fail "lock.sh was not called once with take container: $(cat "$ds_dir/lock-calls")"
+    grep -qxF 'devcontainer-start: .codeo/active was empty and held no lock: removed it' <<<"$ds_out" || fail "no removal line: $ds_out"
+    grep -qxF 'lock: took the lock for #55 on feat/x' <<<"$ds_out" || fail "lock line not printed: $ds_out"
+    grep -q '^issue: *55' "$ds_dir/codeo-home/.codeo/active" || fail "no lock written"
+}
+
+start_empty_lock_file_on_the_base_branch_is_removed() {
+    ds_setup lockemptybase || return 0
+    ds_lock_stub
+    : > "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    grep -qxF 'devcontainer-start: .codeo/active was empty and held no lock: removed it' <<<"$ds_out" || fail "no removal line: $ds_out"
+    [[ ! -e $ds_dir/codeo-home/.codeo/active ]] || fail "the empty lock file is still there"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called on the base branch"
+}
+
+start_nonempty_lock_file_is_left_alone() {
+    ds_setup locknonempty || return 0
+    ds_lock_stub; ds_branch feat/x
+    printf 'issue:   55\n' > "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called although a lock is held"
+    [[ $(cat "$ds_dir/codeo-home/.codeo/active") == 'issue:   55' ]] || fail "the lock file was changed"
+    ! grep -q 'was empty' <<<"$ds_out" || fail "a removal was reported: $ds_out"
 }
 
 start_detached_head_is_a_todo() {
@@ -537,6 +572,8 @@ start_lock_crash_is_a_todo() {
     STUB_LOCK_RC=3 STUB_LOCK_OUT='boom' ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     n=$(ds_todos 'lock.sh failed (exit 3)'); ((n == 1)) || fail "wanted one crash TODO, got $n: $ds_err"
+    ! grep -q boom <<<"$ds_out" || fail "the crash output was printed on stdout: $ds_out"
+    [[ $(grep -o boom <<<"$ds_err" | wc -l) == 1 ]] || fail "boom is not on stderr exactly once: $ds_err"
 }
 
 start_without_codeo_installed_is_a_todo() {
@@ -1830,6 +1867,9 @@ cases=(
     start_takes_the_lock_on_an_issue_branch
     start_takes_no_lock_on_the_base_branch
     start_rerun_with_a_lock_does_not_take_another
+    start_empty_lock_file_is_removed_and_the_lock_taken
+    start_empty_lock_file_on_the_base_branch_is_removed
+    start_nonempty_lock_file_is_left_alone
     start_detached_head_is_a_todo
     start_lock_todo_lines_become_todos
     start_lock_crash_is_a_todo
