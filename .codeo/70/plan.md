@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4, draft at the review gate. Q12 and Q13 are answered (the removal command after a finished close only; H3, H4 and H6 fixed as well). The draft of Tasks 22-25 is in `.codeo/70/plan-draft.md`, waiting for the engineer's approval; nothing is open.
+Round 4, done. QC round 3's two blocking findings (H1, H2) and H3, H4, H6 are planned (Tasks 22-25), the plan was approved and written into the plan file, Q12 and Q13 are answered and nothing is open. The next step is `/codeo:implement`.
 
 ## Questions
 
@@ -143,15 +143,6 @@ What exploration found, so the plan does not re-ask it:
 - **Sequencing.** #69, which the issue says to follow, is closed and merged, so `skills/close/SKILL.md` and `docs/handoff.md` are free to edit.
 - **Documentation lookup (hooks).** Read only for Q2: a typed `/skill` bypasses `PreToolUse`, while `UserPromptSubmit` and `UserPromptExpansion` see it; hooks fire in the terminal, the VS Code extension and cloud sessions alike, but whether a hosted session reads the project's `.claude/settings.json` was not confirmed.
 
-### Footprint
-
-```
-files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, .codeo/overlays/**, skills/**, scripts/cleanup.sh, scripts/github.sh, lib/extension-points.tsv, docs/skills.md, docs/skills-inventory.md, docs/extension-points.md, docs/handoff.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-15-guard-home-only-skills.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 2026-11-15
@@ -191,6 +182,21 @@ sequenced:  none
 
 **Filed through `/codeo:issue`:** none.
 
+### Round 4 — 2026-11-15
+(send-back from qc.md round 3)
+
+**Plan:** the same file, `docs/plans/2026-11-15-guard-home-only-skills.md`, with a `## Round 4` section (Tasks 22-25), approved by the engineer and left unstaged. Shape unchanged: one executable plan, one pull request.
+
+**What QC found.** H1 (blocking, the plan's): after an abandon in a container the lock is gone and the role is `stale:<N>`, yet the abandon closing block's first step is `/codeo:triage` with no checkout named, and round 3's overlay told the model to keep that block; the stash-completed block has the same hole with `/codeo:init #<N>`. H2 (blocking, the plan's): the close overlay prints the removal command at every exit, so after an abandon whose unmerged branch was deleted it hands over the command that destroys the only copy of the work, with a clean `git status`. H3-H6 non-blocking.
+
+**Decisions.** Q12 = finished close only: Task 22 the overlay's `## host-workflow` has one paragraph per exit; the removal command appears only after a finished close and only when the lock's `volume:` is `codeo-<the lock's issue>` (H4); a stash and an abandon print no command and say why, each names the home container for its next skill, a stash says the old container is removed by hand before the resume (H6), an abandon with the branch deleted says the container holds the only copy; `tests/close-removal.test.sh` pins the command to the finished paragraph, with a mutation self-check. Task 23 the stash-completed and abandon-finished closing blocks in `skills/close/SKILL.md` and their two rows in `docs/handoff.md` gain the finished block's clause naming the checkout the project's host workflow gives (H1), pinned in `tests/closing-exits.test.sh`; `tests/cleanup-skill.test.sh` reads `docs/handoff.md` through the repository root (H3). Q13 = H3, H4 and H6; H5 (`CODEO_CLEANUP_REMOVAL`, round 1's F11) stays with `/codeo:triage`. Task 24 documentation, Task 25 the whole check. No script changes.
+
+**Rejected.** Printing the command after a stash and after an abandon with the branch kept (more convenient, three more conditions to word and pin in the text that has come back three times); leaving the overlay unconditional and warning in prose (the warning cannot see committed work).
+
+**Documentation the round moves.** `.devcontainer/README.md`, `docs/handoff.md`, `docs/extension-points.md`, `CHANGELOG.md`; `docs/skills.md` only if it says the commands print at every exit. `docs/skills-inventory.md` needs nothing: no rule and no point changes.
+
+**Filed through `/codeo:issue`:** none.
+
 ### Footprint
 
 ```
@@ -209,3 +215,4 @@ sequenced:  none
 - 2026-11-15 — round 3 after qc round 2: Q8-Q10 raised and answered with the question tool; draft at the review gate · cost: 3m · fable-5-2 539k in + 2.8M cached / 10k out
 - 2026-11-15 — round 3: Round 3 (Tasks 21 total) written into the plan file after approval; Q11 raised on a new overlap with #97 · cost: 5m · fable-5-2 539k in + 3.4M cached / 11k out · sonnet-5-5 27k in + 2.8M cached / 4k out
 - 2026-11-15 — planned round 3: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 17-21); Q11 answered · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 19m · fable-5-2 539k in + 3.4M cached / 11k out · sonnet-5-5 31k in + 4.5M cached / 7k out
+- 2026-11-15 — planned round 4: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 22-25); Q12-Q13 answered · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 4m · fable-5-2 172k in + 1.9M cached / 14k out · sonnet-5-5 171k in + 817k cached / 3k out
