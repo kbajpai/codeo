@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The issue's own dossier settled the behaviour (report and leave the file; the start script only), so the one thing left to ask was the `CHANGELOG.md` overlap with #83, and Q1 is answered. Nothing is open. The plan is being drafted as `.codeo/87/plan-draft.md` for review; nothing is written under `docs/plans/` until it is approved.
+Round 1, done. The issue's own dossier settled the behaviour (report and leave the file; the start script only), so the one thing to ask was the `CHANGELOG.md` overlap with #83, and Q1 is answered. Nothing is open. The plan was approved and written to `docs/plans/2026-11-15-report-lock-file-naming-no-issue.md`; the next step is `/codeo:implement`.
 
 ## Questions
 
@@ -32,6 +32,18 @@ Read before drafting, so the plan does not re-ask it:
 - The `shell` suite has no `filter`; the proof of a task is the whole `bash tests/run.sh`.
 - No overlay section for `plan` (`plan-shape`, `proof-of-done`, `wiki-rules` all exit 3); no invariants document, no shared environment, no `wiki` module, no `resources[]`.
 
+## Outcome
+
+2026-11-15
+
+**Plan:** `docs/plans/2026-11-15-report-lock-file-naming-no-issue.md`, a scoped executable plan (two tasks) under `docs/plans/`, approved by the engineer and left unstaged. No reference doc under `docs/`: there is no standing decision here.
+
+**Decisions.** Q1 = proceed and coordinate: #83 also adds a bullet under `## Unreleased` in `CHANGELOG.md`, so Task 2 merges `origin/main` first and keeps both bullets. Approach A: a new first arm in step 3a of `devcontainer-start.sh`, testing the file with `container-name.sh`'s pattern (`^issue:[[:space:]]*#*[0-9]+`); report and leave the file, take no lock, on any branch (`issue.md` Q1, Q2). Calls made in the plan: a file naming no issue on a detached HEAD gives the file's TODO alone; an `issue:` line with no number is reported; a `.codeo/active` that is a directory stays unreported; the file is compared byte for byte with `cmp`.
+
+**Rejected.** Asking `container-name.sh --docker` whether the name is "home" (a new dependency and failure path for one line of pattern); a shared helper both scripts source (changes `container-name.sh`, out of scope).
+
+**Documentation.** `.devcontainer/README.md` (*What the start script does*) and `CHANGELOG.md`. No page under `docs/` describes the start script, so none moves. No intake question was resolved here.
+
 ### Footprint
 
 ```
@@ -41,10 +53,7 @@ exclusive:  none
 sequenced:  none — CHANGELOG.md overlaps #83; proceed and coordinate (Q1)
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-15 — Q1 raised and answered in the conversation (#83, glob:CHANGELOG.md: proceed and coordinate); plan drafted as .codeo/87/plan-draft.md, awaiting review · cost: 3m · fable-5-2 103k in + 575k cached / 16k out
+- 2026-11-15 — planned: docs/plans/2026-11-15-report-lock-file-naming-no-issue.md · cost: 5m · fable-5-2 115k in + 844k cached / 18k out · sonnet-5-5 112k in + 163k cached / 1k out
