@@ -8,10 +8,9 @@
 
 ## Where this stands
 
-Q1-Q4 are answered (all as recommended). The plan was approved and written to
-`docs/plans/2026-11-15-file-new-issues-into-backlog.md` (unstaged, for review). Checking the
-footprint as written found a new workflow, #97, overlapping seven files: Q5 is open and
-`## Outcome` stays pending until it is answered.
+Q1-Q5 are answered (all as recommended). The plan was approved and written to
+`docs/plans/2026-11-15-file-new-issues-into-backlog.md` (unstaged, for review). Nothing is open
+and no lock is needed. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -113,6 +112,7 @@ and whether two small edits are dropped to shrink the overlap.
   nothing the acceptance criteria need.
 
 **Answer:**
+Proceed and coordinate (answered in the conversation: "as recommended").
 
 ## Notes
 
@@ -144,6 +144,18 @@ and whether two small edits are dropped to shrink the overlap.
   ownership table), `docs/skills.md` (the `issue` and `triage` sections),
   `docs/skills-inventory.md`, the header comment of `scripts/board.sh`, `CHANGELOG.md`.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-15-file-new-issues-into-backlog.md` — approved 2026-11-15, left unstaged for the engineer's review. Shape: an executable plan under `$PLANS` (six tasks, each test-first with its own proof), no separate reference doc; the decisions live in this dossier and in `docs/handoff.md`.
+
+**Decisions.**
+- Q1 = A: a "no, not ready yet" after triage files an issue is a *leave in the backlog* decision, recorded as `issue:<N>` → `backlog` with no board call, so it is asked once. Rejected: B, record nothing, which asks twice.
+- Q2-Q5 = proceed and coordinate, for #70, #96, #98 and #97. Rejected: sequencing after each (#97 is still at `init`, so the wait has no end) and re-scoping (dropping the `board.test.sh` pin and the `board.sh` header edit would cut two of #97's seven overlaps). Whichever branch merges second rebases; on a conflict in `tests/fixtures/skills-inventory.rules.sha256`, regenerate it with `bash tests/inventory.test.sh --update`.
+- One pull request. The Backlog move sits in `/codeo:issue` step 8, between the dossier commit and the status read; a failed move never fails the filing (new rule `issue-08`); with no board there is no `board.sh` call. `/codeo:triage` keeps asking about a Backlog issue with no ledger row and makes no `board.sh set` call for a card already in Backlog. `board.sh` itself is unchanged apart from its header comment.
+- Proofs: wording tests in the `shell` suite (`bash tests/run.sh`); the first two acceptance criteria need a live board, so QC reports them `untestable` in the suite.
+
+**Documentation the plan changes:** `docs/handoff.md` (the board bullet, its transition table, the ownership table), `docs/skills.md` (the `issue` and `triage` sections), `docs/skills-inventory.md` (`issue-08`), the header comment of `scripts/board.sh` and `CHANGELOG.md`. No intake question was resolved by this skill, and no `/codeo:issue` was filed.
+
 ### Footprint
 
 ```
@@ -153,11 +165,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-15 — Q1-Q4 raised; draft footprint under Notes · cost: 2m · fable-5-2 106k in + 770k cached / 11k out
 - 2026-11-15 — Q1-Q4 answered; plan approved and written; Q5 raised (overlap with #97) · cost: 11m · fable-5-2 109k in + 902k cached / 12k out · sonnet-5-5 143k in + 1.7M cached / 25k out
+- 2026-11-15 — planned: docs/plans/2026-11-15-file-new-issues-into-backlog.md · cost: 12m · fable-5-2 109k in + 902k cached / 12k out · sonnet-5-5 150k in + 2.4M cached / 29k out
