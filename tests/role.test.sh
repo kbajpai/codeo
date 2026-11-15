@@ -91,7 +91,7 @@ stale_needles() {
         case $state in
             finished) want+=("/codeo:cleanup"); bad=(devcontainer-start.sh re-run) ;;
             stashed|abandoned) want+=("/codeo:init #67" "never the start script"); bad=(re-run finished) ;;
-            lost) want+=("workflow is live" "re-run bash .devcontainer/scripts/devcontainer-start.sh"); bad=(finished stashed abandoned) ;;
+            lost) want+=("workflow is live" "re-run bash .devcontainer/scripts/devcontainer-start.sh"); bad=(finished stashed abandoned /codeo:cleanup) ;;
             unknown) want+=("container of the issue it is for"); bad=(devcontainer-start.sh finished) ;;
         esac
     fi
@@ -217,17 +217,46 @@ not_a_clone_fails() {
     [[ -z $out && $err == role:* && $err != *$'\n'* ]] || fail "--check: wanted one 'role:' line on stderr, got '$out' / '$err'"
 }
 
-# stale_with <name> <state> <file> <content>: a codeo-67 clone with no lock and <content> in .codeo/<file>.
+# stale_with <name> <state> <file> <content> [<file2> <content2>]: a codeo-67 clone with no lock and
+# <content> in .codeo/<file> (and <content2> in .codeo/<file2> when given).
 stale_with() {
     mk "$1" codeo-67 main || return 1
     state=$2
     mkdir -p "$dir/.codeo/$(dirname "$3")"
     printf '%b' "$4" >"$dir/.codeo/$3"
+    if [[ $# -ge 6 ]]; then
+        mkdir -p "$dir/.codeo/$(dirname "$5")"
+        printf '%b' "$6" >"$dir/.codeo/$5"
+    fi
+}
+
+# commit_archive <branch>: commits .codeo/done/67 on <branch> (the clone's HEAD is put back afterwards).
+commit_archive() {
+    local back
+    back=$(git -C "$dir" symbolic-ref HEAD)
+    git -C "$dir" symbolic-ref HEAD "refs/heads/$1"
+    git -C "$dir" add -f .codeo/done/67
+    git -C "$dir" -c user.name=t -c user.email=t@t commit -q -m archive
+    git -C "$dir" symbolic-ref HEAD "$back"
 }
 
 stale_finished() {
     stale_with fin finished done/67/close.md '### Round 1 — pull request opened\n' || return 0
+    commit_archive main
     role_is stale:67
+    check_matrix stale:67 67
+}
+
+stale_finished_by_the_remote_base() {
+    stale_with finremote finished done/67/close.md '### Round 1 — pull request opened\n' || return 0
+    commit_archive other
+    git -C "$dir" update-ref refs/remotes/origin/main refs/heads/other
+    role_is stale:67
+    check_matrix stale:67 67
+}
+
+stale_archived_with_an_open_pull_request_is_lock_lost() {
+    stale_with openpr lost done/67/close.md '### Round 1 — pull request opened\n' || return 0
     check_matrix stale:67 67
 }
 
@@ -246,8 +275,26 @@ stale_lock_lost_without_a_close() {
     check_matrix stale:67 67
 }
 
-stale_parked_then_reopened_is_lock_lost() {
-    stale_with reopened lost 67/close.md '### Round 1 — stashed\n\n### Round 2 — pull request opened\n' || return 0
+stale_resumed_stash_is_lock_lost() {
+    stale_with resumed lost 67/close.md '### Round 1 — stashed\n' \
+        67/init.md '- 2026-11-01 — resumed: by someone after the stash of 2026-10-30\n' || return 0
+    check_matrix stale:67 67
+}
+
+stale_stashed_twice_resumed_once_is_stashed() {
+    stale_with twice stashed 67/close.md '### Round 1 — stashed\n\n### Round 2 — stashed\n' \
+        67/init.md '- 2026-11-01 — resumed: by someone after the stash of 2026-10-30\n' || return 0
+    check_matrix stale:67 67
+}
+
+stale_abandoned_after_a_resumed_stash() {
+    stale_with abandonresumed abandoned 67/close.md '### Round 1 — stashed\n\n### Round 2 — abandoned — closed\n' \
+        67/init.md '- 2026-11-01 — resumed: by someone after the stash of 2026-10-30\n' || return 0
+    check_matrix stale:67 67
+}
+
+stale_parked_with_a_later_round_is_still_parked() {
+    stale_with laterround stashed 67/close.md '### Round 1 — stashed\n\n### Round 2 — pull request opened\n' || return 0
     check_matrix stale:67 67
 }
 
@@ -264,10 +311,15 @@ cases=(
     stale_on_main
     stale_on_a_feature_branch
     stale_finished
+    stale_finished_by_the_remote_base
+    stale_archived_with_an_open_pull_request_is_lock_lost
     stale_stashed
     stale_abandoned
     stale_lock_lost_without_a_close
-    stale_parked_then_reopened_is_lock_lost
+    stale_resumed_stash_is_lock_lost
+    stale_stashed_twice_resumed_once_is_stashed
+    stale_abandoned_after_a_resumed_stash
+    stale_parked_with_a_later_round_is_still_parked
     stale_dossier_is_read_under_the_root
     stale_unknown_issue
     mismatch_in_the_home_folder

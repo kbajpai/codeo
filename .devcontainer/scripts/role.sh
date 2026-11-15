@@ -14,8 +14,9 @@
 #         home       no lock, on the base branch (baseBranch in .codeo/config.json, else main), in
 #                    the folder '<codename>-home'.
 #         stale      no lock otherwise: stale:<N> in the folder '<codename>-<N>', else stale:?.
-#                    --check reads the clone's own dossier (.codeo) to say why: finished, stashed, abandoned, a lost
-#                    lock, or unknown.
+#                    --check reads the clone's own dossier (.codeo) to say why, as lock.sh and claim.sh read it:
+#                    finished (the base branch carries .codeo/done/<N>), stashed or abandoned (more parks than
+#                    resumes), a lost lock (the workflow is live, an archive the base lacks included), or unknown.
 #   role.sh --check <skill> [dir]
 #       Exits 0 printing nothing when the skill may run here, 1 printing one refusal line when it
 #       may not. The home-only skills (issue init triage cleanup) run on unguarded and home; the lock
@@ -88,17 +89,33 @@ case $role in
         # What happened to the workflow, from this clone's own dossier (the state directory is .codeo).
         state=unknown
         word=
+        last=
+        ref=
         if [[ -n $number ]]; then
-            if [[ -d $root/.codeo/done/$number ]]; then
+            # The base branch's ref, as lock.sh find_issue picks it, without its fetch.
+            ref=$base
+            if git -C "$root" rev-parse -q --verify "refs/remotes/origin/$base" >/dev/null 2>&1; then
+                ref=origin/$base
+            fi
+            if [[ -d $root/.codeo/done/$number ]] \
+                && git -C "$root" cat-file -e "$ref:.codeo/done/$number" 2>/dev/null; then
                 state=finished
-            elif [[ -d $root/.codeo/$number ]]; then
+            elif [[ -d $root/.codeo/done/$number || -d $root/.codeo/$number ]]; then
+                # Archived with the pull request still open, or no archive at all: the workflow is live
+                # unless the parks outnumber the resumes, counted as claim.sh --stash-live counts them.
                 state=lost
                 park_re='^### Round [0-9]+ — (.+ — )?(stashed|abandoned)([^[:alnum:]].*)?$'
-                last=
+                resume_re='^- .* — resumed: by .* after the (stash|abandon) of '
+                parks=0
+                resumes=0
                 if [[ -f $root/.codeo/$number/close.md ]]; then
-                    last=$(grep -E '^### Round [0-9]+ ' "$root/.codeo/$number/close.md" | tail -n 1 || true)
+                    parks=$(sed 's/[[:space:]]*$//' "$root/.codeo/$number/close.md" | grep -cE "$park_re" || true)
+                    last=$(sed 's/[[:space:]]*$//' "$root/.codeo/$number/close.md" | grep -E "$park_re" | tail -n 1 || true)
                 fi
-                if [[ $last =~ $park_re ]]; then
+                if [[ -f $root/.codeo/$number/init.md ]]; then
+                    resumes=$(sed 's/[[:space:]]*$//' "$root/.codeo/$number/init.md" | grep -cE "$resume_re" || true)
+                fi
+                if [[ ! -d $root/.codeo/done/$number ]] && ((parks > resumes)) && [[ $last =~ $park_re ]]; then
                     state=parked
                     word=${BASH_REMATCH[2]}
                 fi
