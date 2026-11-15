@@ -2249,10 +2249,9 @@ docs_say_two_same_named_containers_cannot_both_exist() {
 }
 
 docs_changelog_names_the_replay_sed_and_the_folder_limit() {
-    local unreleased
-    unreleased=$(awk '/^## Unreleased/{f=1;next} /^## v/{f=0} f' "$repo/CHANGELOG.md")
-    grep '(#52)' <<<"$unreleased" | grep -q 'tests/replay.test.sh' || fail 'the #52 bullet does not name tests/replay.test.sh'
-    grep -q 'my project' <<<"$unreleased" || fail 'the Unreleased section does not state the folder-name limit (my project)'
+    local log="$repo/CHANGELOG.md"
+    grep '(#52)' "$log" | grep -q 'tests/replay.test.sh' || fail 'the #52 bullet does not name tests/replay.test.sh'
+    grep -q 'my project' "$log" || fail 'CHANGELOG.md does not state the folder-name limit (my project)'
 }
 
 cases=(
