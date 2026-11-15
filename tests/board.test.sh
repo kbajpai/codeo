@@ -311,6 +311,11 @@ grep -q -- "--single-select-option-id O_BACKLOG" "$GH_STUB_LOG" || fail "backlog
 GH_STUB_ROWS="${P2//Ready/Backlog}" run set 7 ready
 [[ $rc -eq 0 && $out == *"Backlog → Ready on #2"* ]] || fail "ready without statuses: rc=$rc out=$out err=$err"
 grep -q -- "--single-select-option-id O_READY" "$GH_STUB_LOG" || fail "ready did not write O_READY"
+# A new issue is on no board; /codeo:issue files it with `set <N> backlog`, which adds it to the gate project.
+GH_STUB_ROWS="$url\t\t\t\t" run set 7 backlog
+[[ $rc -eq 0 && $out == *"(not on the board) → Backlog on #2"* ]] || fail "backlog off the board: rc=$rc out=$out err=$err"
+grep -q "^project item-add 2 --owner acme --url $url" "$GH_STUB_LOG" || fail "backlog off the board: not added to #2"
+grep -q -- "--single-select-option-id O_BACKLOG" "$GH_STUB_LOG" || fail "backlog off the board did not write O_BACKLOG"
 for pair in "inProgress:In progress:O_PROG" "inReview:In review:O_REVIEW" "done:Done:O_DONE"; do
     IFS=: read -r key name opt <<<"$pair"
     GH_STUB_ROWS="$P2" run set 7 "$key"
