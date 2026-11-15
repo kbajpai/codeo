@@ -11,8 +11,13 @@
 Round 1. All six plan tasks are built, committed and reviewed (each task review clean; the final
 whole-branch review returned "Ready to merge: Yes" and its three wording fixes are in `f7b9e49`).
 `bash tests/run.sh` prints `all cases passed`, and the suite's `build` is `true`. The hand-off is
-held on Q1: `overlap.sh 71` now prints six paths that #70, which has since reached `qc`, also
-changes. Nothing is pushed beyond the dossier commit that carries this file.
+held on Q1, answered *sequence after #70*: #70 (`feat/guard-home-only-skills-against`, at `qc`) has
+no pull request yet and is not on `main`, so this round waits. When #70 has merged, re-invoke
+`/codeo:implement`: it runs `sync-main.sh`, renames this branch's rule `issue-08` to `issue-09`
+(the marker in `skills/issue/SKILL.md`, the bullet in `docs/skills-inventory.md`, `[issue]=` in
+`tests/inventory.test.sh`, and the `issue-08` mentions in the tests and the plan's text if any),
+regenerates the hash with `bash tests/inventory.test.sh --update`, re-runs `bash tests/run.sh`,
+and writes the outcome. All six tasks are pushed.
 
 ## Questions
 
@@ -48,6 +53,7 @@ The answer decides whether this branch merges `main` after #70 and renumbers its
 - **Re-scope.** Not possible without dropping the rule the criterion on failed moves needs.
 
 **Answer:**
+Sequence after #70 (answered in the conversation: "Sequence after #70").
 
 ## Notes
 
@@ -73,3 +79,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-15 — built all six plan tasks; Q1 raised (overlap and rule-ID collision with #70) · cost: 17m · sonnet-5-5 525k in + 14.5M cached / 64k out
+- 2026-11-15 — Q1 answered: sequence after #70; waiting for it to merge · cost: 19m · sonnet-5-5 529k in + 15.8M cached / 67k out
