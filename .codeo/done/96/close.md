@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-The pull request is not open. `qc.md` round 2 is clear, but `main` moved to `153e82f` (#105) after this branch last merged it, and `CHANGELOG.md` now conflicts. Sent back to `/codeo:implement` to resolve it; then `/codeo:qc`, then `/codeo:close`.
+Pull request #106 is open on qc round 3 (clear). It waits for review and merge; the engineer merges, then runs `/codeo:close` again.
 
 ## Questions
 
@@ -27,6 +27,16 @@ Changes on `main` that touched it:
 
 qc round at review: 2
 
+### Round 2 — pull request opened
+
+2026-11-15
+
+#106 https://github.com/kbajpai/codeo/pull/106
+
+Went out on `qc.md` round 3: **Verdict: clear — forward to `/codeo:close`.** No override.
+
+
 ## Log
 
 - 2026-11-15 — conflict with main in CHANGELOG.md; round 1 sent back to /codeo:implement; board: In progress on #96 (already In progress) · cost: 0m · sonnet-5-5 90k in + 572k cached / 2k out
+- 2026-11-15 — opened #106 on qc round 3; dossier archived; board: In review on #96 · cost: 0m · sonnet-5-5 2k in + 712k cached / 2k out
