@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1: the code met every criterion, but the plan left out where `close`'s next step runs (F1) and what makes a refused finding findable by triage (F2). Q7 (which non-blocking findings to take in) is answered; the round-2 draft is at the review gate.
+Round 2, after a send-back from `/codeo:qc` round 1: the code met every criterion, but the plan left out where `close`'s next step runs (F1) and what makes a refused finding findable by triage (F2). Q7 (which non-blocking findings to take in) is answered; the round-2 plan was approved and written into the plan file (Tasks 11-16); nothing is open and the next step is `/codeo:implement`.
 
 ## Questions
 
@@ -82,17 +82,6 @@ F1, F2 and the cheap ones (F4, F5, F6, F7, F8, F10, F13); F9, F11 and F12 are le
 
 ## Notes
 
-Round 2 footprint, to move to the end of the round 2 outcome once nothing is raised:
-
-### Footprint
-
-```
-files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, .codeo/overlays/**, skills/**, scripts/cleanup.sh, scripts/github.sh, lib/extension-points.tsv, docs/skills.md, docs/skills-inventory.md, docs/extension-points.md, docs/handoff.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-15-guard-home-only-skills.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 What exploration found, so the plan does not re-ask it:
 
 - **Role script.** `.devcontainer/scripts/container-name.sh` already reads the codename (`--codename`) and the lock's issue number with one pattern; `folder-check.sh` reads `baseBranch` from `.codeo/config.json` (fixed in #57, merged) and treats a folder `<codename>-<digits>` off the base branch as a failed lock. The role script is new, sits next to them in `.devcontainer/scripts/`, calls `container-name.sh` for both, and reads the base the way `folder-check.sh` does. It does not call or change `folder-check.sh`, which stays the start script's check of the folder against the lock. My call: it lives with the project's dev container scripts, not in the plugin's `scripts/`, because "home container" is this project's concept.
@@ -120,17 +109,30 @@ What exploration found, so the plan does not re-ask it:
 
 **Documentation.** `.devcontainer/README.md`, `docs/skills.md`, `docs/extension-points.md`, `docs/skills-inventory.md`, `docs/handoff.md`, `README.md`, `CHANGELOG.md`. No intake question was resolved here beyond the four `init.md` left open (all settled by Q1-Q4 and the calls above).
 
+### Round 2 — 2026-11-15
+(send-back from qc.md round 1)
+
+**Plan:** the same file, `docs/plans/2026-11-15-guard-home-only-skills.md`, with a `## Round 2` section (Tasks 11-16), approved by the engineer and left unstaged. Shape unchanged: one executable plan, one pull request.
+
+**What QC found.** F1 (blocking, the plan's): a finished `/codeo:close` names `/codeo:triage` as its first step in a container that has just become stale, where the guard refuses it. F2 (blocking, the plan's): a finding the guard refuses to file was "recorded in the dossier" in no stated form, while triage collects only some forms. F3-F13 non-blocking.
+
+**Decisions.** Q7 = F1, F2 and the cheap ones (F4, F5, F6, F7, F8, F10, F13), answered with the question tool: Task 11 (F1, F7) the finished close names the checkout the follow-up skills run in, generically "the checkout the project's host workflow names" and in this repository's overlay the home container, with the overlay applying only to `host: container`; Task 12 (F2) the refused-finding sentence names the form, a `## Notes` line promising later work with no issue number; Task 13 (F4, F5, F13) the `github.sh` usage line, `cleanup.sh` stopping on an unreadable issue, the `<M>` placeholder; Task 14 (F6, F10) the stale refusal covers a stashed or abandoned workflow and names the recovery, and the overlays cover any other exit; Task 15 (F1, F8) the README and CHANGELOG. F3 → the footprint gains `scripts/github.sh`. Rejected: fixing F1/F2 only; everything F1-F13 (F9 Podman, F11 the override in the production path and F12 generic wording are left in `qc.md` for `/codeo:triage`).
+
+**Documentation the round moves.** `.devcontainer/README.md`, `docs/extension-points.md`, `docs/handoff.md`, `CHANGELOG.md`. `docs/skills.md`, `docs/skills-inventory.md` and `README.md` need nothing.
+
+**Filed through `/codeo:issue`:** none.
+
 ### Footprint
 
 ```
-files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, .codeo/overlays/**, skills/**, scripts/cleanup.sh, lib/extension-points.tsv, docs/skills.md, docs/skills-inventory.md, docs/extension-points.md, docs/handoff.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-15-guard-home-only-skills.md
+files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, .codeo/overlays/**, skills/**, scripts/cleanup.sh, scripts/github.sh, lib/extension-points.tsv, docs/skills.md, docs/skills-inventory.md, docs/extension-points.md, docs/handoff.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-15-guard-home-only-skills.md
 wiki:       none
 exclusive:  none
 sequenced:  none
 ```
-
 ## Log
 
 - 2026-11-15 — Q1-Q6 raised · cost: 4m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 181k in + 139k cached / 8k out
 - 2026-11-15 — planned: docs/plans/2026-11-15-guard-home-only-skills.md · engineering:architecture and engineering:system-design not loaded, their Options/Decision structure applied directly from Q1-Q3 · cost: 13m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 232k in + 2M cached / 39k out
 - 2026-11-15 — round 2 after qc round 1: Q7 raised and answered with the question tool; draft at the review gate · cost: 2m · fable-5-2 423k in + 1.8M cached / 10k out
+- 2026-11-15 — planned round 2: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 11-16) · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 13m · fable-5-2 424k in + 2.2M cached / 11k out · sonnet-5-5 26k in + 1.3M cached / 4k out
