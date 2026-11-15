@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written: back to `/codeo:implement` for the `CHANGELOG.md` sentence (F1 blocking, F2 non-blocking). Q1 = A and Q2 = proceed and coordinate. Nothing is open.
+Round 2 is written: clear, forward to `/codeo:close`. Nothing is open. Non-blocking F5 (the comment on #76 lists three of four scorer corrections) and F6 are recorded for the engineer.
 
 ## Questions
 
@@ -84,8 +84,43 @@ Reviewed `origin/main` (`09e3013`)…`6d5de6f`; since then only `.codeo/76/qc.md
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-15
+
+Reviewed `origin/main` (`09e3013`)…`f651685`, the tree after `/codeo:implement` round 2 (`53aa18f` fixed `CHANGELOG.md:11`).
+
+**Commands and output.**
+- `sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main`. `overlap.sh 76` and `overlap.sh --outside 76` → nothing (the #57 overlap on `CHANGELOG.md` stays answered: Q2 = proceed and coordinate).
+- `scope.sh origin/main HEAD` → `suite.shell=true` (dossiers and `CHANGELOG.md` are paths no suite classifies).
+- Build `true` → exit 0. `bash tests/run.sh` → `all cases passed`, exit 0.
+- `skills/doctor/SKILL.md:4` and `skills/setup/SKILL.md:4` → `model: sonnet`. `CHANGELOG.md:11` now reads "3 times per model on 2 cases … 24 runs in all" and "Haiku passed every item but one".
+- `qc/invariants-extra` and `qc/wiki-rules` overlays exit 3 (none); no invariants file; no shared environment.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | A comparison of a Haiku run and a Sonnet run is recorded for `doctor`, and another for `setup`, naming what was compared and the result. | met | the comment on #76 (issuecomment-6885759871): method, four cases, six items, per-case table, decision per skill |
+| 2 | A skill whose Haiku run matched has `model: haiku`; a skill whose Haiku run differed keeps `model: sonnet`, and the issue says how it differed. | met — under Q1 = A | both `model:` lines are `sonnet`; the comment's Decision section says how each differed |
+| 3 | `bash tests/run.sh` passes. | met | `all cases passed`, exit 0, this round |
+| 4 | `CHANGELOG.md` records the change, or the trial's result when nothing switched. | met | `CHANGELOG.md:11`, now accurate on the run count and on which items differed |
+
+**Documentation.** Only `CHANGELOG.md` moves; no page under `docs/` names the model of `doctor` or `setup`.
+
+**Review.** An opus reviewer (`QC review:`), given the criteria and the diff, checked the changelog, the comment and the `model:` lines against the saved trial output (`results.tsv`, `runs/*/stream.jsonl`): every claim holds, including the item counts, the Read versus Bash split, the model usage per run and the cost. Its assessment, quoted: "Ready to merge? Yes", with two minor notes.
+
+**Findings.**
+- F1 (blocking in round 1) — fixed by `53aa18f`: the run count in `CHANGELOG.md:11` now says 2 cases per skill.
+- F2 (non-blocking in round 1) — fixed by `53aa18f`: the entry now says Haiku passed every item but one.
+- F3 (non-blocking) — the plan's: item 1 was tightened from Q2's wording without being declared; settled by Q1 = A. No change needed.
+- F4 (non-blocking) — the plan's: Task 3 Step 3's `gh` command does not run, and its Task 1 command form lacks `Read` and `--add-dir`; both are disclosed in `implement.md` and the comment. No change needed.
+- F5 (non-blocking) — `/codeo:implement`'s if the engineer wants it fixed: the #76 comment's "three false misses" lists three scorer corrections, and the dossier records a fourth (`doctor-fail` item 5 no longer demands the word "fix", which turned three Haiku cells from F to P). Every cell the re-scoring changed was a Haiku cell, F to P, and none touches item 1, so the decision stands. A one-line edit to the comment would make it complete.
+- F6 (non-blocking) — the comment describes `doctor-fail` Haiku run 2's second Bash call as a read of the template; it also ran `cat .codeo/config.json`. Still an item 1 miss either way. Noted only.
+
+Neither F5 nor F6 sends the change back: a non-blocking finding is recorded and routed, and on its own never opens another round.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-14 — Q1 raised · cost: 4m · opus-5-5 241k in + 1.5M cached / 7k out · sonnet-5-5 27k in + 619k cached / 2k out
 - 2026-11-14 — Q1 answered A; Q2 raised (overlap with #57) · cost: 0m · sonnet-5-5 2k in + 662k cached / 2k out
 - 2026-11-15 — round 1: back to /codeo:implement (F1 blocking: CHANGELOG run count) · cost: 0m · opus-5-5 29k in + 226k cached / 706 out
+- 2026-11-15 — round 2: clear, forward to /codeo:close · cost: 4m · opus-5-5 106k in + 1.2M cached / 8k out · sonnet-5-5 20k in + 274k cached / 486 out
