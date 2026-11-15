@@ -46,6 +46,11 @@ must_contain "a footprint gap is blocking from round 2" 'Once `plan.md`'"'"'s `#
 if grep -qF 'and not blocking by rule:' "$skill"; then
     fail "step 6 still calls a footprint gap not blocking by rule on every plan"
 fi
+must_contain "a round-2 footprint gap is owned by step 8's test" 'Whose it is follows step 8'
+must_contain "a second round is recognised by its heading" 'A second round shows as a `### Round <n>` heading'
+if tr '\n' ' ' <"$skill" | tr -s ' ' | grep -qF 'a footprint can only be corrected by a new plan round'; then
+    fail "step 6 still sends every round-2 footprint gap to plan"
+fi
 
 # Step 7: the reviewer.
 must_contain "the reviewer model read" "config.sh\" get '.models.reviewer // \"opus\"'"

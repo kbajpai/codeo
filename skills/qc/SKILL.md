@@ -158,10 +158,12 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
    other. On a first-round plan it is not blocking by rule: the footprint is what other workflows
    were told this one would touch, so the engineer should hear about the gap, but the change may
    still be right.
-   Once `plan.md`'s `## Outcome` has a `### Round 2` or later it is blocking, and `/codeo:plan`'s:
-   the `qc-verdict` check fails the pull request on the same paths, and a footprint can only be
-   corrected by a new plan round, so the finding goes back to `/codeo:plan` before any pull
-   request exists.
+   Once `plan.md`'s `## Outcome` has a `### Round 2` or later it is blocking: the `qc-verdict`
+   check fails the pull request that archives the dossier on the same paths.
+   Whose it is follows step 8: `/codeo:implement`'s when the code strayed into a file the plan
+   never called for, where reverting it clears the gap, and `/codeo:plan`'s when the work needs
+   the file and the footprint left it out, where only a new plan round can add it.
+   A second round shows as a `### Round <n>` heading, n ≥ 2, under `plan.md`'s `## Outcome`.
 
    **Then the documentation.** For every behaviour the diff changes — an interface, a flow, a
    state, a configuration key, a screen, a deployment step — find the page under `$DOCS` (and, with
