@@ -192,6 +192,8 @@ must_contain "the verdict is not clear when the lease is held but the hook canno
 
 # The home-only guard refuses /codeo:issue in an issue container: the caller records the finding instead.
 must_contain 'a refused call is recorded in the dossier' "record the finding in this skill's own dossier"
+must_contain 'the refused finding is a Notes line' 'as a line under `## Notes`'
+must_contain 'the Notes line carries no issue number' 'carries no issue number'
 must_contain 'a refused call is filed from the home container' 'in the home container'
 
 if ((failures)); then

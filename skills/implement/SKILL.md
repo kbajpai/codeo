@@ -15,8 +15,9 @@ once implementation starts, stop and say so rather than silently deviating from 
 re-running `/codeo:plan`. Work that surfaces mid-task but belongs to no task in the plan goes to
 `/codeo:issue` as its own issue — the plan's scope is the plan's scope.
 When the project's role check refuses the call (the skill is running in an issue container),
-record the finding in this skill's own dossier and say to file it with `/codeo:issue`
-in the home container; `/codeo:triage` finds recorded findings later.
+record the finding in this skill's own dossier as a line under `## Notes` that promises the
+later work and carries no issue number — the form `/codeo:triage` collects once the dossier
+is archived — and say to file it with `/codeo:issue` in the home container.
 
 Where things go is read from the project's config, never assumed:
 
