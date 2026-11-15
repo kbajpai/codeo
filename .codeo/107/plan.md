@@ -61,7 +61,16 @@ Proceed and coordinate, as recommended (given in the conversation: "Accept as re
 
 ## Notes
 
-Decisions already made from the issue and the code; they will appear in the draft for review.
+Decisions already made from the issue and the code; they are in the approved plan.
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/codeo-root.sh, .devcontainer/README.md, tests/devcontainer.test.sh, tests/codeo-root.test.sh, CHANGELOG.md, docs/plans/2026-11-15-dev-container-follow-ups-107.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 - **Shape.** One plan under `docs/plans/`, one pull request, no reference doc. No overlay for `plan-shape`, `proof-of-done` or `wiki-rules` (exit 3), so the generic shapes apply. Suite: `shell` (`bash tests/run.sh`, no `filter`); each task's proof is the test file it touches, run whole.
 - **F16.** The changelog test searches the whole of `CHANGELOG.md` for the `(#52)` bullet and `my project`, not one section.
