@@ -168,15 +168,6 @@ Proceed and coordinate (answered in the conversation: "proceed and coordinate, d
   ownership table), `docs/skills.md` (the `issue` and `triage` sections),
   `docs/skills-inventory.md`, the header comment of `scripts/board.sh`, `CHANGELOG.md`.
 
-### Footprint
-
-```
-files:      skills/issue/SKILL.md, skills/triage/SKILL.md, scripts/board.sh, tests/issue-skill.test.sh, tests/triage-skill.test.sh, tests/closing-exits.test.sh, tests/inventory.test.sh, tests/board.test.sh, tests/fixtures/skills-inventory.rules.sha256, docs/handoff.md, docs/skills.md, docs/skills-inventory.md, CHANGELOG.md, docs/plans/2026-11-15-file-new-issues-into-backlog.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-15-file-new-issues-into-backlog.md` — approved 2026-11-15, left unstaged for the engineer's review. Shape: an executable plan under `$PLANS` (six tasks, each test-first with its own proof), no separate reference doc; the decisions live in this dossier and in `docs/handoff.md`.
@@ -188,6 +179,20 @@ sequenced:  none
 - Proofs: wording tests in the `shell` suite (`bash tests/run.sh`); the first two acceptance criteria need a live board, so QC reports them `untestable` in the suite.
 
 **Documentation the plan changes:** `docs/handoff.md` (the board bullet, its transition table, the ownership table), `docs/skills.md` (the `issue` and `triage` sections), `docs/skills-inventory.md` (`issue-08`), the header comment of `scripts/board.sh` and `CHANGELOG.md`. No intake question was resolved by this skill, and no `/codeo:issue` was filed.
+
+### Round 2
+
+2026-11-15
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-15-file-new-issues-into-backlog.md`, Tasks 7-9 appended under "Round 2" — approved 2026-11-15, left unstaged for the engineer's review. Same shape as round 1; no separate reference doc.
+
+**Decisions.**
+- F1 (blocking): a filed, never-started issue has one ledger fingerprint, `issue:<N>`, whichever of triage's sources finds it; `intake:<dir>` is only for a `new-<slug>/` draft (Task 7). The project's ledger already holds only `issue:<N>` rows for such issues, so no decided issue comes back. Rejected: recording both `intake:<N>` and `issue:<N>` (two rows to keep in step, and every existing decision would be asked once more) and dropping the intake `<N>/` source.
+- F3, F4 (Task 8): *leave in the backlog* records the decision and moves the card only for an issue not already there; a no-move quotes the `status` line and logs `already in Backlog`. F2, F5 (Task 9): the `/codeo:issue` scope sentences name the board write, and the success line is quoted.
+- Q6 = proceed and coordinate, for #107 (`CHANGELOG.md` only; its bullet and ours merge by keeping both). Rejected: sequencing after #107, which is still at `init`. The rule on the branch is `issue-09` (#70 took `issue-08`); this round changes no rule text, so the pinned hash stays.
+
+**Documentation the round changes:** `docs/skills.md` (the `issue` section's opening sentence). Nothing else moves a page. No intake question was resolved by this skill, and no `/codeo:issue` was filed.
 
 ### Footprint
 
@@ -204,3 +209,4 @@ sequenced:  none
 - 2026-11-15 — Q1-Q4 answered; plan approved and written; Q5 raised (overlap with #97) · cost: 11m · fable-5-2 109k in + 902k cached / 12k out · sonnet-5-5 143k in + 1.7M cached / 25k out
 - 2026-11-15 — planned: docs/plans/2026-11-15-file-new-issues-into-backlog.md · cost: 12m · fable-5-2 109k in + 902k cached / 12k out · sonnet-5-5 150k in + 2.4M cached / 29k out
 - 2026-11-15 — round 2 (send-back from qc.md round 1): draft Tasks 7-9 written to .codeo/71/plan-draft.md; Q6 raised (overlap with #107) · cost: 2m · fable-5-2 159k in + 721k cached / 9k out
+- 2026-11-15 — round 2: Q6 answered, draft approved and appended to the plan (Tasks 7-9); footprint unchanged · cost: 13m · fable-5-2 165k in + 1.1M cached / 11k out · sonnet-5-5 159k in + 215k cached / 2k out
