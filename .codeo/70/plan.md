@@ -106,6 +106,12 @@ All of G3-G7. Answered with the question tool, in the conversation (engineer, 20
 
 ## Notes
 
+Round 3 footprint, to move to the end of the round 3 outcome once nothing is raised (unchanged from round 2):
+
+### Footprint
+
+```
+
 What exploration found, so the plan does not re-ask it:
 
 - **Role script.** `.devcontainer/scripts/container-name.sh` already reads the codename (`--codename`) and the lock's issue number with one pattern; `folder-check.sh` reads `baseBranch` from `.codeo/config.json` (fixed in #57, merged) and treats a folder `<codename>-<digits>` off the base branch as a failed lock. The role script is new, sits next to them in `.devcontainer/scripts/`, calls `container-name.sh` for both, and reads the base the way `folder-check.sh` does. It does not call or change `folder-check.sh`, which stays the start script's check of the folder against the lock. My call: it lives with the project's dev container scripts, not in the plugin's `scripts/`, because "home container" is this project's concept.
