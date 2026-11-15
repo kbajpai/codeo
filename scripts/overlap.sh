@@ -27,6 +27,7 @@
 #       origin/<baseBranch>) and the plan is read from <head> (`<state>/<N>/plan.md`, else
 #       `<state>/done/<N>/plan.md`) instead of the working tree; either ref is any commit-ish.
 #       --base and --head are valid only with --outside.
+#       A given ref that does not resolve to a commit is an error (exit 1).
 #       Given alone, --base changes only the diff base: `git diff --name-only <base>...HEAD`, with the
 #       plan read from the working tree.
 #
@@ -61,6 +62,13 @@ done
 
 cd "$(git rev-parse --show-toplevel)"
 export LC_ALL=C
+
+# A given ref must resolve to a commit: `changes()` swallows git errors, so an unresolved ref
+# would read as "nothing outside the footprint".
+for ref in "$given_base" "$given_head"; do
+    [[ -z $ref ]] && continue
+    git rev-parse --verify --quiet "$ref^{commit}" >/dev/null 2>&1 || { echo "overlap: cannot resolve $ref" >&2; exit 1; }
+done
 
 base=$(codeo_base_branch)
 # The plan doc lives here, not in the footprint, so `--outside` must not report it.

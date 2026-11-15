@@ -353,6 +353,17 @@ rc=0
 (cd "$clone" && bash "$plugin/scripts/overlap.sh" --outside 7 --base >/dev/null 2>&1) || rc=$?
 assert_eq "exit with a missing value" 1 "$rc"
 
+case_desc="--outside with a --base or --head that does not resolve is an error"
+clone=$(head_repo 'a.txt')
+for refs in "--base main --head no-such-ref" "--base no-such-ref --head feat/h"; do
+    rc=0
+    # shellcheck disable=SC2086
+    out=$(cd "$clone" && bash "$plugin/scripts/overlap.sh" --outside 7 $refs 2>"$scratch_root/err") || rc=$?
+    assert_eq "exit ($refs)" 1 "$rc"
+    assert_eq "stdout ($refs)" "" "$out"
+    grep -q 'overlap: cannot resolve no-such-ref' "$scratch_root/err" || { echo "no 'cannot resolve' on stderr ($refs)"; exit 1; }
+done
+
 case_desc="nothing in flight"
 origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
 git -C "$origin" -c init.defaultBranch=main init -q
