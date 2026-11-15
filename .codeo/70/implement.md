@@ -8,9 +8,7 @@
 
 ## Where this stands
 
-Round 1. All ten tasks of `docs/plans/2026-11-15-guard-home-only-skills.md` are built and committed (`7840b47` to `5976610`), each task and the whole branch reviewed, and `bash tests/run.sh` prints `all cases passed` at the head (`5976610`); the build (`true`, the `shell` suite's `build`) is ok. The branch already contains `origin/main`.
-
-Stopped before the hand-off on Q1-Q4: `overlap.sh 70` printed overlaps with four workflows that began after the plan was approved (#71, #96, #97, #98). The code is finished; these decide only how the four pull requests merge. The hand-off to `/codeo:qc` waits for them.
+Round 1, done. All ten tasks of the plan are built, committed (`7840b47` to `5976610`) and reviewed, Q1-Q4 are answered, and nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -20,6 +18,7 @@ Stopped before the hand-off on Q1-Q4: `overlap.sh 70` printed overlaps with four
 **Options:** proceed and coordinate · sequence after #71 (recommended: this branch is built and reviewed; #71 is still at `plan`) · re-scope.
 
 **Answer:**
+Sequence, as the question defines it: this branch merges first and #71 rebases onto it, regenerating the inventory fixture. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q2 — Overlap with #96 on `.devcontainer/README.md` and `CHANGELOG.md`: proceed and coordinate, sequence after #96, or re-scope?
 
@@ -27,6 +26,7 @@ Stopped before the hand-off on Q1-Q4: `overlap.sh 70` printed overlaps with four
 **Options:** proceed and coordinate (recommended: the README edits are in separate sections) · sequence after #96 · re-scope.
 
 **Answer:**
+Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q3 — Overlap with #97 on `docs/skills.md`, `docs/handoff.md`, `skills/close/SKILL.md`, `skills/plan/SKILL.md`, `skills/triage/SKILL.md`, `CHANGELOG.md` and more: proceed and coordinate, sequence after #97, or re-scope?
 
@@ -34,6 +34,7 @@ Stopped before the hand-off on Q1-Q4: `overlap.sh 70` printed overlaps with four
 **Options:** sequence after #97 is not recommended (it has not planned yet) · proceed and coordinate (recommended: this branch merges first, #97 plans against `origin/main` and sees the new text) · re-scope.
 
 **Answer:**
+Proceed and coordinate; this branch merges first. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q4 — Overlap with #98 on `skills/plan/SKILL.md`, `tests/plan-skill.test.sh` and `CHANGELOG.md`: proceed and coordinate, sequence after #98, or re-scope?
 
@@ -41,6 +42,7 @@ Stopped before the hand-off on Q1-Q4: `overlap.sh 70` printed overlaps with four
 **Options:** proceed and coordinate (recommended: #98 is nearly through and the later branch merges `origin/main`) · sequence after #98 · re-scope.
 
 **Answer:**
+Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
@@ -58,8 +60,28 @@ Stopped before the hand-off on Q1-Q4: `overlap.sh 70` printed overlaps with four
 
 ## Outcome
 
-_Pending — written at the hand-off._
+2026-11-15
+
+**Plan built:** `docs/plans/2026-11-15-guard-home-only-skills.md`, all ten tasks, one commit per task (a fix commit after a review where one was needed), `7840b47` to `5976610`; each task and the whole branch were reviewed. Overlaps raised at the hand-off (Q1-Q4, #71 #96 #97 #98) are answered: this branch merges first, the others proceed and coordinate.
+
+**What was built.** `.devcontainer/scripts/role.sh` (roles `home`, `issue:<N>`, `stale:<N>`/`stale:?`, `mismatch:<N>:<folder>`, `unguarded`; `--check <skill>`); a `role-guard` extension point, rule and step in eight skills (`issue init triage cleanup plan implement qc close`) with this repository's overlays running `role.sh --check`; callers record a finding the guard refuses to file; `scripts/cleanup.sh` and the `/codeo:cleanup` skill with the overlay point `cleanup/removal-command`; `/codeo:close`'s final report carries the host removal commands through the overlay `close/host-workflow`; `github.sh pr get`.
+
+**Documentation changed.** `.devcontainer/README.md`, `docs/skills.md`, `docs/extension-points.md`, `docs/skills-inventory.md`, `docs/handoff.md`, `README.md`, `CHANGELOG.md`. The plan named all of them; none was added.
+
+**Build result.** The `shell` suite's `build` (`true`) ran ok; `bash tests/run.sh` prints `all cases passed` at `5976610` (full run, after the last fix); `bash scripts/doctor.sh` all ok; `git diff origin/main -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` is empty.
+
+**Deviations from the plan.**
+1. `scripts/github.sh` gained `pr get <n>` (state, `merged_at`, `head_ref`) and `tests/github.test.sh` one case, because `pr view` prints only the merge state. Approved by the engineer in the conversation. The plan's footprint does not list `scripts/github.sh` (`overlap.sh --outside 70` prints it).
+2. `tests/role-guard.test.sh` was committed with the overlays (Task 5), not with Task 3, and began with seven skills; Task 7 added `cleanup`: the suite is green at every commit.
+3. The docs example for `cleanup/removal-command` is neutral (`remove-container {name}`), so `docs/` names no container engine.
+4. Two reviewer findings changed the plan's text: the close overlay now carries "not inside this container" and `git status` first (the skill's default bullet is dead text when an overlay exists), and `cleanup.sh` dies unless the clone's fetch refspec covers every branch, since its branch and dossier proofs read the fetched refs.
+5. The overlays' `role-guard` text keeps "exit 2: report its `role:` line and go on". A fault in the project's own check disables the guard instead of blocking every skill; a stale container cannot reach exit 2.
+
+**Rulings taken while building** (subagent-driven execution; each with what it costs if wrong): (1) tasks 2, 3 and 5 ran as one dispatch with the pin test committed last, so the suite is never red at a commit: costs that three tasks were reviewed together. (2) The docs example for `cleanup/removal-command` is neutral: costs nothing. (3) Reviewers and the final whole-branch review ran on sonnet, not a stronger model, because codeo's subagent hook allows only the configured subagent model: costs a weaker review; `/codeo:qc` grades independently. (4) Task 10 (verification) ran inline. (5) Item 5 above. (6) `pr get` was added after the engineer's approval (item 1).
+
+**Deferred minors**, none blocking: `tests/role.test.sh` mode 100644 and thin `--check` coverage for some roles; the role-guard test's `-A3` window; cleanup's issue-view failure reads as `failed issue` and one unreadable PR aborts the whole report; no test for an invalid overlay regex or an `origin/HEAD` symref; the skill description and `docs/skills.md` intro say "home container only" while the registry default is "runs wherever invoked"; the cleanup closing block's first step is "run the printed commands" even when every command is `-`; wording nits in `.devcontainer/README.md` and the inventory intro.
 
 ## Log
 
 - 2026-11-15 — built Tasks 1-10 and the final-review fix wave; Q1-Q4 raised on overlaps with #71, #96, #97, #98 · cost: 97m · sonnet-5-5 1.2M in + 35M cached / 196k out
+- 2026-11-15 — Q1-Q4 answered; outcome written, handed off to qc · cost: 100m · sonnet-5-5 1.2M in + 37.2M cached / 205k out
