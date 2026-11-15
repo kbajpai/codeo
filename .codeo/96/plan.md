@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The issue's five sections, the dev container scripts and their tests are read. Most of the work has one sensible shape and needs no answer; those calls are listed under `## Notes` so you can correct any of them. Seven questions are open. Q1 is the only one that changes the design; Q2-Q5 are short; Q6 and Q7 are the overlaps with #70 and #98. No draft is written until they are answered.
+Planned and approved. The plan is `docs/plans/2026-11-15-dev-container-follow-ups-96.md`, left unstaged for review. Nothing is open; the next step is `/codeo:implement`.
 
 ## Questions
 
@@ -118,6 +118,19 @@ Each of these has one sensible answer given the issue and the code. Say so in an
 - **`claude auth status` moves to `$HOME`**, the way `plugins.sh` already runs every `claude` call; the bind-mount TODO explains the user-namespace mapping in place of the `sudo chown -R` advice; the `cd ""` quirk and the stray `>=` comment are fixed alongside.
 - **Documentation this moves:** `.devcontainer/README.md` and `docs/release-checklist.md`. No other page under `docs/` describes the dev container.
 - **No shared environment, no invariants document, no wiki** are configured, so no task carries a lease and there is nothing to check the plan against beyond the issue. The `shell` suite has no single-test filter, so each task's proof is `bash tests/run.sh` ending `all cases passed`.
+## Outcome
+
+**Plan file:** `docs/plans/2026-11-15-dev-container-follow-ups-96.md`, unstaged.
+
+**Shape:** a $PLANS plan (Goal / Architecture / Tech Stack / Spec / Global Constraints / Review Focus, eleven checkbox tasks, an acceptance map), in the shape of `2026-11-14-dev-container-follow-ups.md`. No separate reference doc: nothing here is a standing decision.
+
+**Decisions.** Q1: keep the clone folder as the Docker name and state the limit in the CHANGELOG, so #54's "`my project` / `_x` starts" criterion is **not met, by decision** (rejected: drop `--name` with or without a label). Q2: remove `--cpus=2`, keep `--memory=4g` (rejected: `--cpu-quota`). Q3: persisting Claude's login is not done here; Task 11 files it as its own issue (rejected: one shared volume, one volume per container). Q4: the engineer edits the v1.0.6 Release body; Task 10 prepares `.codeo/96/release-v1.0.6-notes.md` and Task 11 hands over the command (rejected: `/codeo:implement` runs it). Q5: n/a. Q6, Q7: proceed and coordinate with #70 and #98; `CHANGELOG.md` and the README are touched once, in Task 10, after merging `origin/main`.
+
+**Settled without a question.** The half-written `~/.gitconfig` window exists (this container's copy was created, then written about 41 ms later), so Task 9 closes it; `/codeo:implement` records that on #96. An identity in an `[include]`d file is documented as not counting, not followed. #88's left minors: five fixed, `home_folder_on_a_configured_base_is_silent` dismissed. Already met on `main` and only pinned: one `safe.directory` entry, a non-regular `~/.claude/settings.json` TODO.
+
+**Documentation pages the plan changes:** `.devcontainer/README.md` and `docs/release-checklist.md`; `CHANGELOG.md` records the change. No other page describes the dev container.
+
+**Intake questions resolved here:** #40's optional item (left out, filed separately), the VS Code single-write check (#81), and #88's left minors.
 
 ### Footprint
 
@@ -127,11 +140,7 @@ wiki:       none
 exclusive:  none
 ```
 
-
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-15 — Q1-Q7 raised · cost: 4m · fable-5-2 111k in + 1.2M cached / 20k out
+- 2026-11-15 — planned: docs/plans/2026-11-15-dev-container-follow-ups-96.md · cost: 8m · fable-5-2 16k in + 457k cached / 823 out · sonnet-5-5 197k in + 2.3M cached / 39k out
