@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, before any task. The plan (`docs/plans/2026-11-15-docs-skill-wording-test-guard.md`) is committed and `sync-main.sh` found the branch already containing `origin/main`. The overlap check printed three paths that #70's branch has changed since the plan was approved; Q1 asks what to do. No task has been dispatched.
+Round 1. Q1 is answered (proceed and coordinate with #70). Building the plan task by task; tasks 1-8 first, then #98 and #70 are re-read before Task 9.
 
 ## Questions
 
@@ -18,6 +18,7 @@ Round 1, before any task. The plan (`docs/plans/2026-11-15-docs-skill-wording-te
 **Options:** proceed and coordinate · sequence after #70 · re-scope. **Recommendation:** proceed and coordinate, as Q3 did: build Tasks 1-8 now, and read both #98's and #70's merged text before Task 9.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-15: "go with the recommendation").
 
 ## Notes
 
