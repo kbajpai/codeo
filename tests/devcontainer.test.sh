@@ -506,6 +506,41 @@ start_rerun_with_a_lock_does_not_take_another() {
     DS_REPO="$ds_dir/codeo-55" ds_lock_ready
     [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called although a lock is held"
     [[ -z $ds_err ]] || fail "stderr is not empty: $ds_err"
+    [[ -s $ds_dir/codeo-55/.codeo/active ]] || fail "the held lock file was not kept"
+}
+
+start_empty_lock_file_is_removed_and_the_lock_taken() {
+    ds_setup lockempty || return 0
+    ds_lock_stub; ds_branch feat/x
+    : > "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(ds_lock_calls) == 1 && $(cat "$ds_dir/lock-calls") == 'take container' ]] || fail "lock.sh was not called once with take container: $(cat "$ds_dir/lock-calls")"
+    grep -qxF 'devcontainer-start: .codeo/active was empty and held no lock: removed it' <<<"$ds_out" || fail "no removal line: $ds_out"
+    grep -qxF 'lock: took the lock for #55 on feat/x' <<<"$ds_out" || fail "lock line not printed: $ds_out"
+    grep -q '^issue: *55' "$ds_dir/codeo-home/.codeo/active" || fail "no lock written"
+}
+
+start_empty_lock_file_on_the_base_branch_is_removed() {
+    ds_setup lockemptybase || return 0
+    ds_lock_stub
+    : > "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    grep -qxF 'devcontainer-start: .codeo/active was empty and held no lock: removed it' <<<"$ds_out" || fail "no removal line: $ds_out"
+    [[ ! -e $ds_dir/codeo-home/.codeo/active ]] || fail "the empty lock file is still there"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called on the base branch"
+}
+
+start_nonempty_lock_file_is_left_alone() {
+    ds_setup locknonempty || return 0
+    ds_lock_stub; ds_branch feat/x
+    printf 'issue:   55\n' > "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called although a lock is held"
+    [[ $(cat "$ds_dir/codeo-home/.codeo/active") == 'issue:   55' ]] || fail "the lock file was changed"
+    ! grep -q 'was empty' <<<"$ds_out" || fail "a removal was reported: $ds_out"
 }
 
 start_detached_head_is_a_todo() {
@@ -537,6 +572,8 @@ start_lock_crash_is_a_todo() {
     STUB_LOCK_RC=3 STUB_LOCK_OUT='boom' ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     n=$(ds_todos 'lock.sh failed (exit 3)'); ((n == 1)) || fail "wanted one crash TODO, got $n: $ds_err"
+    ! grep -q boom <<<"$ds_out" || fail "the crash output was printed on stdout: $ds_out"
+    [[ $(grep -o boom <<<"$ds_err" | wc -l) == 1 ]] || fail "boom is not on stderr exactly once: $ds_err"
 }
 
 start_without_codeo_installed_is_a_todo() {
@@ -545,6 +582,45 @@ start_without_codeo_installed_is_a_todo() {
     ds_branch feat/x
     ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos 'codeo is not installed'); ((n == 1)) || fail "wanted one not-installed TODO, got $n: $ds_err"
+}
+
+# ds_registry_stub <yes|no>: plugin roots "other" and "mine" whose lock.sh logs to lock-calls-<name>, and a
+# registry listing other (projectPath /somewhere/else) and, on yes, mine (projectPath this clone's physical path).
+ds_registry_stub() {
+    local name clone
+    clone=$(cd "$ds_dir/codeo-home" && pwd -P)
+    for name in other mine; do
+        mkdir -p "$ds_dir/plug-$name/scripts"
+        printf '#!/usr/bin/env bash\necho "$*" >> "$STUB_DIR/lock-calls-%s"\n' "$name" > "$ds_dir/plug-$name/scripts/lock.sh"
+        : > "$ds_dir/lock-calls-$name"
+    done
+    mkdir -p "$ds_dir/claude/plugins"
+    jq -n --arg o "$ds_dir/plug-other" --arg m "$ds_dir/plug-mine" --arg c "$clone" --arg with "$1" \
+        '{plugins: {"codeo@codeo": ([{installPath: $o, projectPath: "/somewhere/else"}]
+            + (if $with == "yes" then [{installPath: $m, projectPath: $c}] else [] end))}}' \
+        > "$ds_dir/claude/plugins/installed_plugins.json"
+}
+
+start_uses_this_projects_lock_sh() {
+    ds_setup mine || return 0
+    ds_branch feat/x
+    ds_registry_stub yes
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ -s $ds_dir/lock-calls-mine ]] || fail "this project's lock.sh was not called: $ds_err"
+    [[ ! -s $ds_dir/lock-calls-other ]] || fail "another project's lock.sh was called: $(cat "$ds_dir/lock-calls-other")"
+}
+
+start_ignores_another_projects_codeo() {
+    local n
+    ds_setup notmine || return 0
+    ds_branch feat/x
+    ds_registry_stub no
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ ! -s $ds_dir/lock-calls-other ]] || fail "another project's lock.sh was called: $(cat "$ds_dir/lock-calls-other")"
+    [[ ! -s $ds_dir/lock-calls-mine ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls-mine")"
     n=$(ds_todos 'codeo is not installed'); ((n == 1)) || fail "wanted one not-installed TODO, got $n: $ds_err"
 }
 
@@ -1322,6 +1398,14 @@ title_is_home_without_a_lock() {
     [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail 'settings.json lacks window.title "codeo [home]"'
 }
 
+title_ignores_a_warning_on_stderr() {
+    wt_setup warn || return 0
+    printf '#!/usr/bin/env bash\necho "a warning" >&2\necho "codeo [home]"\n' > "$wt_dir/.devcontainer/scripts/container-name.sh"
+    wt_run --print
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ $wt_out == 'codeo [home]' ]] || fail "--print gave '$wt_out'"
+}
+
 title_names_the_issue_with_a_lock() {
     wt_setup lock || return 0
     printf 'issue:   44\nbranch: feat/x\nstarted: now\n' > "$wt_dir/.codeo/active"
@@ -1791,10 +1875,15 @@ cases=(
     start_takes_the_lock_on_an_issue_branch
     start_takes_no_lock_on_the_base_branch
     start_rerun_with_a_lock_does_not_take_another
+    start_empty_lock_file_is_removed_and_the_lock_taken
+    start_empty_lock_file_on_the_base_branch_is_removed
+    start_nonempty_lock_file_is_left_alone
     start_detached_head_is_a_todo
     start_lock_todo_lines_become_todos
     start_lock_crash_is_a_todo
     start_without_codeo_installed_is_a_todo
+    start_uses_this_projects_lock_sh
+    start_ignores_another_projects_codeo
     start_reports_a_wrong_folder
     start_todo_when_nothing_is_set_up
     start_ready_when_everything_is_set_up
@@ -1847,6 +1936,7 @@ cases=(
     start_ignores_content_edits_when_restoring_modes
     start_leaves_a_bind_mounted_clone_alone
     title_is_home_without_a_lock
+    title_ignores_a_warning_on_stderr
     title_names_the_issue_with_a_lock
     title_falls_back_to_the_clone_name
     title_keeps_other_keys
