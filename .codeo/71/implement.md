@@ -8,16 +8,7 @@
 
 ## Where this stands
 
-Round 1. All six plan tasks are built, committed and reviewed (each task review clean; the final
-whole-branch review returned "Ready to merge: Yes" and its three wording fixes are in `f7b9e49`).
-`bash tests/run.sh` prints `all cases passed`, and the suite's `build` is `true`. The hand-off is
-held on Q1, answered *sequence after #70*: #70 (`feat/guard-home-only-skills-against`, at `qc`) has
-no pull request yet and is not on `main`, so this round waits. When #70 has merged, re-invoke
-`/codeo:implement`: it runs `sync-main.sh`, renames this branch's rule `issue-08` to `issue-09`
-(the marker in `skills/issue/SKILL.md`, the bullet in `docs/skills-inventory.md`, `[issue]=` in
-`tests/inventory.test.sh`, and the `issue-08` mentions in the tests and the plan's text if any),
-regenerates the hash with `bash tests/inventory.test.sh --update`, re-runs `bash tests/run.sh`,
-and writes the outcome. All six tasks are pushed.
+Round 1, built and ready for `/codeo:qc`. All six plan tasks are done; #70 has merged and `sync-main.sh` brought it in, so this branch's rule is now `issue-09`. Nothing is open.
 
 ## Questions
 
@@ -74,9 +65,28 @@ Sequence after #70 (answered in the conversation: "Sequence after #70").
 
 ## Outcome
 
-_Pending — written at the hand-off._
+### Round 1
+
+**Built:** the six plan tasks (`51236ec`, `2359638`, `7e0b56c`, `8a53282`, `04194f4`, `66edd68`) and the final review's wording fixes (`f7b9e49`): `/codeo:issue` step 8 moves the new issue into Backlog when a board is configured, a failed move never fails the filing, `/codeo:triage` finds the card already there, and `docs/handoff.md`, `docs/skills.md`, `board.sh`'s header and the changelog describe it.
+
+**Merge of the base branch (`17a6cf3`):** #70 had merged, so `sync-main.sh` exited 2 with conflicts in five files, resolved against both changes' intent:
+- `skills/issue/SKILL.md` merged cleanly but carried two `issue-08` markers; this branch's was renamed to `issue-09`.
+- `docs/skills-inventory.md`: #70's `[issue-08]` (role check) kept, this branch's rule appended as `[issue-09]`.
+- `tests/inventory.test.sh`: #70's counts with `[issue]=9`.
+- `tests/fixtures/skills-inventory.rules.sha256`: regenerated with `bash tests/inventory.test.sh --update` (`d67ced5c…`).
+- `tests/closing-exits.test.sh`: both branches' cases kept, `issue-backlog` added to the case list and its header.
+- `CHANGELOG.md`: this branch's entry first, now naming `issue-09`, followed by #70's side of the #51 and #52 entries (the wording #70 had updated).
+
+`also changed on main` lines: none printed (the script stopped on the conflicts). `overlap.sh 71` prints nothing.
+
+**Documentation pages changed:** as planned (`docs/handoff.md`, `docs/skills.md`, `docs/skills-inventory.md`, `CHANGELOG.md`); no unplanned page.
+
+**Build:** the suite's `build` is `true`; passed. No shared environment is configured, so there is no lease and no deploy. Not graded here: `bash tests/run.sh` also printed `all cases passed` after the merge.
+
+**Deviations from the plan:** the rule is `issue-09`, not the plan's `issue-08`, because #70 took `issue-08` (Q1, answered: sequence after #70). The plan's text is left as written.
 
 ## Log
 
 - 2026-11-15 — built all six plan tasks; Q1 raised (overlap and rule-ID collision with #70) · cost: 17m · sonnet-5-5 525k in + 14.5M cached / 64k out
 - 2026-11-15 — Q1 answered: sequence after #70; waiting for it to merge · cost: 19m · sonnet-5-5 529k in + 15.8M cached / 67k out
+- 2026-11-15 — #70 merged; merged main, renumbered the rule to issue-09, regenerated the hash, suite passes; handed off to qc · cost: 4m · sonnet-5-5 34k in + 920k cached / 4k out
