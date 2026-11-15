@@ -48,7 +48,8 @@ count=$(git rev-list --count "$before..origin/$base")
 
 if git merge --no-edit "origin/$base" > /dev/null 2>&1; then
     echo "sync-main: merged origin/$base ($count commit(s))"
-    comm -12 <(git diff --name-only "$merge_base" "$before" | sort) <(git diff --name-only "$merge_base" "origin/$base" | sort) |
+    # Byte order on both sides: sort follows the locale, and some comm (uutils) always compares bytes.
+    LC_ALL=C comm -12 <(git diff --name-only "$merge_base" "$before" | LC_ALL=C sort) <(git diff --name-only "$merge_base" "origin/$base" | LC_ALL=C sort) |
         while IFS= read -r path; do echo "sync-main: also changed on $base: $path"; done
     exit 0
 fi
