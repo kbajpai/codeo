@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, after a second send-back from `/codeo:qc` (`qc.md` round 2: back to `/codeo:plan`, F11 blocking). No new question: the round-3 plan is drafted at `.codeo/97/plan-draft.md` (five tasks) and waits for the engineer's approval; nothing is written under `docs/plans/` yet.
+Round 3, done. The round-3 plan was approved and written to `docs/plans/2026-11-15-docs-skill-wording-test-guard-round-3.md`; nothing is open. The next step is `/codeo:implement`.
 
 ## Questions
 
@@ -143,10 +143,25 @@ What exploration found, so the plan does not re-ask it.
 
 **Intake.** None resolved this round.
 
+### Round 3
+
+2026-11-15
+(send-back from qc.md round 2)
+
+**Plan:** `docs/plans/2026-11-15-docs-skill-wording-test-guard-round-3.md`, a five-task plan approved by the engineer and left unstaged; the earlier plan files stay as built. No reference doc.
+
+**Decisions.** F11: the `qc-verdict` footprint rule judges only an archive whose `plan.md` the pull request adds or renames into place (`--diff-filter=AR`), so a pull request that merely edits an old re-planned archive is not compared with it; `docs/handoff.md` says so. F14: a given `--base`/`--head` that does not resolve makes `overlap.sh --outside` exit 1, so the required check cannot pass on a failed diff. F13: `/codeo:qc` step 6 keeps a round-2 footprint gap blocking but leaves whose it is to step 8's test (a stray edit is `/codeo:implement`'s to revert, a file the work needs is `/codeo:plan`'s), and says how a second round is recognised. F12: the abandon text is conditioned on the branch being kept. F15: the changelog entry is reworded.
+
+**Rejected.** Keeping the rule scoped to "an archive the diff touches" with an allow-list of old plans (the failing PRs would still need editing an archive); exempting archives older than the union rule by date (a heuristic the dossier format does not carry). Left out, with reasons in `qc.md`: F8 (a paging `gh` stub), F10 (`skills/init/SKILL.md` after a `lock: TODO`), the unanchored `## Outcome` match in `qc-verdict.sh`.
+
+**Documentation.** `docs/handoff.md` (the required-check sentence), `skills/qc/SKILL.md`, `skills/close/SKILL.md`, `scripts/qc-verdict.sh` and `scripts/overlap.sh` header comments, `CHANGELOG.md`. No wiki module or invariants document.
+
+**Intake.** None resolved this round.
+
 ### Footprint
 
 ```
-files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/overlap.sh, tests/qc-verdict.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, skills/qc/SKILL.md, tests/qc-skill.test.sh, docs/plans/2026-11-15-docs-skill-wording-test-guard.md, docs/plans/2026-11-15-docs-skill-wording-test-guard-round-2.md
+files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/overlap.sh, tests/qc-verdict.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, skills/qc/SKILL.md, tests/qc-skill.test.sh, docs/plans/2026-11-15-docs-skill-wording-test-guard.md, docs/plans/2026-11-15-docs-skill-wording-test-guard-round-2.md, docs/plans/2026-11-15-docs-skill-wording-test-guard-round-3.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -159,3 +174,4 @@ sequenced:  none
 - 2026-11-15 — round 2 after qc.md round 1: Q7 raised · cost: 1m · fable-5-2 420k in + 468k cached / 5k out
 - 2026-11-15 — planned round 2: docs/plans/2026-11-15-docs-skill-wording-test-guard-round-2.md (send-back from qc.md round 1) · engineering:architecture and engineering:system-design not loaded, Q7's options applied directly · cost: 8m · fable-5-2 423k in + 1.4M cached / 6k out · sonnet-5-5 34k in + 2.3M cached / 14k out
 - 2026-11-15 — round 3 after qc.md round 2: plan drafted at .codeo/97/plan-draft.md, awaiting approval · cost: 1m · fable-5-2 533k in + 580k cached / 9k out
+- 2026-11-15 — planned round 3: docs/plans/2026-11-15-docs-skill-wording-test-guard-round-3.md (send-back from qc.md round 2) · engineering:architecture and engineering:system-design not loaded · cost: 8m · fable-5-2 541k in + 1.7M cached / 11k out
