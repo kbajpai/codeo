@@ -111,6 +111,11 @@ Round 3 footprint, to move to the end of the round 3 outcome once nothing is rai
 ### Footprint
 
 ```
+files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, .codeo/overlays/**, skills/**, scripts/cleanup.sh, scripts/github.sh, lib/extension-points.tsv, docs/skills.md, docs/skills-inventory.md, docs/extension-points.md, docs/handoff.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-15-guard-home-only-skills.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 What exploration found, so the plan does not re-ask it:
 
