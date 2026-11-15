@@ -25,6 +25,7 @@ Round 1. The issue's five sections, the dev container scripts and their tests ar
 A host-side rename (an `initializeCommand` that sanitises the name) is not offered: in the named-volume flow that command does not run on your machine with Docker to hand, and I cannot verify it from here.
 
 **Answer:**
+Accepted my pick, in chat (2026-11-15): keep the folder as the Docker name and document the limit.
 
 ### Q2 — The CPU cap: remove it, or keep a cap of 2 another way?
 
@@ -36,6 +37,7 @@ A host-side rename (an `initializeCommand` that sanitises the name) is not offer
 - **Keep a cap of 2 with `--cpu-period=100000` and `--cpu-quota=200000`.** As I recall Docker's checks, a quota is not compared with the host's CPU count and is dropped with a warning where the kernel lacks support, so the container starts in both cases and is still capped at 2. This rests on my memory of Docker's behaviour, not on a test: it adds a task you run on your machine (Q5) to confirm it, and rootless Podman may differ.
 
 **Answer:**
+Accepted my pick, in chat (2026-11-15): remove `--cpus=2`; `--memory=4g` stays.
 
 ### Q3 — The optional item: should Claude's login and plugins survive a rebuild?
 
@@ -49,6 +51,7 @@ A host-side rename (an `initializeCommand` that sanitises the name) is not offer
 - **Do it here, one shared volume.** `codeo-claude` for all containers. One login for everything; the pin conflict above has to be solved in `plugins.sh` first.
 
 **Answer:**
+Accepted my pick, in chat (2026-11-15): leave it out and file it as its own issue.
 
 ### Q4 — Who edits the v1.0.6 Release body on GitHub?
 
@@ -63,6 +66,7 @@ A host-side rename (an `initializeCommand` that sanitises the name) is not offer
 Either way the checklist gains the missing step 8: how a Release is created from the changelog section, without GitHub's generated notes.
 
 **Answer:**
+Accepted my pick, in chat (2026-11-15): the engineer runs it; the plan carries the command and its check.
 
 ### Q5 — Which shell do you type in on your own machine?
 
@@ -71,6 +75,7 @@ Either way the checklist gains the missing step 8: how a Release is created from
 **Options:** PowerShell · Git Bash · WSL bash · something else (name it) · n/a.
 
 **Answer:**
+n/a (neither Q1 nor Q2 needs a check on the engineer's machine), accepted in chat (2026-11-15).
 
 ### Q6 — This plan and #70 change the same files: proceed, sequence, or re-scope?
 
@@ -83,6 +88,7 @@ Either way the checklist gains the missing step 8: how a Release is created from
 - **Re-scope.** Say what to drop from this plan.
 
 **Answer:**
+Accepted my pick, in chat (2026-11-15): proceed and coordinate.
 
 ### Q7 — This plan and #98 both change `CHANGELOG.md`: proceed, sequence, or re-scope?
 
@@ -95,6 +101,7 @@ Either way the checklist gains the missing step 8: how a Release is created from
 - **Re-scope.**
 
 **Answer:**
+Accepted my pick, in chat (2026-11-15): proceed and coordinate.
 
 ## Notes
 
@@ -115,12 +122,11 @@ Each of these has one sensible answer given the issue and the code. Say so in an
 ### Footprint
 
 ```
-files:      .devcontainer/devcontainer.json, .devcontainer/README.md, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/plugins.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/codeo-root.sh, .devcontainer/scripts/container-name.sh, tests/devcontainer.test.sh, tests/codeo-root.test.sh, tests/container-name.test.sh, lib/env.sh, CHANGELOG.md, docs/release-checklist.md, docs/plans/2026-11-15-dev-container-follow-ups-96.md
+files:      .devcontainer/devcontainer.json, .devcontainer/README.md, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/plugins.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/codeo-root.sh, .devcontainer/scripts/container-name.sh, tests/devcontainer.test.sh, tests/codeo-root.test.sh, tests/env.test.sh, lib/env.sh, CHANGELOG.md, docs/release-checklist.md, docs/plans/2026-11-15-dev-container-follow-ups-96.md, .codeo/96/**
 wiki:       none
 exclusive:  none
 ```
 
-Draft: Q1 and Q3 can add `.devcontainer/Dockerfile` and `.devcontainer/scripts/folder-check.sh`.
 
 ## Outcome
 
