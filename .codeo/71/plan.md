@@ -8,10 +8,7 @@
 
 ## Where this stands
 
-Round 2, after the send-back from `qc.md` round 1 (F1 blocking: criterion 5 rests on a ledger
-fingerprint the plan named only partly; F2-F5 non-blocking). The round-2 draft, Tasks 7-9, is at
-`.codeo/71/plan-draft.md` (not committed) and waits for approval. Q6 is open: an overlap with
-#107 on `CHANGELOG.md`. Round 1's outcome below stays as written.
+Round 2 is planned: Q6 answered, the draft approved and appended to `docs/plans/2026-11-15-file-new-issues-into-backlog.md` as Tasks 7-9 (unstaged, for review). Nothing is open and no lock is needed. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -132,7 +129,7 @@ keeps both, as with #96 and #98 (Q3, Q4). The answer decides whether the footpri
 - **Re-scope.** Not possible: every change is recorded in the changelog.
 
 **Answer:**
-_Open._
+Proceed and coordinate (answered in the conversation: "proceed and coordinate, draft approved").
 
 ## Notes
 
@@ -170,6 +167,15 @@ _Open._
 - Pages the change moves: `docs/handoff.md` (the board bullet, its transition table and the
   ownership table), `docs/skills.md` (the `issue` and `triage` sections),
   `docs/skills-inventory.md`, the header comment of `scripts/board.sh`, `CHANGELOG.md`.
+
+### Footprint
+
+```
+files:      skills/issue/SKILL.md, skills/triage/SKILL.md, scripts/board.sh, tests/issue-skill.test.sh, tests/triage-skill.test.sh, tests/closing-exits.test.sh, tests/inventory.test.sh, tests/board.test.sh, tests/fixtures/skills-inventory.rules.sha256, docs/handoff.md, docs/skills.md, docs/skills-inventory.md, CHANGELOG.md, docs/plans/2026-11-15-file-new-issues-into-backlog.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
