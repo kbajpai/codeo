@@ -48,9 +48,13 @@ The guard applies only when all of these hold: `/.dockerenv` exists, `CLAUDE_COD
 
 Each guarded skill (`/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup`, `/codeo:plan`, `/codeo:implement`, `/codeo:qc`, `/codeo:close`) has a `role-guard` section in its overlay, `.codeo/overlays/<skill>.md`, that runs `bash .devcontainer/scripts/role.sh --check <skill>` as the skill's first step. `--check` exits 0 and prints nothing when the skill may run, and exits 1 with one line naming where the skill runs and this container's role when it may not; any other exit (the script is missing, or failed) is reported by the overlay text, which then goes on. A refusal ends the step; nothing the engineer says lifts it, and the way forward is the container the message names. `role.sh` with no arguments prints the role.
 
+A container whose clone lacks the role script and the guard overlays, such as one created from a branch cut before the guard existed, is not guarded: it runs every skill as before until it is removed.
+
 ## Removing a finished container
 
 Nothing inside a container removes a container. At the end of a workflow `/codeo:close` prints the commands that remove the issue's container and its volume. `/codeo:cleanup`, which runs in the home container, lists the other finished issues' containers the same way: it proves each issue is finished (the issue is closed, its pull request is merged, its branch is gone from origin, no branch still carries its dossier) and prints a removal command only for those, built from this project's overlay.
+
+After `/codeo:close` finishes, the container holds no lock and is `stale`, so `/codeo:triage` and `/codeo:cleanup` run in the home container, and the finished close's closing block names it. The removal commands are printed only for a workflow hosted in a container.
 
 Both only print. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
 
