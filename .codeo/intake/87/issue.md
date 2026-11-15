@@ -1,4 +1,4 @@
-# Issue — issue (draft, no number yet)
+# Issue #87 — issue
 
 | | |
 |---|---|
@@ -90,3 +90,4 @@ Reproduced in a scratch clone with the real scripts: a `.codeo/active` holding o
 
 - 2026-11-15 — dossier started from triage item `qc:57:F2`: Q1-Q2 raised
 - 2026-11-15 — Q1-Q2 answered (recommendations accepted); draft written, awaiting approval
+- 2026-11-15 — approved and filed as #87 (https://github.com/kbajpai/codeo/issues/87), label bug
