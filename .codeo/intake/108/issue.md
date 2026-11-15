@@ -1,8 +1,8 @@
-# Issue — issue
+# Issue #108 — issue
 
 ## Where this stands
 
-Drafted from triage run 8 (the engineer chose to file and consolidate). Awaiting approval.
+Drafted from triage run 8 (the engineer chose to file and consolidate). Approved by the engineer; filed.
 
 ## Questions
 
@@ -51,7 +51,7 @@ The scripts matter most: `overlap.sh` and `qc-verdict.sh` are gates other workfl
 
 ## Outcome
 
-_Pending — written when filed._
+Filed as #108.
 
 ## Log
 
