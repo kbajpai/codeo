@@ -3,10 +3,10 @@
 ## Questions
 
 1. **F33 — how to settle the credentials tension.** The page cites "credentials stay outside the VM" (Docker's design, `cited`) while T6 shows `gh` inside a sandbox "Logged in … (GH_TOKEN)". Settling it needs one more command on the engineer's host (is the token in the sandbox's environment the real one or a placeholder). **Options:** (A) the issue asks for that trial and then states the result on the page; (B) the issue only rewords the page to say the tension is untested.
-   **Answer:** _open_
+   **Answer:** (A) run the trial (engineer, in the conversation, 2026-11-15).
 
 2. **F32 — which side of the image-digest disagreement moves.** #86 says the image changed digest between two creates (T10); the page says the base image was not checked, and quotes no `Image:` line. `.codeo/done/73/qc.md` F17 records that the `Image:` lines carried the same digest as the `Kit:` lines. **Options:** (A) the page quotes the `Image:` lines and drops "not checked"; (B) #86 is softened to the page's wording.
-   **Answer:** _open_
+   **Answer:** (A) the page quotes the `Image:` lines (engineer, in the conversation, 2026-11-15).
 
 3. **Scope.** One issue covers F32-F36 and F33 (the engineer asked to consolidate). Out of scope: `sync-main.sh` (#92) and `/codeo:plan`'s footprint key (issue B).
 
@@ -21,3 +21,11 @@ _Pending._
 ## Log
 
 - 2026-11-15 — questions raised · cost: unavailable
+
+## Draft
+
+**Title:** Correct the sbx evaluation page and #86 against their evidence, and test whether the sandbox's `gh` token is the real one
+
+**Labels:** documentation · **Type:** none (user-owned repository)
+
+The body is in `body.md` beside this file, as presented to the engineer.
