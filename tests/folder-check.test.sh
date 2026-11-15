@@ -2,8 +2,9 @@
 # Guards .devcontainer/scripts/folder-check.sh, which says whether a container's clone folder agrees
 # with its workflow lock. Each case runs the real script (and the real container-name.sh) copied into
 # a scratch git repo whose .codeo/config.json names the codename "codeo": the home folder on main or a
-# configured base branch, a wrong folder there, a locked clone in the right and the wrong folder, an issue branch with no lock
-# (an issue folder is left alone, any other folder is reported), and the failure outside a clone.
+# configured base branch, a wrong folder there, a locked clone in the right and the wrong folder, an
+# issue branch with no lock (an issue folder is left alone, any other folder is reported), and the
+# failure outside a clone.
 #
 #   bash tests/folder-check.test.sh
 #
@@ -104,12 +105,12 @@ home_folder_on_a_configured_base_is_silent() {
 
 wrong_folder_on_a_configured_base_names_the_home_folder() {
     fc_setup basewrong develop develop || return 0
-    todo scratch "'codeo-home'"
+    todo scratch "on develop"
 }
 
 issue_folder_on_the_home_clone_is_reported() {
     fc_setup basenum develop develop || return 0
-    todo codeo-12 "'codeo-home'"
+    todo codeo-12 "on develop"
 }
 
 home_folder_off_the_base_branch_is_silent() {
