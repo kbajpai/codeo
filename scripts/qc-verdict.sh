@@ -131,10 +131,14 @@ for n in $touched; do
             END { print max + 0 }
         ' <<<"$plan")
         if ((plan_round >= 2)); then
-            omitted=$(bash "$(dirname "${BASH_SOURCE[0]}")/overlap.sh" --outside "$n" --base "$base" --head "$head_ref" \
-                | tr '\n' ' ')
-            omitted=${omitted% }
-            [[ -z $omitted ]] || fail "$state_rel/done/$n/plan.md: round $plan_round footprint omits: $omitted"
+            # A failing overlap.sh is a failure of its own, named and collected, not an abort.
+            if ! omitted=$(bash "$(dirname "${BASH_SOURCE[0]}")/overlap.sh" --outside "$n" --base "$base" --head "$head_ref"); then
+                fail "$state_rel/done/$n/plan.md: footprint check failed (overlap.sh exited non-zero)"
+            else
+                omitted=$(tr '\n' ' ' <<<"$omitted")
+                omitted=${omitted% }
+                [[ -z $omitted ]] || fail "$state_rel/done/$n/plan.md: round $plan_round footprint omits: $omitted"
+            fi
         fi
     fi
     grep -qxF "$state_rel/done/$n/qc.md" <<<"$judged" && continue
