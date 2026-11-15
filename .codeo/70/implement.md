@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done. All ten tasks of the plan are built, committed (`7840b47` to `5976610`) and reviewed, Q1-Q4 are answered, and nothing is open. The next step is `/codeo:qc`.
+Round 2, done. QC round 1's two blocking findings (F1, F2) and the cheap non-blocking ones the engineer chose (plan Q7) are fixed and committed (`b40172e` to `0252bf7`), reviewed, and `bash tests/run.sh` prints `all cases passed`. Nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -81,7 +81,31 @@ Proceed and coordinate. Go with the recommendation (engineer, in the conversatio
 
 **Deferred minors**, none blocking: `tests/role.test.sh` mode 100644 and thin `--check` coverage for some roles; the role-guard test's `-A3` window; cleanup's issue-view failure reads as `failed issue` and one unreadable PR aborts the whole report; no test for an invalid overlay regex or an `origin/HEAD` symref; the skill description and `docs/skills.md` intro say "home container only" while the registry default is "runs wherever invoked"; the cleanup closing block's first step is "run the printed commands" even when every command is `-`; wording nits in `.devcontainer/README.md` and the inventory intro.
 
+### Round 2 — 2026-11-15
+(send-back from qc.md round 1)
+
+**Plan built:** round 2 of `docs/plans/2026-11-15-guard-home-only-skills.md` (Tasks 11-16), commits `b40172e` to `0252bf7`, on top of a merge of `origin/main` (`be16d5b`, one conflict in `CHANGELOG.md` resolved by keeping both bullets: this branch's and #98's). Each task pair was reviewed; a closing review read the whole round.
+
+**What was built, against QC round 1's findings.**
+- F1, F7 (Task 11, `b40172e`): a finished close names the checkout its follow-up skills run in. Generic skill text: the finished closing block's first step is `/codeo:triage` "in the checkout the project's host workflow names for it, when it names one". This repository's close overlay applies only to `host: container`, says the container holds no lock now so `/codeo:triage` and `/codeo:cleanup` are refused there, names the home container as the first step, and says there is nothing to remove for any other host. `docs/extension-points.md` extended; `tests/close-removal.test.sh` and `tests/closing-exits.test.sh` pin it.
+- F2 (Task 12, `fda7a3e`): the sentence in `skills/plan`, `skills/implement`, `skills/qc` and `docs/handoff.md` now names the form: a line under `## Notes` that promises the later work and carries no issue number, which is what `/codeo:triage` collects from an archived dossier.
+- F4, F5, F13 (Task 13, `5f8255a`): the `github.sh` usage line lists `pr get`; `cleanup.sh` stops with `cleanup: could not read issue #<N>` (no result line, non-zero exit) when the issue cannot be read; the cleanup closing block says `/codeo:init #<M>`, `<M>` the next issue to start.
+- F6, F10 (Task 14, `e9ed7b1`): the stale refusal says the workflow "has ended (finished, stashed or abandoned), or its start script took no lock" and, for a lock skill, to re-run `bash .devcontainer/scripts/devcontainer-start.sh` when it is still the issue's container; all eight overlays add "Any other exit (the script is missing, or failed): report what it printed and go on."; the `.devcontainer/README.md` `stale` row matches.
+- F1, F8 (Task 15, `0252bf7`): `.devcontainer/README.md` says where the follow-up skills run after a close and that a container whose clone predates the guard is not guarded; the existing `## Unreleased` bullet in `CHANGELOG.md` is extended in place.
+- F3 is settled by the plan's footprint (`scripts/github.sh` added). F9 (Podman), F11 (`CODEO_CLEANUP_REMOVAL`) and F12 (generic "home container" wording) were left, by the engineer's answer to plan Q7, in `qc.md` for `/codeo:triage`.
+
+**Documentation changed.** `.devcontainer/README.md`, `docs/extension-points.md`, `docs/handoff.md`, `CHANGELOG.md`, as the plan's round 2 names.
+
+**Build result.** The `shell` suite's `build` (`true`) ran ok; `bash tests/run.sh` prints `all cases passed` at `0252bf7` (3m17s); `bash scripts/doctor.sh` (this repository's) all ok, overlays ok with 11 sections in 8 files; `git diff origin/main -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` is empty; `role.sh --check triage` in this container exits 1 with one line naming `issue:70`; `overlap.sh 70` and `overlap.sh --outside 70` print nothing; the branch contains `origin/main`.
+
+**Deviations from the plan.** None beyond round 1's. One note for `/codeo:qc`: the installed, pinned plugin (v1.0.6) does not know the `<skill>/role-guard` or `cleanup/removal-command` points, so its own `doctor.sh` reports this repository's overlays as unknown sections and its `overlay.sh` exits 2 for them (the skills then "report and go on"): the guard takes effect in a project once it runs a plugin version that carries the new points. This repository's own scripts and tests do not have that limit.
+
+**Rulings taken while building round 2** (each with what it costs if wrong): (1) the tasks ran as three dispatches (Tasks 11+12, 13+14, 15) with Task 16 inline, one commit per task and one review per dispatch: costs that tasks were reviewed in pairs. (2) Reviewers and the closing review ran on sonnet, not a stronger model, because codeo's subagent hook allows only the configured subagent model: costs a weaker review; `/codeo:qc` grades independently on opus. (3) The merge of `origin/main` kept both CHANGELOG bullets verbatim: costs nothing unless the two bullets conflict in meaning (they do not).
+
+**Deferred minors**, none blocking: the close overlay's home-container paragraph is not scoped to `host: container` in its wording; Task 12's skill assertions grep the whole file and `docs/handoff.md` has no wording test; `stale:?` lock-skill wording says "an issue's container" for a home clone; `cleanup.sh` hides `github.sh`'s stderr behind its one `cleanup:` line; the README's "Both only print" now follows a paragraph not about printing.
+
 ## Log
 
 - 2026-11-15 — built Tasks 1-10 and the final-review fix wave; Q1-Q4 raised on overlaps with #71, #96, #97, #98 · cost: 97m · sonnet-5-5 1.2M in + 35M cached / 196k out
 - 2026-11-15 — Q1-Q4 answered; outcome written, handed off to qc · cost: 100m · sonnet-5-5 1.2M in + 37.2M cached / 205k out
+- 2026-11-15 — round 2 after qc round 1: built Tasks 11-16, merged origin/main, handed off to qc · cost: 33m · sonnet-5-5 311k in + 14.1M cached / 56k out
