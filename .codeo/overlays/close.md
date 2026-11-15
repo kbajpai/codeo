@@ -9,3 +9,5 @@ Run `bash .devcontainer/scripts/role.sh --check close` from the project root. Ex
 Print `docker rm -f <volume>; docker volume rm <volume>`, with `<volume>` the lock's `volume:` line, only when that line matches `^codeo-[0-9]+$`; for any other value, including `unknown`, print no command and say to find the container with `docker ps` on the host.
 
 The command is for the host's shell, not this container's: it is one line with `;` between the commands, and it runs unmodified in PowerShell and in bash.
+
+In the report, say to the engineer that these commands run on the host, not inside this container, and that they run `git status` in that clone first, because unpushed work is lost with the volume.

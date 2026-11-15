@@ -17,7 +17,7 @@ rc=0
 out=$(bash scripts/overlay.sh close host-workflow 2>/dev/null) || rc=$?
 [[ "$rc" -eq 0 ]] || fail "overlay.sh close host-workflow exited $rc"
 for needle in 'docker rm -f <volume>; docker volume rm <volume>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
-    'on the host' 'PowerShell'; do
+    'not inside this container' 'git status' 'PowerShell'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 
@@ -31,6 +31,8 @@ bullet=$(awk '/^    - \*\*`host: container`\*\*/ {on=1; print; next} on && /^   
 for needle in 'on the host' 'git status' 'volume:'; do
     [[ "$bullet" == *"$needle"* ]] || fail "host: container bullet lacks: $needle"
 done
-grep -qi 'docker' "$skill" && fail "$skill names a container engine"
+if grep -qi 'docker' "$skill"; then
+    fail "$skill names a container engine: $(grep -i 'docker' "$skill" | head -1)"
+fi
 
 echo "all cases passed"
