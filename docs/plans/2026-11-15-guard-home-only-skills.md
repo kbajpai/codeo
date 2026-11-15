@@ -309,3 +309,102 @@ What each says afterwards:
 - **Coverage.** F1 → Tasks 11 and 15 · F2 → Task 12 · F4, F5, F13 → Task 13 · F6, F10 → Task 14 · F7 → Task 11 · F8 → Task 15. F3 (`scripts/github.sh` outside the footprint) → the footprint gains `scripts/github.sh`. F9, F11, F12 → left in `qc.md` for `/codeo:triage`.
 - **Documentation the round moves.** `.devcontainer/README.md`, `docs/extension-points.md`, `docs/handoff.md`, `CHANGELOG.md`. `docs/skills.md`, `docs/skills-inventory.md` and `README.md` need nothing: none states the sentences or rows changed here.
 - **Consistency.** The F2 sentence is identical in four files; the "Any other exit" sentence is identical in eight overlays; no rule text and no inventory bullet changes, so the pinned hash stays.
+
+---
+
+## Round 3 — send-back from QC round 2
+
+QC round 2 (`.codeo/70/qc.md`) found round 2's fixes in place, the suite green and every criterion met, and two new blocking findings in the plan's own wording. **G1:** round 2's Task 14 made the stale refusal tell a lock skill to re-run the start script, and `lock.sh take` binds from the branch's `init.md` without looking for a stash or an abandon, so the advice revives a parked workflow with no claim and no board move. **G2:** `skills/cleanup/SKILL.md` says its commands rely on `close.md` having recorded a clean tree, a record that never reaches `origin/<base>`, and `cleanup.sh` lists as proven an issue whose `/codeo:close` never finished. The engineer's answers: Q8 detect the state from the clone's dossier; Q9 add a `lease` proof and correct the caveat; Q10 fix all of G3-G7 too.
+
+Rounds 1 and 2's Global Constraints still bind: no `docker`, `codeo-home`, `codeo-gh` or `codeo-git` under `skills/`, `scripts/`, `lib/` or `docs/`; no text under a `<!-- rule -->` marker changes unless a task says so; `.devcontainer/Dockerfile` and `devcontainer.json` do not change; each task's proof is its test file, then `bash tests/run.sh`, both printing `all cases passed`. The roles `role.sh` prints do not change (criterion 1); only the refusal lines do.
+
+### Task 17: The stale refusal reads the clone's own dossier (G1)
+
+**Files:**
+- Modify: `.devcontainer/scripts/role.sh` (the `stale:*` refusal), `.devcontainer/README.md` (the `stale` row of the roles table)
+- Test: `tests/role.test.sh`
+
+**Interfaces:**
+- For `stale:<N>`, `--check` decides one of four states from the clone, in this order, reading `.codeo/` under the clone's root (the state directory is `.codeo`, as `container-name.sh` assumes):
+  1. **finished** — `.codeo/done/<N>/` exists.
+  2. **parked** — `.codeo/<N>/close.md` exists and its last `### Round <n> — …` heading contains `stashed` or `abandoned` (the headings `claim.sh --stash-live` reads); the word found is used in the message.
+  3. **lock lost** — `.codeo/<N>/` exists (a live dossier, no park).
+  4. **unknown** — none of the above; also every `stale:?`.
+- The one-line refusals, `<skill>` and `<N>` filled in, each ending with the role in the form `(role stale:<N>)`:
+  - finished, home-only skill: `/codeo:<skill> can't run here: issue #<N> is finished and this container is done (role stale:<N>); run it in the home container.`
+  - finished, lock skill: `/codeo:<skill> can't run here: issue #<N> is finished and this container is done (role stale:<N>); nothing more runs here, and /codeo:cleanup in the home container prints how to remove it.`
+  - parked, home-only: `/codeo:<skill> can't run here: issue #<N>'s workflow was <stashed|abandoned> and this container holds no lock (role stale:<N>); run it in the home container.`
+  - parked, lock skill: `/codeo:<skill> can't run here: issue #<N>'s workflow was <stashed|abandoned> and this container holds no lock (role stale:<N>); /codeo:init #<N> in the home container is the way back, never the start script.`
+  - lock lost, home-only: `/codeo:<skill> can't run here: this is issue #<N>'s container and it holds no lock (role stale:<N>); run it in the home container.`
+  - lock lost, lock skill: `/codeo:<skill> can't run here: this is issue #<N>'s container, its workflow is live and it holds no lock (role stale:<N>); re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock.`
+  - unknown and `stale:?`, home-only: `/codeo:<skill> can't run here: this clone holds no lock and no dossier says why (role <role>); run it in the home container.`
+  - unknown and `stale:?`, lock skill: `/codeo:<skill> can't run here: this clone holds no lock and no dossier says why (role <role>); the skill runs in the container of the issue it is for.`
+- `issue:`, `mismatch:` and `home` refusals do not change. Exit codes do not change.
+
+- [ ] **Step 1: Write the failing cases** in `tests/role.test.sh`, each a `codeo-67` clone with no lock: with `.codeo/done/67/` → both kinds of skill get `is finished`, a lock skill gets `/codeo:cleanup` and no `devcontainer-start.sh`; with `.codeo/67/close.md` ending `### Round 2 — stashed` → `was stashed`, a lock skill gets `/codeo:init #67` and `never the start script`, and no `re-run`; the same with `— abandoned` → `was abandoned`; with `.codeo/67/init.md` only → a lock skill gets `re-run bash .devcontainer/scripts/devcontainer-start.sh`, and the line does not contain `finished`; with no dossier, and for `stale:?` → `no dossier says why`. A `close.md` whose last round is `— pull request opened` after an earlier `— stashed` round is **lock lost**, not parked. Every refusal is one line and names the role. Replace the round-2 needles (`finished` on every stale refusal, `stashed or abandoned`) with these.
+- [ ] **Step 2: Run** `bash tests/role.test.sh` → fails on the first new case (`is finished` missing).
+- [ ] **Step 3: Implement** the state detection and the eight lines; update the README's `stale` row to say that the refusal names what happened to the workflow (finished, stashed, abandoned, or a lost lock) and the way back for each.
+- [ ] **Step 4: Run** `bash tests/role.test.sh`, `bash tests/role-guard.test.sh`, `bash tests/devcontainer.test.sh`, then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: the stale refusal reads the dossier and never offers the start script for a parked workflow (#70)`.
+
+### Task 18: Cleanup proves the workflow let go of its leases, and says what it cannot see (G2, G4, G7)
+
+**Files:**
+- Modify: `scripts/cleanup.sh`, `skills/cleanup/SKILL.md` (step 1's list of proofs, step 2's caveats, the Hand-off's "never touches" line)
+- Test: `tests/cleanup.test.sh`, `tests/cleanup-skill.test.sh`
+
+**Interfaces:**
+- A fifth proof, `lease`, after `dossier` and before `name`: `cleanup.sh` runs `intake.sh lease list --tsv` once, after the fetch; a failure stops the script with `cleanup: could not read the leases`. An issue whose number is the third field of any line (`held` or `waiting`) prints `<N>\tfailed\tlease`. Proof order: `issue` · `pull-request` · `branch` · `dossier` · `lease` · `name`.
+- The `branch` proof fails (`<N>\tfailed\tbranch`) when the pull request's `head_ref` is empty or `null`.
+- The skill's step 1 lists the five proofs. Step 2's third caveat is replaced, verbatim, by: **"Nothing `origin` holds records whether a clone was left clean, or whether `/codeo:close` ran to its end there: the lock lives only in that clone. A lease the issue still holds is the one trace this proof can see, and it lists the issue as not proven."** The sentence about `close.md` having recorded a clean tree is removed. The Hand-off line reads "any branch other than `codeo/intake`".
+
+- [ ] **Step 1: Write the failing cases** in `tests/cleanup.test.sh`: a lease held by issue 12 on the scratch intake branch → `12\tfailed\tlease`; a wait recorded for issue 12 → the same; no intake branch at all → the issue is still `proven`; a pull request whose stubbed `head.ref` is `null` → `12\tfailed\tbranch`. In `tests/cleanup-skill.test.sh`: the skill contains `the lock lives only in that clone` and `any branch other than \`codeo/intake\``, and does not contain `recorded a clean tree`.
+- [ ] **Step 2: Run** `bash tests/cleanup.test.sh` → fails: the lease case prints `12\tproven\t…`.
+- [ ] **Step 3: Implement.** Build the scratch lease the way `tests/intake-lease.test.sh` does, or by committing `.codeo/intake/leases/<resource>.md` on the scratch origin's `codeo/intake` branch.
+- [ ] **Step 4: Run** the two tests, `bash tests/skills.test.sh cleanup`, then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: cleanup lists an issue that still holds a lease as not proven, and drops a caveat that was untrue (#70)`.
+
+### Task 19: Close's last report agrees with itself (G3, G5, G6)
+
+**Files:**
+- Modify: `.codeo/overlays/close.md` (`## host-workflow`), `skills/close/SKILL.md` (step 17, the "nothing is lost" sentence), `docs/handoff.md` (the `cleanup` row of the closing-block table)
+- Test: `tests/close-removal.test.sh`, `tests/cleanup-skill.test.sh`
+
+**Interfaces:**
+- Overlay: the home-container paragraph begins "After a finished close (the pull request merged), …" and ends "On a stash or an abandon, keep the closing block the skill gives for that exit."
+- Skill, step 17, replacing "everything in it is merged or on origin, so nothing is lost either way": **"everything the workflow committed is merged or on origin; anything left uncommitted or unpushed in the checkout is not, which is why the host workflow's clean-up asks for `git status` first."** No text under a `rule` marker changes.
+- `docs/handoff.md`: the `cleanup` row's next goal names `/codeo:init #<M>`, as the skill does.
+
+- [ ] **Step 1: Write the failing assertions**: `tests/close-removal.test.sh`, the overlay output contains `After a finished close` and `On a stash or an abandon`, and the skill does not contain `nothing is lost either way`; `tests/cleanup-skill.test.sh`, the `cleanup` row of `docs/handoff.md` contains `#<M>` and no `#<N>`.
+- [ ] **Step 2: Run** `bash tests/close-removal.test.sh` → fails on `After a finished close`.
+- [ ] **Step 3: Edit** the three files.
+- [ ] **Step 4: Run** the two tests, `bash tests/closing-exits.test.sh`, `bash tests/close-skill.test.sh`, `bash tests/closing-block.test.sh`, then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: close's last report says what is and is not safe, and the overlay's next step is for a finished close only (#70)`.
+
+### Task 20: Documentation
+
+**Files:**
+- Modify: `.devcontainer/README.md`, `docs/skills.md` (the `## cleanup` section), `README.md` (only if it states the number of proofs), `CHANGELOG.md`
+- Test: `tests/skills-doc.test.sh`, `tests/devcontainer.test.sh`, `tests/agnostic.test.sh`
+
+What each says afterwards:
+- `.devcontainer/README.md`, *Roles and the guard*: a stale container's refusal says what happened to its workflow and the way back: a finished one is done and is removed; a stashed or abandoned one is resumed through `/codeo:init #<N>` in the home container, never by re-running the start script; a live one that lost its lock re-runs the start script. *Removing a finished container*: `/codeo:cleanup` proves five things, the fifth being that the issue holds no lease.
+- `docs/skills.md`, `## cleanup`: five proofs, named; what the proof cannot see, as Task 18's sentence says it.
+- `CHANGELOG.md`: the existing `## Unreleased` bullet for this change, extended in place: the stale refusal's three ways back; the `lease` proof; a missing head branch name fails the branch proof.
+- Every place in the tree outside `docs/plans/` and `.codeo/` that says "four proofs" says five (`grep -rn 'four proofs'`).
+
+- [ ] **Step 1: Write the edits** (present tense, no issue numbers outside the CHANGELOG).
+- [ ] **Step 2: Run** the three tests, then `bash tests/run.sh`; `git diff --stat origin/main -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` prints nothing.
+- [ ] **Step 3: Commit** `docs: a stale container's ways back, and cleanup's fifth proof (#70)`.
+
+### Task 21: The whole check
+
+- [ ] **Step 1: Run** `bash tests/run.sh` → `all cases passed`; `bash scripts/doctor.sh` → every line `ok`.
+- [ ] **Step 2: By hand:** in a scratch clone named `codeo-67` with a `close.md` ending `— stashed` and `CODEO_DOCKERENV` pointing at an existing file, `role.sh --check plan` prints the `/codeo:init #67` line and exits 1.
+
+### Round 3 self-review
+
+- **Coverage.** G1 → Tasks 17 and 20 · G2 → Tasks 18 and 20 · G3, G5, G6 → Task 19 · G4, G7 → Task 18. G8 (round 1's F9, F11, F12) stays with `/codeo:triage`, as answered at Q7.
+- **Criteria.** Criterion 3 asks for "a message naming the finished issue" in a stale container: the finished state says `issue #<N> is finished`; a parked or lock-lost container is not a finished issue, and its line names the issue and what did happen. Criterion 6 says "all four proofs": the four stay, and a fifth is added; a command is still printed only when every proof passes.
+- **Documentation the round moves.** `.devcontainer/README.md`, `docs/skills.md`, `docs/handoff.md`, `CHANGELOG.md`, and `README.md` only where it counts the proofs. `docs/extension-points.md` and `docs/skills-inventory.md` need nothing: no point and no rule changes.
+- **Footprint.** Unchanged from round 2.
