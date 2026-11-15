@@ -1,8 +1,8 @@
-# New issue — /codeo:issue assigns a priority to every issue it files
+# Issue #102 — issue
 
 | | |
 |---|---|
-| Issue | _not filed yet_ |
+| Issue | https://github.com/kbajpai/codeo/issues/102 |
 | Branch | _none — intake_ |
 | Updated | 2026-11-15 |
 
@@ -89,8 +89,9 @@ Issues filed through `/codeo:issue` carry no priority today. Rule `issue-07` in 
 
 ## Outcome
 
-_Pending — written at filing._
+Filed as #102 on 2026-11-15: https://github.com/kbajpai/codeo/issues/102
 
 ## Log
 
 - 2026-11-15 — Q1-Q3 asked and answered in conversation; draft written
+- 2026-11-15 — draft approved; filed as #102
