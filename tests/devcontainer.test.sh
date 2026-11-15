@@ -940,13 +940,25 @@ start_runs_claude_outside_the_clone() {
     [[ -z $(git -C "$ds_dir/codeo-home" status --porcelain --untracked-files=no) ]] || fail 'the clone has changes after the run'
 }
 
-start_without_a_git_top_level_is_one_todo() {
-    local n
+start_without_a_git_top_level_runs_from_the_clone_not_the_caller() {
+    local n el
     ds_setup notoplevel || return 0
+    el="$ds_dir/elsewhere"
+    # A decoy working directory: if any later step ran from here, its scripts would leave a marker.
+    mkdir -p "$el/.devcontainer/scripts" "$el/.codeo"
+    printf '#!/usr/bin/env bash\ntouch "%s/decoy-ran-plugins"\n' "$ds_dir" > "$el/.devcontainer/scripts/plugins.sh"
+    printf '#!/usr/bin/env bash\ntouch "%s/decoy-ran-window-title"\n' "$ds_dir" > "$el/.devcontainer/scripts/window-title.sh"
+    : > "$el/.codeo/active"
     rm -rf "$ds_dir/codeo-home/.git"
+    pushd "$el" > /dev/null || { fail 'could not enter the decoy directory'; return 0; }
     ds_ready_run
+    popd > /dev/null || return 0
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
-    n=$(ds_todos 'could not enter the clone'); ((n == 1)) || fail "wanted one could-not-enter TODO, got $n: $ds_err"
+    n=$(ds_todos 'top level'); ((n == 1)) || fail "wanted one top-level TODO, got $n: $ds_err"
+    [[ ! -e "$ds_dir/decoy-ran-plugins" ]] || fail "plugins.sh ran from the caller's directory"
+    [[ ! -e "$ds_dir/decoy-ran-window-title" ]] || fail "window-title.sh ran from the caller's directory"
+    [[ -f "$el/.codeo/active" && ! -s "$el/.codeo/active" ]] || fail "the caller's .codeo/active was changed or removed"
+    n=$(find "$el" -mindepth 1 | wc -l); ((n == 6)) || fail "the caller's directory changed ($n entries, wanted 6): $(find "$el" -mindepth 1 | paste -sd' ')"
 }
 
 start_longest_mount_wins() {
@@ -2300,7 +2312,7 @@ cases=(
     start_chowns_the_clone_on_a_named_volume
     start_never_chowns_a_bind_mount
     start_runs_claude_outside_the_clone
-    start_without_a_git_top_level_is_one_todo
+    start_without_a_git_top_level_runs_from_the_clone_not_the_caller
     start_longest_mount_wins
     start_own_clone_runs_nothing_privileged
     start_last_mount_at_the_same_point_wins

@@ -50,8 +50,16 @@ if [[ $(stat -c %u "$clone" 2>/dev/null || true) != "$(id -u)" ]]; then
 fi
 
 # 2. Work from the top of the clone.
-# An empty result is a failure here, not `cd ""`.
-top=$(git -C "$clone" rev-parse --show-toplevel 2>/dev/null) && cd "$top" || add_todo "could not enter the clone at $clone"
+# An empty result is a failure here, not `cd ""`. When git cannot find a top level (no .git in the clone), the clone
+# folder itself is the working directory, so every later step, which uses relative paths, runs there and never in
+# the caller's directory; that is one TODO of its own. Only when the folder cannot be entered either is it "could not enter".
+if top=$(git -C "$clone" rev-parse --show-toplevel 2>/dev/null) && [[ -n $top ]] && cd "$top"; then
+    :
+elif cd "$clone"; then
+    add_todo "git could not find the top level of the clone at $clone, so the steps ran from that folder"
+else
+    add_todo "could not enter the clone at $clone"
+fi
 
 # 2b. Executable scripts. Some container filesystems (a Windows or macOS host mount) set core.fileMode=false, and then
 # `git add` records every new script as 100644. This runs only on a clone that is on a Docker volume, as step 1
