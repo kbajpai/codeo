@@ -548,6 +548,45 @@ start_without_codeo_installed_is_a_todo() {
     n=$(ds_todos 'codeo is not installed'); ((n == 1)) || fail "wanted one not-installed TODO, got $n: $ds_err"
 }
 
+# ds_registry_stub <yes|no>: plugin roots "other" and "mine" whose lock.sh logs to lock-calls-<name>, and a
+# registry listing other (projectPath /somewhere/else) and, on yes, mine (projectPath this clone's physical path).
+ds_registry_stub() {
+    local name clone
+    clone=$(cd "$ds_dir/codeo-home" && pwd -P)
+    for name in other mine; do
+        mkdir -p "$ds_dir/plug-$name/scripts"
+        printf '#!/usr/bin/env bash\necho "$*" >> "$STUB_DIR/lock-calls-%s"\n' "$name" > "$ds_dir/plug-$name/scripts/lock.sh"
+        : > "$ds_dir/lock-calls-$name"
+    done
+    mkdir -p "$ds_dir/claude/plugins"
+    jq -n --arg o "$ds_dir/plug-other" --arg m "$ds_dir/plug-mine" --arg c "$clone" --arg with "$1" \
+        '{plugins: {"codeo@codeo": ([{installPath: $o, projectPath: "/somewhere/else"}]
+            + (if $with == "yes" then [{installPath: $m, projectPath: $c}] else [] end))}}' \
+        > "$ds_dir/claude/plugins/installed_plugins.json"
+}
+
+start_uses_this_projects_lock_sh() {
+    ds_setup mine || return 0
+    ds_branch feat/x
+    ds_registry_stub yes
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ -s $ds_dir/lock-calls-mine ]] || fail "this project's lock.sh was not called: $ds_err"
+    [[ ! -s $ds_dir/lock-calls-other ]] || fail "another project's lock.sh was called: $(cat "$ds_dir/lock-calls-other")"
+}
+
+start_ignores_another_projects_codeo() {
+    local n
+    ds_setup notmine || return 0
+    ds_branch feat/x
+    ds_registry_stub no
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ ! -s $ds_dir/lock-calls-other ]] || fail "another project's lock.sh was called: $(cat "$ds_dir/lock-calls-other")"
+    [[ ! -s $ds_dir/lock-calls-mine ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls-mine")"
+    n=$(ds_todos 'codeo is not installed'); ((n == 1)) || fail "wanted one not-installed TODO, got $n: $ds_err"
+}
+
 start_reports_a_wrong_folder() {
     local n
     ds_setup folder || return 0
@@ -1795,6 +1834,8 @@ cases=(
     start_lock_todo_lines_become_todos
     start_lock_crash_is_a_todo
     start_without_codeo_installed_is_a_todo
+    start_uses_this_projects_lock_sh
+    start_ignores_another_projects_codeo
     start_reports_a_wrong_folder
     start_todo_when_nothing_is_set_up
     start_ready_when_everything_is_set_up
