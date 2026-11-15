@@ -460,6 +460,7 @@ STUB
     cat > "$ds_dir/bin/claude" <<'STUB'
 #!/usr/bin/env bash
 echo "$PWD" >> "$STUB_DIR/claude-pwds"
+[[ -z ${STUB_CLAUDE_MARK:-} ]] || : > "$PWD/claude-was-here"
 if [[ "$1 $2" == "auth status" ]]; then
     printf '%s' "${STUB_CLAUDE_OUT:-}"
     exit "${STUB_CLAUDE_RC:-1}"
@@ -770,7 +771,7 @@ start_lock_crash_is_a_todo() {
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     n=$(ds_todos 'lock.sh failed (exit 3)'); ((n == 1)) || fail "wanted one crash TODO, got $n: $ds_err"
     ! grep -q boom <<<"$ds_out" || fail "the crash output was printed on stdout: $ds_out"
-    [[ $(grep -c boom <<<"$ds_err" || true) == 1 ]] || fail "boom is not on stderr on exactly one line: $ds_err"
+    [[ $(grep -o boom <<<"$ds_err" | wc -l | tr -d ' ') == 1 ]] || fail "boom does not appear exactly once on stderr: $ds_err"
 }
 
 start_without_codeo_installed_is_a_todo() {
@@ -932,12 +933,13 @@ start_runs_claude_outside_the_clone() {
     local line
     ds_setup claudecwd || return 0
     : > "$ds_dir/claude-pwds"
-    ds_ready_run
+    STUB_CLAUDE_MARK=1 ds_ready_run
     [[ -s "$ds_dir/claude-pwds" ]] || { fail 'claude was never run'; return 0; }
     while IFS= read -r line; do
         [[ $line == "$ds_dir/home" ]] || fail "claude ran in $line, wanted $ds_dir/home"
     done < "$ds_dir/claude-pwds"
-    [[ -z $(git -C "$ds_dir/codeo-home" status --porcelain --untracked-files=no) ]] || fail 'the clone has changes after the run'
+    [[ ! -e "$ds_dir/codeo-home/claude-was-here" ]] || fail 'claude left a file in the clone'
+    [[ -e "$ds_dir/home/claude-was-here" ]] || fail 'claude did not run from the home directory'
 }
 
 start_without_a_git_top_level_runs_from_the_clone_not_the_caller() {
@@ -2001,10 +2003,12 @@ title_reports_a_failing_container_name_as_one_line() {
     wt_setup cnfail || return 0
     printf '#!/bin/sh\necho "container-name: first" >&2\necho "container-name: second" >&2\nexit 1\n' \
         > "$wt_dir/.devcontainer/scripts/container-name.sh"
+    mkdir -p "$wt_dir/.vscode" && printf '{"editor.tabSize":2}\n' > "$wt_dir/.vscode/settings.json"
     wt_run
     ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
     [[ $wt_err == 'window-title: could not name the container: first / second' ]] || fail "stderr was: $wt_err"
-    ! compgen -G "$wt_dir/.vscode/.settings.*" >/dev/null || fail 'a temp file was left in .vscode'
+    [[ $(ls -A "$wt_dir/.vscode") == settings.json ]] || fail "the failure left something in .vscode: $(ls -A "$wt_dir/.vscode")"
+    [[ $(<"$wt_dir/.vscode/settings.json") == '{"editor.tabSize":2}' ]] || fail 'the failing run changed settings.json'
 }
 
 title_outside_a_repository_says_so() {
