@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 1 done: all five tasks built and reviewed, plus a whole-branch review that found nothing blocking. The build step is the `shell` suite's `build` (`true`). No open question. Next is `/codeo:qc`.
+Round 2 done, after a send-back from `/codeo:close`: `main` was merged in and the `CHANGELOG.md` conflict with #76 resolved by keeping both bullets (round 1: all five tasks built and reviewed, plus a whole-branch review that found nothing blocking). The build step is the `shell` suite's `build` (`true`). No open question. Next is `/codeo:qc`, which runs its whole pass again.
 
 ## Questions
 
@@ -39,6 +39,24 @@ None.
 
 **Deferred minors from #55, for the PR description:** all five are fixed and none is dismissed — header wording in `container-name.sh` (Task 5), `window-title.sh`'s `2>&1` capture (Task 4), the bare `-home` folder on a non-main branch (Task 1, `home_folder_off_the_base_branch_is_silent`), the `lock.sh` crash output repeated in its TODO (Task 3), the weak `.codeo/active` needle (Task 4).
 
+### Round 2
+
+2026-11-15
+(send-back from close.md round 1)
+
+`/codeo:close` found that the branch conflicts with `origin/main` in `CHANGELOG.md`: #76 merged (`dfa8b10`) while this branch was in `/codeo:qc`. The finding holds (checked with `git merge-tree` before and after).
+
+**Merge** (`sync-main.sh`, exit 2, one conflict; merge commit `8edd488`; the branch is merged, not rebased, and has no pull request yet). `also changed on main` for the files this branch touches: only `CHANGELOG.md`.
+- `CHANGELOG.md`: both `## Unreleased` bullets are kept — the #76 bullet (Haiku trial: `doctor` and `setup` stay on Sonnet) first, as it merged first, then this branch's #57 bullet. Nothing in either bullet changed because of the other; the conflict was only the two additions at the same spot. The merge also brought in #76's own archived dossier (`.codeo/done/76/`) and plan (`docs/plans/2026-11-14-trial-doctor-setup-haiku.md`), which this branch does not touch.
+- After the merge `git merge-tree --write-tree origin/main HEAD` exits 0, and `overlap.sh 57` prints nothing.
+
+**Also changed, from `/codeo:qc` round 1** (non-blocking F3, which `close` did not send back but which sits in the line being resolved): the #57 bullet now says the start script, after removing an empty `.codeo/active`, takes the lock "on an issue branch" (on the base branch it takes none, as `start_empty_lock_file_on_the_base_branch_is_removed` shows), and that the v1.0.4 bullet was "clarified in place", not "corrected", because no sentence in it was false. No other finding from that round is addressed here: F1, F2, F4 and F5 are left as `qc.md` recorded them.
+
+**Build result:** the suite's `build` is `true`: exit 0. `tests/agnostic.test.sh`, which guards the wording of tracked files, passes on the merged tree. No script or test changed in this round, so no suite was run beyond that; `/codeo:qc` runs them in full.
+
+**Documentation changed:** `CHANGELOG.md` only. No deviation from the plan.
+
 ## Log
 
 - 2026-11-15 — implemented: 5 tasks, 1 fix round on Task 1 · cost: 45m · sonnet-5-5 625k in + 16.9M cached / 91k out
+- 2026-11-15 — round 2: merged origin/main (CHANGELOG.md conflict with #76 resolved, both bullets kept), F3 wording fixed · cost: 0m · sonnet-5-5 15k in + 1.8M cached / 2k out
