@@ -27,6 +27,8 @@
 #       origin/<baseBranch>) and the plan is read from <head> (`<state>/<N>/plan.md`, else
 #       `<state>/done/<N>/plan.md`) instead of the working tree; either ref is any commit-ish.
 #       --base and --head are valid only with --outside.
+#       Given alone, --base changes only the diff base: `git diff --name-only <base>...HEAD`, with the
+#       plan read from the working tree.
 #
 # Globs: `**` is read as `*`, matched with bash `==`; `none` is no glob. `$CODEO_STATE_DIR/**` never
 # pairs, and `--outside` also leaves out the configured plansDir. This branch's footprint is read from the
