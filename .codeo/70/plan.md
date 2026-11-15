@@ -82,6 +82,17 @@ F1, F2 and the cheap ones (F4, F5, F6, F7, F8, F10, F13); F9, F11 and F12 are le
 
 ## Notes
 
+Round 2 footprint, to move to the end of the round 2 outcome once nothing is raised:
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, .codeo/overlays/**, skills/**, scripts/cleanup.sh, scripts/github.sh, lib/extension-points.tsv, docs/skills.md, docs/skills-inventory.md, docs/extension-points.md, docs/handoff.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-15-guard-home-only-skills.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 What exploration found, so the plan does not re-ask it:
 
 - **Role script.** `.devcontainer/scripts/container-name.sh` already reads the codename (`--codename`) and the lock's issue number with one pattern; `folder-check.sh` reads `baseBranch` from `.codeo/config.json` (fixed in #57, merged) and treats a folder `<codename>-<digits>` off the base branch as a failed lock. The role script is new, sits next to them in `.devcontainer/scripts/`, calls `container-name.sh` for both, and reads the base the way `folder-check.sh` does. It does not call or change `folder-check.sh`, which stays the start script's check of the folder against the lock. My call: it lives with the project's dev container scripts, not in the plugin's `scripts/`, because "home container" is this project's concept.
