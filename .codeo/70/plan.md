@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1: the code met every criterion, but the plan left out where `close`'s next step runs (F1) and what makes a refused finding findable by triage (F2). Q7 (which non-blocking findings to take in) is answered; the round-2 plan was approved and written into the plan file (Tasks 11-16); nothing is open and the next step is `/codeo:implement`.
+Round 3, after a send-back from `/codeo:qc` round 2: round 2's fixes hold and all eight criteria are met, but two new blocking findings are in the plan's wording (G1 the stale recovery advice, G2 the cleanup caveat and a missing workflow-ended proof). Q8-Q10 are answered; the round-3 draft is at the review gate.
 
 ## Questions
 
@@ -80,6 +80,30 @@ One pull request. Go with the recommendation (engineer, in the conversation, 202
 **Answer:**
 F1, F2 and the cheap ones (F4, F5, F6, F7, F8, F10, F13); F9, F11 and F12 are left for `/codeo:triage`. Answered with the question tool, in the conversation (engineer, 2026-11-15).
 
+### Q8 — Round 3, G1: how does the stale refusal say the way back without reviving a parked workflow?
+
+**Why it matters:** round 2's wording tells a lock skill in a stale container to re-run the start script, and `lock.sh take` binds from the branch's `init.md` without checking for a stash or an abandon, so the advice revives a parked workflow with no claim and no board move. Detecting the state adds a read of the clone's own dossier to `role.sh` and three test cases; one generic message adds none but is wrong for a live container whose lock was merely lost.
+**Options:** detect the state from the clone's dossier — finished, parked (stashed or abandoned), or lock lost — and give each its own way back (recommended) · one generic message naming `/codeo:init #<N>` in the home container.
+
+**Answer:**
+Detect the state. Answered with the question tool, in the conversation (engineer, 2026-11-15).
+
+### Q9 — Round 3, G2: besides correcting the untrue caveat, does `cleanup.sh` gain a proof that the workflow ended?
+
+**Why it matters:** a pull request merged on GitHub with automatic branch deletion passes all four proofs even when `/codeo:close` never finished in the container, so leases on the intake branch are still held and removing the volume hides that. A `lease` proof (an issue that holds or waits for any lease in `intake.sh lease list --tsv` is not proven) fails closed and costs one read and one test; it cannot see the lock itself, which lives only in the container. Caveat-only changes no script.
+**Options:** add a `lease` proof and correct the caveat (recommended) · correct the caveat only.
+
+**Answer:**
+Add the `lease` proof and correct the caveat. Answered with the question tool, in the conversation (engineer, 2026-11-15).
+
+### Q10 — Round 3: which of QC round 2's non-blocking findings (G3-G7) does this round fix as well?
+
+**Why it matters:** each is a one-line or wording fix in a file this round already touches (G3 the close overlay's home-container sentence only for the finished exit, G4 cleanup "never touches any branch other than `codeo/intake`", G5 "nothing is lost" against the `git status` warning in close step 17, G6 `#<M>` in `docs/handoff.md`, G7 a null or empty `head_ref` fails the branch proof); left out, each stays in `qc.md` for `/codeo:triage`.
+**Options:** all of G3-G7 (recommended) · G1 and G2 only.
+
+**Answer:**
+All of G3-G7. Answered with the question tool, in the conversation (engineer, 2026-11-15).
+
 ## Notes
 
 What exploration found, so the plan does not re-ask it:
@@ -136,3 +160,4 @@ sequenced:  none
 - 2026-11-15 — planned: docs/plans/2026-11-15-guard-home-only-skills.md · engineering:architecture and engineering:system-design not loaded, their Options/Decision structure applied directly from Q1-Q3 · cost: 13m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 232k in + 2M cached / 39k out
 - 2026-11-15 — round 2 after qc round 1: Q7 raised and answered with the question tool; draft at the review gate · cost: 2m · fable-5-2 423k in + 1.8M cached / 10k out
 - 2026-11-15 — planned round 2: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 11-16) · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 13m · fable-5-2 424k in + 2.2M cached / 11k out · sonnet-5-5 26k in + 1.3M cached / 4k out
+- 2026-11-15 — round 3 after qc round 2: Q8-Q10 raised and answered with the question tool; draft at the review gate · cost: 3m · fable-5-2 539k in + 2.8M cached / 10k out
