@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, done. QC round 2's two blocking findings (G1, G2) and G3-G7 are planned (Tasks 17-21), the plan was approved and written into the plan file, Q8-Q11 are answered and nothing is open. The next step is `/codeo:implement`.
+Round 4, questions open. QC round 3 sent the change back with two blocking findings in the close wording (H1: the abandon closing block, and the stash one, name a home-only skill the guard refuses in that container; H2: the removal command is printed after a stash or an abandon). H1 has one sensible fix and is not a question. Q12 and Q13 are open.
 
 ## Questions
 
@@ -111,6 +111,22 @@ All of G3-G7. Answered with the question tool, in the conversation (engineer, 20
 
 **Answer:**
 Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-15).
+
+### Q12 — Round 4, H2: after which exits does `/codeo:close` print the container-removal command?
+
+**Why it matters:** the close overlay prints `docker rm -f <volume>; docker volume rm <volume>` at every exit of a container-hosted workflow. After an abandon whose unmerged branch the engineer had deleted, the container holds the only copy of the work, committed, so `git status` is clean and the command destroys it. After a stash or an abandon with the branch kept, the branch on origin carries everything pushed, and a stash's old `codeo-<N>` container must go before `/codeo:init #<N>` can open a new one with that name (QC's H6). "Finished only" is one condition and one test, and matches the issue's criterion ("after a finished workflow"); a stash or an abandon then prints no command and says why, and for a stash says the old container is removed by hand on the host (after `git status`) before the resume, pointing at `.devcontainer/README.md`. "All but the last copy" also prints the command after a stash and after an abandon with the branch kept, which is more convenient and needs three more conditions worded and pinned, in the text that has sent this change back three times.
+**Options:** finished close only; a stash or an abandon prints no command and says why (recommended) · every exit except an abandon whose branch was deleted.
+
+**Answer:**
+_Open._
+
+### Q13 — Round 4: which of QC round 3's non-blocking findings (H3-H6) does this round fix as well?
+
+**Why it matters:** H3 (`tests/cleanup-skill.test.sh:24` reads `docs/handoff.md` by a relative path) is a one-line fix. H4 (the overlay prints the command for any `volume:` matching `^codeo-[0-9]+$`, not only `codeo-<the lock's issue>`) is one more condition in the overlay sentence this round rewrites anyway, with one test needle. H6 (a stashed container has no removal advice anywhere) is settled by Q12 either way. H5 (`CODEO_CLEANUP_REMOVAL` works outside tests) is round 1's F11, already left for `/codeo:triage` by the answer to Q7. Left out, each stays in `qc.md` for `/codeo:triage`.
+**Options:** H3, H4 and H6, leaving H5 for triage (recommended) · H1 and H2 only.
+
+**Answer:**
+_Open._
 
 ## Notes
 
