@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 is done: qc round 2 sent the change back for three more claims stronger than their evidence (F13 the KVM sentence on #73, F14 the window-title "no equivalent", F15 U6's folder check) and six smaller ones; all are fixed, and nothing is open. Next is `/codeo:qc`, a full pass from step 0. Still the engineer's: the cleanup of the test sandboxes, clones and Windows Git entries.
+Round 4 is done: qc round 3 sent the change back for two more claims stronger than their evidence (F24 a sandbox name "cannot be reused", F25 U8 marked tried for git wiring that was not run) and six smaller ones; all are fixed, in the page, in #85 and #86 and in the #73 comment, and nothing is open. Next is `/codeo:qc`, a full pass from step 0. Still the engineer's: the cleanup of the test sandboxes, clones and Windows Git entries.
 
 ## Questions
 
@@ -133,8 +133,24 @@ Plan: `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md`. Built from `main
 
 **Documentation pages changed:** only `docs/dev-environment-sbx-evaluation.md`; the other change is the #73 comment. **Build:** the `shell` suite's `build` is `true`. Checks run this round: no blank evidence cell; 28 rows, 22 `tried` and 6 `cited`, every row 7 fields wide; one `**Recommendation:** hybrid` line; no account name, email, token or organisation id on the page; `git diff --stat origin/main...HEAD -- .devcontainer skills` empty; `bash tests/run.sh` `all cases passed`.
 
+### Round 4
+
+2026-11-15
+(send-back from qc.md round 3)
+
+`sync-main.sh` reported `the branch already contains origin/main`; `overlap.sh 73` printed nothing. Each finding was checked against the page, the trial records and `.devcontainer/` before any edit; F24-F31 held. F12 (`plan.md`'s footprint) and F23 (`sync-main.sh`) are not this change's files.
+
+- **F24.** D3 and the Recommendation said a sandbox name "cannot be reused". T8 removed `codeo-a` and created `codeo-a` again; T9 shows only that `create` with the name of an existing sandbox fails. Both now say a name is unique among existing sandboxes (T9) and usable again after `sbx rm` (T8), and that names are a convention a start script checks (#85).
+- **F25.** U8 began "Equivalent, tried" for a duty that is `gh auth setup-git` plus a project-scope check. It now says what T6 tried (the `github` secret and `gh auth status` showing the `project` and `delete_repo` scopes) and what was not (`gh auth setup-git`, the start script's scope check, any `git push` or authenticated fetch from inside a sandbox); #85 now lists a push check as a requirement and as an acceptance criterion.
+- **F26.** #85's body now says "no `user.name` was set (`user.email` was not checked)" in both places it said "no git identity"; #86's body now says no window title was set and that setting one was not tried (edited with `gh issue edit`, read back). The page had no old wording left.
+- **F27-F31.** U13 begins `Workaround, untried:` and the clause "the sandbox set no window title" is gone; U6 adds that off the base branch with no lock a `<codename>-<digits>` folder is left alone; U16 is one verdict, `Workaround (cited):`, with a cross-reference to U9; U14 points to #86, which now lists the session-title requirement and acceptance criterion (the `REMOTE_CONTAINERS` test; whether a sandbox sets it was not checked); D2 says the container is opened through the Clone Repository flow "the README's documented flow; it also mentions Reopen in Container from a host folder"; the Host verdict says what "partly" excludes: a Windows program called as `sbx.exe` / `ssh.exe` from WSL bash with a per-clone Windows Git `safe.directory` entry, and the Linux-in-WSL2 route not tried.
+- **The #73 result comment** (`gh api repos/kbajpai/codeo/issues/comments/6887700427`, my own earlier comment) was edited again: the row counts read "21 tried, 7 cited" (U16 became a cited row, so the table is 21 and 7, not 22 and 6) and the Host line carries the same "partly" clause as the page; re-read from GitHub afterwards.
+
+**Documentation pages changed:** only `docs/dev-environment-sbx-evaluation.md`. The other changes this round are outside the repository: the bodies of #85 and #86 and the #73 comment. **Build:** the `shell` suite's `build` is `true`. Checks run this round: no blank evidence cell; 28 rows, 21 `tried` and 7 `cited`, each 7 fields wide; one `**Recommendation:** hybrid` line; none of "cannot be reused", "Equivalent, tried", "no git identity", "There is no window title" or an account name, email, token or organisation id on the page; `git diff --stat origin/main...HEAD -- .devcontainer skills` empty; `bash tests/run.sh` `all cases passed` on the final page.
+
 ## Log
 
+- 2026-11-15 — round 4: qc round 3 findings F24-F31 fixed (page, #85, #86 and the #73 comment), suite passes · cost: 8m · sonnet-5-5 68k in + 4.9M cached / 19k out
 - 2026-11-15 — round 3: qc round 2 findings F13-F16 and F18-F22 fixed (page and the #73 comment), suite passes · cost: 5m · sonnet-5-5 91k in + 2.7M cached / 15k out
 - 2026-11-15 — round 2: qc round 1 findings F1-F11 fixed on the page, suite passes · cost: 6m · sonnet-5-5 98k in + 2.2M cached / 21k out
 - 2026-11-15 — implemented: tasks 1-7 done, follow-ups #85 and #86 filed · cost: 194m · sonnet-5-5 306k in + 15.9M cached / 118k out
