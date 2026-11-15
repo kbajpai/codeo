@@ -82,6 +82,19 @@ not allow).
 **Answer:**
 Proceed and coordinate (A; answered in the conversation).
 
+### Q4 — `overlap.sh` reports `#57` and `glob:CHANGELOG.md`: proceed and coordinate, sequence after #57, or re-scope?
+
+**Why it matters:** this is the overlap Q3 already answered *proceed and coordinate*, raised again
+only because `overlap.sh` recognises a pair as raised when a question quotes the token it prints,
+`glob:CHANGELOG.md`, and Q3 did not. The footprint's `files:` line lists `CHANGELOG.md`, which #57
+(branch `feat/dev-container-follow-ups-55`, assignee kbajpai, step `close`, working) also changes.
+Confirming Q3's answer lets the outcome be written; sequencing would hold Task 5 until #57 merges.
+
+**Options:** proceed and coordinate (recommended, as in Q3: one added bullet under `## Unreleased`)
+· sequence after #57 · re-scope (leave `CHANGELOG.md` out, which criterion 5 does not allow).
+
+**Answer:**
+
 ## Notes
 
 **What the issue already settles, so it is not asked.** The fix is skill text (not a relaxed item
