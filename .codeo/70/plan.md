@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, after a send-back from `/codeo:qc` round 2: round 2's fixes hold and all eight criteria are met, but two new blocking findings are in the plan's wording (G1 the stale recovery advice, G2 the cleanup caveat and a missing workflow-ended proof). Q8-Q10 are answered; the round-3 draft is at the review gate.
+Round 3: the plan file now carries Round 3 (Tasks 17-21), approved; the dossier is stopped on Q11, a new overlap with #97 on `skills/qc/SKILL.md` and `tests/qc-skill.test.sh` (#97 reached `qc` after round 2). `## Outcome` stays as it is until Q11 is answered, then the round-3 outcome is written and the next step is `/codeo:implement`.
 
 ## Questions
 
@@ -104,6 +104,13 @@ Add the `lease` proof and correct the caveat. Answered with the question tool, i
 **Answer:**
 All of G3-G7. Answered with the question tool, in the conversation (engineer, 2026-11-15).
 
+### Q11 — Round 3: overlap with #97 on `skills/qc/SKILL.md` and `tests/qc-skill.test.sh`: proceed and coordinate, sequence after #97, or re-scope?
+
+**Why it matters:** #97 (branch `docs/docs-skill-wording-test-guard`, assignee kbajpai, step `qc`, working) now lists `skills/qc/SKILL.md` and `tests/qc-skill.test.sh` in its footprint, which the earlier overlap questions on #97 (implement.md Q3) did not cover; this branch already changed both in earlier rounds (the `role-guard` step and rule in the skill, the refused-call sentence in the skill and its test), and round 3 does not touch either. *Proceed* means whichever branch merges second merges `origin/main` and keeps both edits, which `/codeo:implement` and `/codeo:qc` do at the start of every round; *sequence* means this branch waits for #97, which is already at `qc`. The printed overlaps, verbatim: `glob:skills/qc/SKILL.md`, `glob:tests/qc-skill.test.sh`, `skills/qc/SKILL.md`, `tests/qc-skill.test.sh`.
+**Options:** proceed and coordinate (recommended: round 3 adds nothing to either file, and #97 is at `qc`) · sequence after #97 · re-scope.
+
+**Answer:**
+
 ## Notes
 
 Round 3 footprint, to move to the end of the round 3 outcome once nothing is raised (unchanged from round 2):
@@ -172,3 +179,4 @@ sequenced:  none
 - 2026-11-15 — round 2 after qc round 1: Q7 raised and answered with the question tool; draft at the review gate · cost: 2m · fable-5-2 423k in + 1.8M cached / 10k out
 - 2026-11-15 — planned round 2: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 11-16) · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 13m · fable-5-2 424k in + 2.2M cached / 11k out · sonnet-5-5 26k in + 1.3M cached / 4k out
 - 2026-11-15 — round 3 after qc round 2: Q8-Q10 raised and answered with the question tool; draft at the review gate · cost: 3m · fable-5-2 539k in + 2.8M cached / 10k out
+- 2026-11-15 — round 3: Round 3 (Tasks 21 total) written into the plan file after approval; Q11 raised on a new overlap with #97 · cost: 5m · fable-5-2 539k in + 3.4M cached / 11k out · sonnet-5-5 27k in + 2.8M cached / 4k out
