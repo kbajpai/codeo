@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 5, sent back by QC round 4 (J1: a resumed stash whose container lost its lock is called stashed; J2: an archived dossier whose pull request is still open is called finished). Q14 and Q15 are answered and nothing is open. The round's draft (Tasks 26-29) is at the review gate in `.codeo/70/plan-draft.md`, waiting for the engineer's approval.
+Round 5, sent back by QC round 4 (J1: a resumed stash whose container lost its lock is called stashed; J2: an archived dossier whose pull request is still open is called finished). Round 5, done. QC round 4's two blocking findings (J1, J2) and J3, J4, J5, J9 are planned (Tasks 26-29), the plan was approved and written into the plan file, Q14 and Q15 are answered and nothing is open. The next step is `/codeo:implement`.
 
 ## Questions
 
@@ -213,6 +213,21 @@ What exploration found, so the plan does not re-ask it:
 
 **Filed through `/codeo:issue`:** none.
 
+### Round 5 — 2026-11-15
+(send-back from qc.md round 4)
+
+**Plan:** the same file, `docs/plans/2026-11-15-guard-home-only-skills.md`, with a `## Round 5` section (Tasks 26-29), approved by the engineer and left unstaged. Shape unchanged: one executable plan, one pull request.
+
+**What QC found.** J1 (blocking, the plan's): `role.sh` calls a workflow parked from the last `### Round` heading of `close.md` alone, so a resumed stash whose new container failed to take the lock is told it "was stashed" and to use `/codeo:init #<N>`, never the start script. J2 (blocking, the plan's): `role.sh` calls a workflow finished as soon as `.codeo/done/<N>` exists, though close archives it when the pull request is opened, so a container that loses its lock while the pull request awaits review is told it is finished and pointed at removal. J3-J9 non-blocking.
+
+**Decisions.** Q14 = no resume named for an abandon. Q15 = J3, J4, J5 and J9; J6 (Podman), J7 (`CODEO_CLEANUP_REMOVAL`, round 1's F11 and round 3's H5) and J8 (cleanup lists every archived issue) stay with `/codeo:triage`. Task 26 `role.sh` reads the state as the scripts that own it do: finished only when the base branch carries `.codeo/done/<N>` (`origin/<base>` when that ref exists, else the local base, as `lock.sh` does, without its fetch), an archive the base lacks is lock-lost; parked only while parks in `close.md` outnumber resume lines in `init.md`, counted as `claim.sh --stash-live` counts them, the last park heading giving the kind (J1, J2). Task 27 the refusal lines: a stash says to remove this container before `/codeo:init #<N>` opens the new one (J5); an abandon names no resume and says the container may hold the only copy of the work (J4); the home container off its base branch says to switch back to the base branch (J3). Task 28 documents it and corrects `docs/skills.md`'s cleanup non-goal (J9). Task 29 the whole check. Only `role.sh` changes among the scripts. Calls made in the plan: `role.sh` does not fetch; the park count follows `claim.sh` exactly, so a stash followed by a later close round with no resume line reads as stashed (round 3 read it as lock-lost).
+
+**Rejected.** A fetch in the guard (it runs before every skill); naming `/codeo:init #<N>` for an abandon as a deliberate restart; J1 and J2 only.
+
+**Documentation the round moves.** `.devcontainer/README.md`, `docs/skills.md`, `CHANGELOG.md`. `docs/extension-points.md`, `docs/handoff.md` and `docs/skills-inventory.md` need nothing: no point, rule or closing block changes.
+
+**Filed through `/codeo:issue`:** none.
+
 ### Footprint
 
 ```
@@ -233,3 +248,4 @@ sequenced:  none
 - 2026-11-15 — planned round 3: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 17-21); Q11 answered · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 19m · fable-5-2 539k in + 3.4M cached / 11k out · sonnet-5-5 31k in + 4.5M cached / 7k out
 - 2026-11-15 — planned round 4: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 22-25); Q12-Q13 answered · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 4m · fable-5-2 172k in + 1.9M cached / 14k out · sonnet-5-5 171k in + 817k cached / 3k out
 - 2026-11-15 — round 5 after qc round 4: Q14-Q15 raised and answered with the question tool; draft at the review gate · cost: 3m · fable-5-2 170k in + 1.6M cached / 15k out
+- 2026-11-15 — planned round 5: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 26-29); Q14-Q15 answered · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 5m · fable-5-2 171k in + 1.8M cached / 16k out · sonnet-5-5 165k in + 415k cached / 2k out
