@@ -408,3 +408,87 @@ What each says afterwards:
 - **Criteria.** Criterion 3 asks for "a message naming the finished issue" in a stale container: the finished state says `issue #<N> is finished`; a parked or lock-lost container is not a finished issue, and its line names the issue and what did happen. Criterion 6 says "all four proofs": the four stay, and a fifth is added; a command is still printed only when every proof passes.
 - **Documentation the round moves.** `.devcontainer/README.md`, `docs/skills.md`, `docs/handoff.md`, `CHANGELOG.md`, and `README.md` only where it counts the proofs. `docs/extension-points.md` and `docs/skills-inventory.md` need nothing: no point and no rule changes.
 - **Footprint.** Unchanged from round 2.
+
+## Round 4 — send-back from QC round 3
+
+QC round 3 (`.codeo/70/qc.md`) found round 3's fixes in place, the suite green on the tree merged with `origin/main`, every criterion met, and two new blocking findings in the close wording the plan dictated. **H1:** after an abandon in a container the lock is gone, the role is `stale:<N>`, and the abandon closing block still names `/codeo:triage` as the first step with no checkout named; round 3's Task 19 told the overlay to "keep the closing block the skill gives for that exit". The stash-completed block has the same hole: its first step is `/codeo:init #<N>`, a home-only skill, "on any machine". **H2:** the close overlay prints the removal command at every exit, so after an abandon whose unmerged branch the engineer had deleted it hands over the command that destroys the only copy of the work, with a clean `git status`. The engineer's answers: Q12 the command is printed after a finished close only, and a stash or an abandon prints none and says why; Q13 fix H3, H4 and H6 too, H5 stays for `/codeo:triage`.
+
+Earlier rounds' Global Constraints still bind: no `docker`, `codeo-home`, `codeo-gh` or `codeo-git` under `skills/`, `scripts/`, `lib/` or `docs/`; no text under a `<!-- rule -->` marker changes; `.devcontainer/Dockerfile` and `devcontainer.json` do not change; each task's proof is its test file, then `bash tests/run.sh`, both printing `all cases passed`. No script changes in this round: `role.sh`, `cleanup.sh` and `github.sh` stay as they are.
+
+```mermaid
+flowchart TD
+    E{how the close ended<br/>host: container} -->|finished: PR merged| F{volume: is codeo-N<br/>for the lock's issue N?}
+    F -->|yes| F1[print the removal command<br/>host shell, git status first]
+    F -->|no| F2[no command: find it with docker ps]
+    F1 --> FH[next: /codeo:triage and /codeo:cleanup<br/>in codeo-home]
+    F2 --> FH
+    E -->|stash| S[no command<br/>old container removed by hand before the resume<br/>next: /codeo:init #N in codeo-home]
+    E -->|abandon, branch kept| A1[no command<br/>next: /codeo:triage in codeo-home]
+    E -->|abandon, branch deleted| A2[no command, no removal named<br/>this container is the only copy<br/>next: /codeo:triage in codeo-home]
+```
+
+### Task 22: The removal command is for a finished close only (H2, H4, H6, and the overlay's half of H1)
+
+**Files:**
+- Modify: `.codeo/overlays/close.md` (`## host-workflow`; `## role-guard` does not change)
+- Test: `tests/close-removal.test.sh`
+
+**Interfaces.** The `## host-workflow` section reads, in this order (wording may be tightened, the needles below are fixed):
+- `When the lock's \`host\` is \`container\`:` then three paragraphs, one per exit, each starting with its own lead:
+- **`After a finished close (the pull request merged):`** print `docker rm -f <volume>; docker volume rm <volume>`, with `<volume>` the lock's `volume:` line, only when that line matches `^codeo-[0-9]+$` **and its number is the lock's `issue`**; for any other value, including `unknown` and another issue's number, print no command and say to find the container with `docker ps` on the host. The command is for the host's shell (one line, `;`, PowerShell and bash). Say that the commands run on the host, not inside this container, and that the engineer runs `git status` in that clone first. This container holds no lock, so `/codeo:triage` and `/codeo:cleanup` are refused here: tell the engineer to run them in the home container, `codeo-home`, and make that the closing block's first step.
+- **`After a stash:`** print no removal command. This container holds no lock, so `/codeo:init #<N>` is refused here: it runs in the home container, `codeo-home`, and that is the closing block's step. Say that the resume opens a new `codeo-<N>` container, that this one has to be removed first because two containers cannot share the name, and that the engineer removes it by hand on the host once `git status` here shows nothing unpushed; `.devcontainer/README.md` says how.
+- **`After an abandon:`** print no removal command. `/codeo:triage` is refused here: it runs in the home container, `codeo-home`, and that is the closing block's first step. When the branch was kept, the container holds nothing the branch lacks and the engineer may remove it by hand on the host after `git status`. When the branch was deleted, this container holds the only copy of the work: say so and name no removal.
+- `For any other host there is nothing to remove: say so.` (unchanged)
+- The sentence "On a stash or an abandon, keep the closing block the skill gives for that exit" is removed.
+
+- [ ] **Step 1: Write the failing assertions** in `tests/close-removal.test.sh`. Keep the existing needles except `On a stash or an abandon`. Add needles: `After a stash:`, `After an abandon:`, `its number is the lock's \`issue\``, `the only copy`, `/codeo:init #<N>`, `.devcontainer/README.md`. Add three structural checks on the overlay output: (a) the text from `After a finished close` up to `After a stash:` contains `docker rm -f <volume>; docker volume rm <volume>`; (b) the text from `After a stash:` to the end contains no `docker rm` and no `docker volume rm`; (c) the text from `After a stash:` up to `After an abandon:`, and the text from `After an abandon:` up to `For any other host`, each contain `print no removal command` and `home container`. Add a self-check in the style of `tests/role-guard.test.sh`'s scratch case: a scratch copy of the overlay with the removal sentence moved under `After an abandon:` fails check (b) (drive the checks through a function that takes the overlay text, so the scratch copy can be fed to it).
+- [ ] **Step 2: Run** `bash tests/close-removal.test.sh` → fails: `overlay output lacks: After a stash:`.
+- [ ] **Step 3: Rewrite** the overlay section.
+- [ ] **Step 4: Run** `bash tests/close-removal.test.sh`, `bash tests/role-guard.test.sh`, `bash tests/agnostic.test.sh`, `bash scripts/doctor.sh` (every line `ok`), then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: close prints the removal command after a finished close only, and names the home container at every exit (#70)`.
+
+### Task 23: The stash and abandon closing blocks name where their first step runs (H1, H3)
+
+**Files:**
+- Modify: `skills/close/SKILL.md` (the paragraphs `**Closing block — stash completed:**` and `**Closing block — abandon finished:**`, nothing else), `docs/handoff.md` (the rows `stash — completed` and `abandon — finished` of the closing-block exceptions table), `tests/cleanup-skill.test.sh` (line 24)
+- Test: `tests/closing-exits.test.sh`, `tests/cleanup-skill.test.sh`
+
+**Interfaces.**
+- Both paragraphs gain, after the command they name first (`/codeo:init #<N>` for the stash, `/codeo:triage` for the abandon), the clause the finished block already carries, verbatim: **"run in the checkout the project's host workflow names for it when it names one — this checkout holds no lock any more, and a project's role check may refuse the skill here"**. The stash paragraph's "on any machine" stays. Everything else in both paragraphs stays, so every existing needle of `case_stash_completed` and `case_abandon_finished` still holds.
+- `docs/handoff.md`: each of the two rows ends its next-step cell with "in the checkout the project's host workflow names, when it names one".
+- `tests/cleanup-skill.test.sh:24` reads `"$repo/docs/handoff.md"` (the variable the file already defines for the repository root; define it from `BASH_SOURCE` the way `tests/close-removal.test.sh` does if it has none), and every other relative read in that file does the same.
+
+- [ ] **Step 1: Write the failing assertions**: in `tests/closing-exits.test.sh`, `case_stash_completed` and `case_abandon_finished` each add `has "$p" "the checkout the project's host workflow names"`, and `case_rule` adds `has "$ab" 'host workflow'` and the same for the `stash — completed` row (capture it as the other rows are). Extend the file's `bites` case with one mutation: the clause deleted from the abandon paragraph makes `abandon-finished` fail.
+- [ ] **Step 2: Run** `bash tests/closing-exits.test.sh` → fails in `stash-completed`.
+- [ ] **Step 3: Edit** the skill, the two table rows and the test's path.
+- [ ] **Step 4: Run** `bash tests/closing-exits.test.sh`, `bash tests/close-skill.test.sh`, `bash tests/closing-block.test.sh`, `bash tests/inventory.test.sh`, then from another directory `( cd /tmp && bash /workspaces/codeo-70/tests/cleanup-skill.test.sh )` → `all cases passed`, then `bash tests/run.sh`.
+- [ ] **Step 5: Commit** `fix: the stash and abandon closing blocks name the checkout their first step runs in (#70)`.
+
+### Task 24: Documentation
+
+**Files:**
+- Modify: `.devcontainer/README.md` (*Removing a finished container*), `docs/extension-points.md` (`close/host-workflow`, **Expected back**), `CHANGELOG.md` (the existing `## Unreleased` bullet, extended in place)
+- Test: `tests/devcontainer.test.sh`, `tests/skills-doc.test.sh`, `tests/agnostic.test.sh`, `tests/extension-points.test.sh` if present
+
+What each says afterwards (present tense, no issue numbers outside the changelog):
+- `.devcontainer/README.md`: `/codeo:close` prints the removal commands after a finished close only, and only when the lock's `volume:` is the container of the lock's own issue. After a stash it prints none: the resume, `/codeo:init #<N>` in the home container, opens a new `codeo-<N>` container, so the old one is removed first, by hand on the host (`docker rm -f codeo-<N>; docker volume rm codeo-<N>`), once `git status` in it shows nothing unpushed. After an abandon it prints none: with the branch kept the container may be removed the same way; with the branch deleted the container holds the only copy of the work. `/codeo:cleanup` lists finished issues only, so it never lists a stashed or abandoned one.
+- `docs/extension-points.md`, `close/host-workflow`: the returned text may differ by how the close ended (finished, stash, abandon), and names the checkout the follow-up skill runs in for each.
+- `CHANGELOG.md`: the bullet says the removal commands are printed after a finished close only and only for the lock's own issue, and that the stash and abandon closing blocks name the home container for their first step.
+- `docs/skills.md`: check the `close` section's sentence on the host workflow; change it only if it says the commands are printed at every exit.
+
+- [ ] **Step 1: Write the edits.**
+- [ ] **Step 2: Run** the tests named above, then `bash tests/run.sh`; `git diff origin/main...HEAD -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` prints nothing.
+- [ ] **Step 3: Commit** `docs: what close prints at each exit of a container-hosted workflow (#70)`.
+
+### Task 25: The whole check
+
+- [ ] **Step 1: Run** `bash tests/run.sh` → `all cases passed`; `bash scripts/doctor.sh` → every line `ok`.
+- [ ] **Step 2: By hand:** `bash scripts/overlay.sh close host-workflow` and read it once as each of the four endings in the diagram: each names exactly one next step, a checkout that the role check allows for it, and a removal command only for the finished one.
+
+### Round 4 self-review
+
+- **Coverage.** H1 → Tasks 22 (overlay) and 23 (skill, hand-off table) · H2 → Task 22 · H3 → Task 23 · H4 → Task 22 · H6 → Tasks 22 and 24 · H5 stays with `/codeo:triage` (Q7, Q13).
+- **Criteria.** Criterion 5 ("after a finished workflow in a container, the final report contains the command with `<N>` from the lock's `volume:` line") still holds: the finished paragraph prints it from the `volume:` line; the added condition only refuses a `volume:` that names another issue.
+- **The same hole, looked for elsewhere.** Every exit that deletes the lock in a container now names the home container for its next skill: finished (round 2), stash completed and abandon finished (this round). The interrupted and lock-kept exits keep the lock, so `/codeo:close` runs where it is.
+- **Documentation the round moves.** `.devcontainer/README.md`, `docs/handoff.md`, `docs/extension-points.md`, `CHANGELOG.md`. `docs/skills-inventory.md` needs nothing: no rule and no point changes.
+- **Footprint.** Unchanged: every file above is already in it.
