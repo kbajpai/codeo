@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done (after a send-back from `/codeo:qc` round 1). Tasks 1-5 of the round-2 plan are built and reviewed (`eb399da`..`5a1306b`), the build and the full suite pass, and nothing is open. The next step is `/codeo:qc`.
+Round 3, done (after a second send-back from `/codeo:qc`, round 2). Tasks 1-5 of the round-3 plan are built and reviewed (`cc04ebf`..`2f7a37e`), the build and the full suite pass, and nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -89,6 +89,29 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 
 `Deployed revision:` none: no environment.
 
+### Round 3
+
+2026-11-15
+(send-back from qc.md round 2)
+
+**Built.** All five tasks of `docs/plans/2026-11-15-docs-skill-wording-test-guard-round-3.md`, each reviewed by a fresh reviewer on the subagent model, none needing a fix round. Commits `cc04ebf`..`2f7a37e`; `origin/main` had not moved, so nothing was merged.
+
+- Task 1 `scripts/qc-verdict.sh`, `tests/qc-verdict.test.sh`, `docs/handoff.md` (F11): the footprint check runs only for an archive whose `done/<N>/plan.md` the pull request adds or renames into place (`--diff-filter=AR` over `done/*/plan.md`); a pull request that merely edits an old re-planned archive is no longer compared with it. New cases: an old archive that is only touched is not checked (it failed before the fix with `round 2 footprint omits: c.txt`), and an archive renamed into place is checked. QC round 2's reproduction, re-run against the fixed script, now prints `qc-verdict: .codeo/done/7/qc.md: round 1 clear` and exits 0 (it exited 1 before).
+- Task 2 `scripts/overlap.sh`, `tests/overlap.test.sh` (F14): a given `--base` or `--head` that does not resolve to a commit makes `overlap.sh --outside` exit 1 with `overlap: cannot resolve <ref>`; the default path, pair mode and `changes()` are unchanged.
+- Task 3 `skills/qc/SKILL.md`, `tests/qc-skill.test.sh` (F13): step 6 keeps a round-2 footprint gap blocking, leaves whose it is to step 8's test, and says a second round shows as a `### Round <n>` heading, n ≥ 2, under `plan.md`'s `## Outcome`.
+- Task 4 `skills/close/SKILL.md`, `tests/closing-exits.test.sh`, `tests/close-skill.test.sh` (F12): the abandon text and the abandon-finished block are conditioned on the branch being kept; after a deleted branch the checkout is the last copy.
+- Task 5 `CHANGELOG.md` (F15, F11): the #97 bullet says the footprint rule judges only an archive a pull request delivers and that the host-task rule is stated consistently, with its condition.
+
+**Build.** The `shell` suite's build command is `true` and exits 0; `bash tests/run.sh` prints `all cases passed`. No shared environment: no lease, no deploy.
+
+**Documentation pages changed.** `docs/handoff.md` (the required-check sentence), `skills/qc/SKILL.md`, `skills/close/SKILL.md`, `scripts/qc-verdict.sh` and `scripts/overlap.sh` header comments, `CHANGELOG.md`.
+
+**Deviations from the plan.** Task 3's "still says" check unwraps the skill text (`tr '\n' ' ' | tr -s ' '`) before matching, because the phrase it forbids wrapped over two lines and a line-based `grep -F` could never fail on it. Task 1's renamed-archive case already passed before the fix (git reports the rename as `R`, which the old code also judged); it stays as a regression guard.
+
+**Minors left for `/codeo:qc`:** the comment above `touched` in `qc-verdict.sh` does not say only delivered archives are footprint-checked; round 2's "still says" check on `and not blocking by rule:` in `tests/qc-skill.test.sh` is line-based and would pass if a later edit wrapped that phrase; awkward hard-wrap breaks around the one-line pins in the abandon text. Out of scope, for `/codeo:triage`: F8 (a paging `gh` stub), F10 (`skills/init/SKILL.md` after a `lock: TODO`), the unanchored `^## Outcome` match in `qc-verdict.sh`.
+
+`Deployed revision:` none: no environment.
+
 ## Log
 
 - 2026-11-15 — Q1 raised before dispatch · cost: 3m · sonnet-5-5 11k in + 1M cached / 2k out
@@ -96,3 +119,4 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 - 2026-11-15 — Tasks 7-8 built and reviewed; Q3 raised before Task 9 · cost: 32m · sonnet-5-5 694k in + 26.8M cached / 114k out
 - 2026-11-15 — built Tasks 1-10 (two fix rounds), build ok · cost: 74m · sonnet-5-5 918k in + 37.3M cached / 158k out
 - 2026-11-15 — round 2: built the five round-2 tasks (no fix rounds), build ok · cost: 14m · sonnet-5-5 341k in + 18.8M cached / 44k out
+- 2026-11-15 — round 3: built the five round-3 tasks (no fix rounds), build ok · cost: 13m · sonnet-5-5 377k in + 22.6M cached / 52k out
