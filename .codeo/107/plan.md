@@ -23,6 +23,7 @@ Explored `devcontainer-start.sh`, `codeo-root.sh`, `window-title.sh`, `tests/dev
 - **C** — detect the scope first and do nothing at all (no restore, no local `true`), with the TODO.
 
 **Answer:**
+Option A, as recommended (given in the conversation: "Accept as recommended").
 
 ### Q2 — Would you run the `rm` check in the container's terminal and paste the output?
 
@@ -36,6 +37,7 @@ rm -f -- ""; echo "rc=$?"
 **Why it matters:** the output is what `/codeo:implement` records on #107 for criterion 8. Whatever it shows, the plan guards the trap so it never runs `rm` with an empty operand; if `rm` complains, the CHANGELOG bullet also says a stray line on every start is fixed.
 
 **Answer:**
+Not run: "Accept as recommended" was the reply, and this question had no option to pick. Taken as: proceed with the guarded trap whatever `rm` prints. Criterion 8's record on #107 will say what was established (`/usr/bin/rm` resolves to `gnurm`, GNU coreutils 9.7, on the 26.04.1 image) and that the literal `rm -f -- ""` command was not run, unless the engineer pastes its output before `/codeo:implement` finishes.
 
 ### Q3 — #70 overlaps this plan on `CHANGELOG.md`, `.devcontainer/README.md` and `glob:tests/**`: proceed, sequence or re-scope?
 
@@ -45,6 +47,7 @@ rm -f -- ""; echo "rc=$?"
 **Options:** proceed and coordinate (recommended: different bullets, different README lines, different test files) · sequence after #70 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended (given in the conversation: "Accept as recommended").
 
 ### Q4 — #71 overlaps this plan on `CHANGELOG.md`: proceed, sequence or re-scope?
 
@@ -54,6 +57,7 @@ rm -f -- ""; echo "rc=$?"
 **Options:** proceed and coordinate (recommended) · sequence after #71 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended (given in the conversation: "Accept as recommended").
 
 ## Notes
 
