@@ -32,6 +32,7 @@ A trial merge of this branch's head with each other branch (`git merge-tree --wr
 **Options:** proceed and coordinate (my pick: no change on #70's side, so no conflict) · sequence after #70 · re-scope.
 
 **Answer:**
+Proceed and coordinate, accepted in chat (2026-11-15).
 
 ### Q2 — #71 and this branch: `CHANGELOG.md` (`glob:CHANGELOG.md`)
 
@@ -39,6 +40,7 @@ A trial merge of this branch's head with each other branch (`git merge-tree --wr
 **Options:** proceed and coordinate (my pick: keep both bullets at merge time) · sequence after #71 · re-scope.
 
 **Answer:**
+Proceed and coordinate, accepted in chat (2026-11-15).
 
 ### Q3 — #97 and this branch: `CHANGELOG.md`, `lib/env.sh` (`glob:CHANGELOG.md`, `glob:lib/env.sh`)
 
@@ -46,6 +48,7 @@ A trial merge of this branch's head with each other branch (`git merge-tree --wr
 **Options:** proceed and coordinate (my pick: `lib/env.sh` is clean, `CHANGELOG.md` keeps both bullets) · sequence after #97 · re-scope.
 
 **Answer:**
+Proceed and coordinate, accepted in chat (2026-11-15).
 
 ## Notes
 
