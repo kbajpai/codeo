@@ -26,31 +26,46 @@ done
 
 # Structural checks on the overlay text, in one function so a scratch copy can be fed to it.
 check_overlay() {
-    local text=$1 fin rest stash aband part
+    local text=$1 fin rest stash aband part name cmd='docker rm -f <volume>; docker volume rm <volume>'
     fin=${text#*'After a finished close'}
     fin=${fin%%'After a stash:'*}
-    [[ "$fin" == *'docker rm -f <volume>; docker volume rm <volume>'* ]] \
-        || { echo "finished-close paragraph lacks the removal command"; return 1; }
+    [[ "$fin" == *"$cmd"* ]] \
+        || { echo "check a: finished-close paragraph lacks the removal command"; return 1; }
     rest='After a stash:'${text#*'After a stash:'}
-    if [[ "$rest" == *'docker rm'* || "$rest" == *'docker volume rm'* ]]; then
-        echo "text from After a stash: names a removal command"; return 1
-    fi
     stash=${rest%%'After an abandon:'*}
     aband='After an abandon:'${rest#*'After an abandon:'}
     aband=${aband%%'For any other host'*}
-    for part in "$stash" "$aband"; do
-        [[ "$part" == *'print no removal command'* && "$part" == *'home container'* ]] \
-            || { echo "stash or abandon paragraph lacks 'print no removal command' or 'home container'"; return 1; }
+    for name in stash abandon; do
+        part=$stash; [[ $name == abandon ]] && part=$aband
+        if [[ "$part" == *'docker rm'* || "$part" == *'docker volume rm'* ]]; then
+            echo "check b: the $name paragraph names a removal command"; return 1
+        fi
+    done
+    for name in stash abandon; do
+        part=$stash; [[ $name == abandon ]] && part=$aband
+        [[ "$part" == *'print no removal command'* ]] \
+            || { echo "check c: the $name paragraph lacks 'print no removal command'"; return 1; }
+        [[ "$part" == *'home container'* ]] \
+            || { echo "check c: the $name paragraph lacks 'home container'"; return 1; }
     done
 }
 msg=$(check_overlay "$out") || fail "$msg"
 
-# Self-check: the removal sentence moved under the abandon paragraph must fail the checks.
-scratch=${out//'docker rm -f <volume>; docker volume rm <volume>'/'(removed)'}
-scratch=${scratch/'After an abandon:'/'After an abandon: docker rm -f <volume>; docker volume rm <volume>'}
-if check_overlay "$scratch" >/dev/null 2>&1; then
-    fail "self-check: a removal command under After an abandon: passed the checks"
-fi
+# Self-check: each mutant of the real overlay must fail, and from its own check.
+cmd='docker rm -f <volume>; docker volume rm <volume>'
+mutant() { # $1 label, $2 overlay text, $3 expected message prefix
+    local m
+    m=$(check_overlay "$2") && fail "self-check: $1 passed the checks"
+    [[ "$m" == "$3"* ]] || fail "self-check: $1 failed from the wrong check: $m"
+}
+mutant 'a removal command in the abandon paragraph' \
+    "${out/'For any other host'/"$cmd
+For any other host"}" 'check b: the abandon'
+mutant 'a removal command in the stash paragraph' \
+    "${out/'After an abandon:'/"$cmd
+After an abandon:"}" 'check b: the stash'
+mutant 'the removal command deleted from the finished paragraph' \
+    "${out/"$cmd"/'(removed)'}" 'check a:'
 
 rc=0
 bash scripts/overlay.sh close role-guard >/dev/null 2>&1 || rc=$?

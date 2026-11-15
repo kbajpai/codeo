@@ -123,6 +123,7 @@ case_stash_interrupted() {
 case_stash_completed() {
     para "$close" '**Closing block — stash completed:**' || return 0
     has "$p" '/codeo:init #<N>'
+    before "$(flat "$p")" 'and the next is `/codeo:init #<N>`' "the checkout the project's host workflow names"
     has "$(flat "$p")" "the checkout the project's host workflow names"
     has "$p" 'by hand'
     has "$p" 'Ready'
@@ -255,6 +256,14 @@ case_bites() {
     out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
         fail "the old stash ending passed stash-prose"
     [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+
+    # The clause deleted from the stash paragraph makes stash-completed fail.
+    cp "$pristine" "$copy"
+    sed -i '/Closing block — stash completed:/,/^$/s/the checkout the project'"'"'s host workflow names/the checkout/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the stash clause mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-completed 2>&1) &&
+        fail "the stash paragraph without the host workflow clause passed stash-completed"
+    [[ $out == *stash-completed* ]] || fail "stash-completed failed without naming itself: $out"
 
     # The clause deleted from the abandon paragraph makes abandon-finished fail.
     cp "$pristine" "$copy"
