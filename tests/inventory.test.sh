@@ -11,9 +11,9 @@ fail=0
 
 check_fail() { printf 'FAIL %s\n' "$1"; fail=1; }
 
-declare -A want=([issue]=7 [init]=9 [plan]=8 [implement]=9 [qc]=13 [close]=13 [triage]=9)
+declare -A want=([issue]=8 [init]=10 [plan]=9 [implement]=10 [qc]=14 [close]=14 [triage]=10 [cleanup]=4)
 
-for skill in issue init plan implement qc close triage; do
+for skill in issue init plan implement qc close triage cleanup; do
     # The bullets of one "## <skill>" section: a section ends at the next "## " heading.
     bullets=$(awk -v s="$skill" '/^## /{in_s = ($0 == "## " s); next} in_s && /^- /{print}' "$inv")
     n=0
@@ -39,7 +39,7 @@ fixture="$repo/tests/fixtures/skills-inventory.rules.sha256"
 rules_stream() {
     awk '
         function flush() { if (id != "") printf "%s\t%s\n", id, txt; id = "" }
-        /^## / { flush(); in_s = ($0 ~ /^## (issue|init|plan|implement|qc|close|triage)$/); next }
+        /^## / { flush(); in_s = ($0 ~ /^## (issue|init|plan|implement|qc|close|triage|cleanup)$/); next }
         in_s && /^- \[[a-z]+-[0-9]+\] / {
             flush(); id = $2; gsub(/[\[\]]/, "", id)
             txt = $0; sub(/^- \[[a-z]+-[0-9]+\] /, "", txt); next

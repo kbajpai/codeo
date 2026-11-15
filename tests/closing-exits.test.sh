@@ -94,6 +94,8 @@ case_rule() {
     has "$ai" '/codeo:close'
     lacks "$ai" '--stash'
     has "$ab" '/codeo:triage'
+    has "$ab" 'host workflow'
+    has "$(row_for 'stash — completed')" 'host workflow'
     has "$ur" '/codeo:triage'
 }
 
@@ -109,6 +111,7 @@ case_close_lock_kept() {
 case_close_finished() {
     para "$close" '**Closing block — finished:**' || return 0
     has "$p" '/codeo:triage'
+    has "$p" "the checkout the project's host workflow names"
 }
 
 case_stash_interrupted() {
@@ -120,6 +123,8 @@ case_stash_interrupted() {
 case_stash_completed() {
     para "$close" '**Closing block — stash completed:**' || return 0
     has "$p" '/codeo:init #<N>'
+    before "$(flat "$p")" 'and the next is `/codeo:init #<N>`' "the checkout the project's host workflow names"
+    has "$(flat "$p")" "the checkout the project's host workflow names"
     has "$p" 'by hand'
     has "$p" 'Ready'
     before "$p" 'by hand' '/codeo:init'
@@ -170,6 +175,7 @@ case_abandon_finished() {
     has "$p" '/codeo:triage'
     has "$p" 'with no board'
     has "$p" 'the last copy'
+    has "$(flat "$p")" "the checkout the project's host workflow names"
     lacks "$p" '/codeo:init #<N>'
     lacks "$p" '/codeo:close --stash'
 }
@@ -199,6 +205,17 @@ case_stash_prose() {
     text=$(flat "$text")
     lacks "$text" 'Report that `/codeo:init #<N>` resumes it'
     lacks "$text" 'End with the closing block: the goal is resuming the work'
+}
+
+case_host_workflow_fetch() {
+    local text seg
+    text=$(flat "$(cat "$close")")
+    seg=${text#*'Once the lock is gone, everything is pushed'}
+    seg=${seg%%'how the stash ended'*}
+    has "$seg" 'overlay.sh" close host-workflow'
+    seg=${text#*'Once the lock is gone, say what is left of the checkout'}
+    seg=${seg%%'how the abandon ended'*}
+    has "$seg" 'overlay.sh" close host-workflow'
 }
 
 # Puts each old wording back in a scratch copy and checks the named case then fails by name.
@@ -250,12 +267,36 @@ case_bites() {
     out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
         fail "the old stash ending passed stash-prose"
     [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+
+    # The clause deleted from the stash paragraph makes stash-completed fail.
+    cp "$pristine" "$copy"
+    sed -i '/Closing block — stash completed:/,/^$/s/the checkout the project'"'"'s host workflow names/the checkout/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the stash clause mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-completed 2>&1) &&
+        fail "the stash paragraph without the host workflow clause passed stash-completed"
+    [[ $out == *stash-completed* ]] || fail "stash-completed failed without naming itself: $out"
+
+    # The clause deleted from the abandon paragraph makes abandon-finished fail.
+    cp "$pristine" "$copy"
+    sed -i '/Closing block — abandon finished:/,/^$/s/the checkout the project'"'"'s host workflow names/the checkout/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the abandon clause mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" abandon-finished 2>&1) &&
+        fail "the abandon paragraph without the host workflow clause passed abandon-finished"
+    [[ $out == *abandon-finished* ]] || fail "abandon-finished failed without naming itself: $out"
+
+    # The fetch clause removed from the abandon section makes host-workflow-fetch fail.
+    cp "$pristine" "$copy"
+    sed -i '/^before the lock goes\. With the branch kept/,/^End with the closing block that matches how the abandon ended/{s/overlay\.sh" close host-workflow/overlay.sh" close X/}' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the abandon fetch mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" host-workflow-fetch 2>&1) &&
+        fail "the abandon section without the fetch clause passed host-workflow-fetch"
+    [[ $out == *host-workflow-fetch* ]] || fail "host-workflow-fetch failed without naming itself: $out"
     return 0
 }
 
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
     issue-ready issue-not-ready issue-unreadable abandon-finished abandon-interrupted
-    close-step17-lead stash-prose bites)
+    close-step17-lead stash-prose host-workflow-fetch bites)
 
 if (($# > 0)); then
     known=0

@@ -9,7 +9,9 @@ The dev container comes in two kinds. Each is its own clone in its own Docker vo
 | Docker name (`docker ps`) | `codeo-home` | `codeo-<N>` |
 | VS Code window title | `codeo [home]` | `codeo [#<N>]` |
 | Workflow lock | none | taken at start |
-| Where these run | `/codeo:issue`, `/codeo:init`, `/codeo:triage` | `/codeo:plan` through `/codeo:close` |
+| Where these run | `/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup` | `/codeo:plan` through `/codeo:close` |
+
+`/codeo:doctor` and `/codeo:setup` run in either.
 
 `/codeo:init` runs in the home container and hands off to the issue's container. The home container and one or more issue containers can run at the same time, as can two issue containers: each has its own name, clone and volume.
 
@@ -31,6 +33,38 @@ In VS Code, run **Dev Containers: Clone Repository in Named Container Volume…*
 - When `core.fileMode` is false and the clone is on a Docker volume, the script restores the tracked files to the index's modes, turns `core.fileMode` on for this clone, and names the tracked files that are executable on disk but recorded `100644` and left as they are; when the `false` came from a wider scope than the clone's own config, it says which scope the clone's `true` overrides. A mode listing that fails puts its reason in the TODO, and an interrupted run leaves no temporary `modes.*` file.
 - It checks the clone folder against what the lock says. A folder that does not match is reported as a `todo:` line naming the folder to open the container with, and the container is left running.
 - It fills a `user.name` or `user.email` that the `codeo-git` volume's git config lacks, each on its own, from the `~/.gitconfig` VS Code copies in from the host, else from `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL`, and prints which key it set and from where (never the value). Only values written directly in ~/.gitconfig count: an identity kept in a file it [include]s or [includeIf]s is not followed, because VS Code copies only ~/.gitconfig into the container. It never changes a value already in the volume and copies nothing else from the host file. VS Code's copy can arrive after the script starts, so when a value is missing the script waits for the file to be there, not empty, and to stop growing (size and modification time unchanged over 0.2 seconds) for up to 10 seconds (`CODEO_GITCONFIG_WAIT`, where a value that is not a whole number counts as 10); a container whose volume already has the identity never waits. When no source has a value, it lists a TODO that names the sources it tried.
+
+## Roles and the guard
+
+`.devcontainer/scripts/role.sh` says what role a container plays, from the clone folder (the container's Docker name), the workflow lock and the branch. It runs no container-engine command.
+
+| Role | Means | What the guard does |
+|---|---|---|
+| `home` | no lock, on the base branch, in the folder `codeo-home` | Lets `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` run. `/codeo:plan` through `/codeo:close` also pass the guard, and their own step 0 stops them because there is no lock. |
+| `issue:<N>` | locked for `<N>`, in the folder `codeo-<N>` | Lets `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:close` run. Refuses the home-only skills and names the home container. |
+| `stale:<N>`, `stale:?` | no lock, and not the home container on the base branch: `stale:<N>` in the folder `codeo-<N>`, `stale:?` in `codeo-home` on another branch | Refuses every guarded skill in one line that names the role and, from the clone's own dossier, what happened to the workflow: finished (the base branch, as this clone last saw it, carries the archived dossier; nothing more runs here, and `/codeo:cleanup` in the home container prints how to remove it), stashed (a stash not yet resumed; `/codeo:init #<N>` in the home container is the way back, never the start script, and this container is removed first), abandoned (an abandon not taken up again; nothing more runs here, and the container may hold the only copy of the work), a live dossier with no lock (a resumed stash and an archived dossier whose pull request is still open included; re-run `bash .devcontainer/scripts/devcontainer-start.sh` to take the lock), or nothing the dossier says. In `codeo-home` off the base branch (`stale:?`) the refusal tells a home-only skill to switch back to the base branch, and sends any other skill to the container of the issue it is for. Otherwise a home-only skill is sent to the home container. |
+| `mismatch:<N>:<folder>` | locked for `<N>`, in a folder other than `codeo-<N>` | Refuses every guarded skill. |
+| `unguarded` | not a guarded container (see below) | Lets everything run, as it does without a guard. |
+
+The guard applies only when all of these hold: `/.dockerenv` exists, `CLAUDE_CODE_REMOTE` is not `true`, and the clone folder is named `codeo-home` or `codeo-<digits>`. A hosted web session, a plain local checkout, and a container in any other folder are `unguarded` and run every skill as before.
+
+Each guarded skill (`/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup`, `/codeo:plan`, `/codeo:implement`, `/codeo:qc`, `/codeo:close`) has a `role-guard` section in its overlay, `.codeo/overlays/<skill>.md`, that runs `bash .devcontainer/scripts/role.sh --check <skill>` as the skill's first step. `--check` exits 0 and prints nothing when the skill may run, and exits 1 with one line naming where the skill runs and this container's role when it may not; any other exit (the script is missing, or failed) is reported by the overlay text, which then goes on. A refusal ends the step; nothing the engineer says lifts it, and the way forward is the container the message names. `role.sh` with no arguments prints the role.
+
+A container whose clone lacks the role script and the guard overlays, such as one created from a branch cut before the guard existed, is not guarded: it runs every skill as before until it is removed.
+
+## Removing a finished container
+
+Nothing inside a container removes a container. After a finished close, `/codeo:close` prints the commands that remove the issue's container and its volume, and only when the lock's `volume:` is the container of the lock's own issue. `/codeo:cleanup`, which runs in the home container, lists the other finished issues' containers the same way: it proves five things for each issue (the issue is closed, its pull request is merged, its branch is gone from origin, no branch still carries its dossier, and the issue holds no lease and waits for none on the intake branch) and prints a removal command only for an issue that passes all five, built from this project's overlay; a pull request whose head branch name is missing fails the branch proof. Origin cannot show whether a clone holds unpushed work or whether the workflow ended in that container, so a lease the issue still holds is the one trace of an unfinished close, and it lists the issue as not proven.
+
+After `/codeo:close` finishes, the container holds no lock and is `stale`, so `/codeo:triage` and `/codeo:cleanup` run in the home container, and the finished close's closing block names it. The removal commands are printed only for a workflow hosted in a container.
+
+After a stash `/codeo:close` prints no removal command. The resume, `/codeo:init #<N>` in the home container, opens a new `codeo-<N>` container, and two containers cannot share a name (Docker reports `name already in use`), so remove the old one first, by hand on the host, once `git status` in it shows nothing unpushed: `docker rm -f codeo-<N>; docker volume rm codeo-<N>`.
+
+After an abandon it prints none either. With the branch kept, the container holds nothing the branch lacks and may be removed with the same commands. With the branch deleted, the container holds the only copy of the work: do not remove it. `/codeo:triage` runs in the home container in both cases.
+
+`/codeo:cleanup` lists finished issues only, those with a `.codeo/done/<N>` entry on the base branch, so it never lists a stashed or abandoned one.
+
+Both only print. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
 
 ## The folder rule
 

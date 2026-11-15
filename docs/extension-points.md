@@ -79,6 +79,50 @@ extension points.
 
 ## The points
 
+### issue/role-guard
+
+**Where.** `/codeo:issue`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: no lock has been read
+and nothing has been claimed or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh issue` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
+```
+
+### plan/role-guard
+
+**Where.** `/codeo:plan`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: no lock has been read
+and nothing has been claimed or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh plan` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
+```
+
 ### plan/plan-shape
 
 **Where.** `/codeo:plan`, step 5, "Decide the output's shape, and say so before drafting".
@@ -172,6 +216,28 @@ Pages are in the present tense about the system, link to each other by page name
 in the index page. Flows are Mermaid.
 ```
 
+### implement/role-guard
+
+**Where.** `/codeo:implement`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: no lock has been read
+and nothing has been claimed or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh implement` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
+```
+
 ### implement/environment-lease-notes
 
 **Where.** `/codeo:implement`, step 5, the lease paragraph. The skill fetches it only when
@@ -215,6 +281,28 @@ conventions the existing pages under it already follow.
 
 Pages are in the present tense about the system, link to each other by page name, and are listed
 in the index page. Flows are Mermaid.
+```
+
+### qc/role-guard
+
+**Where.** `/codeo:qc`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: no lock has been read
+and nothing has been claimed or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh qc` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
 ```
 
 ### qc/environment-evidence
@@ -280,6 +368,28 @@ Every public function states its failure mode in a comment, and no module reads 
 configuration directly.
 ```
 
+### close/role-guard
+
+**Where.** `/codeo:close`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: no lock has been read
+and nothing has been claimed or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh close` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
+```
+
 ### close/put-back
 
 **Where.** `/codeo:close`, the stash and abandon section, before any release. The skill fetches it
@@ -335,8 +445,10 @@ should carry the commit's short sha; report anything else.
 **May rely on.** The lock's host line (`volume:` or `session:`), the issue number and the branch.
 
 **Expected back.** What the engineer does next with this checkout, for instance how to remove it,
-as ordered commands or prose. The skill relays it to the engineer; the commands are theirs to run,
-never the skill's.
+as ordered commands or prose, and, when this checkout can no longer run the follow-up skills, the
+checkout they run in. The returned text may differ by how the close ended (finished, stash or
+abandon), and names, for each, the checkout the follow-up skill runs in. The skill relays it to the
+engineer; the commands are theirs to run, never the skill's.
 
 **Default when absent.** None; the report names the lock's host and says whether anything is left
 to remove.
@@ -348,6 +460,28 @@ to remove.
 
 1. Close the editor window for this checkout.
 2. Remove the checkout's volume, named on the lock's `volume:` line.
+```
+
+### init/role-guard
+
+**Where.** `/codeo:init`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: no lock has been read
+and nothing has been claimed or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh init` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
 ```
 
 ### init/host-workflow
@@ -376,6 +510,28 @@ Run this in the home checkout only. Do not switch this checkout to the issue's b
 issue's own container takes the lock when it starts. Hand off by printing the issue number.
 ```
 
+### triage/role-guard
+
+**Where.** `/codeo:triage`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: no lock has been read
+and nothing has been claimed or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh triage` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
+```
+
 ### triage/todo-excludes
 
 **Where.** `/codeo:triage`, collecting with `--todos`, "git grep -n -E ... -- <pathspec
@@ -397,4 +553,52 @@ pathspec of the scan.
 vendor/**
 third_party/**
 *.min.js
+```
+
+### cleanup/role-guard
+
+**Where.** `/codeo:cleanup`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: nothing has been
+fetched, read or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh cleanup` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
+```
+
+### cleanup/removal-command
+
+**Where.** `/codeo:cleanup`, through `scripts/cleanup.sh`, whose last proof expands it for each
+issue it has otherwise proven finished.
+
+**May rely on.** The issue number, a finished issue that passed every other proof, and the name
+template it supplies expanding with `{N}`.
+
+**Expected back.** Exactly three lines. `name:` is the name of what the issue left behind, with
+`{N}` for the issue number. `pattern:` is an extended regular expression the expanded name must
+match, so a name that is not an issue's own is refused. `command:` is the command that removes it,
+with `{name}` for the expanded name. The script expands and prints the command and never runs it;
+a missing line or a name that does not match the pattern makes the issue not proven.
+
+**Default when absent.** None; the proven issues are listed and no command is printed.
+
+**Example.**
+
+```markdown
+## removal-command
+
+name: widget-{N}
+pattern: ^widget-[0-9]+$
+command: remove-container {name}
 ```

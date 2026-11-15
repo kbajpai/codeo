@@ -14,7 +14,7 @@ bash tests/run.sh [pattern]   # runs tests/*.test.sh whose name contains the pat
 
 ## Skills
 
-The six pipeline skills run in order inside one workflow, each owning one dossier file under `.codeo/<issue>/`; `triage` runs outside the workflow lock, between workflows; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
+The six pipeline skills run in order inside one workflow, each owning one dossier file under `.codeo/<issue>/`; `triage` and `cleanup` run outside the workflow lock, between workflows, and a project's role guard (see [`.devcontainer/README.md`](.devcontainer/README.md#roles-and-the-guard)) keeps each skill in the checkout it belongs in; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
 
 | Skill | Purpose |
 |-------|---------|
@@ -25,6 +25,7 @@ The six pipeline skills run in order inside one workflow, each owning one dossie
 | [`/codeo:qc`](docs/skills.md#qc) | Check the build, the suites, the criteria, the documentation and an independent review, read what the environment runs, and route forward or back |
 | [`/codeo:close`](docs/skills.md#close) | Open the pull request, wait for the merge, route review feedback back, verify the merge, clean up and release the lock; also the way to stash or abandon a workflow |
 | [`/codeo:triage`](docs/skills.md#triage) | Find the loose ends development left behind and route them to issues |
+| [`/codeo:cleanup`](docs/skills.md#cleanup) | Print the commands that remove finished issues' containers; it proves each one first and runs nothing |
 
 [`/codeo:setup`](docs/skills.md#setup) writes `.codeo/` with a starter `config.json` and creates `docs/plans/`;
 [`/codeo:doctor`](docs/skills.md#doctor) checks the whole set-up — config, GitHub login and scopes, board, branch ruleset, suites, dependencies, overlays and superpowers — and reports every failure.

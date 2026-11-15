@@ -43,6 +43,16 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: qc/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" qc role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: qc-14 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Read `.codeo/active` before anything else.** The lock names the issue this workflow is
    bound to, which is what makes a bare invocation unambiguous here — the engineer named the issue
    when they ran `/codeo:init`. No lock means no workflow here: name `/codeo:init #<N>` as the
@@ -500,6 +510,10 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
 - **May call** `/codeo:issue` for a real problem that is out of scope for this change — a call, not
   a hand-off: control returns, and this skill records the number in its own `## Outcome` and
   `## Log` line (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A call is not a hand-off`).
+  When the project's role check refuses the call (the skill is running in an issue container),
+  record the finding in this skill's own dossier as a line under `## Notes` that promises the
+  later work and carries no issue number — the form `/codeo:triage` collects once the dossier
+  is archived — and say to file it with `/codeo:issue` in the home container.
 - **Spins out subagents** on the configured subagent model (`$SUBAGENT_MODEL`: `models.subagent`,
   sonnet when unset), passed explicitly on every dispatch — except step 7's reviewer, on
   `$REVIEWER_MODEL` (`models.reviewer`, opus when unset) with a `description` starting
