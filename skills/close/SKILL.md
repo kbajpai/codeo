@@ -61,6 +61,16 @@ the step carries on.
 
 ## Phase detection
 
+**Check the role first, before anything else.**
+<!-- point: close/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: close-14 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Read `.codeo/active` before anything else.** The lock names the issue this workflow is bound
    to, and it stays in this checkout from the first phase to the last: the pull request waiting for
    review is still this workflow. No lock means no workflow to close here: say so — or, when the
@@ -516,19 +526,24 @@ the step carries on.
     - **`host: web`** — nothing to remove: the hosted session is done once the engineer closes it.
     - **`host: container`** — the checkout is a container, which this skill cannot remove from
       inside it. Name the lock's `volume:` line, which identifies the container, and say that the
-      container and its volume are the engineer's to remove.
+      container and its volume are removed with commands that run on the host, not inside this
+      container, and that the engineer runs `git status` in that clone first: unpushed work is
+      lost with the volume.
     - **`host: local`** — nothing to remove: the checkout is the engineer's own, the local branch
       still in it, theirs to delete or keep.
 
-    On the finished exit only: everything in it is merged or on origin, so nothing is lost either
-    way. Suggest `/codeo:triage`: the moment a dossier is archived is when what it noticed but did
+    On the finished exit only: everything the workflow committed is merged or on origin; anything
+    left uncommitted or unpushed in the checkout is not, which is why the host workflow's clean-up
+    asks for `git status` first. Suggest `/codeo:triage`: the moment a dossier is archived is when what it noticed but did
     not file is easiest to lose. `superpowers:verification-before-completion` applies to every claim: each
     comes from a tool's output in this invocation — the merge from `github.sh`, the deletion from
     `git ls-remote`, the leases from `lease list`, the lock from `.codeo/active` being gone — never
     from a step having been attempted. End with the closing block for the exit step 16 took:
 
     **Closing block — finished:** when step 16 deleted `.codeo/active`. The goal is the loose ends
-    found; the first step is `/codeo:triage`, then the host's checkout clean-up above.
+    found; the first step is `/codeo:triage`, run in the checkout the project's host workflow names
+    for it when it names one — this checkout holds no lock any more, and a project's role check may
+    refuse the skill here — then the host's checkout clean-up above.
 
     **Closing block — lock kept:** when step 16 kept `.codeo/active`. The goal is a finished close;
     the first step is `/codeo:close` again, in this checkout, because it holds the lock that run
@@ -617,7 +632,7 @@ and commit `close.md`, staged by name, with the same subject, and push. Delete `
 last; when the release or a push failed, keep it, say what failed, and that running
 `/codeo:close --stash` again in this checkout finishes the stash. Once the lock is gone, everything
 is pushed, so this checkout holds nothing the branch lacks: say what is left of it as step 17
-does, by the lock's host, read before the lock goes. An open pull request stays open; say so. End
+does, by the lock's host, read before the lock goes. Fetch the project's `close/host-workflow` as step 17 does, with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow` and its exits handled the same way, and relay the part that is for this exit. An open pull request stays open; say so. End
 with the closing block that matches how the stash ended.
 
 **Closing block — stash interrupted:** `.codeo/active` is kept, because the release or a push
@@ -630,6 +645,7 @@ When the board move failed (the failure `close.md`'s outcome records), the first
 `#<N>` to the Ready status (`$READY`) by hand, naming the status the way the failure line does,
 and the next is `/codeo:init #<N>`; otherwise the first step is `/codeo:init #<N>`, on any
 machine.
+Either way, `/codeo:init #<N>` runs in the checkout the project's host workflow names for it when it names one — this checkout holds no lock any more, and a project's role check may refuse the skill here.
 
 **Closed unmerged** is the engineer's decision to read, not this skill's: ask, as a numbered
 question in `close.md` (step 0), whether to reopen it (theirs to do on GitHub; running
@@ -659,7 +675,7 @@ stash does; a deletion that failed keeps it, as close-10 does on the merge path,
 `/codeo:close` again finishes the abandon.
 
 Once the lock is gone, say what is left of the checkout as step 17 does, by the lock's host, read
-before the lock goes. With the branch kept, the checkout holds nothing the branch lacks. When the
+before the lock goes. With the branch kept, the checkout holds nothing the branch lacks. Fetch the project's `close/host-workflow` as step 17 does, with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow` and its exits handled the same way, and relay the part that is for this exit. When the
 engineer had the branch deleted,
 the local branch is the only copy of the work and its dossier: say so, and do not call the checkout
 safe to remove.
@@ -668,7 +684,7 @@ End with the closing block that matches how the abandon ended.
 **Closing block — abandon finished:** `.codeo/active` is deleted. With a board the card is at
 `$BACKLOG` (or the board move failed: say so, the card is the engineer's to move by hand);
 with no board there is no card. The goal is the loose ends found; the first step is
-`/codeo:triage`, then the host's checkout clean-up as step 17 relays it, unless the branch was
+`/codeo:triage`, run in the checkout the project's host workflow names for it when it names one — this checkout holds no lock any more, and a project's role check may refuse the skill here — then the host's checkout clean-up as step 17 relays it, unless the branch was
 deleted: the checkout is then
 the last copy, the engineer's to keep or to remove knowingly. Name no command that
 resumes or stashes this work: an abandoned workflow is not resumed.

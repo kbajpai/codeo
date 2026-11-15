@@ -74,6 +74,16 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: triage/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" triage role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: triage-10 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Resume or start.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" restore triage` brings the
    folder to a clone that lacks it; an error saying there is no intake branch, or that it has no
    `triage` directory, means a first run: start a new run. A run file with an open question is a

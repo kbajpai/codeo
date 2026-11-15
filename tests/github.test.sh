@@ -408,6 +408,15 @@ assert_eq "exit code" 0 "$rc"
 assert_eq "mergeStateStatus" "UNKNOWN" "$(jq -r '.mergeStateStatus' <<<"$out")"
 assert_eq "mergeable" "null" "$(jq -c '.mergeable' <<<"$out")"
 
+case_desc="pr get 12 (state, merged_at, head ref)"
+reset_case
+write_fixture GET "repos/$repo/pulls/12" <<'JSON'
+{"state":"closed","merged_at":"2026-01-02T03:04:05Z","head":{"ref":"feat/x","sha":"abc"}}
+JSON
+if out=$(bash "$script" pr get 12 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 0 "$rc"
+assert_eq "fields" '{"state":"closed","merged_at":"2026-01-02T03:04:05Z","head_ref":"feat/x"}' "$out"
+
 case_desc="pr view 13 (fixture 404s)"
 reset_case
 mark_fail GET "repos/$repo/pulls/13"
@@ -650,6 +659,7 @@ reset_case
 if out=$(bash "$script" bogus 2>"$err_file"); then rc=0; else rc=$?; fi
 assert_eq "exit code" 1 "$rc"
 assert_contains "usage on stderr" "usage: github.sh" "$(cat "$err_file")"
+assert_contains "usage names pr get" "view|get|reviews" "$(cat "$err_file")"
 
 if ((failures)); then
     echo "$failures case(s) failed"

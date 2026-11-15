@@ -29,6 +29,16 @@ The repository is read from the project's config, never typed into a command:
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: issue/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" issue role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: issue-08 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Invoked with no arguments? Stop and ask before doing anything else.**
    <!-- rule: issue-01 -->
    Don't infer the idea, bug, or problem to file from conversation context or recent activity —

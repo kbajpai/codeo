@@ -14,6 +14,10 @@ architecture itself — those are `/codeo:issue` and `/codeo:plan`. If the plan 
 once implementation starts, stop and say so rather than silently deviating from it, and suggest
 re-running `/codeo:plan`. Work that surfaces mid-task but belongs to no task in the plan goes to
 `/codeo:issue` as its own issue — the plan's scope is the plan's scope.
+When the project's role check refuses the call (the skill is running in an issue container),
+record the finding in this skill's own dossier as a line under `## Notes` that promises the
+later work and carries no issue number — the form `/codeo:triage` collects once the dossier
+is archived — and say to file it with `/codeo:issue` in the home container.
 
 Where things go is read from the project's config, never assumed:
 
@@ -31,6 +35,16 @@ applies — step 5), no `wiki` module (the plan names no wiki pages, and its doc
 pages under `$DOCS`).
 
 ## Workflow
+
+**Check the role first, before anything else.**
+<!-- point: implement/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" implement role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: implement-10 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
 
 0. **Read `.codeo/active` before anything else.** The lock names the issue this workflow is
    bound to, which is what makes a bare invocation unambiguous here — the engineer named the issue
