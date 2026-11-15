@@ -4,7 +4,7 @@ This page describes each codeo skill: what it is for and when it triggers, what 
 
 Six skills form the pipeline: `issue`, `init`, `plan`, `implement`, `qc` and `close`. They run in that order inside one workflow, and the workflow is bound to one issue by the lock (`.codeo/active`, written by `init` and released by `close`). Each skill hands the next one a dossier file, `.codeo/<N>/<skill>.md`, under the protocol in `docs/handoff.md`. `qc` can send a change back to `implement` or `plan`, and `close` can send review feedback or a conflict with the base branch back to `implement`. `issue` runs before an issue number or a branch exists, so it sits outside the lock.
 
-`triage` runs outside the lock too, between workflows: it collects the loose ends development left behind and routes anything worth filing through `issue`. `setup` and `doctor` are not part of any workflow: `setup` creates the project's codeo state and `doctor` checks that the project is ready.
+`triage` runs outside the lock too, between workflows: it collects the loose ends development left behind and routes anything worth filing through `issue`. `cleanup` also runs outside the lock, in the home container, and only prints: it proves which finished issues' dev containers can go and prints the commands that remove them. `setup` and `doctor` are not part of any workflow: `setup` creates the project's codeo state and `doctor` checks that the project is ready.
 
 ```mermaid
 flowchart LR
@@ -14,6 +14,7 @@ flowchart LR
     close -. review feedback / conflict .-> implement
     triage -. files loose ends through .-> issue
     close -. after a merge .-> triage
+    close -. after a merge .-> cleanup
 ```
 
 ## issue
@@ -237,6 +238,30 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 - `triage/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#triagerole-guard))
 - `triage/todo-excludes` — Scan tracked files only, with no exclusions. ([detail](extension-points.md#triagetodo-excludes))
+
+## cleanup
+
+### Purpose and triggers
+
+Prints the commands that remove finished issues' dev containers. For each issue under `.codeo/done` on the base branch it proves, through `scripts/cleanup.sh`, that the issue is closed, its pull request is merged, the pull request's branch is gone from origin and no branch still carries its dossier. It lists the proven issues with the project's removal command and the rest with the proof that failed, and runs nothing. It triggers on "clean up containers", "what can I remove", "cleanup".
+
+It runs in the home container only, outside the workflow lock. It says every time that unpushed work in a clone is invisible from here, and that the commands run on the host, in a shell, after `git status` in that clone.
+
+### Reads and writes
+
+- Reads `origin`: the base branch's `.codeo/done/` directories, branch listings, issues and pull requests, through `scripts/cleanup.sh`.
+- Writes `.codeo/intake/cleanup/` (a record of what was printed), committed to `codeo/intake` through `intake.sh`, never to the checked-out branch.
+
+### Hand-offs and non-goals
+
+- Hands off to nobody: the printed commands are the engineer's to run on the host. It ends with the closing block naming them and then the next issue.
+- Never runs a container command, never mounts or asks for the container engine's socket, and never builds a name or a command itself; it relays what the script printed.
+- Never touches the lock, any dossier, branch, issue, board or pull request.
+
+### Extension points
+
+- `cleanup/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#cleanuprole-guard))
+- `cleanup/removal-command` — None; the proven issues are listed and no command is printed. ([detail](extension-points.md#cleanupremoval-command))
 
 ## setup
 

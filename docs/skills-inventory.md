@@ -116,6 +116,13 @@ in prose exist (only the script's existence is checked).
 - [triage-09] Quote the evidence; one item can have many sources.
 - [triage-10] A refusal from the role check ends the step; no override.
 
+## cleanup
+
+- [cleanup-01] A refusal from the role check ends the step; no override.
+- [cleanup-02] A removal command is printed only for an issue the script proved.
+- [cleanup-03] Never run a container command, and never mount or ask for the container engine's socket.
+- [cleanup-04] Print only what the script printed; never build a name or a command in the skill.
+
 ## Riskiest places to rewrite (generic and project text interleaved)
 
 1. `implement`: the paragraph deciding whether a change needs an environment deploy. Its default

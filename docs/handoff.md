@@ -377,6 +377,7 @@ The default next goal of each skill:
 | `qc` | by verdict: a pull request (`/codeo:close`), fixes (`/codeo:implement`) or a re-plan (`/codeo:plan`) |
 | `close` | by exit: the PR merged, review fixed, or loose ends found (`/codeo:triage`) |
 | `triage` | the next issue started — `/codeo:init #<N>` |
+| `cleanup` | the printed commands run on the host, then the next issue — `/codeo:init #<N>` |
 
 Exits whose next command is not the default:
 

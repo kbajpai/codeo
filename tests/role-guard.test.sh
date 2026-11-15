@@ -11,7 +11,7 @@ set -euo pipefail
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 # The skills that carry the guard. Adding one is a one-word edit here.
-guarded=(issue init triage plan implement qc close)
+guarded=(issue init triage plan implement qc close cleanup)
 unguarded=(doctor setup)
 
 # check_guarded <root> <skill>: prints FAIL lines; always returns 0.

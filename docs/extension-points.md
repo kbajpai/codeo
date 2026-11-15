@@ -552,3 +552,51 @@ vendor/**
 third_party/**
 *.min.js
 ```
+
+### cleanup/role-guard
+
+**Where.** `/codeo:cleanup`, the first paragraph of its workflow, "Check the role first, before
+anything else", ahead of every other step.
+
+**May rely on.** The project root as the working directory and nothing else: nothing has been
+fetched, read or written yet.
+
+**Expected back.** Text that runs the project's role check for this skill and tells the skill to
+stop on its refusal.
+
+**Default when absent.** None; the skill runs wherever it is invoked.
+
+**Example.**
+
+```markdown
+## role-guard
+
+Run `bash scripts/role-check.sh cleanup` from the project root. Exit 0: go on. Exit 1: print its one
+line to the engineer and stop; nothing in this session lifts it.
+```
+
+### cleanup/removal-command
+
+**Where.** `/codeo:cleanup`, through `scripts/cleanup.sh`, whose last proof expands it for each
+issue it has otherwise proven finished.
+
+**May rely on.** The issue number, a finished issue that passed every other proof, and the name
+template it supplies expanding with `{N}`.
+
+**Expected back.** Exactly three lines. `name:` is the name of what the issue left behind, with
+`{N}` for the issue number. `pattern:` is an extended regular expression the expanded name must
+match, so a name that is not an issue's own is refused. `command:` is the command that removes it,
+with `{name}` for the expanded name. The script expands and prints the command and never runs it;
+a missing line or a name that does not match the pattern makes the issue not proven.
+
+**Default when absent.** None; the proven issues are listed and no command is printed.
+
+**Example.**
+
+```markdown
+## removal-command
+
+name: widget-{N}
+pattern: ^widget-[0-9]+$
+command: remove-container {name}
+```

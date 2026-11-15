@@ -19,3 +19,5 @@ close	role-guard	None; the skill runs wherever it is invoked.
 close	put-back	None; a stash or an abandon releases what is held and records what the environment carries.
 close	ci-publish-check	None; no check of what CI did for the merge commit.
 close	host-workflow	None; the report names the lock's host and says whether anything is left to remove.
+cleanup	role-guard	None; the skill runs wherever it is invoked.
+cleanup	removal-command	None; the proven issues are listed and no command is printed.
