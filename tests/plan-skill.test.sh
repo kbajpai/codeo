@@ -35,7 +35,8 @@ must_order() {
 # Step 10: the dossier forms docs/dossier.md documents and the dossier checker reads.
 must_contain 'a second pass'\''s Outcome is not pending' 'On a pass after a send-back, `## Outcome` is not pending: it holds the earlier rounds, which'
 must_contain 'pending means no new round yet' '"pending" in sub-steps 1-3 means no new round is written yet'
-must_contain 'the draft footprint goes under Notes again' 'footprint goes under `## Notes` again all the same'
+must_lack 'step 10 does not repeat that the draft goes under Notes' 'footprint goes under `## Notes` again all the same'
+must_contain 'step 8 keeps the no-known-language case' 'Where none is known, the script cannot be neutral'
 must_contain 'a qc send-back keeps the earlier rounds' 'After a send-back from `/codeo:qc`, the earlier rounds stay as they were written: this'
 must_contain 'the round names the qc round on the next line' 'with the date as its first line and, on the next line, `(send-back from qc.md round <k>)`'
 must_contain 'the new footprint replaces the old' 'naming the `qc.md` round it answers. The new `### Footprint` replaces the earlier round'\''s:'

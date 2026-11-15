@@ -174,7 +174,9 @@ answer too: each task then names its own proof command in full (step 8).
    `$(…)`), no nested quotes or single-quoted arguments, no glob, no `~`, no `./script` path, no
    `&&` or line continuation, because bash, PowerShell and cmd read these differently. Anything
    longer becomes a script in the repository, run as one command,
-   in a language the engineer's host is known to have. A command that cannot be neutral is asked
+   in a language the engineer's host is known to have.
+   Where none is known, the script cannot be neutral: it is asked about and labelled like any other command that cannot be neutral.
+   A command that cannot be neutral is asked
    about and then labelled: the plan asks which shell they use as a numbered question in plan.md
    (`.codeo/<N>/plan.md`), repeats step 4's stop (commit, push, end the turn; resume from the
    file), and labels the command `Shell: <name>`. A `host: local` lock on any platform but Windows
@@ -282,8 +284,7 @@ answer too: each task then names its own proof command in full (step 8).
        On a pass after a send-back, sub-step 1 removes the earlier round's `### Footprint` block and puts the draft under `## Notes`
        as its first edit: the block is the only one `overlap.sh` would otherwise union with the
        new one. That removal is the one edit an answered round ever takes
-       (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`). The draft
-       footprint goes under `## Notes` again all the same.
+       (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
        A block written after a send-back covers the branch, not only this round, so
        run `overlap.sh --outside <N>` and add every path it prints to `files:` before committing it;
        `qc-verdict` fails the pull request if one is still missing.
