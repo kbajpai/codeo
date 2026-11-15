@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2. Q1-Q9 are answered (all as recommended; Q2's reading is stated under it). Nothing is open. The other workflows were re-checked just before the gate (#107 at plan, #71 at qc; their footprints are as Q8 and Q9 describe, no new overlap). The plan is drafted at `.codeo/104/plan-draft.md` (7 tasks, uncommitted by design) and waits for the engineer's approval. On approval it is written to `docs/plans/2026-11-15-live-session-signal.md`, the footprint is recorded here and checked once more with `overlap.sh`, and `## Outcome` follows.
+Planned. Q1-Q9 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-15-live-session-signal.md` (unstaged, for review). The footprint is recorded and checked against every other workflow in flight; nothing is open. The next step is to review and commit the plan, then `/codeo:implement`.
 
 ## Questions
 
@@ -130,6 +130,24 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 
 **Design checked against the code.** Scratch repositories confirmed the git side: `git fetch --prune origin '+refs/codeo/live/*:refs/codeo/live/*'` succeeds when no such ref exists, a force-push of a new parentless empty-tree commit over the old one works, and a deletion on origin is pruned by the next fetch. Not tried from here, and so not asserted by the plan: a push of that ref to GitHub itself, and anything in a web session (Q2, plan Task 7).
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-15-live-session-signal.md` — 7 tasks, unstaged for review. **Shape:** a plan under `docs/plans/` only (Goal / Architecture / Tech Stack / Spec / Global Constraints / Review Focus, checkbox tasks, the `REQUIRED SUB-SKILL` banner), with the decisions table and a sequence diagram folded in. No separate reference doc: nothing here outlives the work except what `docs/handoff.md` records (Task 5). `engineering:system-design` and `engineering:architecture` were available and applied.
+
+**What was decided** (Q1-Q7 all as recommended; the open intake question, how the signal is stored, refreshed and read, is resolved by them):
+- **Storage (Q1).** One parentless, empty-tree commit per session at `refs/codeo/live/<issue>/<machine>`, force-pushed over itself. Rejected: a file on `codeo/intake` (a commit per refresh on a branch every engineer pushes to) and a branch per session (branch-list clutter, an exclusion in every script that walks `refs/remotes/origin`).
+- **Web sessions (Q2).** `git push`, falling back to REST (`github.sh ref put|delete`, Task 1). Q2 had no option marked recommended; it was read as the third option, the REST fallback plus a by-hand web check (Task 7). Rejected: assuming a push to any ref works there.
+- **Refresh (Q3).** A plugin hook on `UserPromptSubmit` and `PostToolUse`, plus `SessionEnd` to clear. Rejected: skills calling it, which edits five `SKILL.md` files and misses a long `implement` run.
+- **Expiry (Q4).** Refresh every 300 s, expire after 900 s, fixed; `CODEO_LIVE_REFRESH_SECONDS` and `CODEO_LIVE_TTL_SECONDS` override. Rejected: a config key.
+- **Naming (Q5).** User: the GitHub login, else `git config user.name`, never an email. Machine: `$CODEO_MACHINE`, else the container's volume, `web-` and 8 characters of the session id, or the hostname. The repository is public.
+- **Display (Q6).** A `live:` line after `changed:` and an `inflight.sh --live` listing; `--tsv` and `--branches` untouched. Rejected: an always-present line, and a sixth `--tsv` column (#103 also adds facts there).
+- **Triage (Q7).** One sentence in `skills/triage/SKILL.md` and one clause in `docs/skills.md`.
+- **Overlaps.** #71 (`skills/triage/SKILL.md`, `docs/handoff.md`, `docs/skills.md`, `CHANGELOG.md`; Q8) and #107 (`CHANGELOG.md`; Q9): proceed and coordinate for both. `overlap.sh 104` printed nothing once the footprint was written, every pair being already raised; `overlap.sh --outside 104` printed nothing. No exclusive resource, so no lease was taken.
+
+**Documentation the plan changes:** `docs/handoff.md` → *Parallel workflows* (a new bullet and the sequence diagram, and a clause in *Who else is in flight*), `docs/skills.md` → *triage* → *Reads and writes*, `CHANGELOG.md` (the `Shared state:` line and one bullet). `docs/dossier.md` and `README.md` do not move. No wiki pages.
+
+**Known limits, stated in the plan:** a session idle for 15 minutes stops reading as live; a writer's clock ahead or behind shifts the window; a dev container signals only after its plugin pin moves to a release carrying this; refs left by machines that never return stay on origin, ignored. The fourth acceptance criterion (a web session) can only be settled by Task 7's by-hand check; if both the push and the REST fallback are refused there, `/codeo:qc` marks it not met.
+
 ### Footprint
 
 ```
@@ -139,13 +157,10 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-15 — Q1-Q7 raised · cost: 3m · fable-5-2 115k in + 1M cached / 14k out
 - 2026-11-15 — Q1-Q7 answered and recorded; plan drafted (.codeo/104/plan-draft.md); footprint overlap with #71 raised as Q8 · cost: 6m · sonnet-5-5 192k in + 2.6M cached / 43k out
 - 2026-11-15 — Q8 answered and recorded; footprint re-checked before the gate, #107 now overlaps on CHANGELOG.md, raised as Q9 · cost: 1m · sonnet-5-5 15k in + 917k cached / 4k out
 - 2026-11-15 — Q9 answered and recorded; no new overlap; draft presented for approval · cost: 0m · sonnet-5-5 13k in + 733k cached / 2k out
+- 2026-11-15 — planned: docs/plans/2026-11-15-live-session-signal.md · cost: 1m · sonnet-5-5 15k in + 1.3M cached / 2k out
