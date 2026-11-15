@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3: the plan file now carries Round 3 (Tasks 17-21), approved; the dossier is stopped on Q11, a new overlap with #97 on `skills/qc/SKILL.md` and `tests/qc-skill.test.sh` (#97 reached `qc` after round 2). `## Outcome` stays as it is until Q11 is answered, then the round-3 outcome is written and the next step is `/codeo:implement`.
+Round 3, done. QC round 2's two blocking findings (G1, G2) and G3-G7 are planned (Tasks 17-21), the plan was approved and written into the plan file, Q8-Q11 are answered and nothing is open. The next step is `/codeo:implement`.
 
 ## Questions
 
@@ -110,19 +110,9 @@ All of G3-G7. Answered with the question tool, in the conversation (engineer, 20
 **Options:** proceed and coordinate (recommended: round 3 adds nothing to either file, and #97 is at `qc`) · sequence after #97 · re-scope.
 
 **Answer:**
+Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ## Notes
-
-Round 3 footprint, to move to the end of the round 3 outcome once nothing is raised (unchanged from round 2):
-
-### Footprint
-
-```
-files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, .codeo/overlays/**, skills/**, scripts/cleanup.sh, scripts/github.sh, lib/extension-points.tsv, docs/skills.md, docs/skills-inventory.md, docs/extension-points.md, docs/handoff.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-15-guard-home-only-skills.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 What exploration found, so the plan does not re-ask it:
 
@@ -163,6 +153,18 @@ What exploration found, so the plan does not re-ask it:
 **Documentation the round moves.** `.devcontainer/README.md`, `docs/extension-points.md`, `docs/handoff.md`, `CHANGELOG.md`. `docs/skills.md`, `docs/skills-inventory.md` and `README.md` need nothing.
 
 **Filed through `/codeo:issue`:** none.
+### Round 3 — 2026-11-15
+(send-back from qc.md round 2)
+
+**Plan:** the same file, `docs/plans/2026-11-15-guard-home-only-skills.md`, with a `## Round 3` section (Tasks 17-21), approved by the engineer and left unstaged. Shape unchanged: one executable plan, one pull request.
+
+**What QC found.** G1 (blocking, the plan's): round 2's stale refusal tells a lock skill to re-run the start script, which `lock.sh take` would honour for a stashed or abandoned workflow, binding it with no claim and no board move. G2 (blocking, the plan's): the cleanup skill's caveat "close.md having recorded a clean tree" names a record that never reaches `origin/<base>`, and `cleanup.sh` lists as proven an issue whose `/codeo:close` never finished and whose leases are still held. G3-G7 non-blocking; round 1's F9, F11 and F12 stay for `/codeo:triage`.
+
+**Decisions.** Q8 = detect the state: Task 17 `role.sh`'s stale refusal reads the clone's own dossier (finished: `.codeo/done/<N>/`; parked: `close.md`'s last round `— stashed` or `— abandoned`, way back `/codeo:init #<N>` in the home container, never the start script; lock lost: a live `.codeo/<N>/`, re-run the start script; unknown: a generic line). Q9 = add the proof: Task 18 `cleanup.sh` gains a fifth proof, `lease` (an issue that holds or waits for any lease is not proven), a missing `head_ref` fails the branch proof, and the untrue caveat is replaced by what is true. Q10 = all of G3-G7: Task 19 close's last report agrees with itself (the overlay's home-container step applies to a finished close only, step 17 stops saying "nothing is lost either way", `docs/handoff.md` uses `#<M>`), G4 in Task 18. Task 20 documents it, Task 21 is the whole check. Q11 = proceed and coordinate on #97's overlap with `skills/qc/SKILL.md` and `tests/qc-skill.test.sh`; round 3 touches neither. Rejected: one generic stale message; caveat-only for cleanup; G1 and G2 only.
+
+**Documentation the round moves.** `.devcontainer/README.md`, `docs/skills.md`, `docs/handoff.md`, `CHANGELOG.md`, and `README.md` only where it counts proofs. `docs/extension-points.md` and `docs/skills-inventory.md` need nothing: no point and no rule changes.
+
+**Filed through `/codeo:issue`:** none.
 
 ### Footprint
 
@@ -172,6 +174,7 @@ wiki:       none
 exclusive:  none
 sequenced:  none
 ```
+
 ## Log
 
 - 2026-11-15 — Q1-Q6 raised · cost: 4m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 181k in + 139k cached / 8k out
@@ -180,3 +183,4 @@ sequenced:  none
 - 2026-11-15 — planned round 2: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 11-16) · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 13m · fable-5-2 424k in + 2.2M cached / 11k out · sonnet-5-5 26k in + 1.3M cached / 4k out
 - 2026-11-15 — round 3 after qc round 2: Q8-Q10 raised and answered with the question tool; draft at the review gate · cost: 3m · fable-5-2 539k in + 2.8M cached / 10k out
 - 2026-11-15 — round 3: Round 3 (Tasks 21 total) written into the plan file after approval; Q11 raised on a new overlap with #97 · cost: 5m · fable-5-2 539k in + 3.4M cached / 11k out · sonnet-5-5 27k in + 2.8M cached / 4k out
+- 2026-11-15 — planned round 3: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 17-21); Q11 answered · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 19m · fable-5-2 539k in + 3.4M cached / 11k out · sonnet-5-5 31k in + 4.5M cached / 7k out
