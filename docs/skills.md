@@ -23,7 +23,7 @@ flowchart LR
 
 Turns a raw idea, bug report, or out-of-scope finding into a well-formed GitHub issue (problem statement, requirements, and acceptance criteria) through a question-and-answer pass with the engineer, then files it with `gh api`, Issue Type included. It triggers on "file an issue", "draft an issue for X", "turn this into an issue", "write up a bug report", or when `/codeo:plan`, `/codeo:implement` or `/codeo:triage` hits work that belongs in an issue of its own.
 
-The skill drafts and files the issue and does nothing else. It captures the what and why (problem, requirements, acceptance criteria), not the how: contracts, diagrams and design belong to `/codeo:plan`. It is standalone: it files the issue, reports the number, and stops. When another skill calls it, that skill passes the finding and the context it already has but does not answer the questions on the engineer's behalf, and filing returns control to the caller with the new issue's number.
+The skill drafts and files the issue, puts it in the board's Backlog when the project has a board, and does nothing else. It captures the what and why (problem, requirements, acceptance criteria), not the how: contracts, diagrams and design belong to `/codeo:plan`. It is standalone: it files the issue, reports the number, and stops. When another skill calls it, that skill passes the finding and the context it already has but does not answer the questions on the engineer's behalf, and filing returns control to the caller with the new issue's number.
 
 ### Reads and writes
 

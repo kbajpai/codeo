@@ -49,6 +49,11 @@ doc_has "skills.md says issue writes Backlog only" docs/skills.md "Writes the ne
 doc_has "skills.md says a failed move never fails the filing" docs/skills.md 'a failed move is reported and never fails the filing'
 doc_has "skills.md says triage finds the card already in Backlog" docs/skills.md 'because `/codeo:issue` writes that Status when it files it'
 
+# F2, F5: the scope sentences name the Backlog write and the success line is reported.
+must_contain "the scope sentence names the board write" "and, with a board, puts it in the board's Backlog, and that is all it does"
+must_contain "the success line is reported" 'Quote that line in the report.'
+doc_has "skills.md's scope sentence names the board write" docs/skills.md "puts it in the board's Backlog when the project has a board, and does nothing else"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

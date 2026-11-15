@@ -9,7 +9,7 @@ Project overlay text adds to or narrows a step; it never overrides a rule marked
 
 # Filing an issue for `$ARGUMENTS`
 
-This skill drafts and files a GitHub issue in this project's repository, and that is all it does. It
+This skill drafts and files a GitHub issue in this project's repository and, with a board, puts it in the board's Backlog, and that is all it does. It
 captures the *what and why* — problem, requirements, acceptance criteria — not the *how*. Contracts,
 diagrams, and design belong to `/codeo:plan`; sketching them here duplicates work it will redo
 properly with the codebase open in front of it. **It hands off to nobody**: it files the issue,
@@ -176,7 +176,7 @@ is the container the message names.
    with nothing printed means no board), put the new issue in the Backlog:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog`, with `<N>` from the created
    issue's response. It adds the issue to the board when it is not on it, and prints one line naming
-   the old and the new Status.
+   the old and the new Status. Quote that line in the report.
 
    <!-- rule: issue-09 -->
    A failed move never fails the filing: the issue exists, so its number is reported as usual, and handed back to a caller, and the line the script printed is quoted with the fix it names (`gh auth refresh -s project` when the token lacks the `project` scope; in a hosted web session the script says to move the card by hand). Then read the new issue's Status once:
