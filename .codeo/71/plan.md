@@ -8,9 +8,9 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing is drafted yet. One design question (Q1) and the footprint
-overlaps with the three other workflows in flight are open. The draft plan follows once they are
-answered.
+Q1-Q4 are answered (all as recommended). The plan is drafted at .codeo/71/plan-draft.md and awaits the engineer's approval; nothing is open.
+The overlaps with #70, #96 and #98 were answered *proceed and coordinate*, so the footprint
+carries no `sequenced:` line.
 
 ## Questions
 
@@ -32,6 +32,7 @@ once, and so what step 5 records on a no.
   filed minutes earlier, but a no given in passing never hides it.
 
 **Answer:**
+A — a no is a *leave in the backlog* decision (answered in the conversation: "as recommended for all four").
 
 ### Q2 — #70 plans to edit the same skills, tests and docs: proceed alongside it, wait for it, or re-scope?
 
@@ -58,6 +59,7 @@ waits, or is built now and rebased by whichever branch merges second.
   `skills/triage/SKILL.md`, so this would mean handing the work to #70. Not recommended.
 
 **Answer:**
+Proceed and coordinate (answered in the conversation: "as recommended for all four").
 
 ### Q3 — #96 also adds a `CHANGELOG.md` entry: proceed and coordinate?
 
@@ -69,6 +71,7 @@ gets a conflict that is resolved by keeping both bullets.
 possible: the release checklist wants every change in the changelog).
 
 **Answer:**
+Proceed and coordinate (answered in the conversation: "as recommended for all four").
 
 ### Q4 — #98 has already changed `CHANGELOG.md`: proceed and coordinate?
 
@@ -81,6 +84,7 @@ and their tests. Same conflict as Q3, one bullet each under `## Unreleased`.
 possible, as in Q3).
 
 **Answer:**
+Proceed and coordinate (answered in the conversation: "as recommended for all four").
 
 ## Notes
 
