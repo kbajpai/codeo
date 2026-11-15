@@ -78,3 +78,7 @@
 | `qc:52:F1-F3` | Plan quotes old model names; changelog clause omits the replay `sed`; plan's `gh --comments --json` command | filed #81 (F2 as a requirement; F1, F3 in Reference only) | 2026-11-14 |
 | `qc:75:F1` | v1.0.6 Release body has auto-generated notes appended, unlike v1.0.5's | filed #81 | 2026-11-14 |
 | `issue:81` | Small follow-ups from #51, #52 and #75; filed 2026-11-14, no branch, board Status `none` | leave in the backlog | 2026-11-14 |
+| `implement:76:haiku-follow-up` | Re-run the Haiku 5.5 trial with the closing-block template read through Read (#76 kept both skills on Sonnet on one item-1 miss) | filed #83 | 2026-11-15 |
+| `qc:76:F5-F6` | #76 comment lists three of four scorer corrections; understates one second Bash call | engineer will edit | 2026-11-15 |
+| `qc:76:F4` | Plan's `gh issue view --comments --json` command does not run (same command as `qc:52:F1-F3`) | already #81 | 2026-11-15 |
+| `issue:83` | Re-run the Haiku trial; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
