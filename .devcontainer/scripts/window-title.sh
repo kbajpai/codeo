@@ -19,8 +19,10 @@ die() { echo "window-title: $*" >&2; exit 1; }
 root=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null) \
     || die "not inside a git repository"
 
-title=$(bash "$(dirname "${BASH_SOURCE[0]}")/container-name.sh" "$root" 2>&1) \
-    || die "could not name the container: ${title#container-name: }"
+errf=$(mktemp) || die "could not create a temporary file"
+trap 'rm -f "$errf"' EXIT
+title=$(bash "$(dirname "${BASH_SOURCE[0]}")/container-name.sh" "$root" 2>"$errf") \
+    || die "could not name the container: $(sed ':a;N;$!ba;s/\n/ \/ /g;s/^container-name: //' "$errf")"
 
 if [[ ${1:-} == --print ]]; then
     echo "$title"

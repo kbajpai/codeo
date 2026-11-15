@@ -1398,6 +1398,14 @@ title_is_home_without_a_lock() {
     [[ $(wt_title "$wt_dir") == 'codeo [home]' ]] || fail 'settings.json lacks window.title "codeo [home]"'
 }
 
+title_ignores_a_warning_on_stderr() {
+    wt_setup warn || return 0
+    printf '#!/usr/bin/env bash\necho "a warning" >&2\necho "codeo [home]"\n' > "$wt_dir/.devcontainer/scripts/container-name.sh"
+    wt_run --print
+    ((wt_rc == 0)) || fail "exit $wt_rc: $wt_err"
+    [[ $wt_out == 'codeo [home]' ]] || fail "--print gave '$wt_out'"
+}
+
 title_names_the_issue_with_a_lock() {
     wt_setup lock || return 0
     printf 'issue:   44\nbranch: feat/x\nstarted: now\n' > "$wt_dir/.codeo/active"
@@ -1928,6 +1936,7 @@ cases=(
     start_ignores_content_edits_when_restoring_modes
     start_leaves_a_bind_mounted_clone_alone
     title_is_home_without_a_lock
+    title_ignores_a_warning_on_stderr
     title_names_the_issue_with_a_lock
     title_falls_back_to_the_clone_name
     title_keeps_other_keys
