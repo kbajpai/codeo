@@ -82,3 +82,12 @@
 | `qc:76:F5-F6` | #76 comment lists three of four scorer corrections; understates one second Bash call | engineer will edit | 2026-11-15 |
 | `qc:76:F4` | Plan's `gh issue view --comments --json` command does not run (same command as `qc:52:F1-F3`) | already #81 | 2026-11-15 |
 | `issue:83` | Re-run the Haiku trial; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `qc:57:F2` | A `.codeo/active` with content but no `issue:` line still counts as a held lock in the dev container start script | filed #87 | 2026-11-15 |
+| `qc:57:F1-F7` | Tests added by #57 that prove less than their names say (stub `lock.sh`, trivially true assertion, loose grep, untested detached-HEAD, failed-`rm` and `window-title.sh` failure paths) | filed #88 | 2026-11-15 |
+| `qc:57:F8` | README and CHANGELOG say same-named containers "cannot run at once"; "cannot both exist" is exact | filed #88 | 2026-11-15 |
+| `qc:57:F4` | `codeo-root.sh` matches a registry `projectPath` by exact string (symlink, trailing slash, null `installPath`) | filed #88 | 2026-11-15 |
+| `qc:57:F5` | One over-long comment line in `devcontainer-start.sh`'s step 3a header | dismissed — cosmetic, nothing breaks | 2026-11-15 |
+| `issue:85` | Start an sbx issue sandbox; filed 2026-11-15, no branch, board Status `none`; depends on #73's evaluation | leave in the backlog | 2026-11-15 |
+| `issue:86` | Work in and end an sbx issue sandbox; filed 2026-11-15, no branch, board Status `none`; depends on #73's evaluation | leave in the backlog | 2026-11-15 |
+| `issue:87` | Dev container start script reports a `.codeo/active` that names no issue; filed 2026-11-15, board Status `none` | ready | 2026-11-15 |
+| `issue:88` | Dev container follow-ups from #57; filed 2026-11-15, board Status `none` | leave in the backlog | 2026-11-15 |
