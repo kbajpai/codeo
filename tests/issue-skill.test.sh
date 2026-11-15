@@ -45,6 +45,9 @@ doc_has "the board bullet says issue files into Backlog" docs/handoff.md 'puts e
 doc_has "the transition table has the filing row" docs/handoff.md '| A new issue is filed | `issue` | `backlog` |'
 doc_has "the failure sentence names issue's exception" docs/handoff.md 'and `issue`, whose dossier is committed before the card moves'
 doc_has "the ownership table gives backlog to issue" docs/handoff.md '`backlog`: `/codeo:issue` at filing'
+doc_has "skills.md says issue writes Backlog only" docs/skills.md "Writes the new issue's board Status, to Backlog only"
+doc_has "skills.md says a failed move never fails the filing" docs/skills.md 'a failed move is reported and never fails the filing'
+doc_has "skills.md says triage finds the card already in Backlog" docs/skills.md 'because `/codeo:issue` writes that Status when it files it'
 
 if ((failures)); then
     echo "$failures case(s) failed"
