@@ -2200,6 +2200,21 @@ scripts_are_committed_executable() {
     done
 }
 
+docs_say_two_same_named_containers_cannot_both_exist() {
+    local readme="$repo/.devcontainer/README.md" log="$repo/CHANGELOG.md"
+    ! grep -q 'cannot run at once' "$readme" || fail 'the README still says cannot run at once'
+    ! grep -q 'cannot run at once' "$log" || fail 'CHANGELOG.md still says cannot run at once'
+    grep -q 'cannot both exist' "$readme" || fail 'the README lacks "cannot both exist"'
+    grep -q 'name already in use' "$readme" || fail 'the README lacks "name already in use"'
+}
+
+docs_changelog_names_the_replay_sed_and_the_folder_limit() {
+    local unreleased
+    unreleased=$(awk '/^## Unreleased/{f=1;next} /^## v/{f=0} f' "$repo/CHANGELOG.md")
+    grep '(#52)' <<<"$unreleased" | grep -q 'tests/replay.test.sh' || fail 'the #52 bullet does not name tests/replay.test.sh'
+    grep -q 'my project' <<<"$unreleased" || fail 'the Unreleased section does not state the folder-name limit (my project)'
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
@@ -2344,6 +2359,8 @@ cases=(
     session_title_hooks_are_registered
     session_title_hook_command_survives_a_missing_script
     scripts_are_committed_executable
+    docs_say_two_same_named_containers_cannot_both_exist
+    docs_changelog_names_the_replay_sed_and_the_folder_limit
 )
 
 for current in "${cases[@]}"; do

@@ -102,5 +102,19 @@ constrain other people and accidents, not the owner.
    git ls-remote --tags origin
    ```
 
+8. Create the GitHub Release from the changelog section only, with its notes in a file and no
+   generated notes. Put the lines between the `## vX.Y.Z` heading and the next version's heading
+   in a file (without the heading), then:
+
+   ```bash
+   gh release create vX.Y.Z --verify-tag --title vX.Y.Z --notes-file <the section>
+   ```
+
+   Never pass `--generate-notes`. A Release that was created with generated notes is repaired with:
+
+   ```bash
+   gh release edit vX.Y.Z --notes-file <the section>
+   ```
+
 A pushed tag is never moved. A fix ships as the next version. The tag ruleset's admin bypass would
 let the owner move one by mistake, so this rule is a convention that GitHub does not enforce.
