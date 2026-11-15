@@ -87,4 +87,4 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-15 — Q1-Q6 raised · cost: pending
+- 2026-11-15 — Q1-Q6 raised · cost: 4m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 181k in + 139k cached / 8k out
