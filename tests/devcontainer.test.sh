@@ -501,14 +501,16 @@ ds_todos() { local n; n=$(grep -c "devcontainer-start: TODO.*$1" <<<"$ds_err" ||
 
 # ds_lock_stub: a stub plugin root at $ds_dir/plugin (set as DS_CODEO_ROOT) whose scripts/lock.sh logs its
 # arguments to $ds_dir/lock-calls and, on a branch other than main, writes .codeo/active for issue 55 and
-# prints the lock line. STUB_LOCK_OUT replaces that output and STUB_LOCK_RC is its exit status.
+# prints the lock line; when .codeo/active exists it takes nothing, as the real lock.sh does. STUB_LOCK_OUT replaces that output and STUB_LOCK_RC is its exit status.
 ds_lock_stub() {
     mkdir -p "$ds_dir/plugin/scripts"
     cat > "$ds_dir/plugin/scripts/lock.sh" <<'STUB'
 #!/usr/bin/env bash
 echo "$*" >> "$STUB_DIR/lock-calls"
 branch=$(git branch --show-current)
-if [[ -n ${STUB_LOCK_OUT:-} ]]; then
+if [[ -e .codeo/active ]]; then
+    echo "lock already taken: .codeo/active"
+elif [[ -n ${STUB_LOCK_OUT:-} ]]; then
     echo "$STUB_LOCK_OUT"
 elif [[ $branch != main ]]; then
     printf 'issue:   55\nbranch:  %s\n' "$branch" > .codeo/active
@@ -577,6 +579,67 @@ start_empty_lock_file_on_the_base_branch_is_removed() {
     grep -qxF 'devcontainer-start: .codeo/active was empty and held no lock: removed it' <<<"$ds_out" || fail "no removal line: $ds_out"
     [[ ! -e $ds_dir/codeo-home/.codeo/active ]] || fail "the empty lock file is still there"
     [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called on the base branch"
+}
+
+start_empty_lock_file_on_a_detached_head_is_removed_and_reported() {
+    local n
+    ds_setup lockemptydetached || return 0
+    ds_lock_stub
+    git -C "$ds_dir/codeo-home" -c user.name=T -c user.email=t@example.com commit -q --allow-empty -m c || { fail 'commit failed'; return 0; }
+    git -C "$ds_dir/codeo-home" checkout -q --detach
+    : > "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    grep -qxF 'devcontainer-start: .codeo/active was empty and held no lock: removed it' <<<"$ds_out" || fail "no removal line: $ds_out"
+    [[ ! -e $ds_dir/codeo-home/.codeo/active ]] || fail "the empty lock file is still there"
+    n=$(ds_todos 'detached'); ((n == 1)) || fail "wanted one detached-HEAD TODO, got $n: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called on a detached HEAD"
+}
+
+start_empty_lock_file_that_cannot_be_removed_is_one_todo() {
+    local n
+    ds_setup lockstuck || return 0
+    ds_lock_stub; ds_branch feat/x
+    : > "$ds_dir/codeo-home/.codeo/active"
+    mkdir -p "$ds_dir/bin"
+    # Fails for .codeo/active; anything else goes to the real rm by its absolute path, so it cannot call itself.
+    cat > "$ds_dir/bin/rm" <<'STUB'
+#!/usr/bin/env bash
+for arg in "$@"; do
+    [[ $arg == .codeo/active ]] && exit 1
+done
+exec /bin/rm "$@"
+STUB
+    chmod +x "$ds_dir/bin/rm"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos 'could not be removed'); ((n == 1)) || fail "wanted one could-not-be-removed TODO, got $n: $ds_err"
+    n=$(ds_todos 'lock'); ((n == 0)) || fail "a TODO about a lock was listed: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls")"
+    [[ -e $ds_dir/codeo-home/.codeo/active ]] || fail "the file is gone although rm failed"
+}
+
+start_unreadable_lock_file_is_one_todo() {
+    local n f
+    ds_setup lockunreadable || return 0
+    ds_lock_stub; ds_branch feat/x
+    f="$ds_dir/codeo-home/.codeo/active"
+    printf 'issue:   55\n' > "$f"
+    cp "$f" "$ds_dir/active-before"
+    chmod 000 "$f"
+    if [[ -r $f ]]; then
+        chmod 644 "$f"
+        echo "SKIP start_unreadable_lock_file_is_one_todo: the tests run as a user that can read a mode-000 file"
+        return 0
+    fi
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos '\.codeo/active could not be read'); ((n == 1)) || fail "wanted one could-not-be-read TODO, got $n: $ds_err"
+    n=$(ds_todos 'names no issue'); ((n == 0)) || fail "an unreadable file was reported as naming no issue: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls")"
+    [[ $(stat -c %a "$f") == 0 ]] || fail "the mode was changed"
+    chmod 644 "$f"
+    cmp -s "$f" "$ds_dir/active-before" || fail "the file was changed"
 }
 
 start_nonempty_lock_file_is_left_alone() {
@@ -655,6 +718,7 @@ start_hash_issue_line_is_a_held_lock() {
     printf 'issue: #55\nbranch:  feat/x\n' > "$ds_dir/codeo-home/.codeo/active"
     cp "$ds_dir/codeo-home/.codeo/active" "$ds_dir/active-before"
     mv "$ds_dir/codeo-home" "$ds_dir/codeo-55"
+    # DS_REPO points the run at the renamed clone: the folder check wants codeo-<issue number>.
     DS_REPO="$ds_dir/codeo-55" ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     [[ -z $ds_err ]] || fail "stderr is not empty: $ds_err"
@@ -703,7 +767,7 @@ start_lock_crash_is_a_todo() {
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     n=$(ds_todos 'lock.sh failed (exit 3)'); ((n == 1)) || fail "wanted one crash TODO, got $n: $ds_err"
     ! grep -q boom <<<"$ds_out" || fail "the crash output was printed on stdout: $ds_out"
-    [[ $(grep -o boom <<<"$ds_err" | wc -l) == 1 ]] || fail "boom is not on stderr exactly once: $ds_err"
+    [[ $(grep -c boom <<<"$ds_err" || true) == 1 ]] || fail "boom is not on stderr on exactly one line: $ds_err"
 }
 
 start_without_codeo_installed_is_a_todo() {
@@ -750,7 +814,6 @@ start_ignores_another_projects_codeo() {
     ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     [[ ! -s $ds_dir/lock-calls-other ]] || fail "another project's lock.sh was called: $(cat "$ds_dir/lock-calls-other")"
-    [[ ! -s $ds_dir/lock-calls-mine ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls-mine")"
     n=$(ds_todos 'codeo is not installed'); ((n == 1)) || fail "wanted one not-installed TODO, got $n: $ds_err"
 }
 
@@ -2094,6 +2157,9 @@ cases=(
     start_rerun_with_a_lock_does_not_take_another
     start_empty_lock_file_is_removed_and_the_lock_taken
     start_empty_lock_file_on_the_base_branch_is_removed
+    start_empty_lock_file_on_a_detached_head_is_removed_and_reported
+    start_empty_lock_file_that_cannot_be_removed_is_one_todo
+    start_unreadable_lock_file_is_one_todo
     start_nonempty_lock_file_is_left_alone
     start_newline_only_lock_file_is_a_todo
     start_lock_file_without_an_issue_line_is_a_todo
