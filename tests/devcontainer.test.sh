@@ -4,7 +4,7 @@
 # Today it checks .codeo/config.json: the codename, the plugin pin, and that the shell suite's paths
 # cover .devcontainer/**. It also checks .devcontainer/devcontainer.json: it is valid JSON that runs as
 # the dev user and names the Dockerfile and start script, caps memory, names the container after its
-# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that and the memory cap), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
+# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that and the memory cap), mounts only the two named volumes, codeo-gh (the gh login) and codeo-git (the git config), and carries no bind mounts, secrets or localEnv.
 # It also checks .devcontainer/Dockerfile (over its non-comment lines): Ubuntu 26.04 with the tools codeo needs, user dev at UID 1000 with the
 # gh config directory, and none of the tools the image deliberately leaves out. Finally it runs
 # .devcontainer/scripts/plugins.sh in a scratch repo against stub claude and git executables: a fresh
@@ -78,6 +78,7 @@ run_args_cap_memory_only() {
 }
 
 run_args_name_the_container_after_its_clone() {
+    # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
     run_args_are_exact "$(dc_json)" \
         || fail 'runArgs is not exactly --name=${containerWorkspaceFolderBasename}, --memory=4g'
 }
@@ -474,7 +475,19 @@ STUB
     cat > "$ds_dir/bin/stat" <<'STUB'
 #!/usr/bin/env bash
 # The settle-stamp query (%s %y) goes to the real stat; every other call is the ownership query.
-case "$*" in *'%s %y'*) exec /usr/bin/stat "$@" ;; esac
+case "$*" in
+    *'%s %y'*)
+        # With STUB_GROW_DIR set, each settle-stamp query first appends the next numbered piece to the host
+        # gitconfig, so the file changes between polls with no timing involved.
+        if [[ -n ${STUB_GROW_DIR:-} ]]; then
+            n=$(cat "$STUB_DIR/grow-n" 2>/dev/null || echo 0)
+            if [[ -f $STUB_GROW_DIR/$((n + 1)) ]]; then
+                cat "$STUB_GROW_DIR/$((n + 1))" >> "$HOME/.gitconfig"
+                echo $((n + 1)) > "$STUB_DIR/grow-n"
+            fi
+        fi
+        exec /usr/bin/stat "$@" ;;
+esac
 echo "${STUB_STAT_UID:?}"
 STUB
     chmod +x "$ds_dir/bin/gh" "$ds_dir/bin/claude" "$ds_dir/bin/sudo" "$ds_dir/bin/stat"
@@ -1153,24 +1166,21 @@ start_waits_for_a_host_gitconfig_that_is_written_after_it_is_created() {
 }
 
 start_waits_for_a_host_gitconfig_that_is_still_growing() {
-    local f
     ds_setup growhost || return 0
-    f="$ds_dir/home/.gitconfig"
-    # The file is written in place in short steps, the email last, so for about half a second it is non-empty and changing.
-    (
-        : > "$f"
-        sleep 0.3
-        printf '[user]\n' >> "$f"; sleep 0.05
-        printf '\tname = Ada O'"'"'Neil\n' >> "$f"; sleep 0.05
-        printf '\t# one\n' >> "$f"; sleep 0.05
-        printf '\t# two\n' >> "$f"; sleep 0.05
-        printf '\t# three\n' >> "$f"; sleep 0.05
-        printf '\t# four\n' >> "$f"; sleep 0.05
-        printf '\t# five\n' >> "$f"; sleep 0.05
-        printf '\temail = ada@example.com\n' >> "$f"
-    ) &
-    DS_GITCONFIG_WAIT=5 DS_AUTHOR_NAME=Env DS_AUTHOR_EMAIL=env@example.com ds_ready_run
-    wait
+    # The file starts empty and the stat stub appends one numbered piece per settle-stamp query, the email last,
+    # so the file is non-empty and changing across eight polls.
+    mkdir "$ds_dir/grow"
+    printf '[user]\n' > "$ds_dir/grow/1"
+    printf '\tname = Ada O'"'"'Neil\n' > "$ds_dir/grow/2"
+    printf '\t# one\n' > "$ds_dir/grow/3"
+    printf '\t# two\n' > "$ds_dir/grow/4"
+    printf '\t# three\n' > "$ds_dir/grow/5"
+    printf '\t# four\n' > "$ds_dir/grow/6"
+    printf '\t# five\n' > "$ds_dir/grow/7"
+    printf '\temail = ada@example.com\n' > "$ds_dir/grow/8"
+    : > "$ds_dir/home/.gitconfig"
+    STUB_GROW_DIR="$ds_dir/grow" DS_GITCONFIG_WAIT=5 DS_AUTHOR_NAME=Env DS_AUTHOR_EMAIL=env@example.com ds_ready_run
+    [[ $(cat "$ds_dir/grow-n") == 8 ]] || fail 'the stub did not append all eight pieces'
     [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
     [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
     grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
@@ -1618,7 +1628,8 @@ esac
 exec $real_git "\$@"
 STUB
     chmod +x "$ds_dir/bin/git"
-    ds_ready_run
+    # The "Terminated" line is the test shell's own job report; the redirect swallows it (ds_run already files the script's stderr).
+    { ds_ready_run; } 2>/dev/null
     ((ds_rc != 0)) || fail 'the script exited 0 although it was sent TERM'
     ! grep -qxF 'gh auth setup-git' "$ds_dir/calls" 2>/dev/null || fail 'step 4 ran, so the script did not stop on TERM'
     ! grep -q 'devcontainer-start: ready$' <<<"$ds_out" || fail "the script ran to the end: $ds_out"
