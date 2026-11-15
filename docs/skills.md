@@ -41,7 +41,7 @@ The skill drafts and files the issue and does nothing else. It captures the what
 
 ### Extension points
 
-None.
+- `issue/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#issuerole-guard))
 
 ## init
 
@@ -73,6 +73,7 @@ The skill turns a filed issue into a place to work: a pushed branch carrying a d
 
 ### Extension points
 
+- `init/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#initrole-guard))
 - `init/host-workflow` — None; the skill hands off to plan in the same session. ([detail](extension-points.md#inithost-workflow))
 
 ## plan
@@ -101,6 +102,7 @@ The skill produces a reviewed planning artifact and never edits application code
 
 ### Extension points
 
+- `plan/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#planrole-guard))
 - `plan/plan-shape` — Use the generic plan shape in the skill. ([detail](extension-points.md#planplan-shape))
 - `plan/proof-of-done` — The suite's filter with {} replaced by the name of the test the task writes; a suite without filter has no single-test form and its whole test command is the proof. With no suites configured, the task names its proof command in full. ([detail](extension-points.md#planproof-of-done))
 - `plan/environment-lease-notes` — None; the plan adds no environment lease notes. ([detail](extension-points.md#planenvironment-lease-notes))
@@ -133,6 +135,7 @@ The skill executes an already-approved plan; it does not plan, draft issues, or 
 
 ### Extension points
 
+- `implement/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#implementrole-guard))
 - `implement/environment-lease-notes` — None; the lease and deploy paragraphs are the whole rule. ([detail](extension-points.md#implementenvironment-lease-notes))
 - `implement/wiki-rules` — Documentation rules are only the project's docsDir conventions. ([detail](extension-points.md#implementwiki-rules))
 
@@ -163,6 +166,7 @@ The skill is the gate between building and merging. It never fixes what it finds
 
 ### Extension points
 
+- `qc/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#qcrole-guard))
 - `qc/environment-evidence` — None; the evidence is the deployed hook's output and nothing more. ([detail](extension-points.md#qcenvironment-evidence))
 - `qc/wiki-rules` — Documentation checks are only the project's docsDir conventions. ([detail](extension-points.md#qcwiki-rules))
 - `qc/invariants-extra` — None; the reviewer works from the criteria, the invariants file and the diff. ([detail](extension-points.md#qcinvariants-extra))
@@ -199,6 +203,7 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 
 ### Extension points
 
+- `close/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#closerole-guard))
 - `close/put-back` — None; a stash or an abandon releases what is held and records what the environment carries. ([detail](extension-points.md#closeput-back))
 - `close/ci-publish-check` — None; no check of what CI did for the merge commit. ([detail](extension-points.md#closeci-publish-check))
 - `close/host-workflow` — None; the report names the lock's host and says whether anything is left to remove. ([detail](extension-points.md#closehost-workflow))
@@ -230,6 +235,7 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 ### Extension points
 
+- `triage/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#triagerole-guard))
 - `triage/todo-excludes` — Scan tracked files only, with no exclusions. ([detail](extension-points.md#triagetodo-excludes))
 
 ## setup

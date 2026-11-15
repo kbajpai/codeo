@@ -36,6 +36,16 @@ exists only while this skill runs, such as `${TMPDIR:-/tmp}/codeo-init-<N>`.
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: init/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" init role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: init-10 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Invoked with no arguments? Stop and ask before doing anything else.** Don't infer the issue
    from recent conversation, open PRs, or "the only open issue." This skill is the one that
    *starts* the workflow, so there is nothing to read a default from.

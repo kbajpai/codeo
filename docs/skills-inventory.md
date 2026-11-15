@@ -26,6 +26,7 @@ in prose exist (only the script's existence is checked).
 - [issue-06] File through REST because `gh issue create` cannot set the Issue Type; take the number and URL from
   the response, never reconstruct them.
 - [issue-07] Never set Priority or Effort.
+- [issue-08] A refusal from the role check ends the step; no override.
 
 ## init
 
@@ -39,6 +40,7 @@ in prose exist (only the script's existence is checked).
 - [init-07] Never merge, rebase or reset a container's unpushed commits.
 - [init-08] Acceptance criteria are copied verbatim.
 - [init-09] The state directory's `.gitignore` must be committed.
+- [init-10] A refusal from the role check ends the step; no override.
 
 ## plan
 
@@ -51,6 +53,7 @@ in prose exist (only the script's existence is checked).
 - [plan-06] Run the overlap check after the footprint is written, because it cannot read a draft.
 - [plan-07] The draft file is not committed and the plan doc stays unstaged.
 - [plan-08] A missing optional plugin means apply its structure directly; a missing required skill is a stop.
+- [plan-09] A refusal from the role check ends the step; no override.
 
 ## implement
 
@@ -64,6 +67,7 @@ in prose exist (only the script's existence is checked).
   a plan gap.
 - [implement-08] Behaviour no documentation task covers is a plan gap, not an unplanned page.
 - [implement-09] Build only; never grade its own work.
+- [implement-10] A refusal from the role check ends the step; no override.
 
 ## qc
 
@@ -80,6 +84,7 @@ in prose exist (only the script's existence is checked).
 - [qc-11] A failed release still hands off.
 - [qc-12] A send-back return means a full re-run.
 - [qc-13] A missing lease or deploy identity means "not yet checkable"; an orphan is non-blocking.
+- [qc-14] A refusal from the role check ends the step; no override.
 
 ## close
 
@@ -96,6 +101,7 @@ in prose exist (only the script's existence is checked).
 - [close-11] Never infer a stash from a failing verdict.
 - [close-12] Before an irreversible put-back, stop and show the engineer.
 - [close-13] Never use `finishing-a-development-branch`.
+- [close-14] A refusal from the role check ends the step; no override.
 
 ## triage
 
@@ -108,6 +114,7 @@ in prose exist (only the script's existence is checked).
 - [triage-07] Sources unavailable in a web session are reported, not skipped silently.
 - [triage-08] Never re-judge QC's classification.
 - [triage-09] Quote the evidence; one item can have many sources.
+- [triage-10] A refusal from the role check ends the step; no override.
 
 ## Riskiest places to rewrite (generic and project text interleaved)
 

@@ -43,6 +43,16 @@ from the acceptance criteria, the diff and the overlay's further rules, if any),
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: qc/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" qc role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: qc-14 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Read `.codeo/active` before anything else.** The lock names the issue this workflow is
    bound to, which is what makes a bare invocation unambiguous here — the engineer named the issue
    when they ran `/codeo:init`. No lock means no workflow here: name `/codeo:init #<N>` as the
