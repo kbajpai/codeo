@@ -40,7 +40,7 @@ In VS Code, run **Dev Containers: Clone Repository in Named Container Volume…*
 |---|---|---|
 | `home` | no lock, on the base branch, in the folder `codeo-home` | Lets `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` run. `/codeo:plan` through `/codeo:close` also pass the guard, and their own step 0 stops them because there is no lock. |
 | `issue:<N>` | locked for `<N>`, in the folder `codeo-<N>` | Lets `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:close` run. Refuses the home-only skills and names the home container. |
-| `stale:<N>`, `stale:?` | no lock, and not the home container on the base branch: `stale:<N>` in the folder `codeo-<N>`, `stale:?` in `codeo-home` on another branch | Refuses every guarded skill and names the container the skill belongs in. |
+| `stale:<N>`, `stale:?` | no lock, and not the home container on the base branch: `stale:<N>` in the folder `codeo-<N>`, `stale:?` in `codeo-home` on another branch | Refuses every guarded skill and names the issue (when it is known), says its container is finished or took no lock, and says where the skill runs. |
 | `mismatch:<N>:<folder>` | locked for `<N>`, in a folder other than `codeo-<N>` | Refuses every guarded skill. |
 | `unguarded` | not a guarded container (see below) | Lets everything run, as it does without a guard. |
 

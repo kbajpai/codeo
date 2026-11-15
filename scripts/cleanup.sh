@@ -32,6 +32,9 @@ state_rel=${CODEO_STATE_DIR#"$CODEO_PROJECT_ROOT"/}
 github=$CODEO_PLUGIN_ROOT/scripts/github.sh
 
 git fetch -q --prune origin || die "fetch failed; nothing proven"
+# The proofs read refs/remotes/origin/*, which only a clone that fetches every branch keeps whole.
+git config --get-all remote.origin.fetch | grep -Eqx '\+?refs/heads/\*:refs/remotes/origin/\*' ||
+    die "origin's fetch refspec does not cover every branch; nothing proven"
 base_sha=$(git rev-parse "origin/$base") || die "no origin/$base"
 
 # The overlay body, or nothing when there is none.
@@ -84,7 +87,8 @@ name_proof() {
     [[ -n $tpl && -n $pattern && -n $cmd ]] || { echo name; return; }
     name=${tpl//\{N\}/$n}
     [[ -n $name && $name =~ $pattern ]] || { echo name; return; }
-    echo "cmd:${cmd//\{name\}/$name}"
+    cmd=${cmd//\{name\}/"$name"}
+    echo "cmd:$cmd"
 }
 
 while IFS= read -r n; do

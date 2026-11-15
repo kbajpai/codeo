@@ -162,6 +162,23 @@ assert_eq "exit non-zero" "yes" "$([[ $rc -ne 0 ]] && echo yes || echo no)"
 assert_eq "cleanup: message" "yes" "$([[ $out == *"cleanup: fetch failed"* ]] && echo yes || echo no)"
 assert_eq "no proven line" "no" "$([[ $out == *"${tab}proven"* ]] && echo yes || echo no)"
 
+case_desc="a single-branch clone proves nothing: exit non-zero, a cleanup: refspec message, no proven line"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+git -C "$REPO_WORK" config remote.origin.fetch '+refs/heads/main:refs/remotes/origin/main'
+rc=0
+out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" 2>&1) || rc=$?
+assert_eq "exit non-zero" "yes" "$([[ $rc -ne 0 ]] && echo yes || echo no)"
+assert_eq "cleanup: refspec message" "yes" "$([[ $out == "cleanup: "*refspec* ]] && echo yes || echo no)"
+assert_eq "no proven line" "no" "$([[ $out == *"${tab}proven"* ]] && echo yes || echo no)"
+
+case_desc="a name containing & is substituted literally"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+CODEO_CLEANUP_REMOVAL=$'name: a&b-{N}\npattern: ^a&b-[0-9]+$\ncommand: rm {name} {name}'
+assert_eq "line" "12${tab}proven${tab}rm a&b-12 a&b-12" "$(run_cleanup)"
+CODEO_CLEANUP_REMOVAL=$overlay
+
 case_desc="dossier still on another branch"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12

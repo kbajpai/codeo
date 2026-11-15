@@ -62,6 +62,7 @@ is the container the message names.
 
 2. **Say what the proof cannot see.** Every time, even when nothing was proven:
    - Unpushed work in a clone is invisible from here. The proof looks at `origin` only.
+   - The proofs need a clone that fetches every branch of `origin`; a clone limited to some branches stops with a message and proves nothing.
    - The commands rely on `close.md` having recorded a clean tree with the tip equal to the pull
      request's head; a clone changed after that is not covered.
    - The commands run on the host, in a shell, and only after `git status` in that clone shows

@@ -94,6 +94,9 @@ check_matrix() {
             [[ -n $out && $out != *$'\n'* ]] || fail "$role: $skill wanted one refusal line, got '$out'"
             [[ $out == *"$role"* ]] || fail "$role: $skill refusal does not name the role: '$out'"
             [[ -z $number || $out == *"#$number"* ]] || fail "$role: $skill refusal does not name #$number: '$out'"
+            case $role in
+                stale:*) [[ $out == *finished* ]] || fail "$role: $skill refusal does not say the container is finished: '$out'" ;;
+            esac
             if is_home_skill "$skill"; then
                 [[ $out == *"home container"* ]] || fail "$role: $skill refusal does not say it runs in the home container: '$out'"
             else
