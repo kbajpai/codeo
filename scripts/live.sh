@@ -95,7 +95,7 @@ machine_label() {
 
 user_label() {
     local name
-    name=$(bash "$github" user login 2> /dev/null) || name=$(git config user.name 2> /dev/null) || name=
+    name=$(bounded bash "$github" user login 2> /dev/null) || name=$(git config user.name 2> /dev/null) || name=
     name=$(clean "$name" 64)
     printf '%s' "${name:-unknown}"
 }
@@ -136,7 +136,7 @@ beat() {
         GIT_COMMITTER_NAME=codeo-live GIT_COMMITTER_EMAIL=codeo-live@invalid \
         git commit-tree "$tree" -F "$message_file") || { rm -f "$message_file"; warn "could not publish — commit-tree failed"; return 0; }
 
-    if reason=$(bounded git push -q --force origin "$sha:$signal_ref" 2>&1); then
+    if reason=$(bounded git push -q --no-verify --force origin "$sha:$signal_ref" 2>&1); then
         rm -f "$message_file"
         return 0
     fi
@@ -152,7 +152,7 @@ clear() {
     local reason
     read_lock || return 0
     rm -f "$(stamp)"
-    bounded git push -q origin --delete "$signal_ref" > /dev/null 2>&1 && return 0
+    bounded git push -q --no-verify origin --delete "$signal_ref" > /dev/null 2>&1 && return 0
     if reason=$(bounded bash "$github" ref delete "$signal_ref" 2>&1 > /dev/null); then return 0; fi
     warn "could not clear — $(last_line "$reason")"
 }

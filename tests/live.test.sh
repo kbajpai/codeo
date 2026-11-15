@@ -37,6 +37,7 @@ cat > "$plugin/scripts/github.sh" <<'GHSTUB'
 case "$1 $2" in
     "user login")
         [[ -z ${STUB_USER_FAIL:-} ]] || exit 1
+        [[ -z ${STUB_USER_HANG:-} ]] || exec sleep 5
         echo alice ;;
     "ref put")
         echo "ref put $3" >> "$STUB_LOG"
@@ -290,6 +291,29 @@ elapsed=$(( $(date +%s) - start ))
 assert_eq "exit" 0 "$rc"
 assert_eq "one stderr line" 1 "$(grep -c . <<< "$err" || true)"
 assert_eq "within timeout + 1s" 1 "$(( elapsed <= 3 ? 1 : 0 ))"
+
+case_desc=beat_does_not_stall_on_a_hung_login_lookup
+new_world; clone_with_lock 104 container codeo-104
+git -C "$clone" config user.name "Bob Builder"
+start=$(date +%s)
+STUB_USER_HANG=1 CODEO_LIVE_PUSH_TIMEOUT=1 run beat --force
+elapsed=$(( $(date +%s) - start ))
+assert_eq "exit" 0 "$rc"
+assert_eq "within 3s" 1 "$(( elapsed <= 3 ? 1 : 0 ))"
+assert_contains "published with the fallback user" "user: Bob Builder" "$(git -C "$origin" log -1 --format=%B refs/codeo/live/104/codeo-104 2>/dev/null || true)"
+
+case_desc=beat_and_clear_skip_the_pre_push_hook
+new_world; clone_with_lock 104 container codeo-104
+printf '#!/bin/sh\ntouch "%s/pre-push-ran"\nexit 1\n' "$scratch_root" > "$clone/.git/hooks/pre-push"
+chmod +x "$clone/.git/hooks/pre-push"
+rm -f "$scratch_root/pre-push-ran"
+: > "$STUB_LOG"
+run beat --force
+assert_eq "ref published by push" 1 "$([[ -n $(ref_sha refs/codeo/live/104/codeo-104) ]] && echo 1 || echo 0)"
+assert_eq "no REST fallback" "" "$(cat "$STUB_LOG")"
+run clear
+assert_eq "ref cleared by push" "" "$(refs)"
+assert_eq "hook never ran" no "$([[ -e $scratch_root/pre-push-ran ]] && echo yes || echo no)"
 
 # --- clear -------------------------------------------------------------------------------------
 
