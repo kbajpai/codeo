@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Tasks 1-8 are built and reviewed (commits ce0b13d..63e6a50); `origin/main` (with #98) is merged in. Q1 and Q2 are answered; Q3 (#70's glob pairing with `tests/close-skill.test.sh`) is open, so Tasks 9-10 wait. The task ledger is in `.superpowers/sdd/` (git-ignored).
+Round 1. Tasks 1-8 are built and reviewed (commits ce0b13d..63e6a50); `origin/main` (with #98) is merged in. Q1-Q3 are answered (proceed and coordinate with #70); building Tasks 9-10. The task ledger is in `.superpowers/sdd/` (git-ignored).
 
 ## Questions
 
@@ -34,6 +34,7 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 **Options:** proceed and coordinate · sequence after #70 · re-scope. **Recommendation:** proceed and coordinate, as Q1 and Q2.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
