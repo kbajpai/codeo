@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 done: Tasks 1-10 of `docs/plans/2026-11-15-dev-container-follow-ups-96.md` are built and committed, the build passes, and the next step is `/codeo:qc`. Task 11's step 3 (the v1.0.6 Release edit) is the engineer's, and its step 2 (filing the login-persistence issue) is still to do.
+Round 2 done (send-back from `qc.md` round 1): F1 and F2 are fixed and committed, the build passes, and the next step is `/codeo:qc`, which re-runs the whole pass. The engineer's `gh release edit` (QC F9) is still pending.
 
 ## Questions
 
@@ -50,6 +50,26 @@ Each task ran as an implementer and a task review on the subagent model (sonnet)
 
 **Left for the engineer:** run `gh release edit v1.0.6 --notes-file .codeo/96/release-v1.0.6-notes.md` (proof: `gh release view v1.0.6 --json body -q .body` has no `What's Changed` or `Full Changelog` line), and file the login-persistence issue with `/codeo:issue`. #54's "`my project` / `_x` starts" criterion is not met, by plan Q1.
 
+
+### Round 2 — 2026-11-15
+(send-back from qc.md round 1)
+
+Both blocking findings held against the code (F1 by a mutation run, F2 by reading step 2) and are fixed; F3-F9 are non-blocking and were not part of this round (F9 is still the engineer's `gh release edit`).
+
+- **F1 — fixed** (`51a4388`). The test harness's stub `stat` now passes the stamp query (`%s %y`) through to the real `stat` and still prints the uid for the ownership query. New case `start_waits_for_a_host_gitconfig_that_is_still_growing` appends to the host file in place in steps shorter than the 0.2 s settle interval with the email line last, and fails (email taken from `GIT_AUTHOR_EMAIL`) when `&& $now == "$stamp"` is removed from the wait loop; three unmutated runs passed.
+- **F2 — fixed** (`962d97e`). When `git rev-parse --show-toplevel` fails, step 2 falls back to `cd "$clone"`, so the later steps run from the clone folder and never from the caller's directory; that is one TODO of its own containing `top level`, and `could not enter the clone` is now only for a failed `cd "$clone"`. The case `start_without_a_git_top_level_is_one_todo` runs from a decoy directory holding marker `plugins.sh` / `window-title.sh` scripts and an empty `.codeo/active`, and fails on the pre-fix script. The CHANGELOG #96 bullet's clause now reads "a git top level it cannot find is one TODO of its own and the remaining steps run from the clone folder, not the caller's directory".
+
+**Ruling.** F2 could have been fixed by skipping the clone-relative steps; I chose the `cd "$clone"` fallback because the identity, `gh`, Claude-settings and `claude` steps do not need the clone and keep reporting their own TODOs. Cost if wrong: a clone folder that is not a git repository runs the remaining steps against a folder with no repository (they already fail soft with TODOs, and the test pins that nothing is touched outside it).
+
+**Documentation pages changed:** none; `CHANGELOG.md` has the one clause above.
+
+**Build:** the `shell` suite's build is `true`: exit 0. The implementer ran `bash tests/run.sh` (`all cases passed`) before its last commit; that is QC's to grade. `sync-main.sh`: `the branch already contains origin/main`; `overlap.sh 96`: nothing.
+
+**Deviations:** one implementer did both fixes as two commits and one reviewer checked the range, instead of a review per fix.
+
+**Deferred minors:** the hard-coded entry count `6` in the decoy test is brittle; the test run prints a stray `Terminated` line from the interrupt case (QC F-list, not blocking).
+
 ## Log
 
 - 2026-11-15 — round 1: Tasks 1-10 built and reviewed, final review and one fix wave; VS Code finding commented on #96 · cost: 137m · sonnet-5-5 1M in + 40.9M cached / 193k out
+- 2026-11-15 — round 2: F1 and F2 fixed (send-back from qc.md round 1) · cost: 24m · sonnet-5-5 140k in + 5.9M cached / 28k out
