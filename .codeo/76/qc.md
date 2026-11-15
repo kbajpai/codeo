@@ -29,6 +29,7 @@ A (answered in the conversation): keep "exactly one Bash call"; both skills stay
 **Options:** proceed and coordinate · sequence after #57 · re-scope (not available: criterion 4 requires the entry).
 
 **Answer:**
+proceed and coordinate (answered in the conversation).
 
 ## Notes
 
