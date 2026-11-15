@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 done (send-back from `qc.md` round 1): F1 and F2 are fixed and committed, the build passes, and the next step is `/codeo:qc`, which re-runs the whole pass. The engineer's `gh release edit` (QC F9) is still pending.
+Round 3 done (send-back from `close.md` round 1): `main` merged and the `CHANGELOG.md` conflict resolved. The build passes. Next step is `/codeo:qc`, which runs again on the merged tree.
 
 ## Questions
 
@@ -69,7 +69,19 @@ Both blocking findings held against the code (F1 by a mutation run, F2 by readin
 
 **Deferred minors:** the hard-coded entry count `6` in the decoy test is brittle; the test run prints a stray `Terminated` line from the interrupt case (QC F-list, not blocking).
 
+### Round 3 — 2026-11-15
+
+(send-back from close.md round 1)
+
+`sync-main.sh` merged `origin/main` (`153e82f`, #105) and conflicted in `CHANGELOG.md` only (exit 2); `lib/env.sh` auto-merged. Resolution: both sides are separate bullets, so both stay, main's `qc-verdict`/`board.sh` bullet first and this branch's #96 bullet after it, each unchanged. Merge commit `b787a48`. `lib/env.sh` still carries the `plugin{repo,ref}` comment line.
+
+Also changed on main: scripts/board.sh, scripts/overlap.sh, scripts/qc-verdict.sh, skills/{close,plan,qc,triage}/SKILL.md, the matching tests, docs/dossier.md, docs/handoff.md, CHANGELOG.md and lib/env.sh. None overlaps this branch's files except `CHANGELOG.md` and `lib/env.sh`.
+
+Build: `true`, exit 0 (the suite has no build). No overlap lines.
+
+
 ## Log
 
 - 2026-11-15 — round 1: Tasks 1-10 built and reviewed, final review and one fix wave; VS Code finding commented on #96 · cost: 137m · sonnet-5-5 1M in + 40.9M cached / 193k out
 - 2026-11-15 — round 2: F1 and F2 fixed (send-back from qc.md round 1) · cost: 24m · sonnet-5-5 140k in + 5.9M cached / 28k out
+- 2026-11-15 — round 3: merged main (#105) and resolved CHANGELOG.md (send-back from close.md round 1) · cost: 0m · sonnet-5-5 14k in + 881k cached / 2k out
