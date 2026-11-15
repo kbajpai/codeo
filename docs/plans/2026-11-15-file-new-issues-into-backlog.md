@@ -164,3 +164,99 @@ flowchart TD
 - **Acceptance criteria:** 1 and 2 → Task 1 (the move) and Task 3 (`board.sh` behaviour pinned); AC 1 and 2 against a live board can only be seen by `/codeo:qc` running `/codeo:issue` and `/codeo:triage` once, so they are `untestable` in the shell suite and QC should say so. 3 → Task 1 (no-board sentence, existing no-board cases untouched). 4 → Task 1 (`issue-08`). 5 → Task 2. 6 → Tasks 1-2 (wording tests for the new step and the unchanged no-board path).
 - **Names:** the strings in each test are the strings in the text it pins, copied from this plan.
 
+
+---
+
+## Round 2 — after QC round 1
+
+**Why this round exists.** QC round 1 found acceptance criterion 5 not reliably met (F1) and four
+non-blocking wording gaps (F2-F5); `.codeo/71/qc.md` has the evidence. Tasks 7-9 fix them. The rule
+Task 1 calls `issue-08` is `issue-09` on the branch, because #70 took `issue-08` when it merged;
+nothing in this round renumbers anything.
+
+**The decision (F1).** A filed issue that was never started is found by two of triage's sources:
+the `<N>/` dossier on `codeo/intake` and the open-issues list. It gets **one fingerprint,
+`issue:<N>`, whichever source finds it**, and it is one item, not two. `intake:<dir>` is kept for a
+`new-<slug>/` draft, which has no issue number yet.
+
+| Option | Trade-off | |
+|---|---|---|
+| One fingerprint, `issue:<N>` | Matches every row already in this project's ledger (`issue:36` … `issue:70`; it has no `intake:<N>` row), so no decided issue comes back. One sentence in two places. | **chosen** |
+| Record two rows, `intake:<N>` and `issue:<N>` | Two rows per decision that must never disagree; every existing `issue:<N>` row would lack its twin, so each decided issue would be asked about once more. | rejected |
+| Drop the intake `<N>/` source | Loses nothing today (the open-issues list finds the same issues), but removes a source another project may rely on when its issue list is unavailable. | rejected |
+
+```mermaid
+flowchart LR
+    A["codeo/intake: N/ dossier, issue open, no branch or PR"] --> C["one item, fingerprint issue:N"]
+    B["open issues with no branch or PR"] --> C
+    C --> D{"issue:N row in the ledger?"}
+    D -- "ready / leave in the backlog" --> E[not asked again]
+    D -- none --> F[asked once]
+    G["codeo/intake: new-slug/ draft"] --> H["fingerprint intake:new-slug"]
+```
+
+**Constraints for this round.**
+- Skill text, its wording tests and one docs sentence; no script changes. Suite `shell`; each task's proof is its own test file, and `bash tests/run.sh` at the end.
+- No rule text in `docs/skills-inventory.md` changes, so the pinned hash stays as it is. Task 7 checks that.
+- Documentation moved: `docs/skills.md` (the `issue` section's opening sentence, Task 9). `docs/handoff.md` and `CHANGELOG.md` already say what the code does after this round ("asks once"); no diagram on a page changes.
+- The quoted sentences are the strings the tests grep for; write them verbatim.
+
+### Task 7: One fingerprint for a filed, never-started issue (F1)
+
+**Files:** Modify: `skills/triage/SKILL.md`; Test: `tests/triage-skill.test.sh`
+
+- [ ] **Step 1: Write the failing cases** in `tests/triage-skill.test.sh` (`must_contain`):
+  `"one fingerprint whichever source finds it"` ← ``has one fingerprint, `issue:<N>`, whichever source finds it``;
+  `"intake fingerprints are for drafts"` ← ``is only for a `new-<slug>/` draft``;
+  `"the intake dossier is not a second item"` ← `the same item the next bullet finds`;
+  `"a backlog decision is dropped at step 2"` ← `left-in-the-backlog items are not shown again`.
+- [ ] **Step 2: Run:** `bash tests/triage-skill.test.sh` — Expected: four new `FAIL:` lines, exit 1.
+- [ ] **Step 3: Edit `skills/triage/SKILL.md`:**
+  1. After the fingerprint list under `<!-- rule: triage-02 -->` (the paragraph ending ``…`todo:<path>:<slug of the comment>`.``), add: "A filed issue that was never started has one fingerprint, `issue:<N>`, whichever source finds it; `intake:<dir>` is only for a `new-<slug>/` draft."
+  2. Step 1.2, the bullet beginning ``On `codeo/intake`:``: replace "an `<N>/` whose issue is open with no branch or PR is filed and never started." with "an `<N>/` whose issue is open with no branch or PR is filed and never started: the same item the next bullet finds, under the same fingerprint `issue:<N>`, never a second one."
+  3. Step 2: replace "Filed, dismissed and already-tracked items are not shown again." with "Filed, dismissed, already-tracked and left-in-the-backlog items are not shown again."
+- [ ] **Step 4: Run the proof.**
+  Run: `bash tests/triage-skill.test.sh && bash tests/skills.test.sh triage && bash tests/inventory.test.sh`
+  Expected: `all cases passed` three times (the inventory's rule texts are untouched, so the hash still matches).
+- [ ] **Step 5: Commit** both files: `fix: one ledger fingerprint for a filed, never-started issue (#71)`.
+
+### Task 8: Triage's *leave in the backlog* wording (F3, F4)
+
+**Files:** Modify: `skills/triage/SKILL.md`; Test: `tests/triage-skill.test.sh`
+
+- [ ] **Step 1: Write the failing cases** (`must_contain`):
+  `"leave in the backlog records, and moves only when needed"` ← `records the decision, and moves the card only for an issue that is not there yet`;
+  `"no move quotes the status line"` ← ``the `status` line when no move was made``;
+  `"the question says when the card moves"` ← `the card moves to Backlog when it is not already there`.
+- [ ] **Step 2: Run:** `bash tests/triage-skill.test.sh` — Expected: three new `FAIL:` lines.
+- [ ] **Step 3: Edit `skills/triage/SKILL.md`:**
+  1. In the paragraph beginning `**It is what makes an issue startable.**`, replace "this skill's *leave in the backlog* is for an issue that is not there yet." with "this skill's *leave in the backlog* records the decision, and moves the card only for an issue that is not there yet."
+  2. Step 4, the option for a filed issue never started: replace "(the card moves to Backlog, run at step 5)" with "(the card moves to Backlog when it is not already there, run at step 5)". This is the text before `<!-- rule: triage-05 -->`, not the rule's entry in the inventory.
+  3. Step 5, **Leave in the backlog**: replace the sentence beginning "Record it, quoting the script's output line" (up to "it does not come back.") with: "Record it, quoting in the run's `## Outcome` the line the script printed — the `status` line when no move was made, else the `set` line — and note in the `## Log` line the backlog move, its failure and the reason, or `already in Backlog`; it does not come back." Keep the failure sentence that follows.
+- [ ] **Step 4: Run the proof.**
+  Run: `bash tests/triage-skill.test.sh && bash tests/skills.test.sh triage`
+  Expected: `all cases passed` twice. All seven round-1 cases still pass (their strings are untouched).
+- [ ] **Step 5: Commit** both files.
+
+### Task 9: `/codeo:issue` scope sentences and the success line (F2, F5); whole suite
+
+**Files:** Modify: `skills/issue/SKILL.md`, `docs/skills.md`; Test: `tests/issue-skill.test.sh`
+
+- [ ] **Step 1: Write the failing cases** in `tests/issue-skill.test.sh`:
+  `must_contain "the scope sentence names the board write"` ← `and, with a board, puts it in the board's Backlog, and that is all it does`;
+  `must_contain "the success line is reported"` ← `Quote that line in the report.`;
+  `doc_has "skills.md's scope sentence names the board write" docs/skills.md` ← `puts it in the board's Backlog when the project has a board, and does nothing else`.
+- [ ] **Step 2: Run:** `bash tests/issue-skill.test.sh` — Expected: three new `FAIL:` lines.
+- [ ] **Step 3: Edit.**
+  1. `skills/issue/SKILL.md`, the opening paragraph: "This skill drafts and files a GitHub issue in this project's repository, and that is all it does." becomes "This skill drafts and files a GitHub issue in this project's repository and, with a board, puts it in the board's Backlog, and that is all it does."
+  2. `skills/issue/SKILL.md` step 8: after "and prints one line naming the old and the new Status." add "Quote that line in the report."
+  3. `docs/skills.md`, `## issue`: "The skill drafts and files the issue and does nothing else." becomes "The skill drafts and files the issue, puts it in the board's Backlog when the project has a board, and does nothing else."
+- [ ] **Step 4: Run the proof.**
+  Run: `bash tests/issue-skill.test.sh && bash tests/skills.test.sh issue && bash tests/skills-doc.test.sh && bash tests/run.sh`
+  Expected: `all cases passed` from each, and the suite exits 0.
+- [ ] **Step 5: Commit** the three files.
+
+## Self-review (round 2)
+
+- **F1 → Task 7** (criterion 5: decided once, not shown again). **F3, F4 → Task 8. F2, F5 → Task 9.** F6 (the tests are wording checks) needs no change: it is this repository's form, and Task 7 adds the sentence a test now pins.
+- **Not changed:** `scripts/`, the inventory's rule texts and hash, `docs/handoff.md`, `CHANGELOG.md`.
