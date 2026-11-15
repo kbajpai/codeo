@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 is written: the build and the suite pass, round 2's blocking findings are fixed, and the review found two more claims stronger than their evidence (F24 a sandbox name "cannot be reused", F25 U8 marked tried for git wiring that was not run) plus seven smaller ones. The change goes back to `/codeo:implement`.
+Round 4 is written: the build and the suite pass on the tree merged with `origin/main`, round 3's blocking findings F24 and F25 are fixed, all six criteria are met, and the review found no Critical issue, two Important and six Minor, all non-blocking. The verdict is clear: next is `/codeo:close`.
 
 ## Questions
 
@@ -154,8 +154,49 @@ Declined by the reviewer, left to the engineer: the accuracy of the cited Docker
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 4 — 2026-11-15
+
+**Commands run** (project root, on `2d66445`, the round-4 implement commit `e1a3cdc` plus the merge of `origin/main`):
+- `sync-main.sh --abort-on-conflict`: `merged origin/main (2 commit(s))` (`8842abc` #89, `f9bfa76` #90), then exit 1 with `comm: file 2 is not in sorted order` (F23, carried: the script, not this change); the `also changed on main:` list was not printed. `git diff --name-only e1a3cdc HEAD` shows what main brought: `.codeo/done/83/*`, `.codeo/done/87/*`, `.devcontainer/README.md`, `.devcontainer/scripts/devcontainer-start.sh`, `CHANGELOG.md`, two plans under `docs/plans/`, `skills/doctor/SKILL.md`, `skills/setup/SKILL.md`, `tests/closing-block.test.sh`, `tests/devcontainer.test.sh`. None is a file this branch changed; the page's account of `devcontainer-start.sh` (step numbering, lock step 3a) is unaffected by main's `.codeo/active` change (it adds a TODO for a file naming no issue).
+- `overlap.sh 73` and `overlap.sh --outside 73`: no output.
+- `git diff origin/main...HEAD --stat`: 7 files, 1201 insertions: `.codeo/73/{implement,init,issue,plan,qc}.md`, `docs/dev-environment-sbx-evaluation.md`, `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md`.
+- `scope.sh origin/main HEAD`: `suite shell needed for unclassified paths:` the five `.codeo/73/*.md` files, then `suite.shell=true`; no `deploy=` line (no environment).
+- Build (`shell`: `true`): no build command, nothing to run. `bash tests/run.sh` on the merged tree: `all cases passed`, exit 0.
+- `overlay.sh qc invariants-extra` and `wiki-rules`: exit 3 (none). `git diff --stat origin/main...HEAD -- .devcontainer skills`: empty.
+- Page checks: 28 rows (D1-D10, U1-U18), 21 `tried` and 7 `cited`, each row 7 fields wide, no blank Evidence cell; one `**Recommendation:** hybrid` line; none of `cannot be reused`, `no git identity`, `There is no window title`, an email address or a token on the page. #85 and #86 are `OPEN`; #85 says "no `user.name` was set (`user.email` was not checked)" and lists the push check as requirement and criterion; #86 says no window title was set and setting one was not tried, and lists session titles; #73's last comment says "21 tried, 7 cited", defines "partly" as the page does, and links #85 and #86.
+- Independent review (opus, `QC review:`, given the criteria, the range `f9bfa76..2d66445` and the issue numbers, not the dossiers): "With fixes", no Critical findings, two Important, six Minor.
+
+**Round 3's blocking findings, rechecked.** F24 (blocking in round 3) — fixed: D3 and the Recommendation say a name is unique among existing sandboxes (T9) and usable again after `sbx rm` (T8). F25 (blocking in round 3) — fixed: U8 reads "Equivalent for the login (tried), not shown for the git wiring" and names what was not run; #85 carries the push check. F26-F31 (non-blocking in round 3) — fixed as the page, #85 and #86 now read.
+
+**Acceptance criteria**
+
+| # | Criterion | Settled by | Verdict |
+|---|---|---|---|
+| 1 | A written comparison exists, covering every driver and requirement, each point marked tried or cited | `docs/dev-environment-sbx-evaluation.md`: D1-D10, U1-U18, 21 `tried`, 7 `cited`, no blank Evidence cell | met |
+| 2 | Every duty has an equivalent, a workaround or "no equivalent" | U1-U18 each carry a verdict | met |
+| 3 | States whether sbx runs on Windows + WSL2, with evidence | `## Host`: `yes, partly`, defined, with T1-T3 output; the #73 comment agrees | met |
+| 4 | One recommendation and its rationale | one `**Recommendation:** hybrid` line with "Why not stay" and "Why not migrate everything" | met |
+| 5 | Follow-up issues filed and linked | #85 and #86 open; linked on the page and in a comment on #73 | met |
+| 6 | `.devcontainer/` and the skills unchanged | `git diff --stat origin/main...HEAD -- .devcontainer skills` empty | met |
+
+**Documentation check.** The only page is the new one; no existing page describes behaviour this change alters, and main's new `.codeo/active` rule in the README and start script does not touch a row. The reviewer found the page's account of `.devcontainer/` accurate.
+
+**Findings** (none blocks the merge)
+
+- **F32 — non-blocking, `/codeo:implement`'s.** The page (T10 Result, line ~371, and the Fragility bullet) says the kit digest differed and "whether the base image changed was not checked", while #86's body states the `docker.io/sbx/claude:latest` image changed digest between two creates (T10). The recorded output has an `Image:` line with the same digest as the `Kit:` line (see F17), so #86 is supported, but the page quotes no `Image:` line, so a reader cannot check it. Quote the `Image:` lines on the page, or soften #86.
+- **F33 — non-blocking.** D1 and "Why not stay" cite "credentials stay outside the VM" as Docker's design (`cited`), while T6 shows `gh` inside the sandbox logged in via `GH_TOKEN`, and whether that is the real token or a placeholder was not tested. The label is honest; a sentence naming the tension would stop a reader weighing it as isolation gained.
+- **F34 — non-blocking.** The Recommendation's naming sentence says "there is no volume or folder-naming rule" twice and ends "to work around" after saying names must be checked by a start script. Reword.
+- **F35 — non-blocking.** The follow-up list maps #85 without U6 and U8 and #86 without U14, though the issue bodies cover them. #86 says "trials T5 to T12" in one place and "T8 to T12" in another.
+- **F36 — non-blocking.** D3's "1m47s (image pull)" infers the pull from T8's "(cached)"; U4's "the bit the index records survives" is checked for `tests/run.sh` only; line 49 says the Linux route "was not tried" twice; the Trials introduction still carries planning instructions ("Paste every output…").
+- **F12 (carried) — non-blocking, `/codeo:plan`'s.** `.codeo/73/plan.md`'s `### Footprint` lacks `sequenced:`. **F23 (carried) — non-blocking, outside this diff:** `sync-main.sh` exits 1 after a clean merge when main has moved.
+
+Declined by the reviewer, left to the engineer: whether hybrid is the best choice, the accuracy of the cited Docker pages (not fetched), and the plan and dossier files as records. The engineer may file F32-F36 through `/codeo:triage`; no issue was filed in this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
+- 2026-11-15 — round 4: build and suite pass, 6 of 6 criteria met, no blocking findings, clear · cost: 3m · opus-5-5 197k in + 1.7M cached / 12k out · sonnet-5-5 119k in + 740k cached / 2k out
 - 2026-11-15 — round 3: build and suite pass, 5 of 6 criteria met, 2 blocking findings, back to implement · cost: 4m · opus-5-5 482k in + 1.8M cached / 16k out · sonnet-5-5 29k in + 2.1M cached / 3k out
 - 2026-11-15 — round 2: build and suite pass, 4 of 6 criteria met, 3 blocking findings, back to implement · cost: 4m · opus-5-5 428k in + 2.9M cached / 15k out · sonnet-5-5 337k in + 1.8M cached / 4k out
 - 2026-11-15 — round 1: build and suite pass, 5 of 6 criteria met, 3 blocking findings, back to implement · cost: 4m · opus-5-5 347k in + 3.9M cached / 17k out · sonnet-5-5 270k in + 1.5M cached / 3k out
