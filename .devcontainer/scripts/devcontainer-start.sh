@@ -5,7 +5,7 @@
 # (the GitHub and Claude logins, a git identity (filled from the host ~/.gitconfig or GIT_AUTHOR_* when the volume lacks it), credentials that block Remote Control). Safe to re-run: each step checks before it acts.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
 # The home container (on the base branch) takes no workflow lock; an issue container takes it with codeo's lock.sh from the init.md
-# on its branch, and its clone folder is checked against the lock.
+# on its branch, and its clone folder is checked against the lock. A .codeo/active that names no issue is reported and left alone.
 #
 #   bash .devcontainer/scripts/devcontainer-start.sh
 set -euo pipefail
@@ -145,7 +145,8 @@ bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fi
 # names this branch. The home container is on the base branch (.codeo/config.json's baseBranch, else
 # main) and takes none; a container that already holds the lock (a re-run) takes none again; a
 # detached HEAD names no branch, so it is a TODO. A zero-byte .codeo/active holds no lock: it is removed
-# first (and said so), then the step runs as for a clone with no lock; a file with content is left alone.
+# first (and said so), then the step runs as for a clone with no lock. A file with content that has no line of the form `issue:`, then spaces, tabs or `#`, then digits
+# (the rule container-name.sh reads the number with) is a TODO on any branch: it is left as it is and takes no lock. A file that does name an issue is a held lock and is left alone.
 # When lock.sh exits 0 its output is printed unchanged, except that its `lock: TODO — …` lines become
 # TODOs; when it exits non-zero its output is not printed, the one failure TODO carries it. The plugin is pinned and not ours: the `|| rc=$?` guard is
 # for a crash or a changed interface after a pin bump, where a non-zero exit would otherwise end this
@@ -160,7 +161,9 @@ if [[ -f .codeo/active && ! -s .codeo/active ]]; then
         add_todo ".codeo/active is empty and could not be removed: remove it, then re-run this script"
     fi
 fi
-if [[ -s .codeo/active ]]; then
+if [[ -f .codeo/active && -s .codeo/active ]] && ! grep -Eq '^issue:[[:space:]]*#*[0-9]+' .codeo/active 2>/dev/null; then
+    add_todo ".codeo/active names no issue, so it holds no usable lock: look at it, remove it if it is not yours, then re-run this script"
+elif [[ -s .codeo/active ]]; then
     : # a lock means the checkout is already bound to an issue, whatever HEAD is
 elif [[ -z $branch ]]; then
     add_todo "HEAD is detached, so no branch names an issue: check out the issue's branch, then re-run this script"

@@ -14,6 +14,7 @@
 # Last it runs .devcontainer/scripts/devcontainer-start.sh in a scratch repo against stub gh, claude,
 # sudo and stat executables and a stub plugins.sh: it always exits 0, lists each login still to do in
 # order, says "ready" when nothing is left, and takes ownership of a clone owned by someone else.
+# The start-script cases also cover a .codeo/active that names no issue: it is reported once, left untouched, and takes no lock.
 # The devcontainer.json checks also cover the postStartCommand that re-runs window-title.sh (the
 # window title) on every start; the start script's login checks are the ones listed just above.
 # It also runs .devcontainer/scripts/session-title.sh against hook fixtures on stdin (home and lock titles,
@@ -533,6 +534,7 @@ start_empty_lock_file_on_the_base_branch_is_removed() {
 }
 
 start_nonempty_lock_file_is_left_alone() {
+    local n
     ds_setup locknonempty || return 0
     ds_lock_stub; ds_branch feat/x
     printf 'issue:   55\n' > "$ds_dir/codeo-home/.codeo/active"
@@ -541,6 +543,88 @@ start_nonempty_lock_file_is_left_alone() {
     [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called although a lock is held"
     [[ $(cat "$ds_dir/codeo-home/.codeo/active") == 'issue:   55' ]] || fail "the lock file was changed"
     ! grep -q 'was empty' <<<"$ds_out" || fail "a removal was reported: $ds_out"
+    n=$(ds_todos 'names no issue'); ((n == 0)) || fail "a held lock was reported: $ds_err"
+}
+
+# ds_no_issue <content>: write <content> (printf %b) to the scratch .codeo/active, keep a copy, and run.
+ds_no_issue() {
+    printf '%b' "$1" > "$ds_dir/codeo-home/.codeo/active"
+    cp "$ds_dir/codeo-home/.codeo/active" "$ds_dir/active-before"
+    ds_lock_ready
+}
+# ds_no_issue_reported: exit 0, exactly one TODO and it is the one for the file, no lock call, the file byte-identical.
+ds_no_issue_reported() {
+    local n
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos '\.codeo/active names no issue, so it holds no usable lock: look at it, remove it if it is not yours, then re-run this script$')
+    ((n == 1)) || fail "wanted one names-no-issue TODO, got $n: $ds_err"
+    n=$(ds_todos ''); ((n == 1)) || fail "wanted that TODO alone, got $n: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls")"
+    cmp -s "$ds_dir/codeo-home/.codeo/active" "$ds_dir/active-before" || fail "the file was changed"
+}
+
+start_newline_only_lock_file_is_a_todo() {
+    ds_setup noissuenl || return 0
+    ds_lock_stub; ds_branch feat/x
+    ds_no_issue '\n'
+    ds_no_issue_reported
+}
+
+start_lock_file_without_an_issue_line_is_a_todo() {
+    ds_setup noissuegarbage || return 0
+    ds_lock_stub; ds_branch feat/x
+    ds_no_issue 'garbage\n'
+    ds_no_issue_reported
+}
+
+start_no_issue_lock_file_on_the_base_branch_is_a_todo() {
+    local content
+    for content in '\n' 'garbage\n'; do
+        ds_setup "noissuebase${#content}" || return 0
+        ds_lock_stub
+        ds_no_issue "$content"
+        ds_no_issue_reported
+    done
+}
+
+start_issue_line_without_a_number_is_a_todo() {
+    ds_setup noissuenone || return 0
+    ds_lock_stub; ds_branch feat/x
+    ds_no_issue 'issue: none\nbranch:  feat/x\n'
+    ds_no_issue_reported
+}
+
+start_no_issue_lock_file_on_a_detached_head_is_one_todo() {
+    ds_setup noissuedetached || return 0
+    ds_lock_stub
+    git -C "$ds_dir/codeo-home" -c user.name=T -c user.email=t@example.com commit -q --allow-empty -m c || { fail 'commit failed'; return 0; }
+    git -C "$ds_dir/codeo-home" checkout -q --detach
+    ds_no_issue 'garbage\n'
+    ds_no_issue_reported
+}
+
+start_hash_issue_line_is_a_held_lock() {
+    ds_setup hashissue || return 0
+    ds_lock_stub; ds_branch feat/x
+    printf 'issue: #55\nbranch:  feat/x\n' > "$ds_dir/codeo-home/.codeo/active"
+    cp "$ds_dir/codeo-home/.codeo/active" "$ds_dir/active-before"
+    mv "$ds_dir/codeo-home" "$ds_dir/codeo-55"
+    DS_REPO="$ds_dir/codeo-55" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ -z $ds_err ]] || fail "stderr is not empty: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called although a lock is held"
+    cmp -s "$ds_dir/codeo-55/.codeo/active" "$ds_dir/active-before" || fail "the file was changed"
+}
+
+start_lock_directory_is_not_reported() {
+    local n
+    ds_setup lockdir || return 0
+    ds_lock_stub; ds_branch feat/x
+    mkdir "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos 'names no issue'); ((n == 0)) || fail "a directory was reported: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called"
 }
 
 start_detached_head_is_a_todo() {
@@ -1878,6 +1962,13 @@ cases=(
     start_empty_lock_file_is_removed_and_the_lock_taken
     start_empty_lock_file_on_the_base_branch_is_removed
     start_nonempty_lock_file_is_left_alone
+    start_newline_only_lock_file_is_a_todo
+    start_lock_file_without_an_issue_line_is_a_todo
+    start_no_issue_lock_file_on_the_base_branch_is_a_todo
+    start_issue_line_without_a_number_is_a_todo
+    start_no_issue_lock_file_on_a_detached_head_is_one_todo
+    start_hash_issue_line_is_a_held_lock
+    start_lock_directory_is_not_reported
     start_detached_head_is_a_todo
     start_lock_todo_lines_become_todos
     start_lock_crash_is_a_todo
