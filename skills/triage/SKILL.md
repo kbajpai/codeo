@@ -23,7 +23,9 @@ command to run, never run.
 **It is what makes an issue startable.** `/codeo:init` starts only an issue whose Status on
 the project board is **Ready** (when a board is configured), and this skill is where the engineer
 says an issue is: *mark Ready* runs `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`. Its other card move is
-*leave in the backlog* (`set <N> backlog`). Those card moves are the only changes it makes outside
+*leave in the backlog* (`set <N> backlog`).
+`/codeo:issue` writes the Backlog Status when it files a new issue, so a new issue is already in the Backlog when it reaches this skill; this skill's *leave in the backlog* is for an issue that is not there yet.
+Those card moves are the only changes it makes outside
 its ledger, each only while acting on the engineer's answer. When the project has no board
 (`board.sh` exits 3 and prints `board: not configured`), there is nothing to mark: say once, at the
 start of the run, that the board is not configured and that Ready marking and the backlog move are
@@ -133,6 +135,7 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
         without that classification — as an ordinary item to ask about, since there is no board
         Status to tell it apart from one still undecided — and note in the run's `## Outcome` that
         board-status enrichment was unavailable, the same way source 1.3 reports itself skipped.
+        Being in the Backlog is not a decision: an issue there with no `issue:<N>` ledger row is asked about like any other, once.
    3. **Unresolved review threads on merged PRs** — merged since the ledger's last run, or the last
       twenty on a first run.
       This one has no REST form: the session's proxy refuses GraphQL outside a pinned set of PR
@@ -216,7 +219,7 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
    - **File it** → call `/codeo:issue` with the item and its evidence. It is a call, not a
      hand-off: `/codeo:issue` asks the engineer its own questions and returns a number. One at
      a time, in the order the engineer ranked them. Then ask, as a follow-up question, whether the
-     new issue is ready to work on (with a board); yes is a *mark Ready*.
+     new issue is ready to work on (with a board); yes is a *mark Ready*; a no is a *leave in the backlog*, recorded as `issue:<N>` → `backlog`, so it is not asked about again.
    - **Mark Ready** → `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`, which adds the
      issue to the board if it is not on it. Record `ready` and quote the line the script prints (it reports the old status, the new option and the project) in
      the run's `## Outcome`.
@@ -227,7 +230,8 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
    - **Dismiss** → record the reason in the engineer's words.
    - **Defer** → record it; it comes back next run.
    - **Leave in the backlog** → with no board configured, only record it in the ledger (no
-     `board.sh` call). With a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog`.
+     `board.sh` call). With a board, read `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>` first:
+     when it prints the Backlog status (the option `board.statuses.backlog` names, else `Backlog`), record the decision and make no `board.sh set` call; otherwise run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog` as before.
      Record it, quoting the script's output line in the run's `## Outcome`, and note the backlog move (or its failure and the reason) in the
      `## Log` line; it does not come back. A
      script failure is reported, and the decision is still recorded — the issue is on the tracker
@@ -258,7 +262,7 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
 - **Writes** `.codeo/intake/triage/` — the ledger and the run files — committed to
   `codeo/intake` through `intake.sh`, never to the checked-out branch; and an issue's board
   Status, to **Ready** or **Backlog** only, only through `board.sh`, only on the engineer's *mark
-  Ready*, *resume* or *leave in the backlog*.
+  Ready*, *resume* or *leave in the backlog*, and a Backlog move only when the card is not already in the Backlog.
 - **Never touches** the issues themselves, any other board Status, any branch, the lock, the
   project's docs or wiki, code, or any other skill's dossier — including the archived ones it reads.
 - **Calls** `/codeo:issue` for every item the engineer chooses to file, and records the number
