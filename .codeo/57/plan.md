@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q5 are answered (the engineer accepted every recommendation in the conversation, and the answers are recorded under each). The plan was approved and is written, unstaged, to `docs/plans/2026-11-14-dev-container-follow-ups.md`. The footprint is under `## Notes`. `overlap.sh 57` then printed `76 glob:CHANGELOG.md`, which Q5 did not quote verbatim, so Q6 restates it; `## Outcome` stays pending until Q6 is answered.
+Round 1. Q1-Q5 are answered (the engineer accepted every recommendation in the conversation, and the answers are recorded under each). The plan was approved and is written, unstaged, to `docs/plans/2026-11-14-dev-container-follow-ups.md`. The footprint is under `## Notes`. Q6 restated the overlap with #76 in the form `overlap.sh` reads and is answered; `overlap.sh 57` prints nothing. `## Outcome` is written and the next step is `/codeo:implement`.
 
 Two things the drafting turned up, both reflected in the draft:
 - **F2 does not reproduce as `qc.md` states it.** On a project whose base is `develop`, the home clone in the folder `codeo-home` already gets no TODO today. The real defects are the ones next to it: the folder `codeo-12` on the home clone is silent, and a wrong folder gets the issue-or-home wording and not the home wording. Task 1 fixes those and still pins the criterion's case.
@@ -102,6 +102,7 @@ The other workflow is #76, branch `feat/trial-doctor-setup-haiku-5`, assignee kb
 **Options:** *proceed and coordinate* (recommended) · *sequence after #76* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
@@ -116,19 +117,38 @@ Where each finding lives:
 - F5: `.devcontainer/scripts/container-name.sh:2-7`; F7: `.devcontainer/README.md:25`.
 - Minors: `.devcontainer/scripts/window-title.sh:22`; `.devcontainer/scripts/devcontainer-start.sh:162-169`; `tests/init-overlay.test.sh:18`.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-14-dev-container-follow-ups.md` (approved, unstaged), five tasks, each proved by `bash tests/run.sh`.
+
+**Shape:** an executable plan under `docs/plans/`; no reference doc, because nothing here is a standing decision beyond what `.devcontainer/README.md` already holds.
+
+**Decisions** (Q1-Q6 answered by accepting each recommendation):
+- Q1, F4: document the shared-folder-name limit and its fix; `runArgs` does not change, so no container is rebuilt. Rejected: putting `-${devcontainerId}` back on the name, which undoes #55's short `docker ps` name.
+- Q2, F6: a zero-byte `.codeo/active` is removed with a printed line and the script carries on as for a clone with no lock. Rejected: a TODO only. A file with content that names no issue is left as it is.
+- Q3, F3: `codeo-root.sh` takes the first `codeo@codeo` entry whose `projectPath` is this clone, else the first with no `projectPath`, and never another project's. Rejected: user scope first.
+- Q4: the `## v1.0.4` bullet for #55 is edited in place and `## Unreleased` says so. Rejected: leaving the released section as is.
+- Q5, Q6: proceed and coordinate with #76 on `CHANGELOG.md`; the second branch to merge keeps both bullets. Rejected: sequencing after #76, re-scoping.
+- F2, F5, F7 and all five deferred minors were settled without a question: all fixed, none dismissed.
+
+**Two findings from planning:** F2 does not reproduce as `qc.md` states it (the home clone in `codeo-home` on a non-`main` base gets no TODO today; the real defects are `codeo-12` being silent there and the wrong-folder text), and no CHANGELOG sentence repeats the F5 claim (it is only in the `container-name.sh` header), so Task 5's CHANGELOG edit clarifies what the v1.0.4 bullet says `container-name.sh` does.
+
+**Intake questions resolved here:** the issue's choice for F4 (run side by side, or document why not) is resolved by Q1: document.
+
+**Documentation the plan changes:** `.devcontainer/README.md` (Task 5). No page under `docs/` moves.
+
+**Issues filed:** none.
+
 ### Footprint
 
 ```
 files:      .devcontainer/scripts/folder-check.sh, .devcontainer/scripts/codeo-root.sh, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/container-name.sh, .devcontainer/README.md, tests/folder-check.test.sh, tests/codeo-root.test.sh, tests/devcontainer.test.sh, tests/init-overlay.test.sh, CHANGELOG.md, docs/plans/2026-11-14-dev-container-follow-ups.md
 wiki:       none
 exclusive:  none
-sequenced:  none — CHANGELOG.md overlaps #76; proceed and coordinate (Q5)
+sequenced:  none — CHANGELOG.md overlaps #76; proceed and coordinate (Q5, Q6)
 ```
-
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 
 - 2026-11-14 — Q1-Q5 raised · cost: 2m · fable-5-2 108k in + 517k cached / 7k out
+- 2026-11-15 — planned: docs/plans/2026-11-14-dev-container-follow-ups.md · cost: 61m · fable-5-2 118k in + 930k cached / 13k out · sonnet-5-5 154k in + 1.8M cached / 24k out
