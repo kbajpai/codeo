@@ -658,14 +658,19 @@ Work that never merged is kept unless someone says otherwise. Then the lock is d
 stash does; a deletion that failed keeps it, as close-10 does on the merge path, and running
 `/codeo:close` again finishes the abandon.
 
-Once the lock is gone the checkout holds nothing the branch lacks: say what is left of it as step 17
-does, by the lock's host, read before the lock goes.
+Once the lock is gone, say what is left of the checkout as step 17 does, by the lock's host, read
+before the lock goes. With the branch kept, the checkout holds nothing the branch lacks. When the
+engineer had the branch deleted,
+the local branch is the only copy of the work and its dossier: say so, and do not call the checkout
+safe to remove.
 End with the closing block that matches how the abandon ended.
 
 **Closing block — abandon finished:** `.codeo/active` is deleted. With a board the card is at
 `$BACKLOG` (or the board move failed: say so, the card is the engineer's to move by hand);
 with no board there is no card. The goal is the loose ends found; the first step is
-`/codeo:triage`, then the host's checkout clean-up as step 17 relays it. Name no command that
+`/codeo:triage`, then the host's checkout clean-up as step 17 relays it, unless the branch was
+deleted: the checkout is then
+the last copy, the engineer's to keep or to remove knowingly. Name no command that
 resumes or stashes this work: an abandoned workflow is not resumed.
 
 **Closing block — abandon interrupted:** `.codeo/active` is kept, because the branch deletion, the

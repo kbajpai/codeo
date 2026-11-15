@@ -199,6 +199,7 @@ step_contains "step 17 reports how the close ended" 17 'Report** how the close e
 must_contain "the abandon exit has a finished closing block" '**Closing block — abandon finished:**'
 must_contain "the abandon exit has an interrupted closing block" '**Closing block — abandon interrupted:**'
 must_contain "the abandon ends with the matching closing block" 'End with the closing block that matches how the abandon ended'
+must_contain "the abandon text says the local branch is the only copy once the remote was deleted" 'the local branch is the only copy of the work and its dossier'
 
 # Each point marker sits once, and the point it marks is fetched.
 for point in ci-publish-check host-workflow; do
