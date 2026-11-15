@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-All seven tasks are done and committed; nothing is open (Q1 and Q2 answered). The page `docs/dev-environment-sbx-evaluation.md` is complete: trials T1-T12 run on the engineer's host, 28 rows (22 `tried`, 6 `cited`), the recommendation `hybrid`, and follow-up issues #85 and #86 filed and linked. Still the engineer's: remove the three test sandboxes and clones (`sbx.exe rm codeo-lim codeo-a codeo-b`; `~/Source/codeo-sbx-a`, `-b`, `-lim`), and optionally undo the three Windows Git `safe.directory` lines and run `sbx.exe setup ssh remove`.
+Round 2 is done: qc round 1 sent the change back for three claims on the page that were stronger than their evidence (F1 KVM, F2 read-only mount, F3 image) and eight smaller ones; all are fixed in `docs/dev-environment-sbx-evaluation.md`, and nothing is open. Next is `/codeo:qc`, a full pass from step 0. Still the engineer's: the cleanup of the test sandboxes, clones and Windows Git entries, and optionally `ls -l /dev/kvm` in the Ubuntu-24.04 distribution.
 
 ## Questions
 
@@ -102,8 +102,25 @@ Plan: `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md`. Built from `main
 
 **Acceptance criteria, as built:** comparison written with every row marked (1); every duty has an equivalent, workaround or `no equivalent` (2); host verdict `yes, partly`, with the trial output (3); one recommendation with its rationale (4); follow-ups #85 and #86 filed and linked (5); `.devcontainer/` and `skills/` unchanged (6).
 
+### Round 2
+
+2026-11-15
+(send-back from qc.md round 1)
+
+`sync-main.sh` reported `the branch already contains origin/main` (the round-1 merge `0e408ef` stands); `overlap.sh 73` printed nothing. Each finding was checked against the page and the trial records before any edit: F1 (`lsmod` cannot show a built-in KVM; `CONFIG_KVM=y` on a WSL2 kernel), F2 (the T3 create output printed both `(ro)` and `(rw)` lines) and F3 (T10 shows only a differing kit digest, and T8's recreate printed `assembled kit image ready (cached)`) all held, and so did F4-F11. Edits are to `docs/dev-environment-sbx-evaluation.md` only.
+
+- **F1.** Every place that inferred "no KVM" or "no basis" from the empty `lsmod | grep kvm` now records it as a fact that is not evidence either way, and the Linux-in-WSL2 route as not tried; T1's command block gained `ls -l /dev/kvm`, recorded as added afterwards and not run, so whether the route is available on this host is not shown. The `yes, partly` Host verdict stands; it rests on the Windows route that was tried.
+- **F2.** T3's Result quotes the `Workspace: … (rw)` line next to the `/run/sandbox/source (ro)` line and says what the `(rw)` mapping is was not determined and no write from inside to the host folder was tried. D1 and U2 mark the read-only host folder `cited`; D1's Evidence is `tried T6, 2026-11-15 (token scopes); cited <URL> (read 2026-11-14)`. The Recommendation no longer asserts filesystem isolation as tried.
+- **F3.** The Recommendation's Fragility bullet and T10's Result say the printed kit digest differed and whether the base image changed was not checked. #86's reference is unchanged.
+- **F4-F11.** T1's Result quotes the Docker Desktop `resources/bin` entry on the WSL `$PATH` and `Docker version 29.9.3` (the CLI is there; which engine runs is not shown); U3 begins `Workaround:`, U4 `Equivalent in effect (no repair step is needed):`, U13 `No equivalent:`; T12's Result quotes the `EXPERIMENTAL: this command may change or be removed in future releases.` line from `sbx.exe setup --help` (it is in the engineer's pasted output; the earlier dossier bullet only said "experimental"); U16 says how the Claude credential reaches the sandbox is not shown; the three "about 23%" statements (D4, T9, the Recommendation) cite the 2m51 and 3m08 sequential re-runs as run-to-run spread; D1, U9, U15 and U16 carry dates and D3's `sbx prune` has its URL; the `## Trials` intro says commands ran as `sbx.exe` and SSH as `ssh.exe`; U2's parenthetical says the branch has to be checked out in the host folder first because the clone follows the host's checked-out ref (cited, not tried).
+
+**Documentation pages changed:** only `docs/dev-environment-sbx-evaluation.md`. **Build:** the `shell` suite's `build` is `true`. Checks run this round: no blank evidence cell; 28 rows, 22 `tried` and 6 `cited`, every row 7 fields wide; one `**Recommendation:** hybrid` line; no account name, email, token or one-time code on the page; `git diff --stat origin/main...HEAD -- .devcontainer skills` empty; `bash tests/run.sh` `all cases passed`.
+
+**Not changed, and why.** F12 (`plan.md`'s footprint lacks `sequenced:`) is `/codeo:plan`'s file, and F13 (`sync-main.sh` exiting 1 after a clean merge) is the plugin's script; neither is this change's to edit. The engineer may still run `ls -l /dev/kvm` in the Ubuntu-24.04 distribution; the page would then record it and the F1 wording could become a result.
+
 ## Log
 
+- 2026-11-15 — round 2: qc round 1 findings F1-F11 fixed on the page, suite passes · cost: 6m · sonnet-5-5 98k in + 2.2M cached / 21k out
 - 2026-11-15 — implemented: tasks 1-7 done, follow-ups #85 and #86 filed · cost: 194m · sonnet-5-5 306k in + 15.9M cached / 118k out
 - 2026-11-14 — Q1 answered (C), T1 run, route A chosen · cost: unavailable until the hand-off
 - 2026-11-14 — Task 1 done, Q1 raised · cost: 13m · sonnet-5-5 122k in + 2.2M cached / 24k out
