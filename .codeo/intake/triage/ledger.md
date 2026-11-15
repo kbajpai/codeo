@@ -95,3 +95,4 @@
 | `qc:87:F2-F3` | One comment and one test left unclear in #87's change | filed #91 | 2026-11-15 |
 | `issue:91` | Report an unreadable `.codeo/active` truthfully; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `implement:83:sync-main-comm` | `sync-main.sh` exits 1 after a clean merge when `sort` and `comm` order paths differently (`comm: … not in sorted order`) | filed #92 | 2026-11-15 |
+| `issue:92` | sync-main.sh exits 1 after a clean merge (sort/comm order); filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
