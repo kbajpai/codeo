@@ -472,6 +472,8 @@ echo "sudo $*" >> "$STUB_DIR/calls"
 STUB
     cat > "$ds_dir/bin/stat" <<'STUB'
 #!/usr/bin/env bash
+# The settle-stamp query (%s %y) goes to the real stat; every other call is the ownership query.
+case "$*" in *'%s %y'*) exec /usr/bin/stat "$@" ;; esac
 echo "${STUB_STAT_UID:?}"
 STUB
     chmod +x "$ds_dir/bin/gh" "$ds_dir/bin/claude" "$ds_dir/bin/sudo" "$ds_dir/bin/stat"
@@ -1134,6 +1136,31 @@ start_waits_for_a_host_gitconfig_that_is_written_after_it_is_created() {
     [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
     [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
     grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+}
+
+start_waits_for_a_host_gitconfig_that_is_still_growing() {
+    local f
+    ds_setup growhost || return 0
+    f="$ds_dir/home/.gitconfig"
+    # The file is written in place in short steps, the email last, so for about half a second it is non-empty and changing.
+    (
+        : > "$f"
+        sleep 0.3
+        printf '[user]\n' >> "$f"; sleep 0.05
+        printf '\tname = Ada O'"'"'Neil\n' >> "$f"; sleep 0.05
+        printf '\t# one\n' >> "$f"; sleep 0.05
+        printf '\t# two\n' >> "$f"; sleep 0.05
+        printf '\t# three\n' >> "$f"; sleep 0.05
+        printf '\t# four\n' >> "$f"; sleep 0.05
+        printf '\t# five\n' >> "$f"; sleep 0.05
+        printf '\temail = ada@example.com\n' >> "$f"
+    ) &
+    DS_GITCONFIG_WAIT=5 DS_AUTHOR_NAME=Env DS_AUTHOR_EMAIL=env@example.com ds_ready_run
+    wait
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+    grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+    grep -qF 'user.email set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.email: $ds_out"
 }
 
 start_does_not_stall_on_a_host_gitconfig_that_stays_empty() {
@@ -2290,6 +2317,7 @@ cases=(
     start_malformed_host_gitconfig_falls_through
     start_waits_for_the_host_gitconfig_to_arrive
     start_waits_for_a_host_gitconfig_that_is_written_after_it_is_created
+    start_waits_for_a_host_gitconfig_that_is_still_growing
     start_does_not_stall_on_a_host_gitconfig_that_stays_empty
     readme_says_included_identities_do_not_count
     start_does_not_wait_when_the_volume_has_the_identity
