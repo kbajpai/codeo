@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2. Q1-Q8 are answered (all as recommended; Q2's reading is stated under it). The plan is drafted at `.codeo/104/plan-draft.md` (7 tasks, uncommitted by design). Re-checking the other workflows before the review gate found that #107 has published a footprint naming `CHANGELOG.md`, so one question is open: Q9. The draft is not up for approval until Q9 is answered; reading it meanwhile is welcome. After Q9, re-run `/codeo:plan`: the draft is presented for approval, and once approved it is written to `docs/plans/2026-11-15-live-session-signal.md`.
+Round 2. Q1-Q9 are answered (all as recommended; Q2's reading is stated under it). Nothing is open. The other workflows were re-checked just before the gate (#107 at plan, #71 at qc; their footprints are as Q8 and Q9 describe, no new overlap). The plan is drafted at `.codeo/104/plan-draft.md` (7 tasks, uncommitted by design) and waits for the engineer's approval. On approval it is written to `docs/plans/2026-11-15-live-session-signal.md`, the footprint is recorded here and checked once more with `overlap.sh`, and `## Outcome` follows.
 
 ## Questions
 
@@ -112,6 +112,7 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 - **Re-scope** — move this plan's changelog edit to the end of the work, in its own pull request after the others merge.
 
 **Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommended").
 
 ## Notes
 
@@ -138,3 +139,4 @@ _Pending — written at the hand-off._
 - 2026-11-15 — Q1-Q7 raised · cost: 3m · fable-5-2 115k in + 1M cached / 14k out
 - 2026-11-15 — Q1-Q7 answered and recorded; plan drafted (.codeo/104/plan-draft.md); footprint overlap with #71 raised as Q8 · cost: 6m · sonnet-5-5 192k in + 2.6M cached / 43k out
 - 2026-11-15 — Q8 answered and recorded; footprint re-checked before the gate, #107 now overlaps on CHANGELOG.md, raised as Q9 · cost: 1m · sonnet-5-5 15k in + 917k cached / 4k out
+- 2026-11-15 — Q9 answered and recorded; no new overlap; draft presented for approval · cost: 0m · sonnet-5-5 13k in + 733k cached / 2k out
