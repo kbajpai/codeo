@@ -445,8 +445,9 @@ should carry the commit's short sha; report anything else.
 **May rely on.** The lock's host line (`volume:` or `session:`), the issue number and the branch.
 
 **Expected back.** What the engineer does next with this checkout, for instance how to remove it,
-as ordered commands or prose. The skill relays it to the engineer; the commands are theirs to run,
-never the skill's.
+as ordered commands or prose, and, when this checkout can no longer run the follow-up skills, the
+checkout they run in. The skill relays it to the engineer; the commands are theirs to run, never
+the skill's.
 
 **Default when absent.** None; the report names the lock's host and says whether anything is left
 to remove.

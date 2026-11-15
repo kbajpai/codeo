@@ -88,6 +88,7 @@ case_close_lock_kept() {
 case_close_finished() {
     para "$close" '**Closing block — finished:**' || return 0
     has "$p" '/codeo:triage'
+    has "$p" "the checkout the project's host workflow names"
 }
 
 case_stash_interrupted() {

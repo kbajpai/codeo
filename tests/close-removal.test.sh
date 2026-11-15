@@ -17,7 +17,8 @@ rc=0
 out=$(bash scripts/overlay.sh close host-workflow 2>/dev/null) || rc=$?
 [[ "$rc" -eq 0 ]] || fail "overlay.sh close host-workflow exited $rc"
 for needle in 'docker rm -f <volume>; docker volume rm <volume>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
-    'not inside this container' 'git status' 'PowerShell'; do
+    'not inside this container' 'git status' 'PowerShell' \
+    'When the lock'"'"'s `host` is `container`' 'nothing to remove' '/codeo:triage' '/codeo:cleanup' 'home container'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 
@@ -31,6 +32,10 @@ bullet=$(awk '/^    - \*\*`host: container`\*\*/ {on=1; print; next} on && /^   
 for needle in 'on the host' 'git status' 'volume:'; do
     [[ "$bullet" == *"$needle"* ]] || fail "host: container bullet lacks: $needle"
 done
+fin=$(awk '/\*\*Closing block — finished:\*\*/ {on=1} on && $0 == "" {exit} on {print}' "$skill")
+[[ -n "$fin" ]] || fail "no Closing block — finished paragraph in $skill"
+[[ "$fin" == *"the checkout the project's host workflow names"* ]] \
+    || fail "finished closing block does not name the checkout the host workflow names"
 if grep -qi 'docker' "$skill"; then
     fail "$skill names a container engine: $(grep -i 'docker' "$skill" | head -1)"
 fi

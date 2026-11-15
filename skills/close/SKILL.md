@@ -540,7 +540,9 @@ is the container the message names.
     from a step having been attempted. End with the closing block for the exit step 16 took:
 
     **Closing block — finished:** when step 16 deleted `.codeo/active`. The goal is the loose ends
-    found; the first step is `/codeo:triage`, then the host's checkout clean-up above.
+    found; the first step is `/codeo:triage`, run in the checkout the project's host workflow names
+    for it when it names one — this checkout holds no lock any more, and a project's role check may
+    refuse the skill here — then the host's checkout clean-up above.
 
     **Closing block — lock kept:** when step 16 kept `.codeo/active`. The goal is a finished close;
     the first step is `/codeo:close` again, in this checkout, because it holds the lock that run
