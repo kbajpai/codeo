@@ -1,8 +1,8 @@
-# Issue new-haiku-trial-rerun — issue
+# Issue #83 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/83 |
 | Branch | none |
 | Updated | 2026-11-15 |
 
@@ -71,8 +71,9 @@ Keep it out of the repo (answered in the conversation).
 
 ## Outcome
 
-_Pending — written when the issue is filed._
+Filed as #83: https://github.com/kbajpai/codeo/issues/83 (label enhancement).
 
 ## Log
 
 - 2026-11-15 — draft written for review, called from /codeo:triage
+- 2026-11-15 — approved at the gate and filed as #83
