@@ -89,9 +89,11 @@ lookup() {
     local n=$1
     # $owner is spliced into the jq program because gh's --jq takes no --arg; it comes from the
     # project's own config, never from the caller.
-    run_gh api graphql -F o="${repo%/*}" -F r="${repo#*/}" -F n="$n" -f query='
-        query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){
-          url projectItems(first:50){nodes{id
+    # --paginate follows projectItems' pageInfo (the one connection with $endCursor); the --jq
+    # filter then runs per page, so a page with none of $owner's items prints the blank row below.
+    run_gh api graphql --paginate -F o="${repo%/*}" -F r="${repo#*/}" -F n="$n" -f query='
+        query($o:String!,$r:String!,$n:Int!,$endCursor:String){repository(owner:$o,name:$r){issue(number:$n){
+          url projectItems(first:50,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id
             project{number title owner{... on User{login} ... on Organization{login}}}
             fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{name}}}}}}}' \
         --jq '.data.repository.issue as $i

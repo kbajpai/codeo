@@ -360,4 +360,17 @@ GH_STUB_ROWS="$P2" run status 7
 [[ $rc -eq 0 && -z $err && $out == Ready ]] || fail "gate-project-only status: rc=$rc err=$err out=$out"
 printf '%s\n' "$with_board" > "$config"
 
+# An issue on more than 50 project items: the lookup must follow every page of projectItems.
+# The stub answers every call alike, so it cannot page; (a) asserts the call asks gh to paginate
+# and reads the cursor, (b) that a card sitting 60th in the rows is still found and written.
+GH_STUB_ROWS="$P2" run status 7
+grep -q "api graphql .*--paginate" "$GH_STUB_LOG" || fail "beyond-50: the lookup has no --paginate"
+grep -q "endCursor" "$GH_STUB_LOG" || fail "beyond-50: the lookup query does not read endCursor"
+filler="$url\tITEM_F\tTodo\t9\tOther"
+rows=$filler
+for _ in $(seq 2 59); do rows+="\n$filler"; done
+GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$rows\n$P1" run set 7 Ready
+[[ $rc -ne 0 ]] || fail "beyond-50: a failed write on the 60th row must exit non-zero: rc=$rc"
+! grep -q "item-delete" "$GH_STUB_LOG" || fail "beyond-50: the existing card was removed as if this run had added it"
+
 echo "board.test.sh: all cases passed"
