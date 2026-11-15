@@ -15,7 +15,6 @@ need_login=()
 say() { echo "devcontainer-start: $*"; }
 add_todo() { todo+=("$1"); }
 
-# (The last of several lines for one mount point is the one in effect, hence >=.)
 # clone_on_named_volume <path>: succeeds when <path> lives on a Docker named volume. It takes the mount
 # that holds <path> (the longest mount point that is <path> or a parent of it) and checks that the mount's
 # root, field 4 of its mountinfo line, is /var/lib/docker/volumes/<name>/_data. A bind mount's root is the
@@ -25,6 +24,7 @@ clone_on_named_volume() {
     info=${CODEO_MOUNTINFO:-/proc/self/mountinfo}
     while read -r _ _ _ root mnt _; do
         [[ -n $mnt ]] || continue
+        # (The last of several lines for one mount point is the one in effect, hence >=.)
         if [[ $path == "$mnt" || $path == "${mnt%/}"/* ]] && ((${#mnt} >= best_len)); then
             best_len=${#mnt}
             best_root=$root
@@ -45,12 +45,13 @@ if [[ $(stat -c %u "$clone" 2>/dev/null || true) != "$(id -u)" ]]; then
         sudo chown -R "$(id -u):$(id -g)" "$clone" ||
             add_todo "the clone is not owned by you and chown failed: run sudo chown -R $(id -u):$(id -g) $clone"
     else
-        add_todo "the clone at $clone is not owned by you and is not on a Docker volume, so it was left alone: run 'sudo chown -R $(id -u):$(id -g) $clone' yourself if that is what you want"
+        add_todo "the clone at $clone is not owned by you and is not on a Docker volume, so it was left alone: under rootless Docker or Podman the user namespace mapping makes host files look owned by another user, changing that ownership would change the host's files, and git is already told to trust the clone"
     fi
 fi
 
 # 2. Work from the top of the clone.
-cd "$(git -C "$clone" rev-parse --show-toplevel)" || { add_todo "could not enter the clone at $clone"; }
+# An empty result is a failure here, not `cd ""`.
+top=$(git -C "$clone" rev-parse --show-toplevel 2>/dev/null) && cd "$top" || add_todo "could not enter the clone at $clone"
 
 # 2b. Executable scripts. Some container filesystems (a Windows or macOS host mount) set core.fileMode=false, and then
 # `git add` records every new script as 100644. This runs only on a clone that is on a Docker volume, as step 1
@@ -299,7 +300,8 @@ fi
 # While CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY is set the check is skipped: the variable overrides any login, so
 # `claude auth login` would not help, and the "unset it" TODO below is the advice.
 if [[ -z ${CLAUDE_CODE_OAUTH_TOKEN:-} && -z ${ANTHROPIC_API_KEY:-} ]]; then
-    if claude_status=$(claude auth status 2>&1); then
+    # Run from $HOME, the way plugins.sh's claude_out does, so claude does not touch the clone.
+    if claude_status=$(cd "$HOME" && claude auth status 2>&1); then
         auth_method=$(jq -r '.authMethod // empty' <<<"$claude_status" 2>/dev/null || true)
         if [[ -n $auth_method && $auth_method != "claude.ai" ]]; then
             add_todo "Claude Code is logged in with $auth_method, not claude.ai, and Remote Control needs claude.ai: run claude auth login"

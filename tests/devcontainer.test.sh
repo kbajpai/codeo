@@ -459,6 +459,7 @@ esac
 STUB
     cat > "$ds_dir/bin/claude" <<'STUB'
 #!/usr/bin/env bash
+echo "$PWD" >> "$STUB_DIR/claude-pwds"
 if [[ "$1 $2" == "auth status" ]]; then
     printf '%s' "${STUB_CLAUDE_OUT:-}"
     exit "${STUB_CLAUDE_RC:-1}"
@@ -856,7 +857,30 @@ start_never_chowns_a_bind_mount() {
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     n=$(ds_sudo_calls); ((n == 0)) || fail "sudo ran for a bind mount: $(cat "$ds_dir/calls")"
     n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "wanted one bind-mount TODO, got $n: $ds_err"
+    if grep 'not on a Docker volume' <<<"$ds_err" | grep -q 'sudo chown -R'; then fail "the bind-mount TODO still advises sudo chown -R: $ds_err"; fi
+    n=$(ds_todos 'user namespace'); ((n == 1)) || fail "the bind-mount TODO does not explain the user namespace: $ds_err"
     ds_safe_dir_set "$ds_dir/codeo-home" || fail 'safe.directory was not set'
+}
+
+start_runs_claude_outside_the_clone() {
+    local line
+    ds_setup claudecwd || return 0
+    : > "$ds_dir/claude-pwds"
+    ds_ready_run
+    [[ -s "$ds_dir/claude-pwds" ]] || { fail 'claude was never run'; return 0; }
+    while IFS= read -r line; do
+        [[ $line == "$ds_dir/home" ]] || fail "claude ran in $line, wanted $ds_dir/home"
+    done < "$ds_dir/claude-pwds"
+    [[ -z $(git -C "$ds_dir/codeo-home" status --porcelain --untracked-files=no) ]] || fail 'the clone has changes after the run'
+}
+
+start_without_a_git_top_level_is_one_todo() {
+    local n
+    ds_setup notoplevel || return 0
+    rm -rf "$ds_dir/codeo-home/.git"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'could not enter the clone'); ((n == 1)) || fail "wanted one could-not-enter TODO, got $n: $ds_err"
 }
 
 start_longest_mount_wins() {
@@ -2030,6 +2054,8 @@ cases=(
     start_plugins_failure_is_a_todo_not_a_failure
     start_chowns_the_clone_on_a_named_volume
     start_never_chowns_a_bind_mount
+    start_runs_claude_outside_the_clone
+    start_without_a_git_top_level_is_one_todo
     start_longest_mount_wins
     start_own_clone_runs_nothing_privileged
     start_last_mount_at_the_same_point_wins
