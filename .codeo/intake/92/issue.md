@@ -1,4 +1,4 @@
-# Issue — sync-main.sh exits 1 after a clean merge when `sort` and `comm` disagree on order
+# Issue #92 — issue
 
 | | |
 |---|---|
@@ -19,8 +19,9 @@ Reproduction (Phase 1, this clone, `LANG=en_US.UTF-8`): `printf '.codeo/done/57/
 
 ## Outcome
 
-_Pending — written at filing._
+Filed as #92 (label `bug`, no Issue Type): https://github.com/kbajpai/codeo/issues/92. Approved in the conversation.
 
 ## Log
 
 - 2026-11-15 — draft written from triage item `implement:83:sync-main-comm`
+- 2026-11-15 — filed #92
