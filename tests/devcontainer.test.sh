@@ -1475,9 +1475,10 @@ start_leaves_no_modes_file_when_interrupted() {
 #!/usr/bin/env bash
 case "\$*" in
     *"diff --raw"*)
+        # \$(...) forks a subshell with the script's own cmdline: climb to the topmost ancestor that matches.
         p=\$PPID
-        while [[ \$p -gt 1 ]] && ! tr '\\0' ' ' < "/proc/\$p/cmdline" | grep -q devcontainer-start.sh; do
-            p=\$(awk '{print \$4}' "/proc/\$p/stat")
+        while pp=\$(awk '{print \$4}' "/proc/\$p/stat") && tr '\\0' ' ' < "/proc/\$pp/cmdline" | grep -q devcontainer-start.sh; do
+            p=\$pp
         done
         kill -TERM "\$p"; sleep 5; exit 1 ;;
 esac
@@ -1485,6 +1486,9 @@ exec $real_git "\$@"
 STUB
     chmod +x "$ds_dir/bin/git"
     ds_ready_run
+    ((ds_rc != 0)) || fail 'the script exited 0 although it was sent TERM'
+    ! grep -qxF 'gh auth setup-git' "$ds_dir/calls" 2>/dev/null || fail 'step 4 ran, so the script did not stop on TERM'
+    ! grep -q 'devcontainer-start: ready$' <<<"$ds_out" || fail "the script ran to the end: $ds_out"
     ! compgen -G "$r/.git/modes.*" >/dev/null || fail 'a modes temp file was left in the git dir after an interrupt'
 }
 
