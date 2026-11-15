@@ -14,6 +14,9 @@ architecture itself — those are `/codeo:issue` and `/codeo:plan`. If the plan 
 once implementation starts, stop and say so rather than silently deviating from it, and suggest
 re-running `/codeo:plan`. Work that surfaces mid-task but belongs to no task in the plan goes to
 `/codeo:issue` as its own issue — the plan's scope is the plan's scope.
+When the project's role check refuses the call (the skill is running in an issue container),
+record the finding in this skill's own dossier and say to file it with `/codeo:issue`
+in the home container; `/codeo:triage` finds recorded findings later.
 
 Where things go is read from the project's config, never assumed:
 

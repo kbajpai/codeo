@@ -190,6 +190,10 @@ must_contain "qc names the not-held line the implement skill reads" 'Lease not h
 grep -qF -- 'Lease not held:' "$plugin_root/skills/implement/SKILL.md" || fail "implement does not read the Lease not held: line"
 must_contain "the verdict is not clear when the lease is held but the hook cannot answer" 'owned by neither skill'
 
+# The home-only guard refuses /codeo:issue in an issue container: the caller records the finding instead.
+must_contain 'a refused call is recorded in the dossier' "record the finding in this skill's own dossier"
+must_contain 'a refused call is filed from the home container' 'in the home container'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

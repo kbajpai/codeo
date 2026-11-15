@@ -328,6 +328,10 @@ caller with a number, and the caller — not `/codeo:issue` — records it in it
 even when called mid-flow; its own file lives under `.codeo/intake/`. `/codeo:triage` records the
 number in its ledger.
 
+When the project's role check refuses the call (the skill is running in an issue container),
+record the finding in this skill's own dossier and say to file it with `/codeo:issue`
+in the home container; `/codeo:triage` finds recorded findings later.
+
 ## Closing block
 
 Every skill's final message ends with the same three-part block, and nothing comes after it. It is

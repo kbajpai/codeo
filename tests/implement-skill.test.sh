@@ -91,6 +91,10 @@ if grep -qF 'added by the next task' "$skill"; then
     fail "the steps 5-9 placeholder is still in the skill"
 fi
 
+# The home-only guard refuses /codeo:issue in an issue container: the caller records the finding instead.
+must_contain 'a refused call is recorded in the dossier' "record the finding in this skill's own dossier"
+must_contain 'a refused call is filed from the home container' 'in the home container'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

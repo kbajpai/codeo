@@ -43,6 +43,10 @@ must_contain 'a lease task carries a Needs lease line' 'carries a line `Needs le
 must_contain 'a script is in a language the host is known to have' "in a language the engineer's host is known to have"
 must_contain 'a host task on the environment carries both markers' 'carries both markers, each on its own line'
 
+# The home-only guard refuses /codeo:issue in an issue container: the caller records the finding instead.
+must_contain 'a refused call is recorded in the dossier' "record the finding in this skill's own dossier"
+must_contain 'a refused call is filed from the home container' 'in the home container'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
