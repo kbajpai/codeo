@@ -102,3 +102,5 @@
 | `qc:73:F23` | `sync-main.sh` exits 1 after a clean merge (`comm … not in sorted order`) | already #92 | 2026-11-15 |
 | `issue:94` | Correct the sbx evaluation page and #86; filed 2026-11-15, board Status `none` | leave in the backlog | 2026-11-15 |
 | `issue:95` | `/codeo:plan` writes `sequenced:  none`; filed 2026-11-15, board Status `none` | leave in the backlog | 2026-11-15 |
+| `issue:97` | Docs, skill wording and test-guard follow-ups from #34, #39, #69; filed 2026-11-15, no branch, board Status `Backlog` | leave in the backlog | 2026-11-15 |
+| `issue:99` | Make the sbx issue sandbox usable (consolidates #94, #85, #86); filed 2026-11-15, no branch, board Status `Backlog` | leave in the backlog | 2026-11-15 |
