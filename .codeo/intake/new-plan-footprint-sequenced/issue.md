@@ -3,10 +3,10 @@
 ## Questions
 
 1. **Which side of the contradiction moves.** `skills/plan/SKILL.md` step 8 tells the plan to draft `### Footprint` from three sources (`files:` from the File Structure, `wiki:`, `exclusive:`) and never names `sequenced:`; step 10 sub-step 1 mentions a `sequenced:` line only "when an overlap question was answered that way". `docs/dossier.md → The footprint` says `sequenced` is "only when an overlap question was answered that way" yet also "A key with nothing under it says `none` rather than disappearing, so a missing line means the plan never looked", and `scripts/dossier-check.sh:339` requires all four keys (`for key in files wiki exclusive sequenced`). **Options:** (A) the plan skill drafts all four keys and writes `sequenced:  none` when nothing was sequenced, keeping the checker as it is; (B) the checker treats `sequenced` as optional; (C) both documents are reconciled by whichever the engineer names.
-   **Answer:** _open_
+   **Answer:** (A) the plan skill writes `sequenced:  none` (engineer, in the conversation, 2026-11-15).
 
 2. **Whether a check should catch it earlier.** No CI job runs `dossier-check.sh`, and `/codeo:qc` does not run it, so a footprint without the key is found only by hand. **Options:** (A) in scope — `/codeo:qc` or CI runs the checker on the plan dossier; (B) out of scope — only the footprint wording is fixed.
-   **Answer:** _open_
+   **Answer:** (B) out of scope (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
@@ -21,3 +21,11 @@ _Pending._
 ## Log
 
 - 2026-11-15 — questions raised · cost: unavailable
+
+## Draft
+
+**Title:** Make `/codeo:plan` write `sequenced:  none` in a plan's footprint, so the dossier checker passes it
+
+**Labels:** bug · **Type:** none (user-owned repository)
+
+Body in `body.md` beside this file. Presented to the engineer in the conversation.
