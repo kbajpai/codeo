@@ -195,6 +195,10 @@ step_contains "the container's volume line is named" 17 '`volume:`'
 step_contains "a local host has nothing to remove" 17 '`host: local`'
 step_contains "triage is suggested" 17 '/codeo:triage'
 step_contains "step 17 conditions its body on the finished exit" 17 'When step 16 deleted `.codeo/active`, fetch'
+step_contains "step 17 reports how the close ended" 17 'Report** how the close ended: finished when step 16 deleted `.codeo/active`, lock kept when it did not.'
+must_contain "the abandon exit has a finished closing block" '**Closing block — abandon finished:**'
+must_contain "the abandon exit has an interrupted closing block" '**Closing block — abandon interrupted:**'
+must_contain "the abandon ends with the matching closing block" 'End with the closing block that matches how the abandon ended'
 
 # Each point marker sits once, and the point it marks is fetched.
 for point in ci-publish-check host-workflow; do

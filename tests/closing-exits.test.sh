@@ -5,11 +5,13 @@
 #
 #   closing-exits.test.sh [case]
 #       Cases: rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-#       issue-ready issue-not-ready issue-unreadable. No argument runs them all; an unknown case
-#       exits 2. Prints "all cases passed" and exits 0, or a FAIL line per failure and exits 1.
+#       issue-ready issue-not-ready issue-unreadable abandon-finished abandon-interrupted
+#       close-step17-lead stash-prose bites. CLOSING_EXITS_ROOT points the checks at another tree.
+#       No argument runs them all; an unknown case exits 2. Prints "all cases passed" and exits 0, or
+#       a FAIL line per failure and exits 1.
 set -euo pipefail
 
-root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+root=${CLOSING_EXITS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 doc="$root/docs/handoff.md"
 close="$root/skills/close/SKILL.md"
 init="$root/skills/init/SKILL.md"
@@ -143,8 +145,70 @@ case_issue_unreadable() {
     before "$p" '/codeo:triage' '/codeo:init #<N>'
 }
 
+case_abandon_finished() {
+    para "$close" '**Closing block — abandon finished:**' || return 0
+    has "$p" '/codeo:triage'
+    lacks "$p" '/codeo:init #<N>'
+    lacks "$p" '/codeo:close --stash'
+}
+
+case_abandon_interrupted() {
+    para "$close" '**Closing block — abandon interrupted:**' || return 0
+    has "$p" '/codeo:close'
+    lacks "$p" '/codeo:close --stash'
+    lacks "$p" '/codeo:init #<N>'
+    # /codeo:close must be the first command named: nothing slash-prefixed precedes it.
+    local head=${p%%/codeo:close*}
+    [[ $head != */codeo:* ]] || fail "another command comes before /codeo:close"
+}
+
+case_close_step17_lead() {
+    local s
+    s=$(step "$close" 17)
+    [[ -n $s ]] || { fail "no step 17 in skills/close/SKILL.md"; return; }
+    lacks "$s" 'Report** that the workflow is finished'
+}
+
+case_stash_prose() {
+    local text
+    text=$(awk '/^## Stash, and closed unmerged$/ { f = 1 } f && /^\*\*Closed unmerged\*\*/ { exit } f' "$close")
+    [[ -n $text ]] || { fail "no stash section in skills/close/SKILL.md"; return; }
+    lacks "$text" 'Report that `/codeo:init #<N>` resumes it'
+}
+
+# Puts each old wording back in a scratch copy and checks the named case then fails by name.
+case_bites() {
+    local t out copy pristine
+    t=$(mktemp -d)
+    # shellcheck disable=SC2064
+    trap "rm -rf '$t'" RETURN
+    mkdir -p "$t/skills/close" "$t/skills/init" "$t/skills/issue" "$t/docs"
+    cp "$root/skills/close/SKILL.md" "$t/skills/close/SKILL.md"
+    cp "$root/skills/init/SKILL.md" "$t/skills/init/SKILL.md"
+    cp "$root/skills/issue/SKILL.md" "$t/skills/issue/SKILL.md"
+    cp "$root/docs/handoff.md" "$t/docs/handoff.md"
+    copy=$t/skills/close/SKILL.md
+    pristine=$t/close.orig
+    cp "$copy" "$pristine"
+
+    sed -i 's/^17\. \*\*Report\*\* how the close ended:.*$/17. **Report** that the workflow is finished. Read the lock'"'"'s `host` line, and its `volume:` or/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the step 17 mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" close-step17-lead 2>&1) &&
+        fail "the old step 17 lead passed close-step17-lead"
+    [[ $out == *close-step17-lead* ]] || fail "close-step17-lead failed without naming itself: $out"
+
+    cp "$pristine" "$copy"
+    sed -i 's/^\*\*Closed unmerged\*\*/Report that `\/codeo:init #<N>` resumes it.\n\n&/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the stash mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
+        fail "the old stash sentence passed stash-prose"
+    [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+    return 0
+}
+
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-    issue-ready issue-not-ready issue-unreadable)
+    issue-ready issue-not-ready issue-unreadable abandon-finished abandon-interrupted
+    close-step17-lead stash-prose bites)
 
 if (($# > 0)); then
     known=0

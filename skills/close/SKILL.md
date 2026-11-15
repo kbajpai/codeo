@@ -501,7 +501,7 @@ the step carries on.
     push failed above, keep it: say what failed, and that running `/codeo:close` again in this
     checkout finishes the close.
 
-17. **Report** that the workflow is finished. Read the lock's `host` line, and its `volume:` or
+17. **Report** how the close ended: finished when step 16 deleted `.codeo/active`, lock kept when it did not. Read the lock's `host` line, and its `volume:` or
     `session:` line, before step 16 deletes it. When step 16 deleted `.codeo/active`, fetch the
     project's host workflow, relay it, then the nothing-is-lost sentence and the `/codeo:triage`
     suggestion below. When it kept the lock, skip that fetch and say nothing of the checkout or
@@ -657,6 +657,20 @@ included — with the same `git ls-remote` check, never the base branch, and nev
 Work that never merged is kept unless someone says otherwise. Then the lock is deleted last, as a
 stash does; a deletion that failed keeps it, as close-10 does on the merge path, and running
 `/codeo:close` again finishes the abandon.
+
+Once the lock is gone the checkout holds nothing the branch lacks: say what is left of it as step 17
+does, by the lock's host, read before the lock goes.
+End with the closing block that matches how the abandon ended.
+
+**Closing block — abandon finished:** `.codeo/active` is deleted, and the card is at `$BACKLOG` (or
+the board move failed: say so, the card is the engineer's to move by hand). The goal is the loose
+ends found; the first step is `/codeo:triage`, then the host's checkout clean-up as step 17 relays
+it. Name no command that resumes or stashes this work: an abandoned workflow is not resumed.
+
+**Closing block — abandon interrupted:** `.codeo/active` is kept, because the branch deletion, the
+release or a push failed. The goal is a finished abandon; the first step is `/codeo:close`, run
+again in this checkout. Say what failed. Name no other command: the lock is still held, so anything
+else would stop at it.
 
 <!-- rule: close-13 -->
 Never use `superpowers:finishing-a-development-branch`: it looks like this skill's twin and is
