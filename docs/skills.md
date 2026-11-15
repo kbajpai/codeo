@@ -257,7 +257,7 @@ It runs in the home container only, outside the workflow lock. It says every tim
 
 - Hands off to nobody: the printed commands are the engineer's to run on the host. It ends with the closing block naming them and then the next issue.
 - Never runs a container command, never mounts or asks for the container engine's socket, and never builds a name or a command itself; it relays what the script printed.
-- Never touches the lock, any dossier, branch, issue, board or pull request.
+- Never touches the lock, any dossier, issue, board or pull request, or any branch other than `codeo/intake`.
 
 ### Extension points
 
