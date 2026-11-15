@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, Q1-Q6 answered (the engineer took every recommendation). Exploration is done and nothing is drafted: the four questions `init` left open settle into Q1-Q4, and Q5-Q6 are new. Nothing overlaps another workflow (`inflight.sh --except 70`: none in flight). Re-run `/codeo:plan` once they are answered.
+Round 1, done. Q1-Q6 are answered, the plan was approved and written to `docs/plans/2026-11-15-guard-home-only-skills.md`; nothing is open. The next step is `/codeo:implement`.
 
 ## Questions
 
@@ -87,6 +87,20 @@ What exploration found, so the plan does not re-ask it:
 - **Sequencing.** #69, which the issue says to follow, is closed and merged, so `skills/close/SKILL.md` and `docs/handoff.md` are free to edit.
 - **Documentation lookup (hooks).** Read only for Q2: a typed `/skill` bypasses `PreToolUse`, while `UserPromptSubmit` and `UserPromptExpansion` see it; hooks fire in the terminal, the VS Code extension and cloud sessions alike, but whether a hosted session reads the project's `.claude/settings.json` was not confirmed.
 
+## Outcome
+
+2026-11-15
+
+**Plan:** `docs/plans/2026-11-15-guard-home-only-skills.md`, a scoped executable plan (ten tasks, one pull request) under `docs/plans/`, approved by the engineer and left unstaged. No reference doc under `docs/`: no standing decision beyond the extension-point and dev container docs the plan updates.
+
+**Decisions (Q1-Q6, all the recommendations).** Q1 the guard applies only when `/.dockerenv` exists, `CLAUDE_CODE_REMOTE` is not `true` and the folder is `<codename>-home` or `<codename>-<digits>`; anything else is `unguarded`. Q2 a registered `<skill>/role-guard` extension point in each of eight skills (`issue`, `init`, `triage`, `cleanup`, `plan`, `implement`, `qc`, `close`), the project's overlay running `role.sh --check <skill>`, and a `rule` marker so there is no override. Q3 `/codeo:cleanup` is a plugin skill backed by `scripts/cleanup.sh`, with the name, pattern and command from a new overlay point `cleanup/removal-command`. Q4 no `.codeo/closed` tombstone. Q5 `doctor` and `setup` are not guarded. Q6 one pull request.
+
+**Calls made in the plan.** The role script lives in `.devcontainer/scripts/` and reuses `container-name.sh`, not `folder-check.sh`; there is no `unknown` role (an unshaped folder is `unguarded`); a no-lock clone in the home folder off the base branch is `stale:?`. Task 4 is the plan's own call, shown at the gate and approved: because the guard is strict, a skill in an issue container that would call `/codeo:issue` records the finding in its own dossier and says to file it from the home container.
+
+**Rejected.** A Claude Code hook as the guard (a typed slash command bypasses `PreToolUse`, and a hosted session may not read the project's settings); a hook as well as the point; the removal command written into the skill; a project-only cleanup skill; a tombstone; three pull requests.
+
+**Documentation.** `.devcontainer/README.md`, `docs/skills.md`, `docs/extension-points.md`, `docs/skills-inventory.md`, `docs/handoff.md`, `README.md`, `CHANGELOG.md`. No intake question was resolved here beyond the four `init.md` left open (all settled by Q1-Q4 and the calls above).
+
 ### Footprint
 
 ```
@@ -95,10 +109,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-15 — Q1-Q6 raised · cost: 4m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 181k in + 139k cached / 8k out
+- 2026-11-15 — planned: docs/plans/2026-11-15-guard-home-only-skills.md · engineering:architecture and engineering:system-design not loaded, their Options/Decision structure applied directly from Q1-Q3 · cost: 13m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 232k in + 2M cached / 39k out
