@@ -41,6 +41,16 @@ must_contain "each criterion is met, not met or untestable" 'not met, or untesta
 
 # Step 6.
 must_contain "files outside the footprint are listed" 'overlap.sh" --outside <N>'
+must_contain "a footprint gap is non-blocking on a first-round plan" 'On a first-round plan it is not blocking by rule'
+must_contain "a footprint gap is blocking from round 2" 'Once `plan.md`'"'"'s `## Outcome` has a `### Round 2` or later it is blocking'
+if grep -qF 'and not blocking by rule:' "$skill"; then
+    fail "step 6 still calls a footprint gap not blocking by rule on every plan"
+fi
+must_contain "a round-2 footprint gap is owned by step 8's test" 'Whose it is follows step 8'
+must_contain "a second round is recognised by its heading" 'A second round shows as a `### Round <n>` heading'
+if tr '\n' ' ' <"$skill" | tr -s ' ' | grep -qF 'a footprint can only be corrected by a new plan round'; then
+    fail "step 6 still sends every round-2 footprint gap to plan"
+fi
 
 # Step 7: the reviewer.
 must_contain "the reviewer model read" "config.sh\" get '.models.reviewer // \"opus\"'"
@@ -189,6 +199,12 @@ fi
 must_contain "qc names the not-held line the implement skill reads" 'Lease not held: <the check'\''s line>'
 grep -qF -- 'Lease not held:' "$plugin_root/skills/implement/SKILL.md" || fail "implement does not read the Lease not held: line"
 must_contain "the verdict is not clear when the lease is held but the hook cannot answer" 'owned by neither skill'
+
+# The home-only guard refuses /codeo:issue in an issue container: the caller records the finding instead.
+must_contain 'a refused call is recorded in the dossier' "record the finding in this skill's own dossier"
+must_contain 'the refused finding is a Notes line' 'as a line under `## Notes`'
+must_contain 'the Notes line carries no issue number' 'carries no issue number'
+must_contain 'a refused call is filed from the home container' 'in the home container'
 
 if ((failures)); then
     echo "$failures case(s) failed"

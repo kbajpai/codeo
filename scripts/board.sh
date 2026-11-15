@@ -28,7 +28,7 @@
 #       cases. When an add, a field lookup or a write failed on some project, that project is
 #       skipped with one stderr line naming it and the reason, the others are still written, and
 #       the exit is non-zero at the end even though something was written. When nothing failed but
-#       nothing was written either, no project the issue is on has the option, and the stderr line
+#       nothing was written either, no synced project has the option, and the stderr line
 #       names the options that exist.
 #
 # Needs a gh login with the `project` scope; without it, says `gh auth refresh -s project`.
@@ -90,9 +90,11 @@ lookup() {
     local n=$1
     # $owner is spliced into the jq program because gh's --jq takes no --arg; it comes from the
     # project's own config, never from the caller.
-    run_gh api graphql -F o="${repo%/*}" -F r="${repo#*/}" -F n="$n" -f query='
-        query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){
-          url projectItems(first:50){nodes{id
+    # --paginate follows projectItems' pageInfo (the one connection with $endCursor); the --jq
+    # filter then runs per page, so a page with none of $owner's items prints the blank row below.
+    run_gh api graphql --paginate -F o="${repo%/*}" -F r="${repo#*/}" -F n="$n" -f query='
+        query($o:String!,$r:String!,$n:Int!,$endCursor:String){repository(owner:$o,name:$r){issue(number:$n){
+          url projectItems(first:50,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id
             project{number title owner{... on User{login} ... on Organization{login}}}
             fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{name}}}}}}}' \
         --jq '.data.repository.issue as $i
@@ -214,7 +216,7 @@ case $cmd in
             # it to the exit.
             if [[ -z ${item_of[$p]} ]] &&
                 ! title_of[$p]=$(run_gh project view "$p" --owner "$owner" --format json --jq .title 2>"$probe_err"); then
-                echo "board.sh: could not add #$n to project #$p — skipped: $(head -n 1 "$probe_err")" >&2
+                echo "board.sh: could not read the title of project #$p — skipped: $(head -n 1 "$probe_err")" >&2
                 rm -f "$probe_err"
                 failed=1
                 continue
@@ -246,6 +248,8 @@ case $cmd in
         done
 
         written=0
+        # The + expansion keeps an empty array legal under set -u on bash 4.3 (doctor requires 4.3,
+        # and a newer bash cannot show the guard biting, so the suite does not try).
         for p in ${probed[@]+"${probed[@]}"}; do
             item=${item_of[$p]} fresh=
             if [[ -z $item ]]; then
@@ -266,10 +270,14 @@ case $cmd in
                 echo "board.sh: could not write '$want' on project #$p ${title_of[$p]} — skipped: $(head -n 1 "$write_err")" >&2
                 rm -f "$write_err"
                 failed=1
-                # A card this run created and could not stamp is taken off again, so the board is
-                # as it was; a card that was already there is never touched.
-                if [[ -n $fresh ]] && ! run_gh project item-delete "$p" --owner "$owner" --id "$item" >/dev/null 2>&1; then
-                    echo "board.sh: could not remove the card it added to project #$p — remove item $item by hand" >&2
+                # Removal is best effort: a card this run created and could not stamp is taken off
+                # again when the delete succeeds, and a card that was already there is never touched.
+                if [[ -n $fresh ]]; then
+                    del_err=$(mktemp)
+                    if ! run_gh project item-delete "$p" --owner "$owner" --id "$item" >/dev/null 2>"$del_err"; then
+                        echo "board.sh: could not remove the card it added to project #$p — remove item $item by hand: $(head -n 1 "$del_err")" >&2
+                    fi
+                    rm -f "$del_err"
                 fi
                 continue
             fi
@@ -280,7 +288,7 @@ case $cmd in
         done
 
         if [[ $written -eq 0 && -z $failed ]]; then
-            echo "board.sh: no project #$n is on has the option '$want' (it has: ${skipped_names[*]:-none})" >&2
+            echo "board.sh: no synced project has the option '$want' (it has: ${skipped_names[*]:-none})" >&2
             exit 1
         fi
         # A skipped add is a failure the skills must see, though the other boards were written.

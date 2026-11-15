@@ -11,7 +11,7 @@
 # on stderr.
 #
 #   bash .devcontainer/scripts/container-name.sh [--docker|--codename] [dir]
-#       --docker   prints the Docker name instead of the title.
+#       --docker   prints the name the container should have.
 #       --codename prints the codename alone.
 #       dir        anywhere inside the clone (default: the current directory).
 set -euo pipefail

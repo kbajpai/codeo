@@ -4,7 +4,7 @@ This page describes each codeo skill: what it is for and when it triggers, what 
 
 Six skills form the pipeline: `issue`, `init`, `plan`, `implement`, `qc` and `close`. They run in that order inside one workflow, and the workflow is bound to one issue by the lock (`.codeo/active`, written by `init` and released by `close`). Each skill hands the next one a dossier file, `.codeo/<N>/<skill>.md`, under the protocol in `docs/handoff.md`. `qc` can send a change back to `implement` or `plan`, and `close` can send review feedback or a conflict with the base branch back to `implement`. `issue` runs before an issue number or a branch exists, so it sits outside the lock.
 
-`triage` runs outside the lock too, between workflows: it collects the loose ends development left behind and routes anything worth filing through `issue`. `setup` and `doctor` are not part of any workflow: `setup` creates the project's codeo state and `doctor` checks that the project is ready.
+`triage` runs outside the lock too, between workflows: it collects the loose ends development left behind and routes anything worth filing through `issue`. `cleanup` also runs outside the lock, in the home container, and only prints: it proves which finished issues' dev containers can go and prints the commands that remove them. `setup` and `doctor` are not part of any workflow: `setup` creates the project's codeo state and `doctor` checks that the project is ready.
 
 ```mermaid
 flowchart LR
@@ -14,6 +14,7 @@ flowchart LR
     close -. review feedback / conflict .-> implement
     triage -. files loose ends through .-> issue
     close -. after a merge .-> triage
+    close -. after a merge .-> cleanup
 ```
 
 ## issue
@@ -42,7 +43,7 @@ The skill drafts and files the issue and does nothing else. It captures the what
 
 ### Extension points
 
-None.
+- `issue/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#issuerole-guard))
 
 ## init
 
@@ -74,6 +75,7 @@ The skill turns a filed issue into a place to work: a pushed branch carrying a d
 
 ### Extension points
 
+- `init/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#initrole-guard))
 - `init/host-workflow` — None; the skill hands off to plan in the same session. ([detail](extension-points.md#inithost-workflow))
 
 ## plan
@@ -102,6 +104,7 @@ The skill produces a reviewed planning artifact and never edits application code
 
 ### Extension points
 
+- `plan/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#planrole-guard))
 - `plan/plan-shape` — Use the generic plan shape in the skill. ([detail](extension-points.md#planplan-shape))
 - `plan/proof-of-done` — The suite's filter with {} replaced by the name of the test the task writes; a suite without filter has no single-test form and its whole test command is the proof. With no suites configured, the task names its proof command in full. ([detail](extension-points.md#planproof-of-done))
 - `plan/environment-lease-notes` — None; the plan adds no environment lease notes. ([detail](extension-points.md#planenvironment-lease-notes))
@@ -134,6 +137,7 @@ The skill executes an already-approved plan; it does not plan, draft issues, or 
 
 ### Extension points
 
+- `implement/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#implementrole-guard))
 - `implement/environment-lease-notes` — None; the lease and deploy paragraphs are the whole rule. ([detail](extension-points.md#implementenvironment-lease-notes))
 - `implement/wiki-rules` — Documentation rules are only the project's docsDir conventions. ([detail](extension-points.md#implementwiki-rules))
 
@@ -158,12 +162,14 @@ The skill is the gate between building and merging. It never fixes what it finds
 - Never touches code, tests, the plan's text, the issue's text, a documentation page, or another skill's dossier file. A test it wishes existed, or a page it wishes said something else, is a finding, not something to write.
 - Does not fix anything it finds, not the code, a test, or a typo; that is `/codeo:implement`'s purview.
 - Does not edit the plan or re-scope the work; that is `/codeo:plan`'s purview.
-- Does not open, merge or approve a pull request; opening one on a clear verdict is `/codeo:close`'s. It pushes its own dossier commits and nothing else.
+- Does not open, merge or approve a pull request; opening one on a clear verdict is `/codeo:close`'s. It pushes its own dossier commits and, when step 2's sync merged the base branch, that merge commit on the same push; nothing else.
 - Does not deploy, build for the environment, or take the lease to change what the environment runs; it reads what is deployed and sends back what is stale.
 - Does not invent acceptance criteria. If `init.md` has none to judge against, that is itself the finding, and it routes back to whoever owed them.
+- A changed path outside the plan's footprint is a finding: non-blocking on a first-round plan, blocking once the plan has a second round, because the `qc-verdict` check fails the pull request on it.
 
 ### Extension points
 
+- `qc/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#qcrole-guard))
 - `qc/environment-evidence` — None; the evidence is the deployed hook's output and nothing more. ([detail](extension-points.md#qcenvironment-evidence))
 - `qc/wiki-rules` — Documentation checks are only the project's docsDir conventions. ([detail](extension-points.md#qcwiki-rules))
 - `qc/invariants-extra` — None; the reviewer works from the criteria, the invariants file and the diff. ([detail](extension-points.md#qcinvariants-extra))
@@ -187,7 +193,7 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 ### Hand-offs and non-goals
 
 - Hands off to `/codeo:implement` when review asks for changes or the branch conflicts with the base branch (a send-back); otherwise to nobody. The workflow ends when the merged branch is cleaned up and the lock released.
-- Its closing block is per exit (see `docs/handoff.md` → Closing block): `/codeo:close` while the lock is kept, `/codeo:close --stash` for an interrupted stash, and, once finished, `/codeo:triage` then the host clean-up. A completed stash names `/codeo:init #<N>`, with a manual Ready repair first when the board move failed.
+- Its closing block is per exit (see `docs/handoff.md` → Closing block): `/codeo:close` while the lock is kept, after an interrupted abandon as well, `/codeo:close --stash` for an interrupted stash, and, once finished, `/codeo:triage` then the host clean-up, an abandon that finished included. A completed stash names `/codeo:init #<N>`, with a manual Ready repair first when the board move failed.
 - Never touches code, tests, documentation pages, the plan's text, the issue's text, another skill's dossier file, or the base branch.
 - Does not merge, approve or review the pull request, and does not answer review comments on the implementer's behalf beyond a summary of what changed.
 - Does not re-run the build, the suites or the acceptance criteria; that is `/codeo:qc`'s.
@@ -200,6 +206,7 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 
 ### Extension points
 
+- `close/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#closerole-guard))
 - `close/put-back` — None; a stash or an abandon releases what is held and records what the environment carries. ([detail](extension-points.md#closeput-back))
 - `close/ci-publish-check` — None; no check of what CI did for the merge commit. ([detail](extension-points.md#closeci-publish-check))
 - `close/host-workflow` — None; the report names the lock's host and says whether anything is left to remove. ([detail](extension-points.md#closehost-workflow))
@@ -231,7 +238,32 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 ### Extension points
 
+- `triage/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#triagerole-guard))
 - `triage/todo-excludes` — Scan tracked files only, with no exclusions. ([detail](extension-points.md#triagetodo-excludes))
+
+## cleanup
+
+### Purpose and triggers
+
+Prints the commands that remove finished issues' dev containers. For each issue under `.codeo/done` on the base branch it proves, through `scripts/cleanup.sh`, that the issue is closed, its pull request is merged, the pull request's branch is gone from origin, no branch still carries its dossier, and the issue holds no lease and waits for none on the intake branch. A command is printed only when the container name the project's overlay gives also matches the overlay's own pattern; an issue that fails a proof is listed with it and no command. It lists the proven issues with the project's removal command and the rest with the proof that failed, and runs nothing. It triggers on "clean up containers", "what can I remove", "cleanup".
+
+It runs in the home container only, outside the workflow lock. It says every time what the proofs cannot see: unpushed work in a clone, whether a clone was left clean, and whether /codeo:close ran to its end there (the lock lives only in that clone; a lease the issue still holds is the one trace, and it lists the issue as not proven). It also says that the commands run on the host, in a shell, after `git status` in that clone.
+
+### Reads and writes
+
+- Reads `origin`: the base branch's `.codeo/done/` directories, branch listings, issues and pull requests, through `scripts/cleanup.sh`.
+- Writes `.codeo/intake/cleanup/` (a record of what was printed), committed to `codeo/intake` through `intake.sh`, never to the checked-out branch.
+
+### Hand-offs and non-goals
+
+- Hands off to nobody: the printed commands are the engineer's to run on the host. It ends with the closing block naming them and then the next issue.
+- Never runs a container command, never mounts or asks for the container engine's socket, and never builds a name or a command itself; it relays what the script printed.
+- Never touches the lock, any dossier, issue, board or pull request, or any branch other than `codeo/intake`.
+
+### Extension points
+
+- `cleanup/role-guard` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#cleanuprole-guard))
+- `cleanup/removal-command` — None; the proven issues are listed and no command is printed. ([detail](extension-points.md#cleanupremoval-command))
 
 ## setup
 
@@ -264,7 +296,7 @@ The script runs eleven checks: config, schema, codename, gh-auth, gh-scopes, boa
 
 ### Reads and writes
 
-- Reads `.codeo/config.json` and the project's overlays, and reads GitHub through `gh api` (the board check's `gh project view` is the one exception, being GraphQL-backed).
+- Reads `.codeo/config.json`, the project's overlays and the extension-point registry `lib/extension-points.tsv` (the `overlays` check), and the installed-plugins file `~/.claude/plugins/installed_plugins.json` (the `superpowers` check). Checks with `command -v` that `gh`, `jq`, `git` and the first word of each suite's build and test commands are on the PATH, and that bash is 4.3 or newer. Reads GitHub through `gh api` (the board check's `gh project view` is the one exception, being GraphQL-backed); when `ci.requiredChecks` is absent the ruleset check compares against `tests` and `qc-verdict`.
 - Writes nothing but its report.
 
 ### Hand-offs and non-goals

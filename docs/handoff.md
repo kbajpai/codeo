@@ -89,6 +89,8 @@ bound checkout is not ambiguous.** The engineer named the issue when they ran `i
 lock honors that rather than guessing at it. The rule that a bare invocation stops and asks still
 holds whenever no workflow is active — which is exactly when there is no lock to read.
 
+A checkout has one role: it is the home checkout, an issue's checkout, or neither. The roles and the guard that keeps a skill out of the wrong checkout are a project's own: each guarded skill reads its `<skill>/role-guard` extension point first and runs whatever check the project's overlay gives it, and the guard applies only where that check says it does. When the check refuses, the step ends there and nothing the engineer says overrides it. `plan`, `implement`, `qc`, `close` and the home-only skills (`issue`, `init`, `triage`, `cleanup`) differ only in what the check allows.
+
 `/codeo:issue` is the exception, as it is to most of this file. It runs before a number exists and
 may be called mid-flow by `plan` or `implement` without disturbing the lock: filing an issue is not
 starting work on it. `/codeo:triage` is outside the lock for the same reason: it reads across every
@@ -301,7 +303,8 @@ The receiving step opens a new round in its own dossier rather than editing the 
 already answered, so the file shows what the send-back changed. One edit is sanctioned: a
 `plan.md` round answering a send-back replaces the earlier round's `### Footprint` block with its
 own, since `overlap.sh` and `inflight.sh` read every block and a stale one goes on producing
-overlaps. The replacing block carries the earlier round's files too, so it covers the whole
+overlaps. The replacing block carries every earlier path the branch still changes, so it covers
+the whole
 branch. A send-back returns to the sender
 once the receiving step is done, and the pass then runs again in full. Re-checking only the part
 that changed is how a regression ships.
@@ -315,6 +318,9 @@ What is enforced is what the project's ruleset on the base branch requires — o
   actually require. `qc-verdict` is the pipeline's own
   (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/qc-verdict.sh" <base> <head>`), and `scope.sh` decides which
   test suites a change needs, for CI and the local quality gate alike.
+  It also fails a pull request that archives a `plan.md` with a `### Round 2` or later whose
+  footprint omits a path `overlap.sh --outside` prints for the branch; an archive the pull request
+  only edits is not judged.
 - **The live-dossier rule.** A send-back moves the dossier back to `.codeo/<N>/`, and the
   `qc-verdict` check fails closed on a live dossier the head still carries, so the open PR stays
   unmergeable until `/codeo:close` archives it to `done/` again.
@@ -329,6 +335,11 @@ caller with a number, and the caller — not `/codeo:issue` — records it in it
 `## Outcome` and `## Log` line. `/codeo:issue` writes nothing into the running workflow's dossiers
 even when called mid-flow; its own file lives under `.codeo/intake/`. `/codeo:triage` records the
 number in its ledger.
+
+When the project's role check refuses the call (the skill is running in an issue container),
+record the finding in this skill's own dossier as a line under `## Notes` that promises the
+later work and carries no issue number — the form `/codeo:triage` collects once the dossier
+is archived — and say to file it with `/codeo:issue` in the home container.
 
 ## Closing block
 
@@ -352,7 +363,7 @@ for the engineer, who should never have to work out where they stand or what to 
   first names the exact command. No step is "decide what to do".
 - **A skill with several exits states the one it took.** `/codeo:qc` is clear, back to
   `/codeo:implement` or back to `/codeo:plan`; `/codeo:close` is waiting on a merge, sent back,
-  finished or stashed. The block describes that exit and no other.
+  finished, stashed or abandoned. The block describes that exit and no other.
 - **It names only a command that can run.** The first step is the command that can run in the
   state the exit leaves behind. A lock a failed step kept, a lock never taken and a Ready gate not
   yet passed each change which command that is. The block never names the command the state
@@ -375,6 +386,7 @@ The default next goal of each skill:
 | `qc` | by verdict: a pull request (`/codeo:close`), fixes (`/codeo:implement`) or a re-plan (`/codeo:plan`) |
 | `close` | by exit: the PR merged, review fixed, or loose ends found (`/codeo:triage`) |
 | `triage` | the next issue started — `/codeo:init #<N>` |
+| `cleanup` | the printed commands run on the host, then the next issue — `/codeo:init #<M>` |
 
 Exits whose next command is not the default:
 
@@ -382,9 +394,12 @@ Exits whose next command is not the default:
 |---|---|
 | `close — lock kept` | `/codeo:close` |
 | `stash — interrupted` | `/codeo:close --stash` |
-| `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed |
-| `init — no lock` | the fix the `lock: TODO` line names, then `lock.sh take local` again |
+| `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed, in the checkout the project's host workflow names, when it names one |
+| `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again; a `lock: TODO` printed after the lock was taken (the volume name unreadable on `host: container`) needs the fix alone |
 | `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
+| `issue — Status unreadable` | the fix its line names (for example `gh auth refresh -s project`), then `/codeo:triage`, then `/codeo:init #<N>` |
+| `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up, in the checkout the project's host workflow names, when it names one |
+| `abandon — interrupted` | `/codeo:close` |
 
 ## Spinning out subagents
 

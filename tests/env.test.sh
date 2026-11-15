@@ -134,7 +134,11 @@ docs_and_plans_dirs_default_and_override() {
     [[ "$out" == "Docs|Docs/p" ]] || fail "override: $out"
 }
 
-for c in docs_and_plans_dirs_default_and_override todo_marker_is_refused_for_each_required_key setup_then_validate_refuses_a_repo_without_origin failures_print_exactly_one_line resolves_project_root_from_a_subdirectory missing_config_names_the_file \
+env_key_reference_lists_plugin() {
+    grep -qE '^#   plugin\{repo,ref\} ' "$plugin_root/lib/env.sh" || fail 'lib/env.sh does not document the plugin key'
+}
+
+for c in env_key_reference_lists_plugin docs_and_plans_dirs_default_and_override todo_marker_is_refused_for_each_required_key setup_then_validate_refuses_a_repo_without_origin failures_print_exactly_one_line resolves_project_root_from_a_subdirectory missing_config_names_the_file \
     invalid_json_names_the_file newer_schema_is_refused_naming_both_numbers \
     missing_base_branch_names_the_key optional_key_is_empty_with_exit_1_and_get_works \
     no_write_outside_project_or_secrets_dir; do

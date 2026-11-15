@@ -48,6 +48,16 @@ answer too: each task then names its own proof command in full (step 8).
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: plan/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" plan role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: plan-09 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Read `.codeo/active` before anything else.** The lock names the issue this workflow is
    bound to, which is what makes a bare invocation unambiguous here — the engineer named the issue
    when they ran `/codeo:init`. No lock means no workflow here: name `/codeo:init #<N>` as the
@@ -99,6 +109,11 @@ answer too: each task then names its own proof command in full (step 8).
    When exploration turns up real work that doesn't belong in this plan, neither widen the scope
    to absorb it nor drop it: delegate it to `/codeo:issue`, which files it as its own issue and
    hands the number back.
+
+   When the project's role check refuses the call (the skill is running in an issue container),
+   record the finding in this skill's own dossier as a line under `## Notes` that promises the
+   later work and carries no issue number — the form `/codeo:triage` collects once the dossier
+   is archived — and say to file it with `/codeo:issue` in the home container.
 
 5. **Decide the output's shape, and say so before drafting.**
    <!-- point: plan/plan-shape -->
@@ -165,22 +180,24 @@ answer too: each task then names its own proof command in full (step 8).
    way `superpowers:test-driven-development` runs them — the failing test first, its expected
    failure, then the code that makes it pass — so that check exists before the code it proves.
 
-   **Mark the tasks the engineer runs on their own host.** A task the engineer runs outside this
-   session's checkout — a build or run on their own machine, when the lock's `host` is not
-   `local`, or is `local` on Windows — is marked with a line `Runs on: the engineer's host`. Its
-   command is neutral: no shell variable or substitution (`$PWD`, `$(…)`), no nested quotes, no
-   `&&` or line continuation, nothing but one command a shell passes through unchanged; anything
+   **Mark the tasks the engineer runs on their own host.** A task the engineer runs on their own
+   machine, not in this session's shell — a build or run there — is marked with a line
+   `Runs on: the engineer's host`. That is every such task when the lock's `host` is not `local`,
+   and also when it is `local` on Windows: the checkout is the same, but Claude Code then runs
+   commands in Git Bash while the engineer may type in PowerShell or cmd. Its command is neutral —
+   one command a shell passes through unchanged: no shell variable or substitution (`$PWD`,
+   `$(…)`), no nested quotes or single-quoted arguments, no glob, no `~`, no `./script` path, no
+   `&&` or line continuation, because bash, PowerShell and cmd read these differently. Anything
    longer becomes a script in the repository, run as one command,
-   in a language the engineer's host is known to have. Where none is known, the task is labelled `Shell: <name>` and asked like
-   any command that cannot be neutral. When a command cannot be neutral, the plan asks
-   which shell they use: it asks as a numbered question in plan.md (`.codeo/<N>/plan.md`), then
-   repeats step 4's stop (commit, push, end the turn; resume from the file), and labels the
-   command `Shell: <name>`.
-   A `host: local` lock needs no question, unless the session runs on Windows: Claude Code then
-   runs commands in Git Bash while the engineer may type in PowerShell, so ask as for any other
-   host. The reason: the session's shell tells nothing about the machine the engineer types on
-   (#67's Task 3 wrote bash that failed in their PowerShell). `Runs on:` and `Needs lease:` are
-   independent: a task on the engineer's own machine against the environment
+   in a language the engineer's host is known to have.
+   Where none is known, the script cannot be neutral: it is asked about and labelled like any other command that cannot be neutral.
+   A command that cannot be neutral is asked
+   about and then labelled: the plan asks which shell they use as a numbered question in plan.md
+   (`.codeo/<N>/plan.md`), repeats step 4's stop (commit, push, end the turn; resume from the
+   file), and labels the command `Shell: <name>`. A `host: local` lock on any platform but Windows
+   needs no question. The reason: the session's shell tells nothing about the machine the engineer
+   types on (#67's Task 3 wrote bash that failed in their PowerShell). `Runs on:` and
+   `Needs lease:` are independent: a task on the engineer's own machine against the environment
    carries both markers, each on its own line, in either order, and a `Needs lease:` task is not a
    host task by itself.
 
@@ -229,7 +246,9 @@ answer too: each task then names its own proof command in full (step 8).
    means none are configured — whose `paths` the plan's files fall under; a parameterised one is
    written `<name>:<suffix>`). `exclusive:` never
    lists `$ENV_RESOURCE`: the later steps lease the environment from its first task, not the plan.
-   A key with nothing under it says `none`. Then run
+   `sequenced:` is the fourth key and reads `none` when nothing was sequenced; step 10 fills it in
+   when an overlap question is answered *sequence after #M*. A key with nothing under it says
+   `none`, and `dossier-check.sh` fails a footprint that lacks any of the four. Then run
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --except <N>` — one block per other workflow:
    its issue, branch, assignee, last finished step, its plan's footprint lines when it has one,
    and the files its branch has changed — and compare. Each overlap becomes a numbered question in
@@ -270,14 +289,23 @@ answer too: each task then names its own proof command in full (step 8).
     (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The gate`).
 
     1. **Write the footprint down.** Put the `### Footprint` block, as step 8 drafted it and the
-       answers since have amended it (with a `sequenced:` line when an overlap question was
-       answered that way), under `plan.md`'s `## Notes`, leaving `## Outcome` pending. Commit it
-       alone, staged by name, with the subject `docs(codeo): plan dossier for #<N> — footprint`,
-       and push.
+       answers since have amended it (its `sequenced:` line names the issue when an overlap
+       question was answered that way, and stays `none` otherwise), under `plan.md`'s `## Notes`,
+       leaving `## Outcome` pending.
+
+       **After a send-back, make the draft cover the branch.**
        On a pass after a send-back, `## Outcome` is not pending: it holds the earlier rounds, which
-       stay as written, and "pending" in sub-steps 1-3 means no new round is written yet. The draft
-       footprint goes under `## Notes` again all the same, and the earlier round's block stays where
-       it is until sub-step 4 replaces it.
+       stay as written, and "pending" in sub-steps 1-3 means no new round is written yet.
+       On a pass after a send-back, sub-step 1 removes the earlier round's `### Footprint` block and puts the draft under `## Notes`
+       as its first edit: the block is the only one `overlap.sh` would otherwise union with the
+       new one. That removal is the one edit an answered round ever takes
+       (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
+       A block written after a send-back covers the branch, not only this round, so
+       run `overlap.sh --outside <N>` and add every path it prints to `files:` before committing it;
+       `qc-verdict` fails the pull request if one is still missing.
+
+       Commit it alone, staged by name, with the subject
+       `docs(codeo): plan dossier for #<N> — footprint`, and push.
        <!-- rule: plan-06 -->
        Only now run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" <N>` — step 8 compared a
        draft, which `overlap.sh` cannot read; it reads the `### Footprint` in this checkout's
@@ -317,14 +345,9 @@ answer too: each task then names its own proof command in full (step 8).
        pass's outcome goes beneath them as the next `### Round <n>` (the unheaded first is round
        1), with the date as its first line and, on the next line, `(send-back from qc.md round <k>)`
        naming the `qc.md` round it answers. The new `### Footprint` replaces the earlier round's:
-       moving it out of `## Notes` to end the new round removes the old block, because
-       `overlap.sh` and `inflight.sh` read every block in the file, and a stale one goes on
-       producing overlaps. That removal is the one edit an answered round ever takes
-       (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
-       A block written after a send-back covers the branch, not only this round: once the earlier
-       block is gone,
-       run `overlap.sh --outside <N>` and add every path it prints to `files:` before committing,
-       then run `overlap.sh <N>` again if you added any and raise what it prints as at sub-step 2.
+       sub-step 1 already removed the old block, because `overlap.sh` and `inflight.sh` read every
+       block in the file, and a stale one goes on producing overlaps; moving the new block out of
+       `## Notes` to end the new round is all that is left to do.
 
 11. **Report** the file path and a one-line summary, then end with the closing block
     (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next goal is building the plan,

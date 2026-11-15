@@ -76,6 +76,16 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: triage/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" triage role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: triage-10 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Resume or start.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" restore triage` brings the
    folder to a clone that lacks it; an error saying there is no intake branch, or that it has no
    `triage` directory, means a first run: start a new run. A run file with an open question is a
@@ -221,7 +231,7 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
      a time, in the order the engineer ranked them. Then ask, as a follow-up question, whether the
      new issue is ready to work on (with a board); yes is a *mark Ready*; a no is a *leave in the backlog*, recorded as `issue:<N>` → `backlog`, so it is not asked about again.
    - **Mark Ready** → `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`, which adds the
-     issue to the board if it is not on it. Record `ready` and quote the line the script prints (it reports the old status, the new option and the project) in
+     issue to a synced project only where that project's Status has the Ready option, and sets Ready there. Record `ready` and quote the line the script prints (it reports the old status, the new option and the project) in
      the run's `## Outcome`.
      <!-- rule: triage-06 -->
      A script failure — the `project` token scope is the likely one, and the script names the

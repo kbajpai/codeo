@@ -234,13 +234,15 @@ sequenced:  after #7 — both add an Orders migration (Q6)
   it from the first environment task. Each is something two
   branches cannot both change and merge cleanly, and each is a lock `intake.sh lease` takes, one
   file per resource (`:` spelled `_`).
-- `sequenced` — only when an overlap question was answered that way: which issue this waits for,
-  why, and the question that decided it.
+- `sequenced` — `none` unless an overlap question was answered *sequence after #M*; then which
+  issue this waits for, why, and the question that decided it. It is never left out:
+  `dossier-check.sh` fails a block without it.
 
 A block written after a send-back covers the branch, not only the round: its `files` carry the
 round's own paths plus every earlier path the branch still changes. `overlap.sh --outside <N>`
 prints the paths the branch changes that the file's blocks do not cover, and the plan adds each
-one before the block is committed.
+one before the block is committed. It runs after the earlier round's block has been removed, so it
+judges the block that remains; `qc-verdict` runs the same check on the archived `plan.md`.
 
 A key with nothing under it says `none` rather than disappearing, so a missing line means the
 plan never looked, not that it found nothing.

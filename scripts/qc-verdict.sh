@@ -11,6 +11,12 @@
 #       "qc-verdict: no archived dossier in this PR" when the diff adds, modifies or renames
 #       nothing under a numeric done/<N>/ -- a PR that only deletes there reports the same -- and
 #       exits 0.
+#       An archive this PR adds or renames into place (its done/<N>/plan.md is added or renamed in
+#       the diff; one it only edits is history, not judged) whose plan.md has a "### Round <k>"
+#       (k >= 2) in its "## Outcome" also fails when its footprint omits a path the diff
+#       changes (overlap.sh --outside), reported as
+#       "<state>/done/<N>/plan.md: round <k> footprint omits: <paths>"; one-round plans and archives
+#       with no plan.md are not checked.
 #       Every failure reason goes to stderr, naming the file; every file is checked and every
 #       failure reported before the non-zero exit.
 set -euo pipefail
@@ -115,7 +121,31 @@ done <<<"$judged"
 # here is by design.
 touched=$(git diff --name-only --diff-filter=AMR "$base" "$head_ref" -- "$state_rel/done/" \
     | sed -nE "s#^$state_re/done/([0-9]+)/.*#\\1#p" | sort -un)
+# Archives whose plan.md the diff adds or renames into place: only these are footprint-checked.
+delivered=$(git diff --name-only --diff-filter=AR "$base" "$head_ref" -- ":(glob)$state_rel/done/*/plan.md" \
+    | sed -nE "s#^$state_re/done/([0-9]+)/plan\\.md\$#\\1#p" | sort -un)
 for n in $touched; do
+    # A re-planned archive (its plan.md's '## Outcome' has a '### Round <k>' heading, k >= 2) must
+    # have a footprint that still covers every path the branch changes: a later round's block is
+    # the union, so a path outside every `files` glob was never planned for.
+    if grep -qxF "$n" <<<"$delivered" && plan=$(git show "$head_ref:$state_rel/done/$n/plan.md" 2>/dev/null); then
+        plan_round=$(awk '
+            /^## Outcome/ { o = 1; next }
+            o && /^## / { exit }
+            o && /^### Round [0-9]+/ { k = $3 + 0; if (k > max) max = k }
+            END { print max + 0 }
+        ' <<<"$plan")
+        if ((plan_round >= 2)); then
+            # A failing overlap.sh is a failure of its own, named and collected, not an abort.
+            if ! omitted=$(bash "$(dirname "${BASH_SOURCE[0]}")/overlap.sh" --outside "$n" --base "$base" --head "$head_ref"); then
+                fail "$state_rel/done/$n/plan.md: footprint check failed (overlap.sh exited non-zero)"
+            else
+                omitted=$(tr '\n' ' ' <<<"$omitted")
+                omitted=${omitted% }
+                [[ -z $omitted ]] || fail "$state_rel/done/$n/plan.md: round $plan_round footprint omits: $omitted"
+            fi
+        fi
+    fi
     grep -qxF "$state_rel/done/$n/qc.md" <<<"$judged" && continue
     if git cat-file -e "$head_ref:$state_rel/done/$n/qc.md" 2>/dev/null; then
         echo "qc-verdict: $state_rel/done/$n touched, qc.md unchanged by this PR: not judged"

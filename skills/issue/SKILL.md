@@ -29,6 +29,16 @@ The repository is read from the project's config, never typed into a command:
 
 ## Workflow
 
+**Check the role first, before anything else.**
+<!-- point: issue/role-guard -->
+Fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" issue role-guard`. On exit 0 follow the
+printed text, which runs the project's role check; when the check refuses, print its one line and
+stop — nothing else is done. On exit 3 there is no guard and the step runs as before. On exit 1, 2
+or 4 report the one `codeo:` line and carry on unguarded.
+<!-- rule: issue-08 -->
+A refusal from the role check ends the step. The engineer's words do not lift it; the way forward
+is the container the message names.
+
 0. **Invoked with no arguments? Stop and ask before doing anything else.**
    <!-- rule: issue-01 -->
    Don't infer the idea, bug, or problem to file from conversation context or recent activity —
@@ -168,7 +178,7 @@ The repository is read from the project's config, never typed into a command:
    issue's response. It adds the issue to the board when it is not on it, and prints one line naming
    the old and the new Status.
 
-   <!-- rule: issue-08 -->
+   <!-- rule: issue-09 -->
    A failed move never fails the filing: the issue exists, so its number is reported as usual, and handed back to a caller, and the line the script printed is quoted with the fix it names (`gh auth refresh -s project` when the token lacks the `project` scope; in a hosted web session the script says to move the card by hand). Then read the new issue's Status once:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`. With no board, make no `board.sh` call at all. The Ready name is
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.board.statuses.ready // "Ready"'`, as

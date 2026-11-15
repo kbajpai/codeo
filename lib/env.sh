@@ -28,7 +28,10 @@
 #   board{owner,projects[],gateProject,statuses{}}   optional project board. projects[] and
 #                           gateProject are integers (project numbers). statuses keys are camelCase
 #                           logical names (ready, inProgress, inReview, done, backlog) mapping to the
-#                           board's own option names; a name that is not a key passes through.
+#                           board's own option names; a key with no entry resolves to its conventional
+#                           default (ready → Ready, backlog → Backlog, inProgress → In progress,
+#                           inReview → In review, done → Done); any other name passes through as an
+#                           option name.
 #   labelTypes{}            issue label -> branch type
 #   suites[]{name,paths[],build,test,filter,parallel} test suites and the paths that trigger them.
 #                           parallel is a bool, default false: true means the suite may run together
@@ -56,6 +59,7 @@
 #   invariants              path to the project's invariants document
 #   models{subagent,reviewer}
 #   modules[]               optional modules the project enables
+#   plugin{repo,ref}        optional; the codeo plugin this project pins: repo (owner/name) and ref (a tag or branch); read by the dev container's plugins.sh
 #   stacks[]                optional; names recorded by setup.sh --stack (informational only)
 #   ci{requiredChecks[]}    optional; checks the project's CI requires before a merge
 

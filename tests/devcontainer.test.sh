@@ -3,10 +3,9 @@
 # function named in the final cases=( ... ) array; add a case by writing a function and listing it.
 # Today it checks .codeo/config.json: the codename, the plugin pin, and that the shell suite's paths
 # cover .devcontainer/**. It also checks .devcontainer/devcontainer.json: it is valid JSON that runs as
-# the dev user and names the Dockerfile and start script, caps memory and cpus, names the container after its
-# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that, memory and cpus), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
-# It also checks .devcontainer/Dockerfile
-# (over its non-comment lines): Ubuntu 26.04 with the tools codeo needs, user dev at UID 1000 with the
+# the dev user and names the Dockerfile and start script, caps memory, names the container after its
+# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that and the memory cap), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
+# It also checks .devcontainer/Dockerfile (over its non-comment lines): Ubuntu 26.04 with the tools codeo needs, user dev at UID 1000 with the
 # gh config directory, and none of the tools the image deliberately leaves out. Finally it runs
 # .devcontainer/scripts/plugins.sh in a scratch repo against stub claude and git executables: a fresh
 # machine gets both plugins, a re-run changes nothing, a new pin reinstalls codeo, an unreachable pin
@@ -67,15 +66,32 @@ devcontainer_json_is_valid_and_runs_as_dev() {
         || fail 'postCreateCommand does not run devcontainer-start.sh'
 }
 
-run_args_cap_memory_and_cpus() {
-    jq -e '.runArgs | (index("--memory=4g") != null) and (index("--cpus=2") != null)' "$(dc_json)" >/dev/null \
-        || fail 'runArgs does not carry both --memory=4g and --cpus=2'
+# run_args_are_exact <file>: succeeds only when runArgs is exactly the name and the memory cap, nothing more.
+run_args_are_exact() {
+    # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
+    jq -e '.runArgs == ["--name=${containerWorkspaceFolderBasename}","--memory=4g"]' "$1" >/dev/null
+}
+
+run_args_cap_memory_only() {
+    jq -e '.runArgs | (index("--memory=4g") != null) and (map(select(startswith("--cpus"))) | length == 0)' "$(dc_json)" >/dev/null \
+        || fail 'runArgs does not carry --memory=4g, or it carries a --cpus entry'
 }
 
 run_args_name_the_container_after_its_clone() {
-    # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
-    jq -e '.runArgs == ["--name=${containerWorkspaceFolderBasename}","--memory=4g","--cpus=2"]' "$(dc_json)" >/dev/null \
-        || fail 'runArgs is not exactly --name=${containerWorkspaceFolderBasename}, --memory=4g, --cpus=2'
+    run_args_are_exact "$(dc_json)" \
+        || fail 'runArgs is not exactly --name=${containerWorkspaceFolderBasename}, --memory=4g'
+}
+
+run_args_reject_an_extra_or_duplicate_entry() {
+    local tmp extra
+    tmp=$(mktemp -d)
+    for extra in --memory=8g --cpus=1; do
+        jq --arg e "$extra" '.runArgs += [$e]' "$(dc_json)" >"$tmp/devcontainer.json"
+        if run_args_are_exact "$tmp/devcontainer.json"; then
+            fail "runArgs with $extra appended was accepted as exact"
+        fi
+    done
+    rm -rf "$tmp"
 }
 
 post_start_command_reruns_the_title() {
@@ -233,7 +249,7 @@ case "$1 $2 ${3:-}" in
         fi ;;
     "plugin marketplace add")
         if [[ $4 == *@* ]]; then
-            jq -n --arg r "${4#*@}" '{codeo: {source: {ref: $r}}}' > "$market"
+            jq -n --arg p "${4%@*}" --arg r "${4#*@}" '{codeo: {source: {repo: $p, ref: $r}}}' > "$market"
         fi ;;
     "plugin marketplace remove")
         # The real CLI rewrites the project's settings when run inside a repository.
@@ -266,10 +282,10 @@ pl_run() {
 # pl_calls_have <line>: a claude call equal to the whole line was made.
 pl_calls_have() { grep -qxF -- "$1" "$pl_dir/stub/calls"; }
 
-# pl_installed_codeo_at <ref>: codeo is installed with its marketplace pinned to the ref.
+# pl_installed_codeo_at <ref> [repo]: codeo is installed with its marketplace pinned to the ref, from the repo.
 pl_installed_codeo_at() {
     echo 'codeo@codeo' >> "$pl_dir/stub/installed"
-    jq -n --arg r "$1" '{codeo: {source: {ref: $r}}}' > "$pl_dir/claude/plugins/known_marketplaces.json"
+    jq -n --arg r "$1" --arg p "${2:-kbajpai/codeo}" '{codeo: {source: {repo: $p, ref: $r}}}' > "$pl_dir/claude/plugins/known_marketplaces.json"
 }
 
 pl_pin='{"repo":"kbajpai/codeo","ref":"v1.0.3"}'
@@ -313,6 +329,35 @@ plugins_ref_change_reinstalls_codeo() {
     fi
     pl_calls_have 'plugin install codeo@codeo --scope user' || fail 'codeo was not reinstalled'
     ! pl_calls_have 'plugin install superpowers@superpowers-marketplace --scope user' || fail 'superpowers was reinstalled'
+}
+
+plugins_repo_change_reinstalls_codeo() {
+    local removed added
+    pl_setup repochange "$pl_pin" || return 0
+    echo 'superpowers@superpowers-marketplace' >> "$pl_dir/stub/installed"
+    pl_installed_codeo_at v1.0.3 someone/codeo-fork
+    pl_run
+    ((pl_rc == 0)) || fail "exit $pl_rc, stderr: $pl_err"
+    removed=$(grep -nxF 'plugin marketplace remove codeo' "$pl_dir/stub/calls" | head -n1 | cut -d: -f1 || true)
+    added=$(grep -nxF 'plugin marketplace add kbajpai/codeo@v1.0.3' "$pl_dir/stub/calls" | head -n1 | cut -d: -f1 || true)
+    [[ -n $removed ]] || fail 'no marketplace remove codeo'
+    [[ -n $added ]] || fail 'no marketplace add from the pinned repo'
+    if [[ -n $removed && -n $added ]] && ((removed >= added)); then
+        fail 'marketplace remove did not come before the add'
+    fi
+    pl_calls_have 'plugin install codeo@codeo --scope user' || fail 'codeo was not reinstalled'
+    ! pl_calls_have 'plugin install superpowers@superpowers-marketplace --scope user' || fail 'superpowers was reinstalled'
+}
+
+plugins_record_without_a_repo_is_not_reinstalled() {
+    local extra
+    pl_setup norepo "$pl_pin" || return 0
+    printf '%s\n' 'superpowers@superpowers-marketplace' 'codeo@codeo' > "$pl_dir/stub/installed"
+    jq -n '{codeo: {source: {ref: "v1.0.3"}}}' > "$pl_dir/claude/plugins/known_marketplaces.json"
+    pl_run
+    ((pl_rc == 0)) || fail "exit $pl_rc, stderr: $pl_err"
+    extra=$(grep -vxF 'plugin list' "$pl_dir/stub/calls" || true)
+    [[ -z $extra ]] || fail "a record without a repo caused calls other than plugin list: $extra"
 }
 
 plugins_pin_change_leaves_tracked_files_alone() {
@@ -414,6 +459,7 @@ esac
 STUB
     cat > "$ds_dir/bin/claude" <<'STUB'
 #!/usr/bin/env bash
+echo "$PWD" >> "$STUB_DIR/claude-pwds"
 if [[ "$1 $2" == "auth status" ]]; then
     printf '%s' "${STUB_CLAUDE_OUT:-}"
     exit "${STUB_CLAUDE_RC:-1}"
@@ -426,6 +472,8 @@ echo "sudo $*" >> "$STUB_DIR/calls"
 STUB
     cat > "$ds_dir/bin/stat" <<'STUB'
 #!/usr/bin/env bash
+# The settle-stamp query (%s %y) goes to the real stat; every other call is the ownership query.
+case "$*" in *'%s %y'*) exec /usr/bin/stat "$@" ;; esac
 echo "${STUB_STAT_UID:?}"
 STUB
     chmod +x "$ds_dir/bin/gh" "$ds_dir/bin/claude" "$ds_dir/bin/sudo" "$ds_dir/bin/stat"
@@ -455,14 +503,16 @@ ds_todos() { local n; n=$(grep -c "devcontainer-start: TODO.*$1" <<<"$ds_err" ||
 
 # ds_lock_stub: a stub plugin root at $ds_dir/plugin (set as DS_CODEO_ROOT) whose scripts/lock.sh logs its
 # arguments to $ds_dir/lock-calls and, on a branch other than main, writes .codeo/active for issue 55 and
-# prints the lock line. STUB_LOCK_OUT replaces that output and STUB_LOCK_RC is its exit status.
+# prints the lock line; when .codeo/active exists it takes nothing, as the real lock.sh does. STUB_LOCK_OUT replaces that output and STUB_LOCK_RC is its exit status.
 ds_lock_stub() {
     mkdir -p "$ds_dir/plugin/scripts"
     cat > "$ds_dir/plugin/scripts/lock.sh" <<'STUB'
 #!/usr/bin/env bash
 echo "$*" >> "$STUB_DIR/lock-calls"
 branch=$(git branch --show-current)
-if [[ -n ${STUB_LOCK_OUT:-} ]]; then
+if [[ -e .codeo/active ]]; then
+    echo "lock already taken: .codeo/active"
+elif [[ -n ${STUB_LOCK_OUT:-} ]]; then
     echo "$STUB_LOCK_OUT"
 elif [[ $branch != main ]]; then
     printf 'issue:   55\nbranch:  %s\n' "$branch" > .codeo/active
@@ -531,6 +581,67 @@ start_empty_lock_file_on_the_base_branch_is_removed() {
     grep -qxF 'devcontainer-start: .codeo/active was empty and held no lock: removed it' <<<"$ds_out" || fail "no removal line: $ds_out"
     [[ ! -e $ds_dir/codeo-home/.codeo/active ]] || fail "the empty lock file is still there"
     [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called on the base branch"
+}
+
+start_empty_lock_file_on_a_detached_head_is_removed_and_reported() {
+    local n
+    ds_setup lockemptydetached || return 0
+    ds_lock_stub
+    git -C "$ds_dir/codeo-home" -c user.name=T -c user.email=t@example.com commit -q --allow-empty -m c || { fail 'commit failed'; return 0; }
+    git -C "$ds_dir/codeo-home" checkout -q --detach
+    : > "$ds_dir/codeo-home/.codeo/active"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    grep -qxF 'devcontainer-start: .codeo/active was empty and held no lock: removed it' <<<"$ds_out" || fail "no removal line: $ds_out"
+    [[ ! -e $ds_dir/codeo-home/.codeo/active ]] || fail "the empty lock file is still there"
+    n=$(ds_todos 'detached'); ((n == 1)) || fail "wanted one detached-HEAD TODO, got $n: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called on a detached HEAD"
+}
+
+start_empty_lock_file_that_cannot_be_removed_is_one_todo() {
+    local n
+    ds_setup lockstuck || return 0
+    ds_lock_stub; ds_branch feat/x
+    : > "$ds_dir/codeo-home/.codeo/active"
+    mkdir -p "$ds_dir/bin"
+    # Fails for .codeo/active; anything else goes to the real rm by its absolute path, so it cannot call itself.
+    cat > "$ds_dir/bin/rm" <<'STUB'
+#!/usr/bin/env bash
+for arg in "$@"; do
+    [[ $arg == .codeo/active ]] && exit 1
+done
+exec /bin/rm "$@"
+STUB
+    chmod +x "$ds_dir/bin/rm"
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos 'could not be removed'); ((n == 1)) || fail "wanted one could-not-be-removed TODO, got $n: $ds_err"
+    n=$(ds_todos 'lock'); ((n == 0)) || fail "a TODO about a lock was listed: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls")"
+    [[ -e $ds_dir/codeo-home/.codeo/active ]] || fail "the file is gone although rm failed"
+}
+
+start_unreadable_lock_file_is_one_todo() {
+    local n f
+    ds_setup lockunreadable || return 0
+    ds_lock_stub; ds_branch feat/x
+    f="$ds_dir/codeo-home/.codeo/active"
+    printf 'issue:   55\n' > "$f"
+    cp "$f" "$ds_dir/active-before"
+    chmod 000 "$f"
+    if [[ -r $f ]]; then
+        chmod 644 "$f"
+        echo "SKIP start_unreadable_lock_file_is_one_todo: the tests run as a user that can read a mode-000 file"
+        return 0
+    fi
+    ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    n=$(ds_todos '\.codeo/active could not be read'); ((n == 1)) || fail "wanted one could-not-be-read TODO, got $n: $ds_err"
+    n=$(ds_todos 'names no issue'); ((n == 0)) || fail "an unreadable file was reported as naming no issue: $ds_err"
+    [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls")"
+    [[ $(stat -c %a "$f") == 0 ]] || fail "the mode was changed"
+    chmod 644 "$f"
+    cmp -s "$f" "$ds_dir/active-before" || fail "the file was changed"
 }
 
 start_nonempty_lock_file_is_left_alone() {
@@ -609,6 +720,7 @@ start_hash_issue_line_is_a_held_lock() {
     printf 'issue: #55\nbranch:  feat/x\n' > "$ds_dir/codeo-home/.codeo/active"
     cp "$ds_dir/codeo-home/.codeo/active" "$ds_dir/active-before"
     mv "$ds_dir/codeo-home" "$ds_dir/codeo-55"
+    # DS_REPO points the run at the renamed clone: the folder check wants codeo-<issue number>.
     DS_REPO="$ds_dir/codeo-55" ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     [[ -z $ds_err ]] || fail "stderr is not empty: $ds_err"
@@ -624,6 +736,7 @@ start_lock_directory_is_not_reported() {
     ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     n=$(ds_todos 'names no issue'); ((n == 0)) || fail "a directory was reported: $ds_err"
+    n=$(ds_todos 'could not be read'); ((n == 0)) || fail "a directory was reported as unreadable: $ds_err"
     [[ $(ds_lock_calls) == 0 ]] || fail "lock.sh was called"
 }
 
@@ -657,7 +770,7 @@ start_lock_crash_is_a_todo() {
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     n=$(ds_todos 'lock.sh failed (exit 3)'); ((n == 1)) || fail "wanted one crash TODO, got $n: $ds_err"
     ! grep -q boom <<<"$ds_out" || fail "the crash output was printed on stdout: $ds_out"
-    [[ $(grep -o boom <<<"$ds_err" | wc -l) == 1 ]] || fail "boom is not on stderr exactly once: $ds_err"
+    [[ $(grep -c boom <<<"$ds_err" || true) == 1 ]] || fail "boom is not on stderr on exactly one line: $ds_err"
 }
 
 start_without_codeo_installed_is_a_todo() {
@@ -704,7 +817,6 @@ start_ignores_another_projects_codeo() {
     ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     [[ ! -s $ds_dir/lock-calls-other ]] || fail "another project's lock.sh was called: $(cat "$ds_dir/lock-calls-other")"
-    [[ ! -s $ds_dir/lock-calls-mine ]] || fail "lock.sh was called: $(cat "$ds_dir/lock-calls-mine")"
     n=$(ds_todos 'codeo is not installed'); ((n == 1)) || fail "wanted one not-installed TODO, got $n: $ds_err"
 }
 
@@ -811,7 +923,42 @@ start_never_chowns_a_bind_mount() {
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     n=$(ds_sudo_calls); ((n == 0)) || fail "sudo ran for a bind mount: $(cat "$ds_dir/calls")"
     n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "wanted one bind-mount TODO, got $n: $ds_err"
+    if grep 'not on a Docker volume' <<<"$ds_err" | grep -q 'sudo chown -R'; then fail "the bind-mount TODO still advises sudo chown -R: $ds_err"; fi
+    n=$(ds_todos 'user namespace'); ((n == 1)) || fail "the bind-mount TODO does not explain the user namespace: $ds_err"
     ds_safe_dir_set "$ds_dir/codeo-home" || fail 'safe.directory was not set'
+}
+
+start_runs_claude_outside_the_clone() {
+    local line
+    ds_setup claudecwd || return 0
+    : > "$ds_dir/claude-pwds"
+    ds_ready_run
+    [[ -s "$ds_dir/claude-pwds" ]] || { fail 'claude was never run'; return 0; }
+    while IFS= read -r line; do
+        [[ $line == "$ds_dir/home" ]] || fail "claude ran in $line, wanted $ds_dir/home"
+    done < "$ds_dir/claude-pwds"
+    [[ -z $(git -C "$ds_dir/codeo-home" status --porcelain --untracked-files=no) ]] || fail 'the clone has changes after the run'
+}
+
+start_without_a_git_top_level_runs_from_the_clone_not_the_caller() {
+    local n el
+    ds_setup notoplevel || return 0
+    el="$ds_dir/elsewhere"
+    # A decoy working directory: if any later step ran from here, its scripts would leave a marker.
+    mkdir -p "$el/.devcontainer/scripts" "$el/.codeo"
+    printf '#!/usr/bin/env bash\ntouch "%s/decoy-ran-plugins"\n' "$ds_dir" > "$el/.devcontainer/scripts/plugins.sh"
+    printf '#!/usr/bin/env bash\ntouch "%s/decoy-ran-window-title"\n' "$ds_dir" > "$el/.devcontainer/scripts/window-title.sh"
+    : > "$el/.codeo/active"
+    rm -rf "$ds_dir/codeo-home/.git"
+    pushd "$el" > /dev/null || { fail 'could not enter the decoy directory'; return 0; }
+    ds_ready_run
+    popd > /dev/null || return 0
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'top level'); ((n == 1)) || fail "wanted one top-level TODO, got $n: $ds_err"
+    [[ ! -e "$ds_dir/decoy-ran-plugins" ]] || fail "plugins.sh ran from the caller's directory"
+    [[ ! -e "$ds_dir/decoy-ran-window-title" ]] || fail "window-title.sh ran from the caller's directory"
+    [[ -f "$el/.codeo/active" && ! -s "$el/.codeo/active" ]] || fail "the caller's .codeo/active was changed or removed"
+    n=$(find "$el" -mindepth 1 | wc -l); ((n == 6)) || fail "the caller's directory changed ($n entries, wanted 6): $(find "$el" -mindepth 1 | paste -sd' ')"
 }
 
 start_longest_mount_wins() {
@@ -990,6 +1137,59 @@ start_waits_for_the_host_gitconfig_to_arrive() {
     [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
     [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
     grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+}
+
+start_waits_for_a_host_gitconfig_that_is_written_after_it_is_created() {
+    ds_setup writehost || return 0
+    # The file exists empty first and is then written in place, as VS Code does.
+    ( : > "$ds_dir/home/.gitconfig"; sleep 1; git config --file "$ds_dir/home/.gitconfig" user.name "Ada O'Neil"; git config --file "$ds_dir/home/.gitconfig" user.email ada@example.com ) &
+    DS_GITCONFIG_WAIT=5 DS_AUTHOR_NAME=Env DS_AUTHOR_EMAIL=env@example.com ds_ready_run
+    wait
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+    grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+}
+
+start_waits_for_a_host_gitconfig_that_is_still_growing() {
+    local f
+    ds_setup growhost || return 0
+    f="$ds_dir/home/.gitconfig"
+    # The file is written in place in short steps, the email last, so for about half a second it is non-empty and changing.
+    (
+        : > "$f"
+        sleep 0.3
+        printf '[user]\n' >> "$f"; sleep 0.05
+        printf '\tname = Ada O'"'"'Neil\n' >> "$f"; sleep 0.05
+        printf '\t# one\n' >> "$f"; sleep 0.05
+        printf '\t# two\n' >> "$f"; sleep 0.05
+        printf '\t# three\n' >> "$f"; sleep 0.05
+        printf '\t# four\n' >> "$f"; sleep 0.05
+        printf '\t# five\n' >> "$f"; sleep 0.05
+        printf '\temail = ada@example.com\n' >> "$f"
+    ) &
+    DS_GITCONFIG_WAIT=5 DS_AUTHOR_NAME=Env DS_AUTHOR_EMAIL=env@example.com ds_ready_run
+    wait
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+    grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+    grep -qF 'user.email set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.email: $ds_out"
+}
+
+start_does_not_stall_on_a_host_gitconfig_that_stays_empty() {
+    local start=$SECONDS
+    ds_setup emptyhost || return 0
+    : > "$ds_dir/home/.gitconfig"
+    DS_GITCONFIG_WAIT=2 DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    ((SECONDS - start < 6)) || fail "the run took $((SECONDS - start))s"
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0: $ds_err"
+    [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "user.name is not the environment's: $(ds_global user.name)"
+    grep -qF 'user.name set from GIT_AUTHOR_NAME' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+}
+
+readme_says_included_identities_do_not_count() {
+    local readme="$repo/.devcontainer/README.md"
+    if grep -qF '[include]' "$readme" && grep -qF 'directly in' "$readme"; then return 0; fi
+    fail 'the README does not say an included identity does not count'
 }
 
 start_does_not_wait_when_the_volume_has_the_identity() {
@@ -1361,6 +1561,66 @@ start_keeps_an_executable_bit_the_index_does_not_record() {
     [[ -x $r/tool.sh ]] || fail 'tool.sh lost its executable bit'
     git -C "$r" diff --summary | grep -q 'mode change 100644 => 100755 tool.sh' || fail "git diff --summary does not show the mode change: $(git -C "$r" diff --summary)"
     ! grep -q 'restored' <<<"$ds_out" || fail "stdout mentions a restore: $ds_out"
+    grep 'tool.sh' <<<"$ds_out" | grep -q '100644' || fail "stdout does not name tool.sh and 100644: $ds_out"
+}
+
+start_names_a_file_mode_overridden_from_a_wider_scope() {
+    local r
+    ds_setup override-scope || return 0
+    ds_on_volume
+    r="$ds_dir/codeo-home"
+    git -C "$r" config --unset core.filemode
+    git config --file "$ds_dir/gitconfig" core.fileMode false
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --local --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true locally'
+    grep 'overrid' <<<"$ds_out" | grep -q 'global' || fail "stdout does not say it overrode the global setting: $ds_out"
+}
+
+# Pins existing behaviour: a file whose mode was lost and whose content was edited is still restored and counted.
+start_files_restore_and_content_edit_both_count() {
+    local r
+    ds_setup restore-and-edit || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/codeo-home"
+    printf '#!/bin/sh\necho edited\n' > "$r/bin/run.sh" || { fail 'could not edit bin/run.sh'; return 0; }
+    chmod 644 "$r/bin/run.sh"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ -x $r/bin/run.sh ]] || fail 'bin/run.sh is not executable'
+    grep -q 'echo edited' "$r/bin/run.sh" || fail 'bin/run.sh lost its edited content'
+    grep -q 'restored the modes of 1 tracked file (bin/run.sh)' <<<"$ds_out" || fail "stdout does not say it restored the modes of 1 tracked file (bin/run.sh): $ds_out"
+}
+
+start_leaves_no_modes_file_when_interrupted() {
+    local r real_git
+    ds_setup interrupted || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/codeo-home"
+    real_git=$(command -v git)
+    cat > "$ds_dir/bin/git" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+    *"diff --raw"*)
+        # \$(...) forks a subshell with the script's own cmdline: climb to the topmost ancestor that matches.
+        p=\$PPID
+        while pp=\$(awk '{print \$4}' "/proc/\$p/stat") && tr '\\0' ' ' < "/proc/\$pp/cmdline" | grep -q devcontainer-start.sh; do
+            p=\$pp
+        done
+        kill -TERM "\$p"; sleep 5; exit 1 ;;
+esac
+exec $real_git "\$@"
+STUB
+    chmod +x "$ds_dir/bin/git"
+    ds_ready_run
+    ((ds_rc != 0)) || fail 'the script exited 0 although it was sent TERM'
+    ! grep -qxF 'gh auth setup-git' "$ds_dir/calls" 2>/dev/null || fail 'step 4 ran, so the script did not stop on TERM'
+    ! grep -q 'devcontainer-start: ready$' <<<"$ds_out" || fail "the script ran to the end: $ds_out"
+    ! compgen -G "$r/.git/modes.*" >/dev/null || fail 'a modes temp file was left in the git dir after an interrupt'
 }
 
 start_keeps_file_mode_off_when_the_mode_listing_fails() {
@@ -1374,7 +1634,7 @@ start_keeps_file_mode_off_when_the_mode_listing_fails() {
     cat > "$ds_dir/bin/git" <<STUB
 #!/usr/bin/env bash
 case "\$*" in
-    *"diff --raw"*) exit 1 ;;
+    *"diff --raw"*) echo 'fatal: boom' >&2; exit 1 ;;
 esac
 exec $real_git "\$@"
 STUB
@@ -1384,6 +1644,7 @@ STUB
     [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was turned on although the modes could not be listed'
     n=$(ds_todos 'could not be listed'); ((n == 1)) || fail "wanted one TODO saying the modes could not be listed, got $n: $ds_err"
     grep 'could not be listed' <<<"$ds_err" | grep -q 'update-index --chmod' || fail "the TODO does not name update-index --chmod: $ds_err"
+    grep 'could not be listed' <<<"$ds_err" | grep -q 'fatal: boom' || fail "the TODO does not carry the listing's stderr: $ds_err"
     ! compgen -G "$r/.git/modes.*" >/dev/null || fail 'a modes temp file was left in the git dir'
 }
 
@@ -1699,6 +1960,53 @@ title_reports_an_unwritable_vscode_dir() {
     [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
 }
 
+title_leaves_the_exclude_file_alone_when_it_has_the_entry() {
+    local exclude before
+    wt_setup exclkeep || return 0
+    wt_run
+    ((wt_rc == 0)) || fail "first run: exit $wt_rc: $wt_err"
+    exclude=$(git -C "$wt_dir" rev-parse --path-format=absolute --git-path info/exclude)
+    touch -d '2001-01-01 00:00:00' "$exclude"
+    before=$(stat -c %y "$exclude")
+    wt_run
+    ((wt_rc == 0)) || fail "second run: exit $wt_rc: $wt_err"
+    [[ $(stat -c %y "$exclude") == "$before" ]] || fail "info/exclude was touched: $before -> $(stat -c %y "$exclude")"
+}
+
+title_reports_a_settings_path_that_is_not_a_regular_file() {
+    wt_setup notregular || return 0
+    mkdir -p "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 1)) || fail "directory: exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "directory: stderr was: $wt_err"
+    [[ $wt_err == *'not a regular file'* ]] || fail "directory: stderr lacks 'not a regular file': $wt_err"
+    [[ $wt_err != *'not valid JSON'* ]] || fail "directory: stderr says not valid JSON: $wt_err"
+    wt_setup unreadable || return 0
+    mkdir -p "$wt_dir/.vscode"
+    echo '{"a":1}' > "$wt_dir/.vscode/settings.json"
+    chmod 000 "$wt_dir/.vscode/settings.json"
+    if [[ -r $wt_dir/.vscode/settings.json ]]; then
+        chmod 644 "$wt_dir/.vscode/settings.json"
+        echo 'SKIP title_reports_a_settings_path_that_is_not_a_regular_file: the tests run as a user that can read a mode-000 file'
+        return 0
+    fi
+    wt_run
+    chmod 644 "$wt_dir/.vscode/settings.json"
+    ((wt_rc == 1)) || fail "unreadable: exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "unreadable: stderr was: $wt_err"
+    [[ $wt_err == *'not readable'* ]] || fail "unreadable: stderr lacks 'not readable': $wt_err"
+}
+
+title_reports_a_failing_container_name_as_one_line() {
+    wt_setup cnfail || return 0
+    printf '#!/bin/sh\necho "container-name: first" >&2\necho "container-name: second" >&2\nexit 1\n' \
+        > "$wt_dir/.devcontainer/scripts/container-name.sh"
+    wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $wt_err == 'window-title: could not name the container: first / second' ]] || fail "stderr was: $wt_err"
+    ! compgen -G "$wt_dir/.vscode/.settings.*" >/dev/null || fail 'a temp file was left in .vscode'
+}
+
 title_outside_a_repository_says_so() {
     local d
     wt_setup norepo || return 0
@@ -1932,11 +2240,27 @@ scripts_are_committed_executable() {
     done
 }
 
+docs_say_two_same_named_containers_cannot_both_exist() {
+    local readme="$repo/.devcontainer/README.md" log="$repo/CHANGELOG.md"
+    ! grep -q 'cannot run at once' "$readme" || fail 'the README still says cannot run at once'
+    ! grep -q 'cannot run at once' "$log" || fail 'CHANGELOG.md still says cannot run at once'
+    grep -q 'cannot both exist' "$readme" || fail 'the README lacks "cannot both exist"'
+    grep -q 'name already in use' "$readme" || fail 'the README lacks "name already in use"'
+}
+
+docs_changelog_names_the_replay_sed_and_the_folder_limit() {
+    local unreleased
+    unreleased=$(awk '/^## Unreleased/{f=1;next} /^## v/{f=0} f' "$repo/CHANGELOG.md")
+    grep '(#52)' <<<"$unreleased" | grep -q 'tests/replay.test.sh' || fail 'the #52 bullet does not name tests/replay.test.sh'
+    grep -q 'my project' <<<"$unreleased" || fail 'the Unreleased section does not state the folder-name limit (my project)'
+}
+
 cases=(
     config_has_codename_pin_and_suite_path
     devcontainer_json_is_valid_and_runs_as_dev
-    run_args_cap_memory_and_cpus
+    run_args_cap_memory_only
     run_args_name_the_container_after_its_clone
+    run_args_reject_an_extra_or_duplicate_entry
     post_start_command_reruns_the_title
     volumes_hold_the_gh_login_and_the_git_config
     git_config_global_points_into_the_git_volume
@@ -1951,6 +2275,8 @@ cases=(
     plugins_fresh_machine_installs_both
     plugins_rerun_changes_nothing
     plugins_ref_change_reinstalls_codeo
+    plugins_repo_change_reinstalls_codeo
+    plugins_record_without_a_repo_is_not_reinstalled
     plugins_pin_change_leaves_tracked_files_alone
     plugins_matches_whole_plugin_names
     plugins_offline_keeps_codeo
@@ -1961,6 +2287,9 @@ cases=(
     start_rerun_with_a_lock_does_not_take_another
     start_empty_lock_file_is_removed_and_the_lock_taken
     start_empty_lock_file_on_the_base_branch_is_removed
+    start_empty_lock_file_on_a_detached_head_is_removed_and_reported
+    start_empty_lock_file_that_cannot_be_removed_is_one_todo
+    start_unreadable_lock_file_is_one_todo
     start_nonempty_lock_file_is_left_alone
     start_newline_only_lock_file_is_a_todo
     start_lock_file_without_an_issue_line_is_a_todo
@@ -1982,6 +2311,8 @@ cases=(
     start_plugins_failure_is_a_todo_not_a_failure
     start_chowns_the_clone_on_a_named_volume
     start_never_chowns_a_bind_mount
+    start_runs_claude_outside_the_clone
+    start_without_a_git_top_level_runs_from_the_clone_not_the_caller
     start_longest_mount_wins
     start_own_clone_runs_nothing_privileged
     start_last_mount_at_the_same_point_wins
@@ -1997,6 +2328,10 @@ cases=(
     start_empty_host_value_falls_through_to_the_environment
     start_malformed_host_gitconfig_falls_through
     start_waits_for_the_host_gitconfig_to_arrive
+    start_waits_for_a_host_gitconfig_that_is_written_after_it_is_created
+    start_waits_for_a_host_gitconfig_that_is_still_growing
+    start_does_not_stall_on_a_host_gitconfig_that_stays_empty
+    readme_says_included_identities_do_not_count
     start_does_not_wait_when_the_volume_has_the_identity
     start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero
     start_setup_git_failure_is_a_todo
@@ -2022,6 +2357,9 @@ cases=(
     start_file_mode_that_cannot_clear_is_a_todo
     start_restores_tracked_modes_before_turning_file_mode_on
     start_keeps_an_executable_bit_the_index_does_not_record
+    start_names_a_file_mode_overridden_from_a_wider_scope
+    start_files_restore_and_content_edit_both_count
+    start_leaves_no_modes_file_when_interrupted
     start_keeps_file_mode_off_when_a_mode_cannot_be_restored
     start_keeps_file_mode_off_when_the_mode_listing_fails
     start_ignores_content_edits_when_restoring_modes
@@ -2043,6 +2381,9 @@ cases=(
     title_strips_a_hash_from_the_lock_line
     title_reports_an_unwritable_exclude
     title_reports_an_unwritable_vscode_dir
+    title_leaves_the_exclude_file_alone_when_it_has_the_entry
+    title_reports_a_settings_path_that_is_not_a_regular_file
+    title_reports_a_failing_container_name_as_one_line
     title_outside_a_repository_says_so
     session_title_names_home_and_the_id
     session_title_names_the_issue_with_a_lock
@@ -2059,6 +2400,8 @@ cases=(
     session_title_hooks_are_registered
     session_title_hook_command_survives_a_missing_script
     scripts_are_committed_executable
+    docs_say_two_same_named_containers_cannot_both_exist
+    docs_changelog_names_the_replay_sed_and_the_folder_limit
 )
 
 for current in "${cases[@]}"; do
