@@ -314,8 +314,9 @@ What is enforced is what the project's ruleset on the base branch requires — o
   actually require. `qc-verdict` is the pipeline's own
   (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/qc-verdict.sh" <base> <head>`), and `scope.sh` decides which
   test suites a change needs, for CI and the local quality gate alike.
-  It also fails a pull request whose archived `plan.md` has a `### Round 2` or later and whose
-  footprint omits a path `overlap.sh --outside` prints for the branch.
+  It also fails a pull request that archives a `plan.md` with a `### Round 2` or later whose
+  footprint omits a path `overlap.sh --outside` prints for the branch; an archive the pull request
+  only edits is not judged.
 - **The live-dossier rule.** A send-back moves the dossier back to `.codeo/<N>/`, and the
   `qc-verdict` check fails closed on a live dossier the head still carries, so the open PR stays
   unmergeable until `/codeo:close` archives it to `done/` again.
