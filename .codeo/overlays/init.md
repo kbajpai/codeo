@@ -31,4 +31,4 @@ If the issue's container has commits it never pushed, re-running
 
 ## role-guard
 
-Run `bash .devcontainer/scripts/role.sh --check init` from the project root. Exit 0: go on. Exit 1: print its one line to the engineer and stop; that is the whole answer and nothing in this session lifts it. Exit 2: report its `role:` line and go on.
+Run `bash .devcontainer/scripts/role.sh --check init` from the project root. Exit 0: go on. Exit 1: print its one line to the engineer and stop; that is the whole answer and nothing in this session lifts it. Exit 2: report its `role:` line and go on. Any other exit (the script is missing, or failed): report what it printed and go on.

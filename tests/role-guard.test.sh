@@ -35,6 +35,8 @@ check_guarded() {
     fi
     grep -qF "role.sh --check $skill" <<<"$text" ||
         printf 'FAIL %s: the overlay text does not run role.sh --check %s\n' "$skill" "$skill"
+    grep -qF 'Any other exit (the script is missing, or failed): report what it printed and go on.' <<<"$text" ||
+        printf 'FAIL %s: the overlay text does not say what to do on any other exit\n' "$skill"
     grep -qw 'stop' <<<"$text" ||
         printf 'FAIL %s: the overlay text does not stop on a refusal\n' "$skill"
     return 0

@@ -95,11 +95,18 @@ check_matrix() {
             [[ $out == *"$role"* ]] || fail "$role: $skill refusal does not name the role: '$out'"
             [[ -z $number || $out == *"#$number"* ]] || fail "$role: $skill refusal does not name #$number: '$out'"
             case $role in
-                stale:*) [[ $out == *finished* ]] || fail "$role: $skill refusal does not say the container is finished: '$out'" ;;
+                stale:*)
+                    [[ $out == *finished* ]] || fail "$role: $skill refusal does not say the container is finished: '$out'"
+                    [[ $out == *"stashed or abandoned"* ]] || fail "$role: $skill refusal does not cover a stashed or abandoned workflow: '$out'"
+                    if is_home_skill "$skill"; then
+                        [[ $out == *"run it in the home container"* ]] || fail "$role: $skill refusal does not say to run it in the home container: '$out'"
+                    else
+                        [[ $out == *devcontainer-start.sh* ]] || fail "$role: $skill refusal does not name devcontainer-start.sh: '$out'"
+                    fi ;;
             esac
             if is_home_skill "$skill"; then
                 [[ $out == *"home container"* ]] || fail "$role: $skill refusal does not say it runs in the home container: '$out'"
-            else
+            elif [[ $role != stale:* ]]; then
                 [[ $out == *"'s container"* ]] || fail "$role: $skill refusal does not say it runs in the issue's container: '$out'"
             fi
         fi

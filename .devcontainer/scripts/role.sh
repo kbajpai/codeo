@@ -83,11 +83,17 @@ case $role in
 esac
 case $role in
     stale:*)
-        if [[ $kind == home ]]; then where="the home container"; else where="the container of the issue it is for (that issue's container)"; fi
-        if [[ -n $number ]]; then
-            echo "/codeo:$skill can't run here: this container belongs to issue #$number, which is finished, or its start script took no lock (role $role); run it in $where."
+        if [[ $kind == home ]]; then
+            where="run it in the home container"
+        elif [[ -n $number ]]; then
+            where="if this is still issue #$number's container, re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock; otherwise it is done, and the skill runs in the container of the issue it is for"
         else
-            echo "/codeo:$skill can't run here: this clone is on a branch other than the base branch with no lock, so it is a finished or lockless issue container (role $role); run it in $where."
+            where="if this is still an issue's container, re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock; otherwise it is done, and the skill runs in the container of the issue it is for"
+        fi
+        if [[ -n $number ]]; then
+            echo "/codeo:$skill can't run here: this container's workflow for issue #$number has ended (finished, stashed or abandoned), or its start script took no lock (role $role); $where."
+        else
+            echo "/codeo:$skill can't run here: this clone is on a branch other than the base branch with no lock, so its workflow has ended (finished, stashed or abandoned) or never took a lock (role $role); $where."
         fi
         exit 1 ;;
 esac
