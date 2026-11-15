@@ -1,4 +1,4 @@
-# Issue — issue
+# Issue #91 — issue
 
 | | |
 |---|---|
@@ -66,3 +66,4 @@ None. Every answer that changes the issue was given in the triage run (file it; 
 ## Log
 
 - 2026-11-15 — drafted from triage run 2026-11-15-3, Q1-Q2: F1 reproduced, F2 reproduced; one issue for F1-F3, related to #88
+- 2026-11-15 — approved and filed as #91 (https://github.com/kbajpai/codeo/issues/91), label bug
