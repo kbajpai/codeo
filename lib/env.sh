@@ -59,6 +59,7 @@
 #   invariants              path to the project's invariants document
 #   models{subagent,reviewer}
 #   modules[]               optional modules the project enables
+#   plugin{repo,ref}        optional; the codeo plugin this project pins: repo (owner/name) and ref (a tag or branch); read by the dev container's plugins.sh
 #   stacks[]                optional; names recorded by setup.sh --stack (informational only)
 #   ci{requiredChecks[]}    optional; checks the project's CI requires before a merge
 

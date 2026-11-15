@@ -38,12 +38,13 @@ plugin() {
     printf '%s' "$dir"
 }
 
-# registry <path>...: writes a plugin registry into the scratch config dir, one entry per argument in order;
-# each is "installPath" (no projectPath) or "installPath@projectPath".
+# registry <entry>...: writes a plugin registry into the scratch config dir, one entry per argument in order;
+# each is "installPath" (no projectPath) or "installPath|projectPath"; an empty installPath is JSON null.
 registry() {
     mkdir -p "$root/cfg/plugins"
-    printf '%s\n' "$@" | jq -R -s '{plugins: {"codeo@codeo": (split("\n") | map(select(. != "") | split("@")
-        | {installPath: .[0]} + (if length > 1 then {projectPath: .[1]} else {} end)))}}' \
+    printf '%s\n' "$@" | jq -R -s '{plugins: {"codeo@codeo": (split("\n") | map(select(. != "") | split("|")
+        | {installPath: (if .[0] == "" then null else .[0] end)}
+            + (if length > 1 then {projectPath: .[1]} else {} end)))}}' \
         > "$root/cfg/plugins/installed_plugins.json"
 }
 
@@ -117,7 +118,7 @@ other_projects_entry_first_is_skipped() {
     setup
     local first want
     first=$(plugin first); want=$(plugin second)
-    registry "$first@/somewhere/else" "$want"
+    registry "$first|/somewhere/else" "$want"
     cr_run
     ((cr_rc == 0)) || fail "exit $cr_rc: $cr_err"
     [[ $cr_out == "$want" ]] || fail "wanted '$want', got '$cr_out'"
@@ -128,7 +129,7 @@ this_projects_entry_wins_over_a_user_entry() {
     setup
     local user want
     user=$(plugin user); want=$(plugin mine)
-    registry "$user" "$want@$cr_clone"
+    registry "$user" "$want|$cr_clone"
     cr_run
     ((cr_rc == 0)) || fail "exit $cr_rc: $cr_err"
     [[ $cr_out == "$want" ]] || fail "wanted '$want', got '$cr_out'"
@@ -137,7 +138,7 @@ this_projects_entry_wins_over_a_user_entry() {
 
 only_another_projects_entry_fails() {
     setup
-    registry "$(plugin other)@/somewhere/else"
+    registry "$(plugin other)|/somewhere/else"
     cr_run
     fails_cleanly
     teardown
@@ -147,14 +148,58 @@ outside_a_git_clone_only_user_entries_qualify() {
     setup
     local want
     want=$(plugin user)
-    registry "$(plugin other)@/somewhere/else" "$want"
+    registry "$(plugin other)|/somewhere/else" "$want"
     rm -rf "$root/clone/.git"
     GIT_CEILING_DIRECTORIES="$root" cr_run
     ((cr_rc == 0)) || fail "exit $cr_rc: $cr_err"
     [[ $cr_out == "$want" ]] || fail "wanted '$want', got '$cr_out'"
-    registry "$(plugin other2)@/somewhere/else"
+    registry "$(plugin other2)|/somewhere/else"
     GIT_CEILING_DIRECTORIES="$root" cr_run
     fails_cleanly
+    teardown
+}
+
+# registry_expect <want>: runs the script and expects <want> on stdout, exit 0.
+registry_expect() {
+    cr_run
+    ((cr_rc == 0)) || fail "exit $cr_rc: $cr_err"
+    [[ $cr_out == "$1" ]] || fail "wanted '$1', got '$cr_out'"
+}
+
+registry_matches_a_project_path_with_a_trailing_slash() {
+    setup
+    local want
+    want=$(plugin mine)
+    registry "$(plugin user)" "$want|$cr_clone/"
+    registry_expect "$want"
+    teardown
+}
+
+registry_matches_a_symlinked_project_path() {
+    setup
+    local want
+    want=$(plugin mine)
+    ln -s "$cr_clone" "$root/link"
+    registry "$(plugin user)" "$want|$root/link"
+    registry_expect "$want"
+    teardown
+}
+
+registry_skips_a_null_install_path_for_this_clone() {
+    setup
+    local want
+    want=$(plugin mine)
+    registry "|$cr_clone" "$(plugin user)" "$want|$cr_clone"
+    registry_expect "$want"
+    teardown
+}
+
+registry_survives_a_project_path_that_no_longer_exists() {
+    setup
+    local want
+    want=$(plugin user)
+    registry "$(plugin gone)|$root/missing" "$want"
+    registry_expect "$want"
     teardown
 }
 
@@ -173,6 +218,10 @@ cases=(
     other_projects_entry_first_is_skipped
     this_projects_entry_wins_over_a_user_entry
     only_another_projects_entry_fails
+    registry_matches_a_project_path_with_a_trailing_slash
+    registry_matches_a_symlinked_project_path
+    registry_skips_a_null_install_path_for_this_clone
+    registry_survives_a_project_path_that_no_longer_exists
     outside_a_git_clone_only_user_entries_qualify
     no_registry_fails
 )

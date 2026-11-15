@@ -6,7 +6,8 @@
 # Exit 0 with the root on stdout; exit 1 with one "codeo-root:" line on stderr when there is none.
 # Order: $CODEO_ROOT when set, else the installPath of codeo@codeo in the plugin registry under
 # ${CLAUDE_CONFIG_DIR:-$HOME/.claude} (the lookup devcontainer-start.sh does): the first entry whose projectPath
-# is this clone's root, else the first with no projectPath. An entry for another project is never taken,
+# is this clone's root (compared after the recorded path is resolved: trailing slash, symlink), else the first with no
+# projectPath; an entry with no installPath never qualifies. An entry for another project is never taken,
 # and outside a git clone only entries with no projectPath qualify. A set $CODEO_ROOT that
 # lacks scripts/lock.sh fails rather than falling through: a wrong override someone typed must not be
 # quietly replaced by a different codeo. No path is ever guessed.
@@ -23,14 +24,31 @@ fi
 registry="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json"
 root=
 if [[ -f $registry ]]; then
-    # The clone's physical root, the path the registry records; empty outside a git clone, so that only
-    # entries with no projectPath qualify (the failure must not abort under set -e).
+    # The clone's physical root; empty outside a git clone, so that only entries with no projectPath qualify
+    # (the failure must not abort under set -e).
     clone=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || true)
     [[ -z $clone ]] || clone=$(cd "$clone" && pwd -P)
-    root=$(jq -r --arg c "$clone" '
-        [.plugins["codeo@codeo"][]? | select($c != "" and .projectPath == $c)][0].installPath
-        // [.plugins["codeo@codeo"][]? | select(.projectPath == null)][0].installPath
-        // empty' "$registry" 2>/dev/null || true)
+    # One "projectPath<TAB>installPath" line per entry; an absent or null field is empty. A recorded projectPath
+    # matches after it is resolved (trailing slash, symlink); one that no longer exists is compared as written.
+    # An entry with no installPath never qualifies.
+    entries=$(jq -r '.plugins["codeo@codeo"][]? | [(.projectPath // ""), (.installPath // "")] | @tsv' \
+        "$registry" 2>/dev/null || true)
+    fallback=
+    while IFS= read -r line; do
+        pp=${line%%$'\t'*}
+        ip=${line#*$'\t'}
+        [[ -n $ip ]] || continue
+        if [[ -z $pp ]]; then
+            [[ -n $fallback ]] || fallback=$ip
+        elif [[ -n $clone ]]; then
+            resolved=$(cd "$pp" 2>/dev/null && pwd -P) || resolved=${pp%/}
+            if [[ $resolved == "$clone" ]]; then
+                root=$ip
+                break
+            fi
+        fi
+    done <<< "$entries"
+    [[ -n $root ]] || root=$fallback
 fi
 if [[ -z $root ]] || ! has_lock "$root"; then
     echo "codeo-root: no installed codeo@codeo with scripts/lock.sh in $registry; install it or set CODEO_ROOT" >&2
