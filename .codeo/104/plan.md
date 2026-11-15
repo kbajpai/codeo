@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored the code the signal would touch (`scripts/inflight.sh`, `scripts/intake.sh`, `scripts/lock.sh`, `hooks/`, `tests/inflight.test.sh`) and brainstormed the design. Seven questions are open (Q1-Q7); nothing is drafted until they are answered. Each question carries a recommendation, so "as recommended" is a complete answer.
+Round 2. Q1-Q7 are answered (all as recommended; Q2's reading is stated under it). The plan is drafted at `.codeo/104/plan-draft.md` (7 tasks, uncommitted by design) and its footprint checked against the other workflows in flight, which raised one question, Q8 (#71). The draft is not up for approval until Q8 is answered; reading it meanwhile is welcome. After Q8, re-run `/codeo:plan`: it writes the plan to `docs/plans/2026-11-15-live-session-signal.md` for review.
 
 ## Questions
 
@@ -21,6 +21,7 @@ Explored the code the signal would touch (`scripts/inflight.sh`, `scripts/intake
 - **A branch per session** — `codeo/live/<N>/<machine>`, force-pushed. As the first option, but visible in the branch list, and every script that walks `refs/remotes/origin` (`inflight.sh`, `claim.sh`, triage's branch scan) needs an exclusion.
 
 **Answer:**
+A ref of its own per session, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
 
 ### Q2 — Can a hosted web session push to a ref that is not its own branch?
 
@@ -28,6 +29,7 @@ Explored the code the signal would touch (`scripts/inflight.sh`, `scripts/intake
 **Options:** pushes to any ref work there · only branch pushes work (then Q1 becomes a branch or the intake file, or REST writes the ref) · unknown — build the REST fallback, used when the push is refused, and record a by-hand web check for `/codeo:qc`.
 
 **Answer:**
+Accepted as recommendations (engineer, in the conversation, 2026-11-15). No option of this question was marked recommended; the planner reads that as the third option: build the REST fallback, used when the push is refused, and record a by-hand web check for `/codeo:qc`. Correct this line if another option was meant.
 
 ### Q3 — What keeps the signal fresh?
 
@@ -38,6 +40,7 @@ Explored the code the signal would touch (`scripts/inflight.sh`, `scripts/intake
 - **Both** — the hook, plus one explicit call at each skill's start so the signal appears without waiting for the first tool call.
 
 **Answer:**
+A plugin hook, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
 
 ### Q4 — How long until a dead session stops reading as live, and is that configurable?
 
@@ -50,6 +53,7 @@ Explored the code the signal would touch (`scripts/inflight.sh`, `scripts/intake
 The reader judges expiry from the signal's own timestamp against its own clock, so two machines whose clocks disagree by minutes shift the window by that much. I would document that and not try to correct for it.
 
 **Answer:**
+Refresh every 5 minutes, expire after 15, fixed, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
 
 ### Q5 — What exactly are "the user" and "the machine", given that this repository is public?
 
@@ -61,6 +65,7 @@ The reader judges expiry from the signal's own timestamp against its own clock, 
 **Options:** as proposed · never publish a real hostname (a `local` checkout then says `local` unless `$CODEO_MACHINE` is set) · something else — say what.
 
 **Answer:**
+As proposed (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
 
 ### Q6 — How should `inflight.sh` show it?
 
@@ -73,6 +78,7 @@ The reader judges expiry from the signal's own timestamp against its own clock, 
 A failed fetch of the signals would print `live: unknown` and never drop the line silently.
 
 **Answer:**
+A `live:` line in the human block and a separate `--live` listing, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
 
 ### Q7 — Does `/codeo:triage`'s own text change in this issue?
 
@@ -80,6 +86,18 @@ A failed fetch of the signals would print `live: unknown` and never drop the lin
 **Options:**
 - **One sentence in triage (recommended)** — a workflow with a live session is listed with its `live:` line quoted and is not asked about as parked work. Accepts the overlap with #71 and #70, which becomes an overlap question once the footprint is drafted.
 - **No triage edit** — triage shows the line because `inflight.sh` prints it; what triage concludes from it is left to #103, which rewrites that paragraph anyway.
+
+**Answer:**
+One sentence in triage, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
+
+### Q8 — #71 edits four files this plan edits; how do the two branches proceed?
+
+**Why it matters:** the draft footprint (`.codeo/104/plan-draft.md`, last section) overlaps #71's. Two branches editing one file merge cleanly only when their hunks are apart, and that is a coordination question, not one this plan can settle alone.
+**What overlaps:** #71, branch `feat/file-new-issues-straight-board`, assignee kbajpai, last finished step `implement` (working). `overlap.sh` names it on `CHANGELOG.md`, `glob:CHANGELOG.md`, `docs/handoff.md`, `glob:docs/handoff.md`, `docs/skills.md`, `glob:docs/skills.md`, `skills/triage/SKILL.md` and `glob:skills/triage/SKILL.md`. In this plan the edits are small and additive: a changelog bullet and the `Shared state:` line (Task 6), one bullet and one clause in the two docs, and one sentence in the triage step that reads `inflight.sh` (Task 5). #107 (`feat/dev-container-follow-ups-96`, kbajpai, at `init`) has no footprint yet and has changed no file, so there is nothing to compare. #70 has merged since the branch was cut; `/codeo:implement` merges `origin/main` first.
+**Options:**
+- **Proceed and coordinate (recommended)** — keep the plan as drafted. `/codeo:implement` and `/codeo:qc` merge `origin/main` each round, so whichever of the two lands second resolves its own hunks; Tasks 5 and 6 re-read the lines they edit before editing them.
+- **Sequence after #71** — this issue waits for #71's merge before `/codeo:implement` starts, so the two never share an unmerged file. Costs the wait; #71 is already at `implement`.
+- **Re-scope** — drop the triage sentence and its docs clause (Q7's recommendation), leaving `CHANGELOG.md` and `docs/handoff.md` as the only shared files.
 
 **Answer:**
 
@@ -95,7 +113,9 @@ A failed fetch of the signals would print `live: unknown` and never drop the lin
 - One pull request. Documentation moves in `docs/handoff.md` (*The lock*, *Parallel workflows*), `docs/skills.md`, `lib/env.sh`'s header if Q4 adds a key, and `CHANGELOG.md`.
 - Liveness stays information only: no script refuses or waits because of it.
 
-**Other workflows in flight** (`inflight.sh --except 104`, 2026-11-15). #107 is at `init` with no footprint yet. #71 (plan) and #70 (qc) both cover `CHANGELOG.md` and `docs/handoff.md`; #70's footprint also claims `skills/**` and `tests/**`, so any test file this plan adds falls inside it. These become numbered overlap questions once the footprint is drafted from the answers above. #103, the sibling issue, is open and not started; it will edit `scripts/inflight.sh` and `tests/inflight.test.sh` too, which is why Q6 recommends leaving `--tsv` alone.
+**Other workflows in flight** (`inflight.sh --except 104`, re-run 2026-11-15 after the answers). #107 is at `init` with no footprint yet. #71 is at `implement` and overlaps on four files (Q8). #70 merged while this was being planned; `origin/main` now has its changes to `scripts/github.sh`, `skills/triage/SKILL.md`, `docs/handoff.md`, `docs/skills.md` and `CHANGELOG.md`, which this branch does not have yet. #103, the sibling issue, is open and not started; it will edit `scripts/inflight.sh` and `tests/inflight.test.sh` too, which is why Q6 left `--tsv` alone.
+
+**Design checked against the code.** Scratch repositories confirmed the git side: `git fetch --prune origin '+refs/codeo/live/*:refs/codeo/live/*'` succeeds when no such ref exists, a force-push of a new parentless empty-tree commit over the old one works, and a deletion on origin is pruned by the next fetch. Not tried from here, and so not asserted by the plan: a push of that ref to GitHub itself, and anything in a web session (Q2, plan Task 7).
 
 ## Outcome
 
@@ -104,3 +124,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-15 — Q1-Q7 raised · cost: 3m · fable-5-2 115k in + 1M cached / 14k out
+- 2026-11-15 — Q1-Q7 answered and recorded; plan drafted (.codeo/104/plan-draft.md); footprint overlap with #71 raised as Q8 · cost: 6m · sonnet-5-5 192k in + 2.6M cached / 43k out
