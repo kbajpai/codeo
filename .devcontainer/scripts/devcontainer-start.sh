@@ -66,17 +66,20 @@ top=$(git -C "$clone" rev-parse --show-toplevel 2>/dev/null) && cd "$top" || add
 # restore_modes: chmod +x each tracked file the index records as 100755 but the disk has as 100644 (what a filesystem
 # that dropped the bit did), then list again. Only that direction: a file the disk has executable and the index does
 # not record is the developer's, and stays. The listing (`git -c core.fileMode=true diff --raw -z --no-renames`) goes
-# through a temp file in the git dir, because bash drops NUL bytes from a command substitution. Prints nothing; sets
-# restored_count, restored_paths and left_paths (the paths still differing). Returns 0 when none are left, 1 when
-# some are, 2 when a listing failed (the temp file is removed on every path).
+# through a temp file in the git dir (kept in modes_list, which the EXIT/INT/TERM trap removes), because bash drops NUL
+# bytes from a command substitution; its stderr goes to list_err. Prints nothing; sets kept_paths (executable on disk,
+# 100644 in the index), restored_count, restored_paths and left_paths (the paths still differing). Returns 0 when none
+# are left, 1 when some are, 2 when a listing failed.
 restore_modes() {
-    local meta path old new list
+    local meta path old new
     restored_count=0
     restored_paths=()
     left_paths=()
-    list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX" 2>/dev/null) || return 2
-    if ! git -c core.fileMode=true diff --raw -z --no-renames >"$list" 2>/dev/null; then
-        rm -f -- "$list"
+    kept_paths=()
+    list_err=
+    modes_list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX" 2>/dev/null) || return 2
+    if ! list_err=$(git -c core.fileMode=true diff --raw -z --no-renames 2>&1 >"$modes_list"); then
+        list_err=${list_err//$'\n'/ / }
         return 2
     fi
     while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
@@ -86,19 +89,26 @@ restore_modes() {
             restored_count=$((restored_count + 1))
             restored_paths+=("$path")
         fi
-    done <"$list"
-    if ! git -c core.fileMode=true diff --raw -z --no-renames >"$list" 2>/dev/null; then
-        rm -f -- "$list"
+    done <"$modes_list"
+    if ! list_err=$(git -c core.fileMode=true diff --raw -z --no-renames 2>&1 >"$modes_list"); then
+        list_err=${list_err//$'\n'/ / }
         return 2
     fi
     while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
         read -r old new _ <<<"${meta#:}"
-        [[ $old == 100755 && $new == 100644 ]] || continue
-        left_paths+=("$path")
-    done <"$list"
-    rm -f -- "$list"
+        if [[ $old == 100755 && $new == 100644 ]]; then
+            left_paths+=("$path")
+        elif [[ $old == 100644 && $new == 100755 ]]; then
+            kept_paths+=("$path")
+        fi
+    done <"$modes_list"
     ((${#left_paths[@]} == 0)) || return 1
 }
+
+# The listing's temp file is removed on every exit, an interrupt included.
+modes_list=
+trap 'rm -f -- "${modes_list:-}"' EXIT
+trap 'exit 143' INT TERM
 
 if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
     if ! clone_on_named_volume "$clone"; then
@@ -108,16 +118,20 @@ if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; t
             if [[ ! -x $filemode_probe ]] && chmod u+x -- "$filemode_probe" 2>/dev/null && [[ -x $filemode_probe ]] \
                 && chmod u-x -- "$filemode_probe" 2>/dev/null && [[ ! -x $filemode_probe ]]; then
                 rm -f -- "$filemode_probe"
+                filemode_scope=$(git config --show-scope --get core.fileMode 2>/dev/null) && filemode_scope=${filemode_scope%%[[:space:]]*} || filemode_scope=local
                 restore_rc=0
                 restore_modes || restore_rc=$?
                 if ((restore_rc == 2)); then
-                    add_todo "core.fileMode is false and the tracked files' modes could not be listed: stage each new script with git update-index --chmod=+x <file>"
+                    add_todo "core.fileMode is false and the tracked files' modes could not be listed${list_err:+ ($list_err)}: stage each new script with git update-index --chmod=+x <file>"
                 elif ((restore_rc == 1)); then
                     left_list=$(printf '%s, ' "${left_paths[@]:0:5}")
                     left_list=${left_list%, }
                     ((${#left_paths[@]} <= 5)) || left_list+=" and $((${#left_paths[@]} - 5)) more"
                     add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
                 elif git config core.fileMode true; then
+                    if [[ $filemode_scope != local ]]; then
+                        say "core.fileMode was false from the $filemode_scope config: this clone's config now overrides it with true"
+                    fi
                     if ((restored_count > 0)); then
                         restored_list=$(printf '%s, ' "${restored_paths[@]:0:5}")
                         restored_list=${restored_list%, }
@@ -125,6 +139,12 @@ if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; t
                         say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) ($restored_list) to the index's and set it to true for this clone"
                     else
                         say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
+                    fi
+                    if ((${#kept_paths[@]} > 0)); then
+                        kept_list=$(printf '%s, ' "${kept_paths[@]:0:5}")
+                        kept_list=${kept_list%, }
+                        ((${#kept_paths[@]} <= 5)) || kept_list+=" and $((${#kept_paths[@]} - 5)) more"
+                        say "executable on disk but 100644 in the index, so left as they are: $kept_list; they show as a mode change, and git add -A would commit them as executable"
                     fi
                 else
                     add_todo "core.fileMode is false and could not be turned on: run git config core.fileMode true, or stage new scripts with git update-index --chmod=+x"

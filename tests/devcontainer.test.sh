@@ -1430,6 +1430,57 @@ start_keeps_an_executable_bit_the_index_does_not_record() {
     [[ -x $r/tool.sh ]] || fail 'tool.sh lost its executable bit'
     git -C "$r" diff --summary | grep -q 'mode change 100644 => 100755 tool.sh' || fail "git diff --summary does not show the mode change: $(git -C "$r" diff --summary)"
     ! grep -q 'restored' <<<"$ds_out" || fail "stdout mentions a restore: $ds_out"
+    grep 'tool.sh' <<<"$ds_out" | grep -q '100644' || fail "stdout does not name tool.sh and 100644: $ds_out"
+}
+
+start_names_a_file_mode_overridden_from_a_wider_scope() {
+    local r
+    ds_setup override-scope || return 0
+    ds_on_volume
+    r="$ds_dir/codeo-home"
+    git -C "$r" config --unset core.filemode
+    git config --file "$ds_dir/gitconfig" core.fileMode false
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --local --type=bool core.fileMode) == true ]] || fail 'core.fileMode is not true locally'
+    grep 'overrid' <<<"$ds_out" | grep -q 'global' || fail "stdout does not say it overrode the global setting: $ds_out"
+}
+
+# Pins existing behaviour: a file whose mode was lost and whose content was edited is still restored and counted.
+start_files_restore_and_content_edit_both_count() {
+    local r
+    ds_setup restore-and-edit || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/codeo-home"
+    printf '#!/bin/sh\necho edited\n' > "$r/bin/run.sh" || { fail 'could not edit bin/run.sh'; return 0; }
+    chmod 644 "$r/bin/run.sh"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ -x $r/bin/run.sh ]] || fail 'bin/run.sh is not executable'
+    grep -q 'echo edited' "$r/bin/run.sh" || fail 'bin/run.sh lost its edited content'
+    grep -q 'restored the modes of 1 tracked file (bin/run.sh)' <<<"$ds_out" || fail "stdout does not say it restored the modes of 1 tracked file (bin/run.sh): $ds_out"
+}
+
+start_leaves_no_modes_file_when_interrupted() {
+    local r real_git
+    ds_setup interrupted || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/codeo-home"
+    real_git=$(command -v git)
+    cat > "$ds_dir/bin/git" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+    *"diff --raw"*) kill -TERM "\$PPID"; sleep 5; exit 1 ;;
+esac
+exec $real_git "\$@"
+STUB
+    chmod +x "$ds_dir/bin/git"
+    ds_ready_run
+    ! compgen -G "$r/.git/modes.*" >/dev/null || fail 'a modes temp file was left in the git dir after an interrupt'
 }
 
 start_keeps_file_mode_off_when_the_mode_listing_fails() {
@@ -1443,7 +1494,7 @@ start_keeps_file_mode_off_when_the_mode_listing_fails() {
     cat > "$ds_dir/bin/git" <<STUB
 #!/usr/bin/env bash
 case "\$*" in
-    *"diff --raw"*) exit 1 ;;
+    *"diff --raw"*) echo 'fatal: boom' >&2; exit 1 ;;
 esac
 exec $real_git "\$@"
 STUB
@@ -1453,6 +1504,7 @@ STUB
     [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was turned on although the modes could not be listed'
     n=$(ds_todos 'could not be listed'); ((n == 1)) || fail "wanted one TODO saying the modes could not be listed, got $n: $ds_err"
     grep 'could not be listed' <<<"$ds_err" | grep -q 'update-index --chmod' || fail "the TODO does not name update-index --chmod: $ds_err"
+    grep 'could not be listed' <<<"$ds_err" | grep -q 'fatal: boom' || fail "the TODO does not carry the listing's stderr: $ds_err"
     ! compgen -G "$r/.git/modes.*" >/dev/null || fail 'a modes temp file was left in the git dir'
 }
 
@@ -2096,6 +2148,9 @@ cases=(
     start_file_mode_that_cannot_clear_is_a_todo
     start_restores_tracked_modes_before_turning_file_mode_on
     start_keeps_an_executable_bit_the_index_does_not_record
+    start_names_a_file_mode_overridden_from_a_wider_scope
+    start_files_restore_and_content_edit_both_count
+    start_leaves_no_modes_file_when_interrupted
     start_keeps_file_mode_off_when_a_mode_cannot_be_restored
     start_keeps_file_mode_off_when_the_mode_listing_fails
     start_ignores_content_edits_when_restoring_modes
