@@ -107,3 +107,5 @@
 | `qc:98:F1-F2` | #98 non-blocking minors: "step 10 fills it in" wording at `skills/plan/SKILL.md:232-233` (F1), `comm` shim inert under uutils (F2), ragged wrap at `:275-277` | dismissed — cosmetic, nothing breaks | 2026-11-15 |
 | `issue:100` | Release v1.0.7 once #70, #71, #96, #97, #98 close; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `issue:102` | `/codeo:issue` priority label when the project opts in; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `issue:103` | Let triage judge in-flight workflows from evidence (dates, waiting-on, board mismatch); filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `issue:104` | Publish a live-session signal for in-flight workflows; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
