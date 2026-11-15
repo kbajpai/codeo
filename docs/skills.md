@@ -243,9 +243,9 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 ### Purpose and triggers
 
-Prints the commands that remove finished issues' dev containers. For each issue under `.codeo/done` on the base branch it proves, through `scripts/cleanup.sh`, that the issue is closed, its pull request is merged, the pull request's branch is gone from origin and no branch still carries its dossier. It lists the proven issues with the project's removal command and the rest with the proof that failed, and runs nothing. It triggers on "clean up containers", "what can I remove", "cleanup".
+Prints the commands that remove finished issues' dev containers. For each issue under `.codeo/done` on the base branch it proves, through `scripts/cleanup.sh`, that the issue is closed, its pull request is merged, the pull request's branch is gone from origin, no branch still carries its dossier, and the issue holds no lease and waits for none on the intake branch. A command is printed only when the container name the project's overlay gives also matches the overlay's own pattern; an issue that fails a proof is listed with it and no command. It lists the proven issues with the project's removal command and the rest with the proof that failed, and runs nothing. It triggers on "clean up containers", "what can I remove", "cleanup".
 
-It runs in the home container only, outside the workflow lock. It says every time that unpushed work in a clone is invisible from here, and that the commands run on the host, in a shell, after `git status` in that clone.
+It runs in the home container only, outside the workflow lock. It says every time what the proofs cannot see: unpushed work in a clone, whether a clone was left clean, and whether /codeo:close ran to its end there (the lock lives only in that clone; a lease the issue still holds is the one trace, and it lists the issue as not proven). It also says that the commands run on the host, in a shell, after `git status` in that clone.
 
 ### Reads and writes
 

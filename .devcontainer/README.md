@@ -52,7 +52,7 @@ A container whose clone lacks the role script and the guard overlays, such as on
 
 ## Removing a finished container
 
-Nothing inside a container removes a container. At the end of a workflow `/codeo:close` prints the commands that remove the issue's container and its volume. `/codeo:cleanup`, which runs in the home container, lists the other finished issues' containers the same way: it proves each issue is finished (the issue is closed, its pull request is merged, its branch is gone from origin, no branch still carries its dossier) and prints a removal command only for those, built from this project's overlay.
+Nothing inside a container removes a container. At the end of a workflow `/codeo:close` prints the commands that remove the issue's container and its volume. `/codeo:cleanup`, which runs in the home container, lists the other finished issues' containers the same way: it proves five things for each issue (the issue is closed, its pull request is merged, its branch is gone from origin, no branch still carries its dossier, and the issue holds no lease and waits for none on the intake branch) and prints a removal command only for an issue that passes all five, built from this project's overlay; a pull request whose head branch name is missing fails the branch proof. Origin cannot show whether a clone holds unpushed work or whether the workflow ended in that container, so a lease the issue still holds is the one trace of an unfinished close, and it lists the issue as not proven.
 
 After `/codeo:close` finishes, the container holds no lock and is `stale`, so `/codeo:triage` and `/codeo:cleanup` run in the home container, and the finished close's closing block names it. The removal commands are printed only for a workflow hosted in a container.
 
