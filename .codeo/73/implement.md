@@ -34,6 +34,7 @@ C — run T1 first (given in the conversation, 2026-11-14). T1's output came bac
 - **C — disagree with the verdict** (`migrate` or `stay`, and why); I rewrite the section, and the follow-ups change with it (`stay` files none).
 
 **Answer:**
+A, file the five (given in the conversation, 2026-11-15).
 
 ## Notes
 
