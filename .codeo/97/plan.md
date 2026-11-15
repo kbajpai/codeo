@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done. Q7 is answered, the round-2 plan was approved and written to `docs/plans/2026-11-15-docs-skill-wording-test-guard-round-2.md`; nothing is open. The next step is `/codeo:implement`.
+Round 3, after a second send-back from `/codeo:qc` (`qc.md` round 2: back to `/codeo:plan`, F11 blocking). No new question: the round-3 plan is drafted at `.codeo/97/plan-draft.md` (five tasks) and waits for the engineer's approval; nothing is written under `docs/plans/` yet.
 
 ## Questions
 
@@ -104,6 +104,15 @@ What exploration found, so the plan does not re-ask it.
 - *Non-blocking, taken (small, in files the round already edits):* F4 (restore "where no such language is known, ask and label `Shell: <name>`" in step 8), F5 (drop the repeated "goes under `## Notes` again" sentence in step 10), F6 (the abandon-finished block allows for no board), F7 (`overlap.sh` header says what `--base` alone does), F9 (the changelog entry states when the host-task rule applies).
 - *Non-blocking, left:* F8 (the stub cannot page; a paging stub is a larger rewrite of a file #71 is editing, and the flag assertion already bites); F10 (`skills/init/SKILL.md` saying "there is no lock" after any `lock: TODO` is a behaviour question for `init`, outside this issue; it stays recorded in `qc.md` for `/codeo:triage`); the minors carried from `implement.md`.
 
+**Round 3 (send-back from `qc.md` round 2).** All twenty criteria are met; one blocking finding, the plan's. No question is needed: each fix below follows from the finding and from answers already given (Q1, Q7).
+
+- *F11.* Round 1's Task 6 scoped the footprint rule to "an archive the diff touches", so a pull request that merely edits an old re-planned archive is compared with it and fails. Round 3 scopes it to an archive whose `plan.md` the diff adds or renames into place, which is what `/codeo:close`'s archive commit produces, with a case for each side.
+- *F14, taken.* `overlap.sh`'s `changes()` swallows git errors, so a `--base`/`--head` that does not resolve makes the required check pass; a given ref that does not resolve becomes an error.
+- *F13, taken.* `qc` step 6 said a round-2 gap is always the plan's; whose it is follows step 8 (a stray edit is `/codeo:implement`'s to revert). The step also says how a second round is recognised.
+- *F12, taken.* The abandon text is conditioned on the branch being kept.
+- *F15, taken.* The changelog entry is reworded so the host-task rule does not read as new, and so the footprint rule's scope matches F11's fix.
+- *Left:* F8, F10 and the unanchored `^## Outcome` match, recorded in `qc.md` for `/codeo:triage`.
+
 ## Outcome
 
 2026-11-15
@@ -149,3 +158,4 @@ sequenced:  none
 - 2026-11-15 — planned: docs/plans/2026-11-15-docs-skill-wording-test-guard.md · engineering:architecture and engineering:system-design not loaded, Q1's Options/Decision structure applied directly · cost: 27m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 378k in + 4.8M cached / 90k out
 - 2026-11-15 — round 2 after qc.md round 1: Q7 raised · cost: 1m · fable-5-2 420k in + 468k cached / 5k out
 - 2026-11-15 — planned round 2: docs/plans/2026-11-15-docs-skill-wording-test-guard-round-2.md (send-back from qc.md round 1) · engineering:architecture and engineering:system-design not loaded, Q7's options applied directly · cost: 8m · fable-5-2 423k in + 1.4M cached / 6k out · sonnet-5-5 34k in + 2.3M cached / 14k out
+- 2026-11-15 — round 3 after qc.md round 2: plan drafted at .codeo/97/plan-draft.md, awaiting approval · cost: 1m · fable-5-2 533k in + 580k cached / 9k out
