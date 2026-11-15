@@ -1,4 +1,4 @@
-# Issue — issue (draft, no number yet)
+# Issue #88 — issue
 
 | | |
 |---|---|
@@ -104,3 +104,4 @@ Close the small things #57 (the dev container follow-ups from #55, merged as PR 
 
 - 2026-11-15 — dossier started from triage items `qc:57:F1-F7`, `qc:57:F8`, `qc:57:F4`: Q1-Q2 raised
 - 2026-11-15 — Q1-Q2 answered (recommendations accepted); draft written, awaiting approval
+- 2026-11-15 — approved and filed as #88 (https://github.com/kbajpai/codeo/issues/88), label enhancement
