@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Tasks 1-8 are built and reviewed (commits ce0b13d..63e6a50); `origin/main` (with #98) is merged in. Q1-Q3 are answered (proceed and coordinate with #70); building Tasks 9-10. The task ledger is in `.superpowers/sdd/` (git-ignored).
+Round 1, done. Q1-Q3 are answered, Tasks 1-10 are built and reviewed (`ce0b13d`..`3fd6bd8`), the build and the full suite pass, and nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -40,10 +40,34 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 
 ## Outcome
 
-_Pending — written at the hand-off._
+2026-11-15
+
+**Built.** All ten tasks of `docs/plans/2026-11-15-docs-skill-wording-test-guard.md`, each reviewed by a fresh reviewer on the subagent model; Tasks 6 and 9 each took one fix round. Commits `ce0b13d`..`3fd6bd8` on this branch, with `origin/main` (carrying #98) merged at `1bf8458`.
+
+- Task 1 `tests/skills-doc.test.sh`: fenced lines in an Extension points part are not counted, a skill name is matched literally, missing/extra output is sorted (`LC_ALL=C`), with three new cases.
+- Task 2 `docs/skills.md`: `doctor` Reads lists the extension-point registry, the installed-plugins file, the PATH checks and the `ci.requiredChecks` fallback; `qc` mentions the sync merge commit.
+- Task 3 `scripts/board.sh`, `tests/board.test.sh`, `lib/env.sh`, `skills/triage/SKILL.md`: "no synced project has the option …", a title read is not an add, a failed removal gives its reason, the `undo-fails` case asserts `item-delete`, a case with `board.statuses` absent, the bash 4.3 idiom commented; two descriptions corrected.
+- Task 4 `scripts/board.sh`: `lookup` uses `gh api graphql --paginate`; `board.sh status 97` ran against GitHub and printed `In progress`.
+- Task 5 `scripts/overlap.sh`: `--outside <N> [--base <ref>] [--head <ref>]`.
+- Task 6 `scripts/qc-verdict.sh`: fails a pull request whose archived `plan.md` has a `### Round 2` or later and whose footprint omits a path `overlap.sh --outside` prints; a failed `overlap.sh` is reported by name and collected.
+- Task 7 `skills/close/SKILL.md` and its tests: `abandon finished` and `abandon interrupted` closing blocks, step 17's lead conditioned, guards shown to bite against a copy with the old sentences restored.
+- Task 8 `docs/handoff.md` and `tests/closing-exits.test.sh`: the abandon among close's exits, rows for both abandon exits and `issue — Status unreadable`, the reworded `init — no lock` row, the replacing-footprint and required-check sentences; FAIL lines to stderr, the empty-`step` guard, the missing-row message.
+- Task 9 `skills/plan/SKILL.md`, `tests/plan-skill.test.sh`, `docs/dossier.md`: on a send-back pass sub-step 1 removes the earlier block and runs `overlap.sh --outside`; step 8's host-task paragraph is consistent; pins and `must_lack`/`must_order` helpers.
+- Task 10 `CHANGELOG.md`: the v1.0.4 entry corrected and one `## Unreleased` bullet.
+
+**Build.** The `shell` suite's build command is `true` and exits 0; `bash tests/run.sh` prints `all cases passed`. No shared environment is configured: no lease taken, nothing deployed.
+
+**Documentation pages changed.** `docs/skills.md`, `docs/handoff.md`, `docs/dossier.md`, `lib/env.sh`'s key reference, `skills/triage/SKILL.md`, `CHANGELOG.md`.
+
+**Deviations from the plan.** `board.sh`'s header comment and one existing `tests/board.test.sh` assertion pinned the old "is on has the option" wording and were updated with the message (Task 3). Task 9 relaxed one pin (`is marked with a line`, with `Runs on: the engineer's host` still pinned) because the rewrap splits the old quote across lines. `tests/closing-exits.test.sh` lost its executable bit in Task 7 and regained it in Task 8. `sync-main.sh` of the installed plugin (1.0.6) exits 1 after a clean merge because of the `comm` locale bug #98 fixed; the merge itself committed.
+
+**Minors left for `/codeo:qc`** (reviewers' non-blocking notes; none fixed): `qc-verdict.sh` matches `/^## Outcome/` without anchoring, so `## Outcomes` would match; no `qc-verdict` case for a PR that only adds files under `docs/plans` and `.codeo`, nor for a `### Round 2` outside `## Outcome`; `overlap.sh`'s `changes()` swallows git errors for a mistyped `--base` or `--head` (`qc-verdict` passes refs it resolved itself); `overlap.sh`'s non-`done/` plan path under `--head` is untested; `tests/board.test.sh`'s `title-read-fails` does not assert the exit code; step 17's lead and the sub-step 1 sentence in step 10 are long single lines because their pins are single-line; `row_for` in `tests/closing-exits.test.sh` matches a label's suffix only; the `RETURN` trap in `bites` stays set; two consecutive "On a pass after a send-back" sentences in step 10.
+
+`Deployed revision:` none: no environment.
 
 ## Log
 
 - 2026-11-15 — Q1 raised before dispatch · cost: 3m · sonnet-5-5 11k in + 1M cached / 2k out
 - 2026-11-15 — Tasks 1-6 built and reviewed, origin/main merged; Q2 raised before Task 7 · cost: 17m · sonnet-5-5 525k in + 20.2M cached / 80k out
 - 2026-11-15 — Tasks 7-8 built and reviewed; Q3 raised before Task 9 · cost: 32m · sonnet-5-5 694k in + 26.8M cached / 114k out
+- 2026-11-15 — built Tasks 1-10 (two fix rounds), build ok · cost: 74m · sonnet-5-5 918k in + 37.3M cached / 158k out
