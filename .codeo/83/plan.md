@@ -109,6 +109,15 @@ throwaway outside the repository; the record is a comment on #83.
 - Only `doctor` and `setup` get the sentence. The other seven skills cite the template the same way
   and are out of scope.
 
+### Footprint
+
+```
+files:      skills/doctor/SKILL.md, skills/setup/SKILL.md, tests/closing-block.test.sh, CHANGELOG.md, docs/plans/2026-11-15-rerun-haiku-doctor-setup.md
+wiki:       none
+exclusive:  none
+sequenced:  none — CHANGELOG.md overlaps #57; proceed and coordinate (Q3)
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
