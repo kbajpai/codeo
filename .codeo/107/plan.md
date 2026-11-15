@@ -80,4 +80,4 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-15 — Q1-Q4 raised · cost: pending
+- 2026-11-15 — Q1-Q4 raised · cost: 3m · fable-5-2 106k in + 1M cached / 15k out
