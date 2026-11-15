@@ -1,7 +1,8 @@
 # Skills inventory — the rules that must survive the move
 
-Source: the seven skills of the pipeline codeo was extracted from (`issue`, `init`, `plan`,
-`implement`, `qc`, `close`, `triage`), read in October 2026. This file holds only the generic part.
+Source: the eight skills: the seven of the pipeline codeo was extracted from (`issue`, `init`, `plan`,
+`implement`, `qc`, `close`, `triage`), read in October 2026, and `cleanup`, which was written for codeo
+and has its own `## cleanup` section. This file holds only the generic part.
 Anything specific to a project (its paths, tools and domain rules) belongs in that project's own
 repository, never here.
 

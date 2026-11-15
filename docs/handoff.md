@@ -89,6 +89,8 @@ bound checkout is not ambiguous.** The engineer named the issue when they ran `i
 lock honors that rather than guessing at it. The rule that a bare invocation stops and asks still
 holds whenever no workflow is active — which is exactly when there is no lock to read.
 
+A checkout has one role: it is the home checkout, an issue's checkout, or neither. The roles and the guard that keeps a skill out of the wrong checkout are a project's own: each guarded skill reads its `<skill>/role-guard` extension point first and runs whatever check the project's overlay gives it, and the guard applies only where that check says it does. When the check refuses, the step ends there and nothing the engineer says overrides it. `plan`, `implement`, `qc`, `close` and the home-only skills (`issue`, `init`, `triage`, `cleanup`) differ only in what the check allows.
+
 `/codeo:issue` is the exception, as it is to most of this file. It runs before a number exists and
 may be called mid-flow by `plan` or `implement` without disturbing the lock: filing an issue is not
 starting work on it. `/codeo:triage` is outside the lock for the same reason: it reads across every
