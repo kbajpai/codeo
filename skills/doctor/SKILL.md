@@ -9,4 +9,4 @@ Project overlay text adds to or narrows a step; it never overrides a rule marked
 # Doctor
 
 Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/doctor.sh"` from the project root.
-Report its output verbatim, then end with the closing block (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`) and nothing else. If every check passes, the next goal is filing or starting an issue (`/codeo:issue`, `/codeo:init #<N>`). If it exits non-zero, say so, and make the goal fixing the failures it named, one step each, ending with re-running `/codeo:doctor`.
+Report its output verbatim, then end with the closing block (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`) and nothing else. Read the template with the Read tool, not with a Bash command. If every check passes, the next goal is filing or starting an issue (`/codeo:issue`, `/codeo:init #<N>`). If it exits non-zero, say so, and make the goal fixing the failures it named, one step each, ending with re-running `/codeo:doctor`.
