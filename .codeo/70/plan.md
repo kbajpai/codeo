@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4, done. QC round 3's two blocking findings (H1, H2) and H3, H4, H6 are planned (Tasks 22-25), the plan was approved and written into the plan file, Q12 and Q13 are answered and nothing is open. The next step is `/codeo:implement`.
+Round 5, sent back by QC round 4 (J1: a resumed stash whose container lost its lock is called stashed; J2: an archived dossier whose pull request is still open is called finished). Q14 and Q15 are open; the round's draft waits on them.
 
 ## Questions
 
@@ -127,6 +127,22 @@ Finished close only; a stash or an abandon prints no command and says why. Answe
 
 **Answer:**
 H3, H4 and H6; H5 stays for `/codeo:triage`. Answered with the question tool, in the conversation (engineer, 2026-11-15).
+
+### Q14 — Round 5, J4: what does the stale refusal say for an abandoned workflow?
+
+**Why it matters:** `role.sh` gives a stashed and an abandoned workflow the same line: "`/codeo:init #<N>` in the home container is the way back". For a stash that is right. For an abandon it is not: `/codeo:init` stops an abandoned workflow unless the engineer takes it up again, and `/codeo:close`'s own rule names no command that resumes one. The container may also hold the only copy of the work (when the branch was deleted at the abandon), which the refusal does not say. "No resume named" makes the abandoned line say the workflow was abandoned, that nothing more runs in this container, and that it may hold the only copy of the work, so check the branch on origin before removing it. "Name init as a deliberate restart" keeps the command but words it as taking the issue up again on purpose. J1 and J2 (the two blocking findings) are fixed either way: a park counts only while parks outnumber the resume lines in `init.md`, as `claim.sh` counts them, and an archived dossier counts as finished only when the base branch carries it.
+**Options:** no resume named; say it was abandoned, nothing more runs here, and the container may hold the only copy (recommended) · name `/codeo:init #<N>` as a deliberate restart.
+
+**Answer:**
+_Open._
+
+### Q15 — Round 5: which of QC round 4's non-blocking findings (J3-J9) does this round fix as well?
+
+**Why it matters:** J3 (in `codeo-home` on a branch other than the base, the refusal says "run it in the home container" to someone already in it), J4 (Q14) and J5 (the stash refusal does not say to remove this container before the resume opens a new one) are all in the refusal text this round rewrites, each one sentence and one test needle. J9 (`docs/skills.md` says cleanup never touches any branch, though it commits to `codeo/intake`) is a one-line page fix. J6 (Podman) and J7 (`CODEO_CLEANUP_REMOVAL` outside tests) are round 1's F9 and F11, already left for `/codeo:triage`. J8 (`cleanup.sh` lists every issue ever archived on every run) is a change to what cleanup prints, a design of its own. Left out, each stays in `qc.md` for `/codeo:triage`.
+**Options:** J3, J4, J5 and J9, leaving J6-J8 for triage (recommended) · J1 and J2 only.
+
+**Answer:**
+_Open._
 
 ## Notes
 
