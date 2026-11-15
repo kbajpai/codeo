@@ -14,6 +14,6 @@ The command is for the host's shell, not this container's: it is one line with `
 
 In the report, say to the engineer that these commands run on the host, not inside this container, and that they run `git status` in that clone first, because unpushed work is lost with the volume.
 
-This container holds no lock now, so `/codeo:triage` and `/codeo:cleanup` are refused here. Tell the engineer to run them in the home container, `codeo-home`, and make that the closing block's first step.
+After a finished close (the pull request merged), this container holds no lock, so `/codeo:triage` and `/codeo:cleanup` are refused here. Tell the engineer to run them in the home container, `codeo-home`, and make that the closing block's first step. On a stash or an abandon, keep the closing block the skill gives for that exit.
 
 For any other host there is nothing to remove: say so.

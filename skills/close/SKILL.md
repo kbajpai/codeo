@@ -532,8 +532,9 @@ is the container the message names.
     - **`host: local`** — nothing to remove: the checkout is the engineer's own, the local branch
       still in it, theirs to delete or keep.
 
-    On the finished exit only: everything in it is merged or on origin, so nothing is lost either
-    way. Suggest `/codeo:triage`: the moment a dossier is archived is when what it noticed but did
+    On the finished exit only: everything the workflow committed is merged or on origin; anything
+    left uncommitted or unpushed in the checkout is not, which is why the host workflow's clean-up
+    asks for `git status` first. Suggest `/codeo:triage`: the moment a dossier is archived is when what it noticed but did
     not file is easiest to lose. `superpowers:verification-before-completion` applies to every claim: each
     comes from a tool's output in this invocation — the merge from `github.sh`, the deletion from
     `git ls-remote`, the leases from `lease list`, the lock from `.codeo/active` being gone — never
