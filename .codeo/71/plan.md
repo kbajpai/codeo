@@ -8,9 +8,10 @@
 
 ## Where this stands
 
-Q1-Q4 are answered (all as recommended). The plan is drafted at .codeo/71/plan-draft.md and awaits the engineer's approval; nothing is open.
-The overlaps with #70, #96 and #98 were answered *proceed and coordinate*, so the footprint
-carries no `sequenced:` line.
+Q1-Q4 are answered (all as recommended). The plan was approved and written to
+`docs/plans/2026-11-15-file-new-issues-into-backlog.md` (unstaged, for review). Checking the
+footprint as written found a new workflow, #97, overlapping seven files: Q5 is open and
+`## Outcome` stays pending until it is answered.
 
 ## Questions
 
@@ -86,6 +87,33 @@ possible, as in Q3).
 **Answer:**
 Proceed and coordinate (answered in the conversation: "as recommended for all four").
 
+### Q5 — #97 declares seven of the same files, `scripts/board.sh` among them: proceed and coordinate, sequence after #97, or re-scope?
+
+**Why it matters:** #97 (`docs/docs-skill-wording-test-guard`, assignee kbajpai, step `init
+(working)`; its branch has changed nothing yet) was pushed after Q2-Q4 were asked, so it was not in
+that comparison. `overlap.sh 71` prints, for #97: `glob:CHANGELOG.md`, `glob:docs/handoff.md`,
+`glob:docs/skills.md`, `glob:scripts/board.sh`, `glob:skills/triage/SKILL.md`,
+`glob:tests/board.test.sh` and `glob:tests/closing-exits.test.sh`. #97 consolidates doc and
+test-guard follow-ups from #34, #39 and #69, including a `board.sh set` message fix and edits to
+`docs/skills.md`, `docs/handoff.md` and the triage skill. This plan touches the same files in
+different places: a header comment in `scripts/board.sh` (no code), one added case in
+`tests/board.test.sh`, one added case in `tests/closing-exits.test.sh`, the triage skill's
+backlog wording, and the `issue` and `triage` sections of `docs/skills.md` and the board bullet
+and tables of `docs/handoff.md`. The one real risk is `board.sh`: #97 changes its output, this
+plan changes only its comment. The answer decides whether the plan carries a `sequenced:` line,
+and whether two small edits are dropped to shrink the overlap.
+**Options:**
+- **Proceed and coordinate (recommended).** Build now; whichever of #97 and #71 merges second
+  rebases. The overlaps are adjacent-line conflicts in the docs and test files; `scripts/board.sh`
+  is a comment against a code change, so it merges cleanly unless #97 edits the same header lines.
+- **Sequence after #97.** The footprint records `sequenced: after #97`, and `/codeo:implement`
+  waits for #97 to merge. No rebase, but #97 is still at `init`, so the wait has no end in sight.
+- **Re-scope.** Drop Task 3 (the `board.test.sh` pin, which only restates existing behaviour) and
+  the `scripts/board.sh` header edit from Task 6. That removes two of the seven overlaps and loses
+  nothing the acceptance criteria need.
+
+**Answer:**
+
 ## Notes
 
 - Decided by the plan, no question needed:
@@ -132,3 +160,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-15 — Q1-Q4 raised; draft footprint under Notes · cost: 2m · fable-5-2 106k in + 770k cached / 11k out
+- 2026-11-15 — Q1-Q4 answered; plan approved and written; Q5 raised (overlap with #97) · cost: 11m · fable-5-2 109k in + 902k cached / 12k out · sonnet-5-5 143k in + 1.7M cached / 25k out
