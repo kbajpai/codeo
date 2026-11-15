@@ -62,6 +62,9 @@ step() {
         f { print }' "$1"
 }
 
+# Prints $1 with newlines joined and runs of spaces squeezed, so a phrase wrapped over lines matches.
+flat() { printf '%s' "$1" | tr '\n' ' ' | tr -s ' '; }
+
 case_rule() {
     local block row
     block=$(sed -n '/^## Closing block$/,/^## Spinning out subagents$/p' "$doc")
@@ -184,13 +187,16 @@ case_close_step17_lead() {
     s=$(step "$close" 17)
     [[ -n $s ]] || { fail "no step 17 in skills/close/SKILL.md"; return; }
     lacks "$s" 'Report** that the workflow is finished'
+    lacks "$(flat "$s")" 'End with the closing block: the goal is the loose ends found'
 }
 
 case_stash_prose() {
     local text
     text=$(awk '/^## Stash, and closed unmerged$/ { f = 1 } f && /^\*\*Closed unmerged\*\*/ { exit } f' "$close")
     [[ -n $text ]] || { fail "no stash section in skills/close/SKILL.md"; return; }
+    text=$(flat "$text")
     lacks "$text" 'Report that `/codeo:init #<N>` resumes it'
+    lacks "$text" 'End with the closing block: the goal is resuming the work'
 }
 
 # Puts each old wording back in a scratch copy and checks the named case then fails by name.
@@ -219,6 +225,28 @@ case_bites() {
     ! cmp -s "$pristine" "$copy" || fail "the stash mutation changed nothing"
     out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
         fail "the old stash sentence passed stash-prose"
+    [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+
+    # The old sentences as they were wrapped (2a86915^), so a line break cannot hide them.
+    cp "$pristine" "$copy"
+    sed -i 's/^    from a step having been attempted\. End with the closing block for the exit step 16 took:$/    from a step having been attempted. End with the closing block: the goal is the loose ends found,\n    the first step `\/codeo:triage`, then the host'"'"'s checkout clean-up above./' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the wrapped step 17 mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" close-step17-lead 2>&1) &&
+        fail "the old step 17 ending passed close-step17-lead"
+    [[ $out == *close-step17-lead* ]] || fail "close-step17-lead failed without naming itself: $out"
+
+    cp "$pristine" "$copy"
+    sed -i 's/^\*\*Closed unmerged\*\*/Report that `\/codeo:init #<N>`\nresumes it, on any machine.\n\n&/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the wrapped stash sentence mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
+        fail "the old stash sentence passed stash-prose"
+    [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+
+    cp "$pristine" "$copy"
+    sed -i 's/^\*\*Closed unmerged\*\*/request stays open; say so. End with the closing block: the goal is resuming the work, the first\nstep `\/codeo:init #<N>`.\n\n&/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the wrapped stash ending mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
+        fail "the old stash ending passed stash-prose"
     [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
     return 0
 }
