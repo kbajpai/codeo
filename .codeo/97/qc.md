@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done: back to `/codeo:plan`. All twenty criteria are met and round 1's three blocking findings are fixed, but the new `qc-verdict` rule fails any pull request that touches an older re-planned archive (F11, reproduced), so the check cannot be required as built. One blocking finding, the plan's.
+Round 3, done: clear, forward to `/codeo:close`. All twenty criteria are met and no finding is blocking; two small documentation overstatements (F16, F17) and four minor test and script notes are recorded for the engineer to fix in this pull request or send on to `/codeo:triage`.
 
 ## Questions
 
@@ -143,7 +143,72 @@ Environment: none configured, so no lease check and no environment block. Overla
 
 **Verdict: back to `/codeo:plan`.**
 
+
+### Round 3 — 2026-11-15
+
+(send-back from implement.md round 3, answering this file's round 2)
+
+**Commands and output (this pass).**
+
+- `bash scripts/sync-main.sh --abort-on-conflict` → `the branch already contains origin/main`, exit 0. Nothing merged this round.
+- `bash scripts/overlap.sh 97` → no output, exit 0. `bash scripts/overlap.sh --outside 97` → no output, exit 0.
+- `git diff origin/main...HEAD --stat` → 27 files changed, 1707 insertions, 89 deletions.
+- `bash scripts/scope.sh origin/main HEAD` → `suite.shell=true`; no `deploy=` line (no environment configured).
+- Build: the `shell` suite's build command is `true` → exit 0.
+- Suite: `bash tests/run.sh` → `all cases passed`, exit 0.
+- Round 2's F11, re-run in the same scratch repo (base holds a re-planned `done/7`; the pull request appends a line to `done/7/qc.md` and adds `c.txt`): `bash scripts/qc-verdict.sh <base> <head>` → `qc-verdict: .codeo/done/7/qc.md: round 1 clear`, exit 0 (round 2: `round 2 footprint omits: c.txt`, exit 1).
+- Round 1's two guards, on copies of the current `skills/close/SKILL.md`: step 17's old ending put back → `CLOSING_EXITS_ROOT=<copy> bash tests/closing-exits.test.sh close-step17-lead` prints `FAIL: close-step17-lead — has [End with the closing block: the goal is the loose ends found] …`, exit 1; the stash sentence put back with its original line break → `… stash-prose` exit 1; a copy of the pristine current skill → `all cases passed`. (My first attempt reused scratch copies built before round 3 and passed; they held a skill from an earlier round, so I rebuilt them on the current file and the guards fail as they should.)
+- `bash scripts/overlap.sh --outside 97 --base no-such-ref --head HEAD` → `overlap: cannot resolve no-such-ref`, exit 1.
+- `QC_SKILL=<origin/main's skills/qc/SKILL.md> bash tests/qc-skill.test.sh` → `5 case(s) failed` (the round-2 and round-3 pins and both still-says checks): the pins bite.
+- Overlays: `overlay.sh qc invariants-extra` and `wiki-rules` both exit 3 (none). No invariants file, no wiki module, no environment.
+
+**Acceptance criteria.**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| #41: `docs/skills.md` `doctor` Reads lists the extension-points file, installed-plugins file, PATH checks and the `ci.requiredChecks` fallback | met | `docs/skills.md:266`, read against `scripts/doctor.sh` in round 1 and unchanged since |
+| #41: `docs/skills.md` `qc` mentions the sync merge commit | met | `docs/skills.md:160` |
+| #41: a test shows fenced lines in an Extension points part are not counted | met | `tests/skills-doc.test.sh` `fenced-part`; the round-3 reviewer reverted the rule in a scratch copy and it failed |
+| #41: the guard's output order is identical across runs | met | `stable-order`; reverting the sort fails it (reviewer) |
+| #41: a skill name containing regex metacharacters is matched literally | met | `metachar-name` (`a.b` against `axb/`); passes only with the literal match (reviewer) |
+| #43: a test fails when a second-round `### Footprint` omits a path `overlap.sh --outside <N>` would print, without relying on a grep of the skill text | met | `tests/qc-verdict.test.sh` (`replan footprint omits a changed path`, `an archive renamed into place is checked`, the failed-check case) and `tests/overlap.test.sh`; the delivered-archive scope is tested on both sides |
+| #43: reading `skills/plan/SKILL.md` from sub-step 2 through 4, no step requires `## Outcome` to be both written and still pending | met | `skills/plan/SKILL.md` step 10 as read by me and by two reviewers: sub-step 1 removes the old block and runs `--outside`, sub-step 4 only moves the block |
+| #43: with the issue on no board, `board.sh set` does not print "no project #N is on …" | met | `tests/board.test.sh` `no-board-message` |
+| #43: a failed title read is not reported as a failed add; a failed removal's message includes the reason | met | `title-read-fails`, `undo-fails` |
+| #43: a `tests/board.test.sh` case runs with `board.statuses` absent from the config and passes | met | `statuses-absent` |
+| #43: the `undo-fails` case fails if `item-delete` is not called | met | `tests/board.test.sh:263` |
+| #43: an issue on a project beyond the first 50 items is found; a failed write on it does not delete its card | met | `lookup` uses `gh api graphql --paginate` with `$endCursor`/`pageInfo`; `beyond-50` asserts the flag and the failed write on the 60th row. The stub cannot page (F20), and the query reads the issue's own `projectItems` (see F16) |
+| #43: each of the five wording items reads correctly against the code | met | `CHANGELOG.md:43`, `lib/env.sh`, `skills/triage/SKILL.md:220`, `docs/handoff.md:302`, `docs/dossier.md:244` |
+| #74: close's abandon exit ends with a closing block (finished: a command that can run with the lock gone; interrupted: `/codeo:close`; neither names `/codeo:init #<N>` or `/codeo:close --stash`) | met | `skills/close/SKILL.md` abandon section; `closing-exits` cases `abandon-finished` and `abandon-interrupted` |
+| #74: `docs/handoff.md` lists the abandon among close's exits and has rows for both abandon exits and `issue — Status unreadable`; the `init — no lock` row no longer names `lock.sh take local` unconditionally | met | `docs/handoff.md` exits bullet and rows 54-58 (but see F17 for the finished-abandon row's omission) |
+| #74: `tests/closing-exits.test.sh` has a case for each new abandon block, and a check that fails when the old unconditional sentences are put back in close step 17 and in the stash prose (shown to bite against a copy with the sentence restored) | met | the two mutations above both exit 1; `case_bites` restores each old sentence with its original line break; the reviewer also ran them against the real pre-#69 skill |
+| #74: `skills/plan/SKILL.md`'s host-task paragraph is consistent, its neutral list names single-quoted arguments, globs, `~` and `./script`, and `tests/plan-skill.test.sh` pins the changes | met | `skills/plan/SKILL.md:168-187`; pins shown to bite against `origin/main`'s copy |
+| #74: `CHANGELOG.md` has an `## Unreleased` entry that says both branches of the host-task rule | met | `CHANGELOG.md:16`: neutral commands, and a command that cannot be neutral is asked about and labelled `Shell: <name>` |
+| #74: every left minor is fixed or dismissed with a reason in `plan.md`, and step 17's unconditional lead and the empty-`step` guard are fixed | met | `plan.md`'s round-1 Self-Review and round-2 and round-3 Notes; step 17's lead is conditioned; `case_init_no_lock` fails on an empty `step` result |
+| #74: `bash tests/run.sh` passes | met | `bash tests/run.sh` prints `all cases passed`, exit 0 |
+
+**Documentation.** `docs/skills.md`, `docs/handoff.md`, `docs/dossier.md`, `lib/env.sh`, `skills/triage/SKILL.md`, `skills/qc/SKILL.md`, `skills/plan/SKILL.md`, `skills/close/SKILL.md`, `scripts/overlap.sh`'s and `scripts/qc-verdict.sh`'s headers and `CHANGELOG.md` say what the code now does, with two exceptions recorded as F16 and F17 (a changelog rationale and two summary lines that overstate). `skills/qc/SKILL.md` step 6 and `scripts/qc-verdict.sh` agree: non-blocking on a first-round plan, blocking from `### Round 2`, ownership by step 8's test.
+
+**Independent review.** Reviewer on `opus` (`QC review:`), given the acceptance criteria alone. No Critical and no Important issue. It tried the required check in scratch repos on both sides (a pull request delivering its own re-planned archive through a send-back cycle fails by name; one that only edits an older archive passes), confirmed `overlap.sh`'s ref check and that no-flag and pair mode are unchanged, and put the old step 17 and stash sentences back with their original line breaks: both guards failed by name.
+
+**Round 2's findings.** F11 (blocking in round 2) — fixed by `cc04ebf`. F12 — fixed by `837fd78`. F13 — fixed by `a3187d0`. F14 — fixed by `307b07e`. F15 — fixed by `2f7a37e`.
+
+**Findings.**
+
+- **F16 — non-blocking, `/codeo:plan`'s.** `CHANGELOG.md:16` says `board.sh set` "follows every page of an issue's project items, so an issue on a large board is found". `lookup` reads the issue's own `projectItems` (`scripts/board.sh:89-98`), about one item per project the issue is on; the size of a board never entered. Paging helps only an issue that sits on more than 50 projects. The criterion is met as worded, but the changelog's reason is untrue and reads as a large-board fix; it should say only that every page is read. The premise came from #43's wording, which the plan followed.
+- **F17 — non-blocking, `/codeo:plan`'s.** `docs/handoff.md:391` (`abandon — finished`: "`/codeo:triage`, then the host's checkout clean-up") and `docs/skills.md:190` ("…then the host clean-up, an abandon that finished included") drop the exception round 3 added to `skills/close/SKILL.md`: after an abandon whose unmerged branch was deleted the checkout is the last copy and is not to be cleaned up casually. The skill, which an agent follows, is right; the two summaries overstate.
+- **F18 — non-blocking, `/codeo:implement`'s.** `scripts/overlap.sh:52-59`: an empty `--base ""` or `--head ""` is treated as absent (I confirmed `--outside 97 --base ""` exits 0 and compares against the default base), so a caller passing an unset variable gets a different comparison instead of the "cannot resolve" error the header promises; the usage line also suggests the flags work without `--outside`.
+- **F19 — non-blocking, `/codeo:implement`'s.** `tests/closing-exits.test.sh` `case_close_step17_lead` checks the old lead (`Report** that the workflow is finished`) on the unflattened step text; it bites today because that lead sat on one line, and a re-wrap would slip past.
+- **F20 — non-blocking, `/codeo:implement`'s (carried as F8).** `tests/board.test.sh` `beyond-50` cannot page: the stub answers one canned reply, so only the `--paginate` flag bites and the per-page blank-row path is never exercised.
+- **F21 — non-blocking, `/codeo:implement`'s (carried as F10).** `skills/init/SKILL.md:321,329` still says there is no lock after any `lock: TODO`; `docs/handoff.md`'s `init — no lock` row is right (`scripts/lock.sh` prints the volume-name TODO after writing the lock).
+- Carried and recorded, not re-raised: the unanchored `^## Outcome` match in `qc-verdict.sh`; the comment above `touched` in `qc-verdict.sh` not saying only delivered archives are footprint-checked; round 2's `and not blocking by rule:` still-says check being line-based; hard-wrap breaks around one-line pins in the abandon text; the items listed in `implement.md`'s earlier rounds.
+
+**Routing.** No blocking finding: every criterion is met, the build and the full suite pass, and the required check behaves correctly on both sides in the cases tried. F16 and F17 are untrue statements, small ones, and both belong to documentation a reader would trust; they do not break behaviour, and the skill an agent follows is right. They can be fixed in the pull request by one more round if the engineer wants (a changelog clause, and a clause on two summary lines), or filed with the others through `/codeo:triage` after the merge.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-15 — qc round 1: build and suite pass, one criterion not met, three blocking findings, back to plan · cost: 10m · opus-5-5 511k in + 6.9M cached / 34k out · sonnet-5-5 395k in + 29k cached / 3k out
 - 2026-11-15 — qc round 2: build and suite pass, all criteria met, one blocking finding (F11), back to plan · cost: 9m · opus-5-5 626k in + 4.8M cached / 28k out · sonnet-5-5 24k in + 520k cached / 2k out
+- 2026-11-15 — qc round 3: build and suite pass, all criteria met, no blocking finding (F16-F21 non-blocking), clear · cost: 10m · opus-5-5 774k in + 5.5M cached / 33k out · sonnet-5-5 26k in + 634k cached / 2k out
