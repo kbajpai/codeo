@@ -1892,6 +1892,53 @@ title_reports_an_unwritable_vscode_dir() {
     [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "stderr was: $wt_err"
 }
 
+title_leaves_the_exclude_file_alone_when_it_has_the_entry() {
+    local exclude before
+    wt_setup exclkeep || return 0
+    wt_run
+    ((wt_rc == 0)) || fail "first run: exit $wt_rc: $wt_err"
+    exclude=$(git -C "$wt_dir" rev-parse --path-format=absolute --git-path info/exclude)
+    touch -d '2001-01-01 00:00:00' "$exclude"
+    before=$(stat -c %y "$exclude")
+    wt_run
+    ((wt_rc == 0)) || fail "second run: exit $wt_rc: $wt_err"
+    [[ $(stat -c %y "$exclude") == "$before" ]] || fail "info/exclude was touched: $before -> $(stat -c %y "$exclude")"
+}
+
+title_reports_a_settings_path_that_is_not_a_regular_file() {
+    wt_setup notregular || return 0
+    mkdir -p "$wt_dir/.vscode/settings.json"
+    wt_run
+    ((wt_rc == 1)) || fail "directory: exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "directory: stderr was: $wt_err"
+    [[ $wt_err == *'not a regular file'* ]] || fail "directory: stderr lacks 'not a regular file': $wt_err"
+    [[ $wt_err != *'not valid JSON'* ]] || fail "directory: stderr says not valid JSON: $wt_err"
+    wt_setup unreadable || return 0
+    mkdir -p "$wt_dir/.vscode"
+    echo '{"a":1}' > "$wt_dir/.vscode/settings.json"
+    chmod 000 "$wt_dir/.vscode/settings.json"
+    if [[ -r $wt_dir/.vscode/settings.json ]]; then
+        chmod 644 "$wt_dir/.vscode/settings.json"
+        echo 'SKIP title_reports_a_settings_path_that_is_not_a_regular_file: the tests run as a user that can read a mode-000 file'
+        return 0
+    fi
+    wt_run
+    chmod 644 "$wt_dir/.vscode/settings.json"
+    ((wt_rc == 1)) || fail "unreadable: exit $wt_rc, wanted 1"
+    [[ $wt_err == window-title:* && $wt_err != *$'\n'* ]] || fail "unreadable: stderr was: $wt_err"
+    [[ $wt_err == *'not readable'* ]] || fail "unreadable: stderr lacks 'not readable': $wt_err"
+}
+
+title_reports_a_failing_container_name_as_one_line() {
+    wt_setup cnfail || return 0
+    printf '#!/bin/sh\necho "container-name: first" >&2\necho "container-name: second" >&2\nexit 1\n' \
+        > "$wt_dir/.devcontainer/scripts/container-name.sh"
+    wt_run
+    ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
+    [[ $wt_err == 'window-title: could not name the container: first / second' ]] || fail "stderr was: $wt_err"
+    ! compgen -G "$wt_dir/.vscode/.settings.*" >/dev/null || fail 'a temp file was left in .vscode'
+}
+
 title_outside_a_repository_says_so() {
     local d
     wt_setup norepo || return 0
@@ -2247,6 +2294,9 @@ cases=(
     title_strips_a_hash_from_the_lock_line
     title_reports_an_unwritable_exclude
     title_reports_an_unwritable_vscode_dir
+    title_leaves_the_exclude_file_alone_when_it_has_the_entry
+    title_reports_a_settings_path_that_is_not_a_regular_file
+    title_reports_a_failing_container_name_as_one_line
     title_outside_a_repository_says_so
     session_title_names_home_and_the_id
     session_title_names_the_issue_with_a_lock
