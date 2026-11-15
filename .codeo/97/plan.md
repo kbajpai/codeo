@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q5 are answered (recorded from the engineer's "go ahead" in the conversation, each taking its recommendation); Q6 (#71 has since added `tests/board.test.sh` to its footprint) is answered: proceed and coordinate. The plan is drafted at `.codeo/97/plan-draft.md` for review; nothing is written under `docs/plans/` yet; the engineer's approval of the draft is the only thing outstanding.
+Round 1, done. Q1-Q6 are answered, the plan was approved and written to `docs/plans/2026-11-15-docs-skill-wording-test-guard.md`; nothing is open. The next step is `/codeo:implement`.
 
 ## Questions
 
@@ -85,6 +85,20 @@ What exploration found, so the plan does not re-ask it.
 - *Left minors.* Fixed: the step-17 lead, the empty-`step` guard, the missing-row message, the host-task paragraph's wrapping and overlap (rewritten anyway), `closing-exits.test.sh` FAIL lines to stderr as `closing-block.test.sh` does (no effect on `run.sh`, which merges both streams). Dismissed: long lines in `skills/issue/SKILL.md` (line 3 is frontmatter and cannot wrap; 177-181 are closing-block paragraphs, a rewrap is churn in a file #71 also edits); `docs/skills.md` lines that do not enumerate every exit (the page defers to `docs/handoff.md → Closing block`, which Q3's task completes).
 - *One pull request.* The three parts are separable but share `docs/skills.md`, `docs/handoff.md`, `CHANGELOG.md` and one branch; the issue is one planning pass.
 
+## Outcome
+
+2026-11-15
+
+**Plan:** `docs/plans/2026-11-15-docs-skill-wording-test-guard.md`, a scoped executable plan (ten tasks, one pull request), approved by the engineer and left unstaged. No reference doc under `docs/`: nothing here is a standing decision beyond what the plan's tasks write into the pages below.
+
+**Decisions.** Q1 the re-planned-footprint rule is enforced by `qc-verdict.sh`, scoped to archived plans with a `### Round 2` or later, through a new optional `--base`/`--head` on `overlap.sh --outside` (CI's checkout was read: `qc-verdict` runs with full history and is handed the merge base and head). Q2 the `skills/plan/SKILL.md` and `tests/plan-skill.test.sh` tasks wait for #98 to merge. Q3, Q4, Q6 proceed and coordinate with #70 and #71, the close, handoff and board tasks ordered last. Q5 proceed with #96. Calls made in the plan, shown at the gate: `gh api --paginate` for the 50-item lookup, observable in the stub only by its flag; the bash 4.3 idiom kept and commented, not tested; step 10's `--outside` check moved to sub-step 1 by making the earlier block's removal the first edit of a send-back pass; abandon-finished names `/codeo:triage` and abandon-interrupted names `/codeo:close`, neither naming `/codeo:init #<N>` or `/codeo:close --stash`.
+
+**Rejected.** A branch-aware `dossier-check.sh` (it is config-free and shape-only, and CI does not run it on real dossiers); a fixture test only (it protects no real planning pass); three pull requests; proving the bash 4.3 guard (a newer bash cannot show it biting); fixing `skills/issue/SKILL.md`'s long lines and enumerating every exit in `docs/skills.md` (dismissed with reasons in the plan's Self-Review).
+
+**Documentation.** `docs/skills.md` (`doctor`, `qc`, `close`), `docs/handoff.md` (exits, rows, the replacing-footprint sentence, the `qc-verdict` check), `docs/dossier.md` (when the footprint check runs), `lib/env.sh`'s key reference, `skills/triage/SKILL.md`, `CHANGELOG.md`. No wiki module or invariants document.
+
+**Intake.** #43's Q1 (the 50-item lookup) was already answered at filing: a requirement. #70's overlap, which `init.md` left open, is resolved by Q3.
+
 ### Footprint
 
 ```
@@ -94,10 +108,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 - 2026-11-15 — Q1-Q5 raised · cost: 3m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 292k in + 1.5M cached / 35k out
 - 2026-11-15 — Q1-Q5 answered in the conversation; plan drafted at .codeo/97/plan-draft.md, awaiting approval · engineering:architecture and engineering:system-design not loaded, Q1's Options/Decision structure applied directly · cost: 12m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 372k in + 3.4M cached / 83k out
+- 2026-11-15 — planned: docs/plans/2026-11-15-docs-skill-wording-test-guard.md · engineering:architecture and engineering:system-design not loaded, Q1's Options/Decision structure applied directly · cost: 27m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 378k in + 4.8M cached / 90k out
