@@ -17,6 +17,7 @@ repo_root() { cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd; }
 repo=$(repo_root)
 
 failures=0
+state=""         # the state a stale refusal must report: finished, stashed, abandoned, lost, unknown
 current=""
 root=""
 dir=""
@@ -74,6 +75,31 @@ role_is() {
 # is_home_skill <skill>
 is_home_skill() { local s; for s in "${home_skills[@]}"; do [[ $s == "$1" ]] && return 0; done; return 1; }
 
+# stale_needles <skill> <line>: the per-state wording of a stale refusal, by $state (finished, stashed,
+# abandoned, lost, unknown).
+stale_needles() {
+    local skill=$1 line=$2 want=() bad=()
+    case $state in
+        finished) want=("is finished") ;;
+        stashed|abandoned) want=("was $state" "holds no lock") ;;
+        lost) want=("holds no lock") ;;
+        unknown) want=("no dossier says why") ;;
+    esac
+    if is_home_skill "$skill"; then
+        want+=("run it in the home container"); bad=(devcontainer-start.sh "/codeo:init #")
+    else
+        case $state in
+            finished) want+=("/codeo:cleanup"); bad=(devcontainer-start.sh re-run) ;;
+            stashed|abandoned) want+=("/codeo:init #67" "never the start script"); bad=(re-run finished) ;;
+            lost) want+=("workflow is live" "re-run bash .devcontainer/scripts/devcontainer-start.sh"); bad=(finished stashed abandoned) ;;
+            unknown) want+=("container of the issue it is for"); bad=(devcontainer-start.sh finished) ;;
+        esac
+    fi
+    local n
+    for n in "${want[@]}"; do [[ $line == *"$n"* ]] || fail "$role: $skill ($state) refusal lacks '$n': '$line'"; done
+    for n in "${bad[@]}"; do [[ $line != *"$n"* ]] || fail "$role: $skill ($state) refusal must not say '$n': '$line'"; done
+}
+
 # check_matrix <role> <number>: every one of the eight skills against the clone in $dir,
 # whose role is <role>. <number> is the issue number a refusal must name ("" when there is none).
 check_matrix() {
@@ -93,16 +119,10 @@ check_matrix() {
             ((rc == 1)) || fail "$role: $skill wanted exit 1, got $rc ($err)"
             [[ -n $out && $out != *$'\n'* ]] || fail "$role: $skill wanted one refusal line, got '$out'"
             [[ $out == *"$role"* ]] || fail "$role: $skill refusal does not name the role: '$out'"
-            [[ -z $number || $out == *"#$number"* ]] || fail "$role: $skill refusal does not name #$number: '$out'"
+            [[ -z $number || $state == unknown || $out == *"#$number"* ]] || fail "$role: $skill refusal does not name #$number: '$out'"
             case $role in
                 stale:*)
-                    [[ $out == *finished* ]] || fail "$role: $skill refusal does not say the container is finished: '$out'"
-                    [[ $out == *"stashed or abandoned"* ]] || fail "$role: $skill refusal does not cover a stashed or abandoned workflow: '$out'"
-                    if is_home_skill "$skill"; then
-                        [[ $out == *"run it in the home container"* ]] || fail "$role: $skill refusal does not say to run it in the home container: '$out'"
-                    else
-                        [[ $out == *devcontainer-start.sh* ]] || fail "$role: $skill refusal does not name devcontainer-start.sh: '$out'"
-                    fi ;;
+                    stale_needles "$skill" "$out" ;;
             esac
             if is_home_skill "$skill"; then
                 [[ $out == *"home container"* ]] || fail "$role: $skill refusal does not say it runs in the home container: '$out'"
@@ -132,6 +152,7 @@ issue_container() {
 
 stale_on_main() {
     mk stalemain codeo-67 main || return 0
+    state=unknown
     role_is stale:67
     check_matrix stale:67 67
 }
@@ -142,6 +163,7 @@ stale_on_a_feature_branch() {
 }
 
 stale_unknown_issue() {
+    state=unknown
     mk staleq codeo-home feat/x || return 0
     role_is 'stale:?'
     check_matrix 'stale:?' ""
@@ -195,11 +217,58 @@ not_a_clone_fails() {
     [[ -z $out && $err == role:* && $err != *$'\n'* ]] || fail "--check: wanted one 'role:' line on stderr, got '$out' / '$err'"
 }
 
+# stale_with <name> <state> <file> <content>: a codeo-67 clone with no lock and <content> in .codeo/<file>.
+stale_with() {
+    mk "$1" codeo-67 main || return 1
+    state=$2
+    mkdir -p "$dir/.codeo/$(dirname "$3")"
+    printf '%b' "$4" >"$dir/.codeo/$3"
+}
+
+stale_finished() {
+    stale_with fin finished done/67/close.md '### Round 1 — pull request opened\n' || return 0
+    role_is stale:67
+    check_matrix stale:67 67
+}
+
+stale_stashed() {
+    stale_with stashed stashed 67/close.md '### Round 1 — pull request opened\n\n### Round 2 — stashed\n' || return 0
+    check_matrix stale:67 67
+}
+
+stale_abandoned() {
+    stale_with abandoned abandoned 67/close.md '### Round 1 — abandoned — the pull request was closed\n' || return 0
+    check_matrix stale:67 67
+}
+
+stale_lock_lost_without_a_close() {
+    stale_with lost lost 67/init.md 'issue: 67\n' || return 0
+    check_matrix stale:67 67
+}
+
+stale_parked_then_reopened_is_lock_lost() {
+    stale_with reopened lost 67/close.md '### Round 1 — stashed\n\n### Round 2 — pull request opened\n' || return 0
+    check_matrix stale:67 67
+}
+
+stale_dossier_is_read_under_the_root() {
+    stale_with subdir stashed 67/close.md '### Round 1 — stashed\n' || return 0
+    mkdir -p "$dir/sub/deep"
+    run --check plan "$dir/sub/deep"
+    [[ $out == *"was stashed"* ]] || fail "from a subdirectory: wanted the stashed line, got '$out'"
+}
+
 cases=(
     home_on_main
     issue_container
     stale_on_main
     stale_on_a_feature_branch
+    stale_finished
+    stale_stashed
+    stale_abandoned
+    stale_lock_lost_without_a_close
+    stale_parked_then_reopened_is_lock_lost
+    stale_dossier_is_read_under_the_root
     stale_unknown_issue
     mismatch_in_the_home_folder
     mismatch_in_another_issue_folder

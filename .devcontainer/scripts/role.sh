@@ -14,6 +14,8 @@
 #         home       no lock, on the base branch (baseBranch in .codeo/config.json, else main), in
 #                    the folder '<codename>-home'.
 #         stale      no lock otherwise: stale:<N> in the folder '<codename>-<N>', else stale:?.
+#                    --check reads the clone's own dossier (.codeo) to say why: finished, stashed, abandoned, a lost
+#                    lock, or unknown.
 #   role.sh --check <skill> [dir]
 #       Exits 0 printing nothing when the skill may run here, 1 printing one refusal line when it
 #       may not. The home-only skills (issue init triage cleanup) run on unguarded and home; the lock
@@ -83,18 +85,52 @@ case $role in
 esac
 case $role in
     stale:*)
-        if [[ $kind == home ]]; then
-            where="run it in the home container"
-        elif [[ -n $number ]]; then
-            where="if this is still issue #$number's container, re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock; otherwise it is done, and the skill runs in the container of the issue it is for"
-        else
-            where="if this is still an issue's container, re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock; otherwise it is done, and the skill runs in the container of the issue it is for"
-        fi
+        # What happened to the workflow, from this clone's own dossier (the state directory is .codeo).
+        state=unknown
+        word=
         if [[ -n $number ]]; then
-            echo "/codeo:$skill can't run here: this container's workflow for issue #$number has ended (finished, stashed or abandoned), or its start script took no lock (role $role); $where."
-        else
-            echo "/codeo:$skill can't run here: this clone is on a branch other than the base branch with no lock, so its workflow has ended (finished, stashed or abandoned) or never took a lock (role $role); $where."
+            if [[ -d $root/.codeo/done/$number ]]; then
+                state=finished
+            elif [[ -d $root/.codeo/$number ]]; then
+                state=lost
+                park_re='^### Round [0-9]+ — (.+ — )?(stashed|abandoned)([^[:alnum:]].*)?$'
+                last=
+                if [[ -f $root/.codeo/$number/close.md ]]; then
+                    last=$(grep -E '^### Round [0-9]+ ' "$root/.codeo/$number/close.md" | tail -n 1 || true)
+                fi
+                if [[ $last =~ $park_re ]]; then
+                    state=parked
+                    word=${BASH_REMATCH[2]}
+                fi
+            fi
         fi
+        head="/codeo:$skill can't run here:"
+        case $state in
+            finished)
+                if [[ $kind == home ]]; then
+                    echo "$head issue #$number is finished and this container is done (role $role); run it in the home container."
+                else
+                    echo "$head issue #$number is finished and this container is done (role $role); nothing more runs here, and /codeo:cleanup in the home container prints how to remove it."
+                fi ;;
+            parked)
+                if [[ $kind == home ]]; then
+                    echo "$head issue #$number's workflow was $word and this container holds no lock (role $role); run it in the home container."
+                else
+                    echo "$head issue #$number's workflow was $word and this container holds no lock (role $role); /codeo:init #$number in the home container is the way back, never the start script."
+                fi ;;
+            lost)
+                if [[ $kind == home ]]; then
+                    echo "$head this is issue #$number's container and it holds no lock (role $role); run it in the home container."
+                else
+                    echo "$head this is issue #$number's container, its workflow is live and it holds no lock (role $role); re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock."
+                fi ;;
+            *)
+                if [[ $kind == home ]]; then
+                    echo "$head this clone holds no lock and no dossier says why (role $role); run it in the home container."
+                else
+                    echo "$head this clone holds no lock and no dossier says why (role $role); the skill runs in the container of the issue it is for."
+                fi ;;
+        esac
         exit 1 ;;
 esac
 if [[ $kind == home ]]; then
