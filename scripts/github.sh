@@ -238,6 +238,6 @@ case $group in
         [[ -z $out ]] || printf '%s\n' "$out"
         ;;
     *)
-        die "usage: github.sh issue view|assignee-add|assignee-remove|search|list-all | issue-types | user login | pr list-for-branch|view|reviews|comments|review-comments|checks|create|comment | run list | workflow dispatch | label list"
+        die "usage: github.sh issue view|assignee-add|assignee-remove|search|list-all | issue-types | user login | pr list-for-branch|view|get|reviews|comments|review-comments|checks|create|comment | run list | workflow dispatch | label list"
         ;;
 esac

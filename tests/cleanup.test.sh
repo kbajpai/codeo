@@ -128,6 +128,16 @@ setup_repo "12:$body"
 fixture 12 open 41 2026-01-01T00:00:00Z feat/12
 assert_eq "line" "12${tab}failed${tab}issue" "$(run_cleanup)"
 
+case_desc="an unreadable issue stops the script: exit non-zero, a cleanup: line, no proven or failed line"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+rm "$GH_STUB_DIR/GET_repos_o_n_issues_12.json"
+rc=0
+err=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" 2>&1 >"$scratch_root/out.txt") || rc=$?
+assert_eq "exit non-zero" "yes" "$([[ $rc -ne 0 ]] && echo yes || echo no)"
+assert_eq "stderr" "cleanup: could not read issue #12" "$err"
+assert_eq "stdout empty" "" "$(cat "$scratch_root/out.txt")"
+
 case_desc="pull request not merged"
 setup_repo "12:$body"
 fixture 12 closed 41 null feat/12

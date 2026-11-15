@@ -659,6 +659,7 @@ reset_case
 if out=$(bash "$script" bogus 2>"$err_file"); then rc=0; else rc=$?; fi
 assert_eq "exit code" 1 "$rc"
 assert_contains "usage on stderr" "usage: github.sh" "$(cat "$err_file")"
+assert_contains "usage names pr get" "view|get|reviews" "$(cat "$err_file")"
 
 if ((failures)); then
     echo "$failures case(s) failed"

@@ -76,7 +76,7 @@ is the container the message names.
 4. **Close.** End with the closing block
    (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`). When something was proven, the next
    goal is those leftovers removed on the host and the next issue started: step 1 is running the
-   printed commands on the host after `git status` in each clone, step 2 `/codeo:init #<N>`. When
+   printed commands on the host after `git status` in each clone, step 2 `/codeo:init #<M>`, `<M>` being the next issue to start. When
    nothing was proven, the next goal is the loose ends found, and step 1 is `/codeo:triage`.
 
 ## Hand-off

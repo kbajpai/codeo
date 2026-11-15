@@ -58,8 +58,9 @@ overlay_value() {
 
 # The first failing proof for issue $1, or `ok`.
 first_failed_proof() {
-    local n=$1 pr info ref sha
-    [[ $(bash "$github" issue view "$n" </dev/null | jq -r '.state') == closed ]] || { echo issue; return; }
+    local n=$1 issue pr info ref sha
+    issue=$(bash "$github" issue view "$n" </dev/null 2>/dev/null) || die "could not read issue #$n"
+    [[ $(jq -r '.state' <<<"$issue") == closed ]] || { echo issue; return; }
 
     pr=$({ git show "$base_sha:$state_rel/done/$n/close.md" 2>/dev/null || true; } |
         awk '/^#[0-9]+ https?:\/\// { sub(/^#/, ""); print $1; exit }')

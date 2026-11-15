@@ -15,6 +15,8 @@ text=$(cat "$skill") || exit 1
 for needle in 'cleanup.sh' 'git status' 'unpushed work' 'intake.sh" commit cleanup'; do
     grep -qF -- "$needle" <<<"$text" || check_fail "the skill does not contain: $needle"
 done
+grep -qF '/codeo:init #<M>' "$skill" || check_fail "the closing block does not name /codeo:init #<M>"
+! grep -qF '/codeo:init #<N>' "$skill" || check_fail "the closing block still names /codeo:init #<N>"
 ! grep -qiw 'docker' "$skill" || check_fail "the skill names the container engine"
 ! grep -qF 'codeo-home' "$skill" || check_fail "the skill names the home container"
 
