@@ -138,6 +138,7 @@ Each of these has one sensible answer given the issue and the code. Say so in an
 files:      .devcontainer/devcontainer.json, .devcontainer/README.md, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/plugins.sh, .devcontainer/scripts/window-title.sh, .devcontainer/scripts/codeo-root.sh, .devcontainer/scripts/container-name.sh, tests/devcontainer.test.sh, tests/codeo-root.test.sh, tests/env.test.sh, lib/env.sh, CHANGELOG.md, docs/release-checklist.md, docs/plans/2026-11-15-dev-container-follow-ups-96.md, .codeo/96/**
 wiki:       none
 exclusive:  none
+sequenced:  none
 ```
 
 ## Log
