@@ -283,7 +283,8 @@ answer too: each task then names its own proof command in full (step 8).
        as its first edit: the block is the only one `overlap.sh` would otherwise union with the
        new one. That removal is the one edit an answered round ever takes
        (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`). The draft
-       footprint goes under `## Notes` again all the same. Then
+       footprint goes under `## Notes` again all the same.
+       A block written after a send-back covers the branch, not only this round, so
        run `overlap.sh --outside <N>` and add every path it prints to `files:` before committing it;
        `qc-verdict` fails the pull request if one is still missing.
 
@@ -331,9 +332,6 @@ answer too: each task then names its own proof command in full (step 8).
        sub-step 1 already removed the old block, because `overlap.sh` and `inflight.sh` read every
        block in the file, and a stale one goes on producing overlaps; moving the new block out of
        `## Notes` to end the new round is all that is left to do.
-       A block written after a send-back covers the branch, not only this round:
-       run `overlap.sh <N>` again if you added any path to `files:` and raise what it prints as at
-       sub-step 2.
 
 11. **Report** the file path and a one-line summary, then end with the closing block
     (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`): the next goal is building the plan,

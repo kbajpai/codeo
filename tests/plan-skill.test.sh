@@ -52,7 +52,7 @@ paragraph=$(awk '/\*\*After a send-back, make the draft cover the branch\.\*\*/ 
 [[ -n $paragraph ]] || fail 'the send-back paragraph is empty or missing'
 [[ $paragraph != *'`## Outcome` still pending'* ]] || fail 'the send-back paragraph still says `## Outcome` still pending'
 grep -qF -- 'stop, `## Outcome` still pending. Re-invoked' "$skill" || fail 'sub-step 2 lost its pending `## Outcome`'
-must_contain 'the pair check runs again after an addition' 'run `overlap.sh <N>` again if you added any'
+must_lack 'the stale re-run is gone from sub-step 4' 'run `overlap.sh <N>` again if you added any'
 must_contain 'the host-run rule has its heading' '**Mark the tasks the engineer runs on their own host.**'
 must_contain 'a host-run task opens with the Runs on line' "Runs on: the engineer's host"
 must_contain 'a host-run command is neutral' 'no shell variable or substitution'
