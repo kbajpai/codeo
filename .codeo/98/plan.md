@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, stopped before drafting. The code is read and the bug is reproduced; intake's open question about the cause is settled (see Notes). Q1 and Q2 are open. Once both are answered the plan is drafted to `.codeo/98/plan-draft.md` for review.
+Round 1. Q1 (proceed and coordinate with #70) and Q2 (a byte-order `comm` wrapper in the test) are answered; nothing is open. The plan is drafted to `.codeo/98/plan-draft.md` and waits for the engineer's review.
 
 ## Questions
 
@@ -25,6 +25,7 @@ Nothing else overlaps: #70 does not touch `scripts/sync-main.sh`, `tests/sync-ma
 **Options:** proceed and coordinate (recommended: #70 has not started implementing, and this fix is small enough to merge first) · sequence after #70 · re-scope.
 
 **Answer:**
+Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q2 — Should the new `sync-main.test.sh` case fail on the unfixed script everywhere, or only in the dev container?
 
@@ -37,6 +38,7 @@ Nothing else overlaps: #70 does not touch `scripts/sync-main.sh`, `tests/sync-ma
 In both, a machine with no `en_US.UTF-8` locale installed cannot reproduce the ordering at all; the case would print one `skip:` line there and not count as a failure, unless you would rather it fail.
 
 **Answer:**
+(b) Pin `comm` to byte order in the test. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
@@ -46,6 +48,7 @@ Read before drafting, so the plan does not re-ask it:
 - **The fix I intend to plan:** run both `sort` calls and `comm` on line 51 under `LC_ALL=C`, on that line only. Byte order on both sides is right on every coreutils. Rejected: `export LC_ALL=C` at the top of the script as `overlap.sh` does (it would also change the locale `git merge` runs in, and the merge logic is out of scope); replacing `comm` with `grep -Fxf` (a larger change than the bug needs).
 - **The `sequenced:` half.** `dossier-check.sh:339` already requires all four keys. `skills/plan/SKILL.md` step 8 names three keys and step 10 sub-step 1 says the `sequenced:` line is written only "when an overlap question was answered that way"; `docs/dossier.md:237` says the same. The plan changes those three places and leaves the checker alone.
 - **Fixtures that already exist.** `tests/fixtures/dossiers/good-open-pending/plan.md` is a drafted footprint (under `## Notes`, outcome pending) with `sequenced:  none`, and it passes; `bad-footprint` lacks the key and is expected to print `lacks: sequenced`. My call: add no new fixture, and add `must_contain` cases to `tests/plan-skill.test.sh` for the new skill wording, plus one check that `docs/dossier.md` no longer carries the "only when" sentence. The plan will name the two fixtures as the evidence for criterion 8.
+- Q2 follow-through, my call: with no `en_US.UTF-8` locale installed the new case prints one `skip:` line and does not fail (the answer to Q2 did not say otherwise). The fix and the wrapper were tried in a scratch copy: the unfixed script exits 1 with the three `comm:` warnings (with the wrapper, and also with this container's own `comm`); the fixed one exits 0 with three `also changed on main:` lines and an empty stderr.
 - One pull request for both halves, as the issue consolidates them.
 - The `shell` suite has no `filter`; the proof of a task is the whole `bash tests/run.sh`.
 - No overlay section for `plan` (`plan-shape`, `proof-of-done`, `wiki-rules` all exit 3); no invariants document, no shared environment, no `wiki` module, no `resources[]`.
@@ -67,3 +70,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-15 — Q1-Q2 raised (Q1: #70, glob:CHANGELOG.md, glob:skills/**, glob:tests/**) · cost: 2m · fable-5-2 72k in + 508k cached / 7k out
+- 2026-11-15 — Q1-Q2 answered in the conversation (Q1: proceed and coordinate; Q2: b); plan drafted as .codeo/98/plan-draft.md, awaiting review · cost: unavailable, usage.sh not run before the review gate
