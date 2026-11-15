@@ -1,0 +1,209 @@
+# Guard the home-only skills, print removal commands at close, add /codeo:cleanup — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** A skill that belongs in the home container refuses to run anywhere else, `/codeo:close` prints the host commands that remove its finished container, and a print-only `/codeo:cleanup` lists them for every finished issue.
+
+**Architecture:** One project script, `.devcontainer/scripts/role.sh`, decides a clone's role (`home`, `issue:<N>`, `stale:<N>`, `mismatch:<N>:<folder>`, or `unguarded` outside this project's dev container). Eight skills each gain a registered extension point `<skill>/role-guard`; the project's overlay for each runs `role.sh --check <skill>` and the skill stops on a refusal, which a `rule` marker makes final. `/codeo:cleanup` is a plugin skill backed by `scripts/cleanup.sh`, which proves each finished issue on GitHub and takes the container name and removal command from a new overlay point, `cleanup/removal-command`. `/codeo:close`'s final report carries the same command through `close/host-workflow`.
+
+**Tech Stack:** bash, jq, git, `github.sh`; tests are `tests/*.test.sh` run by `bash tests/run.sh` (the `shell` suite, no single-test filter).
+
+**Spec:** `.codeo/70/issue.md` (the issue's Key Requirements and acceptance criteria) and `.codeo/70/plan.md` Q1-Q6 (the engineer's decisions). No reference doc under `docs/`: nothing here is a standing decision beyond what `docs/extension-points.md` and `.devcontainer/README.md` will say.
+
+## Global Constraints
+
+- **Decisions, not to be reopened.** Q1 marker rule · Q2 per-skill extension point (no hook) · Q3 plugin skill with overlay point `cleanup/removal-command` · Q4 no tombstone · Q5 eight skills guarded, `doctor` and `setup` not · Q6 one pull request.
+- **Q1 rule, exactly:** guarded only when `/.dockerenv` exists, `CLAUDE_CODE_REMOTE` is not `true`, and the clone folder is `<codename>-home` or `<codename>-<digits>`. Anything else prints `unguarded`.
+- **No override.** The refusal in each skill is a `<!-- rule: <skill>-NN -->` rule; nothing in the skill or an overlay lets the engineer's words skip it.
+- **codeo is public and project-agnostic** (`tests/agnostic.test.sh`): no skill, script or doc under `skills/`, `scripts/`, `lib/` or `docs/` names `codeo-home`, `codeo-gh`, `codeo-git` or the `docker` command. Those live only in `.codeo/overlays/` and `.devcontainer/`.
+- **`.devcontainer/Dockerfile` and `.devcontainer/devcontainer.json` do not change**: no container engine, no bind mount, no secret, no Docker socket (`tests/devcontainer.test.sh` stays green). `/codeo:cleanup` and `scripts/cleanup.sh` run no Docker command.
+- **Every printed command runs unmodified in PowerShell and bash**: one line, `;` between commands, no variables or substitutions.
+- **Pinned rule text.** `docs/skills-inventory.md` rule bullets are pinned by `tests/fixtures/skills-inventory.rules.sha256`: adding bullets means `bash tests/inventory.test.sh --update` and saying so in the commit message.
+- **Invariants.** No invariants document is configured, so there is nothing to check this plan against. No shared environment, no `wiki` module and no `resources[]`: no task carries a lease marker, and every task is proved in this checkout.
+- **Documentation moved** (written in Tasks 3, 7 and 9): `.devcontainer/README.md`, `docs/skills.md`, `docs/extension-points.md`, `docs/skills-inventory.md`, `docs/handoff.md`, `README.md`, `CHANGELOG.md`.
+- **Task proof.** Each task names its test file, run alone, then `bash tests/run.sh` (the suite has no `filter`, so the whole `test` command is the proof); both must print `all cases passed`. A red-first step names the expected failure.
+
+## Review Focus
+
+- A container opened with **Reopen in Container** from a host folder named `codeo` (or anything unshaped): must be `unguarded`, never refused. Pinned in Task 1.
+- **A hosted web session whose workspace sits in a folder named `codeo-70`**: `CLAUDE_CODE_REMOTE=true` must win over the folder. Pinned in Task 1.
+- **A `.codeo/active` that names no issue** in a `codeo-<N>` folder on `main`: reads as no lock, so `stale:<N>`; the start script already reports the file. Pinned in Task 1.
+- **A skill called by another skill from an issue container** (`/codeo:plan` calling `/codeo:issue`): the guard refuses it. Tasks 3 and 4 make the caller record the finding instead of filing it.
+- **`cleanup.sh` handed a template that expands to `codeo-home`, `codeo-gh` or `codeo-git`, or to no pattern at all**: no command is printed, only the failed proof `name`. Pinned in Task 6.
+- **An issue whose `close.md` records no pull request line**: listed as failed proof `pull-request`, no command. Pinned in Task 6.
+
+---
+
+### Task 1: The role script
+
+**Files:**
+- Create: `.devcontainer/scripts/role.sh`
+- Test: `tests/role.test.sh`
+
+**Interfaces:**
+- Consumes: `.devcontainer/scripts/container-name.sh` (`--codename`, `--docker`); `.codeo/config.json` `baseBranch` (default `main`), read the way `folder-check.sh` reads it.
+- Produces: `role.sh [dir]` prints exactly one line: `unguarded` | `home` | `issue:<N>` | `stale:<N>` | `stale:?` | `mismatch:<N>:<folder>`. `role.sh --check <skill> [dir]` exits 0 printing nothing when the skill may run here, exits 1 printing one refusal line when it may not, exits 2 with one `role:` line on stderr for an unknown skill or a non-repository. `CODEO_DOCKERENV` (default `/.dockerenv`) names the file whose presence means "in a container", so tests can run anywhere.
+
+Roles: with a lock for `<N>`, `issue:<N>` when the folder is `<codename>-<N>`, else `mismatch:<N>:<folder>`; no lock, on the base branch, folder `<codename>-home` → `home`; no lock otherwise → `stale:<N>` when the folder is `<codename>-<N>`, else `stale:?`.
+
+`--check` table: the home-only skills are `issue init triage cleanup`, the lock skills are `plan implement qc close`. Home-only runs on `unguarded` and `home`; lock skills run on `unguarded`, `issue:<N>` **and `home`** (their own step 0 already refuses with no lock, naming `/codeo:init`). Every other role refuses. The refusal line is one sentence that names the role, and for `stale:<N>` and `mismatch:<N>:…` names issue `#<N>`, and says where the skill runs (the home container, or the issue's container).
+
+- [ ] **Step 1: Write the failing test** `tests/role.test.sh`. It builds scratch git clones in directories named per case, each with `.codeo/config.json` (`codename: "codeo"`, `baseBranch: "main"`) and a stub `CODEO_DOCKERENV` file. Cases, each asserting the exact output of `role.sh` (and of `--check` for each of the eight skills and each role: exit code, and for a refusal that the line is one line and names the role and, where there is one, `#<N>`):
+  - `home`: folder `codeo-home`, on `main`, no lock.
+  - `issue:70`: folder `codeo-70`, lock `issue:   70`, on a feature branch.
+  - `stale:67`: folder `codeo-67`, no lock, on `main`; and the same on a feature branch.
+  - `stale:?`: folder `codeo-home`, no lock, on a feature branch.
+  - `mismatch:70:codeo-home`: folder `codeo-home` with a lock for 70; and `mismatch:70:codeo-71`.
+  - `.codeo/active` with content but no `issue:` line, folder `codeo-67`, on `main`: `stale:67`.
+  - `unguarded`: no dockerenv file; `CLAUDE_CODE_REMOTE=true` in a folder `codeo-70`; folder `codeo` with the dockerenv file; folder `other-70`.
+  - `--check`: every skill exits 0 on `unguarded`; the four home-only skills exit 0 on `home` and 1 on `issue:70`, `stale:67`, `mismatch:…`; the four lock skills exit 0 on `issue:70` and `home` and 1 on `stale:67` and `mismatch:…`; `doctor` and `setup` exit 2.
+- [ ] **Step 2: Run it to verify it fails.** `bash tests/role.test.sh` → fails with `role.sh: No such file` (the first case).
+- [ ] **Step 3: Implement `.devcontainer/scripts/role.sh`** with the header-comment style of `container-name.sh`. Take the codename and the lock's number from `container-name.sh` (`--codename`, and `--docker` minus the codename prefix), never re-parse `.codeo/active`.
+- [ ] **Step 4: Run it to verify it passes.** `bash tests/role.test.sh` → `all cases passed`; then `bash tests/run.sh` → `all cases passed`.
+- [ ] **Step 5: Commit** `feat: add role.sh, the dev container's role check (#70)`; stage `.devcontainer/scripts/role.sh tests/role.test.sh`.
+
+### Task 2: The guard's pin, written red
+
+**Files:**
+- Create: `tests/role-guard.test.sh`
+
+**Interfaces:**
+- Consumes: `lib/extension-points.tsv`, `skills/<skill>/SKILL.md`, `.codeo/overlays/<skill>.md`.
+- Produces: the test the engineer's "a test fails if any of the four stops declaring or calling the check" asks for.
+
+For each of `issue init triage cleanup plan implement qc close` it asserts: the registry has a `<skill>	role-guard` row; the skill carries `<!-- point: <skill>/role-guard -->` exactly once and one `<!-- rule: <skill>-NN -->` marker whose paragraph says there is no override; `bash scripts/overlay.sh <skill> role-guard` exits 0 and its text contains `role.sh --check <skill>`; and the text ends the skill's step when the check exits 1 (contains `stop`). For `doctor` and `setup` it asserts the opposite: no `role-guard` row, no marker. A scratch-copy case deletes the marker from a copy of `skills/issue/SKILL.md` and checks the test's own function reports it.
+
+- [ ] **Step 1: Write the test** as above.
+- [ ] **Step 2: Run it to verify it fails.** `bash tests/role-guard.test.sh` → fails first on `issue: no role-guard row in lib/extension-points.tsv`. It stays red until Tasks 3, 5 and 7 are done; do not run `tests/run.sh` as a proof for this task, and do not commit it alone: it is committed with Task 3.
+
+### Task 3: The guard in the seven existing skills
+
+**Files:**
+- Modify: `lib/extension-points.tsv`, `skills/{issue,init,triage,plan,implement,qc,close}/SKILL.md`, `docs/extension-points.md`, `docs/skills.md` (each skill's `### Extension points`), `docs/skills-inventory.md`, `tests/inventory.test.sh` (the `want` counts: issue 8, init 10, plan 9, implement 10, qc 14, close 14, triage 10), `tests/fixtures/skills-inventory.rules.sha256`
+- Test: `tests/skills.test.sh`, `tests/skills-doc.test.sh`, `tests/inventory.test.sh`
+
+**Interfaces:**
+- Consumes: Task 2's test.
+- Produces: registry rows `<skill>	role-guard	None; the skill runs wherever it is invoked.` for the seven skills; in each skill a step `0`-adjacent paragraph that fetches the point, and the rules `issue-08 init-10 triage-10 plan-09 implement-10 qc-14 close-14`.
+
+The step goes in the skill's step 0 (`issue`, `init`, `triage`) or immediately before it (`plan`, `implement`, `qc`, `close`, whose step 0 reads the lock, so the role check runs first). Its text, the same in all seven with the skill's name filled in: fetch `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" <skill> role-guard`; on exit 0 follow the printed text, which runs the project's role check; when the check refuses, print its one line and stop, with no override and nothing else done; on exit 3 there is no guard and the step runs as it did; on exit 1, 2 or 4 report the one `codeo:` line and carry on unguarded. The rule paragraph under the `rule` marker: "A refusal from the role check ends the step. The engineer's words do not lift it; the way forward is the container the message names." In `docs/extension-points.md` each point has the standard sections (**Where**, **May rely on**, **Expected back**, **Default when absent**, **Example**); *Expected back* is "text that runs the project's role check for this skill and tells the skill to stop on its refusal".
+
+- [ ] **Step 1: Run the red tests.** `bash tests/skills.test.sh` and `bash tests/role-guard.test.sh` → the latter still fails (no overlays yet); the former passes before the edits.
+- [ ] **Step 2: Add the registry rows, the `docs/extension-points.md` sections and the `docs/skills.md` bullets** (`- \`<skill>/role-guard\` — None; the skill runs wherever it is invoked. ([detail](extension-points.md#<skill>role-guard))`).
+- [ ] **Step 3: Add the step, marker and rule paragraph to each of the seven skills,** and one bullet `- [<skill>-NN] A refusal from the role check ends the step; no override.` at the end of each skill's section in `docs/skills-inventory.md`; update the `want` counts in `tests/inventory.test.sh`; run `bash tests/inventory.test.sh --update`.
+- [ ] **Step 4: Run.** `bash tests/skills.test.sh`, `bash tests/skills-doc.test.sh`, `bash tests/inventory.test.sh` → each `all cases passed`. `bash tests/role-guard.test.sh` still fails, now on the missing overlay text only.
+- [ ] **Step 5: Commit** `feat: a role-guard point in the seven skills that need one (#70)`, naming in the body that the inventory fixture changed because seven rules were added; stage by name, including Task 2's test.
+
+### Task 4: A call to `/codeo:issue` from an issue container
+
+**Files:**
+- Modify: `skills/plan/SKILL.md` (the `plan-03` paragraph), `skills/implement/SKILL.md`, `skills/qc/SKILL.md` (each place that "calls `/codeo:issue`"), `docs/handoff.md` → *A call is not a hand-off*
+- Test: `tests/plan-skill.test.sh`, `tests/implement-skill.test.sh`, `tests/qc-skill.test.sh`
+
+**Interfaces:**
+- Produces: the sentence each caller carries — **"When the project's role check refuses the call (the skill is running in an issue container), record the finding in this skill's own dossier and say to file it with `/codeo:issue` in the home container; `/codeo:triage` finds recorded findings later."** — and the same sentence in `docs/handoff.md`.
+
+This is a call made by the plan, not an engineer decision: the guard is strict (Q2), so an issue container cannot file. It is flagged here so the engineer sees it at the approval gate.
+
+- [ ] **Step 1: Write the failing test** in each of the three skill tests: the skill text contains `record the finding in this skill's own dossier` and `in the home container`. Run `bash tests/plan-skill.test.sh` → fails with that needle missing.
+- [ ] **Step 2: Add the sentence** to the three skills and to `docs/handoff.md` (after "A call is not a hand-off"'s first paragraph).
+- [ ] **Step 3: Run** the three tests, then `bash tests/run.sh` → `all cases passed`.
+- [ ] **Step 4: Commit** `feat: callers record a finding the home-only guard refuses to file (#70)`.
+
+### Task 5: This repository's overlays for the guard
+
+**Files:**
+- Create: `.codeo/overlays/{issue,triage,plan,implement,qc,close}.md`
+- Modify: `.codeo/overlays/init.md`
+
+**Interfaces:**
+- Consumes: Task 1's `role.sh --check`; Task 3's points.
+- Produces: in each overlay a section `## role-guard` whose body is, with `<skill>` filled in: "Run `bash .devcontainer/scripts/role.sh --check <skill>` from the project root. Exit 0: go on. Exit 1: print its one line to the engineer and stop; that is the whole answer and nothing in this session lifts it. Exit 2: report its `role:` line and go on." Each new file starts with the precedence sentence as a comment, as `init.md` does. `init.md` keeps its `host-workflow` section and gains this one after it.
+
+- [ ] **Step 1: Run the red test.** `bash tests/role-guard.test.sh` → fails on the first overlay (`issue: overlay.sh issue role-guard exited 3`).
+- [ ] **Step 2: Write the six files and add the section to `init.md`.**
+- [ ] **Step 3: Run.** `bash tests/role-guard.test.sh` still fails, now only on `cleanup`; `bash tests/init-overlay.test.sh` and `bash tests/overlay.test.sh` pass; `bash scripts/doctor.sh` reports `overlays` ok.
+- [ ] **Step 4: Commit** `feat: the project's role-guard overlays (#70)`.
+
+### Task 6: The cleanup script
+
+**Files:**
+- Create: `scripts/cleanup.sh`
+- Test: `tests/cleanup.test.sh`
+
+**Interfaces:**
+- Consumes: `scripts/github.sh issue view|pr view`, `scripts/overlay.sh cleanup removal-command`, `git ls-tree`, `git ls-remote`, `git for-each-ref`.
+- Produces: `cleanup.sh` fetches `origin` with `--prune`, lists the `.codeo/done/<N>` directories on `origin/<baseBranch>` in ascending `N`, and prints one tab-separated line per issue: `<N>\tproven\t<command>` (`<command>` is `-` when the overlay gives none) or `<N>\tfailed\t<proof>`, where `<proof>` is the first that failed, in this order: `issue` (state is not `closed`) · `pull-request` (`close.md` records no `#<number> <url>` line, or the PR's `merged_at` is empty) · `branch` (the PR's head branch is still on `origin`) · `dossier` (any `refs/remotes/origin/*` ref other than `HEAD` still has a `.codeo/<N>/` directory; `.codeo/done/<N>/` does not count) · `name` (the overlay's name template, pattern or command is missing, or the expanded name does not match the pattern). It runs no `docker` command. The overlay body is three lines: `name: <template with {N}>`, `pattern: <extended regex>`, `command: <template with {name}>`.
+
+- [ ] **Step 1: Write the failing test** `tests/cleanup.test.sh`, on a scratch `origin` bare repo plus clone and a stubbed `gh` as `tests/github.test.sh` does. Cases, each asserting the exact lines printed: an issue passing all four proofs prints `proven` with `docker rm -f codeo-12; docker volume rm codeo-12` (the overlay in the fixture supplies the three lines); one case per proof failing, each printing `failed` with that proof's name and no command, the earlier proofs passing; `close.md` without a pull request line → `failed pull-request`; a template expanding to `codeo-home`, `codeo-gh` and `codeo-git` in turn → `failed name` and no command; an overlay with no `pattern:` line → `failed name`; no overlay at all (exit 3) → `proven` with `-`; a stub `docker` on `PATH` that writes a marker file, asserting the marker is never written; output lines are in ascending `N`.
+- [ ] **Step 2: Run it to verify it fails.** `bash tests/cleanup.test.sh` → fails with `scripts/cleanup.sh: No such file`.
+- [ ] **Step 3: Implement `scripts/cleanup.sh`** in the style of `scripts/inflight.sh` (header comment, `source lib/env.sh`, one `die`). The name check is the last proof and the only place a command is built.
+- [ ] **Step 4: Run.** `bash tests/cleanup.test.sh` and then `bash tests/run.sh` → `all cases passed`.
+- [ ] **Step 5: Commit** `feat: scripts/cleanup.sh proves finished issues and prints, never runs (#70)`.
+
+### Task 7: The `/codeo:cleanup` skill
+
+**Files:**
+- Create: `skills/cleanup/SKILL.md`, `.codeo/overlays/cleanup.md`
+- Modify: `lib/extension-points.tsv` (`cleanup	role-guard` and `cleanup	removal-command	None; the proven issues are listed and no command is printed.`), `docs/extension-points.md`, `docs/skills.md` (a `## cleanup` section with the four sub-headings, the intro paragraph, the Mermaid chart), `docs/skills-inventory.md` (a `## cleanup` section, `cleanup-01`…`cleanup-04`), `tests/inventory.test.sh` (add `cleanup` to the `want` map as 4, to the loop and to the awk heading regex), `tests/fixtures/skills-inventory.rules.sha256`, `docs/handoff.md` (the closing-block table row for `cleanup`)
+- Test: `tests/skills.test.sh`, `tests/skills-doc.test.sh`, `tests/inventory.test.sh`, `tests/closing-block.test.sh`, `tests/role-guard.test.sh`, `tests/cleanup-skill.test.sh`
+
+**Interfaces:**
+- Consumes: `scripts/cleanup.sh` (Task 6), the `role-guard` point.
+- Produces: the skill (frontmatter `model: sonnet`, description starting "Print the commands that remove finished issues' dev containers…", triggers "clean up containers", "what can I remove", "cleanup") with this workflow: `0` role guard (`cleanup-01`, no override) · `1` run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup.sh"` and relay its lines verbatim as two lists, *proven* with the command and *not proven* with the failed proof and no command · `2` always say that unpushed work in a clone is invisible from here, that the commands rely on `close.md` having recorded a clean tree with the tip equal to the pull request's head, and that the commands run on the host, in a shell, after `git status` in that clone · `3` record what was printed under `.codeo/intake/cleanup/<YYYY-MM-DD>.md` through `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit cleanup "<message>"` · `4` the closing block. Rules: `cleanup-02` print a removal command only for an issue the script proved · `cleanup-03` never run a container command, and never mount or ask for the Docker socket · `cleanup-04` print only what the script printed, never build a name or a command in the skill. `.codeo/overlays/cleanup.md` carries `## role-guard` (as Task 5) and `## removal-command` with `name: codeo-{N}`, `pattern: ^codeo-[0-9]+$`, `command: docker rm -f {name}; docker volume rm {name}`.
+
+- [ ] **Step 1: Write the failing test** `tests/cleanup-skill.test.sh`: the skill text contains `cleanup.sh`, `git status`, `unpushed work`, `intake.sh" commit cleanup`; it contains no `docker` anywhere in `skills/cleanup/SKILL.md`; the overlay's `removal-command` text, run through `scripts/cleanup.sh`'s name check, rejects `codeo-home`, `codeo-gh`, `codeo-git` and `codeo-` and accepts `codeo-70`. Run `bash tests/cleanup-skill.test.sh` → fails: `skills/cleanup/SKILL.md: No such file`.
+- [ ] **Step 2: Write the skill, the overlay, the registry rows and the docs entries** above.
+- [ ] **Step 3: Run.** `bash tests/cleanup-skill.test.sh tests/role-guard.test.sh tests/skills.test.sh tests/skills-doc.test.sh tests/inventory.test.sh tests/closing-block.test.sh` one by one, each `all cases passed`; then `bash tests/run.sh`.
+- [ ] **Step 4: Commit** `feat: /codeo:cleanup, a print-only skill (#70)`, naming the changed inventory fixture.
+
+### Task 8: `/codeo:close` prints the removal commands
+
+**Files:**
+- Modify: `skills/close/SKILL.md` (step 17, the `host: container` default), `.codeo/overlays/close.md` (a `## host-workflow` section)
+- Test: `tests/close-removal.test.sh`
+
+**Interfaces:**
+- Consumes: the lock's `volume:` line; the overlay point `close/host-workflow`, already registered.
+- Produces: the generic default for `host: container` says the container's commands run **on the host, not inside this container**, and to run `git status` in that clone first; the overlay's body is: "Print `docker rm -f <volume>; docker volume rm <volume>`, with `<volume>` the lock's `volume:` line, only when that line matches `^codeo-[0-9]+$`; for any other value, including `unknown`, print no command and say to find the container with `docker ps` on the host."
+
+- [ ] **Step 1: Write the failing test** `tests/close-removal.test.sh`: `bash scripts/overlay.sh close host-workflow` exits 0 and contains `docker rm -f <volume>; docker volume rm <volume>`, `^codeo-[0-9]+$`, `unknown`; `skills/close/SKILL.md` contains `on the host` and `git status`. Run it → fails with `overlay.sh close host-workflow exited 3`.
+- [ ] **Step 2: Edit** the skill's `host: container` bullet and write the overlay section.
+- [ ] **Step 3: Run** `bash tests/close-removal.test.sh`, `bash tests/close-skill.test.sh`, `bash tests/closing-exits.test.sh`, then `bash tests/run.sh`.
+- [ ] **Step 4: Commit** `feat: /codeo:close prints the host commands that remove its container (#70)`.
+
+### Task 9: Documentation
+
+**Files:**
+- Modify: `.devcontainer/README.md`, `docs/handoff.md`, `README.md`, `CHANGELOG.md`, `docs/skills-inventory.md` (the intro, which names "the seven skills")
+- Test: `tests/devcontainer.test.sh`, `tests/skills-doc.test.sh`
+
+What each must say afterwards:
+- `.devcontainer/README.md`: the table's last row reads `/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup` for home and `/codeo:plan` through `/codeo:close` for an issue container, with a line that `doctor` and `setup` run in either. A new section **Roles and the guard** with the roles table from Task 1, the Q1 rule (when the guard applies and when it does not), the refusal each role gets, and that `role.sh --check` is what each skill's overlay runs. A **Removing a finished container** section: what `/codeo:close` prints, that `/codeo:cleanup` lists the rest, that both only print and run on the host after `git status`.
+- `docs/handoff.md`: *The lock* gains a paragraph on the roles and the guard, stating the guard is the project's and applies only in its dev container; the closing-block table has the `cleanup` row (next goal: the removal commands run on the host, then the next issue, `/codeo:init #<N>`).
+- `README.md`: the Skills table row for `/codeo:cleanup`; the sentence that lists which skills run where.
+- `docs/skills-inventory.md`: the intro names eight skills.
+- `CHANGELOG.md`: a bullet under `## Unreleased`, "Nothing in `lib/`, `hooks/` changes; `scripts/` gains `cleanup.sh`; `skills/` gains `cleanup` and a `role-guard` step in eight skills (#70)", stating the shared-state and config-schema lines remain unchanged. Merge `origin/main` first and keep every existing bullet.
+
+- [ ] **Step 1: Write the edits.**
+- [ ] **Step 2: Run** `bash tests/devcontainer.test.sh` (proves the Dockerfile and `devcontainer.json` are untouched: `git diff --stat origin/main -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` prints nothing), `bash tests/skills-doc.test.sh`, then `bash tests/run.sh` → `all cases passed`.
+- [ ] **Step 3: Commit** `docs: the roles, the guard and the removal commands (#70)`.
+
+### Task 10: The whole check
+
+**Files:** none.
+
+- [ ] **Step 1: Run** `bash tests/run.sh` → `all cases passed`; `bash scripts/doctor.sh` → every line `ok`; `git diff --stat origin/main -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` → empty; `grep -rn 'codeo-home\|codeo-gh\|codeo-git\|docker ' skills scripts lib docs` → matches only in prose that says what *not* to do (none expected in `skills/` and `scripts/`).
+- [ ] **Step 2: Try the guard by hand** in this container: `bash .devcontainer/scripts/role.sh` prints `issue:70`; `bash .devcontainer/scripts/role.sh --check init; echo $?` prints a refusal line and `1`; `CLAUDE_CODE_REMOTE=true bash .devcontainer/scripts/role.sh --check init; echo $?` prints `0`.
+
+---
+
+## Self-review
+
+- **Spec coverage:** criterion 1 → Task 1 · 2 → Tasks 2, 3, 5, 7 · 3 → Tasks 1, 3, 5 · 4 → Task 1 (`unguarded`) · 5 → Task 8 · 6 → Tasks 6, 7 · 7 → Tasks 6, 7, 9 (`tests/devcontainer.test.sh`) · 8 → Tasks 3, 7, 9, 10. Key Requirement "records what it printed in a dossier on the intake branch" → Task 7 step 3.
+- **Consistency:** `role.sh --check <skill>` and the eight skill names are the same in Tasks 1, 2, 5 and 7; the overlay body keys `name:` `pattern:` `command:` are the same in Tasks 6 and 7; rule IDs are `<skill>-NN` with the NN the next free number (issue-08, init-10, triage-10, plan-09, implement-10, qc-14, close-14, cleanup-01 to 04).
+- **Proportion:** ten tasks, one pull request (Q6). Tasks 3 and 7 are the largest; each is one deliverable (a lint-green set of skills).
+
+## Documentation the change moves
+
+`.devcontainer/README.md`, `docs/skills.md`, `docs/extension-points.md`, `docs/skills-inventory.md`, `docs/handoff.md`, `README.md`, `CHANGELOG.md` — all in Tasks 3, 7 and 9.
