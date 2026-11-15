@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-The plan was approved and is written at `docs/plans/2026-11-15-dev-container-follow-ups-107.md` (unstaged, for the engineer's review). The footprint is committed under `## Notes`. `overlap.sh` still prints `71	glob:CHANGELOG.md`, because Q4 did not quote the token verbatim; Q5 raises it again in that form. The outcome is written once Q5 is answered.
+Done. The plan is approved and written at `docs/plans/2026-11-15-dev-container-follow-ups-107.md` (unstaged, for the engineer to review and commit). Q1-Q5 are answered, `overlap.sh` prints nothing, no lock was needed, and the outcome below is written. The next step is `/codeo:implement`.
 
 ## Questions
 
@@ -67,19 +67,12 @@ Proceed and coordinate, as recommended (given in the conversation: "Accept as re
 **Options:** proceed and coordinate (recommended, as answered in Q4) · sequence after #71 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended (given in the conversation: "Proceed as recommended").
 
 ## Notes
 
 Decisions already made from the issue and the code; they are in the approved plan.
 
-### Footprint
-
-```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/codeo-root.sh, .devcontainer/README.md, tests/devcontainer.test.sh, tests/codeo-root.test.sh, CHANGELOG.md, docs/plans/2026-11-15-dev-container-follow-ups-107.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 - **Shape.** One plan under `docs/plans/`, one pull request, no reference doc. No overlay for `plan-shape`, `proof-of-done` or `wiki-rules` (exit 3), so the generic shapes apply. Suite: `shell` (`bash tests/run.sh`, no `filter`); each task's proof is the test file it touches, run whole.
 - **F16.** The changelog test searches the whole of `CHANGELOG.md` for the `(#52)` bullet and `my project`, not one section.
@@ -98,10 +91,36 @@ sequenced:  none
 
 ## Outcome
 
-_Pending — written at the hand-off._
+2026-11-15
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-15-dev-container-follow-ups-107.md` (unstaged until the engineer commits it) |
+| Shape | a plan under `docs/plans/` (nine checkbox tasks, each ending in its own proof command); no reference doc |
+
+**Decisions.**
+- **Q1:** a `core.fileMode` `false` from the command or worktree scope is checked by reading the effective value back after the local `true`; the script then lists one TODO naming the scope, prints neither the "overrides" line nor the "set it to true" clause, and so no `ready`. Rejected: a plain stdout line with no TODO (B), and detecting the scope first and doing nothing (C).
+- **Q2:** the trap is guarded so `rm` never gets an empty operand. The literal `rm -f -- ""` is refused by this environment's safety check; `/usr/bin/rm` resolves to `gnurm` (GNU coreutils 9.7) on the 26.04.1 image. Task 9 records that on #107, with the engineer's output instead if they paste it.
+- **Q3, Q4, Q5:** proceed and coordinate with #70 and #71 on `CHANGELOG.md` (and #70 on the README and `tests/**`); both files are edited once, in Task 8, after merging `origin/main`.
+- **F14** is fixed by construction (a stub `stat` that grows the host file on each read), proved by a mutation, not by 20 runs under `nice`. **F13** is a `{ …; } 2>/dev/null` around the interrupt case. **F18** fixes the one SC2016 line #96 introduced. **F7** reads registry fields raw with `join("\t")`. **F11**'s follow-up list is taken from the titles and bodies of #40, #54, #81, #88 and #91: #36, #47, #50, #51, #52, #55, #57, #75 and #87.
+- Out of scope, unchanged: the folder-name limit, persisting Claude's login, anything under `scripts/`, `hooks/`, `skills/` or `lib/`, the image.
+
+**Documentation pages the plan changes:** `.devcontainer/README.md` (the `core.fileMode` bullet) and `CHANGELOG.md` (the #96 bullet, one new bullet), both in Task 8. No page under `docs/` and no wiki page moves.
+
+**Intake questions resolved here:** none (`init.md` left none open). No `/codeo:issue` filed; the optional `engineering` skills were not used because the change adds no component or technology choice.
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/codeo-root.sh, .devcontainer/README.md, tests/devcontainer.test.sh, tests/codeo-root.test.sh, CHANGELOG.md, docs/plans/2026-11-15-dev-container-follow-ups-107.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Log
 
 - 2026-11-15 — Q1-Q4 raised · cost: 3m · fable-5-2 106k in + 1M cached / 15k out
 - 2026-11-15 — Q1-Q4 answered in the conversation; draft written to .codeo/107/plan-draft.md, awaiting approval (optional engineering skills not used: the change adds no component or technology choice) · cost: 4m · sonnet-5-5 162k in + 1.3M cached / 37k out
 - 2026-11-15 — plan approved and written to docs/plans/2026-11-15-dev-container-follow-ups-107.md; footprint committed; overlap.sh printed 71 glob:CHANGELOG.md, Q5 raised · cost: 6m · sonnet-5-5 169k in + 2.8M cached / 42k out
+- 2026-11-15 — planned: docs/plans/2026-11-15-dev-container-follow-ups-107.md (Q5 answered, overlap.sh clean; no /codeo:issue filed; engineering skills not used) · cost: 19m · sonnet-5-5 174k in + 3.8M cached / 46k out
