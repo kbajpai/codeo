@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, done. QC round 2's two blocking findings (G1, G2) and G3-G7 are fixed and committed (`53d0234` to `e5bffbf`), reviewed, and `bash tests/run.sh` prints `all cases passed`. Nothing is open. The next step is `/codeo:qc`.
+Round 4, done. QC round 3's two blocking findings (H1, H2) and H3, H4, H6 are fixed and committed (`310dccb` to `3256788`), reviewed, and `bash tests/run.sh` prints `all cases passed`. Nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -126,9 +126,32 @@ Proceed and coordinate. Go with the recommendation (engineer, in the conversatio
 
 **Deferred minors**, none blocking: the cleanup skill's frontmatter `description` lists four proofs and omits the lease; the unknown-state stale refusal names the role but no `#<N>` and its test skips that check; the finished lock-skill line says `/codeo:cleanup` "prints how to remove it" although it prints a command only for a proven issue; `docs/skills.md` writes `/codeo:close` without backticks in the new cleanup sentence, and the new step-17 sentence wraps unevenly.
 
+### Round 4 — 2026-11-15
+(send-back from qc.md round 3)
+
+**Plan built:** round 4 of `docs/plans/2026-11-15-guard-home-only-skills.md` (Tasks 22-25), commits `310dccb` to `3256788`, on a branch that already contained `origin/main` (no merge needed, no conflict). Tasks 22+23 ran as one dispatch, Task 24 as its own, Task 25 inline; each dispatch was reviewed, and a closing review read the whole round.
+
+**What was built, against QC round 3's findings.**
+- H2, H4, H6 and the overlay's half of H1 (Task 22, `310dccb`): `.codeo/overlays/close.md`'s `## host-workflow` has one paragraph per exit. The removal command appears only under "After a finished close", and only when the lock's `volume:` matches `^codeo-[0-9]+$` and its number is the lock's `issue`. After a stash it prints none, names `/codeo:init #<N>` in the home container, and says the old container is removed by hand on the host first. After an abandon it prints none, names `/codeo:triage` in the home container, and says that with the branch deleted the container holds the only copy. `tests/close-removal.test.sh` pins the command to the finished paragraph, with three real mutants (the command copied into the stash paragraph, into the abandon paragraph, deleted from the finished paragraph), each asserted on its own failure message.
+- H1, H3 (Task 23, `6afc189`, fix `8430550`): the stash-completed and abandon-finished closing blocks in `skills/close/SKILL.md` and their two rows in `docs/handoff.md` name the checkout the project's host workflow gives for the next skill; for the stash the clause covers both the board-failed and the other branch. `tests/closing-exits.test.sh` pins both, with mutations; `tests/cleanup-skill.test.sh` reads `docs/handoff.md` through the repository root.
+- Closing review's finding (`3256788`): the stash and abandon prose now fetch `close/host-workflow` as step 17 does before naming the checkout, pinned by a `host-workflow-fetch` case with a mutation; the abandon paragraph of the overlay points at `.devcontainer/README.md`, and its test checks `the only copy` and that pointer inside that paragraph only.
+- Task 24 (`64ec875`): `.devcontainer/README.md` says what close prints at each exit and how a stashed or abandoned container is removed by hand; `docs/extension-points.md` says the host-workflow text may differ by exit; the existing `CHANGELOG.md` bullet is extended in place. `docs/skills.md` says nothing about when the commands print and is unchanged.
+- Left, as the engineer chose at plan Q13: H5 (`CODEO_CLEANUP_REMOVAL` outside tests, round 1's F11) for `/codeo:triage`.
+
+**Documentation changed.** `.devcontainer/README.md`, `docs/handoff.md`, `docs/extension-points.md`, `CHANGELOG.md`.
+
+**Build result.** The `shell` suite's `build` (`true`) ran ok; `bash tests/run.sh` prints `all cases passed` at `3256788` (3m20s); `bash scripts/doctor.sh` (this repository's) all ok; `git diff origin/main...HEAD -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` is empty; `bash scripts/overlay.sh close host-workflow` read as each ending (finished, stash, abandon with the branch kept, abandon with it deleted) names one next step in the home container and a removal command only for the finished close; `overlap.sh 70` and `overlap.sh --outside 70` print nothing.
+
+**Deviations from the plan.** One addition: the closing review found that stash and abandon never said to fetch the overlay point, so Task 23's clause could name a checkout with nothing fetched; the fetch sentence and its test were added in `3256788`. Otherwise none.
+
+**Rulings taken while building round 4** (each with what it costs if wrong): (1) Tasks 22+23 ran as one dispatch with one reviewer: costs that two tasks were reviewed together. (2) All reviews ran on sonnet, because codeo's subagent hook allows only the configured subagent model: costs a weaker review; `/codeo:qc` grades independently on opus. (3) "On any machine" stays in the stash-completed block next to the new clause, because the plan says it stays: costs two adjacent phrases that read slightly at odds, which QC may raise. (4) Four small review findings were left as minor rather than opening a second fix wave (see below): costs that QC may raise them again.
+
+**Deferred minors**, none blocking: the `docs/handoff.md` abandon row's clause reads as qualifying the clean-up rather than `/codeo:triage`; the overlay's stash paragraph says two containers cannot share the name even when the `volume:` is not `codeo-<N>`; the README's abandon paragraph omits "after `git status`" for the kept-branch removal; the README's "Both only print." sits three paragraphs from what it refers to; the stash section of `case_host_workflow_fetch` has no mutation of its own. Round 3's minors stand as recorded there.
+
 ## Log
 
 - 2026-11-15 — built Tasks 1-10 and the final-review fix wave; Q1-Q4 raised on overlaps with #71, #96, #97, #98 · cost: 97m · sonnet-5-5 1.2M in + 35M cached / 196k out
 - 2026-11-15 — Q1-Q4 answered; outcome written, handed off to qc · cost: 100m · sonnet-5-5 1.2M in + 37.2M cached / 205k out
 - 2026-11-15 — round 2 after qc round 1: built Tasks 11-16, merged origin/main, handed off to qc · cost: 33m · sonnet-5-5 311k in + 14.1M cached / 56k out
 - 2026-11-15 — round 3 after qc round 2: built Tasks 17-21, handed off to qc · cost: 28m · sonnet-5-5 292k in + 11M cached / 53k out
+- 2026-11-15 — round 4 after qc round 3: built Tasks 22-25, handed off to qc · cost: 31m · sonnet-5-5 434k in + 12.3M cached / 65k out
