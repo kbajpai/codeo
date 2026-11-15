@@ -13,7 +13,7 @@
 #
 #   Verbs: issue view|assignee-add|assignee-remove|search|list-all, issue-types (prints nothing
 #   when the owner is a user, who has none), user login,
-#   pr list-for-branch|view|reviews|comments|review-comments|checks|create [--draft]|comment, run list,
+#   pr list-for-branch|view|get|reviews|comments|review-comments|checks|create [--draft]|comment, run list,
 #   workflow dispatch <workflow-file> <ref> (prints nothing on success; the ref must carry the
 #   workflow file and the caller needs `actions: write`), label list.
 set -euo pipefail
@@ -172,6 +172,13 @@ case $group in
                 jq -n --arg s "$(normalize_mergeable_state "$state")" \
                     --argjson m "$(jq -c '.mergeable' <<<"$pr")" \
                     '{mergeable: $m, mergeStateStatus: $s}'
+                ;;
+            get)
+                # What cleanup.sh proves from: the PR's state, when it merged (null when not) and its head branch.
+                n=${1:?pr number}
+                out=$(gh api "repos/$repo/pulls/$n" -q '{state,merged_at,head_ref:.head.ref}') || die "pr get $n: GET failed"
+                [[ -n $out ]] || die "pr get $n: empty response"
+                printf '%s\n' "$out"
                 ;;
             reviews) n=${1:?pr number}; out=$(gh api "repos/$repo/pulls/$n/reviews") || die "pr reviews $n: GET failed"; printf '%s\n' "$out" ;;
             comments) n=${1:?pr number}; out=$(gh api "repos/$repo/issues/$n/comments") || die "pr comments $n: GET failed"; printf '%s\n' "$out" ;;
