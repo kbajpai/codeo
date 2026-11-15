@@ -168,6 +168,7 @@ case_issue_unreadable() {
 case_abandon_finished() {
     para "$close" '**Closing block — abandon finished:**' || return 0
     has "$p" '/codeo:triage'
+    has "$p" 'with no board'
     lacks "$p" '/codeo:init #<N>'
     lacks "$p" '/codeo:close --stash'
 }

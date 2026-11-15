@@ -662,10 +662,11 @@ Once the lock is gone the checkout holds nothing the branch lacks: say what is l
 does, by the lock's host, read before the lock goes.
 End with the closing block that matches how the abandon ended.
 
-**Closing block — abandon finished:** `.codeo/active` is deleted, and the card is at `$BACKLOG` (or
-the board move failed: say so, the card is the engineer's to move by hand). The goal is the loose
-ends found; the first step is `/codeo:triage`, then the host's checkout clean-up as step 17 relays
-it. Name no command that resumes or stashes this work: an abandoned workflow is not resumed.
+**Closing block — abandon finished:** `.codeo/active` is deleted. With a board the card is at
+`$BACKLOG` (or the board move failed: say so, the card is the engineer's to move by hand);
+with no board there is no card. The goal is the loose ends found; the first step is
+`/codeo:triage`, then the host's checkout clean-up as step 17 relays it. Name no command that
+resumes or stashes this work: an abandoned workflow is not resumed.
 
 **Closing block — abandon interrupted:** `.codeo/active` is kept, because the branch deletion, the
 release or a push failed. The goal is a finished abandon; the first step is `/codeo:close`, run
