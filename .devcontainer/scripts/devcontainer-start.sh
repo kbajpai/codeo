@@ -66,7 +66,7 @@ top=$(git -C "$clone" rev-parse --show-toplevel 2>/dev/null) && cd "$top" || add
 # restore_modes: chmod +x each tracked file the index records as 100755 but the disk has as 100644 (what a filesystem
 # that dropped the bit did), then list again. Only that direction: a file the disk has executable and the index does
 # not record is the developer's, and stays. The listing (`git -c core.fileMode=true diff --raw -z --no-renames`) goes
-# through a temp file in the git dir (kept in modes_list, which the EXIT/INT/TERM trap removes), because bash drops NUL
+# through a temp file in the git dir (kept in modes_list, which the EXIT trap removes when the script ends), because bash drops NUL
 # bytes from a command substitution; its stderr goes to list_err. Prints nothing; sets kept_paths (executable on disk,
 # 100644 in the index), restored_count, restored_paths and left_paths (the paths still differing). Returns 0 when none
 # are left, 1 when some are, 2 when a listing failed.
@@ -108,7 +108,6 @@ restore_modes() {
 # The listing's temp file is removed on every exit, an interrupt included.
 modes_list=
 trap 'rm -f -- "${modes_list:-}"' EXIT
-trap 'exit 143' INT TERM
 
 if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
     if ! clone_on_named_volume "$clone"; then

@@ -1474,7 +1474,12 @@ start_leaves_no_modes_file_when_interrupted() {
     cat > "$ds_dir/bin/git" <<STUB
 #!/usr/bin/env bash
 case "\$*" in
-    *"diff --raw"*) kill -TERM "\$PPID"; sleep 5; exit 1 ;;
+    *"diff --raw"*)
+        p=\$PPID
+        while [[ \$p -gt 1 ]] && ! tr '\\0' ' ' < "/proc/\$p/cmdline" | grep -q devcontainer-start.sh; do
+            p=\$(awk '{print \$4}' "/proc/\$p/stat")
+        done
+        kill -TERM "\$p"; sleep 5; exit 1 ;;
 esac
 exec $real_git "\$@"
 STUB
