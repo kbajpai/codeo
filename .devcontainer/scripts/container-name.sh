@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# What this clone's dev container is called, for the VS Code window (window-title.sh), every Claude
-# session in it (session-title.sh) and the Docker container name: "<codename> [#<N>]" while
-# .codeo/active holds issue N (the digits after the first "issue:" line, with or without spaces, tabs
-# or "#"), else "<codename> [home]". The Docker name is "<codename>-<N>" / "<codename>-home". A lock
+# What this clone's dev container is called, for the VS Code window (window-title.sh) and every
+# Claude session in it (session-title.sh): "<codename> [#<N>]" while .codeo/active holds issue N (the
+# digits after the first "issue:" line, with or without spaces, tabs or "#"), else "<codename> [home]".
+# --docker prints what the container's Docker name should be, "<codename>-<N>" / "<codename>-home";
+# the Docker name itself is the clone folder, set by runArgs --name=${containerWorkspaceFolderBasename}
+# in .devcontainer/devcontainer.json, and folder-check.sh reports a folder that disagrees. A lock
 # that names no issue reads as home. The codename is .codeo/config.json's, else the clone
-# directory's name. All three names come from this one script so they cannot drift apart.
+# directory's name.
 # Prints one line on stdout. Outside a git repository it exits 1 with one "container-name: ..." line
 # on stderr.
 #

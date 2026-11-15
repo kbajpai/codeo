@@ -9,10 +9,11 @@
 #       not it prints a line, and 1 when container-name.sh fails (not a git clone, say), after one
 #       "folder-check: ..." line carrying its message.
 #
-# With a lock the folder must be exactly the Docker name. Without one the branch decides. On main the
-# clone is the home container, so its folder must be exactly '<codename>-home'. Anything else is an
-# issue container that failed to take its lock (and the lock script has already said why), so an
-# issue folder, <codename>-<digits>, is left alone and only a folder of neither shape is reported.
+# With a lock the folder must be exactly the Docker name. Without one the branch decides. On the base
+# branch (baseBranch in .codeo/config.json, else main) the clone is the home container, so its folder
+# must be exactly '<codename>-home'. Anything else is an issue container that failed to take its lock
+# (and the lock script has already said why), so an issue folder, <codename>-<digits>, is left alone
+# and only a folder of neither shape is reported.
 set -euo pipefail
 
 here=$(dirname "${BASH_SOURCE[0]}")
@@ -27,6 +28,9 @@ want=$(bash "$here/container-name.sh" --docker "$dir" 2>"$errf") || {
     exit 1
 }
 codename=$(bash "$here/container-name.sh" --codename "$dir")
+root=$(git -C "$dir" rev-parse --show-toplevel)
+base=$(jq -r '.baseBranch // empty' "$root/.codeo/config.json" 2>/dev/null || true)
+[[ -n $base ]] || base=main
 # The codename may hold regex metacharacters, so the issue-folder test compares a prefix and digits.
 locked=
 [[ $want == "$codename-home" ]] || locked=1
@@ -39,9 +43,9 @@ fi
 if [[ -n $locked ]]; then
     [[ $have == "$want" ]] \
         || echo "todo: this container's folder is '$have' but its lock says '$want', so 'docker ps' names it wrongly: remove it and open it again with the folder '$want' (.devcontainer/README.md)"
-elif [[ $branch == main ]]; then
+elif [[ $branch == "$base" ]]; then
     [[ $have == "$codename-home" ]] \
-        || echo "todo: this container's folder is '$have' but its clone is on main with no lock, so it is the home container and 'docker ps' names it wrongly: remove it and open it again with the folder '$codename-home' (.devcontainer/README.md)"
+        || echo "todo: this container's folder is '$have' but its clone is on $base with no lock, so it is the home container and 'docker ps' names it wrongly: remove it and open it again with the folder '$codename-home' (.devcontainer/README.md)"
 else
     suffix=${have#"$codename-"}
     if [[ $have != "$codename-home" && ( $suffix == "$have" || ! $suffix =~ ^[0-9]+$ ) ]]; then
