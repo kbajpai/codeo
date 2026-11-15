@@ -130,6 +130,15 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 
 **Design checked against the code.** Scratch repositories confirmed the git side: `git fetch --prune origin '+refs/codeo/live/*:refs/codeo/live/*'` succeeds when no such ref exists, a force-push of a new parentless empty-tree commit over the old one works, and a deletion on origin is pruned by the next fetch. Not tried from here, and so not asserted by the plan: a push of that ref to GitHub itself, and anything in a web session (Q2, plan Task 7).
 
+### Footprint
+
+```
+files:      scripts/live.sh, scripts/github.sh, scripts/inflight.sh, hooks/live-signal.sh, hooks/hooks.json, skills/triage/SKILL.md, docs/handoff.md, docs/skills.md, tests/live.test.sh, tests/live-signal.test.sh, tests/inflight.test.sh, tests/github.test.sh, CHANGELOG.md, docs/plans/2026-11-15-live-session-signal.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
