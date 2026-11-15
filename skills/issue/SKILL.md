@@ -181,7 +181,7 @@ The repository is read from the project's config, never typed into a command:
 
    **Closing block — Ready, no board or unavailable:** the Status equals the Ready name, there is no board, or it printed `unavailable` (then say above the block that the Status could not be read in a web session): the next goal is starting the issue, the first step `/codeo:init #<N>`.
 
-   **Closing block — not Ready:** it printed `none`, `unset` or any other column, which is what a new issue normally gets: the next goal is getting the issue to Ready, the first step `/codeo:triage` (its *mark Ready* moves the card), then `/codeo:init #<N>`.
+   **Closing block — not Ready:** it printed `none`, `unset` or another column (`Backlog` is what a new issue normally gets once the move at filing worked, so anything else means the move failed or never ran, or the issue sits elsewhere on the board): the next goal is getting the issue to Ready, the first step `/codeo:triage` (its *mark Ready* moves the card), then `/codeo:init #<N>`.
 
    **Closing block — Status unreadable:** `board.sh status` exited non-zero: quote its line, then the first step is the fix it names (for example `gh auth refresh -s project` when the token lacks the `project` scope), then `/codeo:triage`, then `/codeo:init #<N>`.
 

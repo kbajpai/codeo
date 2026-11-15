@@ -24,9 +24,9 @@ command to run, never run.
 the project board is **Ready** (when a board is configured), and this skill is where the engineer
 says an issue is: *mark Ready* runs `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready`. Its other card move is
 *leave in the backlog* (`set <N> backlog`).
-`/codeo:issue` writes the Backlog Status when it files a new issue, so a new issue is already in the Backlog when it reaches this skill; this skill's *leave in the backlog* is for an issue that is not there yet.
 Those card moves are the only changes it makes outside
-its ledger, each only while acting on the engineer's answer. When the project has no board
+its ledger, each only while acting on the engineer's answer.
+`/codeo:issue` writes the Backlog Status when it files a new issue, so a new issue is already in the Backlog when it reaches this skill; this skill's *leave in the backlog* is for an issue that is not there yet. When the project has no board
 (`board.sh` exits 3 and prints `board: not configured`), there is nothing to mark: say once, at the
 start of the run, that the board is not configured and that Ready marking and the backlog move are
 skipped, and carry on with every other step.
@@ -129,13 +129,13 @@ finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
         `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`: one whose Status is already the
         Ready status (the option `board.statuses.ready` names, else `Ready`) is waiting
         on `/codeo:init`, not on a decision, and is listed as such rather than asked about.
+        Being in the Backlog is not a decision: an issue there with no `issue:<N>` ledger row is asked about like any other, once.
         <!-- rule: triage-07 -->
         A source that is unavailable in a hosted web session is reported, never skipped silently:
         when the board is not configured, or the read is `unavailable` there, list the issue
         without that classification — as an ordinary item to ask about, since there is no board
         Status to tell it apart from one still undecided — and note in the run's `## Outcome` that
         board-status enrichment was unavailable, the same way source 1.3 reports itself skipped.
-        Being in the Backlog is not a decision: an issue there with no `issue:<N>` ledger row is asked about like any other, once.
    3. **Unresolved review threads on merged PRs** — merged since the ledger's last run, or the last
       twenty on a first run.
       This one has no REST form: the session's proxy refuses GraphQL outside a pinned set of PR
