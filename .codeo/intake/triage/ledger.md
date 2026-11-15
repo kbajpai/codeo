@@ -96,3 +96,9 @@
 | `issue:91` | Report an unreadable `.codeo/active` truthfully; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `implement:83:sync-main-comm` | `sync-main.sh` exits 1 after a clean merge when `sort` and `comm` order paths differently (`comm: … not in sorted order`) | filed #92 | 2026-11-15 |
 | `issue:92` | sync-main.sh exits 1 after a clean merge (sort/comm order); filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `qc:73:F32-F36` | sbx evaluation page and #86: image-digest wording (F32), doubled naming sentence (F34), missing follow-up rows and trial range (F35), inferred and leftover wording (F36) | filed #94 | 2026-11-15 |
+| `qc:73:F33` | Page cites "credentials stay outside the VM" while T6 shows `GH_TOKEN` in the sandbox; real token or placeholder untested | filed #94 | 2026-11-15 |
+| `qc:73:F12` | `/codeo:plan` writes a `### Footprint` with no `sequenced:` line, which `dossier-check.sh` rejects | filed #95 | 2026-11-15 |
+| `qc:73:F23` | `sync-main.sh` exits 1 after a clean merge (`comm … not in sorted order`) | already #92 | 2026-11-15 |
+| `issue:94` | Correct the sbx evaluation page and #86; filed 2026-11-15, board Status `none` | leave in the backlog | 2026-11-15 |
+| `issue:95` | `/codeo:plan` writes `sequenced:  none`; filed 2026-11-15, board Status `none` | leave in the backlog | 2026-11-15 |
