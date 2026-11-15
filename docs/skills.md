@@ -157,7 +157,7 @@ The skill is the gate between building and merging. It never fixes what it finds
 - Never touches code, tests, the plan's text, the issue's text, a documentation page, or another skill's dossier file. A test it wishes existed, or a page it wishes said something else, is a finding, not something to write.
 - Does not fix anything it finds, not the code, a test, or a typo; that is `/codeo:implement`'s purview.
 - Does not edit the plan or re-scope the work; that is `/codeo:plan`'s purview.
-- Does not open, merge or approve a pull request; opening one on a clear verdict is `/codeo:close`'s. It pushes its own dossier commits and nothing else.
+- Does not open, merge or approve a pull request; opening one on a clear verdict is `/codeo:close`'s. It pushes its own dossier commits and, when step 2's sync merged the base branch, that merge commit on the same push; nothing else.
 - Does not deploy, build for the environment, or take the lease to change what the environment runs; it reads what is deployed and sends back what is stale.
 - Does not invent acceptance criteria. If `init.md` has none to judge against, that is itself the finding, and it routes back to whoever owed them.
 
@@ -263,7 +263,7 @@ The script runs eleven checks: config, schema, codename, gh-auth, gh-scopes, boa
 
 ### Reads and writes
 
-- Reads `.codeo/config.json` and the project's overlays, and reads GitHub through `gh api` (the board check's `gh project view` is the one exception, being GraphQL-backed).
+- Reads `.codeo/config.json`, the project's overlays and the extension-point registry `lib/extension-points.tsv` (the `overlays` check), and the installed-plugins file `~/.claude/plugins/installed_plugins.json` (the `superpowers` check). Checks with `command -v` that `gh`, `jq`, `git` and the first word of each suite's build and test commands are on the PATH, and that bash is 4.3 or newer. Reads GitHub through `gh api` (the board check's `gh project view` is the one exception, being GraphQL-backed); when `ci.requiredChecks` is absent the ruleset check compares against `tests` and `qc-verdict`.
 - Writes nothing but its report.
 
 ### Hand-offs and non-goals
