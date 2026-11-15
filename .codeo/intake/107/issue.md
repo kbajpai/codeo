@@ -1,8 +1,8 @@
-# Issue — issue
+# Issue #107 — issue
 
 ## Where this stands
 
-Drafted from triage run 8 (the engineer chose to file and consolidate). Awaiting approval.
+Drafted from triage run 8 (the engineer chose to file and consolidate). Approved by the engineer; filed.
 
 ## Questions
 
@@ -60,7 +60,7 @@ Small defects and weak tests that #96's QC (`.codeo/done/96/qc.md`, rounds 2-3) 
 
 ## Outcome
 
-_Pending — written when filed._
+Filed as #107.
 
 ## Log
 
