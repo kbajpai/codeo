@@ -15,7 +15,9 @@
 #   when the owner is a user, who has none), user login,
 #   pr list-for-branch|view|get|reviews|comments|review-comments|checks|create [--draft]|comment, run list,
 #   workflow dispatch <workflow-file> <ref> (prints nothing on success; the ref must carry the
-#   workflow file and the caller needs `actions: write`), label list.
+#   workflow file and the caller needs `actions: write`), label list,
+#   ref put <ref> <message-file> (prints the new root commit's sha) | ref delete <ref> (prints
+#   nothing, also when the ref is already gone); both only for refs/codeo/live/*.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
@@ -237,7 +239,44 @@ case $group in
         out=$(gh api --paginate "repos/$repo/labels" -q '.[].name') || die "label list: GET failed"
         [[ -z $out ]] || printf '%s\n' "$out"
         ;;
+    ref)
+        sub=${1:?ref subcommand}; shift
+        case $sub in
+            put|delete) ;;
+            *) die "unknown ref subcommand: $sub" ;;
+        esac
+        # Only the live-session signal's namespace may be written through this verb.
+        [[ ${1:-} == refs/codeo/live/* ]] \
+            || die "ref $sub: only refs/codeo/live/* may be written, got ${1:-nothing}"
+        ref=$1; api_ref=${ref#refs/}
+        case $sub in
+            put)
+                msg_file=${2:?message file}
+                base=$(codeo_base_branch) || exit 1
+                head=$(gh api "repos/$repo/git/ref/heads/$base" -q .object.sha) \
+                    || die "ref put $ref: could not read the head of $base"
+                tree=$(gh api "repos/$repo/git/commits/$head" -q .tree.sha) \
+                    || die "ref put $ref: could not read the tree of $head"
+                # No parents field: the commit is a root, so the signal drags no history along.
+                sha=$(gh api -X POST "repos/$repo/git/commits" -F "message=@$msg_file" -f "tree=$tree" \
+                    -q .sha) || die "ref put $ref: could not create the commit"
+                [[ -n $sha ]] || die "ref put $ref: empty commit response"
+                if ! gh api -X PATCH "repos/$repo/git/refs/$api_ref" -f "sha=$sha" -F force=true >/dev/null 2>&1; then
+                    gh api -X POST "repos/$repo/git/refs" -f "ref=$ref" -f "sha=$sha" >/dev/null \
+                        || die "ref put $ref: could not create or move the ref"
+                fi
+                printf '%s\n' "$sha"
+                ;;
+            delete)
+                if ! out=$(gh api -X DELETE "repos/$repo/git/refs/$api_ref" 2>&1); then
+                    # An already-gone ref is the state the caller wanted.
+                    [[ $out == *"Reference does not exist"* || $out == *"Not Found"* ]] \
+                        || die "ref delete $ref: DELETE failed"
+                fi
+                ;;
+        esac
+        ;;
     *)
-        die "usage: github.sh issue view|assignee-add|assignee-remove|search|list-all | issue-types | user login | pr list-for-branch|view|get|reviews|comments|review-comments|checks|create|comment | run list | workflow dispatch | label list"
+        die "usage: github.sh issue view|assignee-add|assignee-remove|search|list-all | issue-types | user login | pr list-for-branch|view|get|reviews|comments|review-comments|checks|create|comment | run list | workflow dispatch | label list | ref put|delete"
         ;;
 esac

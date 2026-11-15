@@ -654,6 +654,75 @@ assert_eq "exit code" 1 "$rc"
 assert_eq "stdout empty" "" "$out"
 assert_contains "stderr names the failure" "label list" "$(cat "$err_file")"
 
+printf 'live: 104 m\n' > "$scratch_dir/live-msg.txt"
+ref_fixtures() {
+    write_fixture GET "repos/$repo/git/ref/heads/main" <<'JSON'
+{"object":{"sha":"b1"}}
+JSON
+    write_fixture GET "repos/$repo/git/commits/b1" <<'JSON'
+{"tree":{"sha":"t1"}}
+JSON
+    write_fixture POST "repos/$repo/git/commits" <<'JSON'
+{"sha":"c1"}
+JSON
+}
+
+case_desc="ref_put_creates_a_parentless_commit_and_moves_the_ref"
+reset_case
+ref_fixtures
+write_fixture PATCH "repos/$repo/git/refs/codeo/live/104/m" <<'JSON'
+{}
+JSON
+if out=$(bash "$script" ref put refs/codeo/live/104/m "$scratch_dir/live-msg.txt" 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 0 "$rc"
+assert_eq "stdout is the new sha" "c1" "$out"
+log=$(cat "$calls_log")
+assert_contains "commit POST" "METHOD=POST PATH=repos/$repo/git/commits" "$log"
+assert_contains "commit tree" "FIELD=tree=t1" "$log"
+assert_eq "no parents field" 0 "$(grep -c 'parents' <<<"$log" || true)"
+assert_contains "ref PATCH" "METHOD=PATCH PATH=repos/$repo/git/refs/codeo/live/104/m" "$log"
+assert_contains "ref sha" "FIELD=sha=c1" "$log"
+assert_contains "ref force" "FIELD=force=true" "$log"
+
+case_desc="ref_put_creates_the_ref_when_it_does_not_exist"
+reset_case
+ref_fixtures
+mark_fail PATCH "repos/$repo/git/refs/codeo/live/104/m"
+write_fixture POST "repos/$repo/git/refs" <<'JSON'
+{}
+JSON
+if out=$(bash "$script" ref put refs/codeo/live/104/m "$scratch_dir/live-msg.txt" 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 0 "$rc"
+assert_eq "stdout is the new sha" "c1" "$out"
+log=$(cat "$calls_log")
+assert_contains "ref POST" "METHOD=POST PATH=repos/$repo/git/refs" "$log"
+assert_contains "ref name" "FIELD=ref=refs/codeo/live/104/m" "$log"
+
+case_desc="ref_put_refuses_other_namespaces"
+reset_case
+if out=$(bash "$script" ref put refs/heads/main "$scratch_dir/live-msg.txt" 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout empty" "" "$out"
+assert_contains "stderr names the namespace" "refs/codeo/live/" "$(cat "$err_file")"
+assert_eq "no gh call" "" "$(cat "$calls_log")"
+
+case_desc="ref_delete_removes_the_ref"
+reset_case
+write_fixture DELETE "repos/$repo/git/refs/codeo/live/104/m" <<'JSON'
+{}
+JSON
+if out=$(bash "$script" ref delete refs/codeo/live/104/m 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 0 "$rc"
+assert_eq "stdout empty" "" "$out"
+assert_contains "call" "METHOD=DELETE PATH=repos/$repo/git/refs/codeo/live/104/m" "$(cat "$calls_log")"
+
+case_desc="ref_delete_of_a_missing_ref_succeeds"
+reset_case
+mark_fail DELETE "repos/$repo/git/refs/codeo/live/104/m"
+if out=$(bash "$script" ref delete refs/codeo/live/104/m 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 0 "$rc"
+assert_eq "stdout empty" "" "$out"
+
 case_desc="no such verb"
 reset_case
 if out=$(bash "$script" bogus 2>"$err_file"); then rc=0; else rc=$?; fi
