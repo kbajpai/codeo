@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored `devcontainer-start.sh`, `codeo-root.sh`, `window-title.sh`, `tests/devcontainer.test.sh`, `tests/codeo-root.test.sh`, the CHANGELOG, the README and #96's QC findings. Most of the design is settled (see Notes). Four questions are open: one behaviour choice (Q1), one command only the engineer can run (Q2) and two footprint overlaps (Q3, Q4). No draft is written until they are answered.
+Q1-Q4 are answered (Q1 option A, Q3 and Q4 proceed and coordinate, Q2 proceed with the guard). The draft plan is at `.codeo/107/plan-draft.md` and waits for the engineer's approval; nothing is open in this file. After approval the plan file is written under `docs/plans/`, the footprint is committed here, `overlap.sh` is run, and the outcome is written.
 
 ## Questions
 
@@ -85,3 +85,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-15 — Q1-Q4 raised · cost: 3m · fable-5-2 106k in + 1M cached / 15k out
+- 2026-11-15 — Q1-Q4 answered in the conversation; draft written to .codeo/107/plan-draft.md, awaiting approval (optional engineering skills not used: the change adds no component or technology choice) · cost: 4m · sonnet-5-5 162k in + 1.3M cached / 37k out
