@@ -526,7 +526,9 @@ is the container the message names.
     - **`host: web`** — nothing to remove: the hosted session is done once the engineer closes it.
     - **`host: container`** — the checkout is a container, which this skill cannot remove from
       inside it. Name the lock's `volume:` line, which identifies the container, and say that the
-      container and its volume are the engineer's to remove.
+      container and its volume are removed with commands that run on the host, not inside this
+      container, and that the engineer runs `git status` in that clone first: unpushed work is
+      lost with the volume.
     - **`host: local`** — nothing to remove: the checkout is the engineer's own, the local branch
       still in it, theirs to delete or keep.
 
