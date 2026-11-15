@@ -17,7 +17,7 @@ repo_root() { cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd; }
 repo=$(repo_root)
 
 failures=0
-state=""         # the state a stale refusal must report: finished, stashed, abandoned, lost, unknown
+state=""         # the state a stale refusal must report: finished, stashed, abandoned, lost, unknown, offbase
 current=""
 root=""
 dir=""
@@ -84,15 +84,21 @@ stale_needles() {
         stashed|abandoned) want=("was $state" "holds no lock") ;;
         lost) want=("holds no lock") ;;
         unknown) want=("no dossier says why") ;;
+        offbase) want=() ;;
     esac
     if is_home_skill "$skill"; then
-        want+=("run it in the home container"); bad=(devcontainer-start.sh "/codeo:init #")
+        case $state in
+            offbase) want+=("not on the base branch main" "switch back to main"); bad=("run it in the home container" "no dossier says why") ;;
+            *) want+=("run it in the home container"); bad=(devcontainer-start.sh "/codeo:init #") ;;
+        esac
     else
         case $state in
             finished) want+=("/codeo:cleanup"); bad=(devcontainer-start.sh re-run) ;;
-            stashed|abandoned) want+=("/codeo:init #67" "never the start script"); bad=(re-run finished) ;;
+            stashed) want+=("/codeo:init #67" "never the start script" "remove this one" ".devcontainer/README.md"); bad=(re-run finished) ;;
+            abandoned) want+=("nothing more runs here" "the only copy"); bad=("/codeo:init #" devcontainer-start.sh re-run "the way back") ;;
             lost) want+=("workflow is live" "re-run bash .devcontainer/scripts/devcontainer-start.sh"); bad=(finished stashed abandoned /codeo:cleanup) ;;
             unknown) want+=("container of the issue it is for"); bad=(devcontainer-start.sh finished) ;;
+            offbase) want+=("off the base branch main" "container of the issue it is for"); bad=("no dossier says why") ;;
         esac
     fi
     local n
@@ -119,7 +125,7 @@ check_matrix() {
             ((rc == 1)) || fail "$role: $skill wanted exit 1, got $rc ($err)"
             [[ -n $out && $out != *$'\n'* ]] || fail "$role: $skill wanted one refusal line, got '$out'"
             [[ $out == *"$role"* ]] || fail "$role: $skill refusal does not name the role: '$out'"
-            [[ -z $number || $state == unknown || $out == *"#$number"* ]] || fail "$role: $skill refusal does not name #$number: '$out'"
+            [[ -z $number || $state == unknown || $state == offbase || $out == *"#$number"* ]] || fail "$role: $skill refusal does not name #$number: '$out'"
             case $role in
                 stale:*)
                     stale_needles "$skill" "$out" ;;
@@ -162,9 +168,18 @@ stale_on_a_feature_branch() {
     role_is stale:67
 }
 
-stale_unknown_issue() {
-    state=unknown
+home_off_the_base_branch() {
+    state=offbase
     mk staleq codeo-home feat/x || return 0
+    role_is 'stale:?'
+    check_matrix 'stale:?' ""
+}
+
+home_on_a_detached_head() {
+    state=offbase
+    mk detached codeo-home main || return 0
+    git -C "$dir" -c user.name=t -c user.email=t@t commit -q --allow-empty -m base
+    git -C "$dir" checkout -q --detach
     role_is 'stale:?'
     check_matrix 'stale:?' ""
 }
@@ -321,7 +336,8 @@ cases=(
     stale_abandoned_after_a_resumed_stash
     stale_parked_with_a_later_round_is_still_parked
     stale_dossier_is_read_under_the_root
-    stale_unknown_issue
+    home_off_the_base_branch
+    home_on_a_detached_head
     mismatch_in_the_home_folder
     mismatch_in_another_issue_folder
     lock_without_an_issue_line_is_no_lock

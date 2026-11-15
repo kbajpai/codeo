@@ -16,7 +16,8 @@
 #         stale      no lock otherwise: stale:<N> in the folder '<codename>-<N>', else stale:?.
 #                    --check reads the clone's own dossier (.codeo) to say why, as lock.sh and claim.sh read it:
 #                    finished (the base branch carries .codeo/done/<N>), stashed or abandoned (more parks than
-#                    resumes), a lost lock (the workflow is live, an archive the base lacks included), or unknown.
+#                    resumes), a lost lock (the workflow is live, an archive the base lacks included), or unknown;
+#                    stale:? is the home container off the base branch.
 #   role.sh --check <skill> [dir]
 #       Exits 0 printing nothing when the skill may run here, 1 printing one refusal line when it
 #       may not. The home-only skills (issue init triage cleanup) run on unguarded and home; the lock
@@ -88,6 +89,7 @@ case $role in
     stale:*)
         # What happened to the workflow, from this clone's own dossier (the state directory is .codeo).
         state=unknown
+        [[ $role != stale:\? ]] || state=offbase
         word=
         last=
         ref=
@@ -132,14 +134,22 @@ case $role in
             parked)
                 if [[ $kind == home ]]; then
                     echo "$head issue #$number's workflow was $word and this container holds no lock (role $role); run it in the home container."
+                elif [[ $word == stashed ]]; then
+                    echo "$head issue #$number's workflow was stashed and this container holds no lock (role $role); /codeo:init #$number in the home container is the way back, never the start script, and it opens a new container with this one's name, so remove this one on the host first, once git status here shows nothing unpushed (.devcontainer/README.md says how)."
                 else
-                    echo "$head issue #$number's workflow was $word and this container holds no lock (role $role); /codeo:init #$number in the home container is the way back, never the start script."
+                    echo "$head issue #$number's workflow was abandoned and this container holds no lock (role $role); nothing more runs here, and it may hold the only copy of the work, so check that the branch is still on origin before removing it."
                 fi ;;
             lost)
                 if [[ $kind == home ]]; then
                     echo "$head this is issue #$number's container and it holds no lock (role $role); run it in the home container."
                 else
                     echo "$head this is issue #$number's container, its workflow is live and it holds no lock (role $role); re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock."
+                fi ;;
+            offbase)
+                if [[ $kind == home ]]; then
+                    echo "$head this is the home container, but it is not on the base branch $base (role $role); switch back to $base and run it again."
+                else
+                    echo "$head this is the home container, off the base branch $base (role $role); the skill runs in the container of the issue it is for."
                 fi ;;
             *)
                 if [[ $kind == home ]]; then
