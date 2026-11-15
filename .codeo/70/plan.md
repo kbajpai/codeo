@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, stopped on Q1-Q6. Exploration is done and nothing is drafted: the four questions `init` left open settle into Q1-Q4, and Q5-Q6 are new. Nothing overlaps another workflow (`inflight.sh --except 70`: none in flight). Re-run `/codeo:plan` once they are answered.
+Round 1, Q1-Q6 answered (the engineer took every recommendation). Exploration is done and nothing is drafted: the four questions `init` left open settle into Q1-Q4, and Q5-Q6 are new. Nothing overlaps another workflow (`inflight.sh --except 70`: none in flight). Re-run `/codeo:plan` once they are answered.
 
 ## Questions
 
@@ -21,6 +21,7 @@ Round 1, stopped on Q1-Q6. Exploration is done and nothing is drafted: the four 
 - **(c) Explicit opt-in:** the guard runs only where the start script wrote a marker file (gitignored). Most exact, but a container made before this change has no marker and stays unguarded until it is rebuilt.
 
 **Answer:**
+(a) Marker rule. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q2 — How do the eight skills reach the guard: an extension point in each skill, a Claude Code hook, or both?
 
@@ -32,6 +33,7 @@ Round 1, stopped on Q1-Q6. Exploration is done and nothing is drafted: the four 
 - **(c) Both:** (a) for the rule and (b) so a typed command is stopped before the model starts. Two places to keep in step.
 
 **Answer:**
+(a) Extension point in each skill. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q3 — Is `/codeo:cleanup` a codeo plugin skill, and where does the container-removal command come from?
 
@@ -42,6 +44,7 @@ Round 1, stopped on Q1-Q6. Exploration is done and nothing is drafted: the four 
 - **(c) Project skill** under `.claude/skills/cleanup/`: nothing generic in the plugin, but it is outside `docs/skills.md`'s sections, the lint and the inventory, which the issue asks to cover it.
 
 **Answer:**
+(a) Plugin skill with an overlay point. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q4 — Is a `.codeo/closed` tombstone, written by `/codeo:close`, worth having on top of the folder-and-branch check?
 
@@ -50,6 +53,7 @@ Round 1, stopped on Q1-Q6. Exploration is done and nothing is drafted: the four 
 **Options:** no tombstone · tombstone written by `close`.
 
 **Answer:**
+No tombstone. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q5 — Does "every skill stops in a stale container" include `doctor` and `setup`?
 
@@ -58,6 +62,7 @@ Round 1, stopped on Q1-Q6. Exploration is done and nothing is drafted: the four 
 **Options:** the eight only · all ten.
 
 **Answer:**
+The eight only; `doctor` and `setup` run anywhere. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ### Q6 — One pull request, or several?
 
@@ -65,6 +70,7 @@ Round 1, stopped on Q1-Q6. Exploration is done and nothing is drafted: the four 
 **Options:** one pull request, recommended (the criteria are written as one change and the shared docs would otherwise conflict three times) · three, in that order.
 
 **Answer:**
+One pull request. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
