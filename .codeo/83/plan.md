@@ -9,8 +9,8 @@
 ## Where this stands
 
 Read `init.md`, `issue.md`, #76's plan and dossiers, both skills, `docs/handoff.md`'s closing-block
-section and the tests. The issue settles most of the plan; three things it does not are below as
-Q1-Q3. Nothing is drafted until they are answered.
+section and the tests. Q1-Q3 are answered (A, A, proceed and coordinate). The draft is in
+`.codeo/83/plan-draft.md` awaiting the engineer's approval.
 
 ## Questions
 
@@ -42,6 +42,7 @@ It names Bash as well as Read because a Bash read is exactly what Haiku did in #
 - **C — reword until it passes, up to a limit you name.**
 
 **Answer:**
+A (answered in the conversation).
 
 ### Q2 — Does the repository get a test that fails when the Read sentence is dropped from `doctor` or `setup`?
 
@@ -62,6 +63,7 @@ criteria ask for the text, not for a guard.
 - **C — no test.** The sentence is checked once, by `grep`, in this change.
 
 **Answer:**
+A (answered in the conversation).
 
 ### Q3 — `CHANGELOG.md` is also changed by #57. Proceed and coordinate, sequence after #57, or re-scope?
 
@@ -78,6 +80,7 @@ one added bullet) · sequence after #57 · re-scope (leave `CHANGELOG.md` out, w
 not allow).
 
 **Answer:**
+Proceed and coordinate (A; answered in the conversation).
 
 ## Notes
 
