@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 5, sent back by QC round 4 (J1: a resumed stash whose container lost its lock is called stashed; J2: an archived dossier whose pull request is still open is called finished). Q14 and Q15 are open; the round's draft waits on them.
+Round 5, sent back by QC round 4 (J1: a resumed stash whose container lost its lock is called stashed; J2: an archived dossier whose pull request is still open is called finished). Q14 and Q15 are answered and nothing is open. The round's draft (Tasks 26-29) is at the review gate in `.codeo/70/plan-draft.md`, waiting for the engineer's approval.
 
 ## Questions
 
@@ -134,7 +134,7 @@ H3, H4 and H6; H5 stays for `/codeo:triage`. Answered with the question tool, in
 **Options:** no resume named; say it was abandoned, nothing more runs here, and the container may hold the only copy (recommended) · name `/codeo:init #<N>` as a deliberate restart.
 
 **Answer:**
-_Open._
+No resume named: the abandoned line says the workflow was abandoned, nothing more runs here, and the container may hold the only copy of the work. Answered with the question tool, in the conversation (engineer, 2026-11-15).
 
 ### Q15 — Round 5: which of QC round 4's non-blocking findings (J3-J9) does this round fix as well?
 
@@ -142,7 +142,7 @@ _Open._
 **Options:** J3, J4, J5 and J9, leaving J6-J8 for triage (recommended) · J1 and J2 only.
 
 **Answer:**
-_Open._
+J3, J4, J5 and J9; J6, J7 and J8 stay for `/codeo:triage`. Answered with the question tool, in the conversation (engineer, 2026-11-15).
 
 ## Notes
 
@@ -232,3 +232,4 @@ sequenced:  none
 - 2026-11-15 — round 3: Round 3 (Tasks 21 total) written into the plan file after approval; Q11 raised on a new overlap with #97 · cost: 5m · fable-5-2 539k in + 3.4M cached / 11k out · sonnet-5-5 27k in + 2.8M cached / 4k out
 - 2026-11-15 — planned round 3: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 17-21); Q11 answered · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 19m · fable-5-2 539k in + 3.4M cached / 11k out · sonnet-5-5 31k in + 4.5M cached / 7k out
 - 2026-11-15 — planned round 4: docs/plans/2026-11-15-guard-home-only-skills.md (Tasks 22-25); Q12-Q13 answered · engineering:architecture and engineering:system-design not loaded, the structure applied directly · cost: 4m · fable-5-2 172k in + 1.9M cached / 14k out · sonnet-5-5 171k in + 817k cached / 3k out
+- 2026-11-15 — round 5 after qc round 4: Q14-Q15 raised and answered with the question tool; draft at the review gate · cost: 3m · fable-5-2 170k in + 1.6M cached / 15k out
