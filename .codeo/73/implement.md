@@ -4,13 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/73 |
 | Branch | `docs/evaluate-docker-sandboxes-sbx-against` |
-| Updated | 2026-11-14 |
+| Updated | 2026-11-15 |
 
 ## Where this stands
 
-Task 1 is done and committed (`9bddbbc`): `docs/dev-environment-sbx-evaluation.md` has 28 rows (10 drivers, 18 duties), every one `cited` with a Docker URL, and trials T1-T12. `bash tests/run.sh` exits 0, no evidence cell is blank, and `.devcontainer/` and `skills/` are unchanged.
-
-Tasks 1-6 are done and committed: the page has all 28 rows marked (22 `tried`, 6 `cited`), the Host verdict (`yes, partly`), and the trial results T1-T12. Task 7 is written but not finished: the page's `## Recommendation` says `hybrid` with its rationale and the three intake questions answered, and `## Follow-up issues` lists five proposed issues, not yet filed. **Q2 is open**: the engineer confirms the verdict and the list before any issue is filed. Then `/codeo:issue` files each one, the numbers go into the page and a comment on #73, the scope proof runs, and `## Outcome` is written. Also still the engineer's: remove the three test sandboxes and clones when done (`sbx.exe rm codeo-lim codeo-a codeo-b`; `~/Source/codeo-sbx-a`, `-b`, `-lim`), and optionally undo the three Windows Git `safe.directory` lines and `sbx.exe setup ssh remove`.
+All seven tasks are done and committed; nothing is open (Q1 and Q2 answered). The page `docs/dev-environment-sbx-evaluation.md` is complete: trials T1-T12 run on the engineer's host, 28 rows (22 `tried`, 6 `cited`), the recommendation `hybrid`, and follow-up issues #85 and #86 filed and linked. Still the engineer's: remove the three test sandboxes and clones (`sbx.exe rm codeo-lim codeo-a codeo-b`; `~/Source/codeo-sbx-a`, `-b`, `-lim`), and optionally undo the three Windows Git `safe.directory` lines and run `sbx.exe setup ssh remove`.
 
 ## Questions
 
@@ -83,9 +81,29 @@ A, file the five (given in the conversation, 2026-11-15).
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Plan: `docs/plans/2026-11-14-evaluate-docker-sandboxes-sbx.md`. Built from `main` at `09e3013` (the branch already contained `origin/main`; no overlaps).
+
+**Tasks 1-7 done.**
+- Task 1 (`9bddbbc`): the page, 28 rows cited, trials T1-T12; commands in T4, T6-T9 changed to one `sbx exec` per line.
+- Tasks 2-5 (engineer, host `Windows 10.0.26300.9818`, WSL2 `Ubuntu-24.04`, `sbx` v0.53.0): trials run 2026-11-14 and 2026-11-15; results in `## Notes` above. The first T1/T2 run found `sbx` is `sbx.exe` from WSL; T3 needed a Windows Git `safe.directory` entry per clone; T9 took four attempts (a nested clone, the same error, then two sandboxes running at once).
+- Task 6 (`7ae4d6c`): results folded into the page; 22 rows `tried`, 6 `cited` (U1, U5, U6, U7, U11, U14).
+- Task 7: `## Recommendation` is `hybrid`, answering the three questions open at intake; follow-ups filed through `/codeo:issue` as **#85** (start an issue sandbox) and **#86** (work in and end one), consolidated from five proposed items at the engineer's request (Q2 = A, then two issues). Both are linked in the page and in a comment on #73.
+
+**Documentation pages changed:** only `docs/dev-environment-sbx-evaluation.md`.
+
+**Build:** the `shell` suite's `build` is `true`; `bash tests/run.sh` was also run after the page changed and ended `all cases passed`. Scope proof: `git diff --stat origin/main -- .devcontainer skills` prints nothing; no blank evidence cell; one `**Recommendation:** hybrid` line.
+
+**Deviations from the plan:**
+- The plan named `main` for the scope proof; `origin/main` was used because the container has no local `main`.
+- Tasks 3-5's commands use `sbx.exe`, and Task 3 needed `git.exe config --global --add safe.directory` (Windows-wide, one line per clone), neither of which the plan anticipated.
+- The plan's Task 7 listed five follow-up issues; two were filed.
+- Task 5's check of `sbx exec` timing under parallel load did not capture memory or an `ls` afterwards.
+- The plan's Global Constraint on one plain command per line was kept; T6's single quotes in `gh auth token` were Docker's own example and passed bash on WSL unchanged.
+
+**Acceptance criteria, as built:** comparison written with every row marked (1); every duty has an equivalent, workaround or `no equivalent` (2); host verdict `yes, partly`, with the trial output (3); one recommendation with its rationale (4); follow-ups #85 and #86 filed and linked (5); `.devcontainer/` and `skills/` unchanged (6).
 
 ## Log
 
+- 2026-11-15 — implemented: tasks 1-7 done, follow-ups #85 and #86 filed · cost: 194m · sonnet-5-5 306k in + 15.9M cached / 118k out
 - 2026-11-14 — Q1 answered (C), T1 run, route A chosen · cost: unavailable until the hand-off
 - 2026-11-14 — Task 1 done, Q1 raised · cost: 13m · sonnet-5-5 122k in + 2.2M cached / 24k out

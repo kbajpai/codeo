@@ -1,6 +1,6 @@
 # Evaluation: Docker Sandboxes (`sbx`) against the dev container
 
-> **Status: draft, trials recorded, recommendation written (hybrid), follow-up issues not yet filed.** Trials T1 to T12 were run by the engineer on 2026-11-14 and 2026-11-15; rows they settled say `tried T<n>`, the rest still rest on Docker's documentation (`cited`).
+> **Status: complete, recommendation hybrid, follow-up issues #85 and #86 filed.** Trials T1 to T12 were run by the engineer on 2026-11-14 and 2026-11-15; rows they settled say `tried T<n>`, the rest still rest on Docker's documentation (`cited`).
 
 ## Contents
 
@@ -435,12 +435,7 @@ hello
 
 ## Follow-up issues
 
-The hybrid needs these, each its own issue. They are filed through `/codeo:issue` with the engineer; the numbers go here when they are.
+The hybrid needs two issues, which consolidate five items (the engineer chose two issues over five).
 
-1. A start script for an `sbx` issue sandbox: takes the lock, seeds the git identity, installs the plugins, checks the sandbox name against the lock (U5, U7, U9, U12).
-2. Starting a sandbox on the branch `/codeo:init` pushed, and the Windows `safe.directory` step per clone (U2, U3).
-3. Opening a sandbox in VS Code with the folder and the extensions in place (D2, U13, U18).
-4. Ending an issue's sandbox without losing work: fetch or push before `sbx rm`, and how it relates to #70 (D3).
-5. Pinning the `claude` image and finding why a running sandbox was stopped when another started (D3, D4, T9, T10).
-
-_Not yet filed: pending the engineer's go-ahead (implement dossier Q2)._
+- [#85](https://github.com/kbajpai/codeo/issues/85) — Start an sbx issue sandbox: a start script for the lock, identity and plugins, on the pushed branch. Covers the start script (U5, U7, U9, U12), starting on the branch `/codeo:init` pushed (U2), and the per-clone Windows Git trust step (U3).
+- [#86](https://github.com/kbajpai/codeo/issues/86) — Work in and end an sbx issue sandbox: VS Code folder and extensions, no lost work on removal, a pinned image. Covers the editor (D2, U13, U18), ending a sandbox without losing work and its link to #70 (D3), and pinning the image and the unexplained stops (D3, D4, T9, T10).
