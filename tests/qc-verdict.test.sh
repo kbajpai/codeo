@@ -628,6 +628,65 @@ run_case "$dir" "$base_branch" feature
 assert_eq "exit code" 0 "$rc"
 assert_eq "output" "qc-verdict: .codeo/done/1/qc.md: round 1 clear" "$out"
 
+# --- cases: a re-planned footprint must cover every path the branch changes (#43) ---------------
+# replan_repo <extra rounds> <files line> <with plan: 1|0> — base commit carries the config; head adds a.txt,
+# b.txt, a clear qc.md and (optionally) a plan.md with the given Outcome rounds. Sets $dir, $base, $head.
+replan_repo() {
+    local rounds=$1 files=$2 with_plan=$3
+    dir=$(new_repo)
+    mkdir -p "$dir/.codeo"
+    printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}\n' > "$dir/.codeo/config.json"
+    git -C "$dir" add .codeo
+    git -C "$dir" commit -q -m base
+    base=$(git -C "$dir" rev-parse HEAD)
+    mkdir -p "$dir/.codeo/done/7"
+    echo a > "$dir/a.txt"
+    echo b > "$dir/b.txt"
+    qc_md '### Round 1 — 2026-09-01
+
+**Verdict: clear.**' > "$dir/.codeo/done/7/qc.md"
+    if [[ $with_plan == 1 ]]; then
+        printf '# Plan\n\n## Outcome\n\nFirst planning round.\n\n%s### Footprint\n\n```\nfiles:      %s\nwiki:       none\nexclusive:  none\n```\n\n## Log\n\n- x\n' \
+            "$rounds" "$files" > "$dir/.codeo/done/7/plan.md"
+    fi
+    git -C "$dir" add -A
+    git -C "$dir" commit -q -m head
+    head=$(git -C "$dir" rev-parse HEAD)
+}
+
+case_desc="replan footprint omits a changed path"
+replan_repo '### Round 2 — 2026-09-02
+
+Re-planned.
+
+' 'b.txt' 1
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 1 "$rc"
+assert_contains "names the plan" ".codeo/done/7/plan.md" "$out"
+assert_contains "names the round and path" "round 2 footprint omits: a.txt" "$out"
+
+case_desc="replan footprint union covers both paths"
+replan_repo '### Round 2 — 2026-09-02
+
+Re-planned.
+
+' 'a.txt, b.txt' 1
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
+case_desc="one-round plan is not checked"
+replan_repo '' 'b.txt' 1
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
+case_desc="archive with no plan is not checked"
+replan_repo '' 'b.txt' 0
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

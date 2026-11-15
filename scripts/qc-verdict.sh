@@ -11,6 +11,10 @@
 #       "qc-verdict: no archived dossier in this PR" when the diff adds, modifies or renames
 #       nothing under a numeric done/<N>/ -- a PR that only deletes there reports the same -- and
 #       exits 0.
+#       A touched archive whose plan.md has a "### Round <k>" (k >= 2) in its "## Outcome" also fails
+#       when its footprint omits a path the diff changes (overlap.sh --outside), reported as
+#       "<state>/done/<N>/plan.md: round <k> footprint omits: <paths>"; one-round plans and archives
+#       with no plan.md are not checked.
 #       Every failure reason goes to stderr, naming the file; every file is checked and every
 #       failure reported before the non-zero exit.
 set -euo pipefail
@@ -116,6 +120,23 @@ done <<<"$judged"
 touched=$(git diff --name-only --diff-filter=AMR "$base" "$head_ref" -- "$state_rel/done/" \
     | sed -nE "s#^$state_re/done/([0-9]+)/.*#\\1#p" | sort -un)
 for n in $touched; do
+    # A re-planned archive (its plan.md's '## Outcome' has a '### Round <k>' heading, k >= 2) must
+    # have a footprint that still covers every path the branch changes: a later round's block is
+    # the union, so a path outside every `files` glob was never planned for.
+    if plan=$(git show "$head_ref:$state_rel/done/$n/plan.md" 2>/dev/null); then
+        plan_round=$(awk '
+            /^## Outcome/ { o = 1; next }
+            o && /^## / { exit }
+            o && /^### Round [0-9]+/ { k = $3 + 0; if (k > max) max = k }
+            END { print max + 0 }
+        ' <<<"$plan")
+        if ((plan_round >= 2)); then
+            omitted=$(bash "$(dirname "${BASH_SOURCE[0]}")/overlap.sh" --outside "$n" --base "$base" --head "$head_ref" \
+                | tr '\n' ' ')
+            omitted=${omitted% }
+            [[ -z $omitted ]] || fail "$state_rel/done/$n/plan.md: round $plan_round footprint omits: $omitted"
+        fi
+    fi
     grep -qxF "$state_rel/done/$n/qc.md" <<<"$judged" && continue
     if git cat-file -e "$head_ref:$state_rel/done/$n/qc.md" 2>/dev/null; then
         echo "qc-verdict: $state_rel/done/$n touched, qc.md unchanged by this PR: not judged"
