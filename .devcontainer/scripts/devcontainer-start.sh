@@ -295,16 +295,23 @@ fi
 # already in the volume config is never changed, a source counts only when it holds a non-empty value, and
 # nothing but these two keys is read from the host file. A seeded value is not printed.
 identity_missing() { [[ -z $(git config --global --get "$1" 2>/dev/null || true) ]]; }
-# VS Code copies the host ~/.gitconfig in alongside postCreateCommand, so it can land after this step starts: when a
-# value is missing and the file is not there yet, wait for it, once a second, for at most CODEO_GITCONFIG_WAIT seconds
-# (default 10; a value that is not a whole number is taken as 10, so a typo cannot stop this script). A volume that already holds the identity never waits.
+# VS Code copies the host ~/.gitconfig in alongside postCreateCommand, so it can land after this step starts, and it can
+# exist empty or half-written first: when a value is missing, wait until the file is there, not empty, and its size and
+# mtime are the same on two reads 0.2 s apart, for at most CODEO_GITCONFIG_WAIT seconds (default 10; a value that is not a
+# whole number is taken as 10, so a typo cannot stop this script; 0 does not wait). A file that never fills falls
+# through to the environment. A volume that already holds the identity never waits.
+gitconfig_stamp() { stat -c '%s %y' "$HOME/.gitconfig" 2>/dev/null || true; }
 if identity_missing user.name || identity_missing user.email; then
-    waited=0
+    ticks=0
     wait_max=${CODEO_GITCONFIG_WAIT:-10}
     [[ $wait_max =~ ^[0-9]+$ ]] || wait_max=10
-    while [[ ! -e $HOME/.gitconfig ]] && ((waited < 10#$wait_max)); do
-        sleep 1
-        waited=$((waited + 1))
+    stamp=$(gitconfig_stamp)
+    while ((ticks < 10#$wait_max * 5)); do
+        sleep 0.2
+        ticks=$((ticks + 1))
+        now=$(gitconfig_stamp)
+        if [[ -s $HOME/.gitconfig && $now == "$stamp" ]]; then break; fi
+        stamp=$now
     done
 fi
 for pair in user.name:GIT_AUTHOR_NAME user.email:GIT_AUTHOR_EMAIL; do

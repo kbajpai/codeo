@@ -1124,6 +1124,34 @@ start_waits_for_the_host_gitconfig_to_arrive() {
     grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
 }
 
+start_waits_for_a_host_gitconfig_that_is_written_after_it_is_created() {
+    ds_setup writehost || return 0
+    # The file exists empty first and is then written in place, as VS Code does.
+    ( : > "$ds_dir/home/.gitconfig"; sleep 1; git config --file "$ds_dir/home/.gitconfig" user.name "Ada O'Neil"; git config --file "$ds_dir/home/.gitconfig" user.email ada@example.com ) &
+    DS_GITCONFIG_WAIT=5 DS_AUTHOR_NAME=Env DS_AUTHOR_EMAIL=env@example.com ds_ready_run
+    wait
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
+    [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
+    grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+}
+
+start_does_not_stall_on_a_host_gitconfig_that_stays_empty() {
+    local start=$SECONDS
+    ds_setup emptyhost || return 0
+    : > "$ds_dir/home/.gitconfig"
+    DS_GITCONFIG_WAIT=2 DS_AUTHOR_NAME='Grace Hopper' DS_AUTHOR_EMAIL=grace@example.com ds_ready_run
+    ((SECONDS - start < 6)) || fail "the run took $((SECONDS - start))s"
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0: $ds_err"
+    [[ $(ds_global user.name) == 'Grace Hopper' ]] || fail "user.name is not the environment's: $(ds_global user.name)"
+    grep -qF 'user.name set from GIT_AUTHOR_NAME' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+}
+
+readme_says_included_identities_do_not_count() {
+    local readme="$repo/.devcontainer/README.md"
+    if grep -qF '[include]' "$readme" && grep -qF 'directly in' "$readme"; then return 0; fi
+    fail 'the README does not say an included identity does not count'
+}
+
 start_does_not_wait_when_the_volume_has_the_identity() {
     local start=$SECONDS
     ds_setup nowait || return 0
@@ -2245,6 +2273,9 @@ cases=(
     start_empty_host_value_falls_through_to_the_environment
     start_malformed_host_gitconfig_falls_through
     start_waits_for_the_host_gitconfig_to_arrive
+    start_waits_for_a_host_gitconfig_that_is_written_after_it_is_created
+    start_does_not_stall_on_a_host_gitconfig_that_stays_empty
+    readme_says_included_identities_do_not_count
     start_does_not_wait_when_the_volume_has_the_identity
     start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero
     start_setup_git_failure_is_a_todo
