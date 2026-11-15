@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q5 are answered (recorded from the engineer's "go ahead" in the conversation, each taking its recommendation); Q6 is open (#71 has since added `tests/board.test.sh` to its footprint). The plan is drafted at `.codeo/97/plan-draft.md` for review; nothing is written under `docs/plans/` yet, and no outcome is written while Q6 is open.
+Round 1. Q1-Q5 are answered (recorded from the engineer's "go ahead" in the conversation, each taking its recommendation); Q6 (#71 has since added `tests/board.test.sh` to its footprint) is answered: proceed and coordinate. The plan is drafted at `.codeo/97/plan-draft.md` for review; nothing is written under `docs/plans/` yet; the engineer's approval of the draft is the only thing outstanding.
 
 ## Questions
 
@@ -61,6 +61,7 @@ Proceed and coordinate. Go with the recommendation (engineer, in the conversatio
 **Options:** proceed and coordinate · sequence after #71 · re-scope. **Recommendation:** proceed and coordinate, as Q4: Tasks 3-4 add only new stub variables and new cases, and whichever of the two merges second rebases.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-15).
 
 ## Notes
 
