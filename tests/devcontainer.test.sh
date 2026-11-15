@@ -249,7 +249,7 @@ case "$1 $2 ${3:-}" in
         fi ;;
     "plugin marketplace add")
         if [[ $4 == *@* ]]; then
-            jq -n --arg r "${4#*@}" '{codeo: {source: {ref: $r}}}' > "$market"
+            jq -n --arg p "${4%@*}" --arg r "${4#*@}" '{codeo: {source: {repo: $p, ref: $r}}}' > "$market"
         fi ;;
     "plugin marketplace remove")
         # The real CLI rewrites the project's settings when run inside a repository.
@@ -282,10 +282,10 @@ pl_run() {
 # pl_calls_have <line>: a claude call equal to the whole line was made.
 pl_calls_have() { grep -qxF -- "$1" "$pl_dir/stub/calls"; }
 
-# pl_installed_codeo_at <ref>: codeo is installed with its marketplace pinned to the ref.
+# pl_installed_codeo_at <ref> [repo]: codeo is installed with its marketplace pinned to the ref, from the repo.
 pl_installed_codeo_at() {
     echo 'codeo@codeo' >> "$pl_dir/stub/installed"
-    jq -n --arg r "$1" '{codeo: {source: {ref: $r}}}' > "$pl_dir/claude/plugins/known_marketplaces.json"
+    jq -n --arg r "$1" --arg p "${2:-kbajpai/codeo}" '{codeo: {source: {repo: $p, ref: $r}}}' > "$pl_dir/claude/plugins/known_marketplaces.json"
 }
 
 pl_pin='{"repo":"kbajpai/codeo","ref":"v1.0.3"}'
@@ -329,6 +329,35 @@ plugins_ref_change_reinstalls_codeo() {
     fi
     pl_calls_have 'plugin install codeo@codeo --scope user' || fail 'codeo was not reinstalled'
     ! pl_calls_have 'plugin install superpowers@superpowers-marketplace --scope user' || fail 'superpowers was reinstalled'
+}
+
+plugins_repo_change_reinstalls_codeo() {
+    local removed added
+    pl_setup repochange "$pl_pin" || return 0
+    echo 'superpowers@superpowers-marketplace' >> "$pl_dir/stub/installed"
+    pl_installed_codeo_at v1.0.3 someone/codeo-fork
+    pl_run
+    ((pl_rc == 0)) || fail "exit $pl_rc, stderr: $pl_err"
+    removed=$(grep -nxF 'plugin marketplace remove codeo' "$pl_dir/stub/calls" | head -n1 | cut -d: -f1 || true)
+    added=$(grep -nxF 'plugin marketplace add kbajpai/codeo@v1.0.3' "$pl_dir/stub/calls" | head -n1 | cut -d: -f1 || true)
+    [[ -n $removed ]] || fail 'no marketplace remove codeo'
+    [[ -n $added ]] || fail 'no marketplace add from the pinned repo'
+    if [[ -n $removed && -n $added ]] && ((removed >= added)); then
+        fail 'marketplace remove did not come before the add'
+    fi
+    pl_calls_have 'plugin install codeo@codeo --scope user' || fail 'codeo was not reinstalled'
+    ! pl_calls_have 'plugin install superpowers@superpowers-marketplace --scope user' || fail 'superpowers was reinstalled'
+}
+
+plugins_record_without_a_repo_is_not_reinstalled() {
+    local extra
+    pl_setup norepo "$pl_pin" || return 0
+    printf '%s\n' 'superpowers@superpowers-marketplace' 'codeo@codeo' > "$pl_dir/stub/installed"
+    jq -n '{codeo: {source: {ref: "v1.0.3"}}}' > "$pl_dir/claude/plugins/known_marketplaces.json"
+    pl_run
+    ((pl_rc == 0)) || fail "exit $pl_rc, stderr: $pl_err"
+    extra=$(grep -vxF 'plugin list' "$pl_dir/stub/calls" || true)
+    [[ -z $extra ]] || fail "a record without a repo caused calls other than plugin list: $extra"
 }
 
 plugins_pin_change_leaves_tracked_files_alone() {
@@ -1968,6 +1997,8 @@ cases=(
     plugins_fresh_machine_installs_both
     plugins_rerun_changes_nothing
     plugins_ref_change_reinstalls_codeo
+    plugins_repo_change_reinstalls_codeo
+    plugins_record_without_a_repo_is_not_reinstalled
     plugins_pin_change_leaves_tracked_files_alone
     plugins_matches_whole_plugin_names
     plugins_offline_keeps_codeo
