@@ -21,7 +21,7 @@ grep -qF 'any branch other than `codeo/intake`' "$skill" || check_fail "the hand
 grep -qF '`issue`, `pull-request`, `branch`, `dossier`, `lease` or `name`' "$skill" || check_fail "step 1 does not list the five proofs"
 grep -qF '/codeo:init #<M>' "$skill" || check_fail "the closing block does not name /codeo:init #<M>"
 ! grep -qF '/codeo:init #<N>' "$skill" || check_fail "the closing block still names /codeo:init #<N>"
-row=$(grep -F '| `cleanup` |' docs/handoff.md)
+row=$(grep -F '| `cleanup` |' "$repo/docs/handoff.md")
 [[ $row == *'#<M>'* && $row != *'#<N>'* ]] || check_fail "the handoff cleanup row does not name /codeo:init #<M>: $row"
 ! grep -qiw 'docker' "$skill" || check_fail "the skill names the container engine"
 ! grep -qF 'codeo-home' "$skill" || check_fail "the skill names the home container"

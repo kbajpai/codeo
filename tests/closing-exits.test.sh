@@ -94,6 +94,8 @@ case_rule() {
     has "$ai" '/codeo:close'
     lacks "$ai" '--stash'
     has "$ab" '/codeo:triage'
+    has "$ab" 'host workflow'
+    has "$(row_for 'stash — completed')" 'host workflow'
     has "$ur" '/codeo:triage'
 }
 
@@ -121,6 +123,7 @@ case_stash_interrupted() {
 case_stash_completed() {
     para "$close" '**Closing block — stash completed:**' || return 0
     has "$p" '/codeo:init #<N>'
+    has "$(flat "$p")" "the checkout the project's host workflow names"
     has "$p" 'by hand'
     has "$p" 'Ready'
     before "$p" 'by hand' '/codeo:init'
@@ -171,6 +174,7 @@ case_abandon_finished() {
     has "$p" '/codeo:triage'
     has "$p" 'with no board'
     has "$p" 'the last copy'
+    has "$(flat "$p")" "the checkout the project's host workflow names"
     lacks "$p" '/codeo:init #<N>'
     lacks "$p" '/codeo:close --stash'
 }
@@ -251,6 +255,14 @@ case_bites() {
     out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" stash-prose 2>&1) &&
         fail "the old stash ending passed stash-prose"
     [[ $out == *stash-prose* ]] || fail "stash-prose failed without naming itself: $out"
+
+    # The clause deleted from the abandon paragraph makes abandon-finished fail.
+    cp "$pristine" "$copy"
+    sed -i '/Closing block — abandon finished:/,/^$/s/the checkout the project'"'"'s host workflow names/the checkout/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the abandon clause mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" abandon-finished 2>&1) &&
+        fail "the abandon paragraph without the host workflow clause passed abandon-finished"
+    [[ $out == *abandon-finished* ]] || fail "abandon-finished failed without naming itself: $out"
     return 0
 }
 

@@ -644,7 +644,7 @@ stop at it.
 When the board move failed (the failure `close.md`'s outcome records), the first step is to move
 `#<N>` to the Ready status (`$READY`) by hand, naming the status the way the failure line does,
 and the next is `/codeo:init #<N>`; otherwise the first step is `/codeo:init #<N>`, on any
-machine.
+machine, run in the checkout the project's host workflow names for it when it names one — this checkout holds no lock any more, and a project's role check may refuse the skill here.
 
 **Closed unmerged** is the engineer's decision to read, not this skill's: ask, as a numbered
 question in `close.md` (step 0), whether to reopen it (theirs to do on GitHub; running
@@ -683,7 +683,7 @@ End with the closing block that matches how the abandon ended.
 **Closing block — abandon finished:** `.codeo/active` is deleted. With a board the card is at
 `$BACKLOG` (or the board move failed: say so, the card is the engineer's to move by hand);
 with no board there is no card. The goal is the loose ends found; the first step is
-`/codeo:triage`, then the host's checkout clean-up as step 17 relays it, unless the branch was
+`/codeo:triage`, run in the checkout the project's host workflow names for it when it names one — this checkout holds no lock any more, and a project's role check may refuse the skill here — then the host's checkout clean-up as step 17 relays it, unless the branch was
 deleted: the checkout is then
 the last copy, the engineer's to keep or to remove knowingly. Name no command that
 resumes or stashes this work: an abandoned workflow is not resumed.

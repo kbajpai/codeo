@@ -392,11 +392,11 @@ Exits whose next command is not the default:
 |---|---|
 | `close — lock kept` | `/codeo:close` |
 | `stash — interrupted` | `/codeo:close --stash` |
-| `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed |
+| `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed, in the checkout the project's host workflow names, when it names one |
 | `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again; a `lock: TODO` printed after the lock was taken (the volume name unreadable on `host: container`) needs the fix alone |
 | `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
 | `issue — Status unreadable` | the fix its line names (for example `gh auth refresh -s project`), then `/codeo:triage`, then `/codeo:init #<N>` |
-| `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up |
+| `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up, in the checkout the project's host workflow names, when it names one |
 | `abandon — interrupted` | `/codeo:close` |
 
 ## Spinning out subagents
