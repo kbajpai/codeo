@@ -241,7 +241,8 @@ sequenced:  after #7 — both add an Orders migration (Q6)
 A block written after a send-back covers the branch, not only the round: its `files` carry the
 round's own paths plus every earlier path the branch still changes. `overlap.sh --outside <N>`
 prints the paths the branch changes that the file's blocks do not cover, and the plan adds each
-one before the block is committed.
+one before the block is committed. It runs after the earlier round's block has been removed, so it
+judges the block that remains; `qc-verdict` runs the same check on the archived `plan.md`.
 
 A key with nothing under it says `none` rather than disappearing, so a missing line means the
 plan never looked, not that it found nothing.

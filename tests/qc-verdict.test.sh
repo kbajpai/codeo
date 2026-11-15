@@ -628,6 +628,131 @@ run_case "$dir" "$base_branch" feature
 assert_eq "exit code" 0 "$rc"
 assert_eq "output" "qc-verdict: .codeo/done/1/qc.md: round 1 clear" "$out"
 
+# --- cases: a re-planned footprint must cover every path the branch changes (#43) ---------------
+# replan_repo <extra rounds> <files line> <with plan: 1|0> — base commit carries the config; head adds a.txt,
+# b.txt, a clear qc.md and (optionally) a plan.md with the given Outcome rounds. Sets $dir, $base, $head.
+replan_repo() {
+    local rounds=$1 files=$2 with_plan=$3 config=${4:-'{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}'}
+    dir=$(new_repo)
+    mkdir -p "$dir/.codeo"
+    printf '%s\n' "$config" > "$dir/.codeo/config.json"
+    git -C "$dir" add .codeo
+    git -C "$dir" commit -q -m base
+    base=$(git -C "$dir" rev-parse HEAD)
+    mkdir -p "$dir/.codeo/done/7"
+    echo a > "$dir/a.txt"
+    echo b > "$dir/b.txt"
+    qc_md '### Round 1 — 2026-09-01
+
+**Verdict: clear.**' > "$dir/.codeo/done/7/qc.md"
+    if [[ $with_plan == 1 ]]; then
+        printf '# Plan\n\n## Outcome\n\nFirst planning round.\n\n%s### Footprint\n\n```\nfiles:      %s\nwiki:       none\nexclusive:  none\n```\n\n## Log\n\n- x\n' \
+            "$rounds" "$files" > "$dir/.codeo/done/7/plan.md"
+    fi
+    git -C "$dir" add -A
+    git -C "$dir" commit -q -m head
+    head=$(git -C "$dir" rev-parse HEAD)
+}
+
+case_desc="replan footprint omits a changed path"
+replan_repo '### Round 2 — 2026-09-02
+
+Re-planned.
+
+' 'b.txt' 1
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 1 "$rc"
+assert_contains "names the plan" ".codeo/done/7/plan.md" "$out"
+assert_contains "names the round and path" "round 2 footprint omits: a.txt" "$out"
+
+case_desc="replan footprint union covers both paths"
+replan_repo '### Round 2 — 2026-09-02
+
+Re-planned.
+
+' 'a.txt, b.txt' 1
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
+case_desc="one-round plan is not checked"
+replan_repo '' 'b.txt' 1
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
+case_desc="archive with no plan is not checked"
+replan_repo '' 'b.txt' 0
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
+case_desc="failed footprint check is reported by name and does not abort"
+replan_repo '### Round 2 — 2026-09-02
+
+Re-planned.
+
+' 'b.txt' 1 '{"schema":1,"repo":{"owner":"o","name":"n"}}'
+mkdir -p "$dir/.codeo/done/8"
+cp "$dir/.codeo/done/7/qc.md" "$dir/.codeo/done/7/plan.md" "$dir/.codeo/done/8/"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m head2
+head=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 1 "$rc"
+assert_contains "names archive 7" "qc-verdict: .codeo/done/7/plan.md: footprint check failed" "$out"
+assert_contains "names archive 8" "qc-verdict: .codeo/done/8/plan.md: footprint check failed" "$out"
+assert_contains "still judges the archives" "qc-verdict: .codeo/done/8/qc.md: round 1 clear" "$out"
+
+# --- cases: only the archive a pull request delivers is judged (#97, F11) ----------------------
+# archive_plan <footprint files> — a plan.md with a Round 2 outcome, on stdout.
+archive_plan() {
+    printf '# Plan\n\n## Outcome\n\nFirst planning round.\n\n### Round 2 — 2026-09-02\n\nRe-planned.\n\n### Footprint\n\n```\nfiles:      %s\nwiki:       none\nexclusive:  none\n```\n\n## Log\n\n- x\n' "$1"
+}
+
+case_desc="an old re-planned archive that is only touched is not checked"
+dir=$(new_repo)
+mkdir -p "$dir/.codeo/done/7"
+printf '%s\n' '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}' > "$dir/.codeo/config.json"
+qc_md '### Round 1 — 2026-09-01
+
+**Verdict: clear.**' > "$dir/.codeo/done/7/qc.md"
+archive_plan 'b.txt' > "$dir/.codeo/done/7/plan.md"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m base
+base=$(git -C "$dir" rev-parse HEAD)
+echo 'late note' >> "$dir/.codeo/done/7/qc.md"
+echo c > "$dir/c.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m head
+head=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "footprint omits" "$out"
+
+case_desc="an archive renamed into place is checked"
+dir=$(new_repo)
+mkdir -p "$dir/.codeo/7"
+printf '%s\n' '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}' > "$dir/.codeo/config.json"
+qc_md '### Round 1 — 2026-09-01
+
+**Verdict: clear.**' > "$dir/.codeo/7/qc.md"
+archive_plan 'b.txt' > "$dir/.codeo/7/plan.md"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m base
+base=$(git -C "$dir" rev-parse HEAD)
+mkdir -p "$dir/.codeo/done"
+git -C "$dir" mv .codeo/7 .codeo/done/7
+echo a > "$dir/a.txt"
+echo b > "$dir/b.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m head
+head=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 1 "$rc"
+assert_contains "names the plan" ".codeo/done/7/plan.md" "$out"
+assert_contains "names the round and path" "round 2 footprint omits: a.txt" "$out"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
