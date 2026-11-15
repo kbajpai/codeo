@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, questions raised. Exploration of all three consolidated parts (#41, #43, #74) is done and the findings are under `## Notes`. Nothing is drafted until the questions below are answered.
+Round 1. Q1-Q5 are answered (recorded from the engineer's "go ahead" in the conversation, each taking its recommendation); Q6 is open (#71 has since added `tests/board.test.sh` to its footprint). The plan is drafted at `.codeo/97/plan-draft.md` for review; nothing is written under `docs/plans/` yet, and no outcome is written while Q6 is open.
 
 ## Questions
 
@@ -21,6 +21,7 @@ Round 1, questions raised. Exploration of all three consolidated parts (#41, #43
 - **(c) A fixture test only**, in `tests/overlap.test.sh` or `tests/dossier-check.test.sh`: a second-round dossier that omits a path must fail. Meets the acceptance criterion literally and is the smallest change, but a real planning pass that skips the rule is still caught by nobody.
 
 **Answer:**
+(a) `qc-verdict.sh`. Go with the recommendation (engineer, in the conversation, 2026-11-15: "go ahead"). Feasibility in CI is checked before the task is drafted.
 
 ### Q2 — #98 also edits `skills/plan/SKILL.md`, `tests/plan-skill.test.sh`, `docs/dossier.md` and `CHANGELOG.md`. Proceed, sequence or re-scope?
 
@@ -28,6 +29,7 @@ Round 1, questions raised. Exploration of all three consolidated parts (#41, #43
 **Options:** proceed and coordinate · sequence after #98 · re-scope. **Recommendation:** sequence after #98, for the `skills/plan/SKILL.md` and `tests/plan-skill.test.sh` tasks only (ordered last in the plan): it is nearest to merging and the same pin tests move under both.
 
 **Answer:**
+Sequence after #98 for the `skills/plan/SKILL.md` and `tests/plan-skill.test.sh` tasks, ordered last. Go with the recommendation (engineer, in the conversation, 2026-11-15: "go ahead").
 
 ### Q3 — #70 also edits `skills/**`, `tests/**`, `docs/handoff.md`, `docs/skills.md` and `CHANGELOG.md`, and `skills/close/SKILL.md` step 17 in particular. Proceed, sequence or re-scope?
 
@@ -35,6 +37,7 @@ Round 1, questions raised. Exploration of all three consolidated parts (#41, #43
 **Options:** proceed and coordinate · sequence after #70 · re-scope. **Recommendation:** proceed and coordinate, with the `skills/close/SKILL.md`, `docs/handoff.md` and `tests/closing-exits.test.sh` tasks ordered last in the plan, so most of the work does not wait on #70.
 
 **Answer:**
+Proceed and coordinate; the close, handoff and `tests/closing-exits.test.sh` tasks ordered last. Go with the recommendation (engineer, in the conversation, 2026-11-15: "go ahead").
 
 ### Q4 — #71 also edits `scripts/board.sh`, `skills/triage/SKILL.md`, `tests/closing-exits.test.sh`, `docs/handoff.md`, `docs/skills.md` and `CHANGELOG.md`. Proceed, sequence or re-scope?
 
@@ -42,11 +45,20 @@ Round 1, questions raised. Exploration of all three consolidated parts (#41, #43
 **Options:** proceed and coordinate · sequence after #71 · re-scope. **Recommendation:** proceed and coordinate; #71 has not planned yet, so its plan can name this issue's `board.sh` change when it reaches its own footprint check.
 
 **Answer:**
+Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-15: "go ahead").
 
 ### Q5 — #96 also edits `lib/env.sh` and `CHANGELOG.md`. Proceed, sequence or re-scope?
 
 **Why it matters:** #96 (`feat/dev-container-follow-ups-40`, assigned to kbajpai, at `plan`, working) lists `glob:lib/env.sh` and `glob:CHANGELOG.md`. This issue changes one comment line in `lib/env.sh` (the `statuses` key reference, lines 28-31) and #96 changes the key reference for `plugin`, a different line; both add a bullet under `## Unreleased`. A sequence would not buy anything.
 **Options:** proceed and coordinate · sequence after #96 · re-scope. **Recommendation:** proceed and coordinate.
+
+**Answer:**
+Proceed and coordinate. Go with the recommendation (engineer, in the conversation, 2026-11-15: "go ahead").
+
+### Q6 — #71 has since added `tests/board.test.sh` to its footprint, beside `scripts/board.sh`. Proceed, sequence or re-scope?
+
+**Why it matters:** raised by the overlap check run while drafting the plan. #71 (`feat/file-new-issues-straight-board`, assigned to kbajpai, now at `plan`, working) lists `glob:tests/board.test.sh` as well as the `glob:scripts/board.sh` Q4 already covered. Tasks 3 and 4 of the draft change `board.sh set`'s messages and lookup and add five cases and two stub variables to `tests/board.test.sh`; a feature that files issues straight onto the board probably extends the same stub, so the two edits would collide in one file. Q4 was answered *proceed and coordinate* when #71 had no plan; this is the same pair with more detail.
+**Options:** proceed and coordinate · sequence after #71 · re-scope. **Recommendation:** proceed and coordinate, as Q4: Tasks 3-4 add only new stub variables and new cases, and whichever of the two merges second rebases.
 
 **Answer:**
 
@@ -75,7 +87,7 @@ What exploration found, so the plan does not re-ask it.
 ### Footprint
 
 ```
-files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/dossier-check.sh, tests/qc-verdict.test.sh, tests/dossier-check.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, docs/plans/2026-11-15-docs-skill-wording-test-guard.md
+files:      docs/skills.md, tests/skills-doc.test.sh, scripts/board.sh, tests/board.test.sh, lib/env.sh, skills/triage/SKILL.md, scripts/qc-verdict.sh, scripts/overlap.sh, tests/qc-verdict.test.sh, tests/overlap.test.sh, skills/plan/SKILL.md, tests/plan-skill.test.sh, skills/close/SKILL.md, tests/closing-exits.test.sh, tests/close-skill.test.sh, docs/handoff.md, docs/dossier.md, CHANGELOG.md, docs/plans/2026-11-15-docs-skill-wording-test-guard.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -87,3 +99,4 @@ _Pending — written at the hand-off._
 
 ## Log
 - 2026-11-15 — Q1-Q5 raised · cost: 3m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 292k in + 1.5M cached / 35k out
+- 2026-11-15 — Q1-Q5 answered in the conversation; plan drafted at .codeo/97/plan-draft.md, awaiting approval · engineering:architecture and engineering:system-design not loaded, Q1's Options/Decision structure applied directly · cost: 12m · fable-5-2 95k in + 591k cached / 7k out · sonnet-5-5 372k in + 3.4M cached / 83k out
