@@ -1,8 +1,8 @@
-# New issue — release v1.0.7 after the in-progress issues
+# Issue #100 — issue
 
 | | |
 |---|---|
-| Issue | _not filed yet_ |
+| Issue | https://github.com/kbajpai/codeo/issues/100 |
 | Branch | _none — intake_ |
 | Updated | 2026-11-15 |
 
@@ -82,8 +82,9 @@ The latest release is v1.0.6 (2026-11-14), and this project pins it in `.codeo/c
 
 ## Outcome
 
-_Pending — written at filing._
+Filed as #100 on 2026-11-15: https://github.com/kbajpai/codeo/issues/100
 
 ## Log
 
 - 2026-11-15 — Q1-Q2 asked and answered in conversation; draft written
+- 2026-11-15 — draft approved; filed as #100
