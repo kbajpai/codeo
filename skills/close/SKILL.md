@@ -632,7 +632,7 @@ and commit `close.md`, staged by name, with the same subject, and push. Delete `
 last; when the release or a push failed, keep it, say what failed, and that running
 `/codeo:close --stash` again in this checkout finishes the stash. Once the lock is gone, everything
 is pushed, so this checkout holds nothing the branch lacks: say what is left of it as step 17
-does, by the lock's host, read before the lock goes. An open pull request stays open; say so. End
+does, by the lock's host, read before the lock goes. Fetch the project's `close/host-workflow` as step 17 does, with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow` and its exits handled the same way, and relay the part that is for this exit. An open pull request stays open; say so. End
 with the closing block that matches how the stash ended.
 
 **Closing block — stash interrupted:** `.codeo/active` is kept, because the release or a push
@@ -675,7 +675,7 @@ stash does; a deletion that failed keeps it, as close-10 does on the merge path,
 `/codeo:close` again finishes the abandon.
 
 Once the lock is gone, say what is left of the checkout as step 17 does, by the lock's host, read
-before the lock goes. With the branch kept, the checkout holds nothing the branch lacks. When the
+before the lock goes. With the branch kept, the checkout holds nothing the branch lacks. Fetch the project's `close/host-workflow` as step 17 does, with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow` and its exits handled the same way, and relay the part that is for this exit. When the
 engineer had the branch deleted,
 the local branch is the only copy of the work and its dossier: say so, and do not call the checkout
 safe to remove.

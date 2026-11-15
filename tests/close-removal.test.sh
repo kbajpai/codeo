@@ -20,13 +20,13 @@ for needle in 'docker rm -f <volume>; docker volume rm <volume>' '^codeo-[0-9]+$
     'not inside this container' 'git status' 'PowerShell' \
     'When the lock'"'"'s `host` is `container`' 'nothing to remove' '/codeo:triage' '/codeo:cleanup' 'home container' \
     'After a finished close' 'After a stash:' 'After an abandon:' \
-    'its number is the lock'"'"'s `issue`' 'the only copy' '/codeo:init #<N>' '.devcontainer/README.md'; do
+    'its number is the lock'"'"'s `issue`' '/codeo:init #<N>' '.devcontainer/README.md'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 
 # Structural checks on the overlay text, in one function so a scratch copy can be fed to it.
 check_overlay() {
-    local text=$1 fin rest stash aband part name cmd='docker rm -f <volume>; docker volume rm <volume>'
+    local text=$1 fin rest stash aband part name needle cmd='docker rm -f <volume>; docker volume rm <volume>'
     fin=${text#*'After a finished close'}
     fin=${fin%%'After a stash:'*}
     [[ "$fin" == *"$cmd"* ]] \
@@ -47,6 +47,9 @@ check_overlay() {
             || { echo "check c: the $name paragraph lacks 'print no removal command'"; return 1; }
         [[ "$part" == *'home container'* ]] \
             || { echo "check c: the $name paragraph lacks 'home container'"; return 1; }
+    done
+    for needle in 'the only copy' '.devcontainer/README.md'; do
+        [[ "$aband" == *"$needle"* ]] || { echo "check d: the abandon paragraph lacks $needle"; return 1; }
     done
 }
 msg=$(check_overlay "$out") || fail "$msg"

@@ -12,6 +12,6 @@ After a finished close (the pull request merged): print `docker rm -f <volume>; 
 
 After a stash: print no removal command. This container holds no lock, so `/codeo:init #<N>` is refused here: it runs in the home container, `codeo-home`, and that is the closing block's step. The resume opens a new `codeo-<N>` container, so this one has to be removed first, because two containers cannot share the name. Say that the engineer removes it by hand on the host once `git status` here shows nothing unpushed; `.devcontainer/README.md` says how.
 
-After an abandon: print no removal command. `/codeo:triage` is refused here: it runs in the home container, `codeo-home`, and that is the closing block's first step. When the branch was kept, the container holds nothing the branch lacks, and the engineer may remove it by hand on the host after `git status`. When the branch was deleted, this container holds the only copy of the work: say so and name no removal.
+After an abandon: print no removal command. `/codeo:triage` is refused here: it runs in the home container, `codeo-home`, and that is the closing block's first step. When the branch was kept, the container holds nothing the branch lacks, and the engineer may remove it by hand on the host after `git status`; `.devcontainer/README.md` says how. When the branch was deleted, this container holds the only copy of the work: say so and name no removal.
 
 For any other host there is nothing to remove: say so.

@@ -207,6 +207,17 @@ case_stash_prose() {
     lacks "$text" 'End with the closing block: the goal is resuming the work'
 }
 
+case_host_workflow_fetch() {
+    local text seg
+    text=$(flat "$(cat "$close")")
+    seg=${text#*'Once the lock is gone, everything is pushed'}
+    seg=${seg%%'how the stash ended'*}
+    has "$seg" 'overlay.sh" close host-workflow'
+    seg=${text#*'Once the lock is gone, say what is left of the checkout'}
+    seg=${seg%%'how the abandon ended'*}
+    has "$seg" 'overlay.sh" close host-workflow'
+}
+
 # Puts each old wording back in a scratch copy and checks the named case then fails by name.
 case_bites() {
     local t out copy pristine
@@ -272,12 +283,20 @@ case_bites() {
     out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" abandon-finished 2>&1) &&
         fail "the abandon paragraph without the host workflow clause passed abandon-finished"
     [[ $out == *abandon-finished* ]] || fail "abandon-finished failed without naming itself: $out"
+
+    # The fetch clause removed from the abandon section makes host-workflow-fetch fail.
+    cp "$pristine" "$copy"
+    sed -i '/^before the lock goes\. With the branch kept/,/^End with the closing block that matches how the abandon ended/{s/overlay\.sh" close host-workflow/overlay.sh" close X/}' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the abandon fetch mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" host-workflow-fetch 2>&1) &&
+        fail "the abandon section without the fetch clause passed host-workflow-fetch"
+    [[ $out == *host-workflow-fetch* ]] || fail "host-workflow-fetch failed without naming itself: $out"
     return 0
 }
 
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
     issue-ready issue-not-ready issue-unreadable abandon-finished abandon-interrupted
-    close-step17-lead stash-prose bites)
+    close-step17-lead stash-prose host-workflow-fetch bites)
 
 if (($# > 0)); then
     known=0
