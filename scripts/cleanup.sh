@@ -31,7 +31,7 @@ base=$(codeo_base_branch)
 state_rel=${CODEO_STATE_DIR#"$CODEO_PROJECT_ROOT"/}
 github=$CODEO_PLUGIN_ROOT/scripts/github.sh
 
-git fetch -q --prune origin || die "fetch failed"
+git fetch -q --prune origin || die "fetch failed; nothing proven"
 base_sha=$(git rev-parse "origin/$base") || die "no origin/$base"
 
 # The overlay body, or nothing when there is none.
@@ -65,7 +65,8 @@ first_failed_proof() {
     [[ -n $(jq -r '.merged_at // empty' <<<"$info") ]] || { echo pull-request; return; }
 
     ref=$(jq -r '.head_ref' <<<"$info")
-    [[ -z $(git ls-remote --heads origin "$ref") ]] || { echo branch; return; }
+    # From the refs the fetch above just pruned, never ls-remote: a failed ls-remote prints nothing and would read as "gone".
+    ! git rev-parse --verify -q "refs/remotes/origin/$ref" >/dev/null || { echo branch; return; }
 
     while IFS= read -r ref; do
         sha=$(git rev-parse "$ref")

@@ -144,6 +144,24 @@ fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 push_branch feat/12
 assert_eq "line" "12${tab}failed${tab}branch" "$(run_cleanup)"
 
+case_desc="branch deleted on origin is pruned by the fetch and passes"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+push_branch feat/12
+git -C "$REPO_WORK" fetch -q origin
+git -C "$REPO_WORK" push -q origin --delete feat/12
+assert_eq "line" "12${tab}proven${tab}$want_cmd" "$(run_cleanup)"
+
+case_desc="a failing fetch exits non-zero with a cleanup: message and no proven line"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+git -C "$REPO_WORK" remote set-url origin "$scratch_root/does-not-exist"
+rc=0
+out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" 2>&1) || rc=$?
+assert_eq "exit non-zero" "yes" "$([[ $rc -ne 0 ]] && echo yes || echo no)"
+assert_eq "cleanup: message" "yes" "$([[ $out == *"cleanup: fetch failed"* ]] && echo yes || echo no)"
+assert_eq "no proven line" "no" "$([[ $out == *"${tab}proven"* ]] && echo yes || echo no)"
+
 case_desc="dossier still on another branch"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
