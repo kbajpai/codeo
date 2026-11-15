@@ -109,3 +109,11 @@
 | `issue:102` | `/codeo:issue` priority label when the project opts in; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `issue:103` | Let triage judge in-flight workflows from evidence (dates, waiting-on, board mismatch); filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `issue:104` | Publish a live-session signal for in-flight workflows; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `qc:96:F16` | Changelog docs test reads only `## Unreleased`, so it fails on the release commit | filed #107 | 2026-11-15 |
+| `qc:96:F3-F7-F17` | Start-script and `codeo-root.sh` message and edge defects | filed #107 | 2026-11-15 |
+| `qc:96:F5-F6-F10-F13-F14-F15-F18` | Test weaknesses, timing, cosmetics and #96's wording gaps (F11-F12) | filed #107 | 2026-11-15 |
+| `qc:96:F8` | A folder named `my project` or `_x` still cannot start a dev container | dismissed — the documented limit (plan Q1) is enough | 2026-11-15 |
+| `qc:97:F8-F21` | #97's non-blocking findings: `overlap.sh`, `qc-verdict.sh`, test guards, wording | filed #108 | 2026-11-15 |
+| `implement:96:login-persistence` | Claude's login does not survive a container rebuild | dismissed — nothing is lost, only a re-login | 2026-11-15 |
+| `issue:107` | Dev container follow-ups from #96; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `issue:108` | Follow-ups #97 left; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
