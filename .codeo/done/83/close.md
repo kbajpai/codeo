@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Phase 1, before the pull request is opened. The latest `qc.md` round (round 1) is clear, the tree is clean and pushed, and the branch merges cleanly with `origin/main`. One overlap with a workflow that appeared since the plan (Q1) is open, so no pull request has been opened yet.
+Pull request #90 is open and the dossier is archived. Nothing is open; the workflow stays open until the engineer merges it, then `/codeo:close` again finishes it.
 
 ## Questions
 
@@ -19,6 +19,7 @@ Phase 1, before the pull request is opened. The latest `qc.md` round (round 1) i
 **Options:** proceed and coordinate (recommended: one added bullet each, no shared lines) · sequence after #87 · re-scope (leave `CHANGELOG.md` out, which criterion 5 does not allow).
 
 **Answer:**
+Proceed and coordinate (answered in the conversation).
 
 ## Notes
 
@@ -26,8 +27,15 @@ Phase 1, before the pull request is opened. The latest `qc.md` round (round 1) i
 
 ## Outcome
 
-_Pending — written at the hand-off._
+### Round 1 — pull request opened
+
+2026-11-15
+
+#90 https://github.com/kbajpai/codeo/pull/90
+
+Went out on `qc.md` round 1, verdict: clear — forward to `/codeo:close`. Q1 (overlap with #87 on `CHANGELOG.md`) answered: proceed and coordinate. No override.
 
 ## Log
 
 - 2026-11-15 — close: Q1 raised (overlap with #87 on CHANGELOG.md) · cost: 0m · sonnet-5-5 23k in + 706k cached / 1k out
+- 2026-11-15 — close: Q1 answered (proceed and coordinate); PR #90 opened, dossier archived · board: In review on #83 · cost: 0m · sonnet-5-5 100k in + 375k cached / 2k out
