@@ -21,7 +21,7 @@ failures=0
 p=
 case_name=
 fail() {
-    echo "FAIL: $case_name — $1"
+    echo "FAIL: $case_name — $1" >&2
     failures=$((failures + 1))
 }
 
@@ -63,19 +63,35 @@ step() {
 }
 
 case_rule() {
-    local block
+    local block row
     block=$(sed -n '/^## Closing block$/,/^## Spinning out subagents$/p' "$doc")
     has "$block" '**It names only a command that can run.**'
-    for row in 'lock kept' 'stash — interrupted' 'init — no lock' 'issue — not Ready'; do
-        has "$block" "$row"
-    done
     has "$block" 'Exits whose next command is not the default'
-    has "$block" 'stash — completed'
+    has "$block" 'stashed or abandoned'
+    # $1 label. Prints its row of the exceptions table; fails the case when the table has none.
+    row_for() {
+        local r
+        r=$(grep -F "$1\` |" <<<"$block" || true)
+        [[ -n $r ]] || { fail "docs/handoff.md has no row for [$1]"; return 0; }
+        printf '%s\n' "$r"
+    }
+    for row in 'lock kept' 'stash — interrupted' 'stash — completed' 'issue — not Ready'; do
+        row_for "$row" >/dev/null
+    done
+    local nl ai ab ur
+    ab=$(row_for 'abandon — finished')
+    ai=$(row_for 'abandon — interrupted')
+    nl=$(row_for 'init — no lock')
+    ur=$(row_for 'issue — Status unreadable')
     # The init row names the recovery and lock.sh take local, never the default /codeo:plan.
-    local row
-    row=$(grep -F '`init — no lock`' <<<"$block" || true)
-    has "$row" 'lock.sh take local'
-    lacks "$row" '/codeo:plan'
+    has "$nl" 'lock: TODO'
+    has "$nl" 'host workflow'
+    has "$nl" 'lock.sh take local'
+    lacks "$nl" '/codeo:plan'
+    has "$ai" '/codeo:close'
+    lacks "$ai" '--stash'
+    has "$ab" '/codeo:triage'
+    has "$ur" '/codeo:triage'
 }
 
 case_close_lock_kept() {
@@ -113,6 +129,7 @@ case_init_no_lock() {
     # Step 11 once ended both exits with one sentence naming /codeo:plan; it must not return.
     local s
     s=$(step "$init" 11)
+    [[ -n $s ]] || { fail "no step 11 in skills/init/SKILL.md"; return; }
     lacks "$s" 'Either way, end with the closing block'
 }
 
