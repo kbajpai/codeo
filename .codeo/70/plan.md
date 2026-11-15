@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done. Q1-Q6 are answered, the plan was approved and written to `docs/plans/2026-11-15-guard-home-only-skills.md`; nothing is open. The next step is `/codeo:implement`.
+Round 2, after a send-back from `/codeo:qc` round 1: the code met every criterion, but the plan left out where `close`'s next step runs (F1) and what makes a refused finding findable by triage (F2). Q7 (which non-blocking findings to take in) is answered; the round-2 draft is at the review gate.
 
 ## Questions
 
@@ -72,6 +72,14 @@ The eight only; `doctor` and `setup` run anywhere. Go with the recommendation (e
 **Answer:**
 One pull request. Go with the recommendation (engineer, in the conversation, 2026-11-15).
 
+### Q7 — Round 2: which of QC round 1's non-blocking findings (F4-F13) does this round fix along with F1 and F2?
+
+**Why it matters:** F1 and F2 are blocking and are fixed either way. Each non-blocking finding taken in adds a step and a test to this round; each one left stays in `qc.md` for `/codeo:triage` after the merge. F9 (Podman detection) and F11 (the `CODEO_CLEANUP_REMOVAL` override in the production path) change script behaviour and tests; F12 rewords generic text; the rest are one-line or wording fixes in files this round already touches.
+**Options:** F1, F2 and the cheap ones — F4, F5, F6, F7, F8, F10, F13 (recommended) · F1 and F2 only · everything, F1-F13.
+
+**Answer:**
+F1, F2 and the cheap ones (F4, F5, F6, F7, F8, F10, F13); F9, F11 and F12 are left for `/codeo:triage`. Answered with the question tool, in the conversation (engineer, 2026-11-15).
+
 ## Notes
 
 What exploration found, so the plan does not re-ask it:
@@ -114,3 +122,4 @@ sequenced:  none
 
 - 2026-11-15 — Q1-Q6 raised · cost: 4m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 181k in + 139k cached / 8k out
 - 2026-11-15 — planned: docs/plans/2026-11-15-guard-home-only-skills.md · engineering:architecture and engineering:system-design not loaded, their Options/Decision structure applied directly from Q1-Q3 · cost: 13m · fable-5-2 126k in + 1.1M cached / 15k out · sonnet-5-5 232k in + 2M cached / 39k out
+- 2026-11-15 — round 2 after qc round 1: Q7 raised and answered with the question tool; draft at the review gate · cost: 2m · fable-5-2 423k in + 1.8M cached / 10k out
