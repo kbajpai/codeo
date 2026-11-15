@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4, done. QC round 3's two blocking findings (H1, H2) and H3, H4, H6 are fixed and committed (`310dccb` to `3256788`), reviewed, and `bash tests/run.sh` prints `all cases passed`. Nothing is open. The next step is `/codeo:qc`.
+Round 5, done. QC round 4's two blocking findings (J1, J2) and J3, J4, J5, J9 are fixed and committed (`b99f9b3` to `8fecf13`), reviewed, and `bash tests/run.sh` prints `all cases passed`. Nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -148,6 +148,27 @@ Proceed and coordinate. Go with the recommendation (engineer, in the conversatio
 
 **Deferred minors**, none blocking: the `docs/handoff.md` abandon row's clause reads as qualifying the clean-up rather than `/codeo:triage`; the overlay's stash paragraph says two containers cannot share the name even when the `volume:` is not `codeo-<N>`; the README's abandon paragraph omits "after `git status`" for the kept-branch removal; the README's "Both only print." sits three paragraphs from what it refers to; the stash section of `case_host_workflow_fetch` has no mutation of its own. Round 3's minors stand as recorded there.
 
+### Round 5 — 2026-11-15
+(send-back from qc.md round 4)
+
+**Plan built:** round 5 of `docs/plans/2026-11-15-guard-home-only-skills.md` (Tasks 26-29), commits `b99f9b3` to `8fecf13`, on a branch that already contained `origin/main` (no merge needed, no conflict; `overlap.sh 70` and `overlap.sh --outside 70` print nothing). Tasks 26+27 ran as one dispatch with two commits, Task 28 as its own, Task 29 inline; each dispatch was reviewed, and a closing review read the whole round. The findings were checked against the code before building (`.devcontainer/scripts/role.sh:60-120`, `scripts/lock.sh:24-33`, `scripts/claim.sh:99-100`) and J1 and J2 held.
+
+**What was built, against QC round 4's findings.**
+- J1, J2 (Task 26, `b99f9b3`): `role.sh`'s stale refusal reads the state as the scripts that own it do. A workflow is finished only when the base branch carries `.codeo/done/<N>` (`origin/<base>` when that ref exists, else the local base; `lock.sh`'s rule without its fetch); an archive the base lacks reads as lock-lost. A workflow is parked only while parks in `close.md` outnumber resume lines in `init.md`, counted with `claim.sh`'s own patterns and trim, and the last park heading gives the kind. `tests/role.test.sh` pins each state: a finished archive on the local base and on the remote base, an archive with an open pull request, a resumed stash, a stash twice resumed once, an abandon after a resumed stash, and a stash with a later close round and no resume.
+- J3, J4, J5 (Task 27, `49bddd1`): the stash refusal says to remove this container first, then `/codeo:init #<N>` in the home container; the abandon refusal names no resume and says the container may hold the only copy of the work; the home container off its base branch (or on a detached HEAD) tells a home-only skill to switch back to the base branch and sends any other skill to the issue's container. `tests/role.test.sh` splits its stashed and abandoned needles and adds `home_off_the_base_branch` and `home_on_a_detached_head`.
+- J9 and the documentation (Task 28, `0541bab`, fix `8fecf13`): the stale row of `.devcontainer/README.md` and the existing `CHANGELOG.md` bullet say what each refusal says in each state; `docs/skills.md`'s cleanup non-goal names the `codeo/intake` exception. The task review found the "switch back" sentence over-general (it holds for home-only skills only); fixed in `8fecf13` and re-reviewed.
+- Left, as the engineer chose at plan Q15: J6 (Podman), J7 (`CODEO_CLEANUP_REMOVAL` outside tests, round 1's F11 and round 3's H5) and J8 (cleanup lists every archived issue) for `/codeo:triage`.
+
+**Documentation changed.** `.devcontainer/README.md`, `docs/skills.md`, `CHANGELOG.md`.
+
+**Build result.** The `shell` suite's `build` (`true`) ran ok; `bash tests/run.sh` prints `all cases passed` at `8fecf13` (3m27s); `bash scripts/doctor.sh` all ok; `git diff origin/main...HEAD -- .devcontainer/Dockerfile .devcontainer/devcontainer.json` is empty; `bash .devcontainer/scripts/role.sh` here prints `issue:70`, `--check plan` exits 0 with no output and `--check issue` exits 1 with one line.
+
+**Deviations from the plan.** One addition the implementer made and the review judged sound: `role.sh` reads a workflow as lock-lost, not parked, when `.codeo/done/<N>` exists and the base lacks it, even if `close.md` holds a stash heading (the plan's "lost" rule for such an archive). Otherwise none.
+
+**Rulings taken while building round 5** (each with what it costs if wrong): (1) Tasks 26+27 ran as one dispatch with one reviewer, as they edit the same two files and 27 builds on 26's helpers: costs that two tasks were reviewed together. (2) All reviews ran on sonnet, because codeo's subagent hook allows only the configured subagent model: costs a weaker review; `/codeo:qc` grades independently on opus. (3) The final review's one new minor (a clone with both a live `.codeo/<N>` and a base-carried `done/<N>` reads as "finished", where `lock.sh` would treat it as live) was left unfixed, because Task 26 states "finished" as the archive plus the base carrying it and the state needs a dossier both live and merged: costs that QC may raise it as a plan finding. (4) The untested edges and cosmetic minors below were left rather than opening a second fix wave: costs that QC may raise them again.
+
+**Deferred minors**, none blocking: `role.sh` calls a clone with both a live `.codeo/<N>` and a base-carried `done/<N>` finished, where `lock.sh` finds the live dossier first; `tests/role.test.sh` has no case for a CRLF heading, a `baseBranch` other than `main`, no `origin` remote, or an `origin/<base>` that lacks the archive while the local base carries it; the comment above `stale_needles` does not list `offbase`; the README row and the changelog sentence paraphrase the refusal wording slightly. Round 4's minors stand as recorded there.
+
 ## Log
 
 - 2026-11-15 — built Tasks 1-10 and the final-review fix wave; Q1-Q4 raised on overlaps with #71, #96, #97, #98 · cost: 97m · sonnet-5-5 1.2M in + 35M cached / 196k out
@@ -155,3 +176,4 @@ Proceed and coordinate. Go with the recommendation (engineer, in the conversatio
 - 2026-11-15 — round 2 after qc round 1: built Tasks 11-16, merged origin/main, handed off to qc · cost: 33m · sonnet-5-5 311k in + 14.1M cached / 56k out
 - 2026-11-15 — round 3 after qc round 2: built Tasks 17-21, handed off to qc · cost: 28m · sonnet-5-5 292k in + 11M cached / 53k out
 - 2026-11-15 — round 4 after qc round 3: built Tasks 22-25, handed off to qc · cost: 31m · sonnet-5-5 434k in + 12.3M cached / 65k out
+- 2026-11-15 — round 5 after qc round 4: built Tasks 26-29, handed off to qc · cost: 1m · sonnet-5-5 15k in + 1.7M cached / 4k out
