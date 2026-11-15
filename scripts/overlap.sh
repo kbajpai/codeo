@@ -21,8 +21,12 @@
 #       been raised yet, sorted; `what` is a path, `exclusive:<name>`,
 #       `glob:<glob>` or `wiki:<Page>`. Prints nothing when there
 #       is no new overlap. Exit 0 always — a usage error is the only exit 1.
-#   overlap.sh --outside <N>
+#   overlap.sh --outside <N> [--base <ref>] [--head <ref>]
 #       Prints this branch's changed paths that match none of its own `files` globs, one per line.
+#       With --head the diff is `git diff --name-only <base>...<head>` (--base defaults to
+#       origin/<baseBranch>) and the plan is read from <head> (`<state>/<N>/plan.md`, else
+#       `<state>/done/<N>/plan.md`) instead of the working tree; either ref is any commit-ish.
+#       --base and --head are valid only with --outside.
 #
 # Globs: `**` is read as `*`, matched with bash `==`; `none` is no glob. `$CODEO_STATE_DIR/**` never
 # pairs, and `--outside` also leaves out the configured plansDir. This branch's footprint is read from the
@@ -33,12 +37,25 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 
-usage() { echo "usage: overlap.sh [--outside] <N>" >&2; exit 1; }
+usage() { echo "usage: overlap.sh [--outside] <N> [--base <ref>] [--head <ref>]" >&2; exit 1; }
 
 outside=
 [[ ${1:-} == --outside ]] && { outside=1; shift; }
-(($# == 1)) && [[ $1 =~ ^[0-9]+$ ]] || usage
+(($# >= 1)) && [[ $1 =~ ^[0-9]+$ ]] || usage
 n=$1
+shift
+given_base=
+given_head=
+# --base and --head are valid only with --outside, each with a value.
+while (($# > 0)); do
+    [[ -n $outside ]] && (($# >= 2)) || usage
+    case $1 in
+        --base) given_base=$2 ;;
+        --head) given_head=$2 ;;
+        *) usage ;;
+    esac
+    shift 2
+done
 
 cd "$(git rev-parse --show-toplevel)"
 export LC_ALL=C
@@ -81,7 +98,7 @@ literals() {
 }
 
 # Changed paths against origin/<base> for a ref, dossiers left out.
-changes() { git diff --name-only "origin/$base...$1" -- . ":!$state_rel" 2>/dev/null || true; }
+changes() { git diff --name-only "${given_base:-origin/$base}...$1" -- . ":!$state_rel" 2>/dev/null || true; }
 
 # matches <path> <glob...>: true when the path matches any glob.
 matches() {
@@ -107,11 +124,16 @@ resolve() {
 mydir=$state_rel/$n
 [[ -d $mydir ]] || mydir=$state_rel/done/$n
 myplan=
-[[ -f $mydir/plan.md ]] && myplan=$(cat "$mydir/plan.md")
+if [[ -n $given_head ]]; then
+    myplan=$(git show "$given_head:$state_rel/$n/plan.md" 2>/dev/null ||
+        git show "$given_head:$state_rel/done/$n/plan.md" 2>/dev/null || true)
+elif [[ -f $mydir/plan.md ]]; then
+    myplan=$(cat "$mydir/plan.md")
+fi
 mapfile -t my_globs < <(footprint files <<<"$myplan")
 my_wiki=()
 [[ -z $wiki_on ]] || mapfile -t my_wiki < <(footprint wiki <<<"$myplan")
-mapfile -t mine < <(changes HEAD)
+mapfile -t mine < <(changes "${given_head:-HEAD}")
 
 if [[ -n $outside ]]; then
     for p in "${mine[@]}"; do
