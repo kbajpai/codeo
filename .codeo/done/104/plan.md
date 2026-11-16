@@ -1,0 +1,166 @@
+# Issue #104 — plan
+
+| | |
+|---|---|
+| Issue | https://github.com/kbajpai/codeo/issues/104 |
+| Branch | `feat/publish-live-session-signal-so` |
+| Updated | 2026-11-15 |
+
+## Where this stands
+
+Planned. Q1-Q9 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-15-live-session-signal.md` (unstaged, for review). The footprint is recorded and checked against every other workflow in flight; nothing is open. The next step is to review and commit the plan, then `/codeo:implement`.
+
+## Questions
+
+### Q1 — Where does the signal live?
+
+**Why it matters:** it decides the script that writes it, what `inflight.sh` fetches, and how much history the signal leaves behind. The issue allows "the intake branch or another ref".
+**Options:**
+- **A ref of its own per session, outside `refs/heads/` (recommended)** — `refs/codeo/live/<N>/<machine>`, pointing at one parentless commit with an empty tree whose message carries the fields. Each refresh force-pushes a new commit over the old one, so there is no history, no branch in GitHub's branch list, no CI run and no race with lease pushes. `inflight.sh` reads them all with one extra fetch (`+refs/codeo/live/*:refs/codeo/live/*`). Two machines on one issue show as two live sessions, since each has its own ref. New to this codebase: nothing uses a custom ref namespace yet.
+- **A file on `codeo/intake`** — `.codeo/intake/live/<N>-<machine>.md`, written through `intake.sh`'s existing plumbing. Follows the lease precedent, but every refresh is a commit on the intake branch (about 100 a day per session at a 5-minute refresh), and each one can lose a push race against a lease or a triage commit and retry.
+- **A branch per session** — `codeo/live/<N>/<machine>`, force-pushed. As the first option, but visible in the branch list, and every script that walks `refs/remotes/origin` (`inflight.sh`, `claim.sh`, triage's branch scan) needs an exclusion.
+
+**Answer:**
+A ref of its own per session, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
+
+### Q2 — Can a hosted web session push to a ref that is not its own branch?
+
+**Why it matters:** the criterion "it works in a web session" depends on it, and I cannot test it from this container. If the push is refused there, the plan adds a second write path through REST (`POST /repos/{owner}/{repo}/git/commits`, then create or update the ref with `git/refs`), which is one more task and one more set of tests. If pushes to `codeo/intake` already work from a web session, that is evidence for the intake option in Q1 but says nothing about a `refs/codeo/` ref.
+**Options:** pushes to any ref work there · only branch pushes work (then Q1 becomes a branch or the intake file, or REST writes the ref) · unknown — build the REST fallback, used when the push is refused, and record a by-hand web check for `/codeo:qc`.
+
+**Answer:**
+Accepted as recommendations (engineer, in the conversation, 2026-11-15). No option of this question was marked recommended; the planner reads that as the third option: build the REST fallback, used when the push is refused, and record a by-hand web check for `/codeo:qc`. Correct this line if another option was meant.
+
+### Q3 — What keeps the signal fresh?
+
+**Why it matters:** it decides what "live" means and whether the refresh depends on the model remembering to do it.
+**Options:**
+- **A plugin hook (recommended)** — a second entry in `hooks/hooks.json`, on `UserPromptSubmit` and `PostToolUse`, that runs only when `.codeo/active` exists, refreshes at most once per interval (Q4), and pushes in the background so no tool call waits on the network. "Live" then means *a Claude session is active in a checkout bound to the issue*, whether or not a skill is mid-step. A `SessionEnd` hook deletes the ref, so a clean exit stops showing at once and only a crash waits for the expiry.
+- **The skills call it** — each of init, plan, implement, qc and close runs `live.sh beat` at its start and its stops. "Live" means *a codeo skill ran recently*. A long `implement` run can outlast the expiry between calls, it edits five `SKILL.md` files (all inside #70's footprint) and it relies on the model.
+- **Both** — the hook, plus one explicit call at each skill's start so the signal appears without waiting for the first tool call.
+
+**Answer:**
+A plugin hook, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
+
+### Q4 — How long until a dead session stops reading as live, and is that configurable?
+
+**Why it matters:** the expiry is the documented number in the second acceptance criterion, and a config key means a `lib/env.sh` entry, a default and tests for both.
+**Options:**
+- **Refresh every 5 minutes, expire after 15, fixed (recommended)** — three missed refreshes before a session reads as dead; an environment variable (`CODEO_LIVE_TTL_SECONDS`, as `CODEO_LEASE_GRACE_SECONDS` does for leases) overrides it for tests and odd cases. No config key.
+- **The same defaults, with a config key** — `live{refreshSeconds,expirySeconds}` in `.codeo/config.json`.
+- **Other numbers** — say which.
+
+The reader judges expiry from the signal's own timestamp against its own clock, so two machines whose clocks disagree by minutes shift the window by that much. I would document that and not try to correct for it.
+
+**Answer:**
+Refresh every 5 minutes, expire after 15, fixed, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
+
+### Q5 — What exactly are "the user" and "the machine", given that this repository is public?
+
+**Why it matters:** whatever the signal names is readable by anyone who fetches the ref. It decides what the writer looks up and what `inflight.sh` prints.
+**Proposal:**
+- **User:** the GitHub login from `github.sh user login` (which honours `$CODEO_GITHUB_LOGIN` where `GET /user` is refused, as in a web session), else `git config user.name`. Never the email address: leases fall back to `user.email`, and I would not copy that into a signal on a public repository.
+- **Machine:** `$CODEO_MACHINE` when set; otherwise by the lock's `host` — `container`: the volume name from the lock (`codeo-104` here; the container's own hostname is a random id such as `c68a409ad456`); `web`: `web` plus the lock's session id; `local`: the output of `hostname`.
+
+**Options:** as proposed · never publish a real hostname (a `local` checkout then says `local` unless `$CODEO_MACHINE` is set) · something else — say what.
+
+**Answer:**
+As proposed (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
+
+### Q6 — How should `inflight.sh` show it?
+
+**Why it matters:** #103 will also add facts to `inflight.sh` and promises that the existing `--tsv` columns keep their order. Two issues appending columns to the same rows would have to agree on that order.
+**Options:**
+- **A `live:` line in the human block, and a separate machine-readable listing (recommended)** — the block gains `  live:      kbajpai on codeo-104 (container), 3m ago`, once per live session, printed only when there is one; `--tsv` and `--branches` are untouched; a new `inflight.sh --live` prints `issue<TAB>user<TAB>machine<TAB>host<TAB>last-seen` for status reporters.
+- **Always print the line** — `live: no` when nothing is live, so the absence of a session is stated.
+- **Append a column to `--tsv`** — `live` or empty as a sixth column, with the order agreed with #103.
+
+A failed fetch of the signals would print `live: unknown` and never drop the line silently.
+
+**Answer:**
+A `live:` line in the human block and a separate `--live` listing, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
+
+### Q7 — Does `/codeo:triage`'s own text change in this issue?
+
+**Why it matters:** the first criterion says triage reports live workflows "through `inflight.sh`". Triage already prints what `inflight.sh` prints, so the line reaches it with no skill edit. Changing `skills/triage/SKILL.md` as well puts this issue inside the footprints of #71 and #70, both of which edit that file, and moves the skills-inventory fixture.
+**Options:**
+- **One sentence in triage (recommended)** — a workflow with a live session is listed with its `live:` line quoted and is not asked about as parked work. Accepts the overlap with #71 and #70, which becomes an overlap question once the footprint is drafted.
+- **No triage edit** — triage shows the line because `inflight.sh` prints it; what triage concludes from it is left to #103, which rewrites that paragraph anyway.
+
+**Answer:**
+One sentence in triage, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommendations").
+
+### Q8 — #71 edits four files this plan edits; how do the two branches proceed?
+
+**Why it matters:** the draft footprint (`.codeo/104/plan-draft.md`, last section) overlaps #71's. Two branches editing one file merge cleanly only when their hunks are apart, and that is a coordination question, not one this plan can settle alone.
+**What overlaps:** #71, branch `feat/file-new-issues-straight-board`, assignee kbajpai, last finished step `implement` (working). `overlap.sh` names it on `CHANGELOG.md`, `glob:CHANGELOG.md`, `docs/handoff.md`, `glob:docs/handoff.md`, `docs/skills.md`, `glob:docs/skills.md`, `skills/triage/SKILL.md` and `glob:skills/triage/SKILL.md`. In this plan the edits are small and additive: a changelog bullet and the `Shared state:` line (Task 6), one bullet and one clause in the two docs, and one sentence in the triage step that reads `inflight.sh` (Task 5). #107 (`feat/dev-container-follow-ups-96`, kbajpai, at `init`) has no footprint yet and has changed no file, so there is nothing to compare. #70 has merged since the branch was cut; `/codeo:implement` merges `origin/main` first.
+**Options:**
+- **Proceed and coordinate (recommended)** — keep the plan as drafted. `/codeo:implement` and `/codeo:qc` merge `origin/main` each round, so whichever of the two lands second resolves its own hunks; Tasks 5 and 6 re-read the lines they edit before editing them.
+- **Sequence after #71** — this issue waits for #71's merge before `/codeo:implement` starts, so the two never share an unmerged file. Costs the wait; #71 is already at `implement`.
+- **Re-scope** — drop the triage sentence and its docs clause (Q7's recommendation), leaving `CHANGELOG.md` and `docs/handoff.md` as the only shared files.
+
+**Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommended").
+
+### Q9 — #107 has since published a footprint that names `CHANGELOG.md`; how do the two branches proceed?
+
+**Why it matters:** #107 had no footprint when Q8 was raised, so there was nothing to compare; it has one now, and `overlap.sh` reports it. A changelog is the file every change appends to, so the real risk is a merge conflict in `## Unreleased` and not a clash of ideas.
+**What overlaps:** #107, branch `feat/dev-container-follow-ups-96`, assignee kbajpai, last finished step `init` (working), no file changed yet. `overlap.sh` names it as `glob:CHANGELOG.md`: its footprint lists `CHANGELOG.md` among `.devcontainer/scripts/devcontainer-start.sh`, `.devcontainer/scripts/codeo-root.sh`, `.devcontainer/README.md`, `tests/devcontainer.test.sh`, `tests/codeo-root.test.sh` and its plan. This plan's `CHANGELOG.md` edits are the `Shared state:` line and one bullet (Task 6); nothing else overlaps.
+**Options:**
+- **Proceed and coordinate (recommended)** — keep the plan as drafted. Task 6 re-reads `## Unreleased` after merging `origin/main`, and keeps every existing bullet of whichever branch landed first.
+- **Sequence after #107** — this issue's `/codeo:implement` waits for #107's merge. #107 has not started its plan, so the wait is open-ended.
+- **Re-scope** — move this plan's changelog edit to the end of the work, in its own pull request after the others merge.
+
+**Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-15: "Accepted as recommended").
+
+## Notes
+
+**What exists today.** `inflight.sh` derives everything from pushed branches: one block per workflow, `--tsv` rows for status reporters, `--branches` for `overlap.sh`. The lock `.codeo/active` is gitignored and local. Leases on `codeo/intake` are the only pushed shared state, written with plumbing in a throwaway index. The plugin already ships one hook (`hooks/subagent-model.sh`) that acts only when `.codeo/active` exists, which is the pattern Q3's recommendation follows.
+
+**Calls I am making unless told otherwise.**
+- One new script, `scripts/live.sh`, with `beat`, `clear` and `list`; `inflight.sh` calls `list`. The hook is a thin wrapper around `beat`.
+- The signal is keyed by issue and machine, so two sessions on one issue both show. That is the case most worth seeing.
+- A refresh never fails or delays the session: any error is swallowed after one line on stderr, and with origin unreachable nothing is published.
+- `/codeo:close` does not clear the signal by hand. The session-end hook and the expiry cover it, and an expired ref is ignored by every reader. Expired refs are deleted by the next `beat` for the same issue and machine; a ref left by a machine that never returns stays on origin, unread. If that should be swept, say so under any answer.
+- One pull request. Documentation moves in `docs/handoff.md` (*The lock*, *Parallel workflows*), `docs/skills.md`, `lib/env.sh`'s header if Q4 adds a key, and `CHANGELOG.md`.
+- Liveness stays information only: no script refuses or waits because of it.
+
+**Other workflows in flight** (`inflight.sh --except 104`, re-run 2026-11-15 after the answers). #107 is at `init` with no footprint yet. #71 is at `implement` and overlaps on four files (Q8). #70 merged while this was being planned; `origin/main` now has its changes to `scripts/github.sh`, `skills/triage/SKILL.md`, `docs/handoff.md`, `docs/skills.md` and `CHANGELOG.md`, which this branch does not have yet. #103, the sibling issue, is open and not started; it will edit `scripts/inflight.sh` and `tests/inflight.test.sh` too, which is why Q6 left `--tsv` alone.
+
+**Design checked against the code.** Scratch repositories confirmed the git side: `git fetch --prune origin '+refs/codeo/live/*:refs/codeo/live/*'` succeeds when no such ref exists, a force-push of a new parentless empty-tree commit over the old one works, and a deletion on origin is pruned by the next fetch. Not tried from here, and so not asserted by the plan: a push of that ref to GitHub itself, and anything in a web session (Q2, plan Task 7).
+
+## Outcome
+
+**Plan:** `docs/plans/2026-11-15-live-session-signal.md` — 7 tasks, unstaged for review. **Shape:** a plan under `docs/plans/` only (Goal / Architecture / Tech Stack / Spec / Global Constraints / Review Focus, checkbox tasks, the `REQUIRED SUB-SKILL` banner), with the decisions table and a sequence diagram folded in. No separate reference doc: nothing here outlives the work except what `docs/handoff.md` records (Task 5). `engineering:system-design` and `engineering:architecture` were available and applied.
+
+**What was decided** (Q1-Q7 all as recommended; the open intake question, how the signal is stored, refreshed and read, is resolved by them):
+- **Storage (Q1).** One parentless, empty-tree commit per session at `refs/codeo/live/<issue>/<machine>`, force-pushed over itself. Rejected: a file on `codeo/intake` (a commit per refresh on a branch every engineer pushes to) and a branch per session (branch-list clutter, an exclusion in every script that walks `refs/remotes/origin`).
+- **Web sessions (Q2).** `git push`, falling back to REST (`github.sh ref put|delete`, Task 1). Q2 had no option marked recommended; it was read as the third option, the REST fallback plus a by-hand web check (Task 7). Rejected: assuming a push to any ref works there.
+- **Refresh (Q3).** A plugin hook on `UserPromptSubmit` and `PostToolUse`, plus `SessionEnd` to clear. Rejected: skills calling it, which edits five `SKILL.md` files and misses a long `implement` run.
+- **Expiry (Q4).** Refresh every 300 s, expire after 900 s, fixed; `CODEO_LIVE_REFRESH_SECONDS` and `CODEO_LIVE_TTL_SECONDS` override. Rejected: a config key.
+- **Naming (Q5).** User: the GitHub login, else `git config user.name`, never an email. Machine: `$CODEO_MACHINE`, else the container's volume, `web-` and 8 characters of the session id, or the hostname. The repository is public.
+- **Display (Q6).** A `live:` line after `changed:` and an `inflight.sh --live` listing; `--tsv` and `--branches` untouched. Rejected: an always-present line, and a sixth `--tsv` column (#103 also adds facts there).
+- **Triage (Q7).** One sentence in `skills/triage/SKILL.md` and one clause in `docs/skills.md`.
+- **Overlaps.** #71 (`skills/triage/SKILL.md`, `docs/handoff.md`, `docs/skills.md`, `CHANGELOG.md`; Q8) and #107 (`CHANGELOG.md`; Q9): proceed and coordinate for both. `overlap.sh 104` printed nothing once the footprint was written, every pair being already raised; `overlap.sh --outside 104` printed nothing. No exclusive resource, so no lease was taken.
+
+**Documentation the plan changes:** `docs/handoff.md` → *Parallel workflows* (a new bullet and the sequence diagram, and a clause in *Who else is in flight*), `docs/skills.md` → *triage* → *Reads and writes*, `CHANGELOG.md` (the `Shared state:` line and one bullet). `docs/dossier.md` and `README.md` do not move. No wiki pages.
+
+**Known limits, stated in the plan:** a session idle for 15 minutes stops reading as live; a writer's clock ahead or behind shifts the window; a dev container signals only after its plugin pin moves to a release carrying this; refs left by machines that never return stay on origin, ignored. The fourth acceptance criterion (a web session) can only be settled by Task 7's by-hand check; if both the push and the REST fallback are refused there, `/codeo:qc` marks it not met.
+
+### Footprint
+
+```
+files:      scripts/live.sh, scripts/github.sh, scripts/inflight.sh, hooks/live-signal.sh, hooks/hooks.json, skills/triage/SKILL.md, docs/handoff.md, docs/skills.md, tests/live.test.sh, tests/live-signal.test.sh, tests/inflight.test.sh, tests/github.test.sh, CHANGELOG.md, docs/plans/2026-11-15-live-session-signal.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
+## Log
+
+- 2026-11-15 — Q1-Q7 raised · cost: 3m · fable-5-2 115k in + 1M cached / 14k out
+- 2026-11-15 — Q1-Q7 answered and recorded; plan drafted (.codeo/104/plan-draft.md); footprint overlap with #71 raised as Q8 · cost: 6m · sonnet-5-5 192k in + 2.6M cached / 43k out
+- 2026-11-15 — Q8 answered and recorded; footprint re-checked before the gate, #107 now overlaps on CHANGELOG.md, raised as Q9 · cost: 1m · sonnet-5-5 15k in + 917k cached / 4k out
+- 2026-11-15 — Q9 answered and recorded; no new overlap; draft presented for approval · cost: 0m · sonnet-5-5 13k in + 733k cached / 2k out
+- 2026-11-15 — planned: docs/plans/2026-11-15-live-session-signal.md · cost: 1m · sonnet-5-5 15k in + 1.3M cached / 2k out

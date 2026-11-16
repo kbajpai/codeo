@@ -220,6 +220,124 @@ assert_eq "branches" "7${tab}feat/t${tab}.codeo/7" "$out"
 
 empty_clone=$(clone_of "$(fresh_repo)")
 
+# A live signal in the origin, in live.sh's message format: a parentless commit on the empty tree.
+plant_signal() {
+    local origin=$1 issue=$2 machine=$3 user=$4 age=$5 tree sha
+    tree=$(git -C "$origin" hash-object -t tree -w /dev/null)
+    sha=$(printf 'codeo live signal\n\nissue: %s\nuser: %s\nmachine: %s\nhost: container\nbeat: %s\n' \
+        "$issue" "$user" "$machine" "$(($(date +%s) - age))" | git -C "$origin" commit-tree "$tree" -F -)
+    git -C "$origin" update-ref "refs/codeo/live/$issue/$machine" "$sha"
+}
+clear_signals() {
+    local ref
+    while IFS= read -r ref; do git -C "$1" update-ref -d "$ref"; done \
+        < <(git -C "$1" for-each-ref --format='%(refname)' refs/codeo/live/)
+}
+
+case_desc="human_block_shows_a_live_session"
+plant_signal "$origin" 7 codeo-7 bob 35
+out=$(run_inflight "$clone")
+block7=$(printf '%s\n' "$out" | awk '/^#/ { p = ($1 == "#7") } p')
+assert_contains "live line after changed" "  changed:    src/x.txt
+  live:      bob on codeo-7 (container), 3" "$block7"
+assert_contains "age unit" "s ago" "$block7"
+assert_eq "one live line overall" 1 "$(printf '%s\n' "$out" | grep -c '^  live: ')"
+
+case_desc="two_machines_are_two_live_lines"
+plant_signal "$origin" 7 laptop carol 150
+plant_signal "$origin" 7 codeo-7 bob 40
+out=$(run_inflight "$clone")
+assert_eq "two lines" 2 "$(printf '%s\n' "$out" | grep -c '^  live: ')"
+assert_contains "laptop" "  live:      carol on laptop (container), 2m ago" "$out"
+
+case_desc="an_expired_signal_prints_nothing"
+clear_signals "$origin"
+plant_signal "$origin" 7 codeo-7 bob 1000
+out=$(run_inflight "$clone")
+assert_eq "no live line" 0 "$(printf '%s\n' "$out" | grep -c 'live:' || true)"
+
+case_desc="a_failed_fetch_prints_unknown_not_stale_refs"
+clear_signals "$origin"
+plant_signal "$origin" 7 codeo-7 bob 35
+run_inflight "$clone" > /dev/null
+cp "$plugin/scripts/live.sh" "$scratch_root/live.sh.real"
+cat > "$plugin/scripts/live.sh" <<'LIVESTUB'
+#!/usr/bin/env bash
+case ${1:-} in
+    fetch) echo "live: could not fetch — stub" >&2; exit 1 ;;
+    list) printf '7\tbob\tcodeo-7\tcontainer\t30\n' ;;
+esac
+LIVESTUB
+out=$(run_inflight "$clone")
+assert_eq "unknown once per block" 3 "$(printf '%s\n' "$out" | grep -c "^  live:      unknown (could not fetch the signals)\$")"
+assert_eq "no stale signal" 0 "$(printf '%s\n' "$out" | grep -c 'bob on' || true)"
+live_rc=0
+live_out=$(cd "$clone" && PATH="$stub_bin:$PATH" bash "$plugin/scripts/inflight.sh" --live 2>"$scratch_root/err") || live_rc=$?
+assert_eq "--live exit" 1 "$live_rc"
+assert_eq "--live stdout" "" "$live_out"
+assert_contains "--live reason" "could not fetch" "$(cat "$scratch_root/err")"
+cp "$scratch_root/live.sh.real" "$plugin/scripts/live.sh"
+
+case_desc="a_malformed_signal_does_not_hide_the_ones_after_it"
+clear_signals "$origin"
+plant_raw_signal() { # plant_raw_signal <ref> <issue> <beat>
+    local tree sha
+    tree=$(git -C "$origin" hash-object -t tree -w /dev/null)
+    sha=$(printf 'codeo live signal\n\nissue: %s\nuser: eve\nmachine: bad\nhost: container\nbeat: %s\n' "$2" "$3" |
+        git -C "$origin" commit-tree "$tree" -F -)
+    git -C "$origin" update-ref "$1" "$sha"
+}
+plant_signal "$origin" 5 laptop carol 30
+plant_raw_signal refs/codeo/live/6/badbeat 6 "0$(date +%s)"
+plant_raw_signal refs/codeo/live/6/badissue 0104 "$(date +%s)"
+plant_signal "$origin" 7 codeo-7 bob 35
+live_rc=0
+out=$(run_inflight "$clone" --live) || live_rc=$?
+assert_eq "--live exit" 0 "$live_rc"
+assert_eq "both valid lines" 2 "$(printf '%s\n' "$out" | grep -c .)"
+assert_contains "issue 5" "5${tab}carol${tab}laptop" "$out"
+assert_contains "issue 7" "7${tab}bob${tab}codeo-7" "$out"
+assert_eq "none for the bad ones" 0 "$(printf '%s\n' "$out" | grep -c "eve" || true)"
+out=$(run_inflight "$clone")
+block7=$(printf '%s\n' "$out" | awk '/^#/ { p = ($1 == "#7") } p')
+assert_contains "later block keeps its live line" "  live:      bob on codeo-7 (container)" "$block7"
+
+case_desc="live_listing"
+clear_signals "$origin"
+assert_eq "nothing live" "" "$(run_inflight "$clone" --live)"
+plant_signal "$origin" 7 codeo-7 bob 35
+plant_signal "$origin" 5 laptop carol 30
+out=$(run_inflight "$clone" --live)
+assert_eq "line count" 2 "$(printf '%s\n' "$out" | wc -l | tr -d ' ')"
+assert_contains "issue 5 first" "5${tab}carol${tab}laptop${tab}container${tab}" "$(printf '%s\n' "$out" | head -n 1)"
+out=$(run_inflight "$clone" --live --except 7)
+assert_eq "except 7" 0 "$(printf '%s\n' "$out" | grep -c "^7${tab}" || true)"
+assert_eq "issue 5 stays" 1 "$(printf '%s\n' "$out" | grep -c "^5${tab}")"
+assert_eq "nothing in flight, nothing live" "" "$(run_inflight "$empty_clone" --live)"
+
+case_desc="live_cannot_be_combined"
+for flag in --tsv --branches; do
+    rc=0
+    (cd "$clone" && PATH="$stub_bin:$PATH" bash "$plugin/scripts/inflight.sh" --live "$flag" >/dev/null 2>"$scratch_root/err") || rc=$?
+    assert_eq "exit with $flag" 1 "$rc"
+    assert_contains "usage with $flag" "usage: inflight.sh" "$(cat "$scratch_root/err")"
+done
+
+case_desc="tsv_and_branches_ignore_the_signals"
+out=$(run_inflight "$clone" --tsv)
+assert_eq "tsv rows" "7${tab}feat/a${tab}working${tab}plan${tab}alice
+9${tab}feat/b${tab}pr-open${tab}qc${tab}
+5${tab}feat/c${tab}working${tab}none${tab}" "$out"
+out=$(run_inflight "$clone" --branches)
+assert_eq "branches rows" "7${tab}feat/a${tab}.codeo/7
+9${tab}feat/b${tab}.codeo/done/9
+5${tab}feat/c${tab}.codeo/5" "$out"
+: > "$GH_STUB_LOG"
+run_inflight "$clone" --branches > /dev/null
+assert_eq "gh log" "" "$(cat "$GH_STUB_LOG")"
+clear_signals "$origin"
+
+
 case_desc="tsv empty"
 out=$(run_inflight "$empty_clone" --tsv)
 assert_eq "stdout" "" "$out"
