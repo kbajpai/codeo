@@ -64,6 +64,7 @@ Plan `docs/plans/2026-11-16-cmd-mode-containers.md`, Tasks 1-9 built and reviewe
 **Not proved here** (Task 10, the engineer's): macOS `/bin/bash` 3.2, a real Docker/BuildKit build, login-shell PATH, Remote Control in cmd mode, the VS Code route, and the `/codeo:init` hand-off in a cmd-mode home container (after merge).
 
 ### Round 2
+2026-11-16
 (send-back from qc.md round 1)
 
 QC round 1 held one blocking finding (F1) and six non-blocking ones; all seven were checked against the code and held.
