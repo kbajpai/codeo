@@ -105,6 +105,12 @@ bring_up() {
     run_start "$1"
 }
 
+# require_docker: exit 1 with one line unless the Docker daemon answers.
+require_docker() {
+    docker info >/dev/null 2>&1 \
+        || die 'Docker is not available: install it and start it, then run this again'
+}
+
 # cmd_home <args...>: home [--rebuild].
 cmd_home() {
     local rebuild=0
@@ -113,9 +119,23 @@ cmd_home() {
         1) [[ "$1" == --rebuild ]] || usage; rebuild=1 ;;
         *) usage ;;
     esac
-    docker info >/dev/null 2>&1 \
-        || die 'Docker is not available: install it and start it, then run this again'
+    require_docker
     bring_up codeo-home "$base_ref" "$rebuild"
+}
+
+# cmd_issue <args...>: issue <N> <branch> [--rebuild]. N is a positive integer without a leading zero;
+# the branch starts with a letter or digit and holds only letters, digits, . _ / - and no "..".
+cmd_issue() {
+    local rebuild=0
+    case $# in
+        2) ;;
+        3) [[ "$3" == --rebuild ]] || usage; rebuild=1 ;;
+        *) usage ;;
+    esac
+    case "$1" in '' | 0* | *[!0-9]*) usage ;; esac
+    case "$2" in '' | *..* | [!A-Za-z0-9]* | *[!A-Za-z0-9._/-]*) usage ;; esac
+    require_docker
+    bring_up "codeo-$1" "$2" "$rebuild"
 }
 
 main() {
@@ -124,6 +144,7 @@ main() {
     shift
     case "$cmd" in
         home) cmd_home "$@" ;;
+        issue) cmd_issue "$@" ;;
         *) usage ;;
     esac
 }

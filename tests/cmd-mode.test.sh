@@ -65,7 +65,10 @@ case "$1" in
                 if ((rc == 0)); then : >"$d/clone"; fi
                 exit "$rc"
                 ;;
-            *devcontainer-start.sh*) echo "devcontainer-start: ready" ;;
+            *devcontainer-start.sh*)
+                echo "devcontainer-start: ready"
+                case "$*" in *codeo-113*) echo "lock: took the lock for #113 on ${STUB_BRANCH:-}" ;; esac
+                ;;
         esac
         ;;
 esac
@@ -80,7 +83,7 @@ cm_run() {
     # Per-case settings: cm_git_bin (a directory with git, put on PATH after bin/), CM_GIT_NAME and
     # CM_GIT_EMAIL (the host's GIT_AUTHOR_*), CM_CONTEXT (the host's CODEO_CONTEXT).
     [[ -e "$cm_dir/gitconfig" ]] || : >"$cm_dir/gitconfig"
-    env -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL -u CODEO_CONTEXT -u CODEO_REPO_URL \
+    env -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL -u CODEO_CONTEXT -u CODEO_REPO_URL GIT_CONFIG_NOSYSTEM=1 \
         PATH="$cm_dir/bin${cm_git_bin:+:$cm_git_bin}" HOME="$cm_dir" GIT_CONFIG_GLOBAL="$cm_dir/gitconfig" \
         ${CM_GIT_NAME:+GIT_AUTHOR_NAME="$CM_GIT_NAME"} ${CM_GIT_EMAIL:+GIT_AUTHOR_EMAIL="$CM_GIT_EMAIL"} \
         ${CM_CONTEXT:+CODEO_CONTEXT="$CM_CONTEXT"} \
@@ -243,6 +246,66 @@ a_host_with_only_a_name_passes_only_the_name() {
         || fail "line was: $(cm_calls | tail -n 1)"
 }
 
+issue_without_docker_is_one_line() {
+    cm_setup nodockerissue
+    STUB_INFO_RC=1 cm_run issue 113 b
+    ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
+    [[ "$cm_err" == "codeo-container: Docker is not available"* && "$cm_err" != *$'\n'* ]] \
+        || fail "stderr is not the one line: $cm_err"
+    [[ "$(cm_calls)" == "info" ]] || fail "calls were: $(cm_calls)"
+}
+
+issue_uses_the_numbered_name_and_the_branch() {
+    cm_setup issue
+    local b=feat/cmd-mode-start-use-home want
+    STUB_BRANCH=$b cm_run issue 113 "$b"
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    want=$(lines "$l_info" 'inspect --format {{.State.Running}} codeo-113' 'image inspect codeo-dev:codeo-113' \
+        "build -t codeo-dev:codeo-113 $url#$b:.devcontainer" \
+        'run -d --init --name codeo-113 --hostname codeo-113 --memory=4g -v codeo-113:/workspaces -v codeo-gh:/home/dev/.config/gh -v codeo-git:/home/dev/.config/git -e GIT_CONFIG_GLOBAL=/home/dev/.config/git/config -e CLAUDE_CONFIG_DIR=/workspaces/.claude -e CODEO_CMD_MODE=1 codeo-dev:codeo-113 sleep infinity' \
+        'exec -u root codeo-113 chown dev:dev /workspaces' 'exec codeo-113 test -d /workspaces/codeo-113/.git' \
+        "exec codeo-113 git clone --branch $b $url /workspaces/codeo-113" \
+        'exec -w /workspaces/codeo-113 codeo-113 bash .devcontainer/scripts/devcontainer-start.sh')
+    [[ "$(cm_calls)" == "$want" ]] || fail "calls were: $(cm_calls)"
+    [[ "$cm_out" == *"lock: took the lock for #113 on $b" ]] || fail "stdout was: $cm_out"
+}
+
+issue_rejects_unsafe_numbers_and_branches() {
+    local n b
+    for n in abc 0 1a -1 01 ''; do
+        cm_setup badnum
+        cm_run issue "$n" b
+        ((cm_rc == 2)) || fail "number '$n' exited $cm_rc, not 2"
+        [[ "$cm_err" == *"usage: codeo-container.sh home"* ]] || fail "number '$n' printed no usage"
+        [[ -z "$(cm_calls)" ]] || fail "number '$n' called docker: $(cm_calls)"
+    done
+    # shellcheck disable=SC2016
+    for b in -x 'a b' 'a;b' '$(id)' 'a/../b' '`id`' ''; do
+        cm_setup badbranch
+        cm_run issue 113 "$b"
+        ((cm_rc == 2)) || fail "branch '$b' exited $cm_rc, not 2"
+        [[ "$cm_err" == *"usage: codeo-container.sh home"* ]] || fail "branch '$b' printed no usage"
+        [[ -z "$(cm_calls)" ]] || fail "branch '$b' called docker: $(cm_calls)"
+    done
+}
+
+issue_rebuild_and_rerun_follow_home() {
+    cm_setup issuerebuild
+    echo running >"$cm_dir/state"
+    STUB_IMAGE=present STUB_CLONE=present cm_run issue 113 b --rebuild
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    local calls
+    calls=$(cm_calls)
+    [[ "$calls" == *$'\nrm -f codeo-113\n'* && "$calls" == *"build -t codeo-dev:codeo-113 $url#b:.devcontainer"* ]] \
+        || fail "no rm and build: $calls"
+    cm_setup issuererun
+    echo running >"$cm_dir/state"
+    STUB_CLONE=present cm_run issue 113 b
+    ((cm_rc == 0)) || fail "rerun exited $cm_rc: $cm_err"
+    [[ "$(cm_calls)" == "$(lines info 'inspect --format {{.State.Running}} codeo-113' 'exec codeo-113 test -d /workspaces/codeo-113/.git' \
+        'exec -w /workspaces/codeo-113 codeo-113 bash .devcontainer/scripts/devcontainer-start.sh')" ]] || fail "rerun calls: $(cm_calls)"
+}
+
 cases=(
     usage_errors_exit_2_and_run_no_docker
     docker_that_is_not_there_is_one_line
@@ -256,6 +319,10 @@ cases=(
     identity_is_passed_to_the_start_script_only
     identity_falls_back_to_the_host_environment_then_to_nothing
     a_host_with_only_a_name_passes_only_the_name
+    issue_without_docker_is_one_line
+    issue_uses_the_numbered_name_and_the_branch
+    issue_rejects_unsafe_numbers_and_branches
+    issue_rebuild_and_rerun_follow_home
 )
 
 for current in "${cases[@]}"; do
