@@ -66,7 +66,7 @@ The container is the same as the VS Code route's: the same name, 4 GB memory cap
 
 - The hostname is the container's name, so the prompt reads `dev@codeo-<N>`. The VS Code route sets none.
 - The script sets `CODEO_CMD_MODE`. The start script then writes no `.vscode/settings.json`, because no VS Code is there to name, and does not wait for a host `~/.gitconfig`, because none is copied in.
-- The git identity comes from the host's `git config user.name` and `user.email`, else from `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` in the host's environment, each on its own. They are passed to the start script's run only, as `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL`, so the start script's seeding applies: it fills a key the `codeo-git` volume lacks and never overwrites one it has.
+- The git identity comes from the host's `git config --global user.name` and `--global user.email` (read only where git is usable: on a Mac, once `xcode-select -p` succeeds, so the Command Line Tools install dialog never opens; a repository's own setting is never used), else from `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` in the host's environment, each on its own. They are passed to the start script's run only, as `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL`, so the start script's seeding applies: it fills a key the `codeo-git` volume lacks and never overwrites one it has.
 - Claude Code's login and sessions live on the container's own volume, at `/workspaces/.claude` (`CLAUDE_CONFIG_DIR`). A rebuild keeps them. `docker volume rm codeo-<N>` removes them.
 - The terminal's title is set by `shell`, and the session title by the same hook as in VS Code.
 
