@@ -48,3 +48,4 @@ None.
 ## Log
 
 - 2026-11-16 — init dossier drafted for review
+- 2026-11-16 — initialized: branch fix/follow-ups-70-71-104 off main at 35fcef4 · cost: 3m · sonnet-5-5 15k in + 744k cached / 4k out
