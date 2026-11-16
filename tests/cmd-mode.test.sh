@@ -35,6 +35,7 @@ trap 'rm -rf "$scratch"' EXIT
 # clone files; it uses builtins only, since PATH holds nothing else.
 cm_setup() {
     cm_dir="$scratch/$1"
+    cm_git_bin=""
     mkdir -p "$cm_dir/bin"
     : >"$cm_dir/calls"
     echo missing >"$cm_dir/state"
@@ -76,10 +77,23 @@ STUB
 # cm_run <args...>: run the script with only the stub on PATH; sets cm_rc, cm_out, cm_err.
 cm_run() {
     cm_rc=0
-    env -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL PATH="$cm_dir/bin" \
+    # Per-case settings: cm_git_bin (a directory with git, put on PATH after bin/), CM_GIT_NAME and
+    # CM_GIT_EMAIL (the host's GIT_AUTHOR_*), CM_CONTEXT (the host's CODEO_CONTEXT).
+    [[ -e "$cm_dir/gitconfig" ]] || : >"$cm_dir/gitconfig"
+    env -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL -u CODEO_CONTEXT -u CODEO_REPO_URL \
+        PATH="$cm_dir/bin${cm_git_bin:+:$cm_git_bin}" HOME="$cm_dir" GIT_CONFIG_GLOBAL="$cm_dir/gitconfig" \
+        ${CM_GIT_NAME:+GIT_AUTHOR_NAME="$CM_GIT_NAME"} ${CM_GIT_EMAIL:+GIT_AUTHOR_EMAIL="$CM_GIT_EMAIL"} \
+        ${CM_CONTEXT:+CODEO_CONTEXT="$CM_CONTEXT"} \
         "$bash_abs" "$script" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_rc=$?
     cm_out=$(<"$cm_dir/out")
     cm_err=$(<"$cm_dir/err")
+}
+
+# cm_with_git: put a directory holding only a symlink to the real git on PATH for later cm_run calls.
+cm_with_git() {
+    mkdir -p "$cm_dir/gitbin"
+    ln -sf "$(command -v git)" "$cm_dir/gitbin/git"
+    cm_git_bin="$cm_dir/gitbin"
 }
 
 # cm_calls: the docker calls the stub logged, one per line.
@@ -183,6 +197,52 @@ the_script_is_committed_executable_with_a_bash_shebang() {
     [[ -r "$script" && "$(head -n 1 "$script")" == '#!/usr/bin/env bash' ]] || fail "first line is not #!/usr/bin/env bash"
 }
 
+home_builds_from_a_local_context_when_codeo_context_is_set() {
+    cm_setup context
+    CM_CONTEXT=/x cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls)" == "$(lines "$l_info" "$l_inspect" "$l_image" 'build -t codeo-dev:codeo-home /x' "$l_run" "$l_chown" "$l_test" "$l_clone" "$l_start")" ]] \
+        || fail "calls were: $(cm_calls)"
+}
+
+l_start_id="-w /workspaces/codeo-home codeo-home bash .devcontainer/scripts/devcontainer-start.sh"
+
+identity_is_passed_to_the_start_script_only() {
+    cm_setup identity
+    cm_with_git
+    git config --file "$cm_dir/gitconfig" user.name "Ada O'Neil"
+    git config --file "$cm_dir/gitconfig" user.email ada@example.com
+    cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    local want="exec -e GIT_AUTHOR_NAME=Ada O'Neil -e GIT_AUTHOR_EMAIL=ada@example.com $l_start_id"
+    [[ "$(cm_calls)" == "$(lines "$l_info" "$l_inspect" "$l_image" "$l_build" "$l_run" "$l_chown" "$l_test" "$l_clone" "$want")" ]] \
+        || fail "calls were: $(cm_calls)"
+    if cm_calls | grep '^run ' | grep -q GIT_AUTHOR; then fail "run carries the identity"; fi
+}
+
+identity_falls_back_to_the_host_environment_then_to_nothing() {
+    cm_setup fallback
+    cm_with_git
+    CM_GIT_NAME=Grace CM_GIT_EMAIL=g@example.com cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls | tail -n 1)" == "exec -e GIT_AUTHOR_NAME=Grace -e GIT_AUTHOR_EMAIL=g@example.com $l_start_id" ]] \
+        || fail "with git: $(cm_calls | tail -n 1)"
+    cm_setup nothing
+    cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls | tail -n 1)" == "$l_start" ]] || fail "without git: $(cm_calls | tail -n 1)"
+}
+
+a_host_with_only_a_name_passes_only_the_name() {
+    cm_setup nameonly
+    cm_with_git
+    git config --file "$cm_dir/gitconfig" user.name "Ada O'Neil"
+    cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls | tail -n 1)" == "exec -e GIT_AUTHOR_NAME=Ada O'Neil $l_start_id" ]] \
+        || fail "line was: $(cm_calls | tail -n 1)"
+}
+
 cases=(
     usage_errors_exit_2_and_run_no_docker
     docker_that_is_not_there_is_one_line
@@ -192,6 +252,10 @@ cases=(
     rebuild_removes_the_container_and_keeps_the_volumes
     home_reports_a_failed_clone_as_one_line
     the_script_is_committed_executable_with_a_bash_shebang
+    home_builds_from_a_local_context_when_codeo_context_is_set
+    identity_is_passed_to_the_start_script_only
+    identity_falls_back_to_the_host_environment_then_to_nothing
+    a_host_with_only_a_name_passes_only_the_name
 )
 
 for current in "${cases[@]}"; do

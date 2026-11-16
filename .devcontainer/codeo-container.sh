@@ -80,9 +80,22 @@ ensure_clone() {
     fi
 }
 
-# run_start <name>: run the container's start script in its clone.
+# run_start <name>: run the container's start script in its clone, carrying the host's git identity
+# (git config user.name/user.email when git is on PATH, else GIT_AUTHOR_NAME/GIT_AUTHOR_EMAIL; each
+# key on its own, and a missing value is left out). Only this exec gets it, never docker run.
 run_start() {
-    docker exec -w "/workspaces/$1" "$1" bash .devcontainer/scripts/devcontainer-start.sh
+    local name=$1 git_name='' git_email=''
+    if command -v git >/dev/null 2>&1; then
+        git_name=$(git config user.name 2>/dev/null) || git_name=''
+        git_email=$(git config user.email 2>/dev/null) || git_email=''
+    fi
+    : "${git_name:=${GIT_AUTHOR_NAME:-}}"
+    : "${git_email:=${GIT_AUTHOR_EMAIL:-}}"
+    set -- exec
+    if [[ -n "$git_name" ]]; then set -- "$@" -e "GIT_AUTHOR_NAME=$git_name"; fi
+    if [[ -n "$git_email" ]]; then set -- "$@" -e "GIT_AUTHOR_EMAIL=$git_email"; fi
+    set -- "$@" -w "/workspaces/$name" "$name" bash .devcontainer/scripts/devcontainer-start.sh
+    docker "$@"
 }
 
 # bring_up <name> <ref> <rebuild:0|1>: the whole route for one container, shared by home and issue.
