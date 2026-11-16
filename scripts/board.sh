@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# The Kanban board's Status column, read and written for the pipeline — triage moves a workable
-# issue to Ready or Backlog, init starts only a Ready issue and moves it to In progress, and close
-# moves it to In review, back to In progress on a send-back, to Ready on a stash, to Backlog on an
-# abandon, and to Done once the merge is verified. One script, so no skill hand-rolls the GraphQL
-# and they all agree on which board and which field. The board comes from `board` in the
+# The Kanban board's Status column, read and written for the pipeline —
+# issue files a new issue into Backlog, triage moves a workable issue to Ready or Backlog, init
+# starts only a Ready issue and moves it to In progress, and close moves it to In review, back to
+# In progress on a send-back, to Ready on a stash, to Backlog on an abandon, and to Done once the
+# merge is verified. One script, so no skill hand-rolls the GraphQL and they all agree on which
+# board and which field. The board comes from `board` in the
 # project's .codeo/config.json (owner, projects[], gateProject, statuses{}); without one every
 # verb prints `board: not configured` and exits 3, so a caller can skip the gate.
 #
