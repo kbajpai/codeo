@@ -8,9 +8,9 @@
 
 ## Where this stands
 
-Round 1. Tasks 1-9 of `docs/plans/2026-11-16-cmd-mode-containers.md` are built, reviewed task by task and as a whole branch (verdict: ship), and pushed; the configured build (`true`) passes and the full `bash tests/run.sh` passed in each task. Task 10 is the engineer's (host checks on WSL2 and a Mac), not this skill's.
+Round 1, Q1-Q3 answered. Tasks 1-9 of `docs/plans/2026-11-16-cmd-mode-containers.md` are built, reviewed task by task and as a whole branch (verdict: ship), and pushed; the configured build (`true`) passes and the full `bash tests/run.sh` passed in each task. Task 10 is the engineer's (host checks on WSL2 and a Mac), not this skill's.
 
-The round stops on Q1-Q3: a new workflow, #116, started after the plan was written and lists three of this branch's files in its footprint. Nothing else is open, and no `## Outcome` is written while these are.
+Q1-Q3 (#116's overlap) are answered: proceed and coordinate. Nothing is open.
 
 ## Questions
 
@@ -43,8 +43,27 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-16).
 
 ## Outcome
 
-_Pending — written at the hand-off._
+### Round 1
+
+Plan `docs/plans/2026-11-16-cmd-mode-containers.md`, Tasks 1-9 built and reviewed task by task and as a whole branch (verdict: ship). Task 10 is the engineer's (host checks), not this skill's.
+
+**Built.**
+- `.devcontainer/codeo-container.sh` (new, bash 3.2, builtins plus `docker` and `git`): `home [--rebuild]`, `issue <N> <branch> [--rebuild]`, `shell home|<N>`; image built from the GitHub URL, same names, volumes and memory cap as the VS Code route, host git identity passed as `GIT_AUTHOR_*` to the start script only.
+- `.devcontainer/scripts/devcontainer-start.sh` and `session-title.sh`: `CODEO_CMD_MODE=1` skips `window-title.sh` and the `~/.gitconfig` wait and titles the session without `.vscode/settings.json`; the VS Code path is unchanged.
+- `.codeo/overlays/init.md`: the hand-off prints both routes.
+- Tests: `tests/cmd-mode.test.sh` (stub `docker`, call sequences, validation, bash 3.2 scan), six cases in `tests/devcontainer.test.sh`, three needles in `tests/init-overlay.test.sh`.
+
+**Documentation changed.** `.devcontainer/README.md` (command-line route, Mermaid sequence diagram, rebuild, removal, identity, titles) and `CHANGELOG.md` (one bullet). No page under `docs/` moves.
+
+**Build.** Configured `shell` suite build is `true`: exit 0. The full `bash tests/run.sh` passed in each task.
+
+**Overlap.** #116 (`fix/follow-ups-70-71-104`) also lists `.devcontainer/README.md`, `CHANGELOG.md` and `tests/devcontainer.test.sh`; Q1-Q3 answered *proceed and coordinate*. `overlap.sh 113` prints nothing. `sync-main.sh`: the branch already contains `origin/main`; no "also changed on main" lines.
+
+**Deviations.** None from the plan. Rulings made while building: `cm_run` in the tests runs with `GIT_AUTHOR_*` unset; minors from Tasks 3, 4 and 6 were carried into later tasks. Parked minors: the scan reports line numbers from the comment-stripped stream; `CODEO_CONTEXT` doc wording; `a//b` passes branch validation; the container id prints on stdout; `codeo-dev:<name>` images are never removed; `--rebuild` may reuse cached layers; `home` on a VS Code-created container runs the start script without `CODEO_CMD_MODE`.
+
+**Not proved here** (Task 10, the engineer's): macOS `/bin/bash` 3.2, a real Docker/BuildKit build, login-shell PATH, Remote Control in cmd mode, the VS Code route, and the `/codeo:init` hand-off in a cmd-mode home container (after merge).
 
 ## Log
 
 - 2026-11-16 — Tasks 1-9 built and reviewed, Q1-Q3 raised on #116's overlap · cost: 71m · sonnet-5-5 992k in + 26.4M cached / 160k out
+- 2026-11-16 — Q1-Q3 answered (proceed and coordinate); outcome written, build passed, handed to qc · cost: 0m · sonnet-5-5 86k in + 348k cached / 2k out
