@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Working title | Cmd mode: start and use the home and issue containers from a Linux command line, without VS Code |
+| Working title | Cmd mode: start and use the home and issue containers from a Linux or macOS command line, without VS Code |
 | Source | Engineer's request: "how can we add 'cmd mode' codeo, devcontainer, etc. all to run on Linux command line instead of VS Code" |
 | Updated | 2026-11-16 |
 
@@ -58,7 +58,7 @@ Yes: "Also, make it mac bash compatible" (engineer, in the conversation, 2026-11
 
 ## Draft
 
-**Title:** Cmd mode: start and use the home and issue containers from a Linux command line, without VS Code
+**Title:** Cmd mode: start and use the home and issue containers from a Linux or macOS command line, without VS Code
 
 **Type:** Feature. **Labels:** `enhancement`.
 
