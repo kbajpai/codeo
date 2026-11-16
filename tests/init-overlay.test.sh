@@ -17,7 +17,8 @@ out=$(bash scripts/overlay.sh init host-workflow 2>/dev/null) || rc=$?
 
 for needle in 'home container' 'This skill does not write `.codeo/active`' 'Clone Repository in Named Container Volume' \
     'https://github.com/kbajpai/codeo/tree/' 'codeo-<N>' 'git worktree remove' 'git branch -D' \
-    '/codeo:plan' 'lock: took the lock for #<N>'; do
+    '/codeo:plan' 'lock: took the lock for #<N>' \
+    'bash codeo-container.sh issue <N> <branch>' 'bash codeo-container.sh shell <N>' 'command line'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 [[ "$out" != *'claude --cloud'* ]] || fail "overlay output mentions claude --cloud"
