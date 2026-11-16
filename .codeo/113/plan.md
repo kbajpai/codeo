@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The intake dossier, the dev container's files and scripts, their tests and the other workflow in flight (#104) are read. Nothing is drafted: Q1-Q4 each change what the plan's tasks are. The calls I can make myself are under `## Notes`, so you can overrule any of them while answering.
+Round 1, Q1-Q4 answered in the conversation. The intake dossier, the dev container's files and scripts, their tests and the other workflow in flight (#104) are read. Nothing is drafted: Q1-Q4 each change what the plan's tasks are. The calls I can make myself are under `## Notes`, so you can overrule any of them while answering.
 
 ## Questions
 
@@ -22,6 +22,7 @@ Round 1. The intake dossier, the dev container's files and scripts, their tests 
 - *Pipe it every time:* `curl … | bash -s -- home` for each command. Nothing is saved on the host, but every command is a long line and needs the network.
 
 **Answer:**
+Accepted the recommendation: download the script once with a `curl` line, then run it; the image is built from the GitHub URL, so the host needs no git and no clone (engineer, in the conversation, 2026-11-16).
 
 ### Q2 — Should a cmd-mode container keep the Claude login across a rebuild?
 
@@ -33,6 +34,7 @@ Round 1. The intake dossier, the dev container's files and scripts, their tests 
 - *Leave it as it is:* same as the VS Code route; a rebuild means `claude auth login` again. Least to build and to test.
 
 **Answer:**
+Accepted the recommendation: keep the Claude config per container, on the container's own `codeo-<N>` volume (engineer, in the conversation, 2026-11-16).
 
 ### Q3 — On which machines, and in which shell, will you run the host checks?
 
@@ -43,6 +45,7 @@ Round 1. The intake dossier, the dev container's files and scripts, their tests 
 With a Mac, the plan ends with a host task there. Without one, the only proof this suite can give is a test that scans the script for constructs bash 3.2 and BSD tools lack (associative arrays, `mapfile`, `${x,,}`, `readlink -f`, `sed -i`, `stat -c` and the like), and the plan says plainly that the macOS criterion is unproven on a real Mac until someone runs it. I would write that test either way.
 
 **Answer:**
+"I own a mac" (engineer, in the conversation, 2026-11-16). That settles the macOS criterion: the plan ends with a host task on the Mac, run with `/bin/bash`. The Linux half went unanswered; I take the Linux host to be WSL2's bash and write every host command neutral (one command, no shell variable), so the shell does not matter. Say so if that is wrong.
 
 ### Q4 — #104 also changes `CHANGELOG.md`: proceed, wait, or re-scope?
 
@@ -54,6 +57,7 @@ With a Mac, the plan ends with a host task there. Without one, the only proof th
 - *Re-scope:* leave `CHANGELOG.md` out of this change.
 
 **Answer:**
+Accepted the recommendation: proceed and coordinate (engineer, in the conversation, 2026-11-16).
 
 ## Notes
 
