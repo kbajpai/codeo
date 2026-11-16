@@ -136,7 +136,7 @@ beat() {
     fi
     echo "$now" > "$(stamp)"
 
-    message_file=$(git rev-parse --git-path codeo-live-message)
+    message_file=$(mktemp "$(git rev-parse --git-path codeo-live-message).XXXXXX")
     printf 'codeo live signal\n\nissue: %s\nuser: %s\nmachine: %s\nhost: %s\nbeat: %s\n' \
         "$issue" "$(user_label)" "$machine" "$host" "$now" > "$message_file"
     tree=$(git hash-object -t tree -w /dev/null)
@@ -186,7 +186,7 @@ list() {
         [[ -n $issue && -n $user && -n $machine && -n $host ]] || continue
         # Anyone with push access can plant a ref here, so every field is checked on the way out.
         case $host in container | web | local) ;; *) continue ;; esac
-        [[ $issue =~ ^[0-9]{1,9}$ && $beat =~ ^[0-9]+$ ]] || continue
+        [[ $issue =~ ^[1-9][0-9]{0,8}$ && $beat =~ ^[1-9][0-9]{0,11}$ ]] || continue
         user=$(clean "$user" 64)
         machine=$(clean "$machine" 64)
         [[ -n $user && -n $machine ]] || continue

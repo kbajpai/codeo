@@ -278,6 +278,30 @@ assert_eq "--live stdout" "" "$live_out"
 assert_contains "--live reason" "could not fetch" "$(cat "$scratch_root/err")"
 cp "$scratch_root/live.sh.real" "$plugin/scripts/live.sh"
 
+case_desc="a_malformed_signal_does_not_hide_the_ones_after_it"
+clear_signals "$origin"
+plant_raw_signal() { # plant_raw_signal <ref> <issue> <beat>
+    local tree sha
+    tree=$(git -C "$origin" hash-object -t tree -w /dev/null)
+    sha=$(printf 'codeo live signal\n\nissue: %s\nuser: eve\nmachine: bad\nhost: container\nbeat: %s\n' "$2" "$3" |
+        git -C "$origin" commit-tree "$tree" -F -)
+    git -C "$origin" update-ref "$1" "$sha"
+}
+plant_signal "$origin" 5 laptop carol 30
+plant_raw_signal refs/codeo/live/6/badbeat 6 "0$(date +%s)"
+plant_raw_signal refs/codeo/live/6/badissue 0104 "$(date +%s)"
+plant_signal "$origin" 7 codeo-7 bob 30
+live_rc=0
+out=$(run_inflight "$clone" --live) || live_rc=$?
+assert_eq "--live exit" 0 "$live_rc"
+assert_eq "both valid lines" 2 "$(printf '%s\n' "$out" | grep -c .)"
+assert_contains "issue 5" "5${tab}carol${tab}laptop" "$out"
+assert_contains "issue 7" "7${tab}bob${tab}codeo-7" "$out"
+assert_eq "none for the bad ones" 0 "$(printf '%s\n' "$out" | grep -c "eve" || true)"
+out=$(run_inflight "$clone")
+block7=$(printf '%s\n' "$out" | awk '/^#/ { p = ($1 == "#7") } p')
+assert_contains "later block keeps its live line" "  live:      bob on codeo-7 (container)" "$block7"
+
 case_desc="live_listing"
 clear_signals "$origin"
 assert_eq "nothing live" "" "$(run_inflight "$clone" --live)"

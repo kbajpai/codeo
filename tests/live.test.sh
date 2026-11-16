@@ -441,6 +441,34 @@ assert_eq "nothing listed" "" "$(live "$other" list --tsv)"
 live "$other" list > /dev/null
 assert_eq "human exit" 0 "$?"
 
+case_desc=list_skips_zero_padded_beat_and_issue_and_keeps_the_rest
+new_world
+other=$(clone_of "$origin")
+now=$(date +%s)
+plant refs/codeo/live/1/first "$(signal 1 alice first local "$now")"
+plant refs/codeo/live/2/badbeat "$(signal 2 alice badbeat local "0$now")"
+plant refs/codeo/live/2/badissue "$(signal 0104 alice badissue local "$now")"
+plant refs/codeo/live/3/last "$(signal 3 alice last local "$now")"
+live "$other" fetch
+rc=0
+tsv=$(live "$other" list --tsv) || rc=$?
+assert_eq "list exit" 0 "$rc"
+assert_eq "only issues 1 and 3" "$(printf '1\talice\tfirst\tlocal\t0\n3\talice\tlast\tlocal\t0')" "$tsv"
+
+case_desc=concurrent_forced_beats_do_not_share_a_message_file
+new_world; clone_with_lock 104 container codeo-104
+for round in 1 2 3 4 5 6 7 8 9 10; do
+    CODEO_MACHINE=m1 live "$clone" beat --force 2> "$scratch_root/err1" > /dev/null & pid1=$!
+    CODEO_MACHINE=m2 live "$clone" beat --force 2> "$scratch_root/err2" > /dev/null & pid2=$!
+    rc1=0 rc2=0
+    wait "$pid1" || rc1=$?
+    wait "$pid2" || rc2=$?
+    assert_eq "round $round exits" "0 0" "$rc1 $rc2"
+    assert_eq "round $round stderr" "" "$(cat "$scratch_root/err1" "$scratch_root/err2")"
+done
+assert_eq "both refs exist" 2 "$(refs | grep -c .)"
+assert_eq "no message file left" "" "$(ls "$clone/.git" | grep '^codeo-live-message' || true)"
+
 case_desc=fetch_prunes_a_cleared_signal
 new_world; clone_with_lock 104 container codeo-104
 run beat --force

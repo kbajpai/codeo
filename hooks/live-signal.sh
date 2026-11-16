@@ -3,8 +3,8 @@
 # when the session ends. Hooked to UserPromptSubmit and PostToolUse (`beat`) and SessionEnd (`clear`).
 #
 #   live-signal.sh beat|clear
-#       Reads the hook JSON on stdin and judges the project named by its cwd, never the process
-#       cwd. Does nothing without a project or a .codeo/active lock. `beat` starts live.sh in the
+#       Reads the hook JSON on stdin and judges the project its cwd names, falling back to the
+#       process directory only when the JSON carries none. Does nothing without a project or a .codeo/active lock. `beat` starts live.sh in the
 #       background with every stream closed, so the hook returns at once; `clear` runs in the
 #       foreground. Always exits 0 and prints nothing: a signal must never break a tool call.
 # No `set -e`: every failure below is swallowed on purpose.
