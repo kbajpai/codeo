@@ -21,6 +21,7 @@ The round stops on Q1-Q3: a new workflow, #116, started after the plan was writt
 **Options:** *proceed and coordinate* (recommended: this branch only adds a new section after *Opening a container* and one table row, so a conflict is unlikely and small) · *sequence after #116* (this branch waits for #116's merge, then merges `main`) · *re-scope* (drop the README change from this branch; the docs task would be reopened).
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-16).
 
 ### Q2 — #116 also changes `CHANGELOG.md`: proceed, sequence or re-scope?
 
@@ -29,6 +30,7 @@ The round stops on Q1-Q3: a new workflow, #116, started after the plan was writt
 **Options:** *proceed and coordinate* (recommended, as with #104, whose merge was clean) · *sequence after #116* · *re-scope* (leave `CHANGELOG.md` out).
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-16).
 
 ### Q3 — #116 also changes `tests/devcontainer.test.sh`: proceed, sequence or re-scope?
 
@@ -37,6 +39,7 @@ The round stops on Q1-Q3: a new workflow, #116, started after the plan was writt
 **Options:** *proceed and coordinate* (recommended) · *sequence after #116* · *re-scope* (not workable: the cases belong with the code they test).
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-16).
 
 ## Outcome
 
