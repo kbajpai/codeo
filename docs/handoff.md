@@ -145,12 +145,43 @@ it.
   | The merge is verified | `close` | `done` |
 - **Who else is in flight.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" [--except <N>]`
   lists every workflow with a dossier on a pushed branch — its issue, branch, assignee, last
-  finished step, its plan's footprint, and the files the branch actually changes. It reads origin,
-  so it sees other engineers' work as soon as they push, which every step does. `inflight.sh --tsv`
+  finished step, its plan's footprint, the files the branch actually changes, and a `live:` line for
+  each live session. It reads origin, so it sees other engineers' work as soon as they push,
+  which every step does. `inflight.sh --tsv`
   and `intake.sh lease list --tsv` are the forms a status reporter reads, and the config's
   `hooks.onLeaseChange` runs after every lease change, since a push to the intake branch is all a
   lease change is. Any such report is a view of what is pushed: a row that looks wrong is fixed by
   pushing, never by editing the report.
+- **Who is working right now.** While a Claude session runs in a checkout holding `.codeo/active`,
+  a plugin hook publishes `refs/codeo/live/<issue>/<machine>` — one parentless commit, force-pushed
+  over itself — at most every 5 minutes, and deletes it when the session ends. `inflight.sh` prints
+  a `live:` line (`<user> on <machine> (<host>), <age> ago`) for a workflow with a signal at most 15
+  minutes old, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --live` lists them as TSV
+  (issue, user, machine, host, age in seconds). When the signals cannot be fetched the block says
+  `live: unknown (could not fetch the signals)`. A crash needs no cleanup: the line stops after the
+  expiry. The signal adds nothing to the feature branch or its PR, and it is information only: no
+  script refuses or waits because a workflow is live. It names the GitHub login and a machine label
+  on a public repository, nothing else; the machine is `CODEO_MACHINE`, else the container's volume,
+  the web session's first 8 characters, or the hostname. The reader's own clock judges the age.
+  `CODEO_LIVE_REFRESH_SECONDS` (300), `CODEO_LIVE_TTL_SECONDS` (900), `CODEO_MACHINE` and
+  `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings. Where a push to that ref is refused it is written
+  through the REST API, and where neither works nothing is published and the session says so once.
+
+  ```mermaid
+  sequenceDiagram
+      participant S as Claude session (checkout bound to #N)
+      participant H as hooks/live-signal.sh
+      participant O as origin (refs/codeo/live/N/machine)
+      participant R as inflight.sh in another clone
+      S->>H: UserPromptSubmit / PostToolUse
+      H->>H: .codeo/active present? less than 5 min since last beat?
+      H-->>O: live.sh beat — force-push one parentless commit (REST if the push is refused)
+      R->>O: fetch +refs/codeo/live/*:refs/codeo/live/* (--prune)
+      R->>R: beat within 15 min? print "live:" line
+      S->>H: SessionEnd
+      H->>O: delete the ref
+      Note over O,R: a crash deletes nothing; the line stops printing 15 min after the last beat
+  ```
 - **The footprint.** `/codeo:plan` records what the change will touch — `dossier.md` → *The
   footprint* has the block — and compares it with every other workflow's before its review gate.
   The comparison does not stop there: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" <N>` runs at

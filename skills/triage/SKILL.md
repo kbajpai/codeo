@@ -105,6 +105,9 @@ is the container the message names.
       - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh"` for every workflow on a pushed branch,
         with its last step and assignee. One whose last step is weeks old, or assigned to nobody,
         is worth asking about.
+        A workflow whose block carries a `live:` line has a session working it now: quote the line as
+        evidence and do not ask about it as parked work. `live: unknown` means the signals could not
+        be read; judge that workflow as before and say so in the run's `## Outcome`.
       - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list`. The lease on the config's
         environment resource (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.resource`)
         is held more than a day, or by an issue whose last `qc.md` round is clear or whose PR is
