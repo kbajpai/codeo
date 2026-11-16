@@ -3,9 +3,12 @@
 # without VS Code. Each case is a function named in the final cases=( ... ) array; add a case by
 # writing a function and listing it. The script runs with PATH holding only a stub docker (so it can
 # use nothing but shell builtins and docker), against a scratch directory that logs every docker call.
-# Today it checks the usage errors, the Docker-not-available line, the exact docker calls of a fresh
-# home, a re-run on a running and on a stopped container, --rebuild keeping the volumes, a failed
-# clone reported as one line, and that the script is committed executable with a bash shebang.
+# It checks the usage errors, the Docker-not-available line, the exact docker calls of home, issue and
+# shell (fresh, re-run, stopped, --rebuild keeping the volumes, a failed clone as one line, a local
+# CODEO_CONTEXT build), the git identity passed to the start script only, the validation of issue
+# numbers and branches and of shell targets, that the script is committed executable with a bash
+# shebang, and a portability scan that fails on bash 4 and GNU-only constructs (macOS has bash 3.2
+# and BSD tools). CM_SCRIPT=<file> points the portability scan at another copy of the script.
 #
 #   bash tests/cmd-mode.test.sh
 #
@@ -354,6 +357,24 @@ shell_rejects_anything_but_home_or_a_number() {
     done
 }
 
+script_uses_only_bash_3_2_and_bsd_constructs() {
+    local target=${CM_SCRIPT:-$repo/.devcontainer/codeo-container.sh} code pat hit
+    # Whole-line comments and blank lines are dropped; a trailing comment is still scanned.
+    code=$(grep -vE '^[[:space:]]*(#|$)' "$target") || code=''
+    # shellcheck disable=SC2016  # the patterns are literal text, not expansions
+    local fixed=('declare -A' 'declare -n' 'local -n' 'mapfile' 'readarray' 'coproc' '&>' '|&' ';&' ';;&'
+        '[[ -v' 'readlink -f' 'sed -i' 'stat -c' 'date -d' 'grep -P' 'xargs -r' '=(' '$EPOCHSECONDS' '$BASHPID')
+    for pat in "${fixed[@]}"; do
+        hit=$(printf '%s\n' "$code" | grep -nF -- "$pat") || hit=''
+        [[ -z "$hit" ]] || fail "uses '$pat' (bash 4+ or GNU-only): $hit"
+    done
+    hit=$(printf '%s\n' "$code" | grep -nE '\$\{[^}]*(,,|\^\^)') || hit=''
+    [[ -z "$hit" ]] || fail "uses a case-conversion expansion (bash 4+): $hit"
+    hit=$(printf '%s\n' "$code" | grep -nE '\[\[.*=~[[:space:]]*["'"'"']') || hit=''
+    [[ -z "$hit" ]] || fail "quotes a [[ =~ ]] pattern (bash 3.2 matches it literally): $hit"
+    printf '%s\n' "$code" | grep -qxF 'set -euo pipefail' || fail "no 'set -euo pipefail' line"
+}
+
 cases=(
     shell_opens_bash_in_the_clone
     shell_starts_a_stopped_container_first
@@ -375,6 +396,7 @@ cases=(
     issue_uses_the_numbered_name_and_the_branch
     issue_rejects_unsafe_numbers_and_branches
     issue_rebuild_and_rerun_follow_home
+    script_uses_only_bash_3_2_and_bsd_constructs
 )
 
 for current in "${cases[@]}"; do
