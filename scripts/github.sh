@@ -17,7 +17,7 @@
 #   workflow dispatch <workflow-file> <ref> (prints nothing on success; the ref must carry the
 #   workflow file and the caller needs `actions: write`), label list,
 #   ref put <ref> <message-file> (prints the new root commit's sha) | ref delete <ref> (prints
-#   nothing, also when the ref is already gone); both only for refs/codeo/live/*.
+#   nothing, also when the ref is already gone); both only for refs/codeo/live/<issue>/<machine>.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
@@ -246,8 +246,9 @@ case $group in
             *) die "unknown ref subcommand: $sub" ;;
         esac
         # Only the live-session signal's namespace may be written through this verb.
-        [[ ${1:-} == refs/codeo/live/* ]] \
-            || die "ref $sub: only refs/codeo/live/* may be written, got ${1:-nothing}"
+        # The whole shape is checked: a glob would let `*` match `/` and `..` and walk out of it.
+        [[ ${1:-} =~ ^refs/codeo/live/[0-9]+/[A-Za-z0-9._-]+$ && ${1:-} != *..* ]] \
+            || die "ref $sub: only refs/codeo/live/<issue>/<machine> may be written, got ${1:-nothing}"
         ref=$1; api_ref=${ref#refs/}
         case $sub in
             put)
@@ -255,10 +256,13 @@ case $group in
                 base=$(codeo_base_branch) || exit 1
                 head=$(gh api "repos/$repo/git/ref/heads/$base" -q .object.sha) \
                     || die "ref put $ref: could not read the head of $base"
+                # The commit reuses the base head's tree; the signal's own tree is irrelevant to readers.
                 tree=$(gh api "repos/$repo/git/commits/$head" -q .tree.sha) \
                     || die "ref put $ref: could not read the tree of $head"
                 # No parents field: the commit is a root, so the signal drags no history along.
                 sha=$(gh api -X POST "repos/$repo/git/commits" -F "message=@$msg_file" -f "tree=$tree" \
+                    -f 'author[name]=codeo-live' -f 'author[email]=codeo-live@invalid' \
+                    -f 'committer[name]=codeo-live' -f 'committer[email]=codeo-live@invalid' \
                     -q .sha) || die "ref put $ref: could not create the commit"
                 [[ -n $sha ]] || die "ref put $ref: empty commit response"
                 if ! gh api -X PATCH "repos/$repo/git/refs/$api_ref" -f "sha=$sha" -F force=true >/dev/null 2>&1; then

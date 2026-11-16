@@ -683,6 +683,10 @@ assert_eq "no parents field" 0 "$(grep -c 'parents' <<<"$log" || true)"
 assert_contains "ref PATCH" "METHOD=PATCH PATH=repos/$repo/git/refs/codeo/live/104/m" "$log"
 assert_contains "ref sha" "FIELD=sha=c1" "$log"
 assert_contains "ref force" "FIELD=force=true" "$log"
+assert_contains "author name" "FIELD=author[name]=codeo-live" "$log"
+assert_contains "author email" "FIELD=author[email]=codeo-live@invalid" "$log"
+assert_contains "committer name" "FIELD=committer[name]=codeo-live" "$log"
+assert_contains "committer email" "FIELD=committer[email]=codeo-live@invalid" "$log"
 
 case_desc="ref_put_creates_the_ref_when_it_does_not_exist"
 reset_case
@@ -705,6 +709,38 @@ assert_eq "exit code" 1 "$rc"
 assert_eq "stdout empty" "" "$out"
 assert_contains "stderr names the namespace" "refs/codeo/live/" "$(cat "$err_file")"
 assert_eq "no gh call" "" "$(cat "$calls_log")"
+
+case_desc="ref_put_refuses_dot_dot_traversal"
+reset_case
+if out=$(bash "$script" ref put refs/codeo/live/../../heads/main "$scratch_dir/live-msg.txt" 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout empty" "" "$out"
+assert_contains "stderr is a github: line" "github: ref put" "$(cat "$err_file")"
+assert_eq "no gh call" "" "$(cat "$calls_log")"
+
+case_desc="ref_put_refuses_malformed_signal_refs"
+for bad in refs/codeo/live/104 refs/codeo/live/104/ refs/codeo/live/abc/m refs/codeo/live/104/a/b refs/codeo/live/104/m..x; do
+    reset_case
+    if out=$(bash "$script" ref put "$bad" "$scratch_dir/live-msg.txt" 2>"$err_file"); then rc=0; else rc=$?; fi
+    assert_eq "exit code for $bad" 1 "$rc"
+    assert_eq "no gh call for $bad" "" "$(cat "$calls_log")"
+done
+
+case_desc="ref_delete_refuses_dot_dot_traversal"
+reset_case
+if out=$(bash "$script" ref delete refs/codeo/live/../../heads/main 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout empty" "" "$out"
+assert_contains "stderr is a github: line" "github: ref delete" "$(cat "$err_file")"
+assert_eq "no gh call" "" "$(cat "$calls_log")"
+
+case_desc="ref_delete_refuses_malformed_signal_refs"
+for bad in refs/codeo/live/104 refs/codeo/live/x/m refs/codeo/live/104/a/b; do
+    reset_case
+    if out=$(bash "$script" ref delete "$bad" 2>"$err_file"); then rc=0; else rc=$?; fi
+    assert_eq "exit code for $bad" 1 "$rc"
+    assert_eq "no gh call for $bad" "" "$(cat "$calls_log")"
+done
 
 case_desc="ref_delete_removes_the_ref"
 reset_case
