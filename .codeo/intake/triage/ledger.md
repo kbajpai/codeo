@@ -117,3 +117,11 @@
 | `implement:96:login-persistence` | Claude's login does not survive a container rebuild | dismissed — nothing is lost, only a re-login | 2026-11-15 |
 | `issue:107` | Dev container follow-ups from #96; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `issue:108` | Follow-ups #97 left; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `qc:70:F9-F11-F12-J8` | #70's findings left for triage: Podman not detected by the role guard, `CODEO_CLEANUP_REMOVAL` in the production path, generic "home container only" wording, cleanup lists every archived issue | filed #116 | 2026-11-16 |
+| `qc:104:F10-F13-F14-F15-F16` | #104's findings left for triage (and F5, F7): lock-issue pattern mismatch, push-timeout wording, `ref delete` treats any Not Found as deleted, signal lingers after close, same-volume-name collision, future-dated beat, hook timeout | filed #116 | 2026-11-16 |
+| `qc:104:F3` | Web-session live signal's user label is the harness's git identity | filed #116 (referenced to #112; no requirement here) | 2026-11-16 |
+| `qc:71:F7-F9` | `board.sh set` prints one line per project; a board with no Backlog option fails every filing with no fix named; CHANGELOG omits the `issue:<N>` fingerprint change | filed #116 | 2026-11-16 |
+| `qc:107:F1-F3` | `rm -f -- ""` check unrecorded, CHANGELOG bullet overstates `codeo-root.sh`, weak title test | filed #116 | 2026-11-16 |
+| `issue:112` | Verify the live-session signal in a hosted web session; filed 2026-11-16, no branch, board Status `none` | leave in the backlog | 2026-11-16 |
+| `issue:114` | Dev container trusts the workspace folder in Claude Code; filed 2026-11-16, board Status `none` | leave in the backlog | 2026-11-16 |
+| `issue:116` | Follow-ups #70, #71, #104 and #107 left; filed 2026-11-16, board Status `none` | leave in the backlog | 2026-11-16 |
