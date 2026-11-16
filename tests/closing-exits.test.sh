@@ -5,7 +5,7 @@
 #
 #   closing-exits.test.sh [case]
 #       Cases: rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-#       issue-ready issue-not-ready issue-unreadable abandon-finished abandon-interrupted
+#       issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
 #       close-step17-lead stash-prose bites. CLOSING_EXITS_ROOT points the checks at another tree.
 #       No argument runs them all; an unknown case exits 2. Prints "all cases passed" and exits 0, or
 #       a FAIL line per failure and exits 1.
@@ -170,6 +170,15 @@ case_issue_unreadable() {
     before "$p" '/codeo:triage' '/codeo:init #<N>'
 }
 
+case_issue_backlog() {
+    local s
+    s=$(step "$issue" 8)
+    [[ -n $s ]] || { fail "no step 8 in skills/issue/SKILL.md"; return; }
+    has "$s" 'board.sh" set <N> backlog'
+    has "$s" 'board.sh" status <N>'
+    before "$s" 'board.sh" set <N> backlog' 'board.sh" status <N>'
+}
+
 case_abandon_finished() {
     para "$close" '**Closing block — abandon finished:**' || return 0
     has "$p" '/codeo:triage'
@@ -295,7 +304,7 @@ case_bites() {
 }
 
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-    issue-ready issue-not-ready issue-unreadable abandon-finished abandon-interrupted
+    issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
     close-step17-lead stash-prose host-workflow-fetch bites)
 
 if (($# > 0)); then

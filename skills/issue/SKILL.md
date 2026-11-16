@@ -9,7 +9,7 @@ Project overlay text adds to or narrows a step; it never overrides a rule marked
 
 # Filing an issue for `$ARGUMENTS`
 
-This skill drafts and files a GitHub issue in this project's repository, and that is all it does. It
+This skill drafts and files a GitHub issue in this project's repository and, with a board, puts it in the board's Backlog, and that is all it does. It
 captures the *what and why* — problem, requirements, acceptance criteria — not the *how*. Contracts,
 diagrams, and design belong to `/codeo:plan`; sketching them here duplicates work it will redo
 properly with the codebase open in front of it. **It hands off to nobody**: it files the issue,
@@ -173,9 +173,14 @@ is the container the message names.
    (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The shape of a file`). Commit the rename in one step:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit <N> "docs(codeo): issue dossier for #<N> — filed" --drop new-<slug>`.
    Then, with a board (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .board` succeeds; exit 1
-   with nothing printed means no board), read the new issue's Status once:
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`, with `<N>` from the created issue's
-   response. With no board, make no `board.sh` call. The Ready name is
+   with nothing printed means no board), put the new issue in the Backlog:
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog`, with `<N>` from the created
+   issue's response. It adds the issue to the board when it is not on it, and prints one line naming
+   the old and the new Status. Quote that line in the report.
+
+   <!-- rule: issue-09 -->
+   A failed move never fails the filing: the issue exists, so its number is reported as usual, and handed back to a caller, and the line the script printed is quoted with the fix it names (`gh auth refresh -s project` when the token lacks the `project` scope; in a hosted web session the script says to move the card by hand). Then read the new issue's Status once:
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`. With no board, make no `board.sh` call at all. The Ready name is
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.board.statuses.ready // "Ready"'`, as
    `/codeo:init` reads it. `board.sh status` prints the gate project's Status name, `unset`, `none`
    (not on the board) or `unavailable` (a hosted web session); it exits non-zero on a real failure.
@@ -186,7 +191,7 @@ is the container the message names.
 
    **Closing block — Ready, no board or unavailable:** the Status equals the Ready name, there is no board, or it printed `unavailable` (then say above the block that the Status could not be read in a web session): the next goal is starting the issue, the first step `/codeo:init #<N>`.
 
-   **Closing block — not Ready:** it printed `none`, `unset` or any other column, which is what a new issue normally gets: the next goal is getting the issue to Ready, the first step `/codeo:triage` (its *mark Ready* moves the card), then `/codeo:init #<N>`.
+   **Closing block — not Ready:** it printed `none`, `unset` or another column (`Backlog` is what a new issue normally gets once the move at filing worked, so anything else means the move failed or never ran, or the issue sits elsewhere on the board): the next goal is getting the issue to Ready, the first step `/codeo:triage` (its *mark Ready* moves the card), then `/codeo:init #<N>`.
 
    **Closing block — Status unreadable:** `board.sh status` exited non-zero: quote its line, then the first step is the fix it names (for example `gh auth refresh -s project` when the token lacks the `project` scope), then `/codeo:triage`, then `/codeo:init #<N>`.
 
@@ -203,9 +208,9 @@ lifecycle — it runs before an issue number or a branch exists, and it hands of
   `new-<slug>/` and renamed once the number exists — committed only to the intake
   branch, through `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh"`, which never checks that branch
   out. Nothing on the default branch or on a feature branch: no branch cut, no commit where a PR
-  could pick it up.
+  could pick it up. With a board, also the new issue's card: its board Status, to Backlog only, through `board.sh`.
 - **Never touches** the project's docs, code, the branch, the lock, or another skill's dossier
-  file. When another skill calls it, that caller records the new number in its own outcome and
+  file, or any board Status other than the Backlog it sets at filing. When another skill calls it, that caller records the new number in its own outcome and
   log line; this skill does not.
 - **Spins out subagents** on the configured subagent model (`models.subagent`, `sonnet` when unset), passed explicitly, and prefers a direct
   `grep`/`Read` over an agent when the target is already known — see

@@ -23,18 +23,19 @@ flowchart LR
 
 Turns a raw idea, bug report, or out-of-scope finding into a well-formed GitHub issue (problem statement, requirements, and acceptance criteria) through a question-and-answer pass with the engineer, then files it with `gh api`, Issue Type included. It triggers on "file an issue", "draft an issue for X", "turn this into an issue", "write up a bug report", or when `/codeo:plan`, `/codeo:implement` or `/codeo:triage` hits work that belongs in an issue of its own.
 
-The skill drafts and files the issue and does nothing else. It captures the what and why (problem, requirements, acceptance criteria), not the how: contracts, diagrams and design belong to `/codeo:plan`. It is standalone: it files the issue, reports the number, and stops. When another skill calls it, that skill passes the finding and the context it already has but does not answer the questions on the engineer's behalf, and filing returns control to the caller with the new issue's number.
+The skill drafts and files the issue, puts it in the board's Backlog when the project has a board, and does nothing else. It captures the what and why (problem, requirements, acceptance criteria), not the how: contracts, diagrams and design belong to `/codeo:plan`. It is standalone: it files the issue, reports the number, and stops. When another skill calls it, that skill passes the finding and the context it already has but does not answer the questions on the engineer's behalf, and filing returns control to the caller with the new issue's number.
 
 ### Reads and writes
 
 - Reads existing issues, the relevant code, and whatever context a calling skill passes.
 - Reads the new issue's board Status (`board.sh status`) when a board is configured.
+- Writes the new issue's board Status, to Backlog only, through `board.sh set <N> backlog`, when a board is configured; a failed move is reported and never fails the filing. With no board it makes no `board.sh` call.
 - Writes the GitHub issue, and `.codeo/intake/<N>/issue.md`, drafted under `new-<slug>/` and renamed once the number exists. The dossier is committed only to the intake branch, through `scripts/intake.sh`, which never checks that branch out. Nothing goes on the default branch or on a feature branch: no branch is cut and no commit is made where a PR could pick it up.
 
 ### Hand-offs and non-goals
 
 - Hands off to nobody: it sits outside the workflow's lifecycle, before an issue number or a branch exists. It still ends with the closing block, whose next command is `/codeo:init #<N>`, or `/codeo:triage` first when the project has a board and the new issue is not Ready (the Status read with `board.sh status`; see `docs/handoff.md` → Closing block), or the fix first when that Status cannot be read because the script failed.
-- Never touches the project's docs, code, the branch, the lock, or another skill's dossier file. When another skill calls it, that caller records the new number in its own outcome and log line.
+- Never touches the project's docs, code, the branch, the lock, any board Status other than that Backlog, or another skill's dossier file. When another skill calls it, that caller records the new number in its own outcome and log line.
 - Does not design a solution, request/response contract, or architecture diagram; that is `/codeo:plan`'s purview.
 - Does not write code or plan docs.
 - Does not commit to the default branch or to whatever branch is checked out; its dossier goes only to the intake branch.
@@ -222,7 +223,7 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 - Reads anything: every branch's dossiers, the intake branch, issues, pull requests and their review threads, and, with the flags, the project's docs, its wiki pages and the code; `inflight.sh` also supplies its `live:` lines.
 - Writes `.codeo/intake/triage/` (the ledger and the run files), committed to `codeo/intake` through `intake.sh`, never to the checked-out branch.
-- Writes an issue's board Status, to Ready or Backlog only, only through `board.sh`, and only on the engineer's answer of mark Ready, resume or leave in the backlog.
+- Writes an issue's board Status, to Ready or Backlog only, only through `board.sh`, and only on the engineer's answer of mark Ready, resume or leave in the backlog. A new issue arrives in Backlog already, because `/codeo:issue` writes that Status when it files it; this skill moves a card to Backlog only when it is not already there.
 
 ### Hand-offs and non-goals
 

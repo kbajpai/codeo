@@ -28,6 +28,7 @@ in prose exist (only the script's existence is checked).
   the response, never reconstruct them.
 - [issue-07] Never set Priority or Effort.
 - [issue-08] A refusal from the role check ends the step; no override.
+- [issue-09] A failed Backlog move never fails the filing; report the number and quote the fix.
 
 ## init
 
