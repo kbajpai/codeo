@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `qc.md` round 2: Q5 is open. QC found that `issue` on an existing container silently reuses its clone (R1, the plan's), which defeats the stash-resume safeguard; Q5 asks what it should do instead. The calls I can make myself for R2-R8 are under `## Notes`. Round 1's outcome below stands until Q5 is answered.
+Round 2, after a send-back from `qc.md` round 2: Q5 is answered (refuse). The follow-up plan is drafted in `.codeo/113/plan-draft.md` and awaits approval; round 1's outcome below stands until then.
 
 ## Questions
 
@@ -69,6 +69,7 @@ Accepted the recommendation: proceed and coordinate (engineer, in the conversati
 - *Leave the behaviour, fix the words:* keep the re-run and only add "remove the old container first" to the init hand-off and the README. Least work; the silent reuse stays.
 
 **Answer:**
+Accepted the recommendation: refuse, as Docker does for the VS Code route (engineer, in the conversation, 2026-11-16).
 
 ## Notes
 
