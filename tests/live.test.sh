@@ -14,6 +14,9 @@ plugin_src=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 export GIT_AUTHOR_NAME="Live Test" GIT_AUTHOR_EMAIL="live-test@example.com"
 export GIT_COMMITTER_NAME="Live Test" GIT_COMMITTER_EMAIL="live-test@example.com"
 unset CODEO_MACHINE CODEO_LIVE_REFRESH_SECONDS CODEO_LIVE_TTL_SECONDS CODEO_LIVE_PUSH_TIMEOUT
+# Generous, so a push on a loaded machine is never cut short; the cases that need a short bound set
+# their own.
+export CODEO_LIVE_PUSH_TIMEOUT=60
 
 scratch_root=$(mktemp -d)
 cleanup() { rm -rf "$scratch_root"; }
@@ -24,8 +27,8 @@ mkdir -p "$HOME"
 export GIT_CONFIG_NOSYSTEM=1
 
 # The plugin as installed, with github.sh stubbed: `user login` answers alice (or fails when
-# STUB_USER_FAIL is set); `ref put|delete` log their arguments and succeed (or fail when
-# STUB_PUT_FAIL / STUB_DELETE_FAIL is set).
+# STUB_USER_FAIL is set); `ref put|delete` log their arguments and FAIL, unless the case opts in with
+# STUB_PUT_OK / STUB_DELETE_OK, so a silent fallback to REST cannot mask a failed push.
 plugin="$scratch_root/plugin"
 mkdir -p "$plugin"
 cp -R "$plugin_src/scripts" "$plugin/scripts"
@@ -41,11 +44,11 @@ case "$1 $2" in
         echo alice ;;
     "ref put")
         echo "ref put $3" >> "$STUB_LOG"
-        [[ -z ${STUB_PUT_FAIL:-} ]] || { echo "github: ref put refused" >&2; exit 1; }
+        [[ -n ${STUB_PUT_OK:-} ]] || { echo "github: ref put refused" >&2; exit 1; }
         echo 0123456789abcdef0123456789abcdef01234567 ;;
     "ref delete")
         echo "ref delete $3" >> "$STUB_LOG"
-        [[ -z ${STUB_DELETE_FAIL:-} ]] || { echo "github: ref delete refused" >&2; exit 1; }
+        [[ -n ${STUB_DELETE_OK:-} ]] || { echo "github: ref delete refused" >&2; exit 1; }
         ;;
     *) echo "github.sh stub: unsupported: $*" >&2; exit 1 ;;
 esac
@@ -80,8 +83,15 @@ assert_not_contains() {
 new_world() {
     local seed
     origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
+    : > "$STUB_LOG"
     seed=$(mktemp -d "$scratch_root/seed.XXXXXX")
     git init -q --bare -b main "$origin"
+    # Every push into this origin makes receive-pack start a detached `git maintenance run --auto`
+    # that can race the next git operation. It is the origin's own config that counts: receive-pack
+    # drops the caller's GIT_CONFIG_* environment.
+    git -C "$origin" config gc.auto 0
+    git -C "$origin" config maintenance.auto false
+    git -C "$origin" config receive.autogc false
     git -C "$seed" init -q -b main
     git -C "$seed" config gc.auto 0
     echo placeholder > "$seed/README.md"
@@ -129,6 +139,18 @@ run() {
     err=$(cat "$scratch_root/err")
 }
 
+# Blocks until the epoch second changes, so the next beat's `beat: <epoch>` differs from the last.
+next_second() {
+    local t
+    t=$(date +%s)
+    while [[ $(date +%s) == "$t" ]]; do sleep 0.1; done
+}
+# The last run published by git push alone: nothing on stderr, no REST fallback logged.
+assert_pushed_quietly() {
+    assert_eq "$1: stderr" "" "$err"
+    assert_eq "$1: no REST call" "" "$(cat "$STUB_LOG")"
+}
+
 refs() { git -C "$origin" for-each-ref --format='%(refname)' refs/codeo/live/; }
 ref_sha() { git -C "$origin" rev-parse -q --verify "$1" 2>/dev/null || true; }
 
@@ -150,6 +172,7 @@ run beat --force
 ref=refs/codeo/live/104/codeo-104
 msg=$(git -C "$origin" log -1 --format=%B "$ref" 2>/dev/null || true)
 assert_eq "exit" 0 "$rc"
+assert_pushed_quietly publish
 assert_contains "issue" "issue: 104" "$msg"
 assert_contains "user" "user: alice" "$msg"
 assert_contains "machine" "machine: codeo-104" "$msg"
@@ -177,19 +200,27 @@ new_world; clone_with_lock 104 container codeo-104
 run beat
 first=$(ref_sha refs/codeo/live/104/codeo-104)
 assert_eq "first beat published" 1 "$([[ -n $first ]] && echo 1 || echo 0)"
+assert_pushed_quietly first
 run beat
 assert_eq "second beat throttled" "$first" "$(ref_sha refs/codeo/live/104/codeo-104)"
-sleep 1
+assert_pushed_quietly second
+next_second
 run beat --force
 second=$(ref_sha refs/codeo/live/104/codeo-104)
 assert_eq "force republishes" 1 "$([[ $second != "$first" ]] && echo 1 || echo 0)"
-sleep 1
+assert_pushed_quietly force
+next_second
 CODEO_LIVE_REFRESH_SECONDS=0 run beat
 assert_eq "refresh 0 republishes" 1 "$([[ $(ref_sha refs/codeo/live/104/codeo-104) != "$second" ]] && echo 1 || echo 0)"
+assert_pushed_quietly refresh0
 
 case_desc=beat_replaces_the_signal_it_does_not_accumulate
 new_world; clone_with_lock 104 container codeo-104
-run beat --force; run beat --force; run beat --force
+run beat --force; assert_pushed_quietly one
+next_second
+run beat --force; assert_pushed_quietly two
+next_second
+run beat --force; assert_pushed_quietly three
 assert_eq "history length" 1 "$(git -C "$origin" rev-list --count refs/codeo/live/104/codeo-104 2>/dev/null || true)"
 
 case_desc=beat_without_a_lock_or_on_the_base_branch_does_nothing
@@ -265,6 +296,16 @@ for label in .. .hidden x.lock; do
     assert_eq "label $label: valid ref" 0 "$(git check-ref-format "$published" >/dev/null 2>&1; echo $?)"
 done
 
+case_desc=machine_label_with_a_dot_at_the_64th_character_is_a_valid_ref
+new_world; clone_with_lock 104 container codeo-104
+long=$(printf 'a%.0s' $(seq 1 63))
+CODEO_MACHINE="$long.x" run beat --force
+assert_eq "exit" 0 "$rc"
+assert_eq "stderr" "" "$err"
+published=$(refs)
+assert_eq "one ref" 1 "$(grep -c . <<< "$published" || true)"
+assert_eq "valid ref" 0 "$(git check-ref-format "$published" >/dev/null 2>&1; echo $?)"
+
 # --- failure handling --------------------------------------------------------------------------
 
 case_desc=beat_falls_back_to_rest_when_the_push_is_refused
@@ -272,12 +313,12 @@ new_world; clone_with_lock 104 container codeo-104
 printf '#!/bin/sh\nwhile read old new ref; do case "$ref" in refs/codeo/*) echo refused >&2; exit 1;; esac; done\n' > "$origin/hooks/pre-receive"
 chmod +x "$origin/hooks/pre-receive"
 : > "$STUB_LOG"
-run beat --force
+STUB_PUT_OK=1 run beat --force
 assert_eq "exit" 0 "$rc"
 assert_contains "REST put" "ref put refs/codeo/live/104/codeo-104" "$(cat "$STUB_LOG")"
 assert_eq "stderr" "" "$err"
 : > "$STUB_LOG"
-STUB_PUT_FAIL=1 run beat --force
+run beat --force
 assert_eq "exit when both fail" 0 "$rc"
 assert_eq "one stderr line" 1 "$(grep -c . <<< "$err" || true)"
 assert_eq "line prefix" "live: could not publish" "${err:0:23}"
@@ -286,7 +327,7 @@ case_desc=beat_with_an_unreachable_origin_exits_0_once
 new_world; clone_with_lock 104 container codeo-104
 git -C "$clone" remote set-url origin /nonexistent
 start=$(date +%s)
-STUB_PUT_FAIL=1 CODEO_LIVE_PUSH_TIMEOUT=2 run beat --force
+CODEO_LIVE_PUSH_TIMEOUT=2 run beat --force
 elapsed=$(( $(date +%s) - start ))
 assert_eq "exit" 0 "$rc"
 assert_eq "one stderr line" 1 "$(grep -c . <<< "$err" || true)"
@@ -329,12 +370,12 @@ assert_eq "stamp gone" no "$([[ -e $clone/$stamp || -e $stamp ]] && echo yes || 
 
 case_desc=clear_of_a_missing_ref_exits_0
 new_world; clone_with_lock 104 container codeo-104
-run clear
+STUB_DELETE_OK=1 run clear
 assert_eq "exit" 0 "$rc"
 assert_eq "silent" "" "$err"
 printf '#!/bin/sh\nwhile read old new ref; do case "$ref" in refs/codeo/*) exit 1;; esac; done\n' > "$origin/hooks/pre-receive"
 chmod +x "$origin/hooks/pre-receive"
-STUB_DELETE_FAIL=1 run clear
+run clear
 assert_eq "exit when the fallback fails too" 0 "$rc"
 assert_eq "one stderr line" 1 "$(grep -c . <<< "$err" || true)"
 
@@ -371,6 +412,24 @@ other=$(clone_of "$origin")
 plant refs/codeo/live/5/ahead "$(signal 5 alice ahead local $(( $(date +%s) + 120 )))"
 live "$other" fetch
 assert_eq "age" "$(printf '5\talice\tahead\tlocal\t0')" "$(live "$other" list --tsv)"
+
+case_desc=list_cleans_hostile_fields_and_skips_unknown_hosts
+new_world
+other=$(clone_of "$origin")
+now=$(date +%s)
+plant refs/codeo/live/8/tabby "$(signal 8 "$(printf 'ev\til\033[31m@x')" "$(printf 'm\tach')" local "$now")"
+plant refs/codeo/live/9/evil "$(signal 9 alice evil evil "$now")"
+plant refs/codeo/live/10/bad "$(signal 12x alice bad local "$now")"
+plant refs/codeo/live/11/good "$(signal 11 alice good web "$now")"
+live "$other" fetch
+tsv=$(live "$other" list --tsv)
+assert_eq "two signals survive" 1 "$(( $(grep -c . <<< "$tsv") == 2 ? 1 : 0 ))"
+assert_eq "every line has 5 columns" "" "$(awk -F'\t' 'NF != 5' <<< "$tsv")"
+assert_eq "no ESC byte" 0 "$(printf '%s' "$tsv" | grep -c $'\033' || true)"
+assert_not_contains "evil host omitted" "evil"$'\t'evil "$tsv"
+assert_not_contains "bad issue omitted" "12x" "$tsv"
+assert_contains "hostile signal kept, cleaned" "8"$'\t'"ev il [31m-x"$'\t'"m ach"$'\t'local "$tsv"
+assert_contains "good signal kept" "11"$'\t'alice$'\t'good$'\t'web "$tsv"
 
 case_desc=list_skips_a_malformed_signal
 new_world

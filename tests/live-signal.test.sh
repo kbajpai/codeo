@@ -36,6 +36,12 @@ new_world() {
     origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
     seed=$(mktemp -d "$scratch_root/seed.XXXXXX")
     git init -q --bare -b main "$origin"
+    # Every push into this origin makes receive-pack start a detached `git maintenance run --auto`
+    # that can race the next git operation. It is the origin's own config that counts: receive-pack
+    # drops the caller's GIT_CONFIG_* environment.
+    git -C "$origin" config gc.auto 0
+    git -C "$origin" config maintenance.auto false
+    git -C "$origin" config receive.autogc false
     git -C "$seed" init -q -b main
     echo x > "$seed/README.md"
     git -C "$seed" add README.md

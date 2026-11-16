@@ -36,6 +36,14 @@
 #   commit's identity is codeo-live <codeo-live@invalid>, passed per command; no git config is read
 #   for it or written, and no email address goes in the message.
 #
+# Limits worth knowing:
+#   - Without a `timeout` binary (stock macOS) a push or fetch is unbounded.
+#   - `beat` is fail-open by design: it is called as `beat "$@" || true`, which turns `set -e` off
+#     inside it, so a failing step never stops the caller.
+#   - The throttle stamp is written before the push, so a failed publish is not retried until the
+#     refresh interval has passed (or a --force beat).
+#   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
+#
 # Environment:
 #   CODEO_LIVE_REFRESH_SECONDS  minimum seconds between two unforced beats (default 300)
 #   CODEO_LIVE_TTL_SECONDS      how old a beat may be and still be listed (default 900)
@@ -73,7 +81,7 @@ clean() { tr -c '[:print:]' ' ' <<< "$1" | tr -s ' ' | tr '@' '-' | cut -c "1-$2
 # at most 64 characters, no "..", no leading or trailing ".", no ".lock" suffix.
 ref_label() {
     local label
-    label=$(printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '-' | sed 's/\.\.*\./-/g; s/^\./-/; s/\.$/-/' | cut -c 1-64)
+    label=$(printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '-' | cut -c 1-64 | sed 's/\.\.*\./-/g; s/^\./-/; s/\.$/-/')
     label=${label/%.lock/-lock}
     [[ -n $label ]] || label=unknown
     printf '%s' "$label"
@@ -176,7 +184,12 @@ list() {
         host=$(sed -n 's/^host: //p' <<< "$msg" | head -n 1)
         beat=$(sed -n 's/^beat: //p' <<< "$msg" | head -n 1)
         [[ -n $issue && -n $user && -n $machine && -n $host ]] || continue
-        [[ $issue =~ ^[0-9]+$ && $beat =~ ^[0-9]+$ ]] || continue
+        # Anyone with push access can plant a ref here, so every field is checked on the way out.
+        case $host in container | web | local) ;; *) continue ;; esac
+        [[ $issue =~ ^[0-9]{1,9}$ && $beat =~ ^[0-9]+$ ]] || continue
+        user=$(clean "$user" 64)
+        machine=$(clean "$machine" 64)
+        [[ -n $user && -n $machine ]] || continue
         age=$((now - beat))
         ((age >= 0)) || age=0
         ((age <= ttl)) || continue
