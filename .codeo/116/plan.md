@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3. Q1-Q5 are all answered (Q1-Q3 and Q5 "recommended for all"; Q4's criterion dropped, its output recorded). The draft is at `.codeo/116/plan-draft.md`, awaiting the engineer's approval; nothing is open in this file. Every finding in the issue was read against the code as it is on this branch, and each still holds; the calls the draft will carry are under `## Notes`.
+Planned. Q1-Q5 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-16-follow-ups-70-71-104-107.md` (unstaged, for review). The footprint is recorded and `overlap.sh 116` prints nothing new (#113 was raised as Q5). Nothing is open; the next step is to review and commit the plan, then `/codeo:implement`. Every finding in the issue was read against the code as it is on this branch, and each still holds; the calls the draft will carry are under `## Notes`.
 
 ## Questions
 
@@ -93,6 +93,22 @@ So the criterion "The `rm -f -- ""` check output is recorded on #107" is **dropp
 
 **Shape.** One plan under `docs/plans/`, one pull request; no reference doc. `plan-shape`, `proof-of-done` and `wiki-rules` have no overlay here (exit 3), no invariants document, no shared environment, no `wiki` module, no exclusive resources. The `shell` suite has no `filter`, so each task's proof is the test file it touches and then `bash tests/run.sh`.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-16-follow-ups-70-71-104-107.md` (unstaged, for the engineer to review and commit). **Shape:** one executable plan under `docs/plans/`, ten tasks, one pull request; no reference doc, no diagram beyond the one `docs/handoff.md` already has.
+
+**Decisions** (Q1-Q3 and Q5 "recommended for all", engineer, 2026-11-16):
+- Q1: the `/codeo:cleanup` list limit (J8) is documented, not filtered. Rejected: filtering on the cleanup records (an issue whose command was printed but never run would drop out of sight); dropping J8.
+- Q2: the `SessionEnd` hook's timeout is raised to 20 s (F7). Rejected: keeping 10 and documenting.
+- Q3: a `beat` more than the TTL ahead of the reader's clock is skipped (F5). Rejected: documenting only.
+- Q4: the criterion "the `rm -f -- ""` output is recorded on #107" is dropped from this change at the engineer's say-so. The output they pasted (`rc=0`) is kept in this dossier only; no task posts to #107, and `/codeo:qc` reads the criterion as dropped.
+- Q5: proceed and coordinate with #113; `.devcontainer/README.md`, `CHANGELOG.md` and `tests/devcontainer.test.sh` are each edited once, in Task 10, after `sync-main.sh`.
+- Calls without a question: Podman is fixed (`CODEO_CONTAINERENV`), not documented; `CODEO_CLEANUP_REMOVAL` is removed from `cleanup.sh`; the generic wording is "the checkout the project's role check allows"; `ref delete` counts only `Reference does not exist`; `/codeo:close` clears the live signal in the same command that deletes the lock, at all three exits; the Backlog error names `board.statuses.backlog`; the title test keeps its name and gains a comment, proved by mutation.
+
+**Documentation the plan changes:** `docs/skills.md` (the `cleanup` and `close` sections), `docs/handoff.md` (the live-signal bullet and diagram, the issue-filing sentence), `.devcontainer/README.md` (the guard line) and `CHANGELOG.md`. No wiki module.
+
+**Intake questions resolved here:** F5, F7, F16 and J8 (fix or document) are settled as above; F3 stays with #112. No issue filed from this skill; the optional `engineering` skills were not used (no new component or technology choice).
+
 ### Footprint
 
 ```
@@ -101,12 +117,9 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-16 — explored, Q1-Q5 raised, draft footprint recorded under Notes · cost: 3m · fable-5-2 118k in + 853k cached / 16k out
 - 2026-11-16 — Q1-Q3 and Q5 recorded from the engineer's conversation answer; Q4 still open, stopped · cost: unavailable (no draft work this round)
 - 2026-11-16 — Q4 criterion dropped by the engineer and its output recorded; draft written to .codeo/116/plan-draft.md (10 tasks), awaiting approval · cost: unavailable (mid-turn)
+- 2026-11-16 — planned: docs/plans/2026-11-16-follow-ups-70-71-104-107.md · cost: 592m · fable-5-2 140k in + 355k cached / 846 out · sonnet-5-5 329k in + 2.3M cached / 30k out
