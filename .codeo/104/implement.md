@@ -93,6 +93,5 @@ None.
 
 ## Log
 
-- 2026-11-16 — round 2 (send-back from qc round 1): F1, F2, F4, F6, F8 fixed and reviewed, two fix rounds on the tests, root cause of the flaky live tests found (a non-monotonic clock), build exits 0 · cost: 24m · opus-5-5 526k in + 29k cached / 1k out · sonnet-5-5 265k in + 20M cached / 62k out
-
 - 2026-11-16 — round 1: Tasks 1-6 built and reviewed, one fix round on Task 2, one whole-branch fix wave and re-review, build exits 0 · cost: 67m · sonnet-5-5 913k in + 33.2M cached / 185k out
+- 2026-11-16 — round 2 (send-back from qc round 1): F1, F2, F4, F6, F8 fixed and reviewed, two fix rounds on the tests, root cause of the flaky live tests found (a non-monotonic clock), build exits 0 · cost: 24m · opus-5-5 526k in + 29k cached / 1k out · sonnet-5-5 265k in + 20M cached / 62k out
