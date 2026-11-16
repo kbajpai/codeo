@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `qc.md` round 2: Q5 is answered (refuse). The follow-up plan is drafted in `.codeo/113/plan-draft.md` and awaits approval; round 1's outcome below stands until then.
+Round 2, after a send-back from `qc.md` round 2: Q5 is answered (refuse) and the follow-up plan `docs/plans/2026-11-16-cmd-mode-existing-container.md` is approved and written, unstaged for the engineer to commit. Nothing is open.
 
 ## Questions
 
@@ -116,10 +116,31 @@ Calls I am making unless you say otherwise in an answer:
 
 **What only the engineer can prove.** The Linux and macOS criteria, the VS Code route and the `init` hand-off in a cmd-mode home container run on the engineer's machines (Task 10; the hand-off check only after the pull request merges). This suite proves the host script's calls against a stub `docker` and scans it for bash 4 and GNU-only constructs.
 
+### Round 2
+2026-11-16
+(send-back from qc.md round 2)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-16-cmd-mode-existing-container.md` (approved by the engineer in the conversation, 2026-11-16; left unstaged). Its Spec is the first plan, which stays as it is. |
+| Shape | an executable follow-up plan, four tasks (the last the engineer's, on their host) |
+
+**Decisions.**
+- R1 (blocking, the plan's), Q5: `issue <N> <branch>` on an existing `codeo-<N>`, running or stopped, changes nothing and exits 1 with one line naming `shell <N>`, `--rebuild` and the removal commands. With `--rebuild`, or a volume left without its container, the clone must be on `<branch>`, else the script refuses. `home` keeps its re-run (Task 1).
+- R5, R6 and R2's header comment are small script fixes: `require_docker` shows Docker's own first error line; `session-title.sh` accepts any non-empty `CODEO_CMD_MODE` (Task 2).
+- R2, R3, R4 and the stash paragraph are documentation: the README, the init hand-off and the changelog bullet say what the code does (Task 3).
+- R7 and R8 change nothing: bash 3.2 on a real Mac stays with the first plan's Task 10, and the image's removal is in the README already.
+
+**Options rejected.** Checking `role.sh`'s output before reusing a container, and only fixing the words (Q5); changing the image's shell start-up to make the terminal title last (R3); editing the first plan's text.
+
+**Documentation the plan changes.** `.devcontainer/README.md`, `.codeo/overlays/init.md`, `CHANGELOG.md` (the `(#113)` bullet edited in place). No page under `docs/` moves.
+
+**What only the engineer can prove.** Task 4: `issue` on a running `codeo-<N>` on a real Docker host. The first plan's Task 10 still stands.
+
 ### Footprint
 
 ```
-files:      .devcontainer/codeo-container.sh, .devcontainer/README.md, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .codeo/overlays/init.md, tests/cmd-mode.test.sh, tests/devcontainer.test.sh, tests/init-overlay.test.sh, CHANGELOG.md, docs/plans/2026-11-16-cmd-mode-containers.md
+files:      .devcontainer/codeo-container.sh, .devcontainer/README.md, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .codeo/overlays/init.md, tests/cmd-mode.test.sh, tests/devcontainer.test.sh, tests/init-overlay.test.sh, CHANGELOG.md, docs/plans/2026-11-16-cmd-mode-containers.md, docs/plans/2026-11-16-cmd-mode-existing-container.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -130,3 +151,4 @@ sequenced:  none
 - 2026-11-16 — Q1-Q4 raised · cost: 2m · fable-5-2 78k in + 376k cached / 5k out
 - 2026-11-16 — planned: docs/plans/2026-11-16-cmd-mode-containers.md; Q1-Q4 answered in the conversation; `engineering:system-design` and `engineering:architecture` were unavailable, so their structure was applied directly; Q4's wording gained the token `glob:CHANGELOG.md` so overlap.sh recognises it as raised (answer untouched) · cost: 14m · fable-5-2 94k in + 710k cached / 12k out · sonnet-5-5 157k in + 2.6M cached / 46k out
 - 2026-11-16 — round 2 (send-back from qc.md round 2): Q5 raised · cost: 1m · fable-5-2 204k in + 254k cached / 4k out
+- 2026-11-16 — round 2 (send-back from qc.md round 2): Q5 answered, planned: docs/plans/2026-11-16-cmd-mode-existing-container.md; `engineering:*` skills not used; overlap.sh prints nothing · cost: 85m · fable-5-2 208k in + 484k cached / 5k out · sonnet-5-5 306k in + 987k cached / 11k out
