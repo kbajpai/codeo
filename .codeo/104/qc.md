@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 1 done: the build and the full suite pass, four of the five acceptance criteria are met or settled by tests, and the fourth (a web session) is not yet checkable because the plan's by-hand Task 7 has not been run. The independent review found two defects serious enough to block the merge, and both are `/codeo:implement`'s. Sent back to `/codeo:implement`. No open question.
+Round 2 done, clear: both blocking findings from round 1 are fixed, the build and the full suite pass, and four of the five acceptance criteria are met. The fourth (a web session) is not verified: the engineer deferred the by-hand check to #112. The review's findings are all non-blocking; the first, F9, is a flake in three test assertions on a machine with a stepping clock. Forward to `/codeo:close`. No open question.
 
 ## Questions
 
@@ -72,6 +72,51 @@ None.
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-16
+
+**Sync.** `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main` (`bb396d1`, #111, merged into the branch by round 2 of `implement`), exit 0, so there are no `also changed on main:` lines to re-check. `overlap.sh 104` printed nothing; `overlap.sh --outside 104` printed nothing (no path outside the footprint).
+
+**Scope.** `scope.sh origin/main HEAD`: `suite.shell=true` (the diff touches `scripts/**`, `hooks/**`, `tests/**`, `docs/**`, `skills/**`, and the unclassified `.codeo/104/*` and `CHANGELOG.md`). No `deploy=` line: no environment is configured.
+
+**Build.** The `shell` suite's `build` is `true`: `build rc=0`.
+
+**Tests.** `bash tests/run.sh` (the `shell` suite, whole, from the clean tree at `78f14ba`): `all cases passed`, `suite rc=0`.
+
+**Acceptance criteria.**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| While a codeo skill is working an issue, `inflight.sh` run from another clone shows that workflow as live, with the user and the machine | met | `tests/live.test.sh` `fetch_then_list_shows_a_live_session_from_another_clone`; `tests/inflight.test.sh` `human_block_shows_a_live_session` (`live:      bob on codeo-7 (container), 3…s ago`) and `a_malformed_signal_does_not_hide_the_ones_after_it`; `tests/live-signal.test.sh` `beat_publishes_in_the_background` (the hook publishes) |
+| After the session ends or crashes, the workflow stops showing as live within the documented expiry, with no manual step | met — as documented, with the caveats in F5, F7 and F15 | `tests/live.test.sh` `list_hides_an_expired_signal_and_shows_it_again_inside_the_ttl` (1000 s hidden, 800 s shown, and 70 s hidden against a 60 s TTL); `tests/inflight.test.sh` `an_expired_signal_prints_nothing`; `tests/live-signal.test.sh` `clear_deletes_the_ref` (clean exit); `docs/handoff.md` and `CHANGELOG.md` state the expiry and the 10 to 15 minute idle limit |
+| Neither the feature branch nor its PR gains a commit from the signal | met | `tests/live.test.sh` `beat_adds_nothing_to_the_branch_or_the_pull_request` (origin's `refs/heads` identical, `HEAD` and the tree unchanged); `scripts/live.sh` builds a parentless commit with `git commit-tree` and pushes only `refs/codeo/live/*`; `scripts/github.sh ref put\|delete` accepts only `^refs/codeo/live/[0-9]+/[A-Za-z0-9._-]+$` without `..` |
+| It works in a web session | not yet checkable — deferred to #112 at the engineer's decision (the by-hand check, plan Task 7, was skipped and filed instead) | the git and REST paths are tested against local origins and a stubbed `github.sh` only (`beat_falls_back_to_rest_when_the_push_is_refused`); nothing here reaches a hosted session or GitHub |
+| `bash tests/run.sh` passes. `CHANGELOG.md` records the change | met | `bash tests/run.sh`: `all cases passed`; `CHANGELOG.md` line 7 (`Shared state:`) and the `## Unreleased` bullet naming #104 |
+
+**Round 1's findings.** F1 (blocking in round 1) — fixed by `0632b57`: `live.sh list` accepts a `beat` only as `^[1-9][0-9]{0,11}$` and an `issue` only as `^[1-9][0-9]{0,8}$`; both new cases plant a bad signal between two good ones, and the reviewer confirmed zero-padded and overlong values are rejected. F2 (blocking in round 1) — fixed by `e0b94d9`: `docs/handoff.md` now says the hook discards `beat`'s output and `beat --force` by hand prints the one `live:` line; the page matches `hooks/live-signal.sh`. F4 — fixed by `e0b94d9` (10 to 15 minutes, in `docs/handoff.md` and `CHANGELOG.md`). F6 — fixed by `0632b57` (`mktemp` per-process message file). F8 — fixed by `0632b57` (the hook header). F3, F5 and F7 are unchanged and are the plan's design points; F5 and F7 were found again by this round's review and are not raised again.
+
+**Documentation check.** `docs/handoff.md` (*Who is working right now*), `CHANGELOG.md` and the `live.sh` and hook headers were checked against the code: every name, number, format and behaviour matches, including what the session sees when nothing can be published. One sentence is looser than the code, F13 below. `docs/skills.md` and `skills/triage/SKILL.md` carry the `live:` clause and sentence intact after the merge.
+
+**Independent review** (opus, given the acceptance criteria and the diff only). Its assessment, quoted: "With fixes. Every acceptance criterion is met in the code: a branch-free, expiring, REST-capable signal that names the user and machine, is read by `inflight.sh`, has CHANGELOG coverage, and whose tests pass. The flaky test assertions should be fixed first, because a step-back clock (as on this machine) makes `bash tests/run.sh` fail at random. The minor items can follow in this PR or later." Its Critical list was empty. Its Important finding was checked here against the files (`tests/inflight.test.sh:242-251`, `tests/live.test.sh:181`) and holds.
+
+**Findings.**
+
+- **F9 — non-blocking, `/codeo:implement`'s.** Three assertions in the new tests still depend on two wall-clock readings agreeing to the second, on a machine whose clock is known to step back (round 2 of `implement` found 4 backward steps in 45 s under load): `tests/inflight.test.sh:242` plants a signal at now minus 30 and requires the output to start with `3` (a backward step across a second boundary reads `29s ago`); `tests/inflight.test.sh:247,251` plants at now minus 120 and requires `2m ago` (119 reads `1m ago`); `tests/live.test.sh:181` requires `delta >= 0` for `date +%s` minus the beat (a step back gives −1). Cause: the planted ages sit on a unit edge and the lower bound has no slack. It cannot fail on a runner with a monotonic clock, so the required `tests` check is not at risk, but it can fail `bash tests/run.sh` locally at random under load. Fix direction: plant ages away from unit edges (35 and 150) and allow `delta >= -1`.
+- **F10 — non-blocking, `/codeo:implement`'s.** `scripts/live.sh:116` (`read_lock`) accepts a lock issue matching `^[0-9]+$`, which includes `0` and `0104`, while `list` (`:189`) accepts only `^[1-9][0-9]{0,8}$`. A lock holding such a value would publish a signal every reader drops. Use the same pattern in both places. A lock written by `lock.sh` never holds such a value.
+- **F13 — non-blocking, `/codeo:implement`'s.** `CHANGELOG.md` and the `live.sh` header describe `CODEO_LIVE_PUSH_TIMEOUT` as bounding "each push, fetch or REST call". `scripts/live.sh:155` puts one 8 s limit around the whole `github.sh ref put` (all four REST calls together), and the login lookup has its own. The real bound is tighter than documented, so nothing breaks; the wording is inaccurate.
+- **F14 — non-blocking, `/codeo:plan`'s.** `github.sh ref delete` counts any `Not Found` as already deleted, because the plan's Task 1 said so. GitHub also answers 404 for a write the token may not make, so a refused delete is reported as done. Only `Reference does not exist` should count. A design point of the plan; the signal expires anyway.
+- **F15 — non-blocking, `/codeo:plan`'s.** The signal is cleared only at `SessionEnd`, and `hooks/live-signal.sh` does nothing when `.codeo/active` is gone. When `/codeo:close` releases the lock (a stash or an abandon) while the session continues, or a checkout moves from one issue to another, the old issue shows a `live:` line for up to 15 minutes, and `/codeo:triage` is told not to ask about it as parked work. Within the documented expiry, but not what a reader of "stashed" would expect. Fix direction: clear before the lock is released.
+- **F16 — non-blocking, `/codeo:plan`'s.** A container's machine label is its volume name, so two engineers' containers with the same volume name working the same issue write the same ref and one signal replaces the other. Unlikely; `CODEO_MACHINE` is the way out and the docs could say so.
+- **F5, F7 (seen again, not raised again).** A writer's clock running ahead keeps a crashed session live for that skew plus 15 minutes; the `SessionEnd` hook's 10 s timeout is shorter than a worst-case `clear` (8 s push plus 8 s REST). Both are the plan's chosen numbers and rules, noted in round 1.
+
+**Out of scope, recorded once.** The reviewer declined to judge, and nothing here changes: whether the web session's git proxy and `gh` accept the ref and the REST calls (that is #112), the local hostname and `user.name` fallback on a public repository (named by requirement and disclosed in the docs), the signal staying 10 to 15 minutes stale during a long tool call (a stated limit), and two near-simultaneous beats racing the throttle stamp (an extra push at worst).
+
+**Filed.** No issue was filed by this pass.
+
+**Routing.** No blocking finding remains, so the change may go forward. Two things the engineer should hear before the pull request: the web-session criterion is deferred to #112 and has not been verified, so the pull request should say that and not claim it; and F9 can fail `bash tests/run.sh` at random on a machine with a stepping clock, which is a few lines of `/codeo:implement` if the engineer prefers to fix it first (none of the other non-blocking findings needs to hold the merge).
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-16 — round 1: build and full suite pass, criteria 1-3 and 5 met, criterion 4 not yet checkable, two blocking findings (F1, F2), sent back to `/codeo:implement` · cost: 5m · opus-5-5 533k in + 3.5M cached / 22k out · sonnet-5-5 33k in + 1.8M cached / 8k out
+- 2026-11-16 — round 2: build and full suite pass, criteria 1-3 and 5 met, criterion 4 deferred to #112, no blocking finding (F9-F16 non-blocking), clear, forward to `/codeo:close` · cost: 5m · opus-5-5 671k in + 2.6M cached / 21k out · sonnet-5-5 28k in + 1.8M cached / 4k out
