@@ -1648,6 +1648,33 @@ start_names_a_file_mode_overridden_from_a_wider_scope() {
     grep 'overrid' <<<"$ds_out" | grep -q 'global' || fail "stdout does not say it overrode the global setting: $ds_out"
 }
 
+start_does_not_claim_an_override_the_scope_outranks() {
+    local r name scope
+    for name in param count worktree; do
+        ds_setup "override-$name" || return 0
+        ds_on_volume
+        ds_identity || { fail "could not set the scratch git identity"; return 0; }
+        r="$ds_dir/codeo-home"
+        git -C "$r" config --unset core.filemode
+        case $name in
+            param) scope=command; GIT_CONFIG_PARAMETERS="'core.fileMode=false'" ds_ready_run ;;
+            count) scope=command; GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.fileMode GIT_CONFIG_VALUE_0=false ds_ready_run ;;
+            worktree)
+                scope=worktree
+                git -C "$r" config extensions.worktreeConfig true && git -C "$r" config --worktree core.fileMode false \
+                    || { fail 'could not set the worktree config'; return 0; }
+                ds_ready_run ;;
+        esac
+        ((ds_rc == 0)) || fail "$name: exit $ds_rc, wanted 0"
+        [[ $(git -C "$r" config --local --type=bool core.fileMode) == true ]] || fail "$name: core.fileMode is not true locally"
+        ! grep -q 'overrid' <<<"$ds_out" || fail "$name: stdout claims an override: $ds_out"
+        ! grep -q 'set it to true for this clone' <<<"$ds_out" || fail "$name: stdout claims it set it to true for this clone: $ds_out"
+        [[ $(ds_todos 'still false from the') == 1 ]] || fail "$name: not exactly one 'still false from the' TODO: $ds_err"
+        grep 'TODO.*still false from the' <<<"$ds_err" | grep "$scope" | grep -q 'update-index --chmod' || fail "$name: the TODO does not name $scope and update-index --chmod: $ds_err"
+        [[ $(tail -n1 <<<"$ds_out") != 'devcontainer-start: ready' ]] || fail "$name: stdout ends with ready: $ds_out"
+    done
+}
+
 # Pins existing behaviour: a file whose mode was lost and whose content was edited is still restored and counted.
 start_files_restore_and_content_edit_both_count() {
     local r
@@ -2432,6 +2459,7 @@ cases=(
     start_restores_tracked_modes_before_turning_file_mode_on
     start_keeps_an_executable_bit_the_index_does_not_record
     start_names_a_file_mode_overridden_from_a_wider_scope
+    start_does_not_claim_an_override_the_scope_outranks
     start_files_restore_and_content_edit_both_count
     start_leaves_no_modes_file_when_interrupted
     start_keeps_file_mode_off_when_a_mode_cannot_be_restored

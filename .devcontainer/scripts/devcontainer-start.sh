@@ -70,7 +70,8 @@ fi
 # executable bit as set. Then the files the index records as executable but the disk has as not are made executable
 # again (only that direction: an executable bit the index does not record is left, and shows as a mode change), the
 # files named in the message, and only when that worked does core.fileMode go back on for this clone; if a file could
-# not be restored or the modes could not be listed, say how to stage by hand.
+# not be restored or the modes could not be listed, say how to stage by hand. A `true` that does not take effect (a command or
+# worktree scope outranks the clone's config and still gives false) is reported as a TODO, not as an override.
 
 # restore_modes: chmod +x each tracked file the index records as 100755 but the disk has as 100644 (what a filesystem
 # that dropped the bit did), then list again. Only that direction: a file the disk has executable and the index does
@@ -137,15 +138,23 @@ if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; t
                     ((${#left_paths[@]} <= 5)) || left_list+=" and $((${#left_paths[@]} - 5)) more"
                     add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
                 elif git config core.fileMode true; then
-                    if [[ $filemode_scope != local ]]; then
-                        say "core.fileMode was false from the $filemode_scope config: this clone's config now overrides it with true"
+                    if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
+                        outranked=$(git config --show-scope --get core.fileMode 2>/dev/null || true)
+                        outranked=${outranked%%[[:space:]]*}
+                        add_todo "core.fileMode is still false from the ${outranked:-wider} config, which outranks this clone's own config: unset it there (for the command scope, the GIT_CONFIG_COUNT or GIT_CONFIG_PARAMETERS variable), or stage each new script with git update-index --chmod=+x <file>"
+                        filemode_clause=''
+                    else
+                        filemode_clause=' and set it to true for this clone'
+                        if [[ $filemode_scope != local ]]; then
+                            say "core.fileMode was false from the $filemode_scope config: this clone's config now overrides it with true"
+                        fi
                     fi
                     if ((restored_count > 0)); then
                         restored_list=$(printf '%s, ' "${restored_paths[@]:0:5}")
                         restored_list=${restored_list%, }
                         ((${#restored_paths[@]} <= 5)) || restored_list+=" and $((${#restored_paths[@]} - 5)) more"
-                        say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) ($restored_list) to the index's and set it to true for this clone"
-                    else
+                        say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) ($restored_list) to the index's$filemode_clause"
+                    elif [[ -n $filemode_clause ]]; then
                         say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
                     fi
                     if ((${#kept_paths[@]} > 0)); then
