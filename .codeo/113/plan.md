@@ -49,7 +49,7 @@ With a Mac, the plan ends with a host task there. Without one, the only proof th
 
 ### Q4 — #104 also changes `CHANGELOG.md`: proceed, wait, or re-scope?
 
-**Why it matters:** #104 (branch `feat/publish-live-session-signal-so`, assignee kbajpai, at `qc`) lists `CHANGELOG.md` in its footprint, and this plan adds its own bullet under `## Unreleased` in `CHANGELOG.md`. Nothing else overlaps: #104's other files are under `scripts/`, `hooks/`, `skills/`, `docs/` and `tests/`, none of which this plan touches by the same path.
+**Why it matters:** #104 (branch `feat/publish-live-session-signal-so`, assignee kbajpai, at `qc`) lists `CHANGELOG.md` in its footprint, and this plan adds its own bullet under `## Unreleased` in `CHANGELOG.md`. The overlap is `glob:CHANGELOG.md`. Nothing else overlaps: #104's other files are under `scripts/`, `hooks/`, `skills/`, `docs/` and `tests/`, none of which this plan touches by the same path.
 
 **Options:**
 - *Proceed and coordinate* (recommended): both add one bullet to the same list; whichever merges second resolves a one-line conflict, which `/codeo:close` already routes.
@@ -72,6 +72,29 @@ Calls I am making unless you say otherwise in an answer:
 - **`devcontainer.json` is not changed,** and one pull request carries the whole change.
 - **Documentation the change moves:** `.devcontainer/README.md` (opening, rebuilding and removing a container from the command line; the git identity and title paragraphs), `.codeo/overlays/init.md` (the hand-off prints the command-line step beside the VS Code one), `CHANGELOG.md`.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-16-cmd-mode-containers.md` (approved by the engineer in the conversation, 2026-11-16; left unstaged) |
+| Shape | an executable plan under `docs/plans/`, ten tasks; no separate reference doc, because `.devcontainer/README.md` becomes the standing reference |
+
+**Decisions.**
+- A plain host script, `.devcontainer/codeo-container.sh` (bash 3.2, builtins plus `docker` and `git`), with `home [--rebuild]`, `issue <N> <branch> [--rebuild]` and `shell home|<N>`. It builds the image from the repository's GitHub URL, so the host needs no clone (Q1), and runs the container with the VS Code route's names, volumes and memory cap.
+- The Claude config of a cmd-mode container sits at `/workspaces/.claude` on the container's own volume, so a rebuild keeps the login and removing the volume removes it (Q2).
+- `CODEO_CMD_MODE=1`, set on the container, is how the start script and `session-title.sh` skip the `.vscode/settings.json` write and the host `~/.gitconfig` wait; `REMOTE_CONTAINERS=true` keeps meaning VS Code. `devcontainer.json` is not edited.
+- The host's git identity goes to the start script's `docker exec` only, as `GIT_AUTHOR_*`, and never overwrites the volume's.
+- The Mac is the engineer's; Task 10 runs the host checks on WSL2 and on the Mac (Q3). Linux is taken to be WSL2's bash, with neutral commands.
+- `CHANGELOG.md` overlaps #104's footprint; proceed and coordinate (Q4).
+
+**Options rejected.** The `devcontainer` CLI (needs Node on the host; ruled out in #36's plan); Docker Sandboxes (#99); requiring a clone on the host, or piping the script on every run (Q1); one shared `codeo-claude` volume, or leaving the login to be lost on rebuild (Q2); a `rm` sub-command (the removal commands `/codeo:close` and `/codeo:cleanup` print already serve).
+
+**Documentation the plan changes.** `.devcontainer/README.md` (a command-line section with a Mermaid sequence diagram, rebuild, removal, identity, titles), `.codeo/overlays/init.md` (the hand-off's command-line step) and `CHANGELOG.md`. No page under `docs/` moves.
+
+**Intake questions resolved.** Whether cmd mode keeps the Claude login across rebuilds: yes, on the container's volume (Q2). Whether Remote Control works without VS Code is not resolved: it has to be tried, as Task 10's step 3, and a failure becomes its own issue.
+
+**What only the engineer can prove.** The Linux and macOS criteria, the VS Code route and the `init` hand-off in a cmd-mode home container run on the engineer's machines (Task 10; the hand-off check only after the pull request merges). This suite proves the host script's calls against a stub `docker` and scans it for bash 4 and GNU-only constructs.
+
 ### Footprint
 
 ```
@@ -81,10 +104,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-16 — Q1-Q4 raised · cost: 2m · fable-5-2 78k in + 376k cached / 5k out
+- 2026-11-16 — planned: docs/plans/2026-11-16-cmd-mode-containers.md; Q1-Q4 answered in the conversation; `engineering:system-design` and `engineering:architecture` were unavailable, so their structure was applied directly; Q4's wording gained the token `glob:CHANGELOG.md` so overlap.sh recognises it as raised (answer untouched) · cost: 14m · fable-5-2 94k in + 710k cached / 12k out · sonnet-5-5 157k in + 2.6M cached / 46k out
