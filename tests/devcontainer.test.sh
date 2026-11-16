@@ -942,6 +942,65 @@ start_never_chowns_a_bind_mount() {
     ds_safe_dir_set "$ds_dir/codeo-home" || fail 'safe.directory was not set'
 }
 
+start_bind_mount_todo_does_not_claim_trust_when_the_add_failed() {
+    local n real_git
+    ds_setup trustfail || return 0
+    ds_mountinfo /home/u/src/codeo "$ds_dir/codeo-home"
+    real_git=$(command -v git)
+    cat > "$ds_dir/bin/git" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+    *"config --global --add safe.directory"*) exit 1 ;;
+esac
+exec $real_git "\$@"
+STUB
+    chmod +x "$ds_dir/bin/git"
+    STUB_STAT_UID=$(( $(id -u) + 1 )) ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "wanted one bind-mount TODO, got $n: $ds_err"
+    if grep 'not on a Docker volume' <<<"$ds_err" | grep -q 'already told to trust'; then fail "the bind-mount TODO claims git trusts the clone although the add failed: $ds_err"; fi
+    n=$(ds_todos 'was not told to trust the clone'); ((n == 1)) || fail "wanted one TODO saying git was not told to trust the clone, got $n: $ds_err"
+}
+
+start_mode_listing_todo_carries_the_reason_when_mktemp_fails() {
+    local r n real_mktemp
+    ds_setup mktempfail || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/codeo-home"
+    real_mktemp=$(command -v mktemp)
+    cat > "$ds_dir/bin/mktemp" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+    *modes.*) echo 'mktemp: boom' >&2; exit 1 ;;
+esac
+exec $real_mktemp "\$@"
+STUB
+    chmod +x "$ds_dir/bin/mktemp"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was turned on although the modes could not be listed'
+    n=$(ds_todos 'could not be listed'); ((n == 1)) || fail "wanted one TODO saying the modes could not be listed, got $n: $ds_err"
+    grep 'could not be listed' <<<"$ds_err" | grep -q 'update-index --chmod' || fail "the TODO does not name update-index --chmod: $ds_err"
+    grep 'could not be listed' <<<"$ds_err" | grep -q 'mktemp: boom' || fail "the TODO does not carry mktemp's error: $ds_err"
+}
+
+start_trap_never_runs_rm_with_an_empty_operand() {
+    local real_rm
+    ds_setup emptyrm || return 0
+    real_rm=$(command -v rm)
+    cat > "$ds_dir/bin/rm" <<STUB
+#!/usr/bin/env bash
+{ printf '[%s]' "\$@"; echo; } >> "\$STUB_DIR/rm-calls"
+exec $real_rm "\$@"
+STUB
+    chmod +x "$ds_dir/bin/rm"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    if [[ -s "$ds_dir/rm-calls" ]] && grep -q '\[\]' "$ds_dir/rm-calls"; then fail "rm ran with an empty operand: $(cat "$ds_dir/rm-calls")"; fi
+}
+
 start_runs_claude_outside_the_clone() {
     local line
     ds_setup claudecwd || return 0
@@ -2325,6 +2384,7 @@ cases=(
     start_plugins_failure_is_a_todo_not_a_failure
     start_chowns_the_clone_on_a_named_volume
     start_never_chowns_a_bind_mount
+    start_bind_mount_todo_does_not_claim_trust_when_the_add_failed
     start_runs_claude_outside_the_clone
     start_without_a_git_top_level_runs_from_the_clone_not_the_caller
     start_longest_mount_wins
@@ -2376,6 +2436,8 @@ cases=(
     start_leaves_no_modes_file_when_interrupted
     start_keeps_file_mode_off_when_a_mode_cannot_be_restored
     start_keeps_file_mode_off_when_the_mode_listing_fails
+    start_mode_listing_todo_carries_the_reason_when_mktemp_fails
+    start_trap_never_runs_rm_with_an_empty_operand
     start_ignores_content_edits_when_restoring_modes
     start_leaves_a_bind_mounted_clone_alone
     title_is_home_without_a_lock
