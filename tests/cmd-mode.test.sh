@@ -318,7 +318,9 @@ issue_existing_line() {
 
 # issue_mismatch_line <N> <current> <branch>: the stderr line for a clone on another branch.
 issue_mismatch_line() {
-    echo "codeo-container: the clone in codeo-$1 is on '$2', not '$3': remove the volume (docker volume rm codeo-$1, once git status in it shows nothing unpushed) or give the branch it is on"
+    local on="'$2'"
+    [[ -n "$2" ]] || on='(no branch)'
+    echo "codeo-container: the clone in codeo-$1 is on $on, not '$3': remove it (docker rm -f codeo-$1; docker volume rm codeo-$1, once git status in it shows nothing unpushed) or give the branch it is on"
 }
 
 issue_on_a_running_container_is_refused() {
@@ -362,6 +364,7 @@ issue_on_a_volume_left_without_its_container_checks_the_branch() {
     STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH='' cm_run issue 5 feat/x
     ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
     [[ "$cm_err" == "$(issue_mismatch_line 5 '' feat/x)" ]] || fail "stderr: $cm_err"
+    [[ "$cm_err" == *"is on (no branch), not 'feat/x'"* ]] || fail "no-branch wording: $cm_err"
     if cm_calls | grep -q 'devcontainer-start.sh'; then fail "the start script ran: $(cm_calls)"; fi
 }
 

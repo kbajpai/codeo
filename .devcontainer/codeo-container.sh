@@ -86,8 +86,9 @@ ensure_clone() {
             || die "could not clone branch $ref of $repo_url into $name"
     elif [[ "$check_branch" == 1 ]]; then
         current=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current) || current=''
-        [[ "$current" == "$ref" ]] \
-            || die "the clone in $name is on '$current', not '$ref': remove the volume (docker volume rm $name, once git status in it shows nothing unpushed) or give the branch it is on"
+        [[ "$current" == "$ref" ]] && return 0
+        if [[ -n "$current" ]]; then current="'$current'"; else current='(no branch)'; fi
+        die "the clone in $name is on $current, not '$ref': remove it (docker rm -f $name; docker volume rm $name, once git status in it shows nothing unpushed) or give the branch it is on"
     fi
 }
 
