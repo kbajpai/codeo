@@ -44,11 +44,16 @@ container_state() {
     fi
 }
 
-# ensure_container <name> <ref> <rebuild:0|1>: leave the container running, creating it (and its image)
-# when missing. --rebuild removes it first; the volumes are never touched.
+# ensure_container <name> <ref> <rebuild:0|1> <fresh_only:0|1>: leave the container running, creating it
+# (and its image) when missing. --rebuild removes it first; the volumes are never touched. With fresh_only
+# (issue) a container that exists and is not being rebuilt is refused rather than reused.
 ensure_container() {
-    local name=$1 ref=$2 rebuild=$3 state build_context
+    local name=$1 ref=$2 rebuild=$3 fresh_only=$4 state build_context n
     state=$(container_state "$name")
+    if [[ "$fresh_only" == 1 && "$rebuild" == 0 && "$state" != missing ]]; then
+        n=${name#codeo-}
+        die "$name already exists: enter it with 'bash codeo-container.sh shell $n', rebuild it with 'bash codeo-container.sh issue $n $ref --rebuild', or remove it (docker rm -f $name; docker volume rm $name, once git status in it shows nothing unpushed) to start from a fresh clone"
+    fi
     if [[ "$rebuild" == 1 && "$state" != missing ]]; then
         docker rm -f "$name"
         state=missing
@@ -71,12 +76,17 @@ ensure_container() {
     docker exec -u root "$name" chown dev:dev /workspaces
 }
 
-# ensure_clone <name> <ref>: clone the repository at <ref> into /workspaces/<name> unless it is there.
+# ensure_clone <name> <ref> <check_branch:0|1>: clone the repository at <ref> into /workspaces/<name> unless
+# it is there. With check_branch (issue) a clone already there must be on <ref>.
 ensure_clone() {
-    local name=$1 ref=$2
+    local name=$1 ref=$2 check_branch=$3 current
     if ! docker exec "$name" test -d "/workspaces/$name/.git"; then
         docker exec "$name" git clone --branch "$ref" "$repo_url" "/workspaces/$name" \
             || die "could not clone branch $ref of $repo_url into $name"
+    elif [[ "$check_branch" == 1 ]]; then
+        current=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current) || current=''
+        [[ "$current" == "$ref" ]] \
+            || die "the clone in $name is on '$current', not '$ref': remove the volume (docker volume rm $name, once git status in it shows nothing unpushed) or give the branch it is on"
     fi
 }
 
@@ -108,10 +118,11 @@ run_start() {
     docker "$@"
 }
 
-# bring_up <name> <ref> <rebuild:0|1>: the whole route for one container, shared by home and issue.
+# bring_up <name> <ref> <rebuild:0|1> <fresh_only:0|1>: the whole route for one container, shared by home
+# and issue (fresh_only is 1 for issue: it refuses an existing container and a clone on another branch).
 bring_up() {
-    ensure_container "$1" "$2" "$3"
-    ensure_clone "$1" "$2"
+    ensure_container "$1" "$2" "$3" "$4"
+    ensure_clone "$1" "$2" "$4"
     run_start "$1"
 }
 
@@ -130,7 +141,7 @@ cmd_home() {
         *) usage ;;
     esac
     require_docker
-    bring_up codeo-home "$base_ref" "$rebuild"
+    bring_up codeo-home "$base_ref" "$rebuild" 0
 }
 
 # cmd_issue <args...>: issue <N> <branch> [--rebuild]. N is a positive integer without a leading zero;
@@ -145,7 +156,7 @@ cmd_issue() {
     case "$1" in '' | 0* | *[!0-9]*) usage ;; esac
     case "$2" in '' | *..* | [!A-Za-z0-9]* | *[!A-Za-z0-9._/-]*) usage ;; esac
     require_docker
-    bring_up "codeo-$1" "$2" "$rebuild"
+    bring_up "codeo-$1" "$2" "$rebuild" 1
 }
 
 # cmd_shell <args...>: shell home|<N>. Opens a login bash in the container's clone, starting the container

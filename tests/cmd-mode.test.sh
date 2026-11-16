@@ -68,6 +68,7 @@ case "$1" in
                 if ((rc == 0)); then : >"$d/clone"; fi
                 exit "$rc"
                 ;;
+            *" branch --show-current"*) echo "${STUB_BRANCH:-}" ;;
             *devcontainer-start.sh*)
                 echo "devcontainer-start: ready"
                 case "$*" in *codeo-113*) echo "lock: took the lock for #113 on ${STUB_BRANCH:-}" ;; esac
@@ -295,7 +296,7 @@ issue_rejects_unsafe_numbers_and_branches() {
 issue_rebuild_and_rerun_follow_home() {
     cm_setup issuerebuild
     echo running >"$cm_dir/state"
-    STUB_IMAGE=present STUB_CLONE=present cm_run issue 113 b --rebuild
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=b cm_run issue 113 b --rebuild
     ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
     local calls
     calls=$(cm_calls)
@@ -304,9 +305,70 @@ issue_rebuild_and_rerun_follow_home() {
     cm_setup issuererun
     echo running >"$cm_dir/state"
     STUB_CLONE=present cm_run issue 113 b
-    ((cm_rc == 0)) || fail "rerun exited $cm_rc: $cm_err"
-    [[ "$(cm_calls)" == "$(lines info 'inspect --format {{.State.Running}} codeo-113' 'exec codeo-113 test -d /workspaces/codeo-113/.git' \
-        'exec -w /workspaces/codeo-113 codeo-113 bash .devcontainer/scripts/devcontainer-start.sh')" ]] || fail "rerun calls: $(cm_calls)"
+    ((cm_rc == 1)) || fail "rerun exited $cm_rc, not 1"
+    [[ "$cm_err" == "$(issue_existing_line 113 b)" ]] || fail "rerun stderr: $cm_err"
+}
+
+# issue_existing_line <N> <branch>: the stderr line for an issue on an existing container.
+issue_existing_line() {
+    echo "codeo-container: codeo-$1 already exists: enter it with 'bash codeo-container.sh shell $1', rebuild it with 'bash codeo-container.sh issue $1 $2 --rebuild', or remove it (docker rm -f codeo-$1; docker volume rm codeo-$1, once git status in it shows nothing unpushed) to start from a fresh clone"
+}
+
+# issue_mismatch_line <N> <current> <branch>: the stderr line for a clone on another branch.
+issue_mismatch_line() {
+    echo "codeo-container: the clone in codeo-$1 is on '$2', not '$3': remove the volume (docker volume rm codeo-$1, once git status in it shows nothing unpushed) or give the branch it is on"
+}
+
+issue_on_a_running_container_is_refused() {
+    cm_setup issuerunning
+    echo running >"$cm_dir/state"
+    STUB_CLONE=present cm_run issue 5 feat/x
+    ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
+    [[ "$cm_err" == "$(issue_existing_line 5 feat/x)" ]] || fail "stderr: $cm_err"
+    if cm_calls | grep -qE '^(start|run|rm|build|exec)'; then fail "calls were: $(cm_calls)"; fi
+}
+
+issue_on_a_stopped_container_is_refused_and_not_started() {
+    cm_setup issuestopped
+    echo stopped >"$cm_dir/state"
+    STUB_CLONE=present cm_run issue 5 feat/x
+    ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
+    [[ "$cm_err" == "$(issue_existing_line 5 feat/x)" ]] || fail "stderr: $cm_err"
+    if cm_calls | grep -q '^start'; then fail "the container was started: $(cm_calls)"; fi
+}
+
+issue_rebuild_on_a_matching_clone_goes_ahead() {
+    cm_setup issuematch
+    echo running >"$cm_dir/state"
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 5 feat/x --rebuild
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls | tail -n 1)" == 'exec -w /workspaces/codeo-5 codeo-5 bash .devcontainer/scripts/devcontainer-start.sh' ]] \
+        || fail "calls were: $(cm_calls)"
+}
+
+issue_rebuild_on_another_branch_is_refused() {
+    cm_setup issuemismatch
+    echo running >"$cm_dir/state"
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/old cm_run issue 5 feat/x --rebuild
+    ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
+    [[ "$cm_err" == "$(issue_mismatch_line 5 feat/old feat/x)" ]] || fail "stderr: $cm_err"
+    if cm_calls | grep -q 'devcontainer-start.sh'; then fail "the start script ran: $(cm_calls)"; fi
+}
+
+issue_on_a_volume_left_without_its_container_checks_the_branch() {
+    cm_setup issuevolume
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH='' cm_run issue 5 feat/x
+    ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
+    [[ "$cm_err" == "$(issue_mismatch_line 5 '' feat/x)" ]] || fail "stderr: $cm_err"
+    if cm_calls | grep -q 'devcontainer-start.sh'; then fail "the start script ran: $(cm_calls)"; fi
+}
+
+home_rerun_still_runs_the_start_script_on_an_existing_container() {
+    cm_setup homererun
+    echo running >"$cm_dir/state"
+    STUB_CLONE=present cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls | tail -n 1)" == "$l_start" ]] || fail "calls were: $(cm_calls)"
 }
 
 shell_opens_bash_in_the_clone() {
@@ -502,6 +564,12 @@ cases=(
     issue_uses_the_numbered_name_and_the_branch
     issue_rejects_unsafe_numbers_and_branches
     issue_rebuild_and_rerun_follow_home
+    issue_on_a_running_container_is_refused
+    issue_on_a_stopped_container_is_refused_and_not_started
+    issue_rebuild_on_a_matching_clone_goes_ahead
+    issue_rebuild_on_another_branch_is_refused
+    issue_on_a_volume_left_without_its_container_checks_the_branch
+    home_rerun_still_runs_the_start_script_on_an_existing_container
     a_mac_without_the_command_line_tools_never_calls_git
     a_mac_with_the_command_line_tools_reads_git
     a_non_mac_host_reads_git_whatever_xcode_select_says
