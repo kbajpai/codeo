@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Every codeo workflow in flight, derived from what is pushed rather than kept anywhere.
 #
-#   inflight.sh [--except <N>] [--tsv | --branches]
+#   inflight.sh [--except <N>] [--tsv | --branches | --live]
 #       One block per workflow: the issue, its branch, its assignee, the last step whose dossier
 #       has an `## Outcome`, the plan's `### Footprint` lines when there is one, and `changed:` — the files the branch
 #       actually changes against origin/<base> (`git diff --name-only origin/<base>...<branch>`, dossiers left out,
@@ -15,6 +15,13 @@
 #       assignee lookup fails the whole listing instead: exit 1, the reason on stderr, nothing on
 #       stdout, so a consumer never mistakes "unknown" for "none".
 #       It exists for status reporters, which read it rather than scraping the human blocks. Lines come in origin's ref order, not sorted by issue.
+#       Each human block ends with one `live:` line per live session of that issue (`<user> on <machine>
+#       (<host>), <age> ago`, from `live.sh list --tsv` after one `live.sh fetch`), or a single
+#       `live: unknown (could not fetch the signals)` when the fetch failed, never a stale signal.
+#       --tsv and --branches neither fetch nor read the signals.
+#       --live prints `live.sh list --tsv`'s lines (issue, user, machine, host, age in seconds) after a
+#       fetch, minus the --except issue, and nothing when no one is live. A failed fetch exits 1 with the
+#       reason on stderr and nothing on stdout. It cannot be combined with --tsv or --branches.
 #
 # A workflow is a branch on origin, other than the base branch and codeo/intake, carrying a dossier:
 # at <state>/<N>/ while it is being worked, or at <state>/done/<N>/ once close has opened its PR —
@@ -26,18 +33,26 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 
 steps=(issue init plan implement qc close)
 
-except= tsv= branches=
+except= tsv= branches= live=
 while (($#)); do
     case $1 in
         --except) except=${2:?issue number}; shift 2 ;;
         --tsv) tsv=1; shift ;;
         --branches) branches=1; shift ;;
-        *) echo "usage: inflight.sh [--except <N>] [--tsv | --branches]" >&2; exit 1 ;;
+        --live) live=1; shift ;;
+        *) echo "usage: inflight.sh [--except <N>] [--tsv | --branches | --live]" >&2; exit 1 ;;
     esac
 done
-[[ -z $tsv || -z $branches ]] || { echo "usage: inflight.sh [--except <N>] [--tsv | --branches]" >&2; exit 1; }
+modes=0; [[ -z $tsv ]] || modes=$((modes + 1)); [[ -z $branches ]] || modes=$((modes + 1)); [[ -z $live ]] || modes=$((modes + 1))
+((modes <= 1)) || { echo "usage: inflight.sh [--except <N>] [--tsv | --branches | --live]" >&2; exit 1; }
 
 cd "$(git rev-parse --show-toplevel)"
+
+if [[ -n $live ]]; then
+    bash "$CODEO_PLUGIN_ROOT/scripts/live.sh" fetch </dev/null || exit 1
+    bash "$CODEO_PLUGIN_ROOT/scripts/live.sh" list --tsv </dev/null | awk -F'\t' -v x="$except" '$1 != x'
+    exit 0
+fi
 base=$(codeo_base_branch)
 # The state directory as git sees it (relative to the repo root, where this runs).
 state_rel=${CODEO_STATE_DIR#"$CODEO_PROJECT_ROOT"/}
@@ -55,6 +70,15 @@ last_step() {
     done
     echo "${done:-none}"
 }
+
+# The live sessions, for the human blocks only: fetched once, read once.
+live_ok= live_rows=
+if [[ -z $tsv && -z $branches ]]; then
+    if bash "$CODEO_PLUGIN_ROOT/scripts/live.sh" fetch </dev/null 2>/dev/null; then
+        live_ok=1
+        live_rows=$(bash "$CODEO_PLUGIN_ROOT/scripts/live.sh" list --tsv </dev/null 2>/dev/null || true)
+    fi
+fi
 
 base_sha=$(git rev-parse "origin/$base")
 found=0 rows=
@@ -102,6 +126,15 @@ while IFS= read -r ref; do
             f && /^ *(files|wiki|exclusive|sequenced):/ { sub(/^ */, ""); print "  " $0 }'
         changed=$(git diff --name-only "$base_sha...$sha" -- . ":!$state_rel" 2>/dev/null | paste -sd, - | sed 's/,/, /g')
         echo "  changed:    ${changed:-none}"
+        if [[ -z $live_ok ]]; then
+            echo "  live:      unknown (could not fetch the signals)"
+        else
+            while IFS=$'\t' read -r l_issue l_user l_machine l_host l_age; do
+                [[ $l_issue == "$n" ]] || continue
+                if ((l_age < 60)); then l_age="${l_age}s"; else l_age="$((l_age / 60))m"; fi
+                echo "  live:      $l_user on $l_machine ($l_host), $l_age ago"
+            done <<< "$live_rows"
+        fi
         echo
     done
 done < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin)

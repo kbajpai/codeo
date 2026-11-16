@@ -1,5 +1,5 @@
 {
-  "description": "While a codeo workflow holds .codeo/active, subagents run on the configured models (the QC reviewer on its own)",
+  "description": "While a codeo workflow holds .codeo/active, subagents run on the configured models (the QC reviewer on its own) and the session publishes a short-lived live signal",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,39 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/subagent-model.sh\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/live-signal.sh\" beat",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/live-signal.sh\" beat",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/live-signal.sh\" clear",
+            "timeout": 10
           }
         ]
       }
