@@ -146,12 +146,11 @@ it.
 - **Who else is in flight.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" [--except <N>]`
   lists every workflow with a dossier on a pushed branch — its issue, branch, assignee, last
   finished step, its plan's footprint, the files the branch actually changes, and a `live:` line for
-  each live session. It reads origin, so it sees other engineers' work as soon as they push,
-  which every step does. `inflight.sh --tsv`
-  and `intake.sh lease list --tsv` are the forms a status reporter reads, and the config's
-  `hooks.onLeaseChange` runs after every lease change, since a push to the intake branch is all a
-  lease change is. Any such report is a view of what is pushed: a row that looks wrong is fixed by
-  pushing, never by editing the report.
+  each live session. It reads origin, so it sees other engineers' work as soon as they push, which
+  every step does. `inflight.sh --tsv` and `intake.sh lease list --tsv` are the forms a status
+  reporter reads, and the config's `hooks.onLeaseChange` runs after every lease change, since a push
+  to the intake branch is all a lease change is. Any such report is a view of what is pushed: a row
+  that looks wrong is fixed by pushing, never by editing the report.
 - **Who is working right now.** While a Claude session runs in a checkout holding `.codeo/active`,
   a plugin hook publishes `refs/codeo/live/<issue>/<machine>` — one parentless commit, force-pushed
   over itself — at most every 5 minutes, and deletes it when the session ends. `inflight.sh` prints
@@ -159,13 +158,16 @@ it.
   minutes old, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --live` lists them as TSV
   (issue, user, machine, host, age in seconds). When the signals cannot be fetched the block says
   `live: unknown (could not fetch the signals)`. A crash needs no cleanup: the line stops after the
-  expiry. The signal adds nothing to the feature branch or its PR, and it is information only: no
-  script refuses or waits because a workflow is live. It names the GitHub login and a machine label
-  on a public repository, nothing else; the machine is `CODEO_MACHINE`, else the container's volume,
-  the web session's first 8 characters, or the hostname. The reader's own clock judges the age.
-  `CODEO_LIVE_REFRESH_SECONDS` (300), `CODEO_LIVE_TTL_SECONDS` (900), `CODEO_MACHINE` and
-  `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings. Where a push to that ref is refused it is written
-  through the REST API, and where neither works nothing is published and the session says so once.
+  expiry, and a session idle for 15 minutes (no prompt, no tool call) stops reading as live until
+  its next one. The signal adds nothing to the feature branch or its PR, and it is information only:
+  no script refuses or waits because a workflow is live. On a public repository it names the GitHub
+  login (else `git config user.name`, else `unknown`), a machine label and the host kind
+  (container, web or local), and never an email address. The machine is `CODEO_MACHINE`, else the
+  container's volume, else `web-` plus the web session's first 8 characters, else the hostname. The
+  reader's own clock judges the age. `CODEO_LIVE_REFRESH_SECONDS` (300), `CODEO_LIVE_TTL_SECONDS`
+  (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings. Where a push to that
+  ref is refused it is written through the REST API, and where neither works nothing is published
+  and the session says so once; a failed publish is not retried until the next refresh interval.
 
   ```mermaid
   sequenceDiagram

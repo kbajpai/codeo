@@ -220,7 +220,7 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 ### Reads and writes
 
-- Reads anything: every branch's dossiers, the intake branch, issues, pull requests and their review threads, and, with the flags, the project's docs, its wiki pages and the code, and `inflight.sh`'s `live:` lines.
+- Reads anything: every branch's dossiers, the intake branch, issues, pull requests and their review threads, and, with the flags, the project's docs, its wiki pages and the code; `inflight.sh` also supplies its `live:` lines.
 - Writes `.codeo/intake/triage/` (the ledger and the run files), committed to `codeo/intake` through `intake.sh`, never to the checked-out branch.
 - Writes an issue's board Status, to Ready or Backlog only, only through `board.sh`, and only on the engineer's answer of mark Ready, resume or leave in the backlog.
 
