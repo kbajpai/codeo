@@ -252,7 +252,7 @@ assert_contains "laptop" "  live:      carol on laptop (container), 2m ago" "$ou
 
 case_desc="an_expired_signal_prints_nothing"
 clear_signals "$origin"
-plant_signal "$origin" 7 codeo-7 bob 901
+plant_signal "$origin" 7 codeo-7 bob 1000
 out=$(run_inflight "$clone")
 assert_eq "no live line" 0 "$(printf '%s\n' "$out" | grep -c 'live:' || true)"
 

@@ -125,10 +125,15 @@ clone_with_lock() {
     } > "$clone/.codeo/active"
 }
 
+# Every invocation gets its own commit dates (a counter file, so it survives the $(...) subshells), so two
+# beats never write byte-identical commits whatever the wall clock does; the wall clock is not monotonic
+# on every host.
 live() {
-    local where=$1
+    local where=$1 n
     shift
-    (cd "$where" && bash "$plugin/scripts/live.sh" "$@")
+    n=$(( $(cat "$scratch_root/seq" 2> /dev/null || echo 0) + 1 ))
+    echo "$n" > "$scratch_root/seq"
+    (cd "$where" && GIT_AUTHOR_DATE="@$((1700000000 + n)) +0000" GIT_COMMITTER_DATE="@$((1700000000 + n)) +0000" bash "$plugin/scripts/live.sh" "$@")
 }
 
 # Run live in $clone with stdout in $out, stderr in $err, status in $rc.
@@ -139,12 +144,6 @@ run() {
     err=$(cat "$scratch_root/err")
 }
 
-# Blocks until the epoch second changes, so the next beat's `beat: <epoch>` differs from the last.
-next_second() {
-    local t
-    t=$(date +%s)
-    while [[ $(date +%s) == "$t" ]]; do sleep 0.1; done
-}
 # The last run published by git push alone: nothing on stderr, no REST fallback logged.
 assert_pushed_quietly() {
     assert_eq "$1: stderr" "" "$err"
@@ -204,22 +203,18 @@ assert_pushed_quietly first
 run beat
 assert_eq "second beat throttled" "$first" "$(ref_sha refs/codeo/live/104/codeo-104)"
 assert_pushed_quietly second
-next_second
 run beat --force
 second=$(ref_sha refs/codeo/live/104/codeo-104)
 assert_eq "force republishes" 1 "$([[ $second != "$first" ]] && echo 1 || echo 0)"
 assert_pushed_quietly force
-next_second
-CODEO_LIVE_REFRESH_SECONDS=0 run beat
+CODEO_LIVE_REFRESH_SECONDS=-100 run beat # negative: a small backward clock step must not throttle it
 assert_eq "refresh 0 republishes" 1 "$([[ $(ref_sha refs/codeo/live/104/codeo-104) != "$second" ]] && echo 1 || echo 0)"
 assert_pushed_quietly refresh0
 
 case_desc=beat_replaces_the_signal_it_does_not_accumulate
 new_world; clone_with_lock 104 container codeo-104
 run beat --force; assert_pushed_quietly one
-next_second
 run beat --force; assert_pushed_quietly two
-next_second
 run beat --force; assert_pushed_quietly three
 assert_eq "history length" 1 "$(git -C "$origin" rev-list --count refs/codeo/live/104/codeo-104 2>/dev/null || true)"
 
@@ -396,15 +391,18 @@ case_desc=list_hides_an_expired_signal_and_shows_it_again_inside_the_ttl
 new_world
 other=$(clone_of "$origin")
 now=$(date +%s)
-plant refs/codeo/live/1/old "$(signal 1 alice old container $((now - 901)))"
-plant refs/codeo/live/2/young "$(signal 2 alice young container $((now - 899)))"
+plant refs/codeo/live/1/old "$(signal 1 alice old container $((now - 1000)))"
+plant refs/codeo/live/2/young "$(signal 2 alice young container $((now - 800)))"
 live "$other" fetch
 tsv=$(live "$other" list --tsv)
-assert_not_contains "901 s hidden" "1"$'\t'alice "$tsv"
-assert_contains "899 s shown" "2"$'\t'alice$'\t'young "$tsv"
-plant refs/codeo/live/3/short "$(signal 3 alice short container $((now - 61)))"
+assert_not_contains "1000 s hidden" "1"$'\t'alice "$tsv"
+assert_contains "800 s shown" "2"$'\t'alice$'\t'young "$tsv"
+plant refs/codeo/live/3/short "$(signal 3 alice short container $((now - 70)))"
+plant refs/codeo/live/4/fresh "$(signal 4 alice fresh container $((now - 50)))"
 live "$other" fetch
-assert_not_contains "ttl 60 hides 61 s" "3"$'\t'alice "$(CODEO_LIVE_TTL_SECONDS=60 live "$other" list --tsv)"
+tsv=$(CODEO_LIVE_TTL_SECONDS=60 live "$other" list --tsv)
+assert_not_contains "ttl 60 hides 70 s" "3"$'\t'alice "$tsv"
+assert_contains "ttl 60 shows 50 s" "4"$'\t'alice$'\t'fresh "$tsv"
 
 case_desc=list_treats_a_future_beat_as_age_0
 new_world
