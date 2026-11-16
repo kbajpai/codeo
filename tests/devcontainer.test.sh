@@ -4,7 +4,7 @@
 # Today it checks .codeo/config.json: the codename, the plugin pin, and that the shell suite's paths
 # cover .devcontainer/**. It also checks .devcontainer/devcontainer.json: it is valid JSON that runs as
 # the dev user and names the Dockerfile and start script, caps memory, names the container after its
-# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that and the memory cap), mounts only the one named gh volume, and carries no bind mounts, secrets or localEnv.
+# clone folder alone (--name=${containerWorkspaceFolderBasename}, runArgs exactly that and the memory cap), mounts only the two named volumes, codeo-gh (the gh login) and codeo-git (the git config), and carries no bind mounts, secrets or localEnv.
 # It also checks .devcontainer/Dockerfile (over its non-comment lines): Ubuntu 26.04 with the tools codeo needs, user dev at UID 1000 with the
 # gh config directory, and none of the tools the image deliberately leaves out. Finally it runs
 # .devcontainer/scripts/plugins.sh in a scratch repo against stub claude and git executables: a fresh
@@ -78,6 +78,7 @@ run_args_cap_memory_only() {
 }
 
 run_args_name_the_container_after_its_clone() {
+    # shellcheck disable=SC2016 # the ${...} is the text under test, not an expansion
     run_args_are_exact "$(dc_json)" \
         || fail 'runArgs is not exactly --name=${containerWorkspaceFolderBasename}, --memory=4g'
 }
@@ -460,6 +461,7 @@ STUB
     cat > "$ds_dir/bin/claude" <<'STUB'
 #!/usr/bin/env bash
 echo "$PWD" >> "$STUB_DIR/claude-pwds"
+[[ -z ${STUB_CLAUDE_MARK:-} ]] || : > "$PWD/claude-was-here"
 if [[ "$1 $2" == "auth status" ]]; then
     printf '%s' "${STUB_CLAUDE_OUT:-}"
     exit "${STUB_CLAUDE_RC:-1}"
@@ -473,7 +475,19 @@ STUB
     cat > "$ds_dir/bin/stat" <<'STUB'
 #!/usr/bin/env bash
 # The settle-stamp query (%s %y) goes to the real stat; every other call is the ownership query.
-case "$*" in *'%s %y'*) exec /usr/bin/stat "$@" ;; esac
+case "$*" in
+    *'%s %y'*)
+        # With STUB_GROW_DIR set, each settle-stamp query first appends the next numbered piece to the host
+        # gitconfig, so the file changes between polls with no timing involved.
+        if [[ -n ${STUB_GROW_DIR:-} ]]; then
+            n=$(cat "$STUB_DIR/grow-n" 2>/dev/null || echo 0)
+            if [[ -f $STUB_GROW_DIR/$((n + 1)) ]]; then
+                cat "$STUB_GROW_DIR/$((n + 1))" >> "$HOME/.gitconfig"
+                echo $((n + 1)) > "$STUB_DIR/grow-n"
+            fi
+        fi
+        exec /usr/bin/stat "$@" ;;
+esac
 echo "${STUB_STAT_UID:?}"
 STUB
     chmod +x "$ds_dir/bin/gh" "$ds_dir/bin/claude" "$ds_dir/bin/sudo" "$ds_dir/bin/stat"
@@ -770,7 +784,7 @@ start_lock_crash_is_a_todo() {
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     n=$(ds_todos 'lock.sh failed (exit 3)'); ((n == 1)) || fail "wanted one crash TODO, got $n: $ds_err"
     ! grep -q boom <<<"$ds_out" || fail "the crash output was printed on stdout: $ds_out"
-    [[ $(grep -c boom <<<"$ds_err" || true) == 1 ]] || fail "boom is not on stderr on exactly one line: $ds_err"
+    [[ $(grep -o boom <<<"$ds_err" | wc -l | tr -d ' ') == 1 ]] || fail "boom does not appear exactly once on stderr: $ds_err"
 }
 
 start_without_codeo_installed_is_a_todo() {
@@ -928,16 +942,76 @@ start_never_chowns_a_bind_mount() {
     ds_safe_dir_set "$ds_dir/codeo-home" || fail 'safe.directory was not set'
 }
 
+start_bind_mount_todo_does_not_claim_trust_when_the_add_failed() {
+    local n real_git
+    ds_setup trustfail || return 0
+    ds_mountinfo /home/u/src/codeo "$ds_dir/codeo-home"
+    real_git=$(command -v git)
+    cat > "$ds_dir/bin/git" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+    *"config --global --add safe.directory"*) exit 1 ;;
+esac
+exec $real_git "\$@"
+STUB
+    chmod +x "$ds_dir/bin/git"
+    STUB_STAT_UID=$(( $(id -u) + 1 )) ds_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    n=$(ds_todos 'not on a Docker volume'); ((n == 1)) || fail "wanted one bind-mount TODO, got $n: $ds_err"
+    if grep 'not on a Docker volume' <<<"$ds_err" | grep -q 'already told to trust'; then fail "the bind-mount TODO claims git trusts the clone although the add failed: $ds_err"; fi
+    n=$(ds_todos 'was not told to trust the clone'); ((n == 1)) || fail "wanted one TODO saying git was not told to trust the clone, got $n: $ds_err"
+}
+
+start_mode_listing_todo_carries_the_reason_when_mktemp_fails() {
+    local r n real_mktemp
+    ds_setup mktempfail || return 0
+    ds_on_volume
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_modes_repo || { fail 'could not build the scratch repo'; return 0; }
+    r="$ds_dir/codeo-home"
+    real_mktemp=$(command -v mktemp)
+    cat > "$ds_dir/bin/mktemp" <<STUB
+#!/usr/bin/env bash
+case "\$*" in
+    *modes.*) echo 'mktemp: boom' >&2; exit 1 ;;
+esac
+exec $real_mktemp "\$@"
+STUB
+    chmod +x "$ds_dir/bin/mktemp"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(git -C "$r" config --type=bool core.fileMode) == false ]] || fail 'core.fileMode was turned on although the modes could not be listed'
+    n=$(ds_todos 'could not be listed'); ((n == 1)) || fail "wanted one TODO saying the modes could not be listed, got $n: $ds_err"
+    grep 'could not be listed' <<<"$ds_err" | grep -q 'update-index --chmod' || fail "the TODO does not name update-index --chmod: $ds_err"
+    grep 'could not be listed' <<<"$ds_err" | grep -q 'mktemp: boom' || fail "the TODO does not carry mktemp's error: $ds_err"
+}
+
+start_trap_never_runs_rm_with_an_empty_operand() {
+    local real_rm
+    ds_setup emptyrm || return 0
+    real_rm=$(command -v rm)
+    cat > "$ds_dir/bin/rm" <<STUB
+#!/usr/bin/env bash
+{ printf '[%s]' "\$@"; echo; } >> "\$STUB_DIR/rm-calls"
+exec $real_rm "\$@"
+STUB
+    chmod +x "$ds_dir/bin/rm"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    if [[ -s "$ds_dir/rm-calls" ]] && grep -q '\[\]' "$ds_dir/rm-calls"; then fail "rm ran with an empty operand: $(cat "$ds_dir/rm-calls")"; fi
+}
+
 start_runs_claude_outside_the_clone() {
     local line
     ds_setup claudecwd || return 0
     : > "$ds_dir/claude-pwds"
-    ds_ready_run
+    STUB_CLAUDE_MARK=1 ds_ready_run
     [[ -s "$ds_dir/claude-pwds" ]] || { fail 'claude was never run'; return 0; }
     while IFS= read -r line; do
         [[ $line == "$ds_dir/home" ]] || fail "claude ran in $line, wanted $ds_dir/home"
     done < "$ds_dir/claude-pwds"
-    [[ -z $(git -C "$ds_dir/codeo-home" status --porcelain --untracked-files=no) ]] || fail 'the clone has changes after the run'
+    [[ ! -e "$ds_dir/codeo-home/claude-was-here" ]] || fail 'claude left a file in the clone'
+    [[ -e "$ds_dir/home/claude-was-here" ]] || fail 'claude did not run from the home directory'
 }
 
 start_without_a_git_top_level_runs_from_the_clone_not_the_caller() {
@@ -1151,24 +1225,21 @@ start_waits_for_a_host_gitconfig_that_is_written_after_it_is_created() {
 }
 
 start_waits_for_a_host_gitconfig_that_is_still_growing() {
-    local f
     ds_setup growhost || return 0
-    f="$ds_dir/home/.gitconfig"
-    # The file is written in place in short steps, the email last, so for about half a second it is non-empty and changing.
-    (
-        : > "$f"
-        sleep 0.3
-        printf '[user]\n' >> "$f"; sleep 0.05
-        printf '\tname = Ada O'"'"'Neil\n' >> "$f"; sleep 0.05
-        printf '\t# one\n' >> "$f"; sleep 0.05
-        printf '\t# two\n' >> "$f"; sleep 0.05
-        printf '\t# three\n' >> "$f"; sleep 0.05
-        printf '\t# four\n' >> "$f"; sleep 0.05
-        printf '\t# five\n' >> "$f"; sleep 0.05
-        printf '\temail = ada@example.com\n' >> "$f"
-    ) &
-    DS_GITCONFIG_WAIT=5 DS_AUTHOR_NAME=Env DS_AUTHOR_EMAIL=env@example.com ds_ready_run
-    wait
+    # The file starts empty and the stat stub appends one numbered piece per settle-stamp query, the email last,
+    # so the file is non-empty and changing across eight polls.
+    mkdir "$ds_dir/grow"
+    printf '[user]\n' > "$ds_dir/grow/1"
+    printf '\tname = Ada O'"'"'Neil\n' > "$ds_dir/grow/2"
+    printf '\t# one\n' > "$ds_dir/grow/3"
+    printf '\t# two\n' > "$ds_dir/grow/4"
+    printf '\t# three\n' > "$ds_dir/grow/5"
+    printf '\t# four\n' > "$ds_dir/grow/6"
+    printf '\t# five\n' > "$ds_dir/grow/7"
+    printf '\temail = ada@example.com\n' > "$ds_dir/grow/8"
+    : > "$ds_dir/home/.gitconfig"
+    STUB_GROW_DIR="$ds_dir/grow" DS_GITCONFIG_WAIT=5 DS_AUTHOR_NAME=Env DS_AUTHOR_EMAIL=env@example.com ds_ready_run
+    [[ $(cat "$ds_dir/grow-n") == 8 ]] || fail 'the stub did not append all eight pieces'
     [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the host's: $(ds_global user.name)"
     [[ $(ds_global user.email) == 'ada@example.com' ]] || fail "user.email is not the host's: $(ds_global user.email)"
     grep -qF 'user.name set from ~/.gitconfig' <<<"$ds_out" || fail "no report of user.name: $ds_out"
@@ -1577,6 +1648,33 @@ start_names_a_file_mode_overridden_from_a_wider_scope() {
     grep 'overrid' <<<"$ds_out" | grep -q 'global' || fail "stdout does not say it overrode the global setting: $ds_out"
 }
 
+start_does_not_claim_an_override_the_scope_outranks() {
+    local r name scope
+    for name in param count worktree; do
+        ds_setup "override-$name" || return 0
+        ds_on_volume
+        ds_identity || { fail "could not set the scratch git identity"; return 0; }
+        r="$ds_dir/codeo-home"
+        git -C "$r" config --unset core.filemode
+        case $name in
+            param) scope=command; GIT_CONFIG_PARAMETERS="'core.fileMode=false'" ds_ready_run ;;
+            count) scope=command; GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.fileMode GIT_CONFIG_VALUE_0=false ds_ready_run ;;
+            worktree)
+                scope=worktree
+                git -C "$r" config extensions.worktreeConfig true && git -C "$r" config --worktree core.fileMode false \
+                    || { fail 'could not set the worktree config'; return 0; }
+                ds_ready_run ;;
+        esac
+        ((ds_rc == 0)) || fail "$name: exit $ds_rc, wanted 0"
+        [[ $(git -C "$r" config --local --type=bool core.fileMode) == true ]] || fail "$name: core.fileMode is not true locally"
+        ! grep -q 'overrid' <<<"$ds_out" || fail "$name: stdout claims an override: $ds_out"
+        ! grep -q 'set it to true for this clone' <<<"$ds_out" || fail "$name: stdout claims it set it to true for this clone: $ds_out"
+        [[ $(ds_todos 'still false from the') == 1 ]] || fail "$name: not exactly one 'still false from the' TODO: $ds_err"
+        grep 'TODO.*still false from the' <<<"$ds_err" | grep "from the $scope config" | grep -q 'update-index --chmod' || fail "$name: the TODO does not name $scope and update-index --chmod: $ds_err"
+        [[ $(tail -n1 <<<"$ds_out") != 'devcontainer-start: ready' ]] || fail "$name: stdout ends with ready: $ds_out"
+    done
+}
+
 # Pins existing behaviour: a file whose mode was lost and whose content was edited is still restored and counted.
 start_files_restore_and_content_edit_both_count() {
     local r
@@ -1616,7 +1714,8 @@ esac
 exec $real_git "\$@"
 STUB
     chmod +x "$ds_dir/bin/git"
-    ds_ready_run
+    # The "Terminated" line is the test shell's own job report; the redirect swallows it (ds_run already files the script's stderr).
+    { ds_ready_run; } 2>/dev/null
     ((ds_rc != 0)) || fail 'the script exited 0 although it was sent TERM'
     ! grep -qxF 'gh auth setup-git' "$ds_dir/calls" 2>/dev/null || fail 'step 4 ran, so the script did not stop on TERM'
     ! grep -q 'devcontainer-start: ready$' <<<"$ds_out" || fail "the script ran to the end: $ds_out"
@@ -2001,10 +2100,12 @@ title_reports_a_failing_container_name_as_one_line() {
     wt_setup cnfail || return 0
     printf '#!/bin/sh\necho "container-name: first" >&2\necho "container-name: second" >&2\nexit 1\n' \
         > "$wt_dir/.devcontainer/scripts/container-name.sh"
+    mkdir -p "$wt_dir/.vscode" && printf '{"editor.tabSize":2}\n' > "$wt_dir/.vscode/settings.json"
     wt_run
     ((wt_rc == 1)) || fail "exit $wt_rc, wanted 1"
     [[ $wt_err == 'window-title: could not name the container: first / second' ]] || fail "stderr was: $wt_err"
-    ! compgen -G "$wt_dir/.vscode/.settings.*" >/dev/null || fail 'a temp file was left in .vscode'
+    [[ $(ls -A "$wt_dir/.vscode") == settings.json ]] || fail "the failure left something in .vscode: $(ls -A "$wt_dir/.vscode")"
+    [[ $(<"$wt_dir/.vscode/settings.json") == '{"editor.tabSize":2}' ]] || fail 'the failing run changed settings.json'
 }
 
 title_outside_a_repository_says_so() {
@@ -2249,10 +2350,9 @@ docs_say_two_same_named_containers_cannot_both_exist() {
 }
 
 docs_changelog_names_the_replay_sed_and_the_folder_limit() {
-    local unreleased
-    unreleased=$(awk '/^## Unreleased/{f=1;next} /^## v/{f=0} f' "$repo/CHANGELOG.md")
-    grep '(#52)' <<<"$unreleased" | grep -q 'tests/replay.test.sh' || fail 'the #52 bullet does not name tests/replay.test.sh'
-    grep -q 'my project' <<<"$unreleased" || fail 'the Unreleased section does not state the folder-name limit (my project)'
+    local log="$repo/CHANGELOG.md"
+    grep '(#52)' "$log" | grep -q 'tests/replay.test.sh' || fail 'the #52 bullet does not name tests/replay.test.sh'
+    grep -q 'my project' "$log" || fail 'CHANGELOG.md does not state the folder-name limit (my project)'
 }
 
 cases=(
@@ -2311,6 +2411,7 @@ cases=(
     start_plugins_failure_is_a_todo_not_a_failure
     start_chowns_the_clone_on_a_named_volume
     start_never_chowns_a_bind_mount
+    start_bind_mount_todo_does_not_claim_trust_when_the_add_failed
     start_runs_claude_outside_the_clone
     start_without_a_git_top_level_runs_from_the_clone_not_the_caller
     start_longest_mount_wins
@@ -2358,10 +2459,13 @@ cases=(
     start_restores_tracked_modes_before_turning_file_mode_on
     start_keeps_an_executable_bit_the_index_does_not_record
     start_names_a_file_mode_overridden_from_a_wider_scope
+    start_does_not_claim_an_override_the_scope_outranks
     start_files_restore_and_content_edit_both_count
     start_leaves_no_modes_file_when_interrupted
     start_keeps_file_mode_off_when_a_mode_cannot_be_restored
     start_keeps_file_mode_off_when_the_mode_listing_fails
+    start_mode_listing_todo_carries_the_reason_when_mktemp_fails
+    start_trap_never_runs_rm_with_an_empty_operand
     start_ignores_content_edits_when_restoring_modes
     start_leaves_a_bind_mounted_clone_alone
     title_is_home_without_a_lock

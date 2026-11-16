@@ -38,14 +38,15 @@ clone_on_named_volume() {
 # root-owned under rootless Docker and Podman, and changing it would change the engineer's files on the host.
 clone=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)
 trusted=$(git config --global --get-all safe.directory 2>/dev/null || true)
+trust_ok=1
 grep -qxF -- "$clone" <<<"$trusted" ||
-    git config --global --add safe.directory "$clone" || add_todo "git was not told to trust the clone: run git config --global --add safe.directory $clone"
+    git config --global --add safe.directory "$clone" || { trust_ok=; add_todo "git was not told to trust the clone: run git config --global --add safe.directory $clone"; }
 if [[ $(stat -c %u "$clone" 2>/dev/null || true) != "$(id -u)" ]]; then
     if clone_on_named_volume "$clone"; then
         sudo chown -R "$(id -u):$(id -g)" "$clone" ||
             add_todo "the clone is not owned by you and chown failed: run sudo chown -R $(id -u):$(id -g) $clone"
     else
-        add_todo "the clone at $clone is not owned by you and is not on a Docker volume, so it was left alone: under rootless Docker or Podman the user namespace mapping makes host files look owned by another user, changing that ownership would change the host's files, and git is already told to trust the clone"
+        add_todo "the clone at $clone is not owned by you and is not on a Docker volume, so it was left alone: under rootless Docker or Podman the user namespace mapping makes host files look owned by another user, changing that ownership would change the host's files${trust_ok:+, and git is already told to trust the clone}"
     fi
 fi
 
@@ -69,7 +70,8 @@ fi
 # executable bit as set. Then the files the index records as executable but the disk has as not are made executable
 # again (only that direction: an executable bit the index does not record is left, and shows as a mode change), the
 # files named in the message, and only when that worked does core.fileMode go back on for this clone; if a file could
-# not be restored or the modes could not be listed, say how to stage by hand.
+# not be restored or the modes could not be listed, say how to stage by hand. A `true` that does not take effect (a command or
+# worktree scope outranks the clone's config and still gives false) is reported as a TODO, not as an override.
 
 # restore_modes: chmod +x each tracked file the index records as 100755 but the disk has as 100644 (what a filesystem
 # that dropped the bit did), then list again. Only that direction: a file the disk has executable and the index does
@@ -85,7 +87,7 @@ restore_modes() {
     left_paths=()
     kept_paths=()
     list_err=
-    modes_list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX" 2>/dev/null) || return 2
+    modes_list=$(mktemp "$(git rev-parse --git-dir)/modes.XXXXXX" 2>&1) || { list_err=${modes_list//$'\n'/ / }; modes_list=; return 2; }
     if ! list_err=$(git -c core.fileMode=true diff --raw -z --no-renames 2>&1 >"$modes_list"); then
         list_err=${list_err//$'\n'/ / }
         return 2
@@ -115,7 +117,7 @@ restore_modes() {
 
 # The listing's temp file is removed on every exit, an interrupt included.
 modes_list=
-trap 'rm -f -- "${modes_list:-}"' EXIT
+trap '[[ -z ${modes_list:-} ]] || rm -f -- "$modes_list"' EXIT
 
 if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
     if ! clone_on_named_volume "$clone"; then
@@ -136,15 +138,23 @@ if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; t
                     ((${#left_paths[@]} <= 5)) || left_list+=" and $((${#left_paths[@]} - 5)) more"
                     add_todo "core.fileMode is false and could not restore the modes of $left_list: chmod them to the index's modes, or stage with git update-index --chmod=+x <file>"
                 elif git config core.fileMode true; then
-                    if [[ $filemode_scope != local ]]; then
-                        say "core.fileMode was false from the $filemode_scope config: this clone's config now overrides it with true"
+                    if [[ $(git config --type=bool core.fileMode 2>/dev/null || true) == false ]]; then
+                        outranked=$(git config --show-scope --get core.fileMode 2>/dev/null || true)
+                        outranked=${outranked%%[[:space:]]*}
+                        add_todo "core.fileMode is still false from the ${outranked:-wider} config, which outranks this clone's own config: unset it there (for the command scope, the GIT_CONFIG_COUNT or GIT_CONFIG_PARAMETERS variable), or stage each new script with git update-index --chmod=+x <file>"
+                        filemode_clause=''
+                    else
+                        filemode_clause=' and set it to true for this clone'
+                        if [[ $filemode_scope != local ]]; then
+                            say "core.fileMode was false from the $filemode_scope config: this clone's config now overrides it with true"
+                        fi
                     fi
                     if ((restored_count > 0)); then
                         restored_list=$(printf '%s, ' "${restored_paths[@]:0:5}")
                         restored_list=${restored_list%, }
                         ((${#restored_paths[@]} <= 5)) || restored_list+=" and $((${#restored_paths[@]} - 5)) more"
-                        say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) ($restored_list) to the index's and set it to true for this clone"
-                    else
+                        say "core.fileMode was false and this filesystem keeps the executable bit as set: restored the modes of $restored_count tracked file$( ((restored_count == 1)) || echo s) ($restored_list) to the index's$filemode_clause"
+                    elif [[ -n $filemode_clause ]]; then
                         say "core.fileMode was false and this filesystem keeps the executable bit as set: set it to true for this clone"
                     fi
                     if ((${#kept_paths[@]} > 0)); then

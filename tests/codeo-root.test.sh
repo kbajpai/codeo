@@ -203,6 +203,41 @@ registry_survives_a_project_path_that_no_longer_exists() {
     teardown
 }
 
+registry_matches_a_project_path_with_a_backslash() {
+    setup
+    local bs want
+    bs="$root/back\\slash"
+    mkdir -p "$bs/.devcontainer/scripts"
+    git -C "$bs" init -q
+    cp "$script" "$bs/.devcontainer/scripts/codeo-root.sh"
+    cr_clone=$(cd "$bs" && pwd -P)
+    want=$(plugin mine)
+    registry "$(plugin user)" "$want|$cr_clone"
+    registry_expect "$want"
+    teardown
+}
+
+registry_treats_an_empty_project_path_as_none() {
+    setup
+    local want
+    want=$(plugin none)
+    registry "$(plugin other)|/somewhere/else" "$want|"
+    registry_expect "$want"
+    teardown
+}
+
+registry_treats_a_false_project_path_as_none() {
+    setup
+    local want
+    want=$(plugin none)
+    mkdir -p "$root/cfg/plugins"
+    jq -n --arg o "$(plugin other)" --arg n "$want" \
+        '{plugins: {"codeo@codeo": [{installPath: $o, projectPath: "/somewhere/else"}, {installPath: $n, projectPath: false}]}}' \
+        > "$root/cfg/plugins/installed_plugins.json"
+    registry_expect "$want"
+    teardown
+}
+
 no_registry_fails() {
     setup
     cr_run
@@ -223,6 +258,9 @@ cases=(
     registry_skips_a_null_install_path_for_this_clone
     registry_survives_a_project_path_that_no_longer_exists
     outside_a_git_clone_only_user_entries_qualify
+    registry_matches_a_project_path_with_a_backslash
+    registry_treats_an_empty_project_path_as_none
+    registry_treats_a_false_project_path_as_none
     no_registry_fails
 )
 

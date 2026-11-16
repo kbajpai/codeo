@@ -10,7 +10,8 @@
 # projectPath; an entry with no installPath never qualifies. An entry for another project is never taken,
 # and outside a git clone only entries with no projectPath qualify. A set $CODEO_ROOT that
 # lacks scripts/lock.sh fails rather than falling through: a wrong override someone typed must not be
-# quietly replaced by a different codeo. No path is ever guessed.
+# quietly replaced by a different codeo. No path is ever guessed. A path holding a tab or a newline is not
+# supported; an empty or false projectPath counts as none.
 set -euo pipefail
 
 has_lock() { [[ -f $1/scripts/lock.sh ]]; }
@@ -28,10 +29,11 @@ if [[ -f $registry ]]; then
     # (the failure must not abort under set -e).
     clone=$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || true)
     [[ -z $clone ]] || clone=$(cd "$clone" && pwd -P)
-    # One "projectPath<TAB>installPath" line per entry; an absent or null field is empty. A recorded projectPath
+    # One "projectPath<TAB>installPath" line per entry; an absent, null or false field is empty (jq joins the fields,
+    # so a backslash arrives as written, which @tsv would double). A recorded projectPath
     # matches after it is resolved (trailing slash, symlink); one that no longer exists is compared as written.
     # An entry with no installPath never qualifies.
-    entries=$(jq -r '.plugins["codeo@codeo"][]? | [(.projectPath // ""), (.installPath // "")] | @tsv' \
+    entries=$(jq -r '.plugins["codeo@codeo"][]? | [((.projectPath // "") | tostring), ((.installPath // "") | tostring)] | join("\t")' \
         "$registry" 2>/dev/null || true)
     fallback=
     while IFS= read -r line; do
