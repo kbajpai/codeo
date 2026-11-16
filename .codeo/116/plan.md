@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2. Q1-Q3 and Q5 are answered ("recommended for all", in the conversation, recorded under each). **Q4 is open**: it has no recommended option, only the output of `rm -f -- ""; echo "rc=$?"` run in a container terminal, which this session cannot produce. Nothing is drafted until it is answered. Every finding in the issue was read against the code as it is on this branch, and each still holds; the calls the draft will carry are under `## Notes`.
+Round 3. Q1-Q5 are all answered (Q1-Q3 and Q5 "recommended for all"; Q4's criterion dropped, its output recorded). The draft is at `.codeo/116/plan-draft.md`, awaiting the engineer's approval; nothing is open in this file. Every finding in the issue was read against the code as it is on this branch, and each still holds; the calls the draft will carry are under `## Notes`.
 
 ## Questions
 
@@ -49,6 +49,7 @@ Round 2. Q1-Q3 and Q5 are answered ("recommended for all", in the conversation, 
 **Options:** none. Run it in a terminal of this container (bash) and paste everything it prints, the `rc=` line included.
 
 **Answer:**
+Dropped from this change; the output was pasted anyway and is recorded below (engineer, in the conversation, 2026-11-16: "drop the rm criterion and draft the plan"; recorded here by the skill).
 
 ### Q5 — #113 names three of the same files: proceed and coordinate, sequence after #113, or re-scope?
 
@@ -60,6 +61,17 @@ Round 2. Q1-Q3 and Q5 are answered ("recommended for all", in the conversation, 
 
 **Answer:**
 Proceed and coordinate (engineer, in the conversation, 2026-11-16: "recommended for all"; recorded here by the skill).
+
+### Q4 — answer, recorded by the skill
+
+The engineer (conversation, 2026-11-16): "drop the rm criterion and draft the plan", and pasted from a container terminal:
+
+```
+dev@65b0af50fc72:/workspaces/codeo-116$ rm -f -- ""; echo "rc=$?"
+rc=0
+```
+
+So the criterion "The `rm -f -- ""` check output is recorded on #107" is **dropped from this change** at the engineer's say-so: no task posts to #107. The output above is kept here only.
 
 ## Notes
 
@@ -84,7 +96,7 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-16: "recommended 
 ### Footprint
 
 ```
-files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, scripts/cleanup.sh, scripts/live.sh, scripts/github.sh, scripts/board.sh, hooks/hooks.json, skills/cleanup/SKILL.md, skills/close/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, skills/implement/SKILL.md, skills/qc/SKILL.md, docs/skills.md, docs/skills-inventory.md, docs/handoff.md, CHANGELOG.md, tests/role.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/live.test.sh, tests/live-signal.test.sh, tests/github.test.sh, tests/board.test.sh, tests/devcontainer.test.sh, tests/close-skill.test.sh, tests/issue-skill.test.sh, tests/plan-skill.test.sh, tests/implement-skill.test.sh, tests/qc-skill.test.sh, tests/skills-doc.test.sh, docs/plans/2026-11-16-follow-ups-70-71-104-107.md
+files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, scripts/cleanup.sh, scripts/live.sh, scripts/github.sh, scripts/board.sh, hooks/hooks.json, skills/cleanup/SKILL.md, skills/close/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, skills/implement/SKILL.md, skills/qc/SKILL.md, docs/skills.md, docs/handoff.md, CHANGELOG.md, tests/role.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/live.test.sh, tests/live-signal.test.sh, tests/github.test.sh, tests/board.test.sh, tests/devcontainer.test.sh, tests/close-skill.test.sh, tests/issue-skill.test.sh, tests/plan-skill.test.sh, tests/implement-skill.test.sh, tests/qc-skill.test.sh, docs/plans/2026-11-16-follow-ups-70-71-104-107.md
 wiki:       none
 exclusive:  none
 ```
@@ -97,3 +109,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-16 — explored, Q1-Q5 raised, draft footprint recorded under Notes · cost: 3m · fable-5-2 118k in + 853k cached / 16k out
 - 2026-11-16 — Q1-Q3 and Q5 recorded from the engineer's conversation answer; Q4 still open, stopped · cost: unavailable (no draft work this round)
+- 2026-11-16 — Q4 criterion dropped by the engineer and its output recorded; draft written to .codeo/116/plan-draft.md (10 tasks), awaiting approval · cost: unavailable (mid-turn)
