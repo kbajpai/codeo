@@ -124,4 +124,4 @@
 | `qc:107:F1-F3` | `rm -f -- ""` check unrecorded, CHANGELOG bullet overstates `codeo-root.sh`, weak title test | filed #116 | 2026-11-16 |
 | `issue:112` | Verify the live-session signal in a hosted web session; filed 2026-11-16, no branch, board Status `none` | leave in the backlog | 2026-11-16 |
 | `issue:114` | Dev container trusts the workspace folder in Claude Code; filed 2026-11-16, board Status `none` | leave in the backlog | 2026-11-16 |
-| `issue:116` | Follow-ups #70, #71, #104 and #107 left; filed 2026-11-16, board Status `none` | leave in the backlog | 2026-11-16 |
+| `issue:116` | Follow-ups #70, #71, #104 and #107 left; filed 2026-11-16, board Status `none` | ready | 2026-11-16 |
