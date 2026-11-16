@@ -62,7 +62,11 @@ printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}\n' >"$s
 printf '{"number":70,"state":"closed","labels":[],"assignees":[]}' >"$GH_STUB_DIR/GET_repos_o_n_issues_70.json"
 printf '{"state":"closed","merged_at":"2026-01-01T00:00:00Z","head":{"ref":"feat/70"}}' >"$GH_STUB_DIR/GET_repos_o_n_pulls_41.json"
 
-run() { (cd "$scratch/work" && PATH="$scratch/bin:$PATH" CODEO_CLEANUP_REMOVAL=$1 bash "$repo/scripts/cleanup.sh" 2>&1) || true; }
+run() {
+    mkdir -p "$scratch/work/.codeo/overlays"
+    printf '## removal-command\n%s\n' "$1" >"$scratch/work/.codeo/overlays/cleanup.md"
+    (cd "$scratch/work" && PATH="$scratch/bin:$PATH" bash "$repo/scripts/cleanup.sh" 2>&1) || true
+}
 
 for bad in codeo-home codeo-gh codeo-git codeo-; do
     out=$(run "${body//codeo-\{N\}/$bad}")
