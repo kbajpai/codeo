@@ -9,7 +9,8 @@
 #   codeo-container.sh shell home|<N>
 #
 # CODEO_REPO_URL  the repository to build from and clone (default https://github.com/kbajpai/codeo.git)
-# CODEO_CONTEXT   a local directory to build the image from instead of the Git URL (a developer's own clone)
+# CODEO_CONTEXT   the .devcontainer directory of a local clone, to build the image from instead of the Git URL (the
+#                 repository is still cloned from CODEO_REPO_URL)
 set -euo pipefail
 
 repo_url=${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}
@@ -126,10 +127,16 @@ bring_up() {
     run_start "$1"
 }
 
-# require_docker: exit 1 with one line unless the Docker daemon answers.
+# require_docker: exit 1 with one line unless the Docker daemon answers; the line carries the first line of
+# docker info's own stderr when there is one.
 require_docker() {
-    docker info >/dev/null 2>&1 \
-        || die 'Docker is not available: install it and start it, then run this again'
+    local err
+    err=$(docker info 2>&1 >/dev/null) && return 0
+    err=${err%%$'\n'*}
+    if [[ -n "$err" ]]; then
+        die "Docker is not available: $err"
+    fi
+    die 'Docker is not available: install it and start it, then run this again'
 }
 
 # cmd_home <args...>: home [--rebuild].

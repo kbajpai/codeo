@@ -48,7 +48,9 @@ d=${0%/bin/docker}
 echo "$*" >>"$d/calls"
 state=$(<"$d/state")
 case "$1" in
-    info) exit "${STUB_INFO_RC:-0}" ;;
+    info)
+        [[ -z "${STUB_INFO_ERR:-}" ]] || { echo "$STUB_INFO_ERR" >&2; exit 1; }
+        exit "${STUB_INFO_RC:-0}" ;;
     inspect)
         case "$state" in
             missing) exit 1 ;;
@@ -543,6 +545,14 @@ docs_changelog_names_cmd_mode() {
     [[ "$line" == *"no rebuild"* ]] || fail "the (#113) line does not say no rebuild is needed"
 }
 
+docker_failure_shows_dockers_own_reason() {
+    cm_setup dockerreason
+    STUB_INFO_ERR='permission denied while trying to connect to the Docker daemon socket' cm_run home
+    ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
+    [[ "$cm_err" == 'codeo-container: Docker is not available: permission denied while trying to connect to the Docker daemon socket' ]] \
+        || fail "stderr is not the one line with Docker's reason: $cm_err"
+}
+
 cases=(
     shell_opens_bash_in_the_clone
     shell_starts_a_stopped_container_first
@@ -550,6 +560,7 @@ cases=(
     shell_rejects_anything_but_home_or_a_number
     usage_errors_exit_2_and_run_no_docker
     docker_that_is_not_there_is_one_line
+    docker_failure_shows_dockers_own_reason
     home_creates_builds_clones_and_starts
     home_rerun_on_a_running_container_creates_nothing
     home_starts_a_stopped_container

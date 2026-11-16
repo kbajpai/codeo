@@ -4,7 +4,7 @@
 # "codeo [#<N>]"). Registered for SessionStart and UserPromptSubmit, it reads the hook's JSON on stdin and
 # prints {"hookSpecificOutput":{"hookEventName":"<event>","sessionTitle":"<title>"}} on one line.
 #
-# Only inside a dev container (REMOTE_CONTAINERS=true, or CODEO_CMD_MODE=1 for one started from a host command
+# Only inside a dev container (REMOTE_CONTAINERS=true, or any non-empty CODEO_CMD_MODE for one started from a host command
 # line, where cmd mode writes no .vscode/settings.json), and only for those two events. On every such run with
 # REMOTE_CONTAINERS=true it first refreshes the VS Code window title through window-title.sh (a no-op when it
 # is current), even for a session that was renamed. It then prints a session title only when the session has none, or when its title
@@ -17,7 +17,7 @@
 #   bash .devcontainer/scripts/session-title.sh < <hook json>
 set -uo pipefail
 
-[[ ${REMOTE_CONTAINERS:-} == true || ${CODEO_CMD_MODE:-} == 1 ]] || exit 0
+[[ ${REMOTE_CONTAINERS:-} == true || ${CODEO_CMD_MODE:-} ]] || exit 0
 input=$(cat)
 {
     IFS= read -r -d '' event

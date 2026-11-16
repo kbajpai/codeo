@@ -2170,12 +2170,12 @@ st_json() {
 }
 
 # st_run <stdin> [remote]: runs session-title.sh with REMOTE_CONTAINERS=<remote> (default true; "unset"
-# leaves it out) from /, and with CODEO_CMD_MODE unset unless ST_CMD_MODE is non-empty (then =1).
+# leaves it out) from /, and with CODEO_CMD_MODE unset unless ST_CMD_MODE is non-empty (then set to its value).
 # Sets st_rc, st_out, st_err.
 st_run() {
     local input=$1 remote=${2:-true} errf envs=()
     [[ $remote == unset ]] || envs=("REMOTE_CONTAINERS=$remote")
-    [[ -z ${ST_CMD_MODE:-} ]] || envs+=(CODEO_CMD_MODE=1)
+    [[ -z ${ST_CMD_MODE:-} ]] || envs+=("CODEO_CMD_MODE=$ST_CMD_MODE")
     errf=$(mktemp -p "$pl_root")
     st_rc=0
     st_out=$(cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
@@ -2219,6 +2219,13 @@ session_title_cmd_mode_titles_home_and_the_issue() {
     printf 'issue:   113\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
     st_run "$(st_json SessionStart $st_sid)" unset
     [[ $(st_title) == 'codeo [#113] · a21b9973' ]] || fail "lock: title '$(st_title)'"
+}
+
+session_title_in_cmd_mode_accepts_any_value() {
+    st_setup cmd-mode-any || return 0
+    local ST_CMD_MODE=true
+    st_run "$(st_json SessionStart $st_sid)" unset
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
 }
 
 session_title_cmd_mode_writes_no_vscode_settings() {
@@ -2553,6 +2560,7 @@ cases=(
     session_title_names_home_and_the_id
     session_title_names_the_issue_with_a_lock
     session_title_cmd_mode_titles_home_and_the_issue
+    session_title_in_cmd_mode_accepts_any_value
     session_title_cmd_mode_writes_no_vscode_settings
     session_title_with_both_variables_still_refreshes_the_window_title
     session_title_on_a_prompt_after_clear
