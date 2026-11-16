@@ -8,9 +8,7 @@
 
 ## Where this stands
 
-Round 1 is done and goes back to `/codeo:plan`. The build, the suite and five of the six criteria
-pass. Criterion 5 ("asked once, then not shown again") depends on a ledger fingerprint the plan
-specified only partly. Nothing is open.
+Round 2 is clear and forwards to `/codeo:close`. The build and the full suite pass, all six criteria are met, F1 from round 1 is fixed, and F7-F9 are non-blocking. Nothing is open.
 
 ## Questions
 
@@ -99,6 +97,57 @@ implementation round that follows.
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 2 — 2026-11-16
+
+Reviewed `implement.md` round 2, after `plan.md` round 2, at `bb1187e` against base `cd9cd5e` (`git merge-base origin/main HEAD`).
+
+**Commands and output**
+- `sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main` (exit 0, no `also changed on main:` lines).
+- `overlap.sh 71` → nothing (exit 0; #104 and #107 were already raised and answered). `overlap.sh --outside 71` → nothing (exit 0).
+- `git diff origin/main...HEAD --stat` → 19 files changed, 949 insertions(+), 33 deletions(-).
+- `scope.sh origin/main HEAD` →
+  ```
+  scope: suite shell needed for unclassified paths:
+    .codeo/71/implement.md
+    .codeo/71/init.md
+    .codeo/71/issue.md
+    .codeo/71/plan.md
+    .codeo/71/qc.md
+    CHANGELOG.md
+  suite.shell=true
+  ```
+- Build (`shell`: `true`) → `build-exit=0`.
+- Test (`shell`: `bash tests/run.sh`, run whole) → `all cases passed`, `test-exit=0`.
+- `overlay.sh qc invariants-extra` → exit 3. `overlay.sh qc wiki-rules` → exit 3.
+- Independent review: `superpowers:requesting-code-review` on opus, given the criteria and a one-line description. It followed a new issue through filing and two triage runs. Run against the base revision, `triage-skill` fails 13 of 14 cases and `issue-skill` fails 9. Its assessment, quoted in plain text: "Ready to merge? Yes."
+
+**Acceptance criteria**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | On a project with a board, `board.sh status <N>` prints `Backlog` straight after `/codeo:issue` files issue N. | met | `skills/issue/SKILL.md:175-183`: `set <N> backlog` comes before the `status <N>` read. `tests/board.test.sh` "backlog off the board" shows `set` adds an off-board issue and writes `O_BACKLOG`. `closing-exits` `issue-backlog` pins the order. |
+| 2 | Marking that issue Ready in `/codeo:triage` prints a `board.sh` line whose old status is `Backlog`, not `(not on the board)`. | met | Follows from 1. `tests/board.test.sh` asserts `Backlog → Ready on #2`. |
+| 3 | On a project with no board, `/codeo:issue` files the issue and makes no `board.sh` call. | met | `skills/issue/SKILL.md:183`: "With no board, make no `board.sh` call at all", gated on `config.sh get .board`. Pinned by `issue-skill` "no board, no call". |
+| 4 | When `board.sh set` fails, the issue is still filed, its number is reported, and the failure is quoted with its fix. | met | Rule `issue-09` (`skills/issue/SKILL.md:181-182`). Pinned by `issue-skill` "a failed move never fails the filing" and "the failure is quoted with its fix". See F8 for a failure with no fix to quote. |
+| 5 | `/codeo:triage` asks about a new Backlog issue with no ledger row, and once that issue is decided it isn't shown again. | met | `skills/triage/SKILL.md:77-79` (one fingerprint `issue:<N>` whichever source finds it), `:138-140` (the intake `<N>/` is the same item), `:147` (asked once), `:192-194` (left-in-the-backlog items dropped at step 2), `:237` and `:248-253` (decisions recorded as `issue:<N>`). Pinned by `triage-skill` (14 cases). |
+| 6 | The skill tests cover the new `/codeo:issue` board step and the unchanged no-board path. | met | `tests/issue-skill.test.sh` (board step, no-board path, failure), `tests/triage-skill.test.sh`, `closing-exits` `issue-backlog`. These are wording checks, in this repository's form. |
+
+**Documentation check.** `docs/handoff.md`, `docs/skills.md` (the `issue` section's opening sentence now names the Backlog write), `docs/skills-inventory.md` (`issue-09`), `board.sh`'s header and `CHANGELOG.md` describe what the skills do. The pages carry no issue numbers or "now" wording outside the changelog. The plan named no page for the fingerprint rule, and none states it, so there is nothing stale to update.
+
+**Findings**
+
+- F1 (blocking in round 1) — fixed by `6b32a53` (one fingerprint, `issue:<N>`).
+- F2 (non-blocking in round 1) — fixed by `2ae9447`. F3, F4 (non-blocking in round 1) — fixed by `9638401`. F5 (non-blocking in round 1) — fixed by `2ae9447`.
+- **F7 — non-blocking — `/codeo:plan`'s.** `skills/issue/SKILL.md:178-179` says `set` "prints one line naming the old and the new Status. Quote that line in the report." With several projects in `board.projects`, `board.sh set` prints one line per project written (`scripts/board.sh:286`, inside the per-project loop). The wording is the plan's (round 1 Task 1, round 2 Task 9).
+- **F8 — non-blocking — `/codeo:plan`'s.** Because `/codeo:issue` now writes Backlog on every filing, a board with no `Backlog` option and no `board.statuses.backlog` mapping fails on every filing with `board.sh: no synced project has the option 'Backlog' (it has: …)` (`scripts/board.sh:291`). That message names no fix, so rule `issue-09`'s "quoted with the fix it names" has nothing to quote. The filing still stands. A note that the fix is `board.statuses.backlog` (or a doctor check) would help.
+- **F9 — non-blocking — `/codeo:plan`'s.** `CHANGELOG.md`'s entry does not mention that a filed, never-started issue found on `codeo/intake` is fingerprinted `issue:<N>`. A ledger elsewhere holding an `intake:<N>` row would see that issue asked about once more after upgrading. This project's ledger has no `intake:<N>` rows.
+- F6 (round 1, noted) still holds: the skill tests are wording checks. The reviewer confirmed they fail against the base revision.
+
+**Routing.** No blocking finding. F7–F9 are polish for `/codeo:triage` to pick up, and on their own they do not send the change back.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-15 — round 1: build and suite pass; 5 of 6 criteria met; F1 (criterion 5 fingerprint) blocking, routed back to plan · cost: 4m · opus-5-5 193k in + 2.3M cached / 14k out
+- 2026-11-16 — round 2: build and suite pass; 6 of 6 criteria met; F1 fixed; F7-F9 non-blocking; clear, forward to close · cost: 4m · opus-5-5 348k in + 2M cached / 15k out
