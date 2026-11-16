@@ -160,16 +160,18 @@ it.
   minutes old, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --live` lists them as TSV
   (issue, user, machine, host, age in seconds). When the signals cannot be fetched the block says
   `live: unknown (could not fetch the signals)`. A crash needs no cleanup: the line stops after the
-  expiry, and a session idle for 15 minutes (no prompt, no tool call) stops reading as live until
-  its next one. The signal adds nothing to the feature branch or its PR, and it is information only:
+  expiry, and a session with no prompt or tool call for 10 to 15 minutes stops reading as
+  live until its next one. The signal adds nothing to the feature branch or its PR, and it is information only:
   no script refuses or waits because a workflow is live. On a public repository it names the GitHub
   login (else `git config user.name`, else `unknown`), a machine label and the host kind
   (container, web or local), and never an email address. The machine is `CODEO_MACHINE`, else the
   container's volume, else `web-` plus the web session's first 8 characters, else the hostname. The
   reader's own clock judges the age. `CODEO_LIVE_REFRESH_SECONDS` (300), `CODEO_LIVE_TTL_SECONDS`
   (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings. Where a push to that
-  ref is refused it is written through the REST API, and where neither works nothing is published
-  and the session says so once; a failed publish is not retried until the next refresh interval.
+  ref is refused it is written through the REST API, and where neither works nothing is published:
+  the hook discards the output of `beat` and says nothing, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh"
+  beat --force` run by hand prints the one `live:` line that says why. A failed publish is not
+  retried until the next refresh interval.
 
   ```mermaid
   sequenceDiagram
