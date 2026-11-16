@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, Q1-Q4 answered in the conversation. The intake dossier, the dev container's files and scripts, their tests and the other workflow in flight (#104) are read. Nothing is drafted: Q1-Q4 each change what the plan's tasks are. The calls I can make myself are under `## Notes`, so you can overrule any of them while answering.
+Round 2, after a send-back from `qc.md` round 2: Q5 is open. QC found that `issue` on an existing container silently reuses its clone (R1, the plan's), which defeats the stash-resume safeguard; Q5 asks what it should do instead. The calls I can make myself for R2-R8 are under `## Notes`. Round 1's outcome below stands until Q5 is answered.
 
 ## Questions
 
@@ -59,6 +59,17 @@ With a Mac, the plan ends with a host task there. Without one, the only proof th
 **Answer:**
 Accepted the recommendation: proceed and coordinate (engineer, in the conversation, 2026-11-16).
 
+### Q5 — What does `issue <N> <branch>` do when `codeo-<N>` already exists?
+
+**Why it matters:** QC round 2's R1 (blocking, the plan's). The plan said a second run "creates nothing and runs the start script again". That reuses whatever clone the container holds. After a stash, `/codeo:init #<N>` in the home container prints `bash codeo-container.sh issue <N> <branch>` as the way back; if the old container was not removed first, that command re-runs the start script in the stale clone and `lock.sh` takes the lock there from its old `init.md`. In the VS Code route Docker's `name already in use` stops this; `role.sh` says a stashed container is left through `/codeo:init`, "never the start script". A mistyped branch is accepted the same way. The answer decides the script's behaviour, two README paragraphs and the init hand-off's text.
+
+**Options:**
+- *Refuse, as Docker does for VS Code* (recommended): `issue` on an existing `codeo-<N>`, running or stopped, changes nothing and exits 1 with one line that names the ways on: `bash codeo-container.sh shell <N>` to enter it (the start script is re-run from inside, as its own TODO lines already say), `--rebuild` to rebuild it, and the removal commands to start afresh, which is the stash-resume path. `issue … --rebuild` keeps working on an existing container but first checks that the clone is on `<branch>` and refuses on a mismatch. `home` keeps its re-run: it has no lock and no stash. This gives cmd mode the same safeguard as the VS Code route with the least new logic; the cost is that "run it again to see the TODO list" becomes `shell`, then the start script.
+- *Check, then reuse:* keep the re-run, but only after the script checks that the clone is on `<branch>` and that `role.sh` in it does not report a stashed, abandoned or finished workflow. Friendlier, but the host script then depends on `role.sh`'s output, and a stale clone whose dossier has not been fetched since the stash's resume can still pass.
+- *Leave the behaviour, fix the words:* keep the re-run and only add "remove the old container first" to the init hand-off and the README. Least work; the silent reuse stays.
+
+**Answer:**
+
 ## Notes
 
 Calls I am making unless you say otherwise in an answer:
@@ -71,6 +82,15 @@ Calls I am making unless you say otherwise in an answer:
 - **Remote Control** (the other intake question) cannot be answered here: it has to be tried. The plan gets a host task that tries it in a cmd-mode container and the README records what happened; if it does not work, that becomes its own issue, not part of this change.
 - **`devcontainer.json` is not changed,** and one pull request carries the whole change.
 - **Documentation the change moves:** `.devcontainer/README.md` (opening, rebuilding and removing a container from the command line; the git identity and title paragraphs), `.codeo/overlays/init.md` (the hand-off prints the command-line step beside the VS Code one), `CHANGELOG.md`.
+
+
+**Round 2 (send-back from qc.md round 2).** Calls I am making unless you say otherwise in Q5's answer:
+
+- **One short follow-up plan,** `docs/plans/2026-11-16-cmd-mode-existing-container.md`, with the first plan as its Spec; the first plan's text is not edited. Same footprint files, plus the new plan file.
+- **R2 (`CODEO_CONTEXT`):** the behaviour stays; the README, the script's header and the changelog line say it is the `.devcontainer` directory of a local clone, that only the image is built from it, and that the clone still comes from `CODEO_REPO_URL`.
+- **R3 (terminal title):** the words change, not the behaviour: `shell` sets the title once, and the container's prompt (`dev@codeo-<N>`) then names the terminal. Making the title last would mean changing the image's shell start-up, which the VS Code route shares.
+- **R4-R6** go in as small fixes: the README's list of differences gains `--init`; a failing `docker info` prints Docker's own reason instead of "install it and start it"; `session-title.sh` accepts any non-empty `CODEO_CMD_MODE`, as the start script does.
+- **R7 and R8** change nothing: bash 3.2 on a real Mac is Task 10's, and the image's removal is already in the README.
 
 ## Outcome
 
@@ -108,3 +128,4 @@ sequenced:  none
 
 - 2026-11-16 — Q1-Q4 raised · cost: 2m · fable-5-2 78k in + 376k cached / 5k out
 - 2026-11-16 — planned: docs/plans/2026-11-16-cmd-mode-containers.md; Q1-Q4 answered in the conversation; `engineering:system-design` and `engineering:architecture` were unavailable, so their structure was applied directly; Q4's wording gained the token `glob:CHANGELOG.md` so overlap.sh recognises it as raised (answer untouched) · cost: 14m · fable-5-2 94k in + 710k cached / 12k out · sonnet-5-5 157k in + 2.6M cached / 46k out
+- 2026-11-16 — round 2 (send-back from qc.md round 2): Q5 raised · cost: 1m · fable-5-2 204k in + 254k cached / 4k out
