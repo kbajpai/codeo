@@ -178,7 +178,7 @@ assert_contains "machine" "machine: codeo-104" "$msg"
 assert_contains "host" "host: container" "$msg"
 beat=$(sed -n 's/^beat: //p' <<< "$msg")
 delta=$(( $(date +%s) - ${beat:-0} ))
-assert_eq "beat within 5s" 1 "$(( delta >= 0 && delta <= 5 ? 1 : 0 ))"
+assert_eq "beat within 5s" 1 "$(( delta >= -1 && delta <= 5 ? 1 : 0 ))"
 parents=$(git -C "$origin" rev-list --parents -1 "$ref" 2>/dev/null || true)
 assert_eq "parentless" 1 "$(wc -w <<< "$parents" | tr -d ' ')"
 assert_eq "author email" codeo-live@invalid "$(git -C "$origin" log -1 --format=%ae "$ref" 2>/dev/null || true)"

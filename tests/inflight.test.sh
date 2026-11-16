@@ -235,7 +235,7 @@ clear_signals() {
 }
 
 case_desc="human_block_shows_a_live_session"
-plant_signal "$origin" 7 codeo-7 bob 30
+plant_signal "$origin" 7 codeo-7 bob 35
 out=$(run_inflight "$clone")
 block7=$(printf '%s\n' "$out" | awk '/^#/ { p = ($1 == "#7") } p')
 assert_contains "live line after changed" "  changed:    src/x.txt
@@ -244,7 +244,7 @@ assert_contains "age unit" "s ago" "$block7"
 assert_eq "one live line overall" 1 "$(printf '%s\n' "$out" | grep -c '^  live: ')"
 
 case_desc="two_machines_are_two_live_lines"
-plant_signal "$origin" 7 laptop carol 120
+plant_signal "$origin" 7 laptop carol 150
 plant_signal "$origin" 7 codeo-7 bob 40
 out=$(run_inflight "$clone")
 assert_eq "two lines" 2 "$(printf '%s\n' "$out" | grep -c '^  live: ')"
@@ -258,7 +258,7 @@ assert_eq "no live line" 0 "$(printf '%s\n' "$out" | grep -c 'live:' || true)"
 
 case_desc="a_failed_fetch_prints_unknown_not_stale_refs"
 clear_signals "$origin"
-plant_signal "$origin" 7 codeo-7 bob 30
+plant_signal "$origin" 7 codeo-7 bob 35
 run_inflight "$clone" > /dev/null
 cp "$plugin/scripts/live.sh" "$scratch_root/live.sh.real"
 cat > "$plugin/scripts/live.sh" <<'LIVESTUB'
@@ -290,7 +290,7 @@ plant_raw_signal() { # plant_raw_signal <ref> <issue> <beat>
 plant_signal "$origin" 5 laptop carol 30
 plant_raw_signal refs/codeo/live/6/badbeat 6 "0$(date +%s)"
 plant_raw_signal refs/codeo/live/6/badissue 0104 "$(date +%s)"
-plant_signal "$origin" 7 codeo-7 bob 30
+plant_signal "$origin" 7 codeo-7 bob 35
 live_rc=0
 out=$(run_inflight "$clone" --live) || live_rc=$?
 assert_eq "--live exit" 0 "$live_rc"
@@ -305,7 +305,7 @@ assert_contains "later block keeps its live line" "  live:      bob on codeo-7 (
 case_desc="live_listing"
 clear_signals "$origin"
 assert_eq "nothing live" "" "$(run_inflight "$clone" --live)"
-plant_signal "$origin" 7 codeo-7 bob 30
+plant_signal "$origin" 7 codeo-7 bob 35
 plant_signal "$origin" 5 laptop carol 30
 out=$(run_inflight "$clone" --live)
 assert_eq "line count" 2 "$(printf '%s\n' "$out" | wc -l | tr -d ' ')"
