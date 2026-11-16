@@ -20,6 +20,7 @@ Round 1 stopped at step 2. `sync-main.sh --abort-on-conflict` merged `origin/mai
 **Options:** proceed and coordinate (recommended: two different bullets, as with #70 and #71) · sequence after #104 · re-scope.
 
 **Answer:**
+Proceed and coordinate (given in the conversation: "Proceed & Coordinate").
 
 ## Notes
 
