@@ -72,6 +72,15 @@ Calls I am making unless you say otherwise in an answer:
 - **`devcontainer.json` is not changed,** and one pull request carries the whole change.
 - **Documentation the change moves:** `.devcontainer/README.md` (opening, rebuilding and removing a container from the command line; the git identity and title paragraphs), `.codeo/overlays/init.md` (the hand-off prints the command-line step beside the VS Code one), `CHANGELOG.md`.
 
+### Footprint
+
+```
+files:      .devcontainer/codeo-container.sh, .devcontainer/README.md, .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .codeo/overlays/init.md, tests/cmd-mode.test.sh, tests/devcontainer.test.sh, tests/init-overlay.test.sh, CHANGELOG.md, docs/plans/2026-11-16-cmd-mode-containers.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
