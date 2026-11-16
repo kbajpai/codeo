@@ -149,6 +149,20 @@ for mode in beat clear; do
     assert_eq "$mode unreachable origin exit" 0 "$rc"
     assert_eq "$mode unreachable origin out" "" "$out$err"
 done
+case_desc=docs_state_the_live_signal_limits
+bullet=$(awk '/^- \*\*Who is working right now/{f=1;print;next} f&&/^- \*\*/{exit} f{print}' "$plugin_root/docs/handoff.md")
+bullet=${bullet//$'\n'/ }
+bullet=$(printf '%s' "$bullet" | tr -s ' ')
+for want in '/codeo:close` clears' '20 seconds' 'ahead of the reader' 'the login lookup'; do
+    [[ $bullet == *"$want"* ]] || {
+        echo "FAIL $case_desc: no [$want]"
+        failures=$((failures + 1))
+    }
+done
+[[ $bullet == *'`CODEO_MACHINE`'*'same volume name'* ]] || {
+    echo "FAIL $case_desc: no [CODEO_MACHINE ... same volume name]"
+    failures=$((failures + 1))
+}
 sleep 1
 
 if ((failures > 0)); then
