@@ -374,7 +374,7 @@ number in its ledger.
 When the project's role check refuses the call (the skill is running in an issue container),
 record the finding in this skill's own dossier as a line under `## Notes` that promises the
 later work and carries no issue number — the form `/codeo:triage` collects once the dossier
-is archived — and say to file it with `/codeo:issue` in the home container.
+is archived — and say to file it with `/codeo:issue` in the checkout the project's role check allows.
 
 ## Closing block
 

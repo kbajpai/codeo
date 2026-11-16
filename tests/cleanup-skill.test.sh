@@ -26,6 +26,17 @@ row=$(grep -F '| `cleanup` |' "$repo/docs/handoff.md")
 ! grep -qiw 'docker' "$skill" || check_fail "the skill names the container engine"
 ! grep -qF 'codeo-home' "$skill" || check_fail "the skill names the home container"
 
+# Generic text names no container, and the list's reach is stated.
+! grep -qF 'Home-container' "$skill" || check_fail "the skill still says Home-container"
+! grep -qF 'home container' "$skill" || check_fail "the skill still says home container"
+step2=$(awk '/^2\. \*\*Say what the proof cannot see/{f=1; next} /^3\. /{f=0} f' "$skill")
+grep -qF 'every issue under `.codeo/done/`' <<<"$step2" || check_fail "step 2 does not state the list's reach"
+docs="$repo/docs/skills.md"
+section=$(awk '/^## cleanup$/{f=1; next} /^## /{f=0} f' "$docs")
+grep -qF 'every issue under `.codeo/done/`' <<<"$section" || check_fail "docs/skills.md cleanup section does not state the list's reach"
+! grep -qF 'in the home container, and only prints' "$docs" || check_fail "docs/skills.md still says cleanup runs in the home container"
+! grep -qF 'runs in the home container only' "$docs" || check_fail "docs/skills.md still says cleanup runs in the home container only"
+
 # The overlay's removal-command body, fed to cleanup.sh over a scratch origin with a stubbed gh.
 body=$(awk '/^## removal-command$/{f=1; next} /^## /{f=0} f && NF' "$repo/.codeo/overlays/cleanup.md")
 [[ -n $body ]] || check_fail "the overlay has no removal-command body"
