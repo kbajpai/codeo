@@ -536,6 +536,23 @@ docs_readme_describes_the_logins_as_todo_lines() {
     grep -qF 'lists the logins (GitHub, then Claude Code) as TODO lines' "$readme" || fail "the README does not say the logins are TODO lines"
 }
 
+docs_readme_says_issue_refuses_an_existing_container() {
+    local readme=$repo/.devcontainer/README.md needle
+    for needle in 'already exists' '--rebuild' 'shell <N>' 'docker volume rm codeo-<N>'; do
+        grep -qF -- "$needle" "$readme" || { fail "the README lacks '$needle'"; return; }
+    done
+}
+
+docs_readme_describes_codeo_context_as_the_devcontainer_directory() {
+    grep -qF '`.devcontainer` directory of a local clone, used only to build the image; the repository is still cloned from `CODEO_REPO_URL`' \
+        "$repo/.devcontainer/README.md" || fail "the CODEO_CONTEXT row does not say it is the .devcontainer directory"
+}
+
+docs_readme_lists_init_among_the_differences() {
+    grep -qF 'runs with `--init`, which the VS Code route does not set' "$repo/.devcontainer/README.md" \
+        || fail "the README does not list --init among the differences"
+}
+
 docs_changelog_names_cmd_mode() {
     local line
     line=$(grep -F '(#113)' "$repo/CHANGELOG.md" | head -n 1) || line=''
@@ -591,6 +608,9 @@ cases=(
     docs_readme_states_the_hostname_difference
     docs_readme_says_removal_leaves_the_image
     docs_readme_describes_the_logins_as_todo_lines
+    docs_readme_says_issue_refuses_an_existing_container
+    docs_readme_describes_codeo_context_as_the_devcontainer_directory
+    docs_readme_lists_init_among_the_differences
     docs_changelog_names_cmd_mode
 )
 

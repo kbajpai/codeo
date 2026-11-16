@@ -27,7 +27,7 @@ number and branch filled in:
   `codeo-<N>` (the folder names the container).
 - *From a command line:* on the host, not inside this container, in a terminal, run
   `bash codeo-container.sh issue <N> <branch>`. `codeo-container.sh` is the file the download line in
-  `.devcontainer/README.md` saves; it needs only Docker. Then
+  `.devcontainer/README.md` saves; it needs only Docker. If `codeo-<N>` exists (a stash being resumed), remove it first with `docker rm -f codeo-<N>; docker volume rm codeo-<N>`, once `git status` in it shows nothing unpushed, or the command refuses. Then
   `bash codeo-container.sh shell <N>` opens a shell in `codeo-<N>`; start `claude` there.
 
 Either way, when the container has started its start script prints
