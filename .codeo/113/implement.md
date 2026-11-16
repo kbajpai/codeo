@@ -63,7 +63,28 @@ Plan `docs/plans/2026-11-16-cmd-mode-containers.md`, Tasks 1-9 built and reviewe
 
 **Not proved here** (Task 10, the engineer's): macOS `/bin/bash` 3.2, a real Docker/BuildKit build, login-shell PATH, Remote Control in cmd mode, the VS Code route, and the `/codeo:init` hand-off in a cmd-mode home container (after merge).
 
+### Round 2
+(send-back from qc.md round 1)
+
+QC round 1 held one blocking finding (F1) and six non-blocking ones; all seven were checked against the code and held.
+
+**Fixed.**
+- F1 (blocking): `.devcontainer/README.md` no longer says the hostname is the same as the VS Code route's; a bullet under "These differ" says it is the container's name. Pinned by `docs_readme_states_the_hostname_difference`.
+- F2: `codeo-container.sh` reads the host git config only when git is usable: on Darwin `xcode-select -p` must succeed first, else the `GIT_AUTHOR_*` fallback applies (new `git_is_usable`; three cases with stub `uname`, `xcode-select` and `git`).
+- F3: `shell` passes `-i` always and `-it` when stdin and stdout are terminals (`shell_without_a_terminal_passes_i_only`).
+- F4: the README's removal paragraph names `docker image rm codeo-dev:codeo-<N>`.
+- F5: the README describes the first-run TODOs as the logins in order (GitHub, then Claude Code).
+- F6: `tests/cmd-mode.test.sh` is mode 100755.
+- F7: the identity is read with `git config --global`, so a repository-local identity is never passed (`identity_comes_from_the_global_config_not_the_current_directory`); the README says so.
+
+**Documentation changed.** `.devcontainer/README.md` only.
+
+**Build.** Configured `shell` suite build `true`: exit 0. The three affected test files pass (`cmd-mode`, `devcontainer`, `init-overlay`); the full suite is `/codeo:qc`'s.
+
+**Deviations.** None. The `-it` path of F3 has no test, since it needs a pseudo-terminal. `sync-main.sh`: already contains `origin/main`; `overlap.sh 113` prints nothing.
+
 ## Log
 
 - 2026-11-16 — Tasks 1-9 built and reviewed, Q1-Q3 raised on #116's overlap · cost: 71m · sonnet-5-5 992k in + 26.4M cached / 160k out
 - 2026-11-16 — Q1-Q3 answered (proceed and coordinate); outcome written, build passed, handed to qc · cost: 0m · sonnet-5-5 86k in + 348k cached / 2k out
+- 2026-11-16 — round 2: fixed qc round 1's F1-F7, build passed, handed to qc · cost: 4m · sonnet-5-5 234k in + 1.8M cached / 15k out
