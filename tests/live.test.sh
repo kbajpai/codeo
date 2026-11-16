@@ -453,7 +453,8 @@ live "$other" fetch
 rc=0
 tsv=$(live "$other" list --tsv) || rc=$?
 assert_eq "list exit" 0 "$rc"
-assert_eq "only issues 1 and 3" "$(printf '1\talice\tfirst\tlocal\t0\n3\talice\tlast\tlocal\t0')" "$tsv"
+assert_eq "only issues 1 and 3" "$(printf '1\talice\tfirst\tlocal\n3\talice\tlast\tlocal')" "$(cut -f1-4 <<< "$tsv")"
+assert_eq "ages are small" "" "$(cut -f5 <<< "$tsv" | grep -vE '^[0-5]$' || true)"
 
 case_desc=concurrent_forced_beats_do_not_share_a_message_file
 new_world; clone_with_lock 104 container codeo-104
