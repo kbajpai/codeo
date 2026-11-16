@@ -80,14 +80,24 @@ ensure_clone() {
     fi
 }
 
+# git_is_usable: succeed when git is on PATH and will not open an installer. On a Mac /usr/bin/git is a
+# stub that opens the Command Line Tools install dialog, so there git counts only once xcode-select -p succeeds.
+git_is_usable() {
+    command -v git >/dev/null 2>&1 || return 1
+    if [[ "$(uname -s 2>/dev/null || true)" == Darwin ]]; then
+        xcode-select -p >/dev/null 2>&1 || return 1
+    fi
+    return 0
+}
+
 # run_start <name>: run the container's start script in its clone, carrying the host's git identity
-# (git config user.name/user.email when git is on PATH, else GIT_AUTHOR_NAME/GIT_AUTHOR_EMAIL; each
+# (git config --global user.name/user.email when git is usable, else GIT_AUTHOR_NAME/GIT_AUTHOR_EMAIL; each
 # key on its own, and a missing value is left out). Only this exec gets it, never docker run.
 run_start() {
     local name=$1 git_name='' git_email=''
-    if command -v git >/dev/null 2>&1; then
-        git_name=$(git config user.name 2>/dev/null) || git_name=''
-        git_email=$(git config user.email 2>/dev/null) || git_email=''
+    if git_is_usable; then
+        git_name=$(git config --global user.name 2>/dev/null) || git_name=''
+        git_email=$(git config --global user.email 2>/dev/null) || git_email=''
     fi
     : "${git_name:=${GIT_AUTHOR_NAME:-}}"
     : "${git_email:=${GIT_AUTHOR_EMAIL:-}}"
@@ -162,6 +172,7 @@ cmd_shell() {
         stopped) docker start "$name" ;;
     esac
     if [ -t 1 ]; then printf '\033]0;%s\007' "$title"; fi
+    flags=-i
     if [ -t 0 ] && [ -t 1 ]; then flags=-it; fi
     # shellcheck disable=SC2086
     exec docker exec $flags -w "/workspaces/$name" "$name" bash -l

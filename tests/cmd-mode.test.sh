@@ -2,7 +2,7 @@
 # Guards .devcontainer/codeo-container.sh, the host-side script that starts a codeo dev container
 # without VS Code. Each case is a function named in the final cases=( ... ) array; add a case by
 # writing a function and listing it. The script runs with PATH holding only a stub docker (so it can
-# use nothing but shell builtins and docker), against a scratch directory that logs every docker call.
+# use nothing but shell builtins, docker and, in the git cases, git, uname and xcode-select stubs), against a scratch directory that logs every docker call.
 # It checks the usage errors, the Docker-not-available line, the exact docker calls of home, issue and
 # shell (fresh, re-run, stopped, --rebuild keeping the volumes, a failed clone as one line, a local
 # CODEO_CONTEXT build), the git identity passed to the start script only, the validation of issue
@@ -317,7 +317,7 @@ shell_opens_bash_in_the_clone() {
         cm_run shell "$n"
         ((cm_rc == 0)) || fail "shell $n exited $cm_rc: $cm_err"
         [[ "$(cm_calls)" == "$(lines info "inspect --format {{.State.Running}} codeo-$n" \
-            "exec -w /workspaces/codeo-$n codeo-$n bash -l")" ]] || fail "shell $n calls were: $(cm_calls)"
+            "exec -i -w /workspaces/codeo-$n codeo-$n bash -l")" ]] || fail "shell $n calls were: $(cm_calls)"
     done
 }
 
@@ -327,7 +327,7 @@ shell_starts_a_stopped_container_first() {
     cm_run shell 113
     ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
     [[ "$(cm_calls)" == "$(lines info 'inspect --format {{.State.Running}} codeo-113' 'start codeo-113' \
-        'exec -w /workspaces/codeo-113 codeo-113 bash -l')" ]] || fail "calls were: $(cm_calls)"
+        'exec -i -w /workspaces/codeo-113 codeo-113 bash -l')" ]] || fail "calls were: $(cm_calls)"
 }
 
 shell_on_a_missing_container_names_the_command_that_creates_it() {
@@ -355,6 +355,75 @@ shell_rejects_anything_but_home_or_a_number() {
         [[ "$cm_err" == *"usage: codeo-container.sh home"* ]] || fail "'$args' printed no usage"
         [[ -z "$(cm_calls)" ]] || fail "'$args' called docker: $(cm_calls)"
     done
+}
+
+# cm_stub_mac <uname-output> <xcode-select-rc>: stubs for uname and xcode-select on the stub PATH, and a
+# git that records each call in gitcalls and answers user.name and user.email.
+cm_stub_mac() {
+    mkdir -p "$cm_dir/gitbin"
+    printf '#!/bin/bash\necho %s\n' "$1" >"$cm_dir/bin/uname"
+    printf '#!/bin/bash\nexit %s\n' "$2" >"$cm_dir/bin/xcode-select"
+    cat >"$cm_dir/gitbin/git" <<'STUB'
+#!/bin/bash
+d=${0%/gitbin/git}
+echo "$*" >>"$d/gitcalls"
+case "$*" in *user.name) echo Stub Name ;; *user.email) echo stub@example.com ;; esac
+STUB
+    chmod +x "$cm_dir/bin/uname" "$cm_dir/bin/xcode-select" "$cm_dir/gitbin/git"
+    : >"$cm_dir/gitcalls"
+    cm_git_bin="$cm_dir/gitbin"
+}
+
+a_mac_without_the_command_line_tools_never_calls_git() {
+    cm_setup macnotools
+    cm_stub_mac Darwin 1
+    CM_GIT_NAME=Grace CM_GIT_EMAIL=g@example.com cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ ! -s "$cm_dir/gitcalls" ]] || fail "git was called: $(<"$cm_dir/gitcalls")"
+    [[ "$(cm_calls | tail -n 1)" == "exec -e GIT_AUTHOR_NAME=Grace -e GIT_AUTHOR_EMAIL=g@example.com $l_start_id" ]] \
+        || fail "line was: $(cm_calls | tail -n 1)"
+}
+
+a_mac_with_the_command_line_tools_reads_git() {
+    cm_setup macwithtools
+    cm_stub_mac Darwin 0
+    cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ -s "$cm_dir/gitcalls" ]] || fail "git was not called"
+    [[ "$(cm_calls | tail -n 1)" == "exec -e GIT_AUTHOR_NAME=Stub Name -e GIT_AUTHOR_EMAIL=stub@example.com $l_start_id" ]] \
+        || fail "line was: $(cm_calls | tail -n 1)"
+}
+
+a_non_mac_host_reads_git_whatever_xcode_select_says() {
+    cm_setup linuxhost
+    cm_stub_mac Linux 1
+    cm_run home
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ -s "$cm_dir/gitcalls" ]] || fail "git was not called"
+}
+
+identity_comes_from_the_global_config_not_the_current_directory() {
+    cm_setup localonly
+    cm_with_git
+    mkdir "$cm_dir/repo"
+    git init -q "$cm_dir/repo"
+    git -C "$cm_dir/repo" config user.name Local
+    git -C "$cm_dir/repo" config user.email local@example.com
+    local old=$PWD
+    cd "$cm_dir/repo"
+    cm_run home
+    cd "$old"
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls | tail -n 1)" == "$l_start" ]] || fail "a local identity leaked: $(cm_calls | tail -n 1)"
+}
+
+shell_without_a_terminal_passes_i_only() {
+    cm_setup shellnotty
+    echo running >"$cm_dir/state"
+    cm_run shell 113 </dev/null
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls | tail -n 1)" == 'exec -i -w /workspaces/codeo-113 codeo-113 bash -l' ]] \
+        || fail "line was: $(cm_calls | tail -n 1)"
 }
 
 script_uses_only_bash_3_2_and_bsd_constructs() {
@@ -433,6 +502,11 @@ cases=(
     issue_uses_the_numbered_name_and_the_branch
     issue_rejects_unsafe_numbers_and_branches
     issue_rebuild_and_rerun_follow_home
+    a_mac_without_the_command_line_tools_never_calls_git
+    a_mac_with_the_command_line_tools_reads_git
+    a_non_mac_host_reads_git_whatever_xcode_select_says
+    identity_comes_from_the_global_config_not_the_current_directory
+    shell_without_a_terminal_passes_i_only
     script_uses_only_bash_3_2_and_bsd_constructs
     docs_readme_documents_the_command_line_route
     docs_readme_states_the_hostname_difference
