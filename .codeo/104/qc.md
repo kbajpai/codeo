@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 2 done, clear: both blocking findings from round 1 are fixed, the build and the full suite pass, and four of the five acceptance criteria are met. The fourth (a web session) is not verified: the engineer deferred the by-hand check to #112. The review's findings are all non-blocking; the first, F9, is a flake in three test assertions on a machine with a stepping clock. Forward to `/codeo:close`. No open question.
+Round 3 done, clear (F9 fixed; F17-F20 non-blocking). Round 2 was clear: both blocking findings from round 1 are fixed, the build and the full suite pass, and four of the five acceptance criteria are met. The fourth (a web session) is not verified: the engineer deferred the by-hand check to #112. The review's findings are all non-blocking; the first, F9, is a flake in three test assertions on a machine with a stepping clock. Forward to `/codeo:close`. No open question.
 
 ## Questions
 
@@ -116,7 +116,46 @@ None.
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+### Round 3 — 2026-11-16
+
+Sent back from nowhere: the engineer took up F9 after round 2's clear verdict and ran `/codeo:implement` round 3 (`fix: the live assertions…`, `70e3d7b` carries its dossier), then `/codeo:qc` again. The whole pass was re-run.
+
+**Sync and overlap.** `sync-main.sh --abort-on-conflict`: "the branch already contains origin/main"; no `also changed on` lines. `overlap.sh 104` and `overlap.sh --outside 104` printed nothing. `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: `.codeo/104/*` and `CHANGELOG.md`). Diff against `origin/main`: 19 files, 1978 insertions, 15 deletions; since round 2 only `tests/inflight.test.sh` (ages 30→35 and 120→150) and `tests/live.test.sh` (`delta >= -1`).
+
+**Build.** Suite `shell`, build `true`: exit 0.
+
+**Suite.** `bash tests/run.sh` from the clean tree at `70e3d7b`: `all cases passed`, exit 0 (3m56s).
+
+**Acceptance criteria.**
+
+| # | Criterion | Settled by | Verdict |
+|---|---|---|---|
+| 1 | `inflight.sh` from another clone shows the workflow live, with user and machine | `human_block_shows_a_live_session`, `two_machines_are_two_live_lines`, `live_listing` in `tests/inflight.test.sh` | met |
+| 2 | Stops showing as live within the documented expiry, no manual step | `list_hides_an_expired_signal_and_shows_it_again_inside_the_ttl` in `tests/live.test.sh`, `an_expired_signal_prints_nothing` | met |
+| 3 | Neither the branch nor its PR gains a commit | `beat_adds_nothing_to_the_branch_or_the_pull_request` in `tests/live.test.sh` | met |
+| 4 | It works in a web session | no test reaches a hosted web session; the engineer deferred the by-hand check to #112 | not yet checkable — deferred to #112 at the engineer's decision |
+| 5 | `bash tests/run.sh` passes; `CHANGELOG.md` records the change | the suite run above; the `#104` bullet in `CHANGELOG.md` | met |
+
+**Documentation check.** `docs/handoff.md` (*Who is working right now*), `docs/skills.md`, `skills/triage/SKILL.md` and `CHANGELOG.md` say what the code does; the round 2 repairs (F2, F4) stand. One untrue sentence in a code comment, F17 below. No invariants file and no overlay rules (`overlay.sh qc invariants-extra`: exit 3; `wiki-rules`: exit 3).
+
+**Independent review** (opus, `QC review:`, given the criteria and the diff only): no Critical or Important finding; "Ready to merge: yes, with optional minor fixes". It could not judge criterion 4.
+
+**Findings.**
+- F9 (non-blocking in round 2) — fixed by `fix: the live assertions no longer sit on a unit edge…` (`inflight.test.sh` ages 35 and 150, `live.test.sh` `delta >= -1`); the suite passed from the clean tree.
+- F17 — non-blocking, `/codeo:implement`'s. `scripts/live.sh:9` says the signal is "one parentless commit on the empty tree", but the REST path (`github.sh ref put`) builds its commit on the base head's tree. Readers do not care; the header is untrue for that path. `docs/handoff.md` says only "parentless" and is accurate.
+- F18 — non-blocking, `/codeo:implement`'s. `tests/live-signal.test.sh:148-152`: the last case starts detached beats against an unreachable origin and sleeps 1 s before the EXIT trap runs `rm -rf "$scratch_root"`; on a loaded machine a still-running beat can leave `.git/codeo-live-*` files behind. Exit status unaffected.
+- F19 — non-blocking, `/codeo:implement`'s. `tests/live.test.sh:308-311` asserts a hung login lookup takes at most 3 whole seconds against a 1 s bound; a very loaded machine could exceed it. Other elapsed checks have more headroom.
+- F20 — non-blocking, the plan's design. A crashed session's ref is never deleted and `inflight.sh` fetches every ref, so origin gains one ref per issue and machine for good, closed issues included. Harmless at small scale; pruning on read or at `/codeo:close` is a design change.
+- Seen again and not raised again: F7/F13 (the `SessionEnd` `clear` can take up to 16 s against a hook timeout of 10; the signal then expires by TTL), F14 (`ref delete` treats any 404 as done), F15/F16 (the signal is not cleared on close or stash; two sessions on one machine and issue share a ref, so one's end hides the other for up to 5 minutes).
+
+No issue was filed in this pass. #112 stays the home of criterion 4.
+
+**Routing.** No blocking finding. The pull request must say criterion 4 is deferred to #112 and unverified; none of F10 and F13-F20 needs to hold the merge, and `/codeo:triage` can file the ones worth keeping.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-16 — round 1: build and full suite pass, criteria 1-3 and 5 met, criterion 4 not yet checkable, two blocking findings (F1, F2), sent back to `/codeo:implement` · cost: 5m · opus-5-5 533k in + 3.5M cached / 22k out · sonnet-5-5 33k in + 1.8M cached / 8k out
 - 2026-11-16 — round 2: build and full suite pass, criteria 1-3 and 5 met, criterion 4 deferred to #112, no blocking finding (F9-F16 non-blocking), clear, forward to `/codeo:close` · cost: 5m · opus-5-5 671k in + 2.6M cached / 21k out · sonnet-5-5 28k in + 1.8M cached / 4k out
+- 2026-11-16 — round 3: build and full suite pass, criteria 1-3 and 5 met, criterion 4 deferred to #112, F9 fixed, no blocking finding (F17-F20 non-blocking), clear, forward to `/codeo:close` · cost: 7m · opus-5-5 202k in + 1.7M cached / 15k out · sonnet-5-5 25k in + 390k cached / 3k out
