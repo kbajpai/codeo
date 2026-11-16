@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-No pull request yet. `qc.md` round 3 is clear, the tree is clean and pushed, and the branch merges cleanly with `origin/main`. Opening it waits on Q1: `overlap.sh 104` printed one overlap with #113.
+Pull request #115 is open and the dossier archived under `.codeo/done/104/`; the workflow stays open until the engineer merges it.
 
 ## Questions
 
@@ -23,6 +23,7 @@ No pull request yet. `qc.md` round 3 is clear, the tree is clean and pushed, and
 **Options:** proceed and coordinate (open the pull request now; #113 resolves the changelog conflict when it merges second) · sequence after #113 (hold this pull request until #113 merges) · re-scope (drop the `CHANGELOG.md` edit from this change, which the issue's last acceptance criterion requires, so not advised).
 
 **Answer:**
+Proceed and coordinate. (The engineer, 2026-11-16.)
 
 ## Notes
 
@@ -30,8 +31,15 @@ No pull request yet. `qc.md` round 3 is clear, the tree is clean and pushed, and
 
 ## Outcome
 
-_Pending — written when the pull request is opened._
+
+### Round 1 — pull request opened
+2026-11-16
+
+#115 https://github.com/kbajpai/codeo/pull/115
+
+Went out on `qc.md` round 3, ``**Verdict: clear — forward to `/codeo:close`.**`` No override. Q1 answered *proceed and coordinate*: #113 also edits `CHANGELOG.md`, and whichever merges second resolves it. The body says the web-session criterion is deferred to #112 and unverified. The lookup sees only the newest pull request for the branch.
 
 ## Log
 
 - 2026-11-16 — Q1 raised (overlap with #113 on CHANGELOG.md); no pull request opened yet · board: unchanged · cost: 0m · sonnet-5-5 25k in + 640k cached / 2k out
+- 2026-11-16 — Q1 answered; opened #115 and archived the dossier; board: board.sh: #104 In progress → In review on #3 Codeo  · cost: 0m · sonnet-5-5 3k in + 685k cached / 3k out
