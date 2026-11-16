@@ -306,7 +306,59 @@ issue_rebuild_and_rerun_follow_home() {
         'exec -w /workspaces/codeo-113 codeo-113 bash .devcontainer/scripts/devcontainer-start.sh')" ]] || fail "rerun calls: $(cm_calls)"
 }
 
+shell_opens_bash_in_the_clone() {
+    local n
+    for n in 113 home; do
+        cm_setup shellrun
+        echo running >"$cm_dir/state"
+        cm_run shell "$n"
+        ((cm_rc == 0)) || fail "shell $n exited $cm_rc: $cm_err"
+        [[ "$(cm_calls)" == "$(lines info "inspect --format {{.State.Running}} codeo-$n" \
+            "exec -w /workspaces/codeo-$n codeo-$n bash -l")" ]] || fail "shell $n calls were: $(cm_calls)"
+    done
+}
+
+shell_starts_a_stopped_container_first() {
+    cm_setup shellstopped
+    echo stopped >"$cm_dir/state"
+    cm_run shell 113
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(cm_calls)" == "$(lines info 'inspect --format {{.State.Running}} codeo-113' 'start codeo-113' \
+        'exec -w /workspaces/codeo-113 codeo-113 bash -l')" ]] || fail "calls were: $(cm_calls)"
+}
+
+shell_on_a_missing_container_names_the_command_that_creates_it() {
+    cm_setup shellmissing
+    cm_run shell 113
+    ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
+    [[ -n "$cm_err" && "$cm_err" != *$'\n'* && "$cm_err" == *"codeo-container.sh issue 113 <branch>"* ]] \
+        || fail "stderr was: $cm_err"
+    if cm_calls | grep -q '^exec'; then fail "exec ran on a missing container: $(cm_calls)"; fi
+    cm_setup shellmissinghome
+    cm_run shell home
+    ((cm_rc == 1)) || fail "home exited $cm_rc, not 1"
+    [[ -n "$cm_err" && "$cm_err" != *$'\n'* && "$cm_err" == *"no container codeo-home: create it with 'bash codeo-container.sh home'"* ]] \
+        || fail "home stderr was: $cm_err"
+    if cm_calls | grep -q '^exec'; then fail "exec ran on a missing home: $(cm_calls)"; fi
+}
+
+shell_rejects_anything_but_home_or_a_number() {
+    local args
+    for args in "" codeo-113 x 0 01 -1 "113 extra" "home extra"; do
+        cm_setup shellbad
+        # shellcheck disable=SC2086
+        cm_run shell $args
+        ((cm_rc == 2)) || fail "'$args' exited $cm_rc, not 2"
+        [[ "$cm_err" == *"usage: codeo-container.sh home"* ]] || fail "'$args' printed no usage"
+        [[ -z "$(cm_calls)" ]] || fail "'$args' called docker: $(cm_calls)"
+    done
+}
+
 cases=(
+    shell_opens_bash_in_the_clone
+    shell_starts_a_stopped_container_first
+    shell_on_a_missing_container_names_the_command_that_creates_it
+    shell_rejects_anything_but_home_or_a_number
     usage_errors_exit_2_and_run_no_docker
     docker_that_is_not_there_is_one_line
     home_creates_builds_clones_and_starts

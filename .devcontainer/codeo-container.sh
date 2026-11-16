@@ -138,6 +138,35 @@ cmd_issue() {
     bring_up "codeo-$1" "$2" "$rebuild"
 }
 
+# cmd_shell <args...>: shell home|<N>. Opens a login bash in the container's clone, starting the container
+# first when it is stopped. N is as for issue. The container's shell status becomes the script's.
+cmd_shell() {
+    local name title create flags=''
+    [[ $# -eq 1 ]] || usage
+    case "$1" in
+        home)
+            name=codeo-home
+            title='codeo [home]'
+            create="bash codeo-container.sh home"
+            ;;
+        '' | 0* | *[!0-9]*) usage ;;
+        *)
+            name="codeo-$1"
+            title="codeo [#$1]"
+            create="bash codeo-container.sh issue $1 <branch>"
+            ;;
+    esac
+    require_docker
+    case "$(container_state "$name")" in
+        missing) die "no container $name: create it with '$create'" ;;
+        stopped) docker start "$name" ;;
+    esac
+    if [ -t 1 ]; then printf '\033]0;%s\007' "$title"; fi
+    if [ -t 0 ] && [ -t 1 ]; then flags=-it; fi
+    # shellcheck disable=SC2086
+    exec docker exec $flags -w "/workspaces/$name" "$name" bash -l
+}
+
 main() {
     [[ $# -ge 1 ]] || usage
     local cmd=$1
@@ -145,6 +174,7 @@ main() {
     case "$cmd" in
         home) cmd_home "$@" ;;
         issue) cmd_issue "$@" ;;
+        shell) cmd_shell "$@" ;;
         *) usage ;;
     esac
 }
