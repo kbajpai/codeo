@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 2 done, after a send-back from `/codeo:qc` round 1: the two blocking findings (F1, the octal `beat` that hid every later signal; F2, a documentation claim the hook could not keep) and the polish findings F4, F6 and F8 are fixed and reviewed, and the live tests no longer depend on a monotonic wall clock (the cause of their recurring flakes, found this round). The build step (the `shell` suite's `build`, `true`) exits 0. Task 7, the by-hand web-session check, is deferred to #112. No open question.
+Round 3 done (after qc.md round 2, non-blocking F9 only; see its Outcome). Earlier: Round 2 done, after a send-back from `/codeo:qc` round 1: the two blocking findings (F1, the octal `beat` that hid every later signal; F2, a documentation claim the hook could not keep) and the polish findings F4, F6 and F8 are fixed and reviewed, and the live tests no longer depend on a monotonic wall clock (the cause of their recurring flakes, found this round). The build step (the `shell` suite's `build`, `true`) exits 0. Task 7, the by-hand web-session check, is deferred to #112. No open question.
 
 ## Questions
 
@@ -91,7 +91,19 @@ None.
 
 **Still not run: Task 7.** The by-hand web-session check was deferred, at the engineer's say-so, to #112 (filed from this round's QC); `/codeo:qc` grades the fourth acceptance criterion as deferred with that reason. Findings F3 (the web-session user label), F5 (a clock running ahead stretches the expiry) and F7 (the `SessionEnd` timeout against a slow `clear`) are the plan's design points and are unchanged.
 
+
+### Round 3 — 2026-11-16
+(send-back from qc.md round 2)
+
+The engineer chose to fix F9, the only non-blocking finding taken up; F10 and F13-F16 are left for triage. `sync-main.sh`: the branch already contains `origin/main`; no overlap.
+
+**Checked, held.** F9 read against the code: the planted ages sat on a unit edge and `delta >= 0` had no slack for a backward clock step.
+
+**Built, directly and without a subagent** (a four-line edit to two test files, which the plan has no task for): `tests/inflight.test.sh` plants the `bob` signals at 35 s (was 30) and `carol` at 150 s (was 120), so `3…s ago` and `2m ago` hold across a one-second step; `tests/live.test.sh` allows `delta >= -1`. No code or docs changed. Commit `fix: the live assertions no longer sit on a unit edge…`.
+
+**Build.** Suite `shell` build is `true`: exit 0. `bash tests/run.sh live` and `inflight` passed 3 of 3 runs. Grading is `/codeo:qc`'s.
 ## Log
 
 - 2026-11-16 — round 1: Tasks 1-6 built and reviewed, one fix round on Task 2, one whole-branch fix wave and re-review, build exits 0 · cost: 67m · sonnet-5-5 913k in + 33.2M cached / 185k out
 - 2026-11-16 — round 2 (send-back from qc round 1): F1, F2, F4, F6, F8 fixed and reviewed, two fix rounds on the tests, root cause of the flaky live tests found (a non-monotonic clock), build exits 0 · cost: 24m · opus-5-5 526k in + 29k cached / 1k out · sonnet-5-5 265k in + 20M cached / 62k out
+- 2026-11-16 — round 3 (send-back from qc round 2): F9 fixed in the tests, build exits 0 · cost: 1m · sonnet-5-5 84k in + 354k cached / 2k out
