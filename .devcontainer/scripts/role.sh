@@ -6,8 +6,9 @@
 #
 #   role.sh [dir]
 #       Prints one line: unguarded | home | issue:<N> | stale:<N> | stale:? | mismatch:<N>:<folder>.
-#         unguarded  not a guarded container: CLAUDE_CODE_REMOTE=true, no CODEO_DOCKERENV file
-#                    (default /.dockerenv), or a folder that is neither '<codename>-home' nor
+#         unguarded  not a guarded container: CLAUDE_CODE_REMOTE=true, neither CODEO_DOCKERENV
+#                    (default /.dockerenv) nor CODEO_CONTAINERENV (default /run/.containerenv,
+#                    which Podman creates) exists, or a folder that is neither '<codename>-home' nor
 #                    '<codename>-<digits>'.
 #         issue:<N>  locked for N, in the folder '<codename>-<N>'.
 #         mismatch   locked for N, in any other folder.
@@ -52,7 +53,8 @@ base=$(jq -r '.baseBranch // empty' "$root/.codeo/config.json" 2>/dev/null || tr
 [[ -n $base ]] || base=main
 suffix=${folder#"$codename-"}
 
-if [[ ${CLAUDE_CODE_REMOTE:-} == true || ! -e ${CODEO_DOCKERENV:-/.dockerenv} ]] \
+if [[ ${CLAUDE_CODE_REMOTE:-} == true \
+        || ( ! -e ${CODEO_DOCKERENV:-/.dockerenv} && ! -e ${CODEO_CONTAINERENV:-/run/.containerenv} ) ]] \
     || [[ $suffix == "$folder" || ( $suffix != home && ! $suffix =~ ^[0-9]+$ ) ]]; then
     role=unguarded
 elif [[ -n $lock ]]; then
