@@ -175,11 +175,11 @@ is the container the message names.
    Then, with a board (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .board` succeeds; exit 1
    with nothing printed means no board), put the new issue in the Backlog:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> backlog`, with `<N>` from the created
-   issue's response. It adds the issue to the board when it is not on it, and prints one line naming
-   the old and the new Status. Quote that line in the report.
+   issue's response. It adds the issue to the board when it is not on it, and prints
+   one line per project it wrote, each naming the old and the new Status. Quote them in the report.
 
    <!-- rule: issue-09 -->
-   A failed move never fails the filing: the issue exists, so its number is reported as usual, and handed back to a caller, and the line the script printed is quoted with the fix it names (`gh auth refresh -s project` when the token lacks the `project` scope; in a hosted web session the script says to move the card by hand). Then read the new issue's Status once:
+   A failed move never fails the filing: the issue exists, so its number is reported as usual, and handed back to a caller, and the line the script printed is quoted with the fix it names (`gh auth refresh -s project` when the token lacks the `project` scope; `board.statuses.backlog` in `.codeo/config.json` when the board has no Backlog option; in a hosted web session the script says to move the card by hand). Then read the new issue's Status once:
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" status <N>`. With no board, make no `board.sh` call at all. The Ready name is
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.board.statuses.ready // "Ready"'`, as
    `/codeo:init` reads it. `board.sh status` prints the gate project's Status name, `unset`, `none`

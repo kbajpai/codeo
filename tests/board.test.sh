@@ -240,6 +240,13 @@ GH_STUB_ROWS="$url\t\t\t\t" run set 7 Blocked
 ! grep -q "item-add" "$GH_STUB_LOG" || fail "no-option-no-add added the issue"
 ! grep -q "item-edit" "$GH_STUB_LOG" || fail "no-option-no-add edited"
 
+# A logical key with no matching option names the config fix; a free-form name does not.
+GH_STUB_ROWS="$url\t\t\t\t" run set 7 backlog
+[[ $rc -ne 0 && $err == *"no synced project has the option 'Backlog'"* && $err == *"board.statuses.backlog"* ]] ||
+    fail "a missing Backlog option names its fix: rc=$rc err=$err"
+GH_STUB_ROWS="$url\t\t\t\t" run set 7 Blocked
+[[ $err != *"board.statuses"* ]] || fail "a free-form name gets no config hint: err=$err"
+
 printf '%s\n' '{"schema":1,"repo":{"owner":"acme","name":"widgets"},"baseBranch":"main","board":{"owner":"acme","projects":[2,9],"gateProject":2,"statuses":{}}}' > "$config"
 GH_STUB_ROWS="$P2" run set 7 "In progress"
 [[ $rc -eq 0 ]] || fail "no-option-keeps-others: rc=$rc err=$err"
