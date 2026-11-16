@@ -16,18 +16,21 @@ The finding list is fixed by triage; no duplicate found (`issue search "Podman"`
 **Options:** reference #112 only, no requirement here (recommended) · add a requirement here.
 
 **Answer:**
+Reference #112 only (engineer, 2026-11-16).
 
 ### Q2 — Design-level items: fix, or document the limit?
 F5 (a future-dated `beat` reads as live), F7 (`SessionEnd` 10 s timeout vs a 16 s worst-case clear), F16 (same volume name shares a ref) and J8 (`/codeo:cleanup` lists every archived issue) are choices the earlier plans made. 
 **Options:** state each as "fix or document the limit; `/codeo:plan` decides" (recommended) · require a code fix for each · drop them from the issue.
 
 **Answer:**
+State each as fix-or-document; `/codeo:plan` decides (engineer, 2026-11-16).
 
 ### Q3 — #107's F1 (the `rm -f -- ""` check): a requirement of this issue?
 It is a one-minute human action in a container terminal, not code.
 **Options:** acceptance criterion "the output is recorded on #107" (recommended) · amend #107's criterion 8 instead and drop it here.
 
 **Answer:**
+Acceptance criterion: the output is recorded on #107 (engineer, 2026-11-16).
 
 ## Draft (for approval at step 6)
 
@@ -101,3 +104,4 @@ Each was classified non-blocking by `/codeo:qc` and left for `/codeo:triage`. Le
 ## Log
 
 - 2026-11-16 — dossier opened from triage Q1-Q5, Q1-Q3 raised, draft recorded · cost: unavailable
+- 2026-11-16 — Q1-Q3 answered, draft approved, filed as #116 (https://github.com/kbajpai/codeo/issues/116) · cost: unavailable
