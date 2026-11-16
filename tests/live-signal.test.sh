@@ -84,7 +84,7 @@ assert_eq "PostToolUse beat" yes "$ok"
 assert_eq "SessionEnd clear" yes "$ok"
 [[ $(cmd PreToolUse) == *"subagent-model.sh"* ]] && ok=yes || ok=no
 assert_eq "PreToolUse kept" yes "$ok"
-assert_eq "timeouts" "10 10 10" "$(jq -r '[.hooks.UserPromptSubmit[0].hooks[0].timeout, .hooks.PostToolUse[0].hooks[0].timeout, .hooks.SessionEnd[0].hooks[0].timeout] | join(" ")' "$h")"
+assert_eq "timeouts" "10 10 20" "$(jq -r '[.hooks.UserPromptSubmit[0].hooks[0].timeout, .hooks.PostToolUse[0].hooks[0].timeout, .hooks.SessionEnd[0].hooks[0].timeout] | join(" ")' "$h")"
 
 case_desc=beat_publishes_in_the_background
 new_world

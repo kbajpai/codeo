@@ -44,6 +44,8 @@
 #   - The throttle stamp is written before the push, so a failed publish is not retried until the
 #     refresh interval has passed (or a --force beat).
 #   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
+#   - `clear` can take two bounds (the push `--delete`, then the REST delete), so the `SessionEnd` hook
+#     allows 20 seconds.
 #
 # Environment:
 #   CODEO_LIVE_REFRESH_SECONDS  minimum seconds between two unforced beats (default 300)
