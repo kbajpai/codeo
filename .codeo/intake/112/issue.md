@@ -1,13 +1,13 @@
-# Issue — issue
+# Issue #112 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/112 |
 | Updated | 2026-11-16 |
 
 ## Where this stands
 
-Drafted from `/codeo:qc`'s round 1 on #104 (finding F3) at the engineer's request: the by-hand web-session check was skipped there and this issue carries it. No question is open: the engineer supplied the finding and its scope, and the unknowns below are content of the issue, not blockers. Draft ready for the engineer's approval.
+Filed as #112. Drafted from `/codeo:qc`'s round 1 on #104 (finding F3) at the engineer's request: the by-hand web-session check was skipped there and this issue carries it. No question is open: the engineer supplied the finding and its scope, and the unknowns below are content of the issue, not blockers. The draft was approved and filed.
 
 ## Questions
 
@@ -57,3 +57,4 @@ The signal exists so another machine can tell a workflow is being worked right n
 ## Log
 
 - 2026-11-16 — drafted from #104's qc round 1 (F3); no questions; draft awaiting approval
+- 2026-11-16 — approved and filed as #112
