@@ -375,6 +375,26 @@ script_uses_only_bash_3_2_and_bsd_constructs() {
     printf '%s\n' "$code" | grep -qxF 'set -euo pipefail' || fail "no 'set -euo pipefail' line"
 }
 
+docs_readme_documents_the_command_line_route() {
+    local readme=$repo/.devcontainer/README.md needle
+    local needles=('Opening a container from the command line' 'codeo-container.sh home'
+        'codeo-container.sh issue <N> <branch>' 'codeo-container.sh shell' '--rebuild' 'CODEO_CMD_MODE'
+        '/workspaces/.claude' 'raw.githubusercontent.com/kbajpai/codeo/main/.devcontainer/codeo-container.sh'
+        '```mermaid' 'sequenceDiagram')
+    for needle in "${needles[@]}"; do
+        grep -qF -- "$needle" "$readme" || { fail "the README lacks '$needle'"; return; }
+    done
+}
+
+docs_changelog_names_cmd_mode() {
+    local line
+    line=$(grep -F '(#113)' "$repo/CHANGELOG.md" | head -n 1) || line=''
+    [[ -n "$line" ]] || { fail "no CHANGELOG line names (#113)"; return; }
+    [[ "$line" == *codeo-container.sh* ]] || fail "the (#113) line does not name codeo-container.sh"
+    [[ "$line" == *CODEO_CMD_MODE* ]] || fail "the (#113) line does not name CODEO_CMD_MODE"
+    [[ "$line" == *"no rebuild"* ]] || fail "the (#113) line does not say no rebuild is needed"
+}
+
 cases=(
     shell_opens_bash_in_the_clone
     shell_starts_a_stopped_container_first
@@ -397,6 +417,8 @@ cases=(
     issue_rejects_unsafe_numbers_and_branches
     issue_rebuild_and_rerun_follow_home
     script_uses_only_bash_3_2_and_bsd_constructs
+    docs_readme_documents_the_command_line_route
+    docs_changelog_names_cmd_mode
 )
 
 for current in "${cases[@]}"; do

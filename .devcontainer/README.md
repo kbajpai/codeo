@@ -7,7 +7,7 @@ The dev container comes in two kinds. Each is its own clone in its own Docker vo
 | Clone of | `main` | the branch `/codeo:init` pushed |
 | Clone folder and volume | `codeo-home` | `codeo-<N>` |
 | Docker name (`docker ps`) | `codeo-home` | `codeo-<N>` |
-| VS Code window title | `codeo [home]` | `codeo [#<N>]` |
+| VS Code window title, and the terminal title in cmd mode | `codeo [home]` | `codeo [#<N>]` |
 | Workflow lock | none | taken at start |
 | Where these run | `/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup` | `/codeo:plan` through `/codeo:close` |
 
@@ -21,6 +21,60 @@ In VS Code, run **Dev Containers: Clone Repository in Named Container Volume…*
 
 - Home container: repository URL `https://github.com/kbajpai/codeo`, volume `codeo-home`, folder `codeo-home`.
 - Issue container: repository URL `https://github.com/kbajpai/codeo/tree/<branch>`, volume `codeo-<N>`, folder `codeo-<N>`. `/codeo:init` prints these with the branch and number filled in.
+
+## Opening a container from the command line
+
+A container also opens from a terminal on the host, with no VS Code. One script does it: `.devcontainer/codeo-container.sh`.
+
+The host needs Docker with BuildKit (Docker 23 or later builds from a Git URL in the daemon) and `curl` once, to download the script. It needs nothing else. `git` on the host is used only to seed the container's git identity.
+
+Download the script once:
+
+```bash
+curl -fsSL -o codeo-container.sh https://raw.githubusercontent.com/kbajpai/codeo/main/.devcontainer/codeo-container.sh
+```
+
+Run the commands from the directory that holds the downloaded file.
+
+| Command | What it does |
+|---|---|
+| `bash codeo-container.sh home` | Opens the home container `codeo-home`, a clone of `main`. |
+| `bash codeo-container.sh issue <N> <branch>` | Opens the issue container `codeo-<N>`, a clone of `<branch>`. `/codeo:init` prints the number and the branch. |
+| `bash codeo-container.sh shell home` or `shell <N>` | Opens a shell in an existing container, in its clone folder. |
+
+`home` and `issue` build the image the first time, run the container, clone the repository into it and run the start script. They print what `docker` prints, then the start script's lines: for an issue container `lock: took the lock for #<N> on <branch>`, and for both `devcontainer-start: ready`, or `devcontainer-start: TODO` lines for what is left. The usual first TODO is `Claude Code is not logged in: run claude auth login`: run `bash codeo-container.sh shell <home|N>`, then `claude auth login` in the shell. Run the command again on a running container and it creates nothing: it runs the start script again. On a stopped container it starts it first.
+
+`shell` starts a stopped container, sets the terminal's title to `codeo [home]` or `codeo [#<N>]`, and opens a login `bash` in `/workspaces/codeo-home` or `/workspaces/codeo-<N>`. Start `claude` there. With no such container it prints `codeo-container: no container codeo-<N>: create it with '...'` and exits 1. A bad argument prints the usage and exits 2.
+
+```mermaid
+sequenceDiagram
+    participant H as Host script
+    participant D as Docker
+    participant C as Container
+    H->>D: docker build codeo-dev:codeo-N from the GitHub URL
+    H->>D: docker run codeo-N with CODEO_CMD_MODE=1
+    D->>C: create, volume codeo-N on /workspaces
+    H->>C: chown dev /workspaces, as root
+    H->>C: git clone --branch branch into /workspaces/codeo-N
+    H->>C: run devcontainer-start.sh with GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL
+    C-->>H: lock: took the lock for #N on branch
+    C-->>H: devcontainer-start: ready, or its TODO lines
+    H->>C: shell N: docker exec a login bash in /workspaces/codeo-N
+```
+
+The container is the same as the VS Code route's: the same name, hostname, 4 GB memory cap, and the `codeo-gh` and `codeo-git` volumes. These differ:
+
+- The script sets `CODEO_CMD_MODE`. The start script then writes no `.vscode/settings.json`, because no VS Code is there to name, and does not wait for a host `~/.gitconfig`, because none is copied in.
+- The git identity comes from the host's `git config user.name` and `user.email`, else from `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` in the host's environment, each on its own. They are passed to the start script's run only, as `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL`, so the start script's seeding applies: it fills a key the `codeo-git` volume lacks and never overwrites one it has.
+- Claude Code's login and sessions live on the container's own volume, at `/workspaces/.claude` (`CLAUDE_CONFIG_DIR`). A rebuild keeps them. `docker volume rm codeo-<N>` removes them.
+- The terminal's title is set by `shell`, and the session title by the same hook as in VS Code.
+
+Two variables change where the script reads from:
+
+| Variable | Meaning |
+|---|---|
+| `CODEO_REPO_URL` | The repository to build from and clone. Default `https://github.com/kbajpai/codeo.git`. |
+| `CODEO_CONTEXT` | A local directory to build the image from instead of the Git URL, for a developer's own clone. |
 
 ## What the start script does
 
@@ -64,11 +118,13 @@ After an abandon it prints none either. With the branch kept, the container hold
 
 `/codeo:cleanup` lists finished issues only, those with a `.codeo/done/<N>` entry on the base branch, so it never lists a stashed or abandoned one.
 
-Both only print. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
+Both only print. The printed `docker rm -f codeo-<N>; docker volume rm codeo-<N>` serves a container opened from the command line too; removing its volume also removes its Claude Code login. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
 
 ## The folder rule
 
 The clone folder is the container's Docker name (`runArgs` `--name=${containerWorkspaceFolderBasename}`). Docker accepts names that match `[a-zA-Z0-9][a-zA-Z0-9_.-]+` and refuses anything else before any script runs, so a container cannot start with another folder and the start script never gets to report it. Use the folders above; if you typed another, remove the container and clone again with the right folder.
+
+A container opened from the command line is named by the script, not by a folder, so this rule cannot be broken there.
 
 The Docker name is the folder's name, so two containers whose folders share a name cannot both exist, also while the first is stopped. This happens when a host folder is opened with **Reopen in Container** from two paths with the same last name (`~/a/codeo` and `~/b/codeo`): Docker reports `name already in use`. Give one of them another folder name, or use the named-volume flow above, whose folders `codeo-home` and `codeo-<N>` never clash.
 
@@ -77,3 +133,5 @@ The Docker name is the folder's name, so two containers whose folders share a na
 A container created before the name was the clone folder alone has a different Docker name. Rebuild it once to get the new name. If Docker reports that the name is already in use, a container with that name is left over: remove it with `docker rm <name>` and open the container again. The same message also means a second container with the same folder name: see *The folder rule*.
 
 A container created before the move to Ubuntu 26.04 is still on the older image. Rebuild it once (**Dev Containers: Rebuild Container**) to get the new one. The clone and the `codeo-gh` and `codeo-git` volumes are kept. Expect all of `~/.claude` to be lost on a rebuild (the Claude Code login, past sessions and user settings), because it is not on a volume: run `claude auth login` again, and the start script reinstalls the plugins.
+
+A container opened from the command line is rebuilt with `bash codeo-container.sh home --rebuild` or `bash codeo-container.sh issue <N> <branch> --rebuild`. It removes the container, builds the image again and starts a new container. The volumes are kept: the clone, `/workspaces/.claude` (the Claude Code login and sessions), `codeo-gh` and `codeo-git`.
