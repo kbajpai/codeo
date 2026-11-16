@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, Q1-Q3 answered. Tasks 1-9 of `docs/plans/2026-11-16-cmd-mode-containers.md` are built, reviewed task by task and as a whole branch (verdict: ship), and pushed; the configured build (`true`) passes and the full `bash tests/run.sh` passed in each task. Task 10 is the engineer's (host checks on WSL2 and a Mac), not this skill's.
+Round 3 is built: Tasks 1-3 of `docs/plans/2026-11-16-cmd-mode-existing-container.md` (QC round 2's R1-R6), reviewed, build passing, handed to `/codeo:qc`; Task 4 is the engineer's. Earlier, in round 1, Q1-Q3 were answered and Tasks 1-9 of `docs/plans/2026-11-16-cmd-mode-containers.md` are built, reviewed task by task and as a whole branch (verdict: ship), and pushed; the configured build (`true`) passes and the full `bash tests/run.sh` passed in each task. Task 10 is the engineer's (host checks on WSL2 and a Mac), not this skill's.
 
 Q1-Q3 (#116's overlap) are answered: proceed and coordinate. Nothing is open.
 
@@ -84,8 +84,33 @@ QC round 1 held one blocking finding (F1) and six non-blocking ones; all seven w
 
 **Deviations.** None. The `-it` path of F3 has no test, since it needs a pseudo-terminal. `sync-main.sh`: already contains `origin/main`; `overlap.sh 113` prints nothing.
 
+### Round 3
+2026-11-16
+(after plan.md round 2, answering qc.md round 2)
+
+Plan `docs/plans/2026-11-16-cmd-mode-existing-container.md`, Tasks 1-3 built, each reviewed, then one review of the round as a whole. Task 4 is the engineer's (host check), not this skill's. QC round 2's R1-R6 were each checked against the code and held.
+
+**Built.**
+- Task 1 (R1): `issue <N> <branch>` on an existing `codeo-<N>`, running or stopped, exits 1 with one line naming `shell <N>`, `--rebuild` and removal, and starts nothing; with `--rebuild`, or a volume left without its container, the clone must be on `<branch>` (a detached HEAD counts as a mismatch). `home` keeps its re-run. Six new cases and an updated `issue_rebuild_and_rerun_follow_home`.
+- Task 2 (R5, R6, R2's header): `require_docker` shows Docker's own first error line, falling back to the old text when stderr is empty; `session-title.sh` accepts any non-empty `CODEO_CMD_MODE`; the script header describes `CODEO_CONTEXT` as the `.devcontainer` directory of a local clone. Two new cases.
+- Task 3 (R2, R3, R4, stash paragraph): `.devcontainer/README.md`, `.codeo/overlays/init.md` and the `(#113)` bullet in `CHANGELOG.md` say what the code does; three `docs_readme_*` cases and an overlay needle.
+- Fix wave after the whole-round review: the branch-mismatch message names `docker rm -f codeo-<N>` before `docker volume rm codeo-<N>`, and prints `(no branch)` for a detached HEAD.
+
+**Documentation changed.** `.devcontainer/README.md`, `.codeo/overlays/init.md`, `CHANGELOG.md`. No page under `docs/` moves.
+
+**Build.** Configured `shell` suite build `true`: exit 0. The full `bash tests/run.sh` printed `all cases passed` in Tasks 1-3; the full suite is `/codeo:qc`'s.
+
+**Overlap.** `sync-main.sh`: the branch already contains `origin/main`; `overlap.sh 113` prints nothing.
+
+**Deviations.** One, from the plan's exact text for Task 1's branch-mismatch message. The plan says `remove the volume (docker volume rm codeo-<N>, …)`, but when the mismatch is found `ensure_container` has already created or recreated the container, which mounts the volume, so `docker volume rm` fails with "volume in use". The message now reads `remove it (docker rm -f codeo-<N>; docker volume rm codeo-<N>, once git status in it shows nothing unpushed)`. `docs/plans/2026-11-16-cmd-mode-existing-container.md` line 43 still quotes the old text; the plan is not edited here. Also, a detached HEAD prints `(no branch)` instead of `''`.
+
+**Parked minors.** With `--rebuild` and a mismatch, the container is already rebuilt and left running when the refusal comes; `docker info`'s stderr is used raw (a leading blank line falls back to the generic text, control characters pass through); the init overlay's new sentence is appended to an already long line; the README's rebuild paragraph says the old container and volume must be removed, though `issue … --rebuild` on the same branch would also pass.
+
+**Not proved here** (the engineer's, host): Task 4 (`issue` on a running `codeo-<N>` refuses and leaves `docker ps` unchanged), the first plan's Task 10, and the cmd-mode checks on Docker, Mac `/bin/bash` 3.2 and the VS Code route.
+
 ## Log
 
 - 2026-11-16 — Tasks 1-9 built and reviewed, Q1-Q3 raised on #116's overlap · cost: 71m · sonnet-5-5 992k in + 26.4M cached / 160k out
 - 2026-11-16 — Q1-Q3 answered (proceed and coordinate); outcome written, build passed, handed to qc · cost: 0m · sonnet-5-5 86k in + 348k cached / 2k out
 - 2026-11-16 — round 2: fixed qc round 1's F1-F7, build passed, handed to qc · cost: 4m · sonnet-5-5 234k in + 1.8M cached / 15k out
+- 2026-11-16 — round 3: built the follow-up plan (Tasks 1-3, each reviewed and the round as a whole), one fix wave, build passed, handed to qc · cost: 36m · sonnet-5-5 363k in + 9.7M cached / 58k out
