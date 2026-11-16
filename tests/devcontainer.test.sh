@@ -1670,7 +1670,7 @@ start_does_not_claim_an_override_the_scope_outranks() {
         ! grep -q 'overrid' <<<"$ds_out" || fail "$name: stdout claims an override: $ds_out"
         ! grep -q 'set it to true for this clone' <<<"$ds_out" || fail "$name: stdout claims it set it to true for this clone: $ds_out"
         [[ $(ds_todos 'still false from the') == 1 ]] || fail "$name: not exactly one 'still false from the' TODO: $ds_err"
-        grep 'TODO.*still false from the' <<<"$ds_err" | grep "$scope" | grep -q 'update-index --chmod' || fail "$name: the TODO does not name $scope and update-index --chmod: $ds_err"
+        grep 'TODO.*still false from the' <<<"$ds_err" | grep "from the $scope config" | grep -q 'update-index --chmod' || fail "$name: the TODO does not name $scope and update-index --chmod: $ds_err"
         [[ $(tail -n1 <<<"$ds_out") != 'devcontainer-start: ready' ]] || fail "$name: stdout ends with ready: $ds_out"
     done
 }
