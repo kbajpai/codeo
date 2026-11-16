@@ -3,6 +3,7 @@
 # plugins, writes the window title, turns on Claude Code Remote Control (remoteControlAtStartup in the user
 # settings), restores the executable bit the index records on tracked files and turns core.fileMode back on, only on a clone on a Docker volume where the filesystem keeps the bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
 # (the GitHub and Claude logins, a git identity (filled from the host ~/.gitconfig or GIT_AUTHOR_* when the volume lacks it), credentials that block Remote Control). Safe to re-run: each step checks before it acts.
+# With CODEO_CMD_MODE set (a container started from a host command line, no VS Code) it skips the window title and the wait for the host ~/.gitconfig.
 # It always exits 0, so it never fails the container's creation; what is undone is reported instead.
 # The home container (on the base branch) takes no workflow lock; an issue container takes it with codeo's lock.sh from the init.md
 # on its branch, and its clone folder is checked against the lock. A .codeo/active that names no issue, or cannot be read, or is empty and cannot be removed, is reported and left alone.
@@ -256,8 +257,8 @@ else
     add_todo "the folder check failed: ${folder_out//$'\n'/ / } — fix it and re-run this script"
 fi
 
-# 3b. Window title: write this clone's title into .vscode/settings.json.
-bash .devcontainer/scripts/window-title.sh || add_todo "window-title.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/window-title.sh"
+# 3b. Window title: write this clone's title into .vscode/settings.json. Cmd mode (CODEO_CMD_MODE set) skips it: there is no VS Code to name.
+[[ -n ${CODEO_CMD_MODE:-} ]] || bash .devcontainer/scripts/window-title.sh || add_todo "window-title.sh did not finish: fix what it printed, then run bash .devcontainer/scripts/window-title.sh"
 
 # 3c. Remote Control: merge {"remoteControlAtStartup": true} into the user-scope Claude settings, keeping every other key.
 # A symlinked settings.json is written through (readlink -f), and the file keeps its mode. A file that is not valid
@@ -319,7 +320,8 @@ identity_missing() { [[ -z $(git config --global --get "$1" 2>/dev/null || true)
 # whole number is taken as 10, so a typo cannot stop this script; 0 does not wait). A file that never fills falls
 # through to the environment. A volume that already holds the identity never waits.
 gitconfig_stamp() { stat -c '%s %y' "$HOME/.gitconfig" 2>/dev/null || true; }
-if identity_missing user.name || identity_missing user.email; then
+# Cmd mode (CODEO_CMD_MODE set) never waits: no VS Code is there to copy the host file in.
+if { identity_missing user.name || identity_missing user.email; } && [[ -z ${CODEO_CMD_MODE:-} ]]; then
     ticks=0
     wait_max=${CODEO_GITCONFIG_WAIT:-10}
     [[ $wait_max =~ ^[0-9]+$ ]] || wait_max=10

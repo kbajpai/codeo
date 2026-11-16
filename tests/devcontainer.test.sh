@@ -13,6 +13,7 @@
 # Last it runs .devcontainer/scripts/devcontainer-start.sh in a scratch repo against stub gh, claude,
 # sudo and stat executables and a stub plugins.sh: it always exits 0, lists each login still to do in
 # order, says "ready" when nothing is left, and takes ownership of a clone owned by someone else.
+# The start-script cases also cover CODEO_CMD_MODE (no .vscode, no wait for a host ~/.gitconfig, the identity still seeded once).
 # The start-script cases also cover a .codeo/active that names no issue: it is reported once, left untouched, and takes no lock.
 # The devcontainer.json checks also cover the postStartCommand that re-runs window-title.sh (the
 # window title) on every start; the start script's login checks are the ones listed just above.
@@ -499,9 +500,9 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 # ds_run: run the scratch start script (through $DS_REPO when set, else the repo itself); sets ds_rc, ds_out and ds_err.
 ds_run() {
     ds_rc=0
-    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
+    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT -u CODEO_CMD_MODE -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
         ${DS_CODEO_ROOT:+CODEO_ROOT="$DS_CODEO_ROOT"} \
-        ${DS_SET:+"$DS_SET"} \
+        ${DS_SET:+"$DS_SET"} ${DS_CMD_MODE:+CODEO_CMD_MODE=1} \
         ${DS_AUTHOR_NAME:+GIT_AUTHOR_NAME="$DS_AUTHOR_NAME"} ${DS_AUTHOR_EMAIL:+GIT_AUTHOR_EMAIL="$DS_AUTHOR_EMAIL"} \
         CODEO_GITCONFIG_WAIT="${DS_GITCONFIG_WAIT:-0}" \
         PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="${DS_GITCONFIG:-$ds_dir/gitconfig}" GIT_CONFIG_NOSYSTEM=1 \
@@ -1270,6 +1271,34 @@ start_does_not_wait_when_the_volume_has_the_identity() {
     DS_GITCONFIG_WAIT=30 ds_ready_run
     ((SECONDS - start < 5)) || fail "the run took $((SECONDS - start))s: it waited with the identity in place"
     [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' ]] || fail "stdout does not end with ready: $ds_out"
+}
+
+start_cmd_mode_writes_no_vscode_settings() {
+    ds_setup cmdvscode || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    DS_CMD_MODE=1 ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0: $ds_err"
+    [[ ! -e $ds_dir/codeo-home/.vscode ]] || fail 'cmd mode wrote .vscode'
+    if grep -q '^window-title:' <<<"$ds_out"; then fail "cmd mode ran window-title.sh: $ds_out"; fi
+}
+
+start_cmd_mode_does_not_wait_for_a_host_gitconfig() {
+    local start=$SECONDS n
+    ds_setup cmdwait || return 0
+    : > "$ds_dir/gitconfig"
+    DS_CMD_MODE=1 DS_GITCONFIG_WAIT=10 ds_ready_run
+    ((SECONDS - start < 5)) || fail "the run took $((SECONDS - start))s: it waited in cmd mode"
+    n=$(ds_todos 'git identity is not set'); ((n == 1)) || fail "wanted one identity TODO, got $n: $ds_err"
+}
+
+start_cmd_mode_seeds_the_identity_from_the_environment_once() {
+    ds_setup cmdseed || return 0
+    DS_CMD_MODE=1 DS_AUTHOR_NAME="Ada O'Neil" DS_AUTHOR_EMAIL=ada@example.com ds_ready_run
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the environment's: $(ds_global user.name)"
+    grep -qF 'git identity: user.name set from GIT_AUTHOR_NAME' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+    DS_CMD_MODE=1 DS_AUTHOR_NAME=Other DS_AUTHOR_EMAIL=other@example.com ds_ready_run
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name changed on the second run: $(ds_global user.name)"
+    if grep -qF 'git identity:' <<<"$ds_out"; then fail "the second run reported a seed: $ds_out"; fi
 }
 
 start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero() {
@@ -2434,6 +2463,9 @@ cases=(
     start_does_not_stall_on_a_host_gitconfig_that_stays_empty
     readme_says_included_identities_do_not_count
     start_does_not_wait_when_the_volume_has_the_identity
+    start_cmd_mode_writes_no_vscode_settings
+    start_cmd_mode_does_not_wait_for_a_host_gitconfig
+    start_cmd_mode_seeds_the_identity_from_the_environment_once
     start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero
     start_setup_git_failure_is_a_todo
     start_trusts_the_clone_once
