@@ -19,7 +19,7 @@
 # window title) on every start; the start script's login checks are the ones listed just above.
 # It also runs .devcontainer/scripts/session-title.sh against hook fixtures on stdin (home and lock titles,
 # the prompt hook, an existing title kept, silent outside a dev container and on every failure) and
-# checks that .claude/settings.json registers it. It also checks the scripts are committed executable, the
+# checks that .claude/settings.json registers it. Its cmd-mode cases (CODEO_CMD_MODE=1 without REMOTE_CONTAINERS) title the session and write no .vscode. It also checks the scripts are committed executable, the
 # settings-merge cases (not an object, symlink, mode, no temp file), the credential-variable advice, the
 # core.fileMode probe, the prompt hook's retitling, the guarded hook command and the codeo-git volume.
 # The identity step is covered too: the volume's missing user.name and user.email are filled from the host ~/.gitconfig, else GIT_AUTHOR_*, each on its own and never over a value already there, nothing else
@@ -2170,13 +2170,15 @@ st_json() {
 }
 
 # st_run <stdin> [remote]: runs session-title.sh with REMOTE_CONTAINERS=<remote> (default true; "unset"
-# leaves it out) from /. Sets st_rc, st_out, st_err.
+# leaves it out) from /, and with CODEO_CMD_MODE unset unless ST_CMD_MODE is non-empty (then =1).
+# Sets st_rc, st_out, st_err.
 st_run() {
     local input=$1 remote=${2:-true} errf envs=()
     [[ $remote == unset ]] || envs=("REMOTE_CONTAINERS=$remote")
+    [[ -z ${ST_CMD_MODE:-} ]] || envs+=(CODEO_CMD_MODE=1)
     errf=$(mktemp -p "$pl_root")
     st_rc=0
-    st_out=$(cd / && env -u REMOTE_CONTAINERS "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
+    st_out=$(cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
     st_err=$(<"$errf")
 }
 
@@ -2207,6 +2209,33 @@ session_title_names_the_issue_with_a_lock() {
     printf 'issue:   45\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
     st_run "$(st_json SessionStart $st_sid)"
     [[ $(st_title) == 'codeo [#45] · a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_cmd_mode_titles_home_and_the_issue() {
+    st_setup cmd-mode || return 0
+    local ST_CMD_MODE=1
+    st_run "$(st_json SessionStart $st_sid)" unset
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "no lock: title '$(st_title)'"
+    printf 'issue:   113\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json SessionStart $st_sid)" unset
+    [[ $(st_title) == 'codeo [#113] · a21b9973' ]] || fail "lock: title '$(st_title)'"
+}
+
+session_title_cmd_mode_writes_no_vscode_settings() {
+    st_setup cmd-mode-vscode || return 0
+    local ST_CMD_MODE=1 exclude
+    st_run "$(st_json SessionStart $st_sid)" unset
+    [[ -n $st_out ]] || fail 'no title printed'
+    [[ ! -e $st_dir/.vscode ]] || fail '.vscode was created'
+    exclude=$(git -C "$st_dir" rev-parse --path-format=absolute --git-path info/exclude)
+    ! grep -q '\.vscode' "$exclude" 2>/dev/null || fail 'info/exclude names .vscode'
+}
+
+session_title_with_both_variables_still_refreshes_the_window_title() {
+    st_setup both || return 0
+    local ST_CMD_MODE=1 f=$st_dir/.vscode/settings.json
+    st_run "$(st_json SessionStart $st_sid)" true
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [home]' ]] || fail "window.title $(jq -r '."window.title"' "$f" 2>&1)"
 }
 
 session_title_on_a_prompt_after_clear() {
@@ -2523,6 +2552,9 @@ cases=(
     title_outside_a_repository_says_so
     session_title_names_home_and_the_id
     session_title_names_the_issue_with_a_lock
+    session_title_cmd_mode_titles_home_and_the_issue
+    session_title_cmd_mode_writes_no_vscode_settings
+    session_title_with_both_variables_still_refreshes_the_window_title
     session_title_on_a_prompt_after_clear
     session_title_keeps_an_existing_title
     session_title_is_silent_outside_a_dev_container
