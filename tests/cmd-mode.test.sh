@@ -386,6 +386,23 @@ docs_readme_documents_the_command_line_route() {
     done
 }
 
+docs_readme_states_the_hostname_difference() {
+    local readme=$repo/.devcontainer/README.md
+    if grep -qF 'same name, hostname' "$readme"; then fail "the README says the hostname is the same as the VS Code route's"; fi
+    grep -qF -- "- The hostname is the container's name" "$readme" || fail "no bullet under 'These differ' names the hostname"
+}
+
+docs_readme_says_removal_leaves_the_image() {
+    grep -qF 'docker image rm codeo-dev:codeo-<N>' "$repo/.devcontainer/README.md" \
+        || fail "the README does not say how to remove the image"
+}
+
+docs_readme_describes_the_logins_as_todo_lines() {
+    local readme=$repo/.devcontainer/README.md
+    if grep -qF 'The usual first TODO is' "$readme"; then fail "the README still names one usual first TODO"; fi
+    grep -qF 'lists the logins (GitHub, then Claude Code) as TODO lines' "$readme" || fail "the README does not say the logins are TODO lines"
+}
+
 docs_changelog_names_cmd_mode() {
     local line
     line=$(grep -F '(#113)' "$repo/CHANGELOG.md" | head -n 1) || line=''
@@ -418,6 +435,9 @@ cases=(
     issue_rebuild_and_rerun_follow_home
     script_uses_only_bash_3_2_and_bsd_constructs
     docs_readme_documents_the_command_line_route
+    docs_readme_states_the_hostname_difference
+    docs_readme_says_removal_leaves_the_image
+    docs_readme_describes_the_logins_as_todo_lines
     docs_changelog_names_cmd_mode
 )
 

@@ -42,7 +42,7 @@ Run the commands from the directory that holds the downloaded file.
 | `bash codeo-container.sh issue <N> <branch>` | Opens the issue container `codeo-<N>`, a clone of `<branch>`. `/codeo:init` prints the number and the branch. |
 | `bash codeo-container.sh shell home` or `shell <N>` | Opens a shell in an existing container, in its clone folder. |
 
-`home` and `issue` build the image the first time, run the container, clone the repository into it and run the start script. They print what `docker` prints, then the start script's lines: for an issue container `lock: took the lock for #<N> on <branch>`, and for both `devcontainer-start: ready`, or `devcontainer-start: TODO` lines for what is left. The usual first TODO is `Claude Code is not logged in: run claude auth login`: run `bash codeo-container.sh shell <home|N>`, then `claude auth login` in the shell. Run the command again on a running container and it creates nothing: it runs the start script again. On a stopped container it starts it first.
+`home` and `issue` build the image the first time, run the container, clone the repository into it and run the start script. They print what `docker` prints, then the start script's lines: for an issue container `lock: took the lock for #<N> on <branch>`, and for both `devcontainer-start: ready`, or `devcontainer-start: TODO` lines for what is left. The first run usually lists the logins (GitHub, then Claude Code) as TODO lines: open `bash codeo-container.sh shell <home|N>` and run what each TODO says (for example `claude auth login`). Run the command again on a running container and it creates nothing: it runs the start script again. On a stopped container it starts it first.
 
 `shell` starts a stopped container, sets the terminal's title to `codeo [home]` or `codeo [#<N>]`, and opens a login `bash` in `/workspaces/codeo-home` or `/workspaces/codeo-<N>`. Start `claude` there. With no such container it prints `codeo-container: no container codeo-<N>: create it with '...'` and exits 1. A bad argument prints the usage and exits 2.
 
@@ -62,8 +62,9 @@ sequenceDiagram
     H->>C: shell N: docker exec a login bash in /workspaces/codeo-N
 ```
 
-The container is the same as the VS Code route's: the same name, hostname, 4 GB memory cap, and the `codeo-gh` and `codeo-git` volumes. These differ:
+The container is the same as the VS Code route's: the same name, 4 GB memory cap, and the `codeo-gh` and `codeo-git` volumes. These differ:
 
+- The hostname is the container's name, so the prompt reads `dev@codeo-<N>`. The VS Code route sets none.
 - The script sets `CODEO_CMD_MODE`. The start script then writes no `.vscode/settings.json`, because no VS Code is there to name, and does not wait for a host `~/.gitconfig`, because none is copied in.
 - The git identity comes from the host's `git config user.name` and `user.email`, else from `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` in the host's environment, each on its own. They are passed to the start script's run only, as `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL`, so the start script's seeding applies: it fills a key the `codeo-git` volume lacks and never overwrites one it has.
 - Claude Code's login and sessions live on the container's own volume, at `/workspaces/.claude` (`CLAUDE_CONFIG_DIR`). A rebuild keeps them. `docker volume rm codeo-<N>` removes them.
@@ -118,7 +119,7 @@ After an abandon it prints none either. With the branch kept, the container hold
 
 `/codeo:cleanup` lists finished issues only, those with a `.codeo/done/<N>` entry on the base branch, so it never lists a stashed or abandoned one.
 
-Both only print. The printed `docker rm -f codeo-<N>; docker volume rm codeo-<N>` serves a container opened from the command line too; removing its volume also removes its Claude Code login. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
+Both only print. The printed `docker rm -f codeo-<N>; docker volume rm codeo-<N>` serves a container opened from the command line too; removing its volume also removes its Claude Code login. Such a container also leaves the image `codeo-dev:codeo-<N>`, removed with `docker image rm codeo-dev:codeo-<N>`. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
 
 ## The folder rule
 
