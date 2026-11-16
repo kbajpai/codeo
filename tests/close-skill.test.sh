@@ -309,6 +309,9 @@ section_contains "init resumes a stash" "$stash_section" '/codeo:init #<N>'
 section_contains "an open pull request stays open" "$stash_section" 'stays open'
 section_contains "the abandon deletes the branch only on request" "$stash_section" 'same confirmation as step 14'
 section_order "a stash deletes the lock last" "$stash_section" 'lease release-all <N>' 'Delete `.codeo/active`'
+step_contains "step 16 clears the live signal with the lock" 16 'live.sh" clear; rm -f .codeo/active'
+section_contains "a stash clears the signal with the lock" "$stash_section" 'last, as step 16 does, with the signal cleared'
+section_contains "an abandon clears the signal with the lock" "$stash_section" 'as a stash does, as step 16 does, with the signal cleared'
 for id in close-11 close-12 close-13; do
     section_contains "$id sits in the stash section" "$stash_section" "<!-- rule: $id -->"
 done
