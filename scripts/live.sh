@@ -21,7 +21,8 @@
 #       Prints the signals last fetched (it never fetches) that are within the TTL. --tsv:
 #       issue<TAB>user<TAB>machine<TAB>host<TAB>age-in-seconds, oldest issue first. Otherwise one
 #       `#<issue>  <user> on <machine> (<host>), <age> ago` line each. A signal missing a field, or
-#       with a non-numeric beat, is skipped; a beat in the future counts as age 0.
+#       with a non-numeric beat, is skipped; a beat up to the TTL in the future counts as age 0, one
+#       further ahead is skipped.
 #
 # The signal's commit message:
 #       codeo live signal
@@ -48,7 +49,8 @@
 #   CODEO_LIVE_REFRESH_SECONDS  minimum seconds between two unforced beats (default 300)
 #   CODEO_LIVE_TTL_SECONDS      how old a beat may be and still be listed (default 900)
 #   CODEO_MACHINE               the machine label, overriding the host's default
-#   CODEO_LIVE_PUSH_TIMEOUT     seconds each git push or fetch, or REST call, may take (default 8)
+#   CODEO_LIVE_PUSH_TIMEOUT     seconds each git push or fetch, the login lookup, and the REST fallback
+#                               (`github.sh ref put`, all its calls together) may take (default 8)
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
@@ -113,7 +115,7 @@ read_lock() {
     [[ -f $CODEO_STATE_DIR/active ]] || return 1
     issue=$(lock_field issue)
     host=$(lock_field host)
-    [[ $issue =~ ^[0-9]+$ ]] || return 1
+    [[ $issue =~ ^[1-9][0-9]{0,8}$ ]] || return 1
     case $host in container | web | local) ;; *) return 1 ;; esac
     machine=$(machine_label "$host")
     signal_ref=refs/codeo/live/$issue/$machine
@@ -190,6 +192,7 @@ list() {
         user=$(clean "$user" 64)
         machine=$(clean "$machine" 64)
         [[ -n $user && -n $machine ]] || continue
+        ((beat - now <= ttl)) || continue
         age=$((now - beat))
         ((age >= 0)) || age=0
         ((age <= ttl)) || continue

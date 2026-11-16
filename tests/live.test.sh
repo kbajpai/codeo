@@ -233,6 +233,15 @@ assert_eq "base: refs" "" "$(refs)"
 assert_eq "base: stderr" "" "$err"
 assert_eq "base: stamp" no "$([[ -e $(git -C "$clone" rev-parse --git-path codeo-live-beat) ]] && echo yes || echo no)"
 
+case_desc=beat_publishes_nothing_for_a_lock_issue_list_would_drop
+for bad_issue in 0 0104 1234567890; do
+    new_world; clone_with_lock "$bad_issue" container codeo-x
+    run beat --force
+    assert_eq "$bad_issue: exit" 0 "$rc"
+    assert_eq "$bad_issue: refs" "" "$(refs)"
+    assert_eq "$bad_issue: stderr" "" "$err"
+done
+
 # --- identity ----------------------------------------------------------------------------------
 
 case_desc=machine_by_host
@@ -410,6 +419,21 @@ other=$(clone_of "$origin")
 plant refs/codeo/live/5/ahead "$(signal 5 alice ahead local $(( $(date +%s) + 120 )))"
 live "$other" fetch
 assert_eq "age" "$(printf '5\talice\tahead\tlocal\t0')" "$(live "$other" list --tsv)"
+
+case_desc=list_skips_a_beat_further_ahead_than_the_ttl
+new_world
+other=$(clone_of "$origin")
+now=$(date +%s)
+plant refs/codeo/live/5/far "$(signal 5 alice far local $((now + 1000)))"
+plant refs/codeo/live/6/near "$(signal 6 alice near local $((now + 120)))"
+live "$other" fetch
+assert_eq "only the near one, age 0" "$(printf '6\talice\tnear\tlocal\t0')" "$(live "$other" list --tsv)"
+plant refs/codeo/live/7/over "$(signal 7 alice over local $((now + 70)))"
+plant refs/codeo/live/8/under "$(signal 8 alice under local $((now + 50)))"
+live "$other" fetch
+tsv=$(CODEO_LIVE_TTL_SECONDS=60 live "$other" list --tsv)
+assert_not_contains "ttl 60 hides +70 s" "7"$'\t'alice "$tsv"
+assert_contains "ttl 60 shows +50 s" "8"$'\t'alice$'\t'under "$tsv"
 
 case_desc=list_cleans_hostile_fields_and_skips_unknown_hosts
 new_world
