@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and stopped on questions. Every finding in the issue was read against the code as it is on this branch, and each still holds. Most items have one sensible fix and are listed under `## Notes` as calls the draft will carry. Five things are open and are yours: Q1-Q3 are the three "fix or document" design points intake left to this step where both answers are defensible, Q4 needs output only you can produce, and Q5 is the overlap with #113. Nothing is drafted past them.
+Round 2. Q1-Q3 and Q5 are answered ("recommended for all", in the conversation, recorded under each). **Q4 is open**: it has no recommended option, only the output of `rm -f -- ""; echo "rc=$?"` run in a container terminal, which this session cannot produce. Nothing is drafted until it is answered. Every finding in the issue was read against the code as it is on this branch, and each still holds; the calls the draft will carry are under `## Notes`.
 
 ## Questions
 
@@ -21,6 +21,7 @@ Explored and stopped on questions. Every finding in the issue was read against t
 - **(c) Drop J8 from this change** and leave it in the archive for a later issue.
 
 **Answer:**
+(a) Document (engineer, in the conversation, 2026-11-16: "recommended for all"; recorded here by the skill).
 
 ### Q2 — `SessionEnd`'s 10-second timeout is shorter than a worst-case `clear` (F7): raise it, or document it?
 
@@ -30,6 +31,7 @@ Explored and stopped on questions. Every finding in the issue was read against t
 - **(b) Keep 10 and document** that a `clear` cut short leaves the signal to expire.
 
 **Answer:**
+(a) Raise the `SessionEnd` timeout to 20 (engineer, in the conversation, 2026-11-16: "recommended for all"; recorded here by the skill).
 
 ### Q3 — A `beat` in the future counts as age 0 (F5): cap it, or document it?
 
@@ -39,6 +41,7 @@ Explored and stopped on questions. Every finding in the issue was read against t
 - **(b) Document only:** the page says the expiry holds only when the clocks agree.
 
 **Answer:**
+(a) Cap at the TTL (engineer, in the conversation, 2026-11-16: "recommended for all"; recorded here by the skill).
 
 ### Q4 — What does `rm -f -- ""; echo "rc=$?"` print in a container terminal?
 
@@ -56,6 +59,7 @@ Explored and stopped on questions. Every finding in the issue was read against t
 - **Re-scope.** Drop the Podman guard's README sentence and the title-test comment from this change; `CHANGELOG.md` cannot be dropped, the issue requires the entry.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-16: "recommended for all"; recorded here by the skill).
 
 ## Notes
 
@@ -92,3 +96,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-16 — explored, Q1-Q5 raised, draft footprint recorded under Notes · cost: 3m · fable-5-2 118k in + 853k cached / 16k out
+- 2026-11-16 — Q1-Q3 and Q5 recorded from the engineer's conversation answer; Q4 still open, stopped · cost: unavailable (no draft work this round)
