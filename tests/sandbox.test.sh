@@ -333,16 +333,137 @@ sandbox_path_prints_the_working_folder() {
     [[ "$out" == /sandbox/clone ]] || fail "path was: $out"
 }
 
-# Task 12 replaces this when it builds end.
-valid_end_is_not_yet_built() {
-    sb_setup notyet
-    sb_run end 1 --force
-    ((sb_rc != 0)) || fail "exited 0"
-    [[ "$sb_err" == *"not yet"* ]] || fail "stderr was: $sb_err"
-    [[ "$(sb_calls)" != *git* && "$(sb_calls)" != *create* && "$(sb_calls)" != *exec* ]] || fail "calls: $(sb_calls)"
+sb_err_lines() { wc -l <"$sb_dir/err" | tr -d ' '; }
+
+# end_setup <name> [windows]: sb_setup, plus in work/ a real clone codeo-113 of a bare origin, a bare
+# repository standing in for the sandbox's git remote (remote sandbox-codeo-113 mirrors its branches into
+# refs/sandboxes/codeo-113/), and a git (or, with windows, git.exe) that logs, records its working
+# directory, then runs the real git. Only sbx stays a stub.
+real_git=$(command -v git)
+end_setup() {
+    sb_setup "$1"
+    local w=$sb_dir/work g="$real_git -c user.name=t -c user.email=t@example.com" prog=git
+    $real_git init -q -b main --bare "$sb_dir/origin.git"
+    $real_git init -q "$sb_dir/seed"
+    $g -C "$sb_dir/seed" commit -q --allow-empty -m base
+    $g -C "$sb_dir/seed" branch -M main
+    $real_git -C "$sb_dir/seed" push -q "$sb_dir/origin.git" main
+    $real_git clone -q "$sb_dir/origin.git" "$w/codeo-113"
+    $real_git clone -q --bare "$sb_dir/origin.git" "$sb_dir/sandbox.git"
+    $real_git -C "$w/codeo-113" remote add sandbox-codeo-113 "$sb_dir/sandbox.git"
+    $real_git -C "$w/codeo-113" config remote.sandbox-codeo-113.fetch '+refs/heads/*:refs/sandboxes/codeo-113/*'
+    if [[ "${2:-}" == windows ]]; then prog=git.exe; fi
+    cat >"$sb_dir/bin/$prog" <<STUB
+#!/bin/bash
+echo "\${0##*/} \$*" >>"$sb_dir/calls"
+pwd >"$sb_dir/${prog}_cwd"
+exec "$real_git" "\$@"
+STUB
+    chmod +x "$sb_dir/bin/$prog"
+    echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
 }
 
-sb_err_lines() { wc -l <"$sb_dir/err" | tr -d ' '; }
+# end_commit <count>: add that many commits on branch work in the sandbox repo.
+end_commit() {
+    local i tmp=$sb_dir/wc
+    [[ -d "$tmp" ]] || $real_git clone -q "$sb_dir/sandbox.git" "$tmp"
+    for ((i = 1; i <= $1; i++)); do
+        $real_git -c user.name=t -c user.email=t@example.com -C "$tmp" commit -q --allow-empty -m "unpushed $i"
+    done
+    $real_git -C "$tmp" push -q origin HEAD:refs/heads/work
+}
+
+end_with_nothing_to_lose_removes_the_sandbox() {
+    end_setup endclean
+    sb_run end 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$sb_out" == "removed codeo-113" ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+}
+
+end_with_an_unpushed_commit_removes_nothing() {
+    end_setup endlose
+    end_commit 1
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_out" == *"unpushed 1"* ]] || fail "stdout was: $sb_out"
+    [[ "$sb_out" == *"end 113 --force"* ]] || fail "no --force hint: $sb_out"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_force_removes_and_says_where_the_commits_are() {
+    end_setup endforce
+    end_commit 1
+    sb_run end 113 --force
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$sb_out" == *"refs/sandboxes/codeo-113/ in ./codeo-113"* ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+}
+
+end_without_origin_removes_nothing() {
+    end_setup endorigin
+    $real_git -C "$sb_dir/work/codeo-113" remote set-url origin "$sb_dir/nowhere.git"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *origin* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_with_a_failed_sandbox_fetch_removes_nothing() {
+    end_setup endfetch
+    $real_git -C "$sb_dir/work/codeo-113" remote set-url sandbox-codeo-113 "$sb_dir/nowhere.git"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_starts_a_stopped_sandbox_first() {
+    end_setup endstopped
+    echo 'codeo-113 claude stopped' >"$sb_dir/sandboxes"
+    sb_run end 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    local want
+    want=$'sbx ls\nsbx exec codeo-113 true\ngit -C codeo-113 fetch sandbox-codeo-113'
+    [[ "$(sb_calls)" == "$want"* ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "no rm: $(sb_calls)"
+}
+
+end_on_a_missing_sandbox_is_one_line() {
+    end_setup endmissing
+    : >"$sb_dir/sandboxes"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == "codeo-sandbox: no sandbox codeo-113" ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" == "sbx ls" ]] || fail "calls: $(sb_calls)"
+}
+
+end_without_the_clone_is_one_line() {
+    end_setup endnoclone
+    rm -rf "$sb_dir/work/codeo-113"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$(sb_err_lines)" == 1 ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_lists_at_most_ten_commits() {
+    end_setup endten
+    end_commit 12
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$(grep -c 'unpushed' <<<"$sb_out")" == 10 ]] || fail "stdout was: $sb_out"
+    [[ "$sb_out" == *"and 2 more"* ]] || fail "no 'and 2 more': $sb_out"
+}
+
+end_with_sbx_exe_fetches_with_git_exe_from_the_clone() {
+    end_setup endwin windows
+    rm "$sb_dir/bin/sbx"
+    sb_run end 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(<"$sb_dir/git.exe_cwd")" == "$sb_dir/work/codeo-113" ]] || fail "git.exe ran in: $(<"$sb_dir/git.exe_cwd")"
+    [[ "$(sb_calls)" == *$'\ngit.exe fetch sandbox-codeo-113\n'* ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'\nsbx.exe rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+}
 
 open_writes_the_title_and_opens_the_clone_folder() {
     sb_setup open
@@ -448,13 +569,22 @@ cases=(
     issue_writes_the_sandbox_marker
     issue_name_that_disagrees_with_the_lock_is_one_todo
     sandbox_path_prints_the_working_folder
-    valid_end_is_not_yet_built
     open_writes_the_title_and_opens_the_clone_folder
     open_starts_a_stopped_sandbox_first
     open_on_a_missing_sandbox_names_the_command_that_creates_it
     open_without_ssh_setup_says_to_run_setup_ssh
     open_with_sbx_exe_launches_through_cmd_exe
     shell_execs_bash_in_the_clone
+    end_with_nothing_to_lose_removes_the_sandbox
+    end_with_an_unpushed_commit_removes_nothing
+    end_force_removes_and_says_where_the_commits_are
+    end_without_origin_removes_nothing
+    end_with_a_failed_sandbox_fetch_removes_nothing
+    end_starts_a_stopped_sandbox_first
+    end_on_a_missing_sandbox_is_one_line
+    end_without_the_clone_is_one_line
+    end_lists_at_most_ten_commits
+    end_with_sbx_exe_fetches_with_git_exe_from_the_clone
 )
 
 for current in "${cases[@]}"; do

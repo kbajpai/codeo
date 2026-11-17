@@ -222,12 +222,56 @@ cmd_shell() {
     exec "$sbx" exec -i "codeo-$1" bash -l
 }
 
+# unpushed_commits <clone> <name>: print (one line each) the commits under refs/sandboxes/<name>/ that
+# are on no origin branch; return 0 with no output when there are none.
+unpushed_commits() {
+    git -C "$1" rev-list --oneline --glob="refs/sandboxes/$2/*" --not --remotes=origin
+}
+
+# fetch_sandbox <dir> <name>: mirror the sandbox's branches into refs/sandboxes/<name>/. From WSL the
+# sandbox's git daemon answers only Windows git, so git.exe runs from inside the clone.
+fetch_sandbox() {
+    if ((windows == 1)); then
+        (cd "$1" && git.exe fetch "sandbox-$2")
+    else
+        git -C "$1" fetch "sandbox-$2"
+    fi
+}
+
 cmd_end() {
     (($# == 1 || $# == 2)) || usage
     valid_number "$1" || usage
-    if (($# == 2)); then [[ "$2" == --force ]] || usage; fi
+    local force=0
+    if (($# == 2)); then
+        [[ "$2" == --force ]] || usage
+        force=1
+    fi
     pick_sbx
-    die 'not yet'
+    local name=codeo-$1 dir=codeo-$1 state commits count
+    state=$(sandbox_state "$name")
+    [[ "$state" != missing ]] || die "no sandbox $name"
+    [[ -d "$dir" ]] || die "no clone $dir here: cannot check $name for unpushed commits, nothing removed"
+    if [[ "$state" == stopped ]]; then
+        "$sbx" exec "$name" true || die "could not start $name, nothing removed"
+    fi
+    fetch_sandbox "$dir" "$name" || die "could not fetch sandbox-$name into $dir, nothing removed"
+    git -C "$dir" fetch origin || die "could not fetch origin: cannot prove anything is pushed, nothing removed"
+    commits=$(unpushed_commits "$dir" "$name") || die "could not list the commits of $name, nothing removed"
+    if [[ -z "$commits" ]]; then
+        "$sbx" rm --force "$name" || die "could not remove $name"
+        echo "removed $name"
+        return 0
+    fi
+    count=$(grep -c '' <<<"$commits")
+    if ((force == 0)); then
+        echo "$name has $count commit(s) on no origin branch:"
+        head -n 10 <<<"$commits"
+        if ((count > 10)); then echo "and $((count - 10)) more"; fi
+        echo "nothing removed: push them from the sandbox, or run: codeo-sandbox.sh end $1 --force"
+        return 1
+    fi
+    "$sbx" rm --force "$name" || die "could not remove $name"
+    echo "removed $name; its $count unpushed commit(s) are kept in refs/sandboxes/$name/ in ./$dir"
 }
 
 main() {
