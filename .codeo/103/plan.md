@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after the send-back from `qc.md` round 1 (F1 and F2 blocking, both in rules round 1 of this plan set; F4-F7 the plan's too, F3 and F8-F11 the implementer's). Q7-Q9 are open; the round-2 plan is not drafted until they are answered. Each has a recommendation.
+Round 2 planned, after the send-back from `qc.md` round 1: Q7-Q9 are answered, and the plan is written to `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md` and committed on the engineer's go-ahead. The footprint is checked against every other workflow in flight; nothing is open. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -156,15 +156,6 @@ Move the card only for a stash or abandon, as recommended (engineer, in the conv
 
 **Other workflows in flight** (`inflight.sh --except 103`, 2026-11-17): #116 at `qc`, overlap in Q6; #99 at `init`, no footprint.
 
-### Footprint
-
-```
-files:      scripts/inflight.sh, tests/inflight.test.sh, skills/triage/SKILL.md, tests/triage-skill.test.sh, lib/env.sh, docs/skills.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-17-triage-judges-in-flight-work.md, docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 | | |
@@ -184,10 +175,29 @@ sequenced:  none
 
 **Intake questions resolved:** none were open.
 
+### Round 2
+
+2026-11-17
+(send-back from qc.md round 1)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md` (round 1's plan stands except where this one changes it) |
+| Shape | An implementation plan under `docs/plans/`, 3 tasks |
+| Approval | The engineer accepted Q7-Q9's recommendations and asked to go straight on to `/codeo:implement` (2026-11-17), so this round was not shown as a draft first |
+
+**Decisions** (Q7-Q9, all "as recommended", plus calls on F4, F6 and F7):
+- `waits:` follows the round markers the pipeline already writes: `(send-back from qc.md round <k>)`, `(after plan.md round <j>`, `(send-back from close.md round <m>)` and `qc round at review: <k>`. Without a verdict it names the step after `step:`. Rejected: qc's send-backs only; dropping the route.
+- A live stash or abandon leads `waits:`, with open questions after it on the same line. Rejected: a separate `parked:` line; triage calling `claim.sh` itself.
+- *resume* moves the card to Ready only when `waits:` starts `resume — `. For a quiet workflow it names the owed step. Rejected: always Ready, with the mismatch check expecting it.
+- An archived dossier reads `review — dossier archived` (F4). A combined question's answer is recorded against every fingerprint it carries (F6). A failed `board.sh status` read is reported and never a mismatch (F7).
+
+**Documentation the plan changes:** `scripts/inflight.sh`'s header, `docs/handoff.md` → *Who else is in flight*, `skills/triage/SKILL.md`, `lib/env.sh`, `docs/skills.md` → *triage* (only if a sentence turns untrue), `CHANGELOG.md`.
+
 ### Footprint
 
 ```
-files:      scripts/inflight.sh, tests/inflight.test.sh, skills/triage/SKILL.md, tests/triage-skill.test.sh, lib/env.sh, docs/skills.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-17-triage-judges-in-flight-work.md
+files:      scripts/inflight.sh, tests/inflight.test.sh, skills/triage/SKILL.md, tests/triage-skill.test.sh, lib/env.sh, docs/skills.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-17-triage-judges-in-flight-work.md, docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -199,3 +209,4 @@ sequenced:  none
 - 2026-11-17 — Q1-Q6 answered; draft written to .codeo/103/plan-draft.md (engineering plugin unavailable: system-design and architecture structure applied directly) · cost: 11m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 131k in + 956k cached / 18k out
 - 2026-11-17 — planned: docs/plans/2026-11-17-triage-judges-in-flight-work.md (engineering plugin unavailable) · cost: 37m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 146k in + 1.7M cached / 21k out
 - 2026-11-17 — round 2 (send-back from qc.md round 1): Q7-Q9 raised · cost: 1m · fable-5-2 342k in + 337k cached / 4k out
+- 2026-11-17 — planned round 2: docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md (engineering plugin unavailable) · cost: 22m · fable-5-2 347k in + 1M cached / 7k out · opus-5-5 30k in + 1000k cached / 11k out
