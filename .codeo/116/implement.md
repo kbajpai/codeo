@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2: Q1 and Q2 are answered (proceed and coordinate); `origin/main` is merged and the suite passes. Dispatching the plan's three tasks next.
+Round 2 implemented: the plan's three tasks are committed (3a6b414, c0357d0, d6c708e), each reviewed clean. Nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -62,7 +62,32 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-17: "Proceed & Co
 - `tests/cleanup.test.sh`, `an_exported_removal_override_changes_nothing`: the with-overlay half compares to `$plain` without asserting that `$plain` is the `docker rm -f codeo-12` line.
 - `tests/close-skill.test.sh`: the stash and abandon pins depend on where a line wraps.
 
+### Round 2
+
+2026-11-17
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-17-follow-ups-116-qc-round-1.md`, committed by the engineer before this round. `receiving-code-review`: F1-F6 were each checked against the code (the four "issue container" sentences, the diagram's two lines and the cleanup test were all present as QC described) and all hold. `sync-main.sh`: merged `origin/main` (merge commit abc761a; one conflict, in `CHANGELOG.md`, where `origin/main` added the #113 bullet and rewrote the #107 and #104 bullets this branch had already reworded; resolved by keeping this branch's #107 and #104 text and adding #113's bullet). Its changed files include `.devcontainer/README.md`, `.devcontainer/scripts/devcontainer-start.sh`, `.devcontainer/scripts/session-title.sh`, `.codeo/overlays/init.md`, `tests/devcontainer.test.sh` and `tests/init-overlay.test.sh`; none is in this round's footprint except `.devcontainer/README.md` and `CHANGELOG.md`, which Task 2 edited on top of the merge. Overlaps raised and answered: Q1 (#103) and Q2 (#99), both proceed and coordinate.
+
+**Built** (one commit per task, each by a fresh `sonnet` subagent and reviewed by another; both verdicts Approved, no Critical or Important finding):
+1. 3a6b414 (F1): "(the skill is running in an issue container)" removed from `skills/plan/SKILL.md`, `skills/implement/SKILL.md`, `skills/qc/SKILL.md` and `docs/handoff.md`; `must_lack 'issue container'` in the three skill tests and a `handoff.md` check in `tests/plan-skill.test.sh`.
+2. c0357d0 (F2, F3, F4): the live-signal diagram shows `/codeo:close` running `live.sh clear` and deleting the lock in one command, pinned in `tests/live-signal.test.sh`; `.devcontainer/README.md` names toolbox and distrobox; the CHANGELOG #70 bullet names `/run/.containerenv`.
+3. d6c708e (F5, F6): `tests/cleanup.test.sh` asserts the `docker rm -f codeo-12` line before the export; `tests/close-skill.test.sh` gets `section_contains_flat` for the stash and abandon pins. Mutation proofs in scratch copies: with the overlay not loaded the cleanup case printed its `FAIL`; joining the stash sentence's lines still passed; dropping the clause from the abandon sentence failed only the abandon pin.
+
+**Documentation pages changed:** `docs/handoff.md`, `.devcontainer/README.md`, `CHANGELOG.md`. No wiki module.
+
+**Build:** the `shell` suite's `build` is `true`; it exits 0. Each task's own proof ran the test file it touched and `bash tests/run.sh`, each ending `all cases passed`. No environment is configured: no lease, no deploy.
+
+**Deviations from the plan**
+- Task 2: the brief's `.devcontainer/README.md:49` was stale; the paragraph sits near line 105 after the merge and was matched by its text.
+- Plan Task 2 Step 1 (`sync-main.sh`) ran at the start of the round instead, because the skill requires it; run again after Task 2 it exited 0 with nothing to merge.
+- The whole-branch review `superpowers:subagent-driven-development` ends with was not run here: grading belongs to `/codeo:qc`.
+
+**Minor finding left for `/codeo:qc`**
+- `tests/close-skill.test.sh:84-85`: the stash pin still searches the whole stash-and-abandon section, so it could in principle be satisfied by the abandon paragraph; the wording differs today, so it is not.
+
 ## Log
 
 - 2026-11-16 — implemented: 10 tasks, commits c118828..421dbbf, build rc=0 · cost: 71m · sonnet-5-5 806k in + 17.5M cached / 91k out
 - 2026-11-17 — implement round 2 paused at step 2a: merged origin/main, raised overlaps Q1 (#103) and Q2 (#99), no task dispatched · cost: 4m · sonnet-5-5 33k in + 1.1M cached / 4k out
+- 2026-11-17 — implemented round 2 (send-back from qc.md round 1): 3 tasks, commits 3a6b414..d6c708e, build rc=0 · cost: 18m · sonnet-5-5 215k in + 6M cached / 30k out
