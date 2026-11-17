@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is done: the three tasks of `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md` are built and reviewed, and the build passes. Next: `/codeo:qc`.
+Round 3 is done. It fixes qc round 2's blocking F12 and the non-blocking F17 in `scripts/inflight.sh`. Both were reviewed, and the build passes. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -72,7 +72,39 @@ The branch's `inflight.sh` against origin now prints `waits:` from these rules; 
 - F6's one-kind options name *fix it* and *file it* but not *resume*.
 - Some wrapped lines in the skill are ragged.
 
+### Round 3
+
+2026-11-17
+(send-back from qc.md round 2)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md` (unchanged; this round fixes code that did not do what it says) |
+| Base branch | `sync-main.sh` merged `origin/main` (1 commit, `f2f4588`) with no conflict. It exited 1 after the merge: `comm` complained that its input was not sorted while it listed the changed files. A second run printed `sync-main: the branch already contains origin/main` (exit 0). |
+| Also changed on main | `CHANGELOG.md`, `docs/handoff.md`, `docs/skills.md`. Each was re-checked. This branch's #103 bullet, the *Who else is in flight* paragraph and the triage *Reads* bullet are intact, and none has a conflict marker. Main's edits are to other paragraphs. |
+| Overlaps | `overlap.sh 103` printed none |
+| Build | `shell` suite build `true`: exit 0 |
+| Shared environment | none configured |
+
+**Findings taken from qc.md round 2** (checked against the code with `superpowers:receiving-code-review` before any change):
+- **F12 (blocking): holds, fixed.** Reproduced: with `## Log` after the send-back round, `close_send_back` printed nothing.
+  - `da46e34`: `close_send_back` now reads `### Round` headings and the `qc round at review:` line only inside `## Outcome`, the same way `last_qc_round` does. A later `## ` heading ends the read but keeps the last round's send-back.
+  - The `close_review` fixture and #51's fixture gained the real `## Outcome` and `## Log` shape. The cases `waits_after_review_feedback` and `waits_after_conflicts_with_base` failed before the fix. `waits_after_review_round_rechecked` passed before it by falling through to the same answer.
+  - `9160e9f` adds `waits_close_log_is_not_read_as_a_round`. A `qc round at review: 3` in close.md's `## Log` must not count: `/codeo:qc` is right, and `/codeo:close` would mean the Log was read. The implementer showed this case fails against a version that reads the Log.
+- **F17 (non-blocking): holds, fixed.** `4b30e2c`: `verdict_of` strips CR. `verdict_with_crlf` failed before the fix: a Verdict span wrapped over two CRLF lines printed a `\r`.
+- **F15 (non-blocking): not taken.** The fix belongs in `scripts/claim.sh`, which is outside this change's footprint. It stays recorded in `qc.md`.
+- **F13, F14, F16:** these are the plan's, and stay recorded in `qc.md`.
+
+**Built** (implementer and reviewer both on `sonnet`). `bash tests/inflight.test.sh` printed `all cases passed` (the implementer's run). Task review: spec ✅, approved. Its minor notes, left as they are:
+- `/^## Outcome/` is a prefix match, the same as `last_qc_round`'s.
+- The comment above `close_send_back` could also say that rounds are read only inside `## Outcome`.
+
+**Documentation changed:** none. `scripts/inflight.sh`'s header and `docs/handoff.md` already say `waits:` follows a close send-back, which is now true of a real dossier.
+
+**Deviations:** three commits instead of the two the brief named, because the stronger Log case went in its own commit.
+
 ## Log
 
 - 2026-11-17 — implemented: 4 tasks, 6 commits (06d6ba1..06a5778), build ok · cost: 37m · opus-5-5 78k in + 11.1M cached / 27k out · sonnet-5-5 344k in + 4.2M cached / 53k out
 - 2026-11-17 — implemented round 2: 3 tasks, commits 779af7c..9e91d75, build ok · cost: 31m · opus-5-5 24k in + 7.2M cached / 11k out · sonnet-5-5 238k in + 2.7M cached / 39k out
+- 2026-11-17 — implemented round 3: F12 and F17, commits da46e34..9160e9f, build ok · cost: 6m · opus-5-5 166k in + 1.6M cached / 4k out · sonnet-5-5 264k in + 2M cached / 16k out
