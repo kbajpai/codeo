@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written: back to `/codeo:plan`. Build and the full suite pass; two blocking findings (R1, the plan's: `issue` reuses an existing container, bypassing the stash-resume safeguard; R2, implement's: `CODEO_CONTEXT` is misdocumented) and six non-blocking. No question is open.
+Round 3 is written: clear, forward to `/codeo:close`. Build and the full suite pass; no blocking finding. Seven non-blocking findings (G1-G2 are the plan's: after a branch mismatch or a failed first clone the script leaves a container that its own advice does not get past) are left for `/codeo:triage`. The host checks are the engineer's. No question is open.
 
 ## Questions
 
@@ -115,7 +115,55 @@ Reviewed `35fcef4` (merge base) .. `269ba8b` (HEAD), after implement.md round 2.
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 3 — 2026-11-17
+
+Reviewed `35fcef4` (merge base) .. `2777f25` (HEAD), after implement.md round 3 (answering qc.md round 2 through plan.md round 2).
+
+**Recap of round 2.** R1 (blocking in round 2) — fixed by 373c209 (`issue` refuses an existing container and a clone on another branch) and f7e5df3 (README, init hand-off, changelog); R2 (blocking in round 2) — fixed by 4d916a8 (script header) and f7e5df3 (README table row, CHANGELOG); R3 and R4 (non-blocking in round 2) — fixed by f7e5df3; R5 and R6 (non-blocking in round 2) — fixed by 4d916a8; R7 and R8 stand unchanged by the plan (below).
+
+**Sync and overlap.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`. `overlap.sh 113`: nothing. `overlap.sh --outside 113`: nothing.
+
+**Scope.** `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: the `.codeo/113/*` dossiers and `CHANGELOG.md`). No `deploy=` line; no shared environment is configured.
+
+**Build.** `shell` build `true`: exit 0.
+
+**Tests.** `bash tests/run.sh`, run whole: `all cases passed`, exit 0.
+
+**Criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Linux, one command starts `codeo-home`, ends with `ready`/`todo:` | met in code, not run on a host | home call-sequence tests and `home_rerun_still_runs_the_start_script_on_an_existing_container` in `tests/cmd-mode.test.sh` (stub `docker`); the real run is Task 10 |
+| 2 | Same on macOS `/bin/bash` 3.2, no GNU tools | not yet checkable — needs the Mac | bash 3.2/BSD scan passes; Darwin `xcode-select` cases pass with stubs |
+| 3 | One command starts `codeo-<N>`, prints the lock line | met in code, not run on a host | issue call-sequence tests; `issue_on_a_running_container_is_refused` and `issue_rebuild_on_a_matching_clone_goes_ahead` pin the existing-container behaviour; G1 and G2 for the error states |
+| 4 | `docker ps` names; removal commands remove them | met | `--name codeo-<N>`, volume `codeo-<N>`; README removal paragraph |
+| 5 | One command opens a shell; `claude` starts; role guard passes | met in code, not run on a host | `shell` tests; `role.sh` sees `/.dockerenv` and `/workspaces/codeo-<N>` |
+| 6 | Host identity reaches `git config`; rerun changes nothing | met | `start_cmd_mode_seeds_the_identity_from_the_environment_once`, `identity_comes_from_the_global_config_not_the_current_directory` |
+| 7 | Session titled, no `.vscode/settings.json` | met | `session_title_in_cmd_mode_accepts_any_value` and the cmd-mode cases in `tests/devcontainer.test.sh` |
+| 8 | `/codeo:init` hand-off prints the command-line step | untestable here — needs a cmd-mode home container after merge | `tests/init-overlay.test.sh` needles pass |
+| 9 | VS Code route still works | not yet checkable — needs VS Code | changes gated on `CODEO_CMD_MODE`; `session_title_with_both_variables_still_refreshes_the_window_title` |
+| 10 | `bash tests/run.sh` passes | met | `all cases passed`, exit 0 |
+
+**Documentation.** `.devcontainer/README.md`, `.codeo/overlays/init.md` and `CHANGELOG.md` checked against the code: the refusal wording, `--init`, the title, `CODEO_CONTEXT` and the stash paragraphs match `codeo-container.sh`; no "now", "no longer" or issue number was added to the README or the overlay. The two README sentences about removal before a resumed `issue` hold as written but do not mention `--rebuild` (G5). No page under `docs/` moves, as the plan says.
+
+**Independent review** (opus, given the criteria only): no Critical; two Important, five Minor; "With fixes". Both Important findings were checked against the code and hold; they are classified below.
+
+**Findings.**
+- **G1 — non-blocking, `/codeo:plan`'s.** After a branch mismatch the script has already created (volume left without its container) or recreated (`--rebuild`) a running `codeo-<N>` (`ensure_container` before `ensure_clone`, `codeo-container.sh:126-127`), so the message's "or give the branch it is on" (`:91`) leads to `already exists` on the next run; only `--rebuild` or removal gets forward, and the message names removal. `--rebuild` with a mistyped branch also removes the running container before refusing. The code does what the plan says (the order and the message text were the plan's); deciding the clone's state before touching the container would avoid it.
+- **G2 — non-blocking, `/codeo:plan`'s.** If `git clone` fails after `docker run` (an unpushed branch, a network failure) the container is left running with no clone; `issue` is then refused as existing and the first way on it names, `shell <N>`, fails on `docker exec -w /workspaces/codeo-<N>`. The message also names removal, which works. Same cause as G1: the plan's container-first order.
+- **G3 — non-blocking.** `home` on a `codeo-home` created by VS Code reuses it without `CODEO_CMD_MODE`, so the start script writes `.vscode/settings.json` and waits for `~/.gitconfig`, and `shell home` sessions get no session title; the README does not say so. Parked in implement.md round 1.
+- **G4 — non-blocking.** `--rebuild` is described as building the image again, but `docker build` reuses cached layers. Parked in implement.md round 1.
+- **G5 — non-blocking, implement's.** The stash-resume sentences (README, init overlay) say removal is needed before `issue` opens a resumed workflow; `issue <N> <branch> --rebuild` on the same branch also works and keeps the volume, which the refusal message names.
+- **G6 — non-blocking.** Messages hard-code `bash codeo-container.sh`, wrong if the file was saved under another name.
+- **G7 — non-blocking, implement's.** `issue_on_a_volume_left_without_its_container_checks_the_branch` (`tests/cmd-mode.test.sh:362`) does not assert the `run` call, so it hides G1's side effect.
+- **R7 and R8 (non-blocking in round 2)** stand unchanged, as plan.md round 2 decided: bash 3.2 on a real Mac is Task 10's, and the image's removal is in the README.
+
+**Routing.** No blocking finding. G1 and G2 are real and are the plan's, but each leaves a working way out that the message itself names, and the VS Code route is untouched; they go to `/codeo:triage` with G3-G7 as findings nobody has filed. The host checks (first plan's Task 10, this plan's Task 4) remain the engineer's.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-16 — round 1: build and full suite pass; review found 1 blocking (README hostname claim), 6 non-blocking; sent back to implement · cost: 4m · opus-5-5 227k in + 2.4M cached / 22k out · sonnet-5-5 134k in + 342k cached / 4k out
 - 2026-11-16 — round 2: build and full suite pass; review found R1 (blocking, plan's) and R2 (blocking, implement's), six non-blocking; sent back to plan · cost: 5m · opus-5-5 309k in + 2.3M cached / 28k out
+- 2026-11-17 — round 3: build and full suite pass; review found no blocking finding, seven non-blocking (G1-G2 the plan's); clear, forward to close · cost: 4m · opus-5-5 255k in + 2M cached / 23k out · sonnet-5-5 194k in + 455k cached / 3k out
