@@ -4,15 +4,27 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/116 |
 | Branch | `fix/follow-ups-70-71-104` |
-| Updated | 2026-11-16 |
+| Updated | 2026-11-17 |
 
 ## Where this stands
 
-Implemented: all ten tasks of `docs/plans/2026-11-16-follow-ups-70-71-104-107.md` are committed on the branch, each reviewed clean. Nothing is open. Next step: `/codeo:qc`.
+Round 2 is paused before any task: `overlap.sh 116` raised two workflows that started after the plan was approved. Q1 and Q2 are open. `origin/main` is merged (abc761a; one conflict, in `CHANGELOG.md`, resolved by keeping both sides) and `bash tests/run.sh` ends `all cases passed`. Next step: answer Q1 and Q2, then re-run `/codeo:implement`.
 
 ## Questions
 
-None.
+### Q1 — #103 (`feat/let-codeo-triage-judge-flight`, kbajpai, step implement) also changes `docs/handoff.md`, `docs/skills.md` and `CHANGELOG.md`
+
+**Why it matters:** this round edits `docs/handoff.md` (the refused-call sentence and the live-signal diagram) and `CHANGELOG.md` (the #70 bullet). Proceeding means whoever merges second resolves a textual conflict; sequencing means waiting for #103 to merge first.
+**Options:** proceed and coordinate (recommended: the edits are one sentence, one diagram and one bullet, in places #103 is unlikely to touch) · sequence after #103 · re-scope.
+
+**Answer:**
+
+### Q2 — #99 (`feat/make-sbx-issue-sandbox-usable`, kbajpai, step plan) also changes `.devcontainer/README.md`, `CHANGELOG.md` and `tests/devcontainer.test.sh`
+
+**Why it matters:** this round edits the guard paragraph of `.devcontainer/README.md` and the #70 bullet of `CHANGELOG.md`. #99 has only a plan so far, so nothing has merged to conflict with yet; its plan lists the same README and changelog.
+**Options:** proceed and coordinate (recommended: one appended sentence and one changed phrase) · sequence after #99 · re-scope.
+
+**Answer:**
 
 ## Outcome
 
@@ -51,3 +63,4 @@ None.
 ## Log
 
 - 2026-11-16 — implemented: 10 tasks, commits c118828..421dbbf, build rc=0 · cost: 71m · sonnet-5-5 806k in + 17.5M cached / 91k out
+- 2026-11-17 — implement round 2 paused at step 2a: merged origin/main, raised overlaps Q1 (#103) and Q2 (#99), no task dispatched · cost: 4m · sonnet-5-5 33k in + 1.1M cached / 4k out
