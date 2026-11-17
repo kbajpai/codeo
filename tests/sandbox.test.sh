@@ -39,6 +39,10 @@ sb_setup() {
     mkdir -p "$sb_dir/bin"
     : >"$sb_dir/calls"
     : >"$sb_dir/sandboxes"
+    mkdir -p "$sb_dir/work"
+    echo 'fix/x' >"$sb_dir/branch"
+    echo 'codeo-113' >"$sb_dir/lockname"
+    : >"$sb_dir/trusted"
     local n
     for n in sbx sbx.exe git git.exe code; do
         cat >"$sb_dir/bin/$n" <<'STUB'
@@ -47,7 +51,18 @@ d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
 case "${0##*/} $1" in
     "sbx ls" | "sbx.exe ls") cat "$d/sandboxes" ;;
+    "sbx create" | "sbx.exe create") pwd >"$d/create_cwd" ;;
+    "sbx exec" | "sbx.exe exec")
+        case "$*" in
+            *container-name.sh*) cat "$d/lockname" ;;
+            *devcontainer-start.sh*) echo "start-output" ;;
+            *" pwd") echo "/sandbox/clone" ;;
+        esac ;;
+    "git clone") mkdir -p "${@: -1}/.git" ;;
+    "git.exe config")
+        case "$*" in *--get-all*) cat "$d/trusted" ;; esac ;;
 esac
+if [[ "${0##*/}" == git && "$*" == *"branch --show-current"* ]]; then cat "$d/branch"; fi
 exit 0
 STUB
         chmod +x "$sb_dir/bin/$n"
@@ -57,8 +72,9 @@ STUB
 # sb_run <args...>: run the script with the stubs on PATH; sets sb_rc, sb_out, sb_err.
 sb_run() {
     sb_rc=0
+    # shellcheck disable=SC2016
     env -u CODEO_SBX PATH="$sb_dir/bin:/usr/bin:/bin" ${SB_SBX:+CODEO_SBX="$SB_SBX"} \
-        "$bash_abs" "$script" "$@" >"$sb_dir/out" 2>"$sb_dir/err" || sb_rc=$?
+        "$bash_abs" -c 'cd "$1" && shift && exec "$@"' _ "$sb_dir/work" "$bash_abs" "$script" "$@" >"$sb_dir/out" 2>"$sb_dir/err" || sb_rc=$?
     sb_out=$(<"$sb_dir/out")
     sb_err=$(<"$sb_dir/err")
 }
@@ -154,6 +170,121 @@ config_suite_covers_the_sandbox_folder() {
     jq -e '.suites[0].paths | index(".sbx/**")' "$repo/.codeo/config.json" >/dev/null || fail ".sbx/** is not in suites[0].paths"
 }
 
+# sb_calls: the calls file as one string.
+sb_calls() { cat "$sb_dir/calls"; }
+
+issue_clones_the_branch_on_the_host() {
+    sb_setup clone
+    sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'git clone --branch fix/x https://github.com/kbajpai/codeo.git codeo-113\n'* ]] || fail "calls: $(sb_calls)"
+    sb_setup clone2
+    CODEO_REPO_URL=https://example.test/r.git sb_run issue 113 fix/x
+    [[ "$(sb_calls)" == *'git clone --branch fix/x https://example.test/r.git codeo-113'* ]] || fail "override calls: $(sb_calls)"
+}
+
+issue_refuses_a_host_clone_on_another_branch() {
+    sb_setup otherbranch
+    mkdir -p "$sb_dir/work/codeo-113/.git"
+    echo other >"$sb_dir/branch"
+    sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *"'other'"*fix/x* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *create* ]] || fail "create was called"
+}
+
+issue_refuses_a_folder_that_is_not_a_clone() {
+    sb_setup notclone
+    mkdir -p "$sb_dir/work/codeo-113"
+    sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *codeo-113* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *create* ]] || fail "create was called"
+}
+
+issue_adds_the_windows_trust_line_once() {
+    sb_setup trust
+    rm "$sb_dir/bin/sbx"
+    local want got
+    sb_run issue 113 fix/x
+    got=$(grep -c '^git.exe config --global --add safe.directory ' "$sb_dir/calls" || true)
+    ((got == 1)) || fail "add called $got times"
+    want="git.exe config --global --add safe.directory %(prefix)///wsl.localhost/${WSL_DISTRO_NAME:-}$(cd "$sb_dir/work/codeo-113" && pwd -P)"
+    [[ "$(sb_calls)" == *"$want"* ]] || fail "want '$want' in: $(sb_calls)"
+    sb_setup trust2
+    rm "$sb_dir/bin/sbx"
+    mkdir -p "$sb_dir/work/codeo-113/.git"
+    echo "%(prefix)///wsl.localhost/${WSL_DISTRO_NAME:-}$(cd "$sb_dir/work/codeo-113" && pwd -P)" >"$sb_dir/trusted"
+    sb_run issue 113 fix/x
+    [[ "$(sb_calls)" != *"--add"* ]] || fail "added though trusted: $(sb_calls)"
+}
+
+issue_skips_the_windows_trust_with_linux_sbx() {
+    sb_setup notrust
+    sb_run issue 113 fix/x
+    [[ "$(sb_calls)" != *git.exe* ]] || fail "git.exe called: $(sb_calls)"
+}
+
+issue_without_git_exe_prints_the_trust_command() {
+    sb_setup nogitexe
+    rm "$sb_dir/bin/sbx" "$sb_dir/bin/git.exe"
+    sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    local n
+    n=$(grep -c '^todo:.*git.exe config --global --add safe.directory %(prefix)///wsl.localhost/' <<<"$sb_out" || true)
+    ((n == 1)) || fail "todo lines: $n in: $sb_out"
+    [[ "$(sb_calls)" == *"sbx.exe create"* ]] || fail "create not called"
+}
+
+issue_creates_with_the_limits() {
+    sb_setup create
+    sb_run issue 113 fix/x
+    [[ "$(sb_calls)" == *$'sbx create --clone --name codeo-113 --cpus 2 --memory 4g claude .\n'* ]] || fail "calls: $(sb_calls)"
+    [[ "$(<"$sb_dir/create_cwd")" == "$(cd "$sb_dir/work/codeo-113" && pwd -P)" ]] || fail "create ran in: $(<"$sb_dir/create_cwd")"
+}
+
+issue_runs_the_start_script_with_the_identity() {
+    sb_setup start
+    unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL
+    GIT_AUTHOR_NAME='Ann Dev' GIT_AUTHOR_EMAIL=a@x.test sb_run issue 113 fix/x
+    [[ "$(sb_calls)" == *'sbx exec codeo-113 env CODEO_CMD_MODE=1 GIT_AUTHOR_NAME=Ann Dev GIT_AUTHOR_EMAIL=a@x.test bash .devcontainer/scripts/devcontainer-start.sh'* ]] || fail "calls: $(sb_calls)"
+    [[ "$sb_out" == *start-output* ]] || fail "stdout was: $sb_out"
+    sb_setup start2
+    unset GIT_AUTHOR_EMAIL
+    GIT_AUTHOR_NAME=Ann sb_run issue 113 fix/x
+    [[ "$(sb_calls)" == *'env CODEO_CMD_MODE=1 GIT_AUTHOR_NAME=Ann bash .devcontainer'* ]] || fail "no-email calls: $(sb_calls)"
+}
+
+issue_rerun_on_an_existing_sandbox_creates_nothing() {
+    local state
+    for state in 'running (detached)' stopped; do
+        sb_setup "rerun-${state%% *}"
+        mkdir -p "$sb_dir/work/codeo-113/.git"
+        printf 'NAME AGENT STATUS\ncodeo-113 claude %s\n' "$state" >"$sb_dir/sandboxes"
+        sb_run issue 113 fix/x
+        ((sb_rc == 0)) || fail "$state: exited $sb_rc: $sb_err"
+        [[ "$(sb_calls)" != *"sbx create"* && "$(sb_calls)" != *"sbx run"* ]] || fail "$state: create or run: $(sb_calls)"
+        [[ "$(sb_calls)" == *devcontainer-start.sh* ]] || fail "$state: no start exec"
+    done
+}
+
+issue_name_that_disagrees_with_the_lock_is_one_todo() {
+    sb_setup lock
+    echo codeo-98 >"$sb_dir/lockname"
+    sb_run issue 113 fix/x
+    local want='todo: the sandbox is codeo-113 but its lock is for codeo-98: end it and run issue 98 <branch>'
+    [[ "$sb_out" == *"$want"* ]] || fail "stdout was: $sb_out"
+    [[ "$(grep -c '^todo:' <<<"$sb_out")" == 1 ]] || fail "not exactly one todo: $sb_out"
+}
+
+sandbox_path_prints_the_working_folder() {
+    sb_setup path
+    local out
+    # shellcheck disable=SC2016
+    out=$(PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c 'source "$1"; sbx=sbx; sandbox_path codeo-1' _ "$script")
+    [[ "$out" == /sandbox/clone ]] || fail "path was: $out"
+}
+
 cases=(
     usage_without_arguments_exits_2
     bad_numbers_and_branches_exit_2_before_any_call
@@ -163,6 +294,17 @@ cases=(
     sandbox_state_reads_the_ls_rows
     the_script_is_committed_executable_with_a_bash_shebang
     config_suite_covers_the_sandbox_folder
+    issue_clones_the_branch_on_the_host
+    issue_refuses_a_host_clone_on_another_branch
+    issue_refuses_a_folder_that_is_not_a_clone
+    issue_adds_the_windows_trust_line_once
+    issue_skips_the_windows_trust_with_linux_sbx
+    issue_without_git_exe_prints_the_trust_command
+    issue_creates_with_the_limits
+    issue_runs_the_start_script_with_the_identity
+    issue_rerun_on_an_existing_sandbox_creates_nothing
+    issue_name_that_disagrees_with_the_lock_is_one_todo
+    sandbox_path_prints_the_working_folder
 )
 
 for current in "${cases[@]}"; do

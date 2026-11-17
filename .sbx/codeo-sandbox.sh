@@ -8,6 +8,7 @@
 #   codeo-sandbox.sh end <N> [--force]
 #
 # CODEO_SBX  the sbx program to run, instead of sbx or sbx.exe found on PATH
+# CODEO_REPO_URL  the repository issue clones (default https://github.com/kbajpai/codeo.git)
 set -euo pipefail
 
 sbx=''
@@ -64,26 +65,117 @@ sandbox_state() {
     echo missing
 }
 
+# The agent argument of "sbx create". Task 10 replaces it with the pinned image reference.
+create_agent=claude
+
+# sandbox_path <name>: print the working folder inside the sandbox (sbx exec runs there, and starts a
+# stopped sandbox on its own).
+sandbox_path() {
+    "$sbx" exec "$1" pwd
+}
+
+# ensure_host_clone <N> <branch>: make ./codeo-N a clone on <branch>, or refuse one that is not.
+ensure_host_clone() {
+    local dir=codeo-$1 branch=$2 current
+    if [[ ! -e "$dir" ]]; then
+        git clone --branch "$branch" "${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}" "$dir" ||
+            die "git clone of $branch into $dir failed"
+        return 0
+    fi
+    [[ -e "$dir/.git" ]] || die "$dir exists here but is not a git clone: move it away, then run this again"
+    current=$(git -C "$dir" branch --show-current) || die "could not read the branch of $dir"
+    [[ "$current" == "$branch" ]] ||
+        die "$dir is on '$current', not $branch: check out $branch there, or remove $dir, then run this again"
+}
+
+# ensure_windows_trust <N>: with sbx.exe, make Windows git trust the clone through its \\wsl.localhost
+# path, adding the line once; without git.exe, print the command as one todo line.
+ensure_windows_trust() {
+    ((windows == 1)) || return 0
+    local path
+    path="%(prefix)///wsl.localhost/${WSL_DISTRO_NAME:-}$(cd "codeo-$1" && pwd -P)"
+    if ! command -v git.exe >/dev/null 2>&1; then
+        echo "todo: git on Windows does not trust the clone yet: run git.exe config --global --add safe.directory $path"
+        return 0
+    fi
+    if git.exe config --global --get-all safe.directory | tr -d '\r' | grep -Fxq -- "$path"; then
+        return 0
+    fi
+    git.exe config --global --add safe.directory "$path" || die "git.exe could not add $path to safe.directory"
+}
+
+# ensure_sandbox <N>: create the sandbox from inside the clone unless one by that name exists. A stopped
+# one is left alone: sbx exec starts it.
+ensure_sandbox() {
+    local name=codeo-$1
+    [[ "$(sandbox_state "$name")" == missing ]] || return 0
+    (cd "$name" && "$sbx" create --clone --name "$name" --cpus 2 --memory 4g "$create_agent" .) ||
+        die "could not create the sandbox $name"
+}
+
+# git_is_usable: git is on PATH and will not open an installer (a Mac stub).
+git_is_usable() {
+    command -v git >/dev/null 2>&1
+}
+
+# run_start <name>: run the start script in the sandbox, carrying the host's git identity (read as in
+# codeo-container.sh: git config --global, else GIT_AUTHOR_NAME/GIT_AUTHOR_EMAIL; each key on its own, a
+# missing value left out).
+run_start() {
+    local name=$1 git_name='' git_email=''
+    if git_is_usable; then
+        git_name=$(git config --global user.name 2>/dev/null) || git_name=''
+        git_email=$(git config --global user.email 2>/dev/null) || git_email=''
+    fi
+    : "${git_name:=${GIT_AUTHOR_NAME:-}}"
+    : "${git_email:=${GIT_AUTHOR_EMAIL:-}}"
+    set -- env CODEO_CMD_MODE=1
+    if [[ -n "$git_name" ]]; then set -- "$@" "GIT_AUTHOR_NAME=$git_name"; fi
+    if [[ -n "$git_email" ]]; then set -- "$@" "GIT_AUTHOR_EMAIL=$git_email"; fi
+    "$sbx" exec "$name" "$@" bash .devcontainer/scripts/devcontainer-start.sh
+}
+
+# check_name <name>: print one todo line when the clone's lock names another sandbox.
+check_name() {
+    local name=$1 lock
+    lock=$("$sbx" exec "$name" bash .devcontainer/scripts/container-name.sh --docker) || return 0
+    lock=${lock//$'\r'/}
+    [[ "$lock" == "$name" ]] && return 0
+    echo "todo: the sandbox is $name but its lock is for $lock: end it and run issue ${lock#codeo-} <branch>"
+}
+
 cmd_issue() {
     (($# == 2)) || usage
     valid_number "$1" || usage
     valid_branch "$2" || usage
     pick_sbx
-    die 'not yet'
+    ensure_host_clone "$1" "$2"
+    ensure_windows_trust "$1"
+    ensure_sandbox "$1"
+    run_start "codeo-$1"
+    check_name "codeo-$1"
 }
 
 cmd_open() {
     (($# == 1)) || usage
     valid_number "$1" || usage
     pick_sbx
-    die 'not yet'
+    ensure_host_clone "$1" "$2"
+    ensure_windows_trust "$1"
+    ensure_sandbox "$1"
+    run_start "codeo-$1"
+    check_name "codeo-$1"
 }
 
 cmd_shell() {
     (($# == 1)) || usage
     valid_number "$1" || usage
     pick_sbx
-    die 'not yet'
+    ensure_host_clone "$1" "$2"
+    ensure_windows_trust "$1"
+    ensure_sandbox "$1"
+    run_start "codeo-$1"
+    check_name "codeo-$1"
 }
 
 cmd_end() {
@@ -91,7 +183,11 @@ cmd_end() {
     valid_number "$1" || usage
     if (($# == 2)); then [[ "$2" == --force ]] || usage; fi
     pick_sbx
-    die 'not yet'
+    ensure_host_clone "$1" "$2"
+    ensure_windows_trust "$1"
+    ensure_sandbox "$1"
+    run_start "codeo-$1"
+    check_name "codeo-$1"
 }
 
 main() {
