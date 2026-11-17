@@ -221,7 +221,7 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 ### Reads and writes
 
-- Reads anything: every branch's dossiers, the intake branch, issues, pull requests and their review threads, and, with the flags, the project's docs, its wiki pages and the code; `inflight.sh` also supplies its `live:` lines.
+- Reads anything: every branch's dossiers, the intake branch, issues, pull requests and their review threads, and, with the flags, the project's docs, its wiki pages and the code; `inflight.sh` also supplies its `live:`, `touched:`, `waits:` and `verdict:` lines. The config's `triage.parkedDays` (default 7) sets when a quiet workflow is asked about as parked work. `board.sh status` is compared with the dossier and the pull request for each workflow in flight; a mismatch is named, with its `board.sh set` command, and never fixed by triage.
 - Writes `.codeo/intake/triage/` (the ledger and the run files), committed to `codeo/intake` through `intake.sh`, never to the checked-out branch.
 - Writes an issue's board Status, to Ready or Backlog only, only through `board.sh`, and only on the engineer's answer of mark Ready, resume or leave in the backlog. A new issue arrives in Backlog already, because `/codeo:issue` writes that Status when it files it; this skill moves a card to Backlog only when it is not already there.
 
