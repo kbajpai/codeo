@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Planned. Q1-Q6 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-17-triage-judges-in-flight-work.md` (unstaged, for review). The footprint is recorded and checked against every other workflow in flight; nothing is open. The next step is to review and commit the plan, then `/codeo:implement`.
+Round 2, after the send-back from `qc.md` round 1 (F1 and F2 blocking, both in rules round 1 of this plan set; F4-F7 the plan's too, F3 and F8-F11 the implementer's). Q7-Q9 are open; the round-2 plan is not drafted until they are answered. Each has a recommendation.
 
 ## Questions
 
@@ -106,6 +106,41 @@ As proposed, as recommended (engineer, in the conversation, 2026-11-17: "All as 
 **Answer:**
 Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
 
+### Q7 — How should `waits:` follow a workflow past qc's verdict (qc.md round 1, F1)?
+
+**Why it matters:** round 1's rule read only `qc.md`, so #116 reads `waits: /codeo:plan` although its `plan.md` round 2 answered that send-back and its implement round 2 is under way. The answer decides how much of the pipeline's state `inflight.sh` reads, and so how many cases and tests the rule carries.
+**What is there to read:** every later round already names what it answers, as its second line: `(send-back from qc.md round <k>)` in `plan.md` and `implement.md`, `(after plan.md round <j>)` in `implement.md`, `(send-back from close.md round <m>)` in `implement.md`; and `close.md` heads a send-back `### Round <m> — review feedback` or `— conflicts with <base>` and records `qc round at review: <k>`. The archived dossiers on `main` carry these markers consistently (one variant, `(after plan.md round 2, answering qc.md round 2)`, which a prefix match covers).
+**Options:**
+- **Follow the markers through, and name the next step when qc has not run (recommended).** After the question and stash rules, the first that applies:
+  1. `close.md`'s last round is a send-back (round m): `implement.md` has no `(send-back from close.md round m)` → `/codeo:implement`; it has one but `qc.md`'s last round is not newer than that round's `qc round at review: <k>` → `/codeo:qc`; otherwise rule 2.
+  2. `qc.md`'s last verdict (round k) is clear → `/codeo:close`. Back to `/codeo:plan`: `plan.md` has no `(send-back from qc.md round k)` → `/codeo:plan`; it has one, in its round j, and `implement.md` has no `(after plan.md round j` → `/codeo:implement`; else `/codeo:qc`. Back to `/codeo:implement`: `implement.md` has no `(send-back from qc.md round k)` → `/codeo:implement`; else `/codeo:qc`.
+  3. No verdict: the step after the last finished one (`step:` init → `/codeo:plan`, plan → `/codeo:implement`, implement → `/codeo:qc`); `nothing known` only when no step has an outcome.
+  
+  #116 then reads `waits: /codeo:implement` and #103 `waits: /codeo:qc`. `verdict:` stays qc's last decision, unchanged. About ten more test cases.
+- **Markers for qc's send-backs only** — rule 2 without rules 1 and 3. A review send-back from `/codeo:close` still reads `/codeo:close`, and a workflow qc has not reached reads `nothing known`.
+- **Drop the route** — `waits:` says only `engineer`, `resume`, `review` or `nothing known`, and the reader works the rest out from `step:` and `verdict:`. Simplest, and never stale, but triage then has no line saying which step is owed.
+
+**Answer:**
+
+### Q8 — How does a stash or abandon stay visible when a question is also open (F2)?
+
+**Why it matters:** round 1 put the open question first, so a workflow stashed with a question open read as not stashed; triage then expects In progress, flags the Ready that `/codeo:close` set, and names a command that undoes the stash.
+**Options:**
+- **The stash comes first, with the questions after it (recommended)** — `waits:     resume — #7's stash is live; engineer — plan.md Q2`. A stashed workflow waits on a resume before anything else, the open questions are still shown, and triage reads a stash or abandon from a `waits:` value that starts `resume — `. One line, no new label.
+- **A line of its own** — `parked:    stashed (close.md round 2)`, printed only when there is one, with `waits:` as in round 1. A fourth new line in the block, and triage reads the stash from it.
+- **Triage calls `claim.sh --stash-live` itself** — `inflight.sh` unchanged; the skill runs the script per workflow. One more command per workflow in every triage run, and the block still hides the stash from a human reader.
+
+**Answer:**
+
+### Q9 — What happens to the board when the engineer answers *resume* for a workflow that was only quiet, not stashed (F5)?
+
+**Why it matters:** today *resume* always runs `board.sh set <N> ready`. That was written for stashed work, whose card a lost checkout may have left anywhere. For a workflow raised only for its age the card is In progress and correct; moving it to Ready makes the next triage run flag the Ready it set itself.
+**Options:**
+- **Move the card only for a stash or abandon (recommended)** — for a workflow whose `waits:` starts `resume — `, *resume* runs `board.sh set <N> ready` as today; for one that was only quiet, it names the step `waits:` shows, in that issue's checkout, and makes no card move.
+- **Keep the move, and expect it** — *resume* always sets Ready, and the mismatch check treats Ready on a working dossier as expected when the ledger's last decision for that issue is `resume`.
+
+**Answer:**
+
 ## Notes
 
 **What exists today.** `inflight.sh` prints one block per workflow from pushed branches: `assignee`, `step` (the last step whose dossier has a non-pending `## Outcome`, with `working` or `PR open` from where the dossier sits), the footprint lines, `changed:` and `live:`. `--tsv` (five columns, compared for equality in the tests), `--branches` (read by `overlap.sh`) and `--live` are the machine forms. Triage step 1.2 reads the human block and has one sentence for parked work: "One whose last step is weeks old, or assigned to nobody, is worth asking about."
@@ -151,3 +186,4 @@ sequenced:  none
 - 2026-11-17 — Q1-Q6 raised · cost: 2m · fable-5-2 94k in + 659k cached / 9k out
 - 2026-11-17 — Q1-Q6 answered; draft written to .codeo/103/plan-draft.md (engineering plugin unavailable: system-design and architecture structure applied directly) · cost: 11m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 131k in + 956k cached / 18k out
 - 2026-11-17 — planned: docs/plans/2026-11-17-triage-judges-in-flight-work.md (engineering plugin unavailable) · cost: 37m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 146k in + 1.7M cached / 21k out
+- 2026-11-17 — round 2 (send-back from qc.md round 1): Q7-Q9 raised · cost: 1m · fable-5-2 342k in + 337k cached / 4k out
