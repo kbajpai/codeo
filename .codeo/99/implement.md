@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 1. Tasks 1, 2, 3, 4, 5 and 7 are done. The trials S1-S10 are recorded under `## Trials`, with the decisions and the rulings they lead to. Next: Task 6, then Tasks 8-13. Task 14 is the engineer's acceptance run.
+Round 1. Tasks 1-13 are done and committed; the outcome is below. Task 14 is the engineer's acceptance run on their host. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -360,7 +360,37 @@ sbx.exe rm --force codeo-p
 
 ## Outcome
 
-_Pending — written at the hand-off._
+**Built.** Tasks 1-13 are done and committed; Task 14 is the engineer's acceptance run on their host.
+
+| Part | Tasks | Commits |
+|---|---|---|
+| #114 folder trust | 1-2 | `9c376ce`, `5ac3e7b` |
+| #94 evaluation wording | 3-4, 6 | `f45a6da`, #99's body (Task 4), `279f193` and the #73 comment (Task 6) |
+| Trials | 5 | dossier `c96c4a8`, `1d2cc43`, `facccbd` (S1-S10 under `## Trials`) |
+| #85 host script | 7-8 | `4e6fbdb`, `30a39a6`, `5096870` |
+| #86 sandbox use | 9-13 | `475229c`, `59bda33`, `dde95c2`, `8d60849`, `cf5a0b3`, `7007cb9` |
+
+**Documentation changed:** `.devcontainer/README.md` (Tasks 2, 13), `.sbx/README.md` (new, Task 13), `.codeo/overlays/init.md`'s hand-off (Task 13), `docs/dev-environment-sbx-evaluation.md` (Tasks 3, 6), `CHANGELOG.md` (Tasks 2, 13).
+
+**Build:** the `shell` suite's build is `true`, exit 0. No environment is configured, so nothing was deployed.
+
+**Base branch (step 2a):** `origin/main` merged as `4d219c1`. One conflict, `CHANGELOG.md`: this branch's #114 bullet kept, main's #71 bullet taken (it extends this branch's copy with the `issue:<N>` fingerprint sentence). Also changed on main and re-checked against this branch:
+- `.devcontainer/scripts/role.sh` now also treats `/run/.containerenv` as a container marker. The `role.sh` gap below depends on whether a sandbox has that file; Task 14 can check it with `sbx.exe exec codeo-99 test -e /run/.containerenv`.
+- `.devcontainer/README.md`, `tests/devcontainer.test.sh` (#116): merged cleanly; Task 13's README paragraph was written after the merge.
+
+**Deviations and rulings.**
+- Task 12 `end` removes with `sbx rm --force`, superseding the trials ruling that it would answer `rm`'s prompt itself: answering through a pipe is untried, and `end` has already proved nothing is unpushed (or the user passed `--force`). Cost if wrong: an open VS Code window on the sandbox is cut off; `.sbx/README.md` says to close it first.
+- Task 12 review fix (`cf5a0b3`): `end` refuses when the fetch leaves no refs under `refs/sandboxes/codeo-<N>/`, unless `--force` — zero refs means a misconfigured remote, not a clean sandbox.
+- Tasks 8, 11, 12: a stopped sandbox is started by `sbx exec` itself, not `run -d`; `open` checks `ssh(.exe) codeo-N.sbx -- true` first; on WSL, VS Code is launched as `cmd.exe /c code` from `/mnt/c`, and `end` fetches the sandbox with `git.exe`.
+- Task 13: "Stopped sandboxes" in `.sbx/README.md` gives the cause as not known and the recovery `sbx run -d --name codeo-<N>`. Update it with Task 14's result.
+- The sub-skill's final whole-branch review was not run here: `/codeo:qc`'s independent review is that gate (implement-09).
+
+**Gaps, for QC and for issues of their own.**
+- `end` checks commits only: uncommitted changes, stashes and work on a detached HEAD in the sandbox are not detected. `.sbx/README.md` says so.
+- `role.sh` classifies a sandbox as `unguarded` (no `/.dockerenv`), so skills run there with no role check — see the base-branch note above.
+
+**Deferred minors from the task reviews** (in the SDD ledger, for QC to triage): Task 11 — the pty test skips silently without `script`, the ssh check has no `BatchMode`/`ConnectTimeout`, the folder URI is not percent-encoded; Task 12 — the refusal prints its hint on stdout, test gaps for a failed `exec true` start; Task 13 — README:137 should quote the exact `%(prefix)///wsl.localhost/…` safe.directory entry, `init.md:34` "Either way" reads as two routes, the README omits the `CODEO_CODE` override, one docs test greps two strings independently.
 
 ## Log
 - 2026-11-17 — Tasks 1-4 and 7 done; paused at Task 5 for the engineer's trials · cost: 38m · opus-5-5 55k in + 9.1M cached / 19k out · sonnet-5-5 312k in + 4.2M cached / 44k out
+- 2026-11-17 — Tasks 6, 8-13 done (Task 12 fix round, Task 13 docs); merged origin/main; handed to /codeo:qc · cost: 12m · opus-5-5 63k in + 3M cached / 15k out · sonnet-5-5 165k in + 1.2M cached / 18k out
