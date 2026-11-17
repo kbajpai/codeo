@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 1, paused at Task 5. Tasks 1, 2, 3, 4 and 7 are done: commits `9c376ce`, `5ac3e7b`, `f45a6da` and `4e6fbdb`, and #99's body edited. Each was reviewed and found clean. `sync-main.sh` reported that the branch already contains `origin/main`, and `overlap.sh 99` printed nothing. Waiting on the engineer: run trials S1-S9 (`.codeo/99/plan.md` → Notes → Trials) in WSL2 bash and paste each output under `## Trials` below, with tokens and account names removed. Tasks 6, 8, 10, 11 and 12 read their results. Then run `/codeo:implement` again.
+Round 1. Tasks 1, 2, 3, 4, 5 and 7 are done. The trials S1-S10 are recorded under `## Trials`, with the decisions and the rulings they lead to. Next: Task 6, then Tasks 8-13. Task 14 is the engineer's acceptance run.
 
 ## Questions
 
@@ -175,6 +175,179 @@ cmd.exe /c code --folder-uri …   → (nothing printed; no UNC warning from /mn
 - **What this means for Task 11.** `--folder-uri vscode-remote://ssh-remote+codeo-<N>.sbx<sandbox working path>` opens the folder, if two things hold:
   - the path is the sandbox's own working folder (`ssh.exe codeo-<N>.sbx -- pwd`, or S1's `Workspace:` target), not the host's `$PWD`;
   - `*.sbx` resolves, which `sbx.exe setup ssh` makes so and which is safe to re-run.
+
+**S7.**
+
+- **The engineer's run gave no answer.** It ran in WSL bash, not in a dev container, and the plan's path was wrong anyway:
+
+  ```
+  jq .projects /home/dev/.claude/.claude.json
+  jq: error: Could not open file /home/dev/.claude/.claude.json: No such file or directory
+  ```
+
+- **The answer came from this session's dev container,** `codeo-99`. Its folder was trusted by hand in Claude Code's dialog. There `CLAUDE_CONFIG_DIR=/workspaces/.claude`, so the file is `/workspaces/.claude/.claude.json` (mode 600, owner `dev`), and `$HOME/.claude.json` does not exist.
+
+  ```
+  jq '.projects | with_entries(.value |= {hasTrustDialogAccepted})' /workspaces/.claude/.claude.json
+  {
+    "/workspaces/codeo-99": {
+      "hasTrustDialogAccepted": true
+    }
+  }
+  ```
+
+- **This confirms what Task 1's step 3d writes:**
+  - the file is `$CLAUDE_CONFIG_DIR/.claude.json`;
+  - the key is the clone's exact top-level path;
+  - the field is `hasTrustDialogAccepted: true`, merged into the project's existing entry.
+
+**S8** (sbx v0.53.0 help text; what bears on the plan):
+
+- **`create`:**
+  - `create AGENT|SANDBOX_KIT [PATH...]`: "The first positional argument may be a built-in agent name or a sandbox kit reference", and kit references may be "OCI references".
+  - `-t, --template string`: "Container image to use for the sandbox (default: agent-specific image)".
+  - `--kit`: mixins only, experimental.
+  - `kit.shortcuts.claude`: a global setting that maps the agent name to a kit reference.
+  - `--pull always|missing|never`.
+  - `-e, --env` and `--env-file`: "Set an environment variable in the sandbox", kept with it.
+  - `--cpus` (0 = all host CPUs) and `-m, --memory` ("Default: 50% of host memory, clamped to 512 MiB–32 GiB").
+  - `--name` (2-63 characters).
+  - `--clone`: "the agent's commits are accessible via the sandbox-<name> git remote on the host".
+- **`exec`:**
+  - "If the sandbox is stopped, it is started first", which matches the `started` lines in S2-S6.
+  - `-e/--env`, `--env-file`, `-w/--workdir` and `-u/--user`.
+  - "sbx exits 125 if it could not run the command, for example because the sandbox does not exist. A missing command exits 127."
+- **`rm`:**
+  - "stops them, removes their containers, **removes any Git remote added to the host repository for them**, deletes sandbox state … This action cannot be undone."
+  - "Removal requires confirmation; use `-f, --force` to skip confirmation prompts (for non-interactive scripts) and to delete a sandbox that is in use (e.g. an open SSH connection)."
+  - `--json` and `--format`.
+- **`template`:** `save`, `load`, `ls`, `inspect` and `rm`. A template is a saved snapshot of a sandbox, used through `-t`.
+- **Global flags:** `--no-input` ("Never prompt; commands that need an answer fail with the command to run instead") and `-D, --debug`.
+
+**S9, first attempt** (the VS Code window from S6 was still connected):
+
+```
+sbx.exe exec codeo-t git -c user.name=t -c user.email=t@example.com commit --allow-empty -m scratch
+[main 82a2f9b] scratch
+git fetch sandbox-codeo-t
+fatal: unable to connect to 127.0.0.1:
+127.0.0.1[0: 127.0.0.1]: errno=Connection refused
+git for-each-ref refs/sandboxes
+e9988133afc619d07de524e376bbd6eb3a3da934 commit refs/sandboxes/codeo-t/main
+sbx.exe rm codeo-t
+
+  warning: sandbox "codeo-t" runs on an in-container clone (--clone); commits the agent made inside it are lost on removal unless fetched first (fetched branches are mirrored into refs/sandboxes/codeo-t/* and survive removal; recover one with `git branch LOCAL refs/sandboxes/codeo-t/BRANCH`), or ask the agent to push them to an upstream remote
+    try: git fetch sandbox-codeo-t
+
+  Remove sandbox 'codeo-t'? This cannot be undone. (y/N) y
+
+  error: sandbox 'codeo-t' is in use (e.g. an open SSH connection); close it or re-run with --force
+```
+
+- **WSL's `git fetch` cannot reach the sandbox's Git daemon** (connection refused on `127.0.0.1`). The daemon listens on the Windows side (S1: `git://127.0.0.1:60011/…`), and WSL2's `127.0.0.1` is not Windows's unless networking is mirrored. A second possibility is that the port changed when the sandbox restarted. The retry checks both with `git remote get-url` and `git.exe fetch`.
+- `refs/sandboxes/codeo-t/main` exists without a successful fetch, at `e9988133`, and does not include `82a2f9b`. sbx seems to have written it at create time.
+- **`rm`'s warning** is printed for every `--clone` sandbox, whether or not it holds unfetched commits. It points to `git fetch sandbox-<name>` and `refs/sandboxes/<name>/*`.
+- **`rm` refuses a sandbox that is in use,** even after `y`. An open VS Code Remote - SSH window counts as in use. `--force` overrides this. Task 12's `end` has to say so rather than fail without explanation.
+
+**S9, retry** (VS Code window closed):
+
+```
+git remote get-url sandbox-codeo-t
+git://127.0.0.1:60017/codeo-sbx-t
+git.exe fetch sandbox-codeo-t
+From git://127.0.0.1:60017/codeo-sbx-t
+ * [new branch]      main       -> sandbox-codeo-t/main
+   e998813..82a2f9b  main       -> refs/sandboxes/codeo-t/main
+git for-each-ref refs/sandboxes
+82a2f9bce33c30c5f929932189feb8c0dddda621 commit refs/sandboxes/codeo-t/main
+sbx.exe rm codeo-t
+  warning: … (as above)
+  Remove sandbox 'codeo-t'? This cannot be undone. (y/N) y
+  Removed sandbox codeo-t
+git remote -v
+origin  https://github.com/<owner>/codeo (fetch)
+origin  https://github.com/<owner>/codeo (push)
+git for-each-ref refs/sandboxes
+82a2f9bce33c30c5f929932189feb8c0dddda621 commit refs/sandboxes/codeo-t/main
+```
+
+- **The Git daemon's port changes when the sandbox restarts** (60011 at create, 60017 now), and sbx rewrites the remote's URL to follow it.
+- **From WSL, only Windows Git reaches it.** `git.exe fetch sandbox-<name>` works, where WSL's `git fetch` is refused. On WSL (`windows=1`), Task 12's `end` fetches with `git.exe`.
+- **The fetch mirrors each branch into `refs/sandboxes/<name>/<branch>`** and into the remote-tracking `sandbox-<name>/<branch>`.
+- **`rm` removes the `sandbox-<name>` remote.** `refs/sandboxes/<name>/*` survive it, so the commit made inside is still reachable afterwards (`82a2f9b`).
+
+**S10 (added during the trials): `create` from a pinned digest, passed as the kit reference.**
+
+```
+sbx.exe create --clone --name codeo-p --cpus 2 --memory 4g docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332 .
+  SANDBOX
+    Name:       codeo-p
+    Agent:      claude
+    Kit:        docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    Image:      docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    CPU:        2
+    Memory:     4g
+  AGENT
+    ✓ assembled kit image ready (cached)
+    Git daemon:  git://127.0.0.1:60018/codeo-sbx-t
+    Remote:      sandbox-codeo-p
+    ✓ Created sandbox codeo-p
+sbx.exe exec codeo-p claude --version
+2.1.326 (Claude Code)
+sbx.exe rm --force codeo-p
+  warning: … (as in S9)
+  Removed sandbox codeo-p
+```
+
+- **The full digest works as the kit reference** in place of `claude`:
+  - the agent is still `claude`;
+  - `Kit:` and `Image:` both carry the pinned digest;
+  - the line `now ships as a kit; resolving …:latest` no longer appears.
+- `--cpus 2 --memory 4g` take effect.
+- **`rm --force` removes without a prompt,** but it still prints the warning.
+
+### Decisions
+
+- **D-token:** a **placeholder**. The sandbox's `gh auth token` and `GH_TOKEN` are both `gho_sbxproxymanaged000000000000000000000`; the real token stays on the host (S2). A push with it works (S4).
+- **D-start:** **yes.** The unchanged `devcontainer-start.sh` ran in the sandbox and installed both plugins. It raised exactly two TODOs, both expected for the trial: the folder name (on `main`, no lock) and the git identity (none passed) (S5).
+- **D-exec:**
+  - working folder: `exec` runs as `agent` in the sandbox's working folder, which is the host path made POSIX, `/wsl.localhost/<distro>/<path>` (S3).
+  - flags: `exec` takes `-e`, `-w` and `-u`, starts a stopped sandbox, and exits 125 when it cannot run (S8).
+  - the plan keeps `env VAR=… bash …`.
+- **D-image:**
+  - the pin is passed as `create`'s first positional argument, the kit reference, in place of `claude` (S10);
+  - the pinned reference is `docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332` (S1, 2026-11-17);
+  - `-t` was not needed.
+- **D-rm:**
+  - `sbx rm --force <name>` skips the prompt (S8, S10);
+  - it also removes a sandbox that is in use, while plain `rm` refuses one with an open SSH connection (S9);
+  - it removes the `sandbox-<name>` remote and keeps `refs/sandboxes/<name>/*` (S9).
+- **D-open:** **yes, with two conditions** (S6):
+  - `code --folder-uri vscode-remote://ssh-remote+codeo-<N>.sbx<path>` opened the folder, and `window.title` took effect;
+  - `<path>` is the sandbox's working folder, `/wsl.localhost/$WSL_DISTRO_NAME<host path>` on WSL, not the host's `$PWD`;
+  - `*.sbx` must resolve through `sbx setup ssh`; `ssh.exe <name>.sbx -- true` checks it.
+  - Only GitHub Pull Requests is installed on the remote side.
+- **D-push:** **yes.** After `gh auth setup-git`, push, fetch and branch delete all work from inside (S4).
+
+### Rulings from the trials, for the tasks still to run
+
+- **Task 8:**
+  - On WSL the sandbox's working folder is `/wsl.localhost/$WSL_DISTRO_NAME$(pwd -P)`. Task 8 computes the same path for `safe.directory`.
+  - No change to the plan. The start script already runs `gh auth setup-git` (`devcontainer-start.sh:341`), Task 8 already passes `GIT_AUTHOR_*`, and step 5 writes the global identity.
+- **Task 10:** pass the pin as the kit reference: `create --clone --name codeo-N --cpus 2 --memory 4g "$(cat .sbx/claude-image)" .`. The file holds the S1 digest.
+- **Task 11:**
+  - The folder URI uses the sandbox's working folder (the D-exec path), not the host's `$PWD`.
+  - Before opening, `open` runs `ssh.exe codeo-N.sbx -- true` (`ssh` off WSL). If that fails, it stops and tells the user to run `sbx setup ssh`.
+  - On WSL, `cmd.exe` runs from `/mnt/c`, so the UNC warning does not appear.
+  - Cost if wrong: one `open` that stops early.
+- **Task 12:**
+  - `end` fetches with `git.exe` when `windows=1`.
+  - It removes with `rm --force` only when the user passes `--force`. Otherwise it answers the prompt itself, and when `rm` reports the sandbox is in use it tells the user to close the VS Code window.
+  - This keeps the plan's rule that `--force` is the user's choice.
+- **`role.sh` (outside the footprint):** a sandbox has no `/.dockerenv`, so `role.sh` classifies it as `unguarded`.
+  - Effect: the skills run there with no role check. That is permissive and blocks nothing.
+  - Ruling: left unchanged for this round, and reported in the Outcome as a gap for its own issue.
+  - Cost if wrong: an issue sandbox can run home-only skills.
 
 - **The `--folder-uri` form reaches Remote - SSH and names the right host.** Opening the folder depends on `*.sbx` resolving through Windows OpenSSH's config, which `sbx setup ssh` writes. That command is marked experimental. Task 11's `open` therefore has to check that the host resolves (`ssh.exe <name>.sbx -- true`), and if it does not, point the user to `sbx.exe setup ssh` rather than open a window that fails.
 - **VS Code asks for the platform** the first time it connects to each host. A new `codeo-<N>.sbx` asks again unless `remote.SSH.remotePlatform` maps it, or a `*.sbx` pattern covers it.
