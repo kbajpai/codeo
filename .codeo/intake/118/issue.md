@@ -1,4 +1,4 @@
-# Issue — live-signal leftovers from #104
+# Issue #118 — issue
 
 Raised by /codeo:triage run 2026-11-17-2, Q3. The engineer's answers: file it as a new issue that runs after #116 merges (not folded into #116 or #112).
 
@@ -51,4 +51,4 @@ Run after #116 merges: both change `scripts/live.sh` and its tests.
 
 ## Log
 
-2026-11-17 — draft written, awaiting approval
+2026-11-17 — filed as #118 · cost: unavailable
