@@ -2,6 +2,8 @@
 
 The dev container comes in two kinds. Each is its own clone in its own Docker volume.
 
+An issue can also run in a Docker Sandboxes (sbx) sandbox instead of an issue container; `.sbx/README.md` describes that route.
+
 | | Home container | Issue container |
 |---|---|---|
 | Clone of | `main` | the branch `/codeo:init` pushed |

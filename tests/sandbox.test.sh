@@ -564,6 +564,47 @@ shell_execs_bash_in_the_clone() {
     fi
 }
 
+docs_readme_documents_each_sub_command() {
+    local readme="$repo/.sbx/README.md" sub
+    [[ -f "$readme" ]] || { fail "no .sbx/README.md"; return 0; }
+    for sub in issue open shell end; do
+        grep -Eq "^\|.*codeo-sandbox\.sh $sub\b" "$readme" || fail "no table row for $sub"
+    done
+}
+
+docs_readme_gives_the_download_line() {
+    grep -Fq 'curl -fsSL -o codeo-sandbox.sh https://raw.githubusercontent.com/kbajpai/codeo/main/.sbx/codeo-sandbox.sh' \
+        "$repo/.sbx/README.md" 2>/dev/null || fail "the download line is missing"
+}
+
+docs_readme_gives_the_default_extensions_setting() {
+    grep -Fq '"remote.SSH.defaultExtensions": ["anthropic.claude-code", "timonwong.shellcheck", "bierner.markdown-mermaid"]' \
+        "$repo/.sbx/README.md" 2>/dev/null || fail "the defaultExtensions setting is missing"
+}
+
+docs_readme_says_end_replaces_the_docker_rm_line() {
+    grep -Eq 'end <N>.*replaces the `docker rm' "$repo/.sbx/README.md" 2>/dev/null ||
+        fail "the README does not say end replaces the docker rm line"
+}
+
+docs_readme_states_the_stops() {
+    grep -Fxq '## Stopped sandboxes' "$repo/.sbx/README.md" 2>/dev/null || fail "no Stopped sandboxes section"
+}
+
+docs_readme_says_how_to_move_the_pin() {
+    local readme="$repo/.sbx/README.md"
+    { grep -Fq '.sbx/claude-image' "$readme" && grep -Fq 'CHANGELOG' "$readme"; } 2>/dev/null ||
+        fail "the README does not say the pin moves by editing .sbx/claude-image with a CHANGELOG line"
+}
+
+docs_changelog_names_the_sandbox_route() {
+    grep -Eq '^- .*\.sbx/codeo-sandbox\.sh.*\(#99' "$repo/CHANGELOG.md" || fail "no CHANGELOG bullet for the sandbox route"
+}
+
+docs_the_hand_off_names_the_third_route() {
+    grep -Fq 'bash codeo-sandbox.sh issue <N> <branch>' "$repo/.codeo/overlays/init.md" || fail "init overlay lacks the sandbox route"
+    grep -Fq '.sbx/README.md' "$repo/.devcontainer/README.md" || fail "the dev container README does not point at .sbx/README.md"
+}
 
 cases=(
     usage_without_arguments_exits_2
@@ -607,6 +648,14 @@ cases=(
     end_force_with_no_sandbox_refs_removes
     end_lists_at_most_ten_commits
     end_with_sbx_exe_fetches_with_git_exe_from_the_clone
+    docs_readme_documents_each_sub_command
+    docs_readme_gives_the_download_line
+    docs_readme_gives_the_default_extensions_setting
+    docs_readme_says_end_replaces_the_docker_rm_line
+    docs_readme_states_the_stops
+    docs_readme_says_how_to_move_the_pin
+    docs_changelog_names_the_sandbox_route
+    docs_the_hand_off_names_the_third_route
 )
 
 for current in "${cases[@]}"; do
