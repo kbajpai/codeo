@@ -57,6 +57,7 @@
 #                           (default docs)
 #   plansDir                optional; where plans are saved, relative to the root (default docs/plans)
 #   invariants              path to the project's invariants document
+#   triage{parkedDays}      optional; days without a pushed change after which /codeo:triage asks about an in-flight workflow (default 7; more than this is parked)
 #   models{subagent,reviewer}
 #   modules[]               optional modules the project enables
 #   plugin{repo,ref}        optional; the codeo plugin this project pins: repo (owner/name) and ref (a tag or branch); read by the dev container's plugins.sh

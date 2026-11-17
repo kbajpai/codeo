@@ -34,6 +34,15 @@ must_contain "a backlog decision is dropped at step 2" 'left-in-the-backlog item
 must_contain "leave in the backlog records, and moves only when needed" 'records the decision, and moves the card only for an issue that is not there yet'
 must_contain "no move quotes the status line" 'the `status` line when no move was made'
 must_contain "the question says when the card moves" 'the card moves to Backlog when it is not already there'
+must_contain "reads the threshold" '.triage.parkedDays // 7'
+must_contain "more than the threshold is parked" 'more than the threshold'
+must_contain "within the threshold is listed, not asked" 'listed in the run'"'"'s `## Outcome` with its `touched:` and `waits:` lines and not asked about'
+must_contain "quotes the date and the threshold" 'quote its `touched:` line and the threshold'
+must_contain "parked fingerprint" '`parked:<N>:<touched date>`'
+must_contain "board fingerprint" '`board:<N>:<Status found>`'
+must_contain "send-back is In progress with a PR open" 'dossier at `.codeo/<N>/`'
+must_contain "mismatch names, never runs" 'named, never run'
+must_contain "unavailable is not a mismatch" '`unavailable` is never a mismatch'
 
 if ((failures)); then
     echo "$failures case(s) failed"
