@@ -84,7 +84,7 @@ assert_eq "PostToolUse beat" yes "$ok"
 assert_eq "SessionEnd clear" yes "$ok"
 [[ $(cmd PreToolUse) == *"subagent-model.sh"* ]] && ok=yes || ok=no
 assert_eq "PreToolUse kept" yes "$ok"
-assert_eq "timeouts" "10 10 10" "$(jq -r '[.hooks.UserPromptSubmit[0].hooks[0].timeout, .hooks.PostToolUse[0].hooks[0].timeout, .hooks.SessionEnd[0].hooks[0].timeout] | join(" ")' "$h")"
+assert_eq "timeouts" "10 10 20" "$(jq -r '[.hooks.UserPromptSubmit[0].hooks[0].timeout, .hooks.PostToolUse[0].hooks[0].timeout, .hooks.SessionEnd[0].hooks[0].timeout] | join(" ")' "$h")"
 
 case_desc=beat_publishes_in_the_background
 new_world
@@ -148,6 +148,31 @@ for mode in beat clear; do
     hook $mode "{\"cwd\": \"$clone\"}"
     assert_eq "$mode unreachable origin exit" 0 "$rc"
     assert_eq "$mode unreachable origin out" "" "$out$err"
+done
+case_desc=docs_state_the_live_signal_limits
+bullet=$(awk '/^- \*\*Who is working right now/{f=1;print;next} f&&/^- \*\*/{exit} f{print}' "$plugin_root/docs/handoff.md")
+bullet=${bullet//$'\n'/ }
+bullet=$(printf '%s' "$bullet" | tr -s ' ')
+for want in '/codeo:close` clears' '20 seconds' 'ahead of the reader' 'the login lookup'; do
+    [[ $bullet == *"$want"* ]] || {
+        echo "FAIL $case_desc: no [$want]"
+        failures=$((failures + 1))
+    }
+done
+[[ $bullet == *'`CODEO_MACHINE`'*'same volume name'* ]] || {
+    echo "FAIL $case_desc: no [CODEO_MACHINE ... same volume name]"
+    failures=$((failures + 1))
+}
+handoff=$(<"$plugin_root/docs/handoff.md")
+[[ $handoff == *'S->>O: /codeo:close runs live.sh clear and deletes the lock in one command'* ]] || {
+    echo "FAIL $case_desc: no [S->>O close line]"
+    failures=$((failures + 1))
+}
+for gone in 'S->>H: /codeo:close deletes the lock' 'H->>O: clear in the same command'; do
+    [[ $handoff != *"$gone"* ]] || {
+        echo "FAIL $case_desc: still has [$gone]"
+        failures=$((failures + 1))
+    }
 done
 sleep 1
 

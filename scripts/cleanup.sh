@@ -19,9 +19,8 @@
 #                         name matches the pattern. The only place a command is built.
 #
 # The overlay body (cleanup/removal-command) is three lines: `name: <template with {N}>`,
-# `pattern: <extended regex>` and `command: <template with {name}>`. It comes from $CODEO_CLEANUP_REMOVAL when
-# that is set and non-empty (it exists for the tests), else from `overlay.sh cleanup removal-command`. No overlay
-# (overlay.sh exit 3, or 2 while the point is unregistered) means `proven` with `-`; any other failure dies.
+# `pattern: <extended regex>` and `command: <template with {name}>`; it comes from `overlay.sh cleanup removal-command`. No
+# overlay (overlay.sh exit 3, or 2 while the point is unregistered) means `proven` with `-`; any other failure dies.
 #
 # Config keys read: baseBranch (see lib/env.sh).
 set -euo pipefail
@@ -44,17 +43,13 @@ leases=$(bash "$CODEO_PLUGIN_ROOT/scripts/intake.sh" lease list --tsv </dev/null
 
 # The overlay body, or nothing when there is none.
 overlay=
-if [[ -n ${CODEO_CLEANUP_REMOVAL:-} ]]; then
-    overlay=$CODEO_CLEANUP_REMOVAL
-else
-    rc=0
-    overlay=$(bash "$CODEO_PLUGIN_ROOT/scripts/overlay.sh" cleanup removal-command 2>/dev/null) || rc=$?
-    case $rc in
-        0) ;;
-        2 | 3) overlay= ;;
-        *) die "overlay.sh cleanup removal-command failed (exit $rc)" ;;
-    esac
-fi
+rc=0
+overlay=$(bash "$CODEO_PLUGIN_ROOT/scripts/overlay.sh" cleanup removal-command 2>/dev/null) || rc=$?
+case $rc in
+    0) ;;
+    2 | 3) overlay= ;;
+    *) die "overlay.sh cleanup removal-command failed (exit $rc)" ;;
+esac
 
 # The value after `<key>:` on the key's first line, or nothing.
 overlay_value() {
