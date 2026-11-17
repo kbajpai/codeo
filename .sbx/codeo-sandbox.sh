@@ -247,7 +247,7 @@ cmd_end() {
         force=1
     fi
     pick_sbx
-    local name=codeo-$1 dir=codeo-$1 state commits count
+    local name=codeo-$1 dir=codeo-$1 state commits count refs
     state=$(sandbox_state "$name")
     [[ "$state" != missing ]] || die "no sandbox $name"
     [[ -d "$dir" ]] || die "no clone $dir here: cannot check $name for unpushed commits, nothing removed"
@@ -256,6 +256,10 @@ cmd_end() {
     fi
     fetch_sandbox "$dir" "$name" || die "could not fetch sandbox-$name into $dir, nothing removed"
     git -C "$dir" fetch origin || die "could not fetch origin: cannot prove anything is pushed, nothing removed"
+    refs=$(git -C "$dir" for-each-ref --count=1 --format=x "refs/sandboxes/$name/") || die "could not read the refs of $dir, nothing removed"
+    if [[ -z "$refs" ]] && ((force == 0)); then
+        die "no branches of $name were found under refs/sandboxes/$name/ after the fetch, so nothing can be proved and nothing is removed: end $1 --force removes it anyway"
+    fi
     commits=$(unpushed_commits "$dir" "$name") || die "could not list the commits of $name, nothing removed"
     if [[ -z "$commits" ]]; then
         "$sbx" rm --force "$name" || die "could not remove $name"

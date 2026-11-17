@@ -352,14 +352,17 @@ end_setup() {
     $real_git clone -q --bare "$sb_dir/origin.git" "$sb_dir/sandbox.git"
     $real_git -C "$w/codeo-113" remote add sandbox-codeo-113 "$sb_dir/sandbox.git"
     $real_git -C "$w/codeo-113" config remote.sandbox-codeo-113.fetch '+refs/heads/*:refs/sandboxes/codeo-113/*'
-    if [[ "${2:-}" == windows ]]; then prog=git.exe; fi
-    cat >"$sb_dir/bin/$prog" <<STUB
+    local progs=(git)
+    if [[ "${2:-}" == windows ]]; then progs+=(git.exe); fi
+    for prog in "${progs[@]}"; do
+        cat >"$sb_dir/bin/$prog" <<STUB
 #!/bin/bash
 echo "\${0##*/} \$*" >>"$sb_dir/calls"
 pwd >"$sb_dir/${prog}_cwd"
 exec "$real_git" "\$@"
 STUB
-    chmod +x "$sb_dir/bin/$prog"
+        chmod +x "$sb_dir/bin/$prog"
+    done
     echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
 }
 
@@ -444,6 +447,23 @@ end_without_the_clone_is_one_line() {
     ((sb_rc == 1)) || fail "exited $sb_rc"
     [[ "$(sb_err_lines)" == 1 ]] || fail "stderr was: $sb_err"
     [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_with_no_sandbox_refs_removes_nothing() {
+    end_setup endnorefs
+    $real_git -C "$sb_dir/work/codeo-113" config remote.sandbox-codeo-113.fetch '+refs/heads/*:refs/remotes/sandbox-codeo-113/*'
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "${sb_err##*$'\n'}" == "codeo-sandbox: no branches of codeo-113 were found under refs/sandboxes/codeo-113/ after the fetch, so nothing can be proved and nothing is removed: end 113 --force removes it anyway" ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_force_with_no_sandbox_refs_removes() {
+    end_setup endnorefsforce
+    $real_git -C "$sb_dir/work/codeo-113" config remote.sandbox-codeo-113.fetch '+refs/heads/*:refs/remotes/sandbox-codeo-113/*'
+    sb_run end 113 --force
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
 }
 
 end_lists_at_most_ten_commits() {
@@ -583,6 +603,8 @@ cases=(
     end_starts_a_stopped_sandbox_first
     end_on_a_missing_sandbox_is_one_line
     end_without_the_clone_is_one_line
+    end_with_no_sandbox_refs_removes_nothing
+    end_force_with_no_sandbox_refs_removes
     end_lists_at_most_ten_commits
     end_with_sbx_exe_fetches_with_git_exe_from_the_clone
 )
