@@ -882,6 +882,7 @@ raw_dossier "$w_origin" 59 implement 2026-11-10 '# implement
 
 (after plan.md round 20, answering something else)
 Built.'
+w_dossier 61 qc "$(printf '# qc\r\n\r\n## Outcome\r\n\r\n### Round 1\r\n\r\n**Verdict: clear — forward to\r\n`/codeo:close`.**\r\n')"
 git -C "$w_origin" checkout -q main
 git -C "$w_clone" fetch -q
 w_out=$(run_today "$w_clone")
@@ -905,6 +906,10 @@ assert_contains "line" "  waits:     /codeo:implement" "$(w_block 51)"
 
 case_desc="waits_close_log_is_not_read_as_a_round"
 assert_contains "no k, no marker" "  waits:     /codeo:implement" "$(w_block 60)"
+
+case_desc="verdict_with_crlf"
+assert_contains "line" "  verdict:   round 1 — clear — forward to /codeo:close." "$(w_block 61)"
+assert_eq "no CR" 0 "$(w_block 61 | grep -c $'\r' || true)"
 
 case_desc="waits_names_the_next_step"
 assert_contains "plan" "  waits:     /codeo:implement" "$(w_block 52)"

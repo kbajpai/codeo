@@ -174,7 +174,7 @@ open_questions_in() {
 # number of its last `### Round <k>` heading, else 1.
 verdict_of() {
     local outcome round k span
-    outcome=$({ git show "$1:$2/qc.md" 2>/dev/null || true; } | awk '
+    outcome=$({ git show "$1:$2/qc.md" 2>/dev/null || true; } | tr -d "\r" | awk '
         /^## Outcome/ { o = 1; next }
         /^## / { o = 0 }
         o')
