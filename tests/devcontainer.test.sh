@@ -13,12 +13,13 @@
 # Last it runs .devcontainer/scripts/devcontainer-start.sh in a scratch repo against stub gh, claude,
 # sudo and stat executables and a stub plugins.sh: it always exits 0, lists each login still to do in
 # order, says "ready" when nothing is left, and takes ownership of a clone owned by someone else.
+# The start-script cases also cover CODEO_CMD_MODE (no .vscode, no wait for a host ~/.gitconfig, the identity still seeded once).
 # The start-script cases also cover a .codeo/active that names no issue: it is reported once, left untouched, and takes no lock.
 # The devcontainer.json checks also cover the postStartCommand that re-runs window-title.sh (the
 # window title) on every start; the start script's login checks are the ones listed just above.
 # It also runs .devcontainer/scripts/session-title.sh against hook fixtures on stdin (home and lock titles,
 # the prompt hook, an existing title kept, silent outside a dev container and on every failure) and
-# checks that .claude/settings.json registers it. It also checks the scripts are committed executable, the
+# checks that .claude/settings.json registers it. Its cmd-mode cases (CODEO_CMD_MODE=1 without REMOTE_CONTAINERS) title the session and write no .vscode. It also checks the scripts are committed executable, the
 # settings-merge cases (not an object, symlink, mode, no temp file), the credential-variable advice, the
 # core.fileMode probe, the prompt hook's retitling, the guarded hook command and the codeo-git volume.
 # The identity step is covered too: the volume's missing user.name and user.email are filled from the host ~/.gitconfig, else GIT_AUTHOR_*, each on its own and never over a value already there, nothing else
@@ -499,9 +500,9 @@ ds_identity() { git config --file "$ds_dir/gitconfig" user.name Dev && git confi
 # ds_run: run the scratch start script (through $DS_REPO when set, else the repo itself); sets ds_rc, ds_out and ds_err.
 ds_run() {
     ds_rc=0
-    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
+    env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL -u CODEO_ROOT -u CODEO_CMD_MODE -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
         ${DS_CODEO_ROOT:+CODEO_ROOT="$DS_CODEO_ROOT"} \
-        ${DS_SET:+"$DS_SET"} \
+        ${DS_SET:+"$DS_SET"} ${DS_CMD_MODE:+CODEO_CMD_MODE=1} \
         ${DS_AUTHOR_NAME:+GIT_AUTHOR_NAME="$DS_AUTHOR_NAME"} ${DS_AUTHOR_EMAIL:+GIT_AUTHOR_EMAIL="$DS_AUTHOR_EMAIL"} \
         CODEO_GITCONFIG_WAIT="${DS_GITCONFIG_WAIT:-0}" \
         PATH="$ds_dir/bin:$PATH" HOME="$ds_dir/home" CLAUDE_CONFIG_DIR="$ds_dir/claude" GIT_CONFIG_GLOBAL="${DS_GITCONFIG:-$ds_dir/gitconfig}" GIT_CONFIG_NOSYSTEM=1 \
@@ -1270,6 +1271,34 @@ start_does_not_wait_when_the_volume_has_the_identity() {
     DS_GITCONFIG_WAIT=30 ds_ready_run
     ((SECONDS - start < 5)) || fail "the run took $((SECONDS - start))s: it waited with the identity in place"
     [[ $(tail -n1 <<<"$ds_out") == 'devcontainer-start: ready' ]] || fail "stdout does not end with ready: $ds_out"
+}
+
+start_cmd_mode_writes_no_vscode_settings() {
+    ds_setup cmdvscode || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    DS_CMD_MODE=1 ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0: $ds_err"
+    [[ ! -e $ds_dir/codeo-home/.vscode ]] || fail 'cmd mode wrote .vscode'
+    if grep -q '^window-title:' <<<"$ds_out"; then fail "cmd mode ran window-title.sh: $ds_out"; fi
+}
+
+start_cmd_mode_does_not_wait_for_a_host_gitconfig() {
+    local start=$SECONDS n
+    ds_setup cmdwait || return 0
+    : > "$ds_dir/gitconfig"
+    DS_CMD_MODE=1 DS_GITCONFIG_WAIT=10 ds_ready_run
+    ((SECONDS - start < 5)) || fail "the run took $((SECONDS - start))s: it waited in cmd mode"
+    n=$(ds_todos 'git identity is not set'); ((n == 1)) || fail "wanted one identity TODO, got $n: $ds_err"
+}
+
+start_cmd_mode_seeds_the_identity_from_the_environment_once() {
+    ds_setup cmdseed || return 0
+    DS_CMD_MODE=1 DS_AUTHOR_NAME="Ada O'Neil" DS_AUTHOR_EMAIL=ada@example.com ds_ready_run
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name is not the environment's: $(ds_global user.name)"
+    grep -qF 'git identity: user.name set from GIT_AUTHOR_NAME' <<<"$ds_out" || fail "no report of user.name: $ds_out"
+    DS_CMD_MODE=1 DS_AUTHOR_NAME=Other DS_AUTHOR_EMAIL=other@example.com ds_ready_run
+    [[ $(ds_global user.name) == "Ada O'Neil" ]] || fail "user.name changed on the second run: $(ds_global user.name)"
+    if grep -qF 'git identity:' <<<"$ds_out"; then fail "the second run reported a seed: $ds_out"; fi
 }
 
 start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero() {
@@ -2142,13 +2171,15 @@ st_json() {
 }
 
 # st_run <stdin> [remote]: runs session-title.sh with REMOTE_CONTAINERS=<remote> (default true; "unset"
-# leaves it out) from /. Sets st_rc, st_out, st_err.
+# leaves it out) from /, and with CODEO_CMD_MODE unset unless ST_CMD_MODE is non-empty (then set to its value).
+# Sets st_rc, st_out, st_err.
 st_run() {
     local input=$1 remote=${2:-true} errf envs=()
     [[ $remote == unset ]] || envs=("REMOTE_CONTAINERS=$remote")
+    [[ -z ${ST_CMD_MODE:-} ]] || envs+=("CODEO_CMD_MODE=$ST_CMD_MODE")
     errf=$(mktemp -p "$pl_root")
     st_rc=0
-    st_out=$(cd / && env -u REMOTE_CONTAINERS "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
+    st_out=$(cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
     st_err=$(<"$errf")
 }
 
@@ -2179,6 +2210,40 @@ session_title_names_the_issue_with_a_lock() {
     printf 'issue:   45\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
     st_run "$(st_json SessionStart $st_sid)"
     [[ $(st_title) == 'codeo [#45] · a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_cmd_mode_titles_home_and_the_issue() {
+    st_setup cmd-mode || return 0
+    local ST_CMD_MODE=1
+    st_run "$(st_json SessionStart $st_sid)" unset
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "no lock: title '$(st_title)'"
+    printf 'issue:   113\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json SessionStart $st_sid)" unset
+    [[ $(st_title) == 'codeo [#113] · a21b9973' ]] || fail "lock: title '$(st_title)'"
+}
+
+session_title_in_cmd_mode_accepts_any_value() {
+    st_setup cmd-mode-any || return 0
+    local ST_CMD_MODE=true
+    st_run "$(st_json SessionStart $st_sid)" unset
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_cmd_mode_writes_no_vscode_settings() {
+    st_setup cmd-mode-vscode || return 0
+    local ST_CMD_MODE=1 exclude
+    st_run "$(st_json SessionStart $st_sid)" unset
+    [[ -n $st_out ]] || fail 'no title printed'
+    [[ ! -e $st_dir/.vscode ]] || fail '.vscode was created'
+    exclude=$(git -C "$st_dir" rev-parse --path-format=absolute --git-path info/exclude)
+    ! grep -q '\.vscode' "$exclude" 2>/dev/null || fail 'info/exclude names .vscode'
+}
+
+session_title_with_both_variables_still_refreshes_the_window_title() {
+    st_setup both || return 0
+    local ST_CMD_MODE=1 f=$st_dir/.vscode/settings.json
+    st_run "$(st_json SessionStart $st_sid)" true
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [home]' ]] || fail "window.title $(jq -r '."window.title"' "$f" 2>&1)"
 }
 
 session_title_on_a_prompt_after_clear() {
@@ -2435,6 +2500,9 @@ cases=(
     start_does_not_stall_on_a_host_gitconfig_that_stays_empty
     readme_says_included_identities_do_not_count
     start_does_not_wait_when_the_volume_has_the_identity
+    start_cmd_mode_writes_no_vscode_settings
+    start_cmd_mode_does_not_wait_for_a_host_gitconfig
+    start_cmd_mode_seeds_the_identity_from_the_environment_once
     start_a_non_numeric_wait_limit_falls_back_and_still_exits_zero
     start_setup_git_failure_is_a_todo
     start_trusts_the_clone_once
@@ -2492,6 +2560,10 @@ cases=(
     title_outside_a_repository_says_so
     session_title_names_home_and_the_id
     session_title_names_the_issue_with_a_lock
+    session_title_cmd_mode_titles_home_and_the_issue
+    session_title_in_cmd_mode_accepts_any_value
+    session_title_cmd_mode_writes_no_vscode_settings
+    session_title_with_both_variables_still_refreshes_the_window_title
     session_title_on_a_prompt_after_clear
     session_title_keeps_an_existing_title
     session_title_is_silent_outside_a_dev_container
