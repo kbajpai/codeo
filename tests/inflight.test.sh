@@ -812,11 +812,34 @@ w_dossier 60 close '# close
 
 ## Outcome
 
-### Round 1 — review feedback
+### Round 1
+
+Opened the PR.
+
+### Round 2 — review feedback
 
 ## Log
 
 - 2026-11-10 — qc round at review: 3'
+raw_dossier "$w_origin" 60 qc 2026-11-10 "# qc
+
+## Outcome
+
+### Round 1
+
+**Verdict: back to \`/codeo:implement\`.**
+
+### Round 4
+
+**Verdict: clear — forward to \`/codeo:close\`.**"
+raw_dossier "$w_origin" 60 implement 2026-11-10 '# implement
+
+## Outcome
+
+### Round 3
+
+(send-back from close.md round 2)
+Fixed.'
 w_dossier 52 plan "# plan
 
 ## Outcome
@@ -905,7 +928,7 @@ case_desc="waits_after_conflicts_with_base"
 assert_contains "line" "  waits:     /codeo:implement" "$(w_block 51)"
 
 case_desc="waits_close_log_is_not_read_as_a_round"
-assert_contains "no k, no marker" "  waits:     /codeo:implement" "$(w_block 60)"
+assert_contains "no k, qc owed" "  waits:     /codeo:qc" "$(w_block 60)"
 
 case_desc="verdict_with_crlf"
 assert_contains "line" "  verdict:   round 1 — clear — forward to /codeo:close." "$(w_block 61)"
