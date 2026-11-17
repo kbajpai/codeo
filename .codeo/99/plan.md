@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The issue, the evaluation page, the dev container's scripts and tests, and #116's footprint are read. Nothing is drafted: Q1-Q7 are open. Most of what the three `sbx` parts assume was never tried (the token, a push, the start script inside a sandbox, opening a folder over Remote-SSH), and this session runs in a Linux container with no `sbx`, so only your Windows + WSL2 host can settle it. Q1 asks whether you run those trials now or the plan carries them as its first tasks. The #114 part has no open question: where the trust is stored is confirmed from Claude Code's documentation (see Notes).
+Round 1. Q1-Q7 are answered; the plan draft is at `.codeo/99/plan-draft.md`, awaiting review. Earlier: the issue, the evaluation page, the dev container's scripts and tests, and #116's footprint were read. Most of what the three `sbx` parts assume was never tried (the token, a push, the start script inside a sandbox, opening a folder over Remote-SSH), and this session runs in a Linux container with no `sbx`, so only your Windows + WSL2 host can settle it. Q1 asks whether you run those trials now or the plan carries them as its first tasks. The #114 part has no open question: where the trust is stored is confirmed from Claude Code's documentation (see Notes).
 
 ## Questions
 
@@ -24,6 +24,7 @@ Round 1. The issue, the evaluation page, the dev container's scripts and tests, 
 I wrote the commands for WSL2 bash with `sbx.exe`, as in #73's trials. Say so if you would run them in another shell.
 
 **Answer:**
+Linux bash and WSL2 bash, both, mostly WSL2 (engineer, in the conversation, 2026-11-17). Asked again with the question tool for the half left open: the plan carries the trials as its first host task, and the tasks that depend on them say what to do for each outcome (engineer, 2026-11-17). So the host script picks `sbx` or `sbx.exe` itself, and the Windows Git trust step runs only with `sbx.exe`.
 
 ### Q2 — What should run inside the sandbox at start: the dev container's own start script, or a new one?
 
@@ -35,6 +36,7 @@ I wrote the commands for WSL2 bash with `sbx.exe`, as in #73's trials. Say so if
 - *A new standalone script:* nothing in `.devcontainer/` changes, and the lock, identity and TODO logic exists twice.
 
 **Answer:**
+Accepted the recommendation: run `devcontainer-start.sh` unchanged in cmd mode inside the sandbox (engineer, in the conversation, 2026-11-17). If the trial shows it cannot run there, the plan stops at that task and says so.
 
 ### Q3 — How does the sandbox get its clone, and may the script write the Windows Git trust line itself?
 
@@ -46,6 +48,7 @@ I wrote the commands for WSL2 bash with `sbx.exe`, as in #73's trials. Say so if
 - *No host clone (a mountless sandbox):* the sandbox is created with no host folder and the script clones the branch inside it, as `codeo-container.sh` does. No Windows Git trust step is needed at all. But this mode was never tried, and commits then leave the sandbox only by `git push`: `git fetch sandbox-<name>` does not exist without a host clone, which changes the removal check in Q5. It needs a trial of its own before I can plan it.
 
 **Answer:**
+Accepted the recommendation: the script makes the host clone and adds the Windows Git trust line itself (engineer, in the conversation, 2026-11-17).
 
 ### Q4 — How should the three VS Code extensions get into a sandbox window?
 
@@ -57,6 +60,7 @@ I wrote the commands for WSL2 bash with `sbx.exe`, as in #73's trials. Say so if
 - *The open command installs them:* the script runs VS Code's `--install-extension` against the sandbox for each of the three, then opens the folder. Whether that works against a Remote-SSH host is not known and needs a trial.
 
 **Answer:**
+Accepted the recommendation: a one-time `remote.SSH.defaultExtensions` user setting, documented as setup (engineer, in the conversation, 2026-11-17).
 
 ### Q5 — How should ending a sandbox work, and how far into `/codeo:cleanup` does it go?
 
@@ -68,6 +72,7 @@ I wrote the commands for WSL2 bash with `sbx.exe`, as in #73's trials. Say so if
 - *Documentation only:* the README lists the fetch, the check and `sbx rm` as steps to run by hand. Nothing stops a removal with unpushed work, which the criterion asks for.
 
 **Answer:**
+Accepted the recommendation: an `end <N>` sub-command with `--force`, documented; no plugin script or skill changes here, and the printed removal command is not changed (engineer, in the conversation, 2026-11-17).
 
 ### Q6 — Where should #86's corrected wording go, now that #86 is closed and its text lives in #99's body?
 
@@ -79,6 +84,7 @@ I wrote the commands for WSL2 bash with `sbx.exe`, as in #73's trials. Say so if
 - *Edit neither:* the page alone is corrected, and the plan records that the two criteria are met by the page saying what #86 said wrongly.
 
 **Answer:**
+Accepted the recommendation: edit the "Part of #86" section of #99's body; the closed #86 stays as filed (engineer, in the conversation, 2026-11-17).
 
 ### Q7 — #116 also changes `.devcontainer/README.md`, `tests/devcontainer.test.sh` and `CHANGELOG.md`: proceed, wait, or re-scope?
 
@@ -90,6 +96,7 @@ I wrote the commands for WSL2 bash with `sbx.exe`, as in #73's trials. Say so if
 - *Re-scope:* move the #114 part's README and changelog text out of this change.
 
 **Answer:**
+Accepted the recommendation: proceed and coordinate with #116 (engineer, in the conversation, 2026-11-17).
 
 ## Notes
 
@@ -105,10 +112,11 @@ Not documented: that the extension reads that same file. So the plan writes the 
 - The host script takes the program names from `CODEO_SBX` (default `sbx.exe`) and `CODEO_SSH` (default `ssh.exe`), so a Linux or macOS host can set `sbx`.
 - The git identity comes from the host's `git config --global` (else `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL`) and reaches the start script as `GIT_AUTHOR_*`, as in `codeo-container.sh`.
 - The sandbox is named `codeo-<N>` and the host clone folder is `codeo-<N>`, so the existing folder check compares the right name if the sandbox mirrors the folder name (S5 shows the path).
-- Session titles: the sandbox is created with `CODEO_CMD_MODE=1` in its environment if `sbx` keeps it for later sessions (S8), which `session-title.sh` already honours; otherwise `session-title.sh` gains one more condition.
+- Session titles: the host script writes a marker file `~/.codeo-sandbox` inside the sandbox, and `session-title.sh` treats it like `REMOTE_CONTAINERS=true`; this does not depend on whether `sbx` keeps environment variables for later sessions.
 - The image pin is one line in `.sbx/claude-image` (a `docker.io/sbx/claude@sha256:…` reference) that the script passes to `sbx create`; how `create` takes a digest is read from S9's help output.
 - The unexplained stops: a host task repeats "start one sandbox while another runs" 10 times and records `sbx ls` after each; the README states the count and what was seen, and `sbx run -d --name <name>` as the recovery.
-- One plan file with four parts in the order #114, #94, #85, #86, one pull request. Tasks you run on your host come last in each part.
+- One plan file with four parts in the order #114, #94, #85, #86, one pull request. The trials are Task 5, before the tasks that depend on them; the acceptance run is the last task.
+- `.codeo/config.json`'s `shell` suite gains `.sbx/**` in its `paths`, so changes there trigger the suite.
 
 ### Trials (for Q1)
 
