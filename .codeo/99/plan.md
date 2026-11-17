@@ -126,7 +126,7 @@ Accepted the recommendation: proceed and coordinate with #103 (engineer, in the 
 - *Put the digest in the script itself:* one file, no lookup. `.sbx/claude-image` goes away, moving the pin edits the script, and a host only gets the new pin by downloading the script again.
 
 **Answer:**
-_Pending._
+Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 
 ### Q11 — What should `end` count as "delivered", given that pull requests here are squash-merged and the branch is deleted at close? (qc F2)
 
@@ -138,7 +138,7 @@ _Pending._
 - *Leave the check, and document `--force` after a merge:* no code. Every normal close ends with `--force`, which is the finding.
 
 **Answer:**
-_Pending._
+Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 
 ### Q12 — What should happen to `refs/sandboxes/codeo-<N>/*` in the host clone when a sandbox is removed? (qc F4)
 
@@ -150,7 +150,7 @@ _Pending._
 - *Leave them:* no code. The second `end` for an issue number refuses for commits that were already dealt with.
 
 **Answer:**
-_Pending._
+Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 
 ### Q13 — When `./codeo-<N>` already exists and the sandbox does not, should `issue` update the clone before creating from it? (qc F3)
 
@@ -162,7 +162,7 @@ _Pending._
 - *Warn and carry on:* prints how far behind the clone is and creates anyway. The stale start still happens.
 
 **Answer:**
-_Pending._
+Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 
 ## Notes
 
@@ -273,6 +273,15 @@ sbx.exe rm codeo-t
 
 Paste the warning `rm` prints, then answer `y`.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md, CHANGELOG.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 | | |
@@ -316,15 +325,6 @@ Paste the warning `rm` prints, then answer `y`.
 **Intake questions resolved.**
 - #114: where the trust is stored is settled from Claude Code's documentation, and Task 14 checks it in the extension.
 - #94's token question, #85's push and `user.email`, and #86's `REMOTE_CONTAINERS` question and unexplained stops are not resolved by planning. They become Task 5's trials and Task 14's acceptance run. Session titles in a sandbox no longer depend on `REMOTE_CONTAINERS` (the marker file).
-
-### Footprint
-
-```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, CHANGELOG.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
