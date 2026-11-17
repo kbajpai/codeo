@@ -93,6 +93,14 @@ So the criterion "The `rm -f -- ""` check output is recorded on #107" is **dropp
 
 **Shape.** One plan under `docs/plans/`, one pull request; no reference doc. `plan-shape`, `proof-of-done` and `wiki-rules` have no overlay here (exit 3), no invariants document, no shared environment, no `wiki` module, no exclusive resources. The `shell` suite has no `filter`, so each task's proof is the test file it touches and then `bash tests/run.sh`.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, scripts/cleanup.sh, scripts/live.sh, scripts/github.sh, scripts/board.sh, hooks/hooks.json, skills/cleanup/SKILL.md, skills/close/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, skills/implement/SKILL.md, skills/qc/SKILL.md, docs/skills.md, docs/handoff.md, CHANGELOG.md, tests/role.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/live.test.sh, tests/live-signal.test.sh, tests/github.test.sh, tests/board.test.sh, tests/devcontainer.test.sh, tests/close-skill.test.sh, tests/issue-skill.test.sh, tests/plan-skill.test.sh, tests/implement-skill.test.sh, tests/qc-skill.test.sh, docs/plans/2026-11-16-follow-ups-70-71-104-107.md, docs/plans/2026-11-17-follow-ups-116-qc-round-1.md
+wiki:       none
+exclusive:  none
+```
+
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-16-follow-ups-70-71-104-107.md` (unstaged, for the engineer to review and commit). **Shape:** one executable plan under `docs/plans/`, ten tasks, one pull request; no reference doc, no diagram beyond the one `docs/handoff.md` already has.
