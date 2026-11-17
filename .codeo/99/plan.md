@@ -207,6 +207,15 @@ sbx.exe rm codeo-t
 
 Paste the warning `rm` prints, then answer `y`.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, CHANGELOG.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
