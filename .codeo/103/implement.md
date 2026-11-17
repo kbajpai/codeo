@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-All four tasks of `docs/plans/2026-11-17-triage-judges-in-flight-work.md` are done, each reviewed, and the build passes. The next step is `/codeo:qc`.
+Round 2 is done: the three tasks of `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md` are built and reviewed, and the build passes. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -41,6 +41,38 @@ None.
 
 **Minor review notes left for qc to weigh:** no test for a log date tying an `Updated` row in the same file; a malformed `CODEO_TODAY` prints an empty day count; `docs/handoff.md`, `skills/triage/SKILL.md` and `lib/env.sh` each carry one unwrapped long line from the edits; the triage mismatch bullet refers forward to the branch bullet's `pr list-for-branch` and leaves the `waits:` vocabulary for a stash or abandon implicit; the ledger example in the skill has no `fix named` row.
 
+### Round 2
+
+2026-11-17
+(after plan.md round 2)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md` (committed `311f715`) |
+| Base branch | `sync-main.sh`: the branch already contains `origin/main` |
+| Overlaps | `overlap.sh 103` printed none |
+| Build | `shell` suite build `true`: exit 0 |
+| Shared environment | none configured |
+
+**Built** (every implementer and reviewer on `sonnet`):
+- Task 1, `779af7c`: `waits:` puts a live stash or abandon first (`resume — …`, with any open questions after it as `; engineer — …`). It then shows open questions, then `review — dossier archived`. Otherwise it gives the step owed next, read from the round markers: `(send-back from qc.md round <k>)`, `(after plan.md round <j>`, `(send-back from close.md round <m>)` and `close.md`'s `qc round at review:`. With no verdict it gives the step after `step:`, else `nothing known`. The fence logic is shared between questions and markers. A CRLF `## Log` date is read. Tie and CRLF tests are added, and `docs/handoff.md` is rewrapped and updated. Existing cases whose expected `waits:` follows from the new rules were changed to match: `/codeo:implement` after a plan outcome, `review — dossier archived`, and a pending-init fixture for `nothing known`.
+- Task 2, `de17297`: in `skills/triage/SKILL.md`, a stash or abandon is a `waits:` value starting `resume — `. *resume* moves the card to Ready only for one; for a quiet workflow it names the step `waits:` shows. An unassigned workflow is asked about whatever its date. A combined question's answer is recorded against every fingerprint, with `deferred` for kinds an option doesn't fit. A failed `board.sh status` read is never a mismatch. The table-row check now pins the whole row, and `lib/env.sh` is rewrapped. Against the pre-round-1 skill, the six new checks fail.
+- Task 3, `9e91d75`: the #103 `CHANGELOG.md` bullet is edited in place.
+
+The branch's `inflight.sh` against origin now prints `waits:` from these rules; for #116, whose qc round 2 is clear, it reads `/codeo:close`.
+
+**Documentation changed:** `scripts/inflight.sh`'s header, `docs/handoff.md` (*Who else is in flight*), `skills/triage/SKILL.md`, `lib/env.sh`, `CHANGELOG.md`. `docs/skills.md` is unchanged; its triage bullet is still true.
+
+**Deviations:** none from the plan's decisions. Task 3 was checked from its one-line diff by the controller instead of a reviewer dispatch.
+
+**Minor review notes left for qc:**
+- A verdict naming both `/codeo:plan` and `/codeo:implement` routes to implement. This order is inherited.
+- Fences are recognised at column 0 only. This is inherited.
+- For a quiet workflow, "the step its `waits:` line shows" is undefined when `waits:` names no step (`nothing known`, `review — dossier archived`).
+- F6's one-kind options name *fix it* and *file it* but not *resume*.
+- Some wrapped lines in the skill are ragged.
+
 ## Log
 
 - 2026-11-17 — implemented: 4 tasks, 6 commits (06d6ba1..06a5778), build ok · cost: 37m · opus-5-5 78k in + 11.1M cached / 27k out · sonnet-5-5 344k in + 4.2M cached / 53k out
+- 2026-11-17 — implemented round 2: 3 tasks, commits 779af7c..9e91d75, build ok · cost: 31m · opus-5-5 24k in + 7.2M cached / 11k out · sonnet-5-5 238k in + 2.7M cached / 39k out
