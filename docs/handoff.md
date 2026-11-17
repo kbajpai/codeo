@@ -149,12 +149,16 @@ it.
   lists every workflow with a dossier on a pushed branch — its issue, branch, assignee, last
   finished step, its plan's footprint, the files the branch actually changes, when it was last
   touched and by what evidence (`touched:`), what it waits on (`waits:`), qc's last verdict when
-  there is one (`verdict:`), and a `live:` line per live session. The `touched:`, `waits:` and
-  `verdict:` lines are read from the pushed branch only, and `--tsv` does not carry them. It reads
-  origin, so it sees other engineers' work as soon as they push, which every step does. `inflight.sh --tsv` and `intake.sh lease list --tsv` are the forms a status
-  reporter reads, and the config's `hooks.onLeaseChange` runs after every lease change, since a push
-  to the intake branch is all a lease change is. Any such report is a view of what is pushed: a row
-  that looks wrong is fixed by pushing, never by editing the report.
+  there is one (`verdict:`), and a `live:` line per live session. `waits:` names a live stash or an
+  abandon first (`resume — …`), then open questions (`engineer — plan.md Q2`), else the step the
+  workflow owes next, read from the rounds' send-back markers and qc's verdict, or
+  `review — dossier archived`. The `touched:`, `waits:` and `verdict:` lines are read from the
+  pushed branch only, and `--tsv` does not carry them. It reads origin, so it sees other
+  engineers' work as soon as they push, which every step does. `inflight.sh --tsv` and
+  `intake.sh lease list --tsv` are the forms a status reporter reads, and the config's
+  `hooks.onLeaseChange` runs after every lease change, since a push to the intake branch is all a
+  lease change is. Any such report is a view of what is pushed: a row that looks wrong is fixed by
+  pushing, never by editing the report.
 - **Who is working right now.** While a Claude session runs in a checkout holding `.codeo/active`,
   a plugin hook publishes `refs/codeo/live/<issue>/<machine>` — one parentless commit, force-pushed
   over itself — at most every 5 minutes, and deletes it when the session ends. `inflight.sh` prints

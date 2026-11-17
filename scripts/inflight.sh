@@ -11,10 +11,15 @@
 #       `## Log` date, the source naming which (`branch tip`, `<step>.md Updated`, `<step>.md log`; a tie goes to the
 #       dossier). Whole calendar days to today (CODEO_TODAY=YYYY-MM-DD overrides, for tests), never negative; a
 #       date that does not parse is skipped, and the line is left out when none does. Human blocks only; git only.
-#       `waits:` follows `touched:` — what the workflow waits on, the first that applies: `engineer — <step>.md Q2, Q3;
-#       …` for open questions in its dossiers, `resume — …` when its stash is live or it was abandoned unresumed
-#       (claim.sh --stash-live, reading the fetched branch), `review — PR open`, the route qc's last verdict names
-#       (`/codeo:close`, `/codeo:implement`, `/codeo:plan`), else `nothing known`. `verdict:` follows it, only when
+#       `waits:` follows `touched:` — what the workflow waits on, the first that applies: `resume — …` when its
+#       stash is live or it was abandoned unresumed (claim.sh --stash-live, reading the fetched branch; working
+#       dossiers only); `engineer — plan.md Q2; qc.md Q1` for open questions in its dossiers (after `resume — …;`
+#       when both apply); `review — dossier archived` once close has opened its PR; the step a close send-back
+#       (review feedback, a conflict with the base) leaves owing (`/codeo:implement`, then `/codeo:qc` until qc
+#       grades a later round); the step qc's last verdict leaves owing, read from the `(send-back from …)` and
+#       `(after plan.md round <j>…)` markers (`/codeo:close` when clear, else `/codeo:plan`, `/codeo:implement`
+#       or `/codeo:qc`); with no verdict, the step after the last finished one (init: `/codeo:plan`, plan:
+#       `/codeo:implement`, implement: `/codeo:qc`); else `nothing known`. `verdict:` follows it, only when
 #       qc.md's last round has a bold Verdict/Routing span: `round <k> — <span>`. Human blocks only; no network.
 #       --branches prints one `N<TAB>branch<TAB>dir` line per workflow (dir is <state>/N or
 #       <state>/done/N, <state> being the .codeo directory) and nothing else — no assignee lookup, so no `gh` call, and nothing at
@@ -94,7 +99,7 @@ touched_of() {
     valid_date "$best_d" || return 0
     best_s="branch tip"
     for step in "${steps[@]}"; do
-        text=$(git show "$sha:$dir/$step.md" 2>/dev/null) || continue
+        text=$(git show "$sha:$dir/$step.md" 2>/dev/null | tr -d '\r') || continue
         d=$(printf '%s\n' "$text" | awk -F'|' '/^\| *Updated *\|/ { gsub(/ /, "", $3); print $3; exit }')
         if valid_date "$d" && [[ ! $d < $best_d ]]; then best_d=$d best_s="$step.md Updated"; fi
         d=$(printf '%s\n' "$text" | awk '
@@ -114,25 +119,29 @@ days_since() {
     echo $(((now - then) / 86400 > 0 ? (now - then) / 86400 : 0))
 }
 
+# The awk every reader of a dossier shares: sets t to the line and f to 1 when it is a ``` or ~~~ fence
+# line or inside a fence (which closes on a run at least as long as the one that opened it).
+fence_awk='
+    function run(s, c,   n) { n = 0; while (substr(s, n + 1, 1) == c) n++; return n }
+    {
+        t = $0; f = 0
+        if (fence_len == 0) {
+            c = substr(t, 1, 1)
+            if ((c == "`" || c == "~") && run(t, c) >= 3) { fence_char = c; fence_len = run(t, c); f = 1 }
+        } else {
+            f = 1
+            n = run(t, fence_char)
+            if (n >= fence_len && substr(t, n + 1) ~ /^[ \t]*$/) fence_len = 0
+        }
+    }'
+
 # The open questions of one dossier file at <sha>: `Q3, Q4` (or the whole heading when it has no Q<n>), or
 # nothing. dossier-check.sh's open_questions_of, read from git: a `### ` heading under `## Questions` whose
 # `**Answer:**` body (the rest of that line, then each line to the next heading) is blank; a heading with
 # no `**Answer:**` line is not open; lines inside a ``` fence are ignored.
 open_questions_in() {
-    { git show "$1:$2" 2>/dev/null || true; } | tr -d '\r' | awk '
-        function run(s, c,   n) { n = 0; while (substr(s, n + 1, 1) == c) n++; return n }
+    { git show "$1:$2" 2>/dev/null || true; } | tr -d '\r' | awk "$fence_awk"'
         function settle() { if (label != "" && answering && !answered) out = out (out == "" ? "" : ", ") label; label = ""; answering = 0; answered = 0 }
-        {
-            t = $0; f = 0
-            if (fence_len == 0) {
-                c = substr(t, 1, 1)
-                if ((c == "`" || c == "~") && run(t, c) >= 3) { fence_char = c; fence_len = run(t, c); f = 1 }
-            } else {
-                f = 1
-                n = run(t, fence_char)
-                if (n >= fence_len && substr(t, n + 1) ~ /^[ \t]*$/) fence_len = 0
-            }
-        }
         sec == 2 { next }
         !f && t ~ /^#+ / {
             level = index(t, " ") - 1
@@ -177,26 +186,100 @@ verdict_of() {
     printf 'round %s — %s\n' "${k:-1}" "$span"
 }
 
-# What a workflow waits on, first that applies: an open question (`engineer — plan.md Q2; qc.md Q1`); a
-# parked workflow (`resume — …`, from claim.sh --stash-live on the already-fetched branch); an open PR;
-# the route qc's last verdict names; else `nothing known`. Any failure falls to the next rule.
+# The round number of the `### Round <n>` heading above the first line that starts (after whitespace) with
+# <prefix> and is not followed by a digit; 1 when no heading precedes it; nothing when no line does. Fenced
+# lines do not count, CR is ignored, a missing file is nothing.
+marker_round() {
+    { git show "$1:$2" 2>/dev/null || true; } | tr -d '\r' | awk -v p="$3" "$fence_awk"'
+        !f && t ~ /^### Round [0-9]+/ { r = t; sub(/^### Round /, "", r); sub(/[^0-9].*/, "", r) }
+        !f {
+            s = t; sub(/^[ \t]+/, "", s)
+            if (index(s, p) == 1 && substr(s, length(p) + 1, 1) !~ /[0-9]/) { print (r == "" ? 1 : r); exit }
+        }' || true
+}
+
+# `<m> <k>` when close.md's last `### Round <m>` is a send-back (`— review feedback`, `— conflicts with …`);
+# <k> is the `qc round at review: <k>` that round records, empty when it records none. Else nothing.
+close_send_back() {
+    { git show "$1:$2/close.md" 2>/dev/null || true; } | tr -d '\r' | awk "$fence_awk"'
+        !f && t ~ /^### Round [0-9]+/ {
+            m = t; sub(/^### Round /, "", m); sub(/[^0-9].*/, "", m)
+            sendback = (t ~ /^### Round [0-9]+[^A-Za-z0-9]+(review feedback|conflicts with)/); k = ""; next
+        }
+        !f && t ~ /^## / { sendback = 0 }
+        !f && sendback && k == "" && match(t, /qc round at review:[ `]*[0-9]+/) {
+            k = substr(t, RSTART, RLENGTH); sub(/^[^0-9]*/, "", k)
+        }
+        END { if (sendback) print m " " k }' || true
+}
+
+# The number of the last `### Round` in qc.md's `## Outcome`, else 1 when it has an outcome, else nothing.
+last_qc_round() {
+    { git show "$1:$2/qc.md" 2>/dev/null || true; } | tr -d '\r' | awk "$fence_awk"'
+        !f && t ~ /^## Outcome/ { o = 1; next }
+        !f && t ~ /^## / { o = 0 }
+        o && !f && t ~ /^### Round [0-9]+/ { r = t; sub(/^### Round /, "", r); sub(/[^0-9].*/, "", r) }
+        o && !f && t ~ /[^ \t]/ { has = 1 }
+        END { if (r != "") print r; else if (has) print 1 }' || true
+}
+
+# What a workflow waits on, first that applies (rules 1 and 2 share one line): a live stash or abandon
+# (`resume — …`, claim.sh --stash-live on the already-fetched branch, working dossiers only); an open
+# question (`engineer — plan.md Q2; qc.md Q1`); an archived dossier (`review — dossier archived`); the round
+# close sent back (`/codeo:implement`, then `/codeo:qc` until qc re-grades); qc's last verdict (clear:
+# `/codeo:close`; back to plan or implement: that step until its round answers the verdict's round, then
+# `/codeo:qc`); else the step after the last one finished; else `nothing known`. Any failure falls to the next.
 waits_of() {
-    local sha=$1 dir=$2 state_token=$3 branch=$4 n=$5 verdict=$6 step q parts= out rc=0
-    for step in "${steps[@]}"; do
-        q=$(open_questions_in "$sha" "$dir/$step.md")
-        [[ -z $q ]] || parts+="${parts:+; }$step.md $q"
-    done
-    if [[ -n $parts ]]; then echo "engineer — $parts"; return 0; fi
+    local sha=$1 dir=$2 state_token=$3 branch=$4 n=$5 verdict=$6 step=$7
+    local s q parts= out rc=0 lead= sb m k j qcr
     if [[ $state_token == working ]]; then
         out=$(bash "$CODEO_PLUGIN_ROOT/scripts/claim.sh" --stash-live "$n" "$branch" . </dev/null 2>/dev/null) || rc=$?
-        if [[ $rc == 0 || $rc == 4 ]] && [[ -n $out ]]; then echo "resume — ${out#claim: }"; return 0; fi
+        if [[ $rc == 0 || $rc == 4 ]] && [[ -n $out ]]; then lead="resume — ${out#claim: }"; fi
     fi
-    if [[ $state_token == pr-open ]]; then echo "review — PR open"; return 0; fi
-    verdict=${verdict#round * — }
-    if grep -q -i -E '^clear[[:space:]]*(\.|,|;|:|—|–|$)' <<< "$verdict"; then echo "/codeo:close"; return 0; fi
-    case $verdict in
-        *"/codeo:implement"*) echo "/codeo:implement" ;;
-        *"/codeo:plan"*) echo "/codeo:plan" ;;
+    for s in "${steps[@]}"; do
+        q=$(open_questions_in "$sha" "$dir/$s.md")
+        [[ -z $q ]] || parts+="${parts:+; }$s.md $q"
+    done
+    if [[ -n $parts ]]; then lead+="${lead:+; }engineer — $parts"; fi
+    if [[ -n $lead ]]; then echo "$lead"; return 0; fi
+    if [[ $state_token == pr-open ]]; then echo "review — dossier archived"; return 0; fi
+    sb=$(close_send_back "$sha" "$dir")
+    if [[ -n $sb ]]; then
+        m=${sb% *} k=${sb#* }
+        if [[ -z $(marker_round "$sha" "$dir/implement.md" "(send-back from close.md round $m)") ]]; then
+            echo "/codeo:implement"; return 0
+        fi
+        qcr=$(last_qc_round "$sha" "$dir")
+        if [[ -z $k || ${qcr:-0} -le $k ]]; then echo "/codeo:qc"; return 0; fi
+    fi
+    if [[ -n $verdict ]]; then
+        k=${verdict#round } k=${k%% *}
+        verdict=${verdict#round * — }
+        if grep -q -i -E '^clear[[:space:]]*(\.|,|;|:|—|–|$)' <<< "$verdict"; then echo "/codeo:close"; return 0; fi
+        case $verdict in
+            *"/codeo:implement"*)
+                if [[ -z $(marker_round "$sha" "$dir/implement.md" "(send-back from qc.md round $k)") ]]; then
+                    echo "/codeo:implement"
+                else
+                    echo "/codeo:qc"
+                fi
+                return 0 ;;
+            *"/codeo:plan"*)
+                j=$(marker_round "$sha" "$dir/plan.md" "(send-back from qc.md round $k)")
+                if [[ -z $j ]]; then
+                    echo "/codeo:plan"
+                elif [[ -z $(marker_round "$sha" "$dir/implement.md" "(after plan.md round $j") ]]; then
+                    echo "/codeo:implement"
+                else
+                    echo "/codeo:qc"
+                fi
+                return 0 ;;
+        esac
+    fi
+    case $step in
+        init) echo "/codeo:plan" ;;
+        plan) echo "/codeo:implement" ;;
+        implement) echo "/codeo:qc" ;;
         *) echo "nothing known" ;;
     esac
 }
@@ -259,7 +342,7 @@ while IFS= read -r ref; do
         IFS=$'\t' read -r t_date t_source <<< "$(touched_of "$sha" "$dir")"
         [[ -z $t_date ]] || echo "  touched:   $t_date ($t_source), $(days_since "$t_date") days ago"
         verdict=$(verdict_of "$sha" "$dir")
-        echo "  waits:     $(waits_of "$sha" "$dir" "$state_token" "$branch" "$n" "$verdict")"
+        echo "  waits:     $(waits_of "$sha" "$dir" "$state_token" "$branch" "$n" "$verdict" "$(last_step "$sha" "$dir")")"
         [[ -z $verdict ]] || echo "  verdict:   $verdict"
         if [[ -z $live_ok ]]; then
             echo "  live:      unknown (could not fetch the signals)"

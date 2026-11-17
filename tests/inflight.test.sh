@@ -583,7 +583,7 @@ w_dossier 40 init "# init
 
 ## Outcome
 
-Done."
+$pending"
 git -C "$w_origin" checkout -q main
 w_clone=$(clone_of "$w_origin")
 w_out=$(run_today "$w_clone")
@@ -593,10 +593,10 @@ case_desc="waits_on_the_engineer"
 assert_contains "line" "  waits:     engineer — plan.md Q2, Q3; qc.md Q1" "$(w_block 31)"
 
 case_desc="waits_answer_on_the_same_line_is_answered"
-assert_contains "not engineer" "  waits:     nothing known" "$(w_block 32)"
+assert_contains "next step, not engineer" "  waits:     /codeo:implement" "$(w_block 32)"
 
 case_desc="waits_ignores_a_fenced_question"
-assert_contains "not engineer" "  waits:     nothing known" "$(w_block 33)"
+assert_contains "next step, not engineer" "  waits:     /codeo:implement" "$(w_block 33)"
 
 case_desc="waits_on_a_stash"
 assert_contains "line" "  waits:     resume — #34's stash is live" "$(w_block 34)"
@@ -605,7 +605,7 @@ case_desc="waits_on_an_abandon"
 assert_contains "line" "  waits:     resume — #35 was abandoned on" "$(w_block 35)"
 
 case_desc="waits_on_review"
-assert_contains "line" "  waits:     review — PR open" "$(w_block 36)"
+assert_contains "line" "  waits:     review — dossier archived" "$(w_block 36)"
 
 case_desc="waits_after_a_send_back"
 assert_contains "waits" "  waits:     /codeo:implement" "$(w_block 37)"
@@ -690,10 +690,10 @@ git -C "$w_clone" fetch -q
 w_out=$(run_today "$w_clone")
 
 case_desc="waits_ignores_a_tilde_fence"
-assert_contains "not engineer" "  waits:     nothing known" "$(w_block 41)"
+assert_contains "next step, not engineer" "  waits:     /codeo:implement" "$(w_block 41)"
 
 case_desc="waits_ignores_a_four_backtick_fence_holding_three"
-assert_contains "not engineer" "  waits:     nothing known" "$(w_block 42)"
+assert_contains "next step, not engineer" "  waits:     /codeo:implement" "$(w_block 42)"
 
 case_desc="waits_reads_a_questions_heading_with_a_suffix"
 assert_contains "engineer" "  waits:     engineer — plan.md Q1" "$(w_block 43)"
@@ -701,6 +701,232 @@ assert_contains "engineer" "  waits:     engineer — plan.md Q1" "$(w_block 43)
 case_desc="clearly_is_not_clear"
 assert_contains "verdict" "  verdict:   round 1 — clearly fine" "$(w_block 44)"
 assert_contains "not close" "  waits:     nothing known" "$(w_block 44)"
+
+# Round 2: waits: follows the rounds past qc's verdict; a stash leads; the next step when there is no verdict.
+for n in 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59; do
+    printf '{"number":%s,"labels":[],"assignees":[]}' "$n" > "$stub_dir/GET_repos_o_n_issues_$n.json"
+done
+qc_back_plan='# qc
+
+## Outcome
+
+### Round 1
+
+**Verdict: back to `/codeo:plan`.**'
+qc_clear_1='# qc
+
+## Outcome
+
+### Round 1
+
+**Verdict: clear — forward to `/codeo:close`.**'
+plan_replanned='# plan
+
+## Outcome
+
+### Round 1
+
+First plan.
+
+### Round 2
+
+2026-11-17
+(send-back from qc.md round 1)'
+close_review='# close
+
+## Outcome
+
+### Round 1
+
+Opened the PR.
+
+### Round 2 — review feedback
+
+`qc round at review: 1`'
+w_dossier 45 qc "$qc_back_plan"
+raw_dossier "$w_origin" 45 plan 2026-11-10 "$plan_replanned"
+w_dossier 46 qc "$qc_back_plan"
+raw_dossier "$w_origin" 46 plan 2026-11-10 "$plan_replanned"
+raw_dossier "$w_origin" 46 implement 2026-11-10 '# implement
+
+## Outcome
+
+### Round 2
+(after plan.md round 2)
+Built it.'
+w_dossier 47 qc '# qc
+
+## Outcome
+
+### Round 1
+
+**Verdict: back to `/codeo:implement`.**'
+raw_dossier "$w_origin" 47 implement 2026-11-10 '# implement
+
+## Outcome
+
+### Round 2
+
+(send-back from qc.md round 1)
+Fixed.'
+w_dossier 48 qc "$qc_clear_1"
+raw_dossier "$w_origin" 48 close 2026-11-10 "$close_review"
+w_dossier 49 qc "$qc_clear_1"
+raw_dossier "$w_origin" 49 close 2026-11-10 "$close_review"
+raw_dossier "$w_origin" 49 implement 2026-11-10 '# implement
+
+## Outcome
+
+### Round 2
+
+(send-back from close.md round 2)
+Fixed.'
+w_dossier 50 qc "$qc_clear_1
+
+### Round 2
+
+**Verdict: clear — forward to \`/codeo:close\`.**"
+raw_dossier "$w_origin" 50 close 2026-11-10 "$close_review"
+raw_dossier "$w_origin" 50 implement 2026-11-10 '# implement
+
+## Outcome
+
+### Round 2
+
+(send-back from close.md round 2)
+Fixed.'
+w_dossier 51 close '### Round 1 — conflicts with main'
+w_dossier 52 plan "# plan
+
+## Outcome
+
+Planned."
+w_dossier 53 implement "# implement
+
+## Outcome
+
+Built."
+w_dossier 54 init "# init
+
+## Outcome
+
+Started."
+w_dossier 55 init "# init
+
+## Outcome
+
+Started."
+raw_dossier "$w_origin" 55 close 2026-11-10 "# close
+
+## Outcome
+
+### Round 1 — stashed"
+raw_dossier "$w_origin" 55 plan 2026-11-10 "# plan
+
+## Questions
+
+### Q2 second
+**Answer:**
+
+## Outcome
+
+Done."
+w_dossier 56 qc "$qc_back_plan"
+raw_dossier "$w_origin" 56 plan 2026-11-10 '# plan
+
+## Outcome
+
+### Round 2
+
+see (send-back from qc.md round 1)'
+w_dossier 57 qc "$qc_back_plan"
+raw_dossier "$w_origin" 57 plan 2026-11-10 '# plan
+
+## Outcome
+
+### Round 2
+
+```
+(send-back from qc.md round 1)
+```'
+w_dossier 58 qc "$qc_back_plan"
+raw_dossier "$w_origin" 58 plan 2026-11-10 "$(printf '# plan\r\n\r\n## Outcome\r\n\r\n### Round 2\r\n\r\n   (send-back from qc.md round 1)\r\n')"
+w_dossier 59 qc "$qc_back_plan"
+raw_dossier "$w_origin" 59 plan 2026-11-10 "$plan_replanned"
+raw_dossier "$w_origin" 59 implement 2026-11-10 '# implement
+
+## Outcome
+
+### Round 2
+
+(after plan.md round 20, answering something else)
+Built.'
+git -C "$w_origin" checkout -q main
+git -C "$w_clone" fetch -q
+w_out=$(run_today "$w_clone")
+
+case_desc="waits_after_a_replan"
+assert_contains "plan answered, implement owed" "  waits:     /codeo:implement" "$(w_block 45)"
+assert_contains "implement answered, qc owed" "  waits:     /codeo:qc" "$(w_block 46)"
+
+case_desc="waits_after_an_implement_send_back_answered"
+assert_contains "line" "  waits:     /codeo:qc" "$(w_block 47)"
+
+case_desc="waits_after_review_feedback"
+assert_contains "implement owed" "  waits:     /codeo:implement" "$(w_block 48)"
+assert_contains "qc owed" "  waits:     /codeo:qc" "$(w_block 49)"
+
+case_desc="waits_after_review_round_rechecked"
+assert_contains "line" "  waits:     /codeo:close" "$(w_block 50)"
+
+case_desc="waits_after_conflicts_with_base"
+assert_contains "line" "  waits:     /codeo:implement" "$(w_block 51)"
+
+case_desc="waits_names_the_next_step"
+assert_contains "plan" "  waits:     /codeo:implement" "$(w_block 52)"
+assert_contains "implement" "  waits:     /codeo:qc" "$(w_block 53)"
+assert_contains "init" "  waits:     /codeo:plan" "$(w_block 54)"
+
+case_desc="waits_stash_before_questions"
+assert_contains "line" "  waits:     resume — #55's stash is live; engineer — plan.md Q2" "$(w_block 55)"
+
+case_desc="waits_marker_must_start_a_line"
+assert_contains "mid-line" "  waits:     /codeo:plan" "$(w_block 56)"
+assert_contains "fenced" "  waits:     /codeo:plan" "$(w_block 57)"
+
+case_desc="waits_marker_after_indent_and_crlf"
+assert_contains "line" "  waits:     /codeo:implement" "$(w_block 58)"
+
+case_desc="waits_marker_round_is_not_a_prefix_of_another"
+assert_contains "round 20 is not round 2" "  waits:     /codeo:implement" "$(w_block 59)"
+
+# touched: — a CRLF log date, and a tie between Updated and the log.
+for n in 27 28; do
+    printf '{"number":%s,"labels":[],"assignees":[]}' "$n" > "$stub_dir/GET_repos_o_n_issues_$n.json"
+done
+touched_branch "$t_origin" feat/t27
+raw_dossier "$t_origin" 27 init 2026-11-10 "# init
+
+## Log
+
+- 2026-11-15$(printf '\r')"
+touched_branch "$t_origin" feat/t28
+raw_dossier "$t_origin" 28 plan 2026-11-10 "# plan
+
+| Updated | 2026-11-15 |
+
+## Log
+
+- 2026-11-15 — planned"
+git -C "$t_origin" checkout -q main
+git -C "$t_clone" fetch -q
+t_out=$(run_today "$t_clone")
+
+case_desc="touched_log_date_with_crlf"
+assert_contains "line" "  touched:   2026-11-15 (init.md log), 2 days ago" "$(t_block 27)"
+
+case_desc="touched_log_ties_updated"
+assert_contains "line" "  touched:   2026-11-15 (plan.md log), 2 days ago" "$(t_block 28)"
 
 if ((failures)); then
     echo "$failures case(s) failed"
