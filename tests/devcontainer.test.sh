@@ -2499,6 +2499,16 @@ docs_say_two_same_named_containers_cannot_both_exist() {
     grep -q 'name already in use' "$readme" || fail 'the README lacks "name already in use"'
 }
 
+docs_readme_describes_folder_trust() {
+    local readme="$repo/.devcontainer/README.md"
+    grep -q 'hasTrustDialogAccepted' "$readme" || fail 'the README lacks hasTrustDialogAccepted'
+    grep -q 'Trust this folder' "$readme" || fail 'the README lacks "Trust this folder"'
+}
+
+docs_changelog_names_folder_trust() {
+    grep -q 'Trust this folder' "$repo/CHANGELOG.md" || fail 'CHANGELOG.md lacks "Trust this folder"'
+}
+
 docs_changelog_names_the_replay_sed_and_the_folder_limit() {
     local log="$repo/CHANGELOG.md"
     grep '(#52)' "$log" | grep -q 'tests/replay.test.sh' || fail 'the #52 bullet does not name tests/replay.test.sh'
@@ -2670,6 +2680,8 @@ cases=(
     scripts_are_committed_executable
     docs_say_two_same_named_containers_cannot_both_exist
     docs_changelog_names_the_replay_sed_and_the_folder_limit
+    docs_readme_describes_folder_trust
+    docs_changelog_names_folder_trust
 )
 
 for current in "${cases[@]}"; do
