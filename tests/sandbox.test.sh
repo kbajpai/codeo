@@ -239,8 +239,40 @@ issue_without_git_exe_prints_the_trust_command() {
 issue_creates_with_the_limits() {
     sb_setup create
     sb_run issue 113 fix/x
-    [[ "$(sb_calls)" == *$'sbx create --clone --name codeo-113 --cpus 2 --memory 4g claude .\n'* ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'sbx create --clone --name codeo-113 --cpus 2 --memory 4g docker.io/sbx/claude@sha256:'* ]] || fail "calls: $(sb_calls)"
     [[ "$(<"$sb_dir/create_cwd")" == "$(cd "$sb_dir/work/codeo-113" && pwd -P)" ]] || fail "create ran in: $(<"$sb_dir/create_cwd")"
+}
+
+issue_creates_at_the_pinned_image() {
+    sb_setup pin
+    local ref
+    ref=$(<"$(dirname "$script")/claude-image")
+    sb_run issue 113 fix/x
+    [[ "$(sb_calls)" == *$'sbx create --clone --name codeo-113 --cpus 2 --memory 4g '"$ref"$' .\n'* ]] || fail "calls: $(sb_calls)"
+    sb_setup pin2
+    printf '%s\n' 'docker.io/sbx/claude@sha256:0000000000000000000000000000000000000000000000000000000000000000' >"$sb_dir/image"
+    CODEO_SBX_IMAGE="$sb_dir/image" sb_run issue 113 fix/x
+    [[ "$(sb_calls)" == *' 4g docker.io/sbx/claude@sha256:0000'*' .'* ]] || fail "override calls: $(sb_calls)"
+}
+
+a_pin_that_is_not_a_digest_is_refused() {
+    sb_setup badpin
+    printf '%s\n' 'docker.io/sbx/claude:latest' >"$sb_dir/image"
+    CODEO_SBX_IMAGE="$sb_dir/image" sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == codeo-sandbox:*"$sb_dir/image"* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *create* && "$(sb_calls)" != *clone* ]] || fail "calls: $(sb_calls)"
+    sb_setup nopin
+    CODEO_SBX_IMAGE="$sb_dir/missing" sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "missing exited $sb_rc"
+    [[ "$sb_err" == codeo-sandbox:*"$sb_dir/missing"* && "$sb_err" != *$'\n'* ]] || fail "missing stderr: $sb_err"
+    [[ "$(sb_calls)" != *create* ]] || fail "calls: $(sb_calls)"
+}
+
+the_pin_file_is_a_digest() {
+    local line
+    line=$(<"$(dirname "$script")/claude-image")
+    [[ "$line" =~ ^docker\.io/sbx/claude@sha256:[0-9a-f]{64}$ ]] || fail "pin was: $line"
 }
 
 issue_runs_the_start_script_with_the_identity() {
@@ -328,6 +360,9 @@ cases=(
     issue_skips_the_windows_trust_with_linux_sbx
     issue_without_git_exe_prints_the_trust_command
     issue_creates_with_the_limits
+    issue_creates_at_the_pinned_image
+    a_pin_that_is_not_a_digest_is_refused
+    the_pin_file_is_a_digest
     issue_runs_the_start_script_with_the_identity
     issue_rerun_on_an_existing_sandbox_creates_nothing
     issue_writes_the_sandbox_marker

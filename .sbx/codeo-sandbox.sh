@@ -65,8 +65,20 @@ sandbox_state() {
     echo missing
 }
 
-# The agent argument of "sbx create". Task 10 replaces it with the pinned image reference.
-create_agent=claude
+# The pinned Claude image reference, passed to "sbx create" as its kit reference in place of the agent name.
+create_agent=''
+
+# read_pin: read the one-line pin file (CODEO_SBX_IMAGE, else claude-image next to this script) into
+# create_agent, refusing a missing file or a line that is not docker.io/sbx/claude@sha256:<64 hex>.
+read_pin() {
+    local file=${CODEO_SBX_IMAGE:-$(dirname "${BASH_SOURCE[0]}")/claude-image} line=''
+    [[ -f "$file" ]] || die "the image pin $file is missing: it holds one line, docker.io/sbx/claude@sha256:<64 hex digits>"
+    read -r line <"$file" || [[ -n "$line" ]] || true
+    line=${line//$'\r'/}
+    [[ "$line" =~ ^docker\.io/sbx/claude@sha256:[0-9a-f]{64}$ ]] ||
+        die "the image pin $file is not a digest: it must be one line, docker.io/sbx/claude@sha256:<64 hex digits>"
+    create_agent=$line
+}
 
 # sandbox_path <name>: print the working folder inside the sandbox (sbx exec runs there, and starts a
 # stopped sandbox on its own).
@@ -153,6 +165,7 @@ cmd_issue() {
     valid_number "$1" || usage
     valid_branch "$2" || usage
     pick_sbx
+    read_pin
     ensure_host_clone "$1" "$2"
     ensure_windows_trust "$1"
     ensure_sandbox "$1"
