@@ -633,6 +633,75 @@ case_desc="tsv_and_branches_carry_no_waits"
 out=$(run_today "$w_clone" --tsv)
 assert_eq "tsv" 0 "$(printf '%s\n' "$out" | grep -c -e waits -e verdict || true)"
 
+# Fix round: fence kinds, section suffix, strict "clear".
+for n in 41 42 43 44; do
+    printf '{"number":%s,"labels":[],"assignees":[]}' "$n" > "$stub_dir/GET_repos_o_n_issues_$n.json"
+done
+w_dossier 41 plan '# plan
+
+## Questions
+
+~~~
+### Q9 fenced
+**Answer:**
+~~~
+
+### Q1 real
+**Answer:** ok
+
+## Outcome
+
+Done.'
+w_dossier 42 plan '# plan
+
+## Questions
+
+````
+```
+### Q9 fenced
+**Answer:**
+````
+
+### Q1 real
+**Answer:** ok
+
+## Outcome
+
+Done.'
+w_dossier 43 plan '# plan
+
+## Questions (open)
+
+### Q1 real
+**Answer:**
+
+# Next
+
+## Outcome
+
+Done.'
+w_dossier 44 qc '# qc
+
+## Outcome
+
+**Verdict: clearly fine**'
+git -C "$w_origin" checkout -q main
+git -C "$w_clone" fetch -q
+w_out=$(run_today "$w_clone")
+
+case_desc="waits_ignores_a_tilde_fence"
+assert_contains "not engineer" "  waits:     nothing known" "$(w_block 41)"
+
+case_desc="waits_ignores_a_four_backtick_fence_holding_three"
+assert_contains "not engineer" "  waits:     nothing known" "$(w_block 42)"
+
+case_desc="waits_reads_a_questions_heading_with_a_suffix"
+assert_contains "engineer" "  waits:     engineer — plan.md Q1" "$(w_block 43)"
+
+case_desc="clearly_is_not_clear"
+assert_contains "verdict" "  verdict:   round 1 — clearly fine" "$(w_block 44)"
+assert_contains "not close" "  waits:     nothing known" "$(w_block 44)"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

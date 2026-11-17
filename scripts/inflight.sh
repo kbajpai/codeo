@@ -119,27 +119,44 @@ days_since() {
 # `**Answer:**` body (the rest of that line, then each line to the next heading) is blank; a heading with
 # no `**Answer:**` line is not open; lines inside a ``` fence are ignored.
 open_questions_in() {
-    { git show "$1:$2" 2>/dev/null || true; } | awk '
+    { git show "$1:$2" 2>/dev/null || true; } | tr -d '\r' | awk '
+        function run(s, c,   n) { n = 0; while (substr(s, n + 1, 1) == c) n++; return n }
         function settle() { if (label != "" && answering && !answered) out = out (out == "" ? "" : ", ") label; label = ""; answering = 0; answered = 0 }
-        /^```/ { fence = !fence; next }
-        fence { next }
-        /^## / { settle(); q = ($0 ~ /^## Questions[ \t]*$/); next }
-        !q { next }
-        /^#+ / {
+        {
+            t = $0; f = 0
+            if (fence_len == 0) {
+                c = substr(t, 1, 1)
+                if ((c == "`" || c == "~") && run(t, c) >= 3) { fence_char = c; fence_len = run(t, c); f = 1 }
+            } else {
+                f = 1
+                n = run(t, fence_char)
+                if (n >= fence_len && substr(t, n + 1) ~ /^[ \t]*$/) fence_len = 0
+            }
+        }
+        sec == 2 { next }
+        !f && t ~ /^#+ / {
+            level = index(t, " ") - 1
+            text = substr(t, level + 2); sub(/[ \t]+$/, "", text)
+            if (sec == 1 && level <= 2) { settle(); sec = 2; next }
+            if (sec == 0) {
+                if (level == 2 && (text == "Questions" || index(text, "Questions ") == 1)) sec = 1
+                next
+            }
             settle()
-            if ($0 ~ /^### /) {
-                label = substr($0, 5)
+            if (t ~ /^### /) {
+                label = substr(t, 5)
                 if (label ~ /^Q[0-9]+/) sub(/[^Q0-9].*/, "", label)
             }
             next
         }
-        label != "" && !answering && /^\*\*Answer:\*\*/ {
+        sec != 1 { next }
+        label != "" && !answering && t ~ /^\*\*Answer:\*\*/ {
             answering = 1
-            rest = substr($0, length("**Answer:**") + 1)
+            rest = substr(t, length("**Answer:**") + 1)
             if (rest ~ /[^ \t]/) answered = 1
             next
         }
-        answering && /[^ \t]/ { answered = 1 }
+        answering && t ~ /[^ \t]/ { answered = 1 }
         END { settle(); if (out != "") print out }'
 }
 
@@ -164,7 +181,7 @@ verdict_of() {
 # parked workflow (`resume — …`, from claim.sh --stash-live on the already-fetched branch); an open PR;
 # the route qc's last verdict names; else `nothing known`. Any failure falls to the next rule.
 waits_of() {
-    local sha=$1 dir=$2 state_token=$3 branch=$4 n=$5 step q parts= out rc=0 verdict
+    local sha=$1 dir=$2 state_token=$3 branch=$4 n=$5 verdict=$6 step q parts= out rc=0
     for step in "${steps[@]}"; do
         q=$(open_questions_in "$sha" "$dir/$step.md")
         [[ -z $q ]] || parts+="${parts:+; }$step.md $q"
@@ -175,10 +192,9 @@ waits_of() {
         if [[ $rc == 0 || $rc == 4 ]] && [[ -n $out ]]; then echo "resume — ${out#claim: }"; return 0; fi
     fi
     if [[ $state_token == pr-open ]]; then echo "review — PR open"; return 0; fi
-    verdict=$(verdict_of "$sha" "$dir")
     verdict=${verdict#round * — }
+    if grep -q -i -E '^clear[[:space:]]*(\.|,|;|:|—|–|$)' <<< "$verdict"; then echo "/codeo:close"; return 0; fi
     case $verdict in
-        [Cc]lear*) echo "/codeo:close" ;;
         *"/codeo:implement"*) echo "/codeo:implement" ;;
         *"/codeo:plan"*) echo "/codeo:plan" ;;
         *) echo "nothing known" ;;
@@ -242,8 +258,8 @@ while IFS= read -r ref; do
         echo "  changed:    ${changed:-none}"
         IFS=$'\t' read -r t_date t_source <<< "$(touched_of "$sha" "$dir")"
         [[ -z $t_date ]] || echo "  touched:   $t_date ($t_source), $(days_since "$t_date") days ago"
-        echo "  waits:     $(waits_of "$sha" "$dir" "$state_token" "$branch" "$n")"
         verdict=$(verdict_of "$sha" "$dir")
+        echo "  waits:     $(waits_of "$sha" "$dir" "$state_token" "$branch" "$n" "$verdict")"
         [[ -z $verdict ]] || echo "  verdict:   $verdict"
         if [[ -z $live_ok ]]; then
             echo "  live:      unknown (could not fetch the signals)"
