@@ -6,6 +6,11 @@
 #       has an `## Outcome`, the plan's `### Footprint` lines when there is one, and `changed:` — the files the branch
 #       actually changes against origin/<base> (`git diff --name-only origin/<base>...<branch>`, dossiers left out,
 #       comma-joined, `none` when empty). --except leaves the caller's own issue out.
+#       `touched:` follows `changed:` — when the workflow was last touched and by what evidence, `<date> (<source>),
+#       <d> days ago`: the newest of the branch tip's committer date, each dossier's `Updated` row and its newest
+#       `## Log` date, the source naming which (`branch tip`, `<step>.md Updated`, `<step>.md log`; a tie goes to the
+#       dossier). Whole calendar days to today (CODEO_TODAY=YYYY-MM-DD overrides, for tests), never negative; a
+#       date that does not parse is skipped, and the line is left out when none does. Human blocks only; git only.
 #       --branches prints one `N<TAB>branch<TAB>dir` line per workflow (dir is <state>/N or
 #       <state>/done/N, <state> being the .codeo directory) and nothing else — no assignee lookup, so no `gh` call, and nothing at
 #       all when nothing is in flight. It cannot be combined with --tsv: they are different outputs.
@@ -71,6 +76,39 @@ last_step() {
     echo "${done:-none}"
 }
 
+# A date worth trusting: YYYY-MM-DD that `date` accepts.
+valid_date() { [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && date -u -d "$1" +%s >/dev/null 2>&1; }
+
+# When a workflow was last touched, and by what evidence: `<date><TAB><source>`. The candidates are the
+# branch tip's committer date and, per dossier step, its `| Updated |` row and its newest `## Log` date.
+# Each replaces the best so far when its date is >= it, so a tie goes to the later candidate (a dossier
+# over the tip, a log over `Updated`). A date that does not parse is skipped, never fatal.
+touched_of() {
+    local sha=$1 dir=$2 step best_d best_s d text
+    best_d=$(git log -1 --format=%cs "$sha" 2>/dev/null || true)
+    valid_date "$best_d" || return 0
+    best_s="branch tip"
+    for step in "${steps[@]}"; do
+        text=$(git show "$sha:$dir/$step.md" 2>/dev/null) || continue
+        d=$(printf '%s\n' "$text" | awk -F'|' '/^\| *Updated *\|/ { gsub(/ /, "", $3); print $3; exit }')
+        if valid_date "$d" && [[ ! $d < $best_d ]]; then best_d=$d best_s="$step.md Updated"; fi
+        d=$(printf '%s\n' "$text" | awk '
+            /^## Log/ { l = 1; next }
+            /^## / { l = 0 }
+            l && /^- [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]( |$)/ { if ($2 > m) m = $2 }
+            END { print m }')
+        if valid_date "$d" && [[ ! $d < $best_d ]]; then best_d=$d best_s="$step.md log"; fi
+    done
+    printf '%s\t%s\n' "$best_d" "$best_s"
+}
+
+# Whole calendar days from a YYYY-MM-DD to today (CODEO_TODAY, else `date +%F`), never below 0.
+days_since() {
+    local then now today=${CODEO_TODAY:-$(date +%F)}
+    then=$(date -u -d "$1" +%s) now=$(date -u -d "$today" +%s)
+    echo $(((now - then) / 86400 > 0 ? (now - then) / 86400 : 0))
+}
+
 # The live sessions, for the human blocks only: fetched once, read once.
 live_ok= live_rows=
 if [[ -z $tsv && -z $branches ]]; then
@@ -126,6 +164,8 @@ while IFS= read -r ref; do
             f && /^ *(files|wiki|exclusive|sequenced):/ { sub(/^ */, ""); print "  " $0 }'
         changed=$(git diff --name-only "$base_sha...$sha" -- . ":!$state_rel" 2>/dev/null | paste -sd, - | sed 's/,/, /g')
         echo "  changed:    ${changed:-none}"
+        IFS=$'\t' read -r t_date t_source <<< "$(touched_of "$sha" "$dir")"
+        [[ -z $t_date ]] || echo "  touched:   $t_date ($t_source), $(days_since "$t_date") days ago"
         if [[ -z $live_ok ]]; then
             echo "  live:      unknown (could not fetch the signals)"
         else

@@ -239,7 +239,8 @@ plant_signal "$origin" 7 codeo-7 bob 35
 out=$(run_inflight "$clone")
 block7=$(printf '%s\n' "$out" | awk '/^#/ { p = ($1 == "#7") } p')
 assert_contains "live line after changed" "  changed:    src/x.txt
-  live:      bob on codeo-7 (container), 3" "$block7"
+  touched:" "$block7"
+assert_contains "live line" "  live:      bob on codeo-7 (container), 3" "$block7"
 assert_contains "age unit" "s ago" "$block7"
 assert_eq "one live line overall" 1 "$(printf '%s\n' "$out" | grep -c '^  live: ')"
 
@@ -358,6 +359,102 @@ assert_eq "stdout" "" "$tsv_out"
 assert_contains "stderr" "inflight: assignee lookup for #11 failed" "$(cat "$scratch_root/err")"
 out=$(run_inflight "$clone2")
 assert_contains "human keeps the fallback" "  assignee:  ?" "$out"
+
+# touched: — a workflow's last-touched date and what it came from. An origin of its own, commits at
+# fixed committer dates, and today pinned to 2026-11-17.
+raw_dossier() {
+    local origin=$1 dir=$2 step=$3 commit_date=$4 body=$5
+    mkdir -p "$origin/.codeo/$dir"
+    printf '%s\n' "$body" > "$origin/.codeo/$dir/$step.md"
+    git -C "$origin" add .codeo
+    GIT_COMMITTER_DATE="$commit_date 12:00:00 +0000" git -C "$origin" commit -q -m "$step $dir"
+}
+touched_branch() { git -C "$1" checkout -q main; git -C "$1" checkout -q -b "$2"; }
+
+for n in 21 22 23 24 25 26; do
+    printf '{"number":%s,"labels":[],"assignees":[]}' "$n" > "$stub_dir/GET_repos_o_n_issues_$n.json"
+done
+t_origin=$(fresh_repo)
+touched_branch "$t_origin" feat/t21
+raw_dossier "$t_origin" 21 init 2026-11-10 "# init
+
+| Updated | 2026-11-11 |
+
+## Log
+
+- 2026-11-11 — started
+- 2026-11-14 — planned"
+touched_branch "$t_origin" feat/t22
+raw_dossier "$t_origin" done/22 qc 2026-11-10 "# qc
+
+## Log
+
+- 2026-11-13 — checked"
+touched_branch "$t_origin" feat/t23
+raw_dossier "$t_origin" 23 init 2026-11-16 "# init
+
+| Updated | 2026-11-12 |
+
+## Log
+
+- 2026-11-12 — started"
+touched_branch "$t_origin" feat/t24
+raw_dossier "$t_origin" 24 plan 2026-11-15 "# plan
+
+| Updated | 2026-11-15 |"
+touched_branch "$t_origin" feat/t25
+raw_dossier "$t_origin" 25 init 2026-11-09 "# init
+
+| Updated | 2026-13-45 |
+
+## Log
+
+- someday — x"
+touched_branch "$t_origin" feat/t26
+raw_dossier "$t_origin" 26 init 2026-11-10 "# init
+
+## Log
+
+- 2026-11-20 — from the future"
+git -C "$t_origin" checkout -q main
+t_clone=$(clone_of "$t_origin")
+run_today() { local c=$1; shift; (cd "$c" && CODEO_TODAY=2026-11-17 PATH="$stub_bin:$PATH" bash "$plugin/scripts/inflight.sh" "$@" 2>/dev/null); }
+t_out=$(run_today "$t_clone")
+t_block() { printf '%s\n' "$t_out" | awk -v h="#$1" '/^#/ { p = ($1 == h) } p'; }
+
+case_desc="touched_takes_the_newest_log_date"
+assert_contains "line" "  touched:   2026-11-14 (init.md log), 3 days ago" "$(t_block 21)"
+
+case_desc="touched_prefers_the_tip_when_newer"
+assert_contains "line" "  touched:   2026-11-16 (branch tip), 1 days ago" "$(t_block 23)"
+
+case_desc="touched_tie_names_the_dossier"
+assert_contains "line" "  touched:   2026-11-15 (plan.md Updated), 2 days ago" "$(t_block 24)"
+
+case_desc="touched_falls_back_to_the_tip"
+assert_contains "line" "  touched:   2026-11-09 (branch tip), 8 days ago" "$(t_block 25)"
+
+case_desc="touched_never_negative"
+assert_contains "line" "  touched:   2026-11-20 (init.md log), 0 days ago" "$(t_block 26)"
+
+case_desc="touched_reads_an_archived_dossier"
+assert_contains "line" "  touched:   2026-11-13 (qc.md log), 4 days ago" "$(t_block 22)"
+
+case_desc="touched_sits_between_changed_and_live"
+plant_signal "$t_origin" 21 codeo-21 bob 35
+t_out=$(run_today "$t_clone")
+assert_eq "order" "changed: touched: live:" "$(t_block 21 | grep -oE '^  (changed|touched|live):' | tr -d ' ' | paste -sd' ' -)"
+clear_signals "$t_origin"
+
+case_desc="tsv_and_branches_are_unchanged"
+out=$(run_today "$t_clone" --tsv)
+assert_eq "tsv has no touched" 0 "$(printf '%s\n' "$out" | grep -c touched || true)"
+assert_eq "tsv columns" "5" "$(printf '%s\n' "$out" | head -1 | awk -F'\t' '{print NF}')"
+assert_contains "tsv row" "21${tab}feat/t21${tab}working${tab}none${tab}" "$out"
+out=$(run_today "$t_clone" --branches)
+assert_eq "branches has no touched" 0 "$(printf '%s\n' "$out" | grep -c touched || true)"
+assert_eq "branches columns" "3" "$(printf '%s\n' "$out" | head -1 | awk -F'\t' '{print NF}')"
+assert_contains "branches row" "22${tab}feat/t22${tab}.codeo/done/22" "$out"
 
 if ((failures)); then
     echo "$failures case(s) failed"
