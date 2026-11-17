@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, opened by the send-back in `qc.md` round 1 (F1-F4: the plan's design for the pin file, `end` after a squash merge, the kept refs and an existing clone). Q10-Q13 are open; nothing is drafted until they are answered. The non-blocking findings F5-F8 need no decision and go into the round 2 tasks as they stand. Task 14, the host acceptance run, moves after the round 2 tasks. Round 1's plan stays at `docs/plans/2026-11-17-sbx-issue-sandbox.md`.
+Round 2, finished. Q10-Q13 are answered (recommendations accepted), the footprint check prints nothing and no exclusive resource is named. The round 2 plan is approved and written at `docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md`, unstaged for the engineer to commit. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -273,15 +273,6 @@ sbx.exe rm codeo-t
 
 Paste the warning `rm` prints, then answer `y`.
 
-### Footprint
-
-```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md, CHANGELOG.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 | | |
@@ -326,9 +317,39 @@ sequenced:  none
 - #114: where the trust is stored is settled from Claude Code's documentation, and Task 14 checks it in the extension.
 - #94's token question, #85's push and `user.email`, and #86's `REMOTE_CONTAINERS` question and unexplained stops are not resolved by planning. They become Task 5's trials and Task 14's acceptance run. Session titles in a sandbox no longer depend on `REMOTE_CONTAINERS` (the marker file).
 
+### Round 2
+
+2026-11-17
+(send-back from qc.md round 1)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md` (approved 2026-11-17, unstaged for the engineer to commit) |
+| Shape | An executable plan under `docs/plans/`, following round 1's plan. Its tasks are numbered 15-22, and Task 22 replaces round 1's Task 14 |
+| Tasks | 8: Tasks 15-21 are proved by `bash tests/sandbox.test.sh` or `bash tests/devcontainer.test.sh`, then `bash tests/run.sh`; Task 22 runs on the engineer's host |
+
+**Decisions** (Q10-Q13, recommendations accepted):
+- **Pin source (Q10).** `CODEO_SBX_IMAGE`, else `codeo-<N>/.sbx/claude-image`, else `origin/HEAD:.sbx/claude-image`. The script no longer reads a file beside itself. Rejected: a second download line (a pin moved later never reaches the host), and a digest inside the script (moving the pin means downloading the script again).
+- **Delivered (Q11).** `end` fetches `refs/pull/*/head` into `refs/remotes/origin/pr/*`, so a squash-merged branch's commits count as on `origin`. Rejected: asking GitHub through `gh` (needs a host login and one call per tip), and documenting `--force` after every merge.
+- **Refs at removal (Q12).** A plain `end` deletes `refs/sandboxes/codeo-<N>/`. `--force` moves the refs to `refs/codeo/ended/codeo-<N>/<UTC>/` in one transaction. Rejected: clearing them in `issue`, and leaving them.
+- **Clone refresh (Q13).** When the sandbox is missing, `issue` runs fetch and `merge --ff-only origin/<branch>`, and refuses with one line when it cannot. Rejected: refusing every existing clone, and warning then carrying on.
+- F5-F8 go in as they stand: Tasks 19-21.
+
+**Documentation the plan changes:** `.sbx/README.md`, `.codeo/overlays/init.md`, `docs/dev-environment-sbx-evaluation.md:455`, `CHANGELOG.md`.
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md, CHANGELOG.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-17 — Q1-Q7 raised · cost: 3m · fable-5-2 118k in + 1.1M cached / 6k out · sonnet-5-5 76k in + 283k cached / 7k out
 - 2026-11-17 — Q1-Q7 answered in the conversation; plan approved and written: docs/plans/2026-11-17-sbx-issue-sandbox.md; overlap.sh raised Q8-Q9 · cost: 43m · fable-5-2 144k in + 1.6M cached / 22k out · opus-5-5 179k in + 2.4M cached / 34k out · sonnet-5-5 76k in + 283k cached / 7k out · engineering plugin unavailable, its structure applied directly
 - 2026-11-17 — planned: docs/plans/2026-11-17-sbx-issue-sandbox.md · cost: 46m · fable-5-2 144k in + 1.6M cached / 22k out · opus-5-5 183k in + 3.3M cached / 37k out · sonnet-5-5 76k in + 283k cached / 7k out · Q8-Q9 answered; engineering plugin unavailable, its structure applied directly
 - 2026-11-17 — round 2 opened after qc.md round 1; Q10-Q13 raised · cost: 1m · fable-5-2 196k in + 188k cached / 3k out
+- 2026-11-17 — planned: docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md (round 2) · cost: 113m · opus-5-5 411k in + 1.4M cached / 17k out · engineering plugin unavailable; its structure applied directly
