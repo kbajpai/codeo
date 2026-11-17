@@ -11,6 +11,11 @@
 #       `## Log` date, the source naming which (`branch tip`, `<step>.md Updated`, `<step>.md log`; a tie goes to the
 #       dossier). Whole calendar days to today (CODEO_TODAY=YYYY-MM-DD overrides, for tests), never negative; a
 #       date that does not parse is skipped, and the line is left out when none does. Human blocks only; git only.
+#       `waits:` follows `touched:` — what the workflow waits on, the first that applies: `engineer — <step>.md Q2, Q3;
+#       …` for open questions in its dossiers, `resume — …` when its stash is live or it was abandoned unresumed
+#       (claim.sh --stash-live, reading the fetched branch), `review — PR open`, the route qc's last verdict names
+#       (`/codeo:close`, `/codeo:implement`, `/codeo:plan`), else `nothing known`. `verdict:` follows it, only when
+#       qc.md's last round has a bold Verdict/Routing span: `round <k> — <span>`. Human blocks only; no network.
 #       --branches prints one `N<TAB>branch<TAB>dir` line per workflow (dir is <state>/N or
 #       <state>/done/N, <state> being the .codeo directory) and nothing else — no assignee lookup, so no `gh` call, and nothing at
 #       all when nothing is in flight. It cannot be combined with --tsv: they are different outputs.
@@ -109,6 +114,77 @@ days_since() {
     echo $(((now - then) / 86400 > 0 ? (now - then) / 86400 : 0))
 }
 
+# The open questions of one dossier file at <sha>: `Q3, Q4` (or the whole heading when it has no Q<n>), or
+# nothing. dossier-check.sh's open_questions_of, read from git: a `### ` heading under `## Questions` whose
+# `**Answer:**` body (the rest of that line, then each line to the next heading) is blank; a heading with
+# no `**Answer:**` line is not open; lines inside a ``` fence are ignored.
+open_questions_in() {
+    { git show "$1:$2" 2>/dev/null || true; } | awk '
+        function settle() { if (label != "" && answering && !answered) out = out (out == "" ? "" : ", ") label; label = ""; answering = 0; answered = 0 }
+        /^```/ { fence = !fence; next }
+        fence { next }
+        /^## / { settle(); q = ($0 ~ /^## Questions[ \t]*$/); next }
+        !q { next }
+        /^#+ / {
+            settle()
+            if ($0 ~ /^### /) {
+                label = substr($0, 5)
+                if (label ~ /^Q[0-9]+/) sub(/[^Q0-9].*/, "", label)
+            }
+            next
+        }
+        label != "" && !answering && /^\*\*Answer:\*\*/ {
+            answering = 1
+            rest = substr($0, length("**Answer:**") + 1)
+            if (rest ~ /[^ \t]/) answered = 1
+            next
+        }
+        answering && /[^ \t]/ { answered = 1 }
+        END { settle(); if (out != "") print out }'
+}
+
+# qc's last verdict, as qc-verdict.sh reads it: `round <k> — <span text>`, or nothing. The last bold
+# `**Verdict: …**` / `**Routing: …**` span in the last round of qc.md's `## Outcome`; the round is the
+# number of its last `### Round <k>` heading, else 1.
+verdict_of() {
+    local outcome round k span
+    outcome=$({ git show "$1:$2/qc.md" 2>/dev/null || true; } | awk '
+        /^## Outcome/ { o = 1; next }
+        /^## / { o = 0 }
+        o')
+    k=$(printf '%s\n' "$outcome" | sed -nE 's/^### Round ([0-9]+).*/\1/p' | tail -n1)
+    round=$(printf '%s\n' "$outcome" | awk '/^### Round [0-9]+/ { r = "" } { r = r $0 "\n" } END { printf "%s", r }')
+    span=$(printf '%s\n' "$round" | tr '\n' ' ' | { grep -o -i -E '\*\*(verdict|routing)( then)?:[^*]*\*\*' || true; } | tail -n1)
+    [[ -n $span ]] || return 0
+    span=$(sed -E 's/\*\*//g; s/[`_]//g; s/^[[:space:]]*(verdict|routing)( then)?:[[:space:]]*//I; s/[[:space:]]+$//' <<< "$span")
+    printf 'round %s — %s\n' "${k:-1}" "$span"
+}
+
+# What a workflow waits on, first that applies: an open question (`engineer — plan.md Q2; qc.md Q1`); a
+# parked workflow (`resume — …`, from claim.sh --stash-live on the already-fetched branch); an open PR;
+# the route qc's last verdict names; else `nothing known`. Any failure falls to the next rule.
+waits_of() {
+    local sha=$1 dir=$2 state_token=$3 branch=$4 n=$5 step q parts= out rc=0 verdict
+    for step in "${steps[@]}"; do
+        q=$(open_questions_in "$sha" "$dir/$step.md")
+        [[ -z $q ]] || parts+="${parts:+; }$step.md $q"
+    done
+    if [[ -n $parts ]]; then echo "engineer — $parts"; return 0; fi
+    if [[ $state_token == working ]]; then
+        out=$(bash "$CODEO_PLUGIN_ROOT/scripts/claim.sh" --stash-live "$n" "$branch" . </dev/null 2>/dev/null) || rc=$?
+        if [[ $rc == 0 || $rc == 4 ]] && [[ -n $out ]]; then echo "resume — ${out#claim: }"; return 0; fi
+    fi
+    if [[ $state_token == pr-open ]]; then echo "review — PR open"; return 0; fi
+    verdict=$(verdict_of "$sha" "$dir")
+    verdict=${verdict#round * — }
+    case $verdict in
+        [Cc]lear*) echo "/codeo:close" ;;
+        *"/codeo:implement"*) echo "/codeo:implement" ;;
+        *"/codeo:plan"*) echo "/codeo:plan" ;;
+        *) echo "nothing known" ;;
+    esac
+}
+
 # The live sessions, for the human blocks only: fetched once, read once.
 live_ok= live_rows=
 if [[ -z $tsv && -z $branches ]]; then
@@ -166,6 +242,9 @@ while IFS= read -r ref; do
         echo "  changed:    ${changed:-none}"
         IFS=$'\t' read -r t_date t_source <<< "$(touched_of "$sha" "$dir")"
         [[ -z $t_date ]] || echo "  touched:   $t_date ($t_source), $(days_since "$t_date") days ago"
+        echo "  waits:     $(waits_of "$sha" "$dir" "$state_token" "$branch" "$n")"
+        verdict=$(verdict_of "$sha" "$dir")
+        [[ -z $verdict ]] || echo "  verdict:   $verdict"
         if [[ -z $live_ok ]]; then
             echo "  live:      unknown (could not fetch the signals)"
         else

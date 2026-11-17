@@ -456,6 +456,183 @@ assert_eq "branches has no touched" 0 "$(printf '%s\n' "$out" | grep -c touched 
 assert_eq "branches columns" "3" "$(printf '%s\n' "$out" | head -1 | awk -F'\t' '{print NF}')"
 assert_contains "branches row" "22${tab}feat/t22${tab}.codeo/done/22" "$out"
 
+# waits: and verdict: — what a workflow waits on, and qc's last verdict.
+for n in 31 32 33 34 35 36 37 38 39 40; do
+    printf '{"number":%s,"labels":[],"assignees":[]}' "$n" > "$stub_dir/GET_repos_o_n_issues_$n.json"
+done
+w_origin=$(fresh_repo)
+w_dossier() { # w_dossier <n> <step> <body> — a new branch per workflow
+    touched_branch "$w_origin" "feat/w${1##*/}"
+    raw_dossier "$w_origin" "$1" "$2" 2026-11-10 "$3"
+}
+w_dossier 31 plan '# plan
+
+## Notes
+
+```
+### Q8 fenced
+**Answer:**
+```
+
+## Questions
+
+### Q1 first
+**Answer:** yes
+
+### Q2 second
+**Answer:**
+
+### Q3 third
+**Answer:**   
+
+## Outcome
+
+Done.'
+raw_dossier "$w_origin" 31 qc 2026-11-10 "# qc
+
+## Questions
+
+### Q1 gate
+**Answer:**
+
+## Outcome
+
+Done."
+w_dossier 32 plan "# plan
+
+## Questions
+
+### Q1 pay
+**Answer:** Paid only.
+
+## Outcome
+
+Done."
+w_dossier 33 plan '# plan
+
+## Questions
+
+```
+### Q9 fenced
+**Answer:**
+```
+
+### Q1 real
+**Answer:** ok
+
+## Outcome
+
+Done.'
+w_dossier 34 init "# init
+
+## Outcome
+
+Done."
+raw_dossier "$w_origin" 34 close 2026-11-10 "# close
+
+## Outcome
+
+### Round 1 — stashed"
+w_dossier 35 init "# init
+
+## Outcome
+
+Done."
+raw_dossier "$w_origin" 35 close 2026-11-10 "# close
+
+## Outcome
+
+### Round 2 — abandoned"
+w_dossier done/36 qc "# qc
+
+## Outcome
+
+Done."
+w_dossier 37 qc '# qc
+
+## Outcome
+
+**Verdict: back to `/codeo:implement`.**'
+w_dossier 38 qc '# qc
+
+## Outcome
+
+### Round 1
+
+**Verdict: back to `/codeo:plan`.**
+
+### Round 2
+
+**Verdict: clear — forward to `/codeo:close`.**'
+w_dossier 39 qc '# qc
+
+## Outcome
+
+**Verdict: back to `/codeo:implement`.**'
+raw_dossier "$w_origin" 39 implement 2026-11-10 "# implement
+
+## Questions
+
+### Q1 which
+**Answer:**
+
+## Outcome
+
+Done."
+w_dossier 40 init "# init
+
+## Outcome
+
+Done."
+git -C "$w_origin" checkout -q main
+w_clone=$(clone_of "$w_origin")
+w_out=$(run_today "$w_clone")
+w_block() { printf '%s\n' "$w_out" | awk -v h="#$1" '/^#/ { p = ($1 == h) } p'; }
+
+case_desc="waits_on_the_engineer"
+assert_contains "line" "  waits:     engineer — plan.md Q2, Q3; qc.md Q1" "$(w_block 31)"
+
+case_desc="waits_answer_on_the_same_line_is_answered"
+assert_contains "not engineer" "  waits:     nothing known" "$(w_block 32)"
+
+case_desc="waits_ignores_a_fenced_question"
+assert_contains "not engineer" "  waits:     nothing known" "$(w_block 33)"
+
+case_desc="waits_on_a_stash"
+assert_contains "line" "  waits:     resume — #34's stash is live" "$(w_block 34)"
+
+case_desc="waits_on_an_abandon"
+assert_contains "line" "  waits:     resume — #35 was abandoned on" "$(w_block 35)"
+
+case_desc="waits_on_review"
+assert_contains "line" "  waits:     review — PR open" "$(w_block 36)"
+
+case_desc="waits_after_a_send_back"
+assert_contains "waits" "  waits:     /codeo:implement" "$(w_block 37)"
+assert_contains "verdict" "  verdict:   round 1 — back to /codeo:implement." "$(w_block 37)"
+
+case_desc="verdict_reads_the_last_round"
+assert_contains "waits" "  waits:     /codeo:close" "$(w_block 38)"
+assert_contains "verdict" "  verdict:   round 2 — clear — forward to /codeo:close." "$(w_block 38)"
+
+case_desc="verdict_shown_under_an_open_question"
+assert_contains "waits" "  waits:     engineer — implement.md Q1" "$(w_block 39)"
+assert_contains "verdict" "  verdict:   round 1 — back to /codeo:implement." "$(w_block 39)"
+
+case_desc="waits_nothing_known"
+assert_contains "line" "  waits:     nothing known" "$(w_block 40)"
+assert_eq "no verdict" 0 "$(w_block 40 | grep -c 'verdict:' || true)"
+
+case_desc="waits_and_verdict_sit_between_touched_and_live"
+plant_signal "$w_origin" 38 codeo-38 bob 35
+w_out=$(run_today "$w_clone")
+assert_eq "order" "changed: touched: waits: verdict: live:" "$(w_block 38 | grep -oE '^  (changed|touched|waits|verdict|live):' | tr -d ' ' | paste -sd' ' -)"
+clear_signals "$w_origin"
+
+case_desc="tsv_and_branches_carry_no_waits"
+out=$(run_today "$w_clone" --tsv)
+assert_eq "tsv" 0 "$(printf '%s\n' "$out" | grep -c -e waits -e verdict || true)"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
