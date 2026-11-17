@@ -26,6 +26,7 @@ out=""
 err=""
 remote=""        # the value of CLAUDE_CODE_REMOTE, or empty for unset
 dockerenv=""     # the file CODEO_DOCKERENV names
+containerenv=""  # the file CODEO_CONTAINERENV names (Podman's marker); never created by mk
 
 home_skills=(issue init triage cleanup)
 lock_skills=(plan implement qc close)
@@ -52,6 +53,7 @@ mk() {
     if [[ $# -ge 4 ]]; then printf '%s\n' "$4" >"$dir/.codeo/active"; fi
     dockerenv="$root/dockerenv"
     : >"$dockerenv"
+    containerenv="$root/containerenv"
     remote=""
 }
 
@@ -61,6 +63,7 @@ run() {
     errf=$(mktemp -p "$root")
     rc=0
     out=$(env -u CLAUDE_CODE_REMOTE ${remote:+CLAUDE_CODE_REMOTE=$remote} CODEO_DOCKERENV="$dockerenv" \
+        CODEO_CONTAINERENV="$containerenv" \
         bash "$dir/.devcontainer/scripts/role.sh" "$@" 2>"$errf") || rc=$?
     err=$(cat "$errf")
 }
@@ -207,6 +210,20 @@ no_dockerenv_is_unguarded() {
     check_matrix unguarded ""
 }
 
+containerenv_alone_is_guarded() {
+    mk podman codeo-70 feat/x 'issue: 70' || return 0
+    dockerenv="$root/missing"
+    : >"$containerenv"
+    role_is issue:70
+    check_matrix issue:70 70
+}
+
+both_markers_are_guarded_the_same() {
+    mk bothenv codeo-70 feat/x 'issue: 70' || return 0
+    : >"$containerenv"
+    role_is issue:70
+}
+
 remote_is_unguarded() {
     mk remote codeo-70 feat/x 'issue: 70' || return 0
     remote=true
@@ -342,6 +359,8 @@ cases=(
     mismatch_in_another_issue_folder
     lock_without_an_issue_line_is_no_lock
     no_dockerenv_is_unguarded
+    containerenv_alone_is_guarded
+    both_markers_are_guarded_the_same
     remote_is_unguarded
     other_folders_are_unguarded
     not_a_clone_fails

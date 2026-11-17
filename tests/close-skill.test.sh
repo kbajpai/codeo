@@ -86,6 +86,14 @@ section_contains() {
     grep -qF -- "$3" <<<"$text" || fail "$1 — section [$2] has no [$3]"
 }
 
+# As section_contains, but the section is flattened first, so a needle may span a line break.
+section_contains_flat() {
+    local text
+    text=$(section "$2" | tr '\n' ' ' | tr -s ' ')
+    [[ -n $text ]] || { fail "$1 — no section [## $2] in the skill"; return; }
+    grep -qF -- "$3" <<<"$text" || fail "$1 — section [$2] has no [$3]"
+}
+
 # $1 case, $2 section heading, $3 fixed string, $4 fixed string that must come later in it.
 section_order() {
     local text
@@ -309,6 +317,9 @@ section_contains "init resumes a stash" "$stash_section" '/codeo:init #<N>'
 section_contains "an open pull request stays open" "$stash_section" 'stays open'
 section_contains "the abandon deletes the branch only on request" "$stash_section" 'same confirmation as step 14'
 section_order "a stash deletes the lock last" "$stash_section" 'lease release-all <N>' 'Delete `.codeo/active`'
+step_contains "step 16 clears the live signal with the lock" 16 'live.sh" clear; rm -f .codeo/active'
+section_contains_flat "a stash clears the signal with the lock" "$stash_section" 'Delete `.codeo/active` last, as step 16 does, with the signal cleared'
+section_contains_flat "an abandon clears the signal with the lock" "$stash_section" 'the lock is deleted last, as a stash does, as step 16 does, with the signal cleared'
 for id in close-11 close-12 close-13; do
     section_contains "$id sits in the stash section" "$stash_section" "<!-- rule: $id -->"
 done

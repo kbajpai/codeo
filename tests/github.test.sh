@@ -83,7 +83,8 @@ fixture="$GH_STUB_FIXTURES/$key.json"
 fail_marker="$GH_STUB_FIXTURES/$key.fail"
 
 if [[ -f $fail_marker ]]; then
-    echo '{"message": "Not Found", "status": "404"}'
+    fail_text=$(cat "$fail_marker")
+    jq -nc --arg m "${fail_text:-Not Found}" '{message: $m}'
     echo "gh: 404 (stubbed failure for $method $path)" >&2
     exit 1
 fi
@@ -105,7 +106,7 @@ export GH_STUB_LOG="$calls_log"
 
 fixture_key() { printf '%s_%s' "$1" "$2" | tr -c 'A-Za-z0-9_-' '_'; }
 write_fixture() { cat > "$fixtures_dir/$(fixture_key "$1" "$2").json"; }
-mark_fail() { touch "$fixtures_dir/$(fixture_key "$1" "$2").fail"; }
+mark_fail() { printf '%s' "${3:-}" > "$fixtures_dir/$(fixture_key "$1" "$2").fail"; }
 reset_case() {
     rm -rf "$fixtures_dir"
     mkdir -p "$fixtures_dir"
@@ -754,10 +755,17 @@ assert_contains "call" "METHOD=DELETE PATH=repos/$repo/git/refs/codeo/live/104/m
 
 case_desc="ref_delete_of_a_missing_ref_succeeds"
 reset_case
-mark_fail DELETE "repos/$repo/git/refs/codeo/live/104/m"
+mark_fail DELETE "repos/$repo/git/refs/codeo/live/104/m" "Reference does not exist"
 if out=$(bash "$script" ref delete refs/codeo/live/104/m 2>"$err_file"); then rc=0; else rc=$?; fi
 assert_eq "exit code" 0 "$rc"
 assert_eq "stdout empty" "" "$out"
+
+case_desc="ref_delete_of_a_refused_write_is_a_failure"
+reset_case
+mark_fail DELETE "repos/$repo/git/refs/codeo/live/104/m"
+if out=$(bash "$script" ref delete refs/codeo/live/104/m 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_contains "stderr" "github: ref delete refs/codeo/live/104/m: DELETE failed" "$(cat "$err_file")"
 
 case_desc="no such verb"
 reset_case

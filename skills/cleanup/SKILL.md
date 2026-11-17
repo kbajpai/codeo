@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: Print the commands that remove finished issues' dev containers — for each issue under .codeo/done on the base branch, prove it is really finished (issue closed, pull request merged, branch gone from origin, dossier gone from every branch), print the project's removal command for the ones proven and the failed proof for the rest, and run nothing. Trigger on "clean up containers", "what can I remove", "cleanup". Home-container only, outside the workflow lock; never runs a container command and never builds a command itself.
+description: Print the commands that remove finished issues' dev containers — for each issue under .codeo/done on the base branch, prove it is really finished (issue closed, pull request merged, branch gone from origin, dossier gone from every branch), print the project's removal command for the ones proven and the failed proof for the rest, and run nothing. Trigger on "clean up containers", "what can I remove", "cleanup". Runs outside the workflow lock, in the checkout the project's role check allows; never runs a container command and never builds a command itself.
 model: sonnet
 ---
 
@@ -64,6 +64,7 @@ is the container the message names.
    - Unpushed work in a clone is invisible from here. The proof looks at `origin` only.
    - The proofs need a clone that fetches every branch of `origin`; a clone limited to some branches stops with a message and proves nothing.
    - Nothing `origin` holds records whether a clone was left clean, or whether `/codeo:close` ran to its end there: the lock lives only in that clone. A lease the issue still holds is the one trace this proof can see, and it lists the issue as not proven.
+   - The list is every issue under `.codeo/done/` on the base branch, whether or not it ever had a container, and it grows with each merge; a printed command may name a container that no longer exists, and running it then removes nothing.
    - The commands run on the host, in a shell, and only after `git status` in that clone shows
      nothing left to lose.
 

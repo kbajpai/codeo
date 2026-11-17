@@ -23,6 +23,9 @@ fail() {
 # $1 case, $2 fixed string the skill must contain.
 must_contain() { grep -qF -- "$2" "$skill" || fail "$1 — no [$2]"; }
 
+# $1 case, $2 fixed string the skill must lack.
+must_lack() { ! grep -qF -- "$2" "$skill" || fail "$1 — still has [$2]"; }
+
 # $1 case, $2 fixed string, $3 fixed string that must follow within three lines.
 must_follow() {
     grep -F -A3 -- "$2" "$skill" | grep -F -- "$3" >/dev/null || fail "$1 — no [$3] within three lines of [$2]"
@@ -204,7 +207,9 @@ must_contain "the verdict is not clear when the lease is held but the hook canno
 must_contain 'a refused call is recorded in the dossier' "record the finding in this skill's own dossier"
 must_contain 'the refused finding is a Notes line' 'as a line under `## Notes`'
 must_contain 'the Notes line carries no issue number' 'carries no issue number'
-must_contain 'a refused call is filed from the home container' 'in the home container'
+must_contain 'a refused call is filed where the role check allows' 'in the checkout the project'\''s role check allows'
+must_lack 'no home-container claim in generic text' 'in the home container'
+must_lack 'no issue-container claim in generic text' 'issue container'
 
 if ((failures)); then
     echo "$failures case(s) failed"
