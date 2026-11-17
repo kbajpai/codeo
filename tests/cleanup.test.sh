@@ -306,6 +306,7 @@ setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: docker rm -f {name}'
 plain=$(run_cleanup)
+assert_eq "line with an overlay, before the export" "12${tab}proven${tab}docker rm -f codeo-12" "$plain"
 export CODEO_CLEANUP_REMOVAL=$'name: x-{N}\npattern: ^x-[0-9]+$\ncommand: rm {name}'
 assert_eq "line with an overlay" "$plain" "$(run_cleanup)"
 set_overlay ""
