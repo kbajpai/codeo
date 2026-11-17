@@ -268,6 +268,20 @@ issue_rerun_on_an_existing_sandbox_creates_nothing() {
     done
 }
 
+issue_writes_the_sandbox_marker() {
+    local state mark='sbx exec codeo-113 bash -c : > "$HOME/.codeo-sandbox"' calls
+    for state in missing 'running (detached)'; do
+        sb_setup "mark-${state%% *}"
+        mkdir -p "$sb_dir/work/codeo-113/.git"
+        [[ $state == missing ]] || printf 'NAME AGENT STATUS\ncodeo-113 claude %s\n' "$state" >"$sb_dir/sandboxes"
+        sb_run issue 113 fix/x
+        calls=$(sb_calls)
+        [[ "$calls" == *"$mark"* ]] || fail "$state: no marker exec: $calls"
+        [[ "${calls%%"$mark"*}" != *devcontainer-start.sh* ]] || fail "$state: marker after the start script"
+        [[ "${calls#*"$mark"}" == *devcontainer-start.sh* ]] || fail "$state: no start script after the marker"
+    done
+}
+
 issue_name_that_disagrees_with_the_lock_is_one_todo() {
     sb_setup lock
     echo codeo-98 >"$sb_dir/lockname"
@@ -316,6 +330,7 @@ cases=(
     issue_creates_with_the_limits
     issue_runs_the_start_script_with_the_identity
     issue_rerun_on_an_existing_sandbox_creates_nothing
+    issue_writes_the_sandbox_marker
     issue_name_that_disagrees_with_the_lock_is_one_todo
     sandbox_path_prints_the_working_folder
     valid_open_shell_end_are_not_yet_built

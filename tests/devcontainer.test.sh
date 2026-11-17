@@ -2263,7 +2263,7 @@ st_run() {
     [[ -z ${ST_CMD_MODE:-} ]] || envs+=("CODEO_CMD_MODE=$ST_CMD_MODE")
     errf=$(mktemp -p "$pl_root")
     st_rc=0
-    st_out=$(cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
+    st_out=$(cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "CODEO_SANDBOX_MARK=${ST_MARK:-$pl_root/no-such-sandbox-mark}" "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
     st_err=$(<"$errf")
 }
 
@@ -2328,6 +2328,24 @@ session_title_with_both_variables_still_refreshes_the_window_title() {
     local ST_CMD_MODE=1 f=$st_dir/.vscode/settings.json
     st_run "$(st_json SessionStart $st_sid)" true
     [[ $(jq -r '."window.title"' "$f") == 'codeo [home]' ]] || fail "window.title $(jq -r '."window.title"' "$f" 2>&1)"
+}
+
+session_title_in_a_sandbox_names_the_issue() {
+    st_setup sandbox || return 0
+    local ST_MARK=$pl_root/sandbox-mark f=$st_dir/.vscode/settings.json
+    : >"$ST_MARK"
+    printf 'issue:   99\nbranch: feat/x\nstarted: now\n' >"$st_dir/.codeo/active"
+    st_run "$(st_json SessionStart $st_sid)" unset
+    ((st_rc == 0)) || fail "exit $st_rc"
+    [[ $(st_title) == 'codeo [#99] · a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [#99]' ]] || fail "window.title $(jq -r '."window.title"' "$f" 2>&1)"
+}
+
+session_title_is_silent_with_no_marker() {
+    st_setup no-marker || return 0
+    st_run "$(st_json SessionStart $st_sid)" unset
+    st_silent 'no marker'
+    [[ ! -e $st_dir/.vscode ]] || fail '.vscode was created'
 }
 
 session_title_on_a_prompt_after_clear() {
@@ -2665,6 +2683,8 @@ cases=(
     session_title_in_cmd_mode_accepts_any_value
     session_title_cmd_mode_writes_no_vscode_settings
     session_title_with_both_variables_still_refreshes_the_window_title
+    session_title_in_a_sandbox_names_the_issue
+    session_title_is_silent_with_no_marker
     session_title_on_a_prompt_after_clear
     session_title_keeps_an_existing_title
     session_title_is_silent_outside_a_dev_container

@@ -4,9 +4,10 @@
 # "codeo [#<N>]"). Registered for SessionStart and UserPromptSubmit, it reads the hook's JSON on stdin and
 # prints {"hookSpecificOutput":{"hookEventName":"<event>","sessionTitle":"<title>"}} on one line.
 #
-# Only inside a dev container (REMOTE_CONTAINERS=true, or any non-empty CODEO_CMD_MODE for one started from a host command
-# line, where cmd mode writes no .vscode/settings.json), and only for those two events. On every such run with
-# REMOTE_CONTAINERS=true it first refreshes the VS Code window title through window-title.sh (a no-op when it
+# Only inside a dev container (REMOTE_CONTAINERS=true, a non-empty CODEO_CMD_MODE for one started from a host command
+# line, where cmd mode writes no .vscode/settings.json, or the marker file ${CODEO_SANDBOX_MARK:-~/.codeo-sandbox} that
+# .sbx/codeo-sandbox.sh writes in an sbx sandbox), and only for those two events. On every such run with
+# REMOTE_CONTAINERS=true or the marker it first refreshes the VS Code window title through window-title.sh (a no-op when it
 # is current), even for a session that was renamed. It then prints a session title only when the session has none, or when its title
 # is one this hook set (one line, this container's "<codename> [home]" or "<codename> [#<N>]" then " · " and
 # any eight hex digits, so a forked session's inherited title counts) and differs from the new one, so a
@@ -17,7 +18,8 @@
 #   bash .devcontainer/scripts/session-title.sh < <hook json>
 set -uo pipefail
 
-[[ ${REMOTE_CONTAINERS:-} == true || ${CODEO_CMD_MODE:-} ]] || exit 0
+mark=${CODEO_SANDBOX_MARK:-${HOME:-}/.codeo-sandbox}
+[[ ${REMOTE_CONTAINERS:-} == true || ${CODEO_CMD_MODE:-} || -e $mark ]] || exit 0
 input=$(cat)
 {
     IFS= read -r -d '' event
@@ -31,7 +33,7 @@ case $event in
     *) exit 0 ;;
 esac
 here=$(dirname "${BASH_SOURCE[0]}")
-[[ ${REMOTE_CONTAINERS:-} != true ]] || bash "$here/window-title.sh" >/dev/null 2>&1 || true
+[[ ${REMOTE_CONTAINERS:-} != true && ! -e $mark ]] || bash "$here/window-title.sh" >/dev/null 2>&1 || true
 ((${#sid} >= 8)) || exit 0
 base=$(bash "$here/window-title.sh" --print 2>/dev/null) || exit 0
 [[ -n $base ]] || exit 0

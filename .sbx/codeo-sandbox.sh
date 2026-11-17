@@ -104,13 +104,17 @@ ensure_windows_trust() {
     git.exe config --global --add safe.directory "$path" || die "git.exe could not add $path to safe.directory"
 }
 
-# ensure_sandbox <N>: create the sandbox from inside the clone unless one by that name exists. A stopped
-# one is left alone: sbx exec starts it.
+# ensure_sandbox <N>: create the sandbox from inside the clone unless one by that name exists (a stopped
+# one is left alone: sbx exec starts it), then write the marker session-title.sh looks for. The marker is
+# written on every run, so a rerun repairs a missing one.
 ensure_sandbox() {
     local name=codeo-$1
-    [[ "$(sandbox_state "$name")" == missing ]] || return 0
-    (cd "$name" && "$sbx" create --clone --name "$name" --cpus 2 --memory 4g "$create_agent" .) ||
-        die "could not create the sandbox $name"
+    if [[ "$(sandbox_state "$name")" == missing ]]; then
+        (cd "$name" && "$sbx" create --clone --name "$name" --cpus 2 --memory 4g "$create_agent" .) ||
+            die "could not create the sandbox $name"
+    fi
+    # shellcheck disable=SC2016
+    "$sbx" exec "$name" bash -c ': > "$HOME/.codeo-sandbox"' || die "could not mark the sandbox $name"
 }
 
 # git_is_usable: git is on PATH and will not open an installer (a Mac stub).
