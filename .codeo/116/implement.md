@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is paused before any task: `overlap.sh 116` raised two workflows that started after the plan was approved. Q1 and Q2 are open. `origin/main` is merged (abc761a; one conflict, in `CHANGELOG.md`, resolved by keeping both sides) and `bash tests/run.sh` ends `all cases passed`. Next step: answer Q1 and Q2, then re-run `/codeo:implement`.
+Round 2: Q1 and Q2 are answered (proceed and coordinate); `origin/main` is merged and the suite passes. Dispatching the plan's three tasks next.
 
 ## Questions
 
@@ -18,6 +18,7 @@ Round 2 is paused before any task: `overlap.sh 116` raised two workflows that st
 **Options:** proceed and coordinate (recommended: the edits are one sentence, one diagram and one bullet, in places #103 is unlikely to touch) · sequence after #103 · re-scope.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-17: "Proceed & Coordinate"; recorded here by the skill).
 
 ### Q2 — #99 (`feat/make-sbx-issue-sandbox-usable`, kbajpai, step plan) also changes `.devcontainer/README.md`, `CHANGELOG.md` and `tests/devcontainer.test.sh`
 
@@ -25,6 +26,7 @@ Round 2 is paused before any task: `overlap.sh 116` raised two workflows that st
 **Options:** proceed and coordinate (recommended: one appended sentence and one changed phrase) · sequence after #99 · re-scope.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-17: "Proceed & Coordinate"; recorded here by the skill).
 
 ## Outcome
 
