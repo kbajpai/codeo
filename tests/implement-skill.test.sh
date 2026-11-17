@@ -100,6 +100,7 @@ must_contain 'the refused finding is a Notes line' 'as a line under `## Notes`'
 must_contain 'the Notes line carries no issue number' 'carries no issue number'
 must_contain 'a refused call is filed where the role check allows' 'in the checkout the project'\''s role check allows'
 must_lack 'no home-container claim in generic text' 'in the home container'
+must_lack 'no issue-container claim in generic text' 'issue container'
 
 if ((failures)); then
     echo "$failures case(s) failed"
