@@ -202,12 +202,13 @@ marker_round() {
 # <k> is the `qc round at review: <k>` that round records, empty when it records none. Else nothing.
 close_send_back() {
     { git show "$1:$2/close.md" 2>/dev/null || true; } | tr -d '\r' | awk "$fence_awk"'
-        !f && t ~ /^### Round [0-9]+/ {
+        !f && t ~ /^## Outcome/ { o = 1; next }
+        !f && t ~ /^## / { o = 0 }
+        o && !f && t ~ /^### Round [0-9]+/ {
             m = t; sub(/^### Round /, "", m); sub(/[^0-9].*/, "", m)
             sendback = (t ~ /^### Round [0-9]+[^A-Za-z0-9]+(review feedback|conflicts with)/); k = ""; next
         }
-        !f && t ~ /^## / { sendback = 0 }
-        !f && sendback && k == "" && match(t, /qc round at review:[ `]*[0-9]+/) {
+        o && !f && sendback && k == "" && match(t, /qc round at review:[ `]*[0-9]+/) {
             k = substr(t, RSTART, RLENGTH); sub(/^[^0-9]*/, "", k)
         }
         END { if (sendback) print m " " k }' || true

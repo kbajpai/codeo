@@ -742,7 +742,11 @@ Opened the PR.
 
 ### Round 2 — review feedback
 
-`qc round at review: 1`'
+`qc round at review: 1`
+
+## Log
+
+- 2026-11-10 — closed round 2'
 w_dossier 45 qc "$qc_back_plan"
 raw_dossier "$w_origin" 45 plan 2026-11-10 "$plan_replanned"
 w_dossier 46 qc "$qc_back_plan"
@@ -795,7 +799,24 @@ raw_dossier "$w_origin" 50 implement 2026-11-10 '# implement
 
 (send-back from close.md round 2)
 Fixed.'
-w_dossier 51 close '### Round 1 — conflicts with main'
+w_dossier 51 close '# close
+
+## Outcome
+
+### Round 1 — conflicts with main
+
+## Log
+
+- 2026-11-10 — closed round 1'
+w_dossier 60 close '# close
+
+## Outcome
+
+### Round 1 — review feedback
+
+## Log
+
+- 2026-11-10 — qc round at review: 3'
 w_dossier 52 plan "# plan
 
 ## Outcome
@@ -881,6 +902,9 @@ assert_contains "line" "  waits:     /codeo:close" "$(w_block 50)"
 
 case_desc="waits_after_conflicts_with_base"
 assert_contains "line" "  waits:     /codeo:implement" "$(w_block 51)"
+
+case_desc="waits_close_log_is_not_read_as_a_round"
+assert_contains "no k, no marker" "  waits:     /codeo:implement" "$(w_block 60)"
 
 case_desc="waits_names_the_next_step"
 assert_contains "plan" "  waits:     /codeo:implement" "$(w_block 52)"
