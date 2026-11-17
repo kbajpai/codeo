@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The dev container's postCreateCommand. Trusts the clone (and takes ownership of it when it is on a Docker volume), installs the Claude Code
+# The dev container's postCreateCommand. Trusts the clone (and takes ownership of it when it is on a Docker volume), records the clone as trusted in Claude Code, installs the Claude Code
 # plugins, writes the window title, turns on Claude Code Remote Control (remoteControlAtStartup in the user
 # settings), restores the executable bit the index records on tracked files and turns core.fileMode back on, only on a clone on a Docker volume where the filesystem keeps the bit as set, wires git to the GitHub login, and prints what is still left for the engineer to do
 # (the GitHub and Claude logins, a git identity (filled from the host ~/.gitconfig or GIT_AUTHOR_* when the volume lacks it), credentials that block Remote Control). Safe to re-run: each step checks before it acts.
@@ -294,6 +294,45 @@ if [[ -f $claude_settings ]]; then
     fi
 elif [[ -e $claude_settings ]]; then
     add_todo "$claude_settings is not a regular file and was left alone: fix it, then add \"remoteControlAtStartup\": true"
+fi
+
+# 3d. Folder trust: record the clone as trusted in Claude Code's user state file, so the "Trust this folder?" dialog never appears.
+# The file is $CLAUDE_CONFIG_DIR/.claude.json, else $HOME/.claude.json; a missing one is created as {} with mode 600. Only the clone's own
+# key is set (.projects[<top>].hasTrustDialogAccepted), every other key kept. It runs after step 3 because `claude plugin ...` writes this file too.
+# A file that is not valid JSON, not an object, or whose projects is not an object is left untouched, and one TODO says so.
+trust_key=${top:-$clone}
+trust_state=${CLAUDE_CONFIG_DIR:+$CLAUDE_CONFIG_DIR/.claude.json}
+trust_state=${trust_state:-$HOME/.claude.json}
+if [[ ! -e $trust_state ]]; then
+    (umask 077 && echo '{}' > "$trust_state") 2>/dev/null || add_todo "could not create $trust_state: $trust_key is not trusted in Claude Code"
+fi
+if [[ -f $trust_state ]]; then
+    trust_target=$(readlink -f -- "$trust_state" 2>/dev/null || true)
+    trust_kind=
+    [[ -z $trust_target ]] || trust_kind=$(jq -rn '[inputs] | if length == 0 then "object" elif length == 1 then (.[0] | if type != "object" then type elif has("projects") and (.projects | type) != "object" then "projects-not-object" else "object" end) else "multi" end' "$trust_target" 2>/dev/null || true)
+    if [[ -z $trust_target ]]; then
+        add_todo "could not resolve $trust_state: $trust_key is not trusted in Claude Code"
+    elif [[ -z $trust_kind || $trust_kind == multi ]]; then
+        add_todo "$trust_state is not valid JSON and was left alone: fix it, then trust $trust_key in Claude Code"
+    elif [[ $trust_kind == projects-not-object ]]; then
+        add_todo "$trust_state has a projects value that is not an object and was left alone: fix it, then trust $trust_key in Claude Code"
+    elif [[ $trust_kind != object ]]; then
+        add_todo "$trust_state is not a JSON object and was left alone: fix it, then trust $trust_key in Claude Code"
+    elif trust_tmp=$(mktemp "$(dirname "$trust_target")/.claude.json.XXXXXX" 2>/dev/null); then
+        if jq --arg p "$trust_key" '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' "$trust_target" > "$trust_tmp" 2>/dev/null \
+            && [[ -s $trust_tmp ]] \
+            && chmod --reference="$trust_target" -- "$trust_tmp" 2>/dev/null \
+            && mv -- "$trust_tmp" "$trust_target"; then
+            :
+        else
+            rm -f "$trust_tmp"
+            add_todo "could not write $trust_target: $trust_key is not trusted in Claude Code"
+        fi
+    else
+        add_todo "could not write $trust_target: $trust_key is not trusted in Claude Code"
+    fi
+elif [[ -e $trust_state ]]; then
+    add_todo "$trust_state is not a regular file and was left alone: fix it, then trust $trust_key in Claude Code"
 fi
 
 # 4. GitHub: wire git to the login, and check the project scope the board needs.

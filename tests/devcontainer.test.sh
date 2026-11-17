@@ -1445,7 +1445,7 @@ start_settings_that_cannot_be_resolved_are_a_todo() {
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(cat "$ds_dir/claude/settings.json") == '{"a":1}' ]] || fail 'settings.json was changed'
-    n=$(ds_todos 'could not resolve'); ((n == 1)) || fail "wanted one 'could not resolve' TODO, got $n: $ds_err"
+    n=$(ds_todos 'could not resolve.*Remote Control'); ((n == 1)) || fail "wanted one 'could not resolve' TODO, got $n: $ds_err"
     n=$(ds_todos 'not valid JSON'); ((n == 0)) || fail "unexpected 'not valid JSON' TODO: $ds_err"
 }
 
@@ -1487,8 +1487,93 @@ start_leaves_no_temp_file_when_mv_fails() {
     chmod +x "$ds_dir/bin/mv"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
-    n=$(ds_todos 'could not write'); ((n == 1)) || fail "wanted one 'could not write' TODO, got $n: $ds_err"
-    [[ $(ls -A "$ds_dir/claude") == settings.json ]] || fail "leftover files: $(ls -A "$ds_dir/claude")"
+    n=$(ds_todos 'could not write.*Remote Control'); ((n == 1)) || fail "wanted one 'could not write' TODO, got $n: $ds_err"
+    [[ -z $(find "$ds_dir/claude" -name '.settings.*' -o -name '.claude.json.*') ]] || fail "leftover files: $(ls -A "$ds_dir/claude")"
+}
+
+# ds_trust_key: the path step 3d records, the physical path of the scratch clone.
+ds_trust_key() { (cd "$ds_dir/codeo-home" && pwd -P); }
+
+start_trusts_the_clone_in_claude() {
+    local key
+    ds_setup trustclaude || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    key=$(ds_trust_key)
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    jq -e --arg p "$key" '.projects[$p].hasTrustDialogAccepted == true' "$ds_dir/claude/.claude.json" >/dev/null \
+        || fail "the clone is not trusted: $(cat "$ds_dir/claude/.claude.json" 2>&1)"
+    jq -e --arg p "$key" '(.projects | keys) == [$p]' "$ds_dir/claude/.claude.json" >/dev/null \
+        || fail "projects holds more than the clone: $(cat "$ds_dir/claude/.claude.json" 2>&1)"
+    [[ $(stat -c %a "$ds_dir/claude/.claude.json" 2>/dev/null) == 600 ]] || fail "mode is not 600: $(stat -c %a "$ds_dir/claude/.claude.json" 2>&1)"
+}
+
+start_trust_keeps_other_keys() {
+    local key
+    ds_setup trustkeep || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    key=$(ds_trust_key)
+    mkdir -p "$ds_dir/claude"
+    printf '{"numStartups":3,"projects":{"/x":{"a":1},"%s":{"allowedTools":["Bash"]}}}\n' "$key" > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ds_ready_run
+    jq -e --arg p "$key" '.numStartups == 3 and .projects["/x"].a == 1 and .projects[$p].allowedTools == ["Bash"] and .projects[$p].hasTrustDialogAccepted == true' \
+        "$ds_dir/claude/.claude.json" >/dev/null || fail "keys lost: $(cat "$ds_dir/claude/.claude.json")"
+}
+
+start_malformed_claude_state_is_a_todo() {
+    local n
+    ds_setup trustbad || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '{not json' > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/.claude.json") == '{not json' ]] || fail 'malformed .claude.json was changed'
+    n=$(ds_todos '.claude.json'); ((n == 1)) || fail "wanted one TODO naming .claude.json, got $n: $ds_err"
+}
+
+start_claude_state_not_an_object_is_a_todo() {
+    local n
+    ds_setup trustarr || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '[1]' > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/.claude.json") == '[1]' ]] || fail 'a non-object .claude.json was changed'
+    n=$(ds_todos '.claude.json'); ((n == 1)) || fail "wanted one TODO naming .claude.json, got $n: $ds_err"
+}
+
+start_trust_with_projects_not_an_object_is_a_todo() {
+    local n
+    ds_setup trustproj || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '{"projects":[]}' > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/.claude.json") == '{"projects":[]}' ]] || fail 'a .claude.json with array projects was changed'
+    n=$(ds_todos '.claude.json'); ((n == 1)) || fail "wanted one TODO naming .claude.json, got $n: $ds_err"
+}
+
+start_trust_uses_the_resolved_top_level() {
+    local key
+    ds_setup trustlink || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    key=$(ds_trust_key)
+    ln -s "$ds_dir/codeo-home" "$ds_dir/link" || { fail 'could not make the symlink'; return 0; }
+    DS_REPO="$ds_dir/link" ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    jq -e --arg p "$key" '(.projects | keys) == [$p]' "$ds_dir/claude/.claude.json" >/dev/null \
+        || fail "the key is not the resolved path $key: $(cat "$ds_dir/claude/.claude.json" 2>&1)"
+}
+
+start_trust_leaves_no_temp_file() {
+    ds_setup trusttmp || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_ready_run
+    [[ -z $(find "$ds_dir/claude" -name '.claude.json.*') ]] || fail "leftover files: $(ls -A "$ds_dir/claude")"
 }
 
 start_writes_the_title() {
@@ -2516,6 +2601,13 @@ cases=(
     start_settings_symlink_is_kept
     start_settings_keep_their_mode
     start_leaves_no_temp_file_when_mv_fails
+    start_trusts_the_clone_in_claude
+    start_trust_keeps_other_keys
+    start_malformed_claude_state_is_a_todo
+    start_claude_state_not_an_object_is_a_todo
+    start_trust_with_projects_not_an_object_is_a_todo
+    start_trust_uses_the_resolved_top_level
+    start_trust_leaves_no_temp_file
     start_writes_the_title
     start_env_vars_are_todos
     start_credential_variables_hide_the_login_advice
