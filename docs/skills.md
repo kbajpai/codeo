@@ -4,7 +4,7 @@ This page describes each codeo skill: what it is for and when it triggers, what 
 
 Six skills form the pipeline: `issue`, `init`, `plan`, `implement`, `qc` and `close`. They run in that order inside one workflow, and the workflow is bound to one issue by the lock (`.codeo/active`, written by `init` and released by `close`). Each skill hands the next one a dossier file, `.codeo/<N>/<skill>.md`, under the protocol in `docs/handoff.md`. `qc` can send a change back to `implement` or `plan`, and `close` can send review feedback or a conflict with the base branch back to `implement`. `issue` runs before an issue number or a branch exists, so it sits outside the lock.
 
-`triage` runs outside the lock too, between workflows: it collects the loose ends development left behind and routes anything worth filing through `issue`. `cleanup` also runs outside the lock, in the home container, and only prints: it proves which finished issues' dev containers can go and prints the commands that remove them. `setup` and `doctor` are not part of any workflow: `setup` creates the project's codeo state and `doctor` checks that the project is ready.
+`triage` runs outside the lock too, between workflows: it collects the loose ends development left behind and routes anything worth filing through `issue`. `cleanup` also runs outside the lock, in the checkout the project's role check allows, and only prints: it proves which finished issues' dev containers can go and prints the commands that remove them. `setup` and `doctor` are not part of any workflow: `setup` creates the project's codeo state and `doctor` checks that the project is ready.
 
 ```mermaid
 flowchart LR
@@ -186,7 +186,7 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 
 - Reads the lock, every dossier file (`qc.md`'s last round above all), and the pull request's state, reviews and checks on GitHub.
 - Writes `.codeo/<N>/close.md` (its questions, its `## Outcome` rounds and one `## Log` line per invocation), the commits carrying it and the archive moves, the pull request and its comments, and the clean base-branch merge it makes when the branch is behind, its one commit that is not a dossier commit. Nothing else.
-- Deletes `.codeo/active` and the merged branch on the remote (or, on an abandon, the unmerged one, only when the engineer asks), and moves the dossier directory in and out of `.codeo/done/`. It is the only skill that may do any of these.
+- Deletes `.codeo/active` (and clears the live signal with it) and the merged branch on the remote (or, on an abandon, the unmerged one, only when the engineer asks), and moves the dossier directory in and out of `.codeo/done/`. It is the only skill that may do any of these.
 - Releases every lease the issue holds at every exit (the merge, a stash, an abandon) and the environment at approval when it is still held. It takes the shared environment resource only for a put-back, when the issue no longer holds it, and releases it with the rest. It removes the issue's assignee on a stash or an abandon, after putting the environment back.
 - Moves the issue's board card through `board.sh`, with a board: In review when the pull request opens or is readied again, In progress on a send-back, Ready on a stash, Backlog on an abandon, Done once the merge is verified. Each move is part of its step, never a gate on it.
 
@@ -221,7 +221,7 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 ### Reads and writes
 
-- Reads anything: every branch's dossiers, the intake branch, issues, pull requests and their review threads, and, with the flags, the project's docs, its wiki pages and the code; `inflight.sh` also supplies its `live:` lines.
+- Reads anything: every branch's dossiers, the intake branch, issues, pull requests and their review threads, and, with the flags, the project's docs, its wiki pages and the code; `inflight.sh` also supplies its `live:`, `touched:`, `waits:` and `verdict:` lines. The config's `triage.parkedDays` (default 7) sets when a quiet workflow is asked about as parked work. `board.sh status` is compared with the dossier and the pull request for each workflow in flight; a mismatch is named, with its `board.sh set` command, and never fixed by triage.
 - Writes `.codeo/intake/triage/` (the ledger and the run files), committed to `codeo/intake` through `intake.sh`, never to the checked-out branch.
 - Writes an issue's board Status, to Ready or Backlog only, only through `board.sh`, and only on the engineer's answer of mark Ready, resume or leave in the backlog. A new issue arrives in Backlog already, because `/codeo:issue` writes that Status when it files it; this skill moves a card to Backlog only when it is not already there.
 
@@ -247,7 +247,7 @@ Every step of the pipeline notices things that are real but not its job, and not
 
 Prints the commands that remove finished issues' dev containers. For each issue under `.codeo/done` on the base branch it proves, through `scripts/cleanup.sh`, that the issue is closed, its pull request is merged, the pull request's branch is gone from origin, no branch still carries its dossier, and the issue holds no lease and waits for none on the intake branch. A command is printed only when the container name the project's overlay gives also matches the overlay's own pattern; an issue that fails a proof is listed with it and no command. It lists the proven issues with the project's removal command and the rest with the proof that failed, and runs nothing. It triggers on "clean up containers", "what can I remove", "cleanup".
 
-It runs in the home container only, outside the workflow lock. It says every time what the proofs cannot see: unpushed work in a clone, whether a clone was left clean, and whether /codeo:close ran to its end there (the lock lives only in that clone; a lease the issue still holds is the one trace, and it lists the issue as not proven). It also says that the commands run on the host, in a shell, after `git status` in that clone.
+It runs in the checkout the project's role check allows, outside the workflow lock. The list is every issue under `.codeo/done/` on the base branch, whether or not it ever had a container, and it grows with each merge; a printed command may name a container that no longer exists, and running it then removes nothing. It says every time what the proofs cannot see: unpushed work in a clone, whether a clone was left clean, and whether /codeo:close ran to its end there (the lock lives only in that clone; a lease the issue still holds is the one trace, and it lists the issue as not proven). It also says that the commands run on the host, in a shell, after `git status` in that clone.
 
 ### Reads and writes
 

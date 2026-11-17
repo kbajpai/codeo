@@ -147,27 +147,36 @@ it.
   | The merge is verified | `close` | `done` |
 - **Who else is in flight.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" [--except <N>]`
   lists every workflow with a dossier on a pushed branch — its issue, branch, assignee, last
-  finished step, its plan's footprint, the files the branch actually changes, and a `live:` line for
-  each live session. It reads origin, so it sees other engineers' work as soon as they push, which
-  every step does. `inflight.sh --tsv` and `intake.sh lease list --tsv` are the forms a status
-  reporter reads, and the config's `hooks.onLeaseChange` runs after every lease change, since a push
-  to the intake branch is all a lease change is. Any such report is a view of what is pushed: a row
-  that looks wrong is fixed by pushing, never by editing the report.
+  finished step, its plan's footprint, the files the branch actually changes, when it was last
+  touched and by what evidence (`touched:`), what it waits on (`waits:`), qc's last verdict when
+  there is one (`verdict:`), and a `live:` line per live session. `waits:` names a live stash or an
+  abandon first (`resume — …`), then open questions (`engineer — plan.md Q2`), else the step the
+  workflow owes next, read from the rounds' send-back markers and qc's verdict, or
+  `review — dossier archived`. The `touched:`, `waits:` and `verdict:` lines are read from the
+  pushed branch only, and `--tsv` does not carry them. It reads origin, so it sees other
+  engineers' work as soon as they push, which every step does. `inflight.sh --tsv` and
+  `intake.sh lease list --tsv` are the forms a status reporter reads, and the config's
+  `hooks.onLeaseChange` runs after every lease change, since a push to the intake branch is all a
+  lease change is. Any such report is a view of what is pushed: a row that looks wrong is fixed by
+  pushing, never by editing the report.
 - **Who is working right now.** While a Claude session runs in a checkout holding `.codeo/active`,
   a plugin hook publishes `refs/codeo/live/<issue>/<machine>` — one parentless commit, force-pushed
-  over itself — at most every 5 minutes, and deletes it when the session ends. `inflight.sh` prints
+  over itself — at most every 5 minutes, deletes it when the session ends, and `/codeo:close` clears it in the command that deletes the lock, at a finished close, a stash and an abandon. `inflight.sh` prints
   a `live:` line (`<user> on <machine> (<host>), <age> ago`) for a workflow with a signal at most 15
   minutes old, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --live` lists them as TSV
   (issue, user, machine, host, age in seconds). When the signals cannot be fetched the block says
   `live: unknown (could not fetch the signals)`. A crash needs no cleanup: the line stops after the
   expiry, and a session with no prompt or tool call for 10 to 15 minutes stops reading as
-  live until its next one. The signal adds nothing to the feature branch or its PR, and it is information only:
+  live until its next one. Set `CODEO_MACHINE` in one of two containers with the same volume name working one
+  issue: they share a ref, so one signal replaces the other. A `beat` up to the expiry ahead of
+  the reader's clock counts as age 0, and one further ahead is not listed. The `SessionEnd` hook
+  gets 20 seconds, the two bounds of a `clear`. The signal adds nothing to the feature branch or its PR, and it is information only:
   no script refuses or waits because a workflow is live. On a public repository it names the GitHub
   login (else `git config user.name`, else `unknown`), a machine label and the host kind
   (container, web or local), and never an email address. The machine is `CODEO_MACHINE`, else the
   container's volume, else `web-` plus the web session's first 8 characters, else the hostname. The
   reader's own clock judges the age. `CODEO_LIVE_REFRESH_SECONDS` (300), `CODEO_LIVE_TTL_SECONDS`
-  (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings. Where a push to that
+  (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings; the last bounds each git push or fetch, the login lookup and the REST fallback as a whole. Where a push to that
   ref is refused it is written through the REST API, and where neither works nothing is published:
   the hook discards the output of `beat` and says nothing, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh"
   beat --force` run by hand prints the one `live:` line that says why. A failed publish is not
@@ -184,6 +193,7 @@ it.
       H-->>O: live.sh beat — force-push one parentless commit (REST if the push is refused)
       R->>O: fetch +refs/codeo/live/*:refs/codeo/live/* (--prune)
       R->>R: beat within 15 min? print "live:" line
+      S->>O: /codeo:close runs live.sh clear and deletes the lock in one command
       S->>H: SessionEnd
       H->>O: delete the ref
       Note over O,R: a crash deletes nothing; the line stops printing 15 min after the last beat
@@ -371,10 +381,10 @@ caller with a number, and the caller — not `/codeo:issue` — records it in it
 even when called mid-flow; its own file lives under `.codeo/intake/`. `/codeo:triage` records the
 number in its ledger.
 
-When the project's role check refuses the call (the skill is running in an issue container),
+When the project's role check refuses the call,
 record the finding in this skill's own dossier as a line under `## Notes` that promises the
 later work and carries no issue number — the form `/codeo:triage` collects once the dossier
-is archived — and say to file it with `/codeo:issue` in the home container.
+is archived — and say to file it with `/codeo:issue` in the checkout the project's role check allows.
 
 ## Closing block
 

@@ -273,8 +273,10 @@ case $group in
                 ;;
             delete)
                 if ! out=$(gh api -X DELETE "repos/$repo/git/refs/$api_ref" 2>&1); then
-                    # An already-gone ref is the state the caller wanted.
-                    [[ $out == *"Reference does not exist"* || $out == *"Not Found"* ]] \
+                    # An already-gone ref is the state the caller wanted. GitHub answers 422
+                    # "Reference does not exist" for a missing ref and 404 for a write the
+                    # token may not make, so only the former counts as gone.
+                    [[ $out == *"Reference does not exist"* ]] \
                         || die "ref delete $ref: DELETE failed"
                 fi
                 ;;

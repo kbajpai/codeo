@@ -507,7 +507,11 @@ is the container the message names.
 16. **Release the lock.**
     <!-- rule: close-10 -->
     Delete `.codeo/active` — last, so a failure anywhere above leaves the workflow intact and
-    re-invokable rather than orphaned with no lock. When a release, a branch deletion or a
+    re-invokable rather than orphaned with no lock. Do it with the live-signal clear in one
+    command, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh" clear; rm -f .codeo/active`: `clear`
+    needs the lock to name the signal, and a separate call would let the next hook publish it
+    again. A `clear` that cannot reach origin prints one `live:` line and changes nothing; the
+    signal then expires (`docs/handoff.md`). When a release, a branch deletion or a
     push failed above, keep it: say what failed, and that running `/codeo:close` again in this
     checkout finishes the close.
 
@@ -629,7 +633,7 @@ Then write beneath the round what the environment is left carrying, when a `Depl
 was recorded, and append this invocation's `## Log` line — the date, the stash, what was released, the board
 result, then ` · cost: ` with what `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints —
 and commit `close.md`, staged by name, with the same subject, and push. Delete `.codeo/active`
-last; when the release or a push failed, keep it, say what failed, and that running
+last, as step 16 does, with the signal cleared; when the release or a push failed, keep it, say what failed, and that running
 `/codeo:close --stash` again in this checkout finishes the stash. Once the lock is gone, everything
 is pushed, so this checkout holds nothing the branch lacks: say what is left of it as step 17
 does, by the lock's host, read before the lock goes. Fetch the project's `close/host-workflow` as step 17 does, with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow` and its exits handled the same way, and relay the part that is for this exit. An open pull request stays open; say so. End
@@ -670,8 +674,9 @@ the branch only if the engineer asks, after the
 same confirmation as step 14 — what the branch carries shown, and asked once, saying that
 deleting an unmerged branch deletes the only copy of its dossier, `close.md` and the abandon round
 included — with the same `git ls-remote` check, never the base branch, and never a force-push.
-Work that never merged is kept unless someone says otherwise. Then the lock is deleted last, as a
-stash does; a deletion that failed keeps it, as close-10 does on the merge path, and running
+Work that never merged is kept unless someone says otherwise. Then the lock is deleted last,
+as a stash does, as step 16 does, with the signal cleared; a deletion that failed keeps it, as
+close-10 does on the merge path, and running
 `/codeo:close` again finishes the abandon.
 
 Once the lock is gone, say what is left of the checkout as step 17 does, by the lock's host, read

@@ -1,0 +1,212 @@
+# Issue #103 — plan
+
+| | |
+|---|---|
+| Issue | https://github.com/kbajpai/codeo/issues/103 |
+| Branch | `feat/let-codeo-triage-judge-flight` |
+| Updated | 2026-11-17 |
+
+## Where this stands
+
+Round 2 planned, after the send-back from `qc.md` round 1: Q7-Q9 are answered, and the plan is written to `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md` and committed on the engineer's go-ahead. The footprint is checked against every other workflow in flight; nothing is open. Next: `/codeo:implement`.
+
+## Questions
+
+### Q1 — What does a workflow's block look like, and what counts as evidence for the date?
+
+**Why it matters:** it fixes the lines every consumer of the human block sees, and whether `inflight.sh` makes a GitHub call per pull request on every run in init, plan, implement, qc and close.
+**Proposal:** two lines always, one more when `qc.md` has a verdict, placed after `changed:` and before any `live:` line (the existing tests pin `assignee`/`step`/`changed` as consecutive lines, and `changed` followed by `live`; I would move that one `live` assertion down a line and change no other):
+
+```
+#116  fix/follow-ups-70-71-104
+  assignee:  kbajpai
+  step:      qc (working)
+  files:      …
+  changed:    …
+  touched:   2026-11-17 (qc.md log), 0 days ago
+  waits:     /codeo:implement
+  verdict:   round 1 — back to /codeo:implement
+  live:      kbajpai on codeo-116 (container), 3m ago
+```
+
+The date is the newest of three things read from the pushed branch: the tip commit's committer date, each dossier's `Updated` row, and the last dated line of each dossier's `## Log`. The source in brackets names which one won (`branch tip`, `<step>.md Updated`, `<step>.md log`); on a tie the dossier is named, since it says more than "branch tip". Days are whole calendar days between that date and today.
+**Options:**
+- **Git only, as proposed (recommended)** — no new network call. For a workflow with a pull request open, review comments do not move the date; triage, which already looks each branch's pull request up, quotes the pull request's state beside it.
+- **Also the pull request's last update** — `inflight.sh` looks up the pull request of every workflow whose dossier is archived and takes its `updated_at` as a fourth source. One or two more REST calls per such workflow on every `inflight.sh` run, and `github.sh pr list-for-branch` gains an `updated_at` field (`scripts/github.sh` is in #116's footprint).
+- **Something else** — say what.
+
+**Answer:**
+Git only, as proposed, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
+
+### Q2 — What can `waits:` say, and in what order of precedence?
+
+**Why it matters:** it is the line triage quotes to decide whether a quiet workflow is stuck on the engineer or on nothing, and each value is a detection rule and a test.
+**Proposal:** the first that applies:
+1. `engineer — plan.md Q3, Q4` — any dossier in the directory has a question whose `**Answer:**` body is empty (the same definition `dossier-check.sh` uses). Every file with one is named, separated by `; `.
+2. `resume — stashed (close.md round 2)` or `resume — abandoned (…)` — `close.md` has more stash or abandon rounds than `init.md` has resume lines (the count `claim.sh --stash-live` already makes). The issue does not list this one; without it a deliberately stashed workflow reads `nothing known`.
+3. `review — PR open` — the dossier is archived at `.codeo/done/<N>/`.
+4. `/codeo:close` after a clear verdict, `/codeo:implement` or `/codeo:plan` after a send-back — from `qc.md`'s last decision span, the pattern `qc-verdict.sh` reads.
+5. `nothing known`.
+
+`verdict:` is separate from `waits:` and printed whenever `qc.md` has a decision, so criterion 3 holds even when a question or an open pull request takes precedence.
+**Options:** as proposed, with the stash line (recommended) · the issue's four only, no stash line · something else — say what.
+
+**Answer:**
+As proposed, with the stash line, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
+
+### Q3 — Do the new facts get a machine-readable form?
+
+**Why it matters:** `--tsv` exists so status reporters need not scrape the blocks, and `tests/inflight.test.sh` compares its rows for exact equality. A reader that does `read -r issue branch state step assignee` would get any appended column glued onto `assignee`.
+**Options:**
+- **Human block only (recommended)** — triage reads the block; `--tsv`, `--branches` and `--live` print byte for byte what they print today. A machine-readable form waits until a reporter asks for one.
+- **A new `--facts` listing** — `issue<TAB>touched<TAB>source<TAB>days<TAB>waits<TAB>verdict`, one row per workflow, no `gh` call, as #104 added `--live` and left `--tsv` alone.
+- **Append columns to `--tsv`** — the first five keep their order; the equality tests are rewritten, and a five-variable `read` breaks as described.
+
+**Answer:**
+Human block only, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
+
+### Q4 — How is the parked threshold named and applied?
+
+**Why it matters:** the key is public config once released, and where the comparison happens decides whether a script or the model's arithmetic settles "parked".
+**Proposal:** `triage.parkedDays` in `.codeo/config.json`, a whole number of days, default 7, read by the skill with `config.sh get '.triage.parkedDays // 7'`; documented in `lib/env.sh`'s key list and in `docs/skills.md`'s triage section. No schema bump (an absent optional key). `inflight.sh` prints the day count (Q1) and knows nothing of the threshold; triage asks about a workflow when the count is greater than the threshold (7 days exactly is not parked) and quotes `touched:` and the threshold in the question. A workflow within it is listed in the run's `## Outcome` with its `touched:` and `waits:` lines and not asked about. The existing rules stay: a `live:` line means never asked as parked, and an unassigned workflow is still asked about whatever its date. The fingerprint is `parked:<N>:<touched date>`, so a dismissal or deferral holds only until the workflow is touched and goes quiet again.
+**Options:** as proposed (recommended) · another key name or default — say which · `inflight.sh` takes the threshold and prints `parked: yes|no` itself, so the decision is a script's and has a script test.
+
+**Answer:**
+As proposed, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
+
+### Q5 — Which board Statuses count as a mismatch, and what does triage do with one?
+
+**Why it matters:** the issue's example, `In progress` while a pull request is open, is the normal state after a review send-back (`/codeo:close` moves the dossier back to `.codeo/<N>/` and the card back to In progress with the pull request still open), so the rule has to key on where the dossier sits and not only on the pull request.
+**Proposal:** triage runs `board.sh status <N>` for each workflow in flight and compares it with this table, naming statuses through `board.statuses` as everywhere else:
+
+| What is pushed | Expected Status |
+|---|---|
+| dossier at `.codeo/<N>/`, not stashed or abandoned | In progress |
+| dossier at `.codeo/<N>/`, last `close.md` round stashed | Ready |
+| dossier at `.codeo/<N>/`, last `close.md` round abandoned | Backlog |
+| dossier at `.codeo/done/<N>/`, pull request open | In review |
+| dossier at `.codeo/done/<N>/`, no pull request or closed unmerged | none fits: always a mismatch |
+| pull request merged | Done (the existing `unclosed:<N>` item covers the rest) |
+
+A mismatch is a question of its own, fingerprint `board:<N>:<Status found>`, quoting the `board.sh status` line, the `step:` line and the pull request's state. Options: *fix it* (the `board.sh set <N> <status>` command, named and never run, because triage's own board writes stay Ready and Backlog) · *dismiss (why)* · *defer*. `none` or `unset` is a mismatch too. With no board configured the check is skipped and said once; when the read is `unavailable` (a web session) the run's `## Outcome` says the board comparison was unavailable, per `triage-07`.
+**Options:** as proposed (recommended) · list mismatches in the run's `## Outcome` without asking · let triage write the expected Status itself on the engineer's yes (widens its board writes beyond Ready and Backlog, and changes `docs/handoff.md`'s ownership table).
+
+**Answer:**
+As proposed, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
+
+### Q6 — #116 edits two files this plan will edit; how do the two branches proceed?
+
+**Why it matters:** two branches editing one file merge cleanly only when their hunks are apart.
+**What overlaps:** #116, branch `fix/follow-ups-70-71-104`, assignee kbajpai, last finished step `qc` (working). Its footprint and its `changed:` line both name `CHANGELOG.md` and `docs/skills.md` (`glob:CHANGELOG.md`, `glob:docs/skills.md`). This plan adds one bullet to `## Unreleased` and edits the triage section of `docs/skills.md` (what it reads, and the new config key). It also names `scripts/github.sh`, which this plan touches only under Q1's second option. #99 (`feat/make-sbx-issue-sandbox-usable`, kbajpai, at `init`) has no footprint yet and has changed no file, so there is nothing to compare. This plan's other files: `scripts/inflight.sh`, `skills/triage/SKILL.md`, `lib/env.sh`, `docs/handoff.md` only if a sentence there turns out wrong (it is in #116's footprint too: `docs/handoff.md`, `glob:docs/handoff.md`), `tests/inflight.test.sh`, `tests/triage-skill.test.sh`.
+**Options:**
+- **Proceed and coordinate (recommended)** — the edits are small and apart from #116's; `/codeo:implement` and `/codeo:qc` merge `origin/main` each round, and the changelog and docs tasks re-read the lines they edit first.
+- **Sequence after #116** — `/codeo:implement` waits for #116's merge. #116 is at `qc`, so the wait is probably short.
+- **Re-scope** — say what to drop.
+
+**Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
+
+### Q7 — How should `waits:` follow a workflow past qc's verdict (qc.md round 1, F1)?
+
+**Why it matters:** round 1's rule read only `qc.md`, so #116 reads `waits: /codeo:plan` although its `plan.md` round 2 answered that send-back and its implement round 2 is under way. The answer decides how much of the pipeline's state `inflight.sh` reads, and so how many cases and tests the rule carries.
+**What is there to read:** every later round already names what it answers, as its second line: `(send-back from qc.md round <k>)` in `plan.md` and `implement.md`, `(after plan.md round <j>)` in `implement.md`, `(send-back from close.md round <m>)` in `implement.md`; and `close.md` heads a send-back `### Round <m> — review feedback` or `— conflicts with <base>` and records `qc round at review: <k>`. The archived dossiers on `main` carry these markers consistently (one variant, `(after plan.md round 2, answering qc.md round 2)`, which a prefix match covers).
+**Options:**
+- **Follow the markers through, and name the next step when qc has not run (recommended).** After the question and stash rules, the first that applies:
+  1. `close.md`'s last round is a send-back (round m): `implement.md` has no `(send-back from close.md round m)` → `/codeo:implement`; it has one but `qc.md`'s last round is not newer than that round's `qc round at review: <k>` → `/codeo:qc`; otherwise rule 2.
+  2. `qc.md`'s last verdict (round k) is clear → `/codeo:close`. Back to `/codeo:plan`: `plan.md` has no `(send-back from qc.md round k)` → `/codeo:plan`; it has one, in its round j, and `implement.md` has no `(after plan.md round j` → `/codeo:implement`; else `/codeo:qc`. Back to `/codeo:implement`: `implement.md` has no `(send-back from qc.md round k)` → `/codeo:implement`; else `/codeo:qc`.
+  3. No verdict: the step after the last finished one (`step:` init → `/codeo:plan`, plan → `/codeo:implement`, implement → `/codeo:qc`); `nothing known` only when no step has an outcome.
+  
+  #116 then reads `waits: /codeo:implement` and #103 `waits: /codeo:qc`. `verdict:` stays qc's last decision, unchanged. About ten more test cases.
+- **Markers for qc's send-backs only** — rule 2 without rules 1 and 3. A review send-back from `/codeo:close` still reads `/codeo:close`, and a workflow qc has not reached reads `nothing known`.
+- **Drop the route** — `waits:` says only `engineer`, `resume`, `review` or `nothing known`, and the reader works the rest out from `step:` and `verdict:`. Simplest, and never stale, but triage then has no line saying which step is owed.
+
+**Answer:**
+Follow the markers through, and name the next step when qc has not run, as recommended (engineer, in the conversation, 2026-11-17: "All recommendations accepted").
+
+### Q8 — How does a stash or abandon stay visible when a question is also open (F2)?
+
+**Why it matters:** round 1 put the open question first, so a workflow stashed with a question open read as not stashed; triage then expects In progress, flags the Ready that `/codeo:close` set, and names a command that undoes the stash.
+**Options:**
+- **The stash comes first, with the questions after it (recommended)** — `waits:     resume — #7's stash is live; engineer — plan.md Q2`. A stashed workflow waits on a resume before anything else, the open questions are still shown, and triage reads a stash or abandon from a `waits:` value that starts `resume — `. One line, no new label.
+- **A line of its own** — `parked:    stashed (close.md round 2)`, printed only when there is one, with `waits:` as in round 1. A fourth new line in the block, and triage reads the stash from it.
+- **Triage calls `claim.sh --stash-live` itself** — `inflight.sh` unchanged; the skill runs the script per workflow. One more command per workflow in every triage run, and the block still hides the stash from a human reader.
+
+**Answer:**
+The stash comes first, with the questions after it, as recommended (engineer, in the conversation, 2026-11-17: "All recommendations accepted").
+
+### Q9 — What happens to the board when the engineer answers *resume* for a workflow that was only quiet, not stashed (F5)?
+
+**Why it matters:** today *resume* always runs `board.sh set <N> ready`. That was written for stashed work, whose card a lost checkout may have left anywhere. For a workflow raised only for its age the card is In progress and correct; moving it to Ready makes the next triage run flag the Ready it set itself.
+**Options:**
+- **Move the card only for a stash or abandon (recommended)** — for a workflow whose `waits:` starts `resume — `, *resume* runs `board.sh set <N> ready` as today; for one that was only quiet, it names the step `waits:` shows, in that issue's checkout, and makes no card move.
+- **Keep the move, and expect it** — *resume* always sets Ready, and the mismatch check treats Ready on a working dossier as expected when the ledger's last decision for that issue is `resume`.
+
+**Answer:**
+Move the card only for a stash or abandon, as recommended (engineer, in the conversation, 2026-11-17: "All recommendations accepted").
+
+## Notes
+
+**What exists today.** `inflight.sh` prints one block per workflow from pushed branches: `assignee`, `step` (the last step whose dossier has a non-pending `## Outcome`, with `working` or `PR open` from where the dossier sits), the footprint lines, `changed:` and `live:`. `--tsv` (five columns, compared for equality in the tests), `--branches` (read by `overlap.sh`) and `--live` are the machine forms. Triage step 1.2 reads the human block and has one sentence for parked work: "One whose last step is weeks old, or assigned to nobody, is worth asking about."
+
+**Calls made without a question** (correct any of them in an answer):
+- One pull request, one plan under `docs/plans/`, no separate reference doc. The pages that describe the behaviour (`docs/skills.md`, `lib/env.sh`'s key list, `inflight.sh`'s header) get their own task.
+- The date is printed as `YYYY-MM-DD`; a commit's date is taken in the committer's own time zone, as git records it.
+- An unparseable or missing `Updated` row or log date is skipped, never an error: the branch tip always gives a date.
+- New tests go in `tests/inflight.test.sh` (script behaviour) and `tests/triage-skill.test.sh` (the skill's wording), the two existing homes.
+
+**Other workflows in flight** (`inflight.sh --except 103`, 2026-11-17): #116 at `qc`, overlap in Q6; #99 at `init`, no footprint.
+
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-17-triage-judges-in-flight-work.md` (unstaged, for review) |
+| Shape | An implementation plan under `docs/plans/`, no separate reference doc: the behaviour is documented where it already lives |
+| Tasks | 4 — `touched:` · `waits:` and `verdict:` · triage's threshold and board check · changelog |
+
+**Decisions** (Q1-Q6, all "as recommended"):
+- `inflight.sh`'s human block gains `touched:` (the newest of the branch tip, each dossier's `Updated` row and its last `## Log` date, with its source and a day count), `waits:` (open question with file and number · unresumed stash or abandon · PR open · the step after qc's verdict · `nothing known`) and `verdict:` (qc's last decision span), between `changed:` and `live:`. Git only, no new network call. Rejected: the pull request's `updated_at` as evidence.
+- No machine-readable form: `--tsv`, `--branches` and `--live` are unchanged. Rejected: a `--facts` listing; appended `--tsv` columns.
+- `triage.parkedDays` (default 7, more than it is parked) is read and applied by `/codeo:triage`; fingerprint `parked:<N>:<touched date>`. Rejected: `inflight.sh` deciding `parked:` itself.
+- Triage compares `board.sh status` with an expected Status keyed on where the dossier sits, the stash state and the pull request; a mismatch is a question naming `board.sh set`, never run; `unavailable` is reported once, never a mismatch. Fingerprint `board:<N>:<Status found>`. Rejected: listing without asking; triage writing the Status.
+- #116's overlap (`CHANGELOG.md`, `docs/skills.md`, `docs/handoff.md`): proceed and coordinate.
+
+**Documentation the plan changes:** `scripts/inflight.sh`'s header, `docs/handoff.md` → *Who else is in flight*, `lib/env.sh`'s config key list, `docs/skills.md` → *triage*, `CHANGELOG.md`.
+
+**Intake questions resolved:** none were open.
+
+### Round 2
+
+2026-11-17
+(send-back from qc.md round 1)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md` (round 1's plan stands except where this one changes it) |
+| Shape | An implementation plan under `docs/plans/`, 3 tasks |
+| Approval | The engineer accepted Q7-Q9's recommendations and asked to go straight on to `/codeo:implement` (2026-11-17), so this round was not shown as a draft first |
+
+**Decisions** (Q7-Q9, all "as recommended", plus calls on F4, F6 and F7):
+- `waits:` follows the round markers the pipeline already writes: `(send-back from qc.md round <k>)`, `(after plan.md round <j>`, `(send-back from close.md round <m>)` and `qc round at review: <k>`. Without a verdict it names the step after `step:`. Rejected: qc's send-backs only; dropping the route.
+- A live stash or abandon leads `waits:`, with open questions after it on the same line. Rejected: a separate `parked:` line; triage calling `claim.sh` itself.
+- *resume* moves the card to Ready only when `waits:` starts `resume — `. For a quiet workflow it names the owed step. Rejected: always Ready, with the mismatch check expecting it.
+- An archived dossier reads `review — dossier archived` (F4). A combined question's answer is recorded against every fingerprint it carries (F6). A failed `board.sh status` read is reported and never a mismatch (F7).
+
+**Documentation the plan changes:** `scripts/inflight.sh`'s header, `docs/handoff.md` → *Who else is in flight*, `skills/triage/SKILL.md`, `lib/env.sh`, `docs/skills.md` → *triage* (only if a sentence turns untrue), `CHANGELOG.md`.
+
+### Footprint
+
+```
+files:      scripts/inflight.sh, tests/inflight.test.sh, skills/triage/SKILL.md, tests/triage-skill.test.sh, lib/env.sh, docs/skills.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-17-triage-judges-in-flight-work.md, docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
+## Log
+
+- 2026-11-17 — Q1-Q6 raised · cost: 2m · fable-5-2 94k in + 659k cached / 9k out
+- 2026-11-17 — Q1-Q6 answered; draft written to .codeo/103/plan-draft.md (engineering plugin unavailable: system-design and architecture structure applied directly) · cost: 11m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 131k in + 956k cached / 18k out
+- 2026-11-17 — planned: docs/plans/2026-11-17-triage-judges-in-flight-work.md (engineering plugin unavailable) · cost: 37m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 146k in + 1.7M cached / 21k out
+- 2026-11-17 — round 2 (send-back from qc.md round 1): Q7-Q9 raised · cost: 1m · fable-5-2 342k in + 337k cached / 4k out
+- 2026-11-17 — planned round 2: docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md (engineering plugin unavailable) · cost: 22m · fable-5-2 347k in + 1M cached / 7k out · opus-5-5 30k in + 1000k cached / 11k out

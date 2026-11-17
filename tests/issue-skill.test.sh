@@ -51,7 +51,9 @@ doc_has "skills.md says triage finds the card already in Backlog" docs/skills.md
 
 # F2, F5: the scope sentences name the Backlog write and the success line is reported.
 must_contain "the scope sentence names the board write" "and, with a board, puts it in the board's Backlog, and that is all it does"
-must_contain "the success line is reported" 'Quote that line in the report.'
+must_contain "the success line is reported" 'Quote them in the report.'
+must_contain 'set prints one line per project' 'one line per project'
+must_contain 'the Backlog fix is named' 'board.statuses.backlog'
 doc_has "skills.md's scope sentence names the board write" docs/skills.md "puts it in the board's Backlog when the project has a board, and does nothing else"
 
 if ((failures)); then

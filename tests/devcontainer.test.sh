@@ -2210,6 +2210,7 @@ title_reports_a_settings_path_that_is_not_a_regular_file() {
     [[ $wt_err == *'not readable'* ]] || fail "unreadable: stderr lacks 'not readable': $wt_err"
 }
 
+# The stderr equality guards the one-line message; the two .vscode checks only catch a reordering of the temp file, since window-title.sh dies before creating it.
 title_reports_a_failing_container_name_as_one_line() {
     wt_setup cnfail || return 0
     printf '#!/bin/sh\necho "container-name: first" >&2\necho "container-name: second" >&2\nexit 1\n' \

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Exercises scripts/cleanup.sh on a scratch bare origin plus clone and a stubbed `gh api`:
 # each proof failing in turn (issue, pull-request, branch, dossier, lease, name), the overlay's name check, and that nothing is ever run.
-# The overlay body arrives through CODEO_CLEANUP_REMOVAL, which the script reads before overlay.sh.
+# The overlay body arrives through the scratch project's .codeo/overlays/cleanup.md (set_overlay), which overlay.sh reads.
 # Touches no real git config and makes no network call.
 #
 #   cleanup.test.sh
@@ -61,6 +61,17 @@ tab=$'\t'
 overlay=$'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: docker rm -f {name}; docker volume rm {name}'
 want_cmd='docker rm -f codeo-12; docker volume rm codeo-12'
 
+# set_overlay <body>: the scratch project's cleanup overlay, whose removal-command section is the body; none for an empty body.
+set_overlay() {
+    local file=$REPO_WORK/.codeo/overlays/cleanup.md
+    if [[ -z $1 ]]; then
+        rm -f "$file"
+        return 0
+    fi
+    mkdir -p "${file%/*}"
+    printf '## removal-command\n%s\n' "$1" > "$file"
+}
+
 # fixture <N> <issue state> <pr number|none> <merged_at|null> <head ref>
 fixture() {
     local n=$1 state=$2 pr=$3 merged=$4 ref=$5
@@ -119,8 +130,7 @@ body='Opened.
 case_desc="all five proofs pass"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
-CODEO_CLEANUP_REMOVAL=$overlay
-export CODEO_CLEANUP_REMOVAL
+set_overlay "$overlay"
 assert_eq "line" "12${tab}proven${tab}$want_cmd" "$(run_cleanup)"
 
 case_desc="issue still open"
@@ -157,6 +167,7 @@ assert_eq "line" "12${tab}failed${tab}branch" "$(run_cleanup)"
 case_desc="branch deleted on origin is pruned by the fetch and passes"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay "$overlay"
 push_branch feat/12
 git -C "$REPO_WORK" fetch -q origin
 git -C "$REPO_WORK" push -q origin --delete feat/12
@@ -185,9 +196,8 @@ assert_eq "no proven line" "no" "$([[ $out == *"${tab}proven"* ]] && echo yes ||
 case_desc="a name containing & is substituted literally"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
-CODEO_CLEANUP_REMOVAL=$'name: a&b-{N}\npattern: ^a&b-[0-9]+$\ncommand: rm {name} {name}'
+set_overlay $'name: a&b-{N}\npattern: ^a&b-[0-9]+$\ncommand: rm {name} {name}'
 assert_eq "line" "12${tab}proven${tab}rm a&b-12 a&b-12" "$(run_cleanup)"
-CODEO_CLEANUP_REMOVAL=$overlay
 
 case_desc="dossier still on another branch"
 setup_repo "12:$body"
@@ -198,6 +208,7 @@ assert_eq "line" "12${tab}failed${tab}dossier" "$(run_cleanup)"
 case_desc="done/<N> alone is not a dossier"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay "$overlay"
 push_branch other/thing 13
 assert_eq "line" "12${tab}proven${tab}$want_cmd" "$(run_cleanup)"
 
@@ -235,6 +246,7 @@ assert_eq "line" "12${tab}failed${tab}lease" "$(run_cleanup)"
 case_desc="another issue's lease does not fail this one; the intake branch is read once"
 setup_repo "12:$body" "13:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay "$overlay"
 fixture 13 closed 42 2026-01-01T00:00:00Z feat/13
 push_lease held dev 13
 assert_eq "lines" "12${tab}proven${tab}$want_cmd
@@ -243,6 +255,7 @@ assert_eq "lines" "12${tab}proven${tab}$want_cmd
 case_desc="no intake branch at all: the issue is still proven"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay "$overlay"
 assert_eq "line" "12${tab}proven${tab}$want_cmd" "$(run_cleanup)"
 
 case_desc="an unreadable lease list stops the script"
@@ -274,22 +287,34 @@ for bad in codeo-home codeo-gh codeo-git; do
     case_desc="name template expands to $bad"
     setup_repo "12:$body"
     fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
-    CODEO_CLEANUP_REMOVAL=$'name: '"$bad"$'\npattern: ^codeo-[0-9]+$\ncommand: docker rm -f {name}'
+    set_overlay $'name: '"$bad"$'\npattern: ^codeo-[0-9]+$\ncommand: docker rm -f {name}'
     assert_eq "line" "12${tab}failed${tab}name" "$(run_cleanup)"
 done
 
 case_desc="overlay without a pattern"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
-CODEO_CLEANUP_REMOVAL=$'name: codeo-{N}\ncommand: docker rm -f {name}'
+set_overlay $'name: codeo-{N}\ncommand: docker rm -f {name}'
 assert_eq "line" "12${tab}failed${tab}name" "$(run_cleanup)"
 
 case_desc="overlay without a command"
-CODEO_CLEANUP_REMOVAL=$'name: codeo-{N}\npattern: ^codeo-[0-9]+$'
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$'
 assert_eq "line" "12${tab}failed${tab}name" "$(run_cleanup)"
 
-case_desc="no overlay at all"
+case_desc="an_exported_removal_override_changes_nothing"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: docker rm -f {name}'
+plain=$(run_cleanup)
+assert_eq "line with an overlay, before the export" "12${tab}proven${tab}docker rm -f codeo-12" "$plain"
+export CODEO_CLEANUP_REMOVAL=$'name: x-{N}\npattern: ^x-[0-9]+$\ncommand: rm {name}'
+assert_eq "line with an overlay" "$plain" "$(run_cleanup)"
+set_overlay ""
+assert_eq "line without an overlay" "12${tab}proven${tab}-" "$(run_cleanup)"
 unset CODEO_CLEANUP_REMOVAL
+
+case_desc="no overlay at all"
+set_overlay ""
 assert_eq "line" "12${tab}proven${tab}-" "$(run_cleanup)"
 
 case_desc="ascending N, mixed outcomes"
@@ -297,8 +322,7 @@ setup_repo "30:$body" "7:$body" "12:$body"
 fixture 30 closed 41 2026-01-01T00:00:00Z feat/30
 fixture 7 open 41 2026-01-01T00:00:00Z feat/7
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
-CODEO_CLEANUP_REMOVAL=$overlay
-export CODEO_CLEANUP_REMOVAL
+set_overlay "$overlay"
 assert_eq "lines" "7${tab}failed${tab}issue
 12${tab}proven${tab}$want_cmd
 30${tab}proven${tab}${want_cmd//codeo-12/codeo-30}" "$(run_cleanup)"

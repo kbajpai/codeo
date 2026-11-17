@@ -288,7 +288,11 @@ case $cmd in
         done
 
         if [[ $written -eq 0 && -z $failed ]]; then
-            echo "board.sh: no synced project has the option '$want' (it has: ${skipped_names[*]:-none})" >&2
+            hint=
+            if default_status "$want_arg" >/dev/null; then
+                hint="; if the board names it differently, set board.statuses.$want_arg in .codeo/config.json to the option's name"
+            fi
+            echo "board.sh: no synced project has the option '$want' (it has: ${skipped_names[*]:-none})$hint" >&2
             exit 1
         fi
         # A skipped add is a failure the skills must see, though the other boards were written.

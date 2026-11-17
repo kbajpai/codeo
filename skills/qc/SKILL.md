@@ -510,10 +510,10 @@ is the container the message names.
 - **May call** `/codeo:issue` for a real problem that is out of scope for this change — a call, not
   a hand-off: control returns, and this skill records the number in its own `## Outcome` and
   `## Log` line (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A call is not a hand-off`).
-  When the project's role check refuses the call (the skill is running in an issue container),
+  When the project's role check refuses the call,
   record the finding in this skill's own dossier as a line under `## Notes` that promises the
   later work and carries no issue number — the form `/codeo:triage` collects once the dossier
-  is archived — and say to file it with `/codeo:issue` in the home container.
+  is archived — and say to file it with `/codeo:issue` in the checkout the project's role check allows.
 - **Spins out subagents** on the configured subagent model (`$SUBAGENT_MODEL`: `models.subagent`,
   sonnet when unset), passed explicitly on every dispatch — except step 7's reviewer, on
   `$REVIEWER_MODEL` (`models.reviewer`, opus when unset) with a `description` starting

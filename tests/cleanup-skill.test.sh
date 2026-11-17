@@ -26,6 +26,17 @@ row=$(grep -F '| `cleanup` |' "$repo/docs/handoff.md")
 ! grep -qiw 'docker' "$skill" || check_fail "the skill names the container engine"
 ! grep -qF 'codeo-home' "$skill" || check_fail "the skill names the home container"
 
+# Generic text names no container, and the list's reach is stated.
+! grep -qF 'Home-container' "$skill" || check_fail "the skill still says Home-container"
+! grep -qF 'home container' "$skill" || check_fail "the skill still says home container"
+step2=$(awk '/^2\. \*\*Say what the proof cannot see/{f=1; next} /^3\. /{f=0} f' "$skill")
+grep -qF 'every issue under `.codeo/done/`' <<<"$step2" || check_fail "step 2 does not state the list's reach"
+docs="$repo/docs/skills.md"
+section=$(awk '/^## cleanup$/{f=1; next} /^## /{f=0} f' "$docs")
+grep -qF 'every issue under `.codeo/done/`' <<<"$section" || check_fail "docs/skills.md cleanup section does not state the list's reach"
+! grep -qF 'in the home container, and only prints' "$docs" || check_fail "docs/skills.md still says cleanup runs in the home container"
+! grep -qF 'runs in the home container only' "$docs" || check_fail "docs/skills.md still says cleanup runs in the home container only"
+
 # The overlay's removal-command body, fed to cleanup.sh over a scratch origin with a stubbed gh.
 body=$(awk '/^## removal-command$/{f=1; next} /^## /{f=0} f && NF' "$repo/.codeo/overlays/cleanup.md")
 [[ -n $body ]] || check_fail "the overlay has no removal-command body"
@@ -62,7 +73,11 @@ printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}\n' >"$s
 printf '{"number":70,"state":"closed","labels":[],"assignees":[]}' >"$GH_STUB_DIR/GET_repos_o_n_issues_70.json"
 printf '{"state":"closed","merged_at":"2026-01-01T00:00:00Z","head":{"ref":"feat/70"}}' >"$GH_STUB_DIR/GET_repos_o_n_pulls_41.json"
 
-run() { (cd "$scratch/work" && PATH="$scratch/bin:$PATH" CODEO_CLEANUP_REMOVAL=$1 bash "$repo/scripts/cleanup.sh" 2>&1) || true; }
+run() {
+    mkdir -p "$scratch/work/.codeo/overlays"
+    printf '## removal-command\n%s\n' "$1" >"$scratch/work/.codeo/overlays/cleanup.md"
+    (cd "$scratch/work" && PATH="$scratch/bin:$PATH" bash "$repo/scripts/cleanup.sh" 2>&1) || true
+}
 
 for bad in codeo-home codeo-gh codeo-git codeo-; do
     out=$(run "${body//codeo-\{N\}/$bad}")
