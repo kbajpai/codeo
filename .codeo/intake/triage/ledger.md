@@ -125,3 +125,7 @@
 | `issue:112` | Verify the live-session signal in a hosted web session; filed 2026-11-16, no branch, board Status `none` | leave in the backlog | 2026-11-16 |
 | `issue:114` | Dev container trusts the workspace folder in Claude Code; folded into #99 | already #99 — closed as superseded | 2026-11-17 |
 | `issue:116` | Follow-ups #70, #71, #104 and #107 left; filed 2026-11-16, board Status `none` | ready | 2026-11-16 |
+| `qc:113:G1-G2` | #113's container-first order in `codeo-container.sh` leaves a half-made container after a branch mismatch or failed clone | filed — folded into #99 | 2026-11-17 |
+| `qc:113:G3-G7-R7-R8` | #113's remaining wording, documentation and test gaps | filed — folded into #99 with Q1 | 2026-11-17 |
+| `implement:104:polish` | #104's refresh label, header line, ref-lock collision and F2 | filed #118 | 2026-11-17 |
+| `issue:118` | Live-signal leftovers from #104; filed 2026-11-17, board Status `Backlog` | leave in the backlog — after #116 merges | 2026-11-17 |
