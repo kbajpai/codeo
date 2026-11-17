@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q6 answered ("All as recommended", 2026-11-17). The plan is drafted at `.codeo/103/plan-draft.md` and waits for the engineer's approval; nothing is open.
+Planned. Q1-Q6 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-17-triage-judges-in-flight-work.md` (unstaged, for review). The footprint is recorded and checked against every other workflow in flight; nothing is open. The next step is to review and commit the plan, then `/codeo:implement`.
 
 ## Questions
 
@@ -118,6 +118,25 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 
 **Other workflows in flight** (`inflight.sh --except 103`, 2026-11-17): #116 at `qc`, overlap in Q6; #99 at `init`, no footprint.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-17-triage-judges-in-flight-work.md` (unstaged, for review) |
+| Shape | An implementation plan under `docs/plans/`, no separate reference doc: the behaviour is documented where it already lives |
+| Tasks | 4 — `touched:` · `waits:` and `verdict:` · triage's threshold and board check · changelog |
+
+**Decisions** (Q1-Q6, all "as recommended"):
+- `inflight.sh`'s human block gains `touched:` (the newest of the branch tip, each dossier's `Updated` row and its last `## Log` date, with its source and a day count), `waits:` (open question with file and number · unresumed stash or abandon · PR open · the step after qc's verdict · `nothing known`) and `verdict:` (qc's last decision span), between `changed:` and `live:`. Git only, no new network call. Rejected: the pull request's `updated_at` as evidence.
+- No machine-readable form: `--tsv`, `--branches` and `--live` are unchanged. Rejected: a `--facts` listing; appended `--tsv` columns.
+- `triage.parkedDays` (default 7, more than it is parked) is read and applied by `/codeo:triage`; fingerprint `parked:<N>:<touched date>`. Rejected: `inflight.sh` deciding `parked:` itself.
+- Triage compares `board.sh status` with an expected Status keyed on where the dossier sits, the stash state and the pull request; a mismatch is a question naming `board.sh set`, never run; `unavailable` is reported once, never a mismatch. Fingerprint `board:<N>:<Status found>`. Rejected: listing without asking; triage writing the Status.
+- #116's overlap (`CHANGELOG.md`, `docs/skills.md`, `docs/handoff.md`): proceed and coordinate.
+
+**Documentation the plan changes:** `scripts/inflight.sh`'s header, `docs/handoff.md` → *Who else is in flight*, `lib/env.sh`'s config key list, `docs/skills.md` → *triage*, `CHANGELOG.md`.
+
+**Intake questions resolved:** none were open.
+
 ### Footprint
 
 ```
@@ -127,11 +146,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-17 — Q1-Q6 raised · cost: 2m · fable-5-2 94k in + 659k cached / 9k out
 - 2026-11-17 — Q1-Q6 answered; draft written to .codeo/103/plan-draft.md (engineering plugin unavailable: system-design and architecture structure applied directly) · cost: 11m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 131k in + 956k cached / 18k out
+- 2026-11-17 — planned: docs/plans/2026-11-17-triage-judges-in-flight-work.md (engineering plugin unavailable) · cost: 37m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 146k in + 1.7M cached / 21k out
