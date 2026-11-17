@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written: back to `/codeo:plan` for two blocking findings (F1, F2), both in rules the plan set.
+Round 2 is written: back to `/codeo:implement` for one blocking finding (F12). `close_send_back` never sees a send-back in a real `close.md`, because the `## Log` section ends the round.
 
 ## Questions
 
@@ -60,6 +60,61 @@ Under review: `implement.md` round 1 (`06d6ba1..06a5778`), plan `docs/plans/2026
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 2 — 2026-11-17
+
+Under review: `implement.md` round 2 (`779af7c..9e91d75`, with the dossier at `9b35ae0`), plan `docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md`. This is a whole new pass over `6699326..9b35ae0`.
+
+**Commands and output**
+- `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main` (exit 0).
+- `overlap.sh 103`: nothing printed (exit 0). `overlap.sh --outside 103`: nothing printed (exit 0).
+- `scope.sh origin/main HEAD`: `suite.shell=true` (the dossiers and `CHANGELOG.md` listed as unclassified paths that need the suite). There is no `deploy=` line because no environment is configured.
+- Build: the `shell` suite's build is `true`, exit 0.
+- Test: `bash tests/run.sh` exited 0 and printed `all cases passed`. The suite has no `filter`, so it ran whole.
+- Overlays: `qc invariants-extra` and `qc wiki-rules` both exit 3 (none). There is no invariants file.
+- `bash scripts/inflight.sh` against origin printed, for #103: `touched:   2026-11-17 (qc.md log), 0 days ago`, `waits:     /codeo:qc` and `verdict:   round 1 — back to /codeo:plan.`. For #99: `waits:     /codeo:implement`. For #116 (PR open): `waits:     review — dossier archived` and `verdict:   round 2 — clear — forward to /codeo:close.`.
+- The reviewer (opus, given only the acceptance criteria) ran `tests/inflight.test.sh` and `tests/triage-skill.test.sh`, and both pass. Its verdict was "With fixes".
+- F12 was reproduced here. `close_send_back`'s awk was run over a `close.md` containing `### Round 2 — review feedback`, then `qc round at review: 1`, then `## Log`. It printed nothing. The reviewer's run of the same input without `## Log` printed `2 1`.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | `inflight.sh` prints a last-touched date for every workflow, matching the newest pushed evidence | met | `touched_*` cases in `tests/inflight.test.sh` (tie and CRLF included); the live run printed a date for all three workflows |
+| 2 | An unanswered dossier question shows as waiting on the engineer, with step file and question number | met | `waits_on_the_engineer` and `waits_stash_before_questions`; `scripts/inflight.sh:239-243` |
+| 3 | A workflow whose `qc.md` has a verdict shows that verdict | met | `verdict_*` cases; `scripts/inflight.sh:344-346`; the live run shows the verdicts for #103 and #116 |
+| 4 | Untouched beyond the threshold is asked; within it, listed and not asked | met | `skills/triage/SKILL.md` step 1.2 (with "within the threshold and assigned") and its wording checks in `tests/triage-skill.test.sh` |
+| 5 | Triage flags a board Status that disagrees with the dossier and PR state, quoting both | met | the *Board mismatch* bullet and table in `skills/triage/SKILL.md`; the quoting rule names the `status` line, `step:` and the PR state. F12 makes `waits:` wrong after a close send-back, but the table reads only `resume — `, which F12 does not touch. |
+| 6 | `--tsv` columns and human block lines unchanged; consumers' tests pass | met | `tsv_and_branches_are_unchanged` and the existing `--tsv`/`--branches` cases; full suite passes |
+| 7 | The config setting is documented with its default | met | `lib/env.sh` (`triage{parkedDays}`, default 7), `docs/skills.md` triage *Reads* bullet |
+| 8 | `bash tests/run.sh` passes; `CHANGELOG.md` records the change | met | the run above; the #103 bullet under `## Unreleased` |
+
+**Documentation.**
+- `docs/handoff.md` (*Who else is in flight*), `docs/skills.md` (triage), `lib/env.sh` and `scripts/inflight.sh`'s header all describe the three lines, the `waits:` order and the key, in the present tense and with no issue number.
+- The `scripts/inflight.sh` header (lines 17-19) and `docs/handoff.md` both say `waits:` follows a close send-back, which F12 shows is not true of a real dossier. That is the same defect, not a separate finding.
+- The `CHANGELOG.md` bullet is accurate otherwise.
+
+**Round 1 recap.**
+- F1 (blocking in round 1) — fixed by `779af7c`.
+- F2 (blocking in round 1) — fixed by `779af7c` and `de17297`.
+- F3, F5, F6, F7 and F8 — fixed by `de17297`.
+- F4 — fixed by `779af7c` (the line reads `review — dossier archived`).
+- F9 (CRLF), F10 (tie test) and F11 (wraps) — fixed by `779af7c` and `de17297`.
+
+**Findings**
+- **F12 — blocking, `/codeo:implement`'s.** `close_send_back` never sees a send-back in a real `close.md`.
+  - Cause: the rule `!f && t ~ /^## / { sendback = 0 }` (`scripts/inflight.sh:209`) resets the flag at `## Log`. Every dossier has `## Log` after `## Outcome` (`docs/dossier.md`, the file's shape), so the `END` block prints nothing.
+  - Effect: after review feedback or a conflict send-back from `/codeo:close`, `waits:` falls through to qc's earlier clear verdict and prints `/codeo:close`. That stays wrong both before and after implement answers it, when `/codeo:implement` and then `/codeo:qc` are owed. Triage quotes `waits:`, and *resume* for a quiet workflow names the step it shows.
+  - Why it is implement's: the plan's rule is "`close.md`'s last round when it is a send-back", and the code does not do that. The tests miss it because every send-back fixture (`waits_after_review_feedback`, `waits_after_conflicts_with_base`, `waits_after_review_round_rechecked`) ends at the round, with no `## Log`.
+  - Needed: the round must end only where `## Outcome` ends or the next `### Round` begins, and the send-back fixtures need a `## Log` section.
+- **F13 — non-blocking, `/codeo:plan`'s.** For a quiet workflow, *resume* says to "name the step its `waits:` line shows" (`skills/triage/SKILL.md`, parked-work options and step 5's **Resume**). That has no step to name when `waits:` is `engineer — …`, `review — dossier archived` or `nothing known`. It also has none for an unassigned workflow that has no stash and is not over the threshold, because it is not "raised only for its age".
+- **F14 — non-blocking, `/codeo:plan`'s.** An unassigned workflow is asked about whatever its date, and its fingerprint `parked:<N>:<touched date>` changes with every push. So an active, unassigned workflow is asked about again after each touch, and a dismissal does not hold. Q4 chose to ask about an unassigned workflow; how long a dismissal of one lasts was left open.
+- **F15 — non-blocking, `/codeo:implement`'s.** `waits_of` calls `claim.sh --stash-live "$n" "$branch" .` (`scripts/inflight.sh:236`). `claim.sh` reads `.codeo/<N>/` from the repository root, but `inflight.sh` finds dossiers under `$state_rel`, which carries a `projectPath` prefix. In a project kept in a subdirectory, a live stash would never be seen, and the board table would flag the card's correct Ready as a mismatch. The limit is in `claim.sh` and predates this change; this change adds a caller that inherits it.
+- **F16 — non-blocking, `/codeo:plan`'s.** For a close send-back round with no `qc round at review:` line, `waits:` stays `/codeo:qc` even after qc re-grades. The plan says so explicitly ("Without one, C2 reads 'no'"). `/codeo:close` always writes the line, so only an older or hand-edited dossier would hit this.
+- **F17 — non-blocking, `/codeo:implement`'s.** `verdict_of` (`scripts/inflight.sh:177`) does not strip CR, unlike the other new readers. A Verdict span wrapped over two CRLF lines keeps a `\r` in the printed `verdict:` line.
+
+**Routing.** F12 is the one blocking finding. It is a defect in code that does not do what the plan says, so it goes back to `/codeo:implement`. F15 and F17 are the implementer's too and can ride along. F13, F14 and F16 are the plan's: they are recorded here for `/codeo:triage` or a later plan round, and on their own they do not send the change back.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-17 — qc round 1: build exit 0, `bash tests/run.sh` all cases passed, all 8 criteria met, F1-F2 blocking (plan's), back to /codeo:plan · cost: 12m · opus-5-5 140k in + 5M cached / 21k out
+- 2026-11-17 — qc round 2: build exit 0, `bash tests/run.sh` all cases passed, all 8 criteria met, F12 blocking (implement's), back to /codeo:implement · cost: 5m · opus-5-5 224k in + 4M cached / 24k out
