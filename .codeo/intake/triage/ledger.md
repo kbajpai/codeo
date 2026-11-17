@@ -103,11 +103,11 @@
 | `issue:94` | Correct the sbx evaluation page and #86; filed 2026-11-15, board Status `none` | leave in the backlog | 2026-11-15 |
 | `issue:95` | `/codeo:plan` writes `sequenced:  none`; filed 2026-11-15, board Status `none` | leave in the backlog | 2026-11-15 |
 | `issue:97` | Docs, skill wording and test-guard follow-ups from #34, #39, #69; filed 2026-11-15, no branch, board Status `Backlog` | leave in the backlog | 2026-11-15 |
-| `issue:99` | Make the sbx issue sandbox usable (consolidates #94, #85, #86); filed 2026-11-15, no branch, board Status `Backlog` | leave in the backlog | 2026-11-15 |
+| `issue:99` | Make the sbx issue sandbox usable (consolidates #94, #85, #86, #114); board Status `Backlog` | ready | 2026-11-17 |
 | `qc:98:F1-F2` | #98 non-blocking minors: "step 10 fills it in" wording at `skills/plan/SKILL.md:232-233` (F1), `comm` shim inert under uutils (F2), ragged wrap at `:275-277` | dismissed — cosmetic, nothing breaks | 2026-11-15 |
 | `issue:100` | Release v1.0.7 once #70, #71, #96, #97, #98 close; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `issue:102` | `/codeo:issue` priority label when the project opts in; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
-| `issue:103` | Let triage judge in-flight workflows from evidence (dates, waiting-on, board mismatch); filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `issue:103` | Let triage judge in-flight workflows from evidence; board Status `Backlog` | ready | 2026-11-17 |
 | `issue:104` | Publish a live-session signal for in-flight workflows; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `qc:96:F16` | Changelog docs test reads only `## Unreleased`, so it fails on the release commit | filed #107 | 2026-11-15 |
 | `qc:96:F3-F7-F17` | Start-script and `codeo-root.sh` message and edge defects | filed #107 | 2026-11-15 |
@@ -123,5 +123,5 @@
 | `qc:71:F7-F9` | `board.sh set` prints one line per project; a board with no Backlog option fails every filing with no fix named; CHANGELOG omits the `issue:<N>` fingerprint change | filed #116 | 2026-11-16 |
 | `qc:107:F1-F3` | `rm -f -- ""` check unrecorded, CHANGELOG bullet overstates `codeo-root.sh`, weak title test | filed #116 | 2026-11-16 |
 | `issue:112` | Verify the live-session signal in a hosted web session; filed 2026-11-16, no branch, board Status `none` | leave in the backlog | 2026-11-16 |
-| `issue:114` | Dev container trusts the workspace folder in Claude Code; filed 2026-11-16, board Status `none` | leave in the backlog | 2026-11-16 |
+| `issue:114` | Dev container trusts the workspace folder in Claude Code; folded into #99 | already #99 — closed as superseded | 2026-11-17 |
 | `issue:116` | Follow-ups #70, #71, #104 and #107 left; filed 2026-11-16, board Status `none` | ready | 2026-11-16 |
