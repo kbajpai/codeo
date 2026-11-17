@@ -118,6 +118,15 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 
 **Other workflows in flight** (`inflight.sh --except 103`, 2026-11-17): #116 at `qc`, overlap in Q6; #99 at `init`, no footprint.
 
+### Footprint
+
+```
+files:      scripts/inflight.sh, tests/inflight.test.sh, skills/triage/SKILL.md, tests/triage-skill.test.sh, lib/env.sh, docs/skills.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-17-triage-judges-in-flight-work.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
