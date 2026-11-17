@@ -160,22 +160,14 @@ cmd_open() {
     (($# == 1)) || usage
     valid_number "$1" || usage
     pick_sbx
-    ensure_host_clone "$1" "$2"
-    ensure_windows_trust "$1"
-    ensure_sandbox "$1"
-    run_start "codeo-$1"
-    check_name "codeo-$1"
+    die 'not yet'
 }
 
 cmd_shell() {
     (($# == 1)) || usage
     valid_number "$1" || usage
     pick_sbx
-    ensure_host_clone "$1" "$2"
-    ensure_windows_trust "$1"
-    ensure_sandbox "$1"
-    run_start "codeo-$1"
-    check_name "codeo-$1"
+    die 'not yet'
 }
 
 cmd_end() {
@@ -183,11 +175,7 @@ cmd_end() {
     valid_number "$1" || usage
     if (($# == 2)); then [[ "$2" == --force ]] || usage; fi
     pick_sbx
-    ensure_host_clone "$1" "$2"
-    ensure_windows_trust "$1"
-    ensure_sandbox "$1"
-    run_start "codeo-$1"
-    check_name "codeo-$1"
+    die 'not yet'
 }
 
 main() {

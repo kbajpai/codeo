@@ -285,6 +285,19 @@ sandbox_path_prints_the_working_folder() {
     [[ "$out" == /sandbox/clone ]] || fail "path was: $out"
 }
 
+# Tasks 11 and 12 replace this when they build open, shell and end.
+valid_open_shell_end_are_not_yet_built() {
+    sb_setup notyet
+    local args
+    for args in 'open 1' 'shell 1' 'end 1 --force'; do
+        # shellcheck disable=SC2086
+        sb_run $args
+        ((sb_rc != 0)) || fail "$args: exited 0"
+        [[ "$sb_err" == *"not yet"* ]] || fail "$args: stderr was: $sb_err"
+        [[ "$(sb_calls)" != *git* && "$(sb_calls)" != *create* && "$(sb_calls)" != *exec* ]] || fail "$args: calls: $(sb_calls)"
+    done
+}
+
 cases=(
     usage_without_arguments_exits_2
     bad_numbers_and_branches_exit_2_before_any_call
@@ -305,6 +318,7 @@ cases=(
     issue_rerun_on_an_existing_sandbox_creates_nothing
     issue_name_that_disagrees_with_the_lock_is_one_todo
     sandbox_path_prints_the_working_folder
+    valid_open_shell_end_are_not_yet_built
 )
 
 for current in "${cases[@]}"; do
