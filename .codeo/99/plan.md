@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q7 are answered and the plan is approved and written at `docs/plans/2026-11-17-sbx-issue-sandbox.md` (unstaged, for you to commit). The footprint check raised Q8 (#116, already decided by Q7 but not in the tokens the check reads) and Q9 (#103, `CHANGELOG.md`); the hand-off waits on them. Earlier: the issue, the evaluation page, the dev container's scripts and tests, and #116's footprint were read. Most of what the three `sbx` parts assume was never tried (the token, a push, the start script inside a sandbox, opening a folder over Remote-SSH), and this session runs in a Linux container with no `sbx`, so only your Windows + WSL2 host can settle it. Q1 asks whether you run those trials now or the plan carries them as its first tasks. The #114 part has no open question: where the trust is stored is confirmed from Claude Code's documentation (see Notes).
+Round 1, finished. Q1-Q9 are answered, the footprint check prints nothing and no exclusive resource is named. The plan is approved and written at `docs/plans/2026-11-17-sbx-issue-sandbox.md`, unstaged for the engineer to commit. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -105,6 +105,7 @@ Accepted the recommendation: proceed and coordinate with #116 (engineer, in the 
 **Options:** *proceed and coordinate* (recommended, as Q7) · *sequence after #116* · *re-scope*.
 
 **Answer:**
+Accepted the recommendation: proceed and coordinate with #116, as Q7 (engineer, in the conversation, 2026-11-17).
 
 ### Q9 — #103 also changes `glob:CHANGELOG.md`: proceed, wait, or re-scope?
 
@@ -113,6 +114,7 @@ Accepted the recommendation: proceed and coordinate with #116 (engineer, in the 
 **Options:** *proceed and coordinate* (recommended: both add bullets to one list, and whichever merges second resolves a small conflict) · *sequence after #103* · *re-scope* (leave `CHANGELOG.md` out of this change).
 
 **Answer:**
+Accepted the recommendation: proceed and coordinate with #103 (engineer, in the conversation, 2026-11-17).
 
 ## Notes
 
@@ -223,6 +225,50 @@ sbx.exe rm codeo-t
 
 Paste the warning `rm` prints, then answer `y`.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-17-sbx-issue-sandbox.md` (approved 2026-11-17, unstaged for the engineer to commit) |
+| Shape | An executable plan under `docs/plans/`, with no separate reference doc: the choices are small and local to this change, and `.sbx/README.md` (Task 13) is the standing reference for the sandbox route |
+| Tasks | 14 in all: 12 proved by `bash tests/run.sh` or a named check, and 2 run on the engineer's host (Task 5 trials S1-S9, Task 14 acceptance) |
+
+**Decisions.**
+- Four parts, in this order: #114 (Tasks 1-2), #94 (Tasks 3-4 and 6), #85 (Tasks 7-8), #86 (Tasks 9-13). One branch and one pull request.
+- Folder trust (#114) is a new step 3d in `devcontainer-start.sh`. It writes `projects["<top>"].hasTrustDialogAccepted` in `$CLAUDE_CONFIG_DIR/.claude.json`, written like step 3c. The key and the file are confirmed from Claude Code's documentation. That the VS Code extension reads the same file is checked on the host in Task 14.
+- The sandbox route is a new host script, `.sbx/codeo-sandbox.sh`, with four sub-commands: `issue`, `open`, `shell` and `end`. It runs on Linux and WSL2 bash and picks `sbx` or `sbx.exe` itself (Q1).
+- In the sandbox it runs the unchanged `devcontainer-start.sh` in cmd mode (Q2).
+- It clones the branch on the host and writes the Windows Git trust line itself, only with `sbx.exe` (Q3).
+- The three extensions come from a one-time `remote.SSH.defaultExtensions` user setting (Q4).
+- `end <N> [--force]` refuses to remove a sandbox with commits not on `origin` (Q5).
+- The image is pinned in `.sbx/claude-image`.
+- Session titles in a sandbox come from a marker file read by `session-title.sh`.
+- `.codeo/config.json`'s `shell` suite gains `.sbx/**` in its `paths`.
+- #86's corrected wording goes into #99's body, not into the closed #86 (Q6).
+- The S1-S9 trials are the plan's Task 5, not run before planning (Q1). Tasks 8, 10 and 11 depend on their results, and each names its fallback or the point where it stops.
+- #116 and #103 overlap on `.devcontainer/README.md`, `tests/devcontainer.test.sh` and `CHANGELOG.md`. Both are proceed and coordinate (Q7-Q9).
+
+**Rejected.**
+- A new in-sandbox start script, shared or standalone (Q2).
+- Printing the trust command instead of running it (Q3).
+- A mountless sandbox (Q3).
+- `.vscode/extensions.json`, or installing the extensions from the open command (Q4).
+- Teaching `/codeo:close` and `/codeo:cleanup` about sandboxes, or documenting the removal steps only (Q5).
+- Editing the closed #86 (Q6).
+- Running the trials before drafting (Q1).
+
+**Documentation the plan changes.**
+- `.devcontainer/README.md` (Tasks 2 and 13).
+- `.sbx/README.md`, new (Task 13).
+- `.codeo/overlays/init.md`'s hand-off (Task 13).
+- `docs/dev-environment-sbx-evaluation.md` (Tasks 3 and 6).
+- `CHANGELOG.md` (Tasks 2 and 13).
+- #99's body (Task 4), and #73's result comment if its counts change (Task 6).
+
+**Intake questions resolved.**
+- #114: where the trust is stored is settled from Claude Code's documentation, and Task 14 checks it in the extension.
+- #94's token question, #85's push and `user.email`, and #86's `REMOTE_CONTAINERS` question and unexplained stops are not resolved by planning. They become Task 5's trials and Task 14's acceptance run. Session titles in a sandbox no longer depend on `REMOTE_CONTAINERS` (the marker file).
+
 ### Footprint
 
 ```
@@ -232,11 +278,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-17 — Q1-Q7 raised · cost: 3m · fable-5-2 118k in + 1.1M cached / 6k out · sonnet-5-5 76k in + 283k cached / 7k out
 - 2026-11-17 — Q1-Q7 answered in the conversation; plan approved and written: docs/plans/2026-11-17-sbx-issue-sandbox.md; overlap.sh raised Q8-Q9 · cost: 43m · fable-5-2 144k in + 1.6M cached / 22k out · opus-5-5 179k in + 2.4M cached / 34k out · sonnet-5-5 76k in + 283k cached / 7k out · engineering plugin unavailable, its structure applied directly
+- 2026-11-17 — planned: docs/plans/2026-11-17-sbx-issue-sandbox.md · cost: 46m · fable-5-2 144k in + 1.6M cached / 22k out · opus-5-5 183k in + 3.3M cached / 37k out · sonnet-5-5 76k in + 283k cached / 7k out · Q8-Q9 answered; engineering plugin unavailable, its structure applied directly
