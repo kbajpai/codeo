@@ -121,6 +121,7 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 - **Drop the route** — `waits:` says only `engineer`, `resume`, `review` or `nothing known`, and the reader works the rest out from `step:` and `verdict:`. Simplest, and never stale, but triage then has no line saying which step is owed.
 
 **Answer:**
+Follow the markers through, and name the next step when qc has not run, as recommended (engineer, in the conversation, 2026-11-17: "All recommendations accepted").
 
 ### Q8 — How does a stash or abandon stay visible when a question is also open (F2)?
 
@@ -131,6 +132,7 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 - **Triage calls `claim.sh --stash-live` itself** — `inflight.sh` unchanged; the skill runs the script per workflow. One more command per workflow in every triage run, and the block still hides the stash from a human reader.
 
 **Answer:**
+The stash comes first, with the questions after it, as recommended (engineer, in the conversation, 2026-11-17: "All recommendations accepted").
 
 ### Q9 — What happens to the board when the engineer answers *resume* for a workflow that was only quiet, not stashed (F5)?
 
@@ -140,6 +142,7 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 - **Keep the move, and expect it** — *resume* always sets Ready, and the mismatch check treats Ready on a working dossier as expected when the ledger's last decision for that issue is `resume`.
 
 **Answer:**
+Move the card only for a stash or abandon, as recommended (engineer, in the conversation, 2026-11-17: "All recommendations accepted").
 
 ## Notes
 
@@ -152,6 +155,15 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 - New tests go in `tests/inflight.test.sh` (script behaviour) and `tests/triage-skill.test.sh` (the skill's wording), the two existing homes.
 
 **Other workflows in flight** (`inflight.sh --except 103`, 2026-11-17): #116 at `qc`, overlap in Q6; #99 at `init`, no footprint.
+
+### Footprint
+
+```
+files:      scripts/inflight.sh, tests/inflight.test.sh, skills/triage/SKILL.md, tests/triage-skill.test.sh, lib/env.sh, docs/skills.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-17-triage-judges-in-flight-work.md, docs/plans/2026-11-17-triage-judges-in-flight-work-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
