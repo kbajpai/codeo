@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q7 are answered; the plan draft is at `.codeo/99/plan-draft.md`, awaiting review. Earlier: the issue, the evaluation page, the dev container's scripts and tests, and #116's footprint were read. Most of what the three `sbx` parts assume was never tried (the token, a push, the start script inside a sandbox, opening a folder over Remote-SSH), and this session runs in a Linux container with no `sbx`, so only your Windows + WSL2 host can settle it. Q1 asks whether you run those trials now or the plan carries them as its first tasks. The #114 part has no open question: where the trust is stored is confirmed from Claude Code's documentation (see Notes).
+Round 1. Q1-Q7 are answered and the plan is approved and written at `docs/plans/2026-11-17-sbx-issue-sandbox.md` (unstaged, for you to commit). The footprint check raised Q8 (#116, already decided by Q7 but not in the tokens the check reads) and Q9 (#103, `CHANGELOG.md`); the hand-off waits on them. Earlier: the issue, the evaluation page, the dev container's scripts and tests, and #116's footprint were read. Most of what the three `sbx` parts assume was never tried (the token, a push, the start script inside a sandbox, opening a folder over Remote-SSH), and this session runs in a Linux container with no `sbx`, so only your Windows + WSL2 host can settle it. Q1 asks whether you run those trials now or the plan carries them as its first tasks. The #114 part has no open question: where the trust is stored is confirmed from Claude Code's documentation (see Notes).
 
 ## Questions
 
@@ -97,6 +97,22 @@ Accepted the recommendation: edit the "Part of #86" section of #99's body; the c
 
 **Answer:**
 Accepted the recommendation: proceed and coordinate with #116 (engineer, in the conversation, 2026-11-17).
+
+### Q8 — #116: `glob:.devcontainer/README.md`, `glob:tests/devcontainer.test.sh`, `glob:CHANGELOG.md` — confirm Q7 covers the footprint as written
+
+**Why it matters:** `overlap.sh 99` printed these three tokens against the plan's committed footprint. They are the overlap Q7 already decided. Q7 named the paths but not these tokens, so the check does not recognise it as raised. #116 is on branch `fix/follow-ups-70-71-104`, assignee kbajpai, at `qc`. If you keep Q7's answer, nothing in the plan changes. Any other answer moves Tasks 1, 2 and 13.
+
+**Options:** *proceed and coordinate* (recommended, as Q7) · *sequence after #116* · *re-scope*.
+
+**Answer:**
+
+### Q9 — #103 also changes `glob:CHANGELOG.md`: proceed, wait, or re-scope?
+
+**Why it matters:** #103 (branch `feat/let-codeo-triage-judge-flight`, assignee kbajpai, at `init`) lists `CHANGELOG.md` in its footprint. Its branch has changed nothing yet. This plan adds three bullets under `## Unreleased`, in Tasks 2 and 13. Nothing else overlaps: #103's other files are `scripts/inflight.sh`, `lib/env.sh`, the triage skill, `docs/skills.md` and `docs/handoff.md`, none of which this plan touches.
+
+**Options:** *proceed and coordinate* (recommended: both add bullets to one list, and whichever merges second resolves a small conflict) · *sequence after #103* · *re-scope* (leave `CHANGELOG.md` out of this change).
+
+**Answer:**
 
 ## Notes
 
@@ -223,3 +239,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-17 — Q1-Q7 raised · cost: 3m · fable-5-2 118k in + 1.1M cached / 6k out · sonnet-5-5 76k in + 283k cached / 7k out
+- 2026-11-17 — Q1-Q7 answered in the conversation; plan approved and written: docs/plans/2026-11-17-sbx-issue-sandbox.md; overlap.sh raised Q8-Q9 · cost: 43m · fable-5-2 144k in + 1.6M cached / 22k out · opus-5-5 179k in + 2.4M cached / 34k out · sonnet-5-5 76k in + 283k cached / 7k out · engineering plugin unavailable, its structure applied directly
