@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Planned. Q1-Q5 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-16-follow-ups-70-71-104-107.md` (unstaged, for review). The footprint is recorded and `overlap.sh 116` prints nothing new (#113 was raised as Q5). Nothing is open; the next step is to review and commit the plan, then `/codeo:implement`. Every finding in the issue was read against the code as it is on this branch, and each still holds; the calls the draft will carry are under `## Notes`.
+Planned again after `/codeo:qc` round 1 sent the change back: the engineer approved the draft and the second plan is written to `docs/plans/2026-11-17-follow-ups-116-qc-round-1.md` (unstaged, for review), three tasks answering findings F1-F6. Nothing is open; `overlap.sh 116` prints nothing new. The next step is to review and commit the plan, then `/codeo:implement`.
 
 ## Questions
 
@@ -93,14 +93,6 @@ So the criterion "The `rm -f -- ""` check output is recorded on #107" is **dropp
 
 **Shape.** One plan under `docs/plans/`, one pull request; no reference doc. `plan-shape`, `proof-of-done` and `wiki-rules` have no overlay here (exit 3), no invariants document, no shared environment, no `wiki` module, no exclusive resources. The `shell` suite has no `filter`, so each task's proof is the test file it touches and then `bash tests/run.sh`.
 
-### Footprint
-
-```
-files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, scripts/cleanup.sh, scripts/live.sh, scripts/github.sh, scripts/board.sh, hooks/hooks.json, skills/cleanup/SKILL.md, skills/close/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, skills/implement/SKILL.md, skills/qc/SKILL.md, docs/skills.md, docs/handoff.md, CHANGELOG.md, tests/role.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/live.test.sh, tests/live-signal.test.sh, tests/github.test.sh, tests/board.test.sh, tests/devcontainer.test.sh, tests/close-skill.test.sh, tests/issue-skill.test.sh, tests/plan-skill.test.sh, tests/implement-skill.test.sh, tests/qc-skill.test.sh, docs/plans/2026-11-16-follow-ups-70-71-104-107.md, docs/plans/2026-11-17-follow-ups-116-qc-round-1.md
-wiki:       none
-exclusive:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-16-follow-ups-70-71-104-107.md` (unstaged, for the engineer to review and commit). **Shape:** one executable plan under `docs/plans/`, ten tasks, one pull request; no reference doc, no diagram beyond the one `docs/handoff.md` already has.
@@ -117,10 +109,28 @@ exclusive:  none
 
 **Intake questions resolved here:** F5, F7, F16 and J8 (fix or document) are settled as above; F3 stays with #112. No issue filed from this skill; the optional `engineering` skills were not used (no new component or technology choice).
 
+### Round 2
+
+2026-11-17
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-17-follow-ups-116-qc-round-1.md` (unstaged, for the engineer to review and commit). **Shape:** one executable plan under `docs/plans/`, three tasks, no reference doc. The ten tasks of the first plan are built and stay as they are; this plan answers `qc.md` round 1's findings F1-F6 and nothing else.
+
+**Decisions** (the engineer approved the draft, 2026-11-17: "approved, write it"):
+- F1 (blocking, the plan's): the parenthetical "(the skill is running in an issue container)" is deleted from the refused-call sentence in `skills/plan`, `skills/implement`, `skills/qc` and `docs/handoff.md`, and each of those three skill tests gains a `must_lack 'issue container'` (the plan-skill test also checks `docs/handoff.md`). Rejected: rewording it to a generic parenthetical, since the role check and its reason belong to the project.
+- F2: the handoff diagram's two lines become `S->>O: /codeo:close runs live.sh clear and deletes the lock in one command`; `tests/live-signal.test.sh` pins it.
+- F3: documented, not fixed: `.devcontainer/README.md` names toolbox and distrobox. Rejected: `role.sh` ignoring `/run/.containerenv` there, which cannot be told apart from Podman's.
+- F4: `CHANGELOG.md`'s #70 bullet names `/run/.containerenv` beside `/.dockerenv`.
+- F5 and F6: `tests/cleanup.test.sh` asserts the exact `docker rm -f codeo-12` line before the export, and `tests/close-skill.test.sh` matches the stash and abandon pins on whitespace-flattened text; both proved by mutation.
+- Q4 stands: criterion 13 stays dropped. Q5 stands: `.devcontainer/README.md` and `CHANGELOG.md` are edited once, in Task 2, after `sync-main.sh`; `overlap.sh 116` prints nothing new.
+- Calls without a question: a new plan file instead of editing the first, so `/codeo:implement` does not re-run ten finished tasks.
+
+**Documentation the plan changes:** `docs/handoff.md` (the refused-call sentence, the live-signal diagram), `.devcontainer/README.md` (the guard paragraph), `CHANGELOG.md` (the #70 bullet). No wiki module.
+
 ### Footprint
 
 ```
-files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, scripts/cleanup.sh, scripts/live.sh, scripts/github.sh, scripts/board.sh, hooks/hooks.json, skills/cleanup/SKILL.md, skills/close/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, skills/implement/SKILL.md, skills/qc/SKILL.md, docs/skills.md, docs/handoff.md, CHANGELOG.md, tests/role.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/live.test.sh, tests/live-signal.test.sh, tests/github.test.sh, tests/board.test.sh, tests/devcontainer.test.sh, tests/close-skill.test.sh, tests/issue-skill.test.sh, tests/plan-skill.test.sh, tests/implement-skill.test.sh, tests/qc-skill.test.sh, docs/plans/2026-11-16-follow-ups-70-71-104-107.md
+files:      .devcontainer/scripts/role.sh, .devcontainer/README.md, scripts/cleanup.sh, scripts/live.sh, scripts/github.sh, scripts/board.sh, hooks/hooks.json, skills/cleanup/SKILL.md, skills/close/SKILL.md, skills/issue/SKILL.md, skills/plan/SKILL.md, skills/implement/SKILL.md, skills/qc/SKILL.md, docs/skills.md, docs/handoff.md, CHANGELOG.md, tests/role.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/live.test.sh, tests/live-signal.test.sh, tests/github.test.sh, tests/board.test.sh, tests/devcontainer.test.sh, tests/close-skill.test.sh, tests/issue-skill.test.sh, tests/plan-skill.test.sh, tests/implement-skill.test.sh, tests/qc-skill.test.sh, docs/plans/2026-11-16-follow-ups-70-71-104-107.md, docs/plans/2026-11-17-follow-ups-116-qc-round-1.md
 wiki:       none
 exclusive:  none
 ```
@@ -131,3 +141,4 @@ exclusive:  none
 - 2026-11-16 — Q1-Q3 and Q5 recorded from the engineer's conversation answer; Q4 still open, stopped · cost: unavailable (no draft work this round)
 - 2026-11-16 — Q4 criterion dropped by the engineer and its output recorded; draft written to .codeo/116/plan-draft.md (10 tasks), awaiting approval · cost: unavailable (mid-turn)
 - 2026-11-16 — planned: docs/plans/2026-11-16-follow-ups-70-71-104-107.md · cost: 592m · fable-5-2 140k in + 355k cached / 846 out · sonnet-5-5 329k in + 2.3M cached / 30k out
+- 2026-11-17 — planned (round 2, send-back from qc.md round 1): docs/plans/2026-11-17-follow-ups-116-qc-round-1.md · cost: 32m · fable-5-2 217k in + 968k cached / 7k out · sonnet-5-5 26k in + 951k cached / 3k out
