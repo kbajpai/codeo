@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored `scripts/inflight.sh`, `skills/triage/SKILL.md`, their tests and the docs that describe them. Q1-Q6 are open; nothing is drafted until they are answered. Each has a recommendation, so "accept the recommendations" is a complete answer.
+Q1-Q6 answered ("All as recommended", 2026-11-17). The plan is drafted at `.codeo/103/plan-draft.md` and waits for the engineer's approval; nothing is open.
 
 ## Questions
 
@@ -36,6 +36,7 @@ The date is the newest of three things read from the pushed branch: the tip comm
 - **Something else** — say what.
 
 **Answer:**
+Git only, as proposed, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
 
 ### Q2 — What can `waits:` say, and in what order of precedence?
 
@@ -51,6 +52,7 @@ The date is the newest of three things read from the pushed branch: the tip comm
 **Options:** as proposed, with the stash line (recommended) · the issue's four only, no stash line · something else — say what.
 
 **Answer:**
+As proposed, with the stash line, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
 
 ### Q3 — Do the new facts get a machine-readable form?
 
@@ -61,6 +63,7 @@ The date is the newest of three things read from the pushed branch: the tip comm
 - **Append columns to `--tsv`** — the first five keep their order; the equality tests are rewritten, and a five-variable `read` breaks as described.
 
 **Answer:**
+Human block only, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
 
 ### Q4 — How is the parked threshold named and applied?
 
@@ -69,6 +72,7 @@ The date is the newest of three things read from the pushed branch: the tip comm
 **Options:** as proposed (recommended) · another key name or default — say which · `inflight.sh` takes the threshold and prints `parked: yes|no` itself, so the decision is a script's and has a script test.
 
 **Answer:**
+As proposed, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
 
 ### Q5 — Which board Statuses count as a mismatch, and what does triage do with one?
 
@@ -88,6 +92,7 @@ A mismatch is a question of its own, fingerprint `board:<N>:<Status found>`, quo
 **Options:** as proposed (recommended) · list mismatches in the run's `## Outcome` without asking · let triage write the expected Status itself on the engineer's yes (widens its board writes beyond Ready and Backlog, and changes `docs/handoff.md`'s ownership table).
 
 **Answer:**
+As proposed, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
 
 ### Q6 — #116 edits two files this plan will edit; how do the two branches proceed?
 
@@ -99,6 +104,7 @@ A mismatch is a question of its own, fingerprint `board:<N>:<Status found>`, quo
 - **Re-scope** — say what to drop.
 
 **Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-17: "All as recommended").
 
 ## Notes
 
@@ -119,3 +125,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-17 — Q1-Q6 raised · cost: 2m · fable-5-2 94k in + 659k cached / 9k out
+- 2026-11-17 — Q1-Q6 answered; draft written to .codeo/103/plan-draft.md (engineering plugin unavailable: system-design and architecture structure applied directly) · cost: 11m · fable-5-2 112k in + 1.1M cached / 15k out · opus-5-5 131k in + 956k cached / 18k out
