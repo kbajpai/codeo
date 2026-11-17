@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, finished. Q1-Q9 are answered, the footprint check prints nothing and no exclusive resource is named. The plan is approved and written at `docs/plans/2026-11-17-sbx-issue-sandbox.md`, unstaged for the engineer to commit. Next: `/codeo:implement`.
+Round 2, opened by the send-back in `qc.md` round 1 (F1-F4: the plan's design for the pin file, `end` after a squash merge, the kept refs and an existing clone). Q10-Q13 are open; nothing is drafted until they are answered. The non-blocking findings F5-F8 need no decision and go into the round 2 tasks as they stand. Task 14, the host acceptance run, moves after the round 2 tasks. Round 1's plan stays at `docs/plans/2026-11-17-sbx-issue-sandbox.md`.
 
 ## Questions
 
@@ -115,6 +115,54 @@ Accepted the recommendation: proceed and coordinate with #116, as Q7 (engineer, 
 
 **Answer:**
 Accepted the recommendation: proceed and coordinate with #103 (engineer, in the conversation, 2026-11-17).
+
+### Q10 — Where should `issue` read the image pin from, now that the README's one download leaves it without `claude-image`? (qc F1)
+
+**Why it matters:** the script reads `claude-image` beside itself, and the README downloads only the script, so `issue` exits 1 before `create`. A pin downloaded once would also never follow a later pin move. Whatever is chosen has to work for a branch cut before this change merges, whose clone has no `.sbx/claude-image`.
+
+**Options:**
+- *From the host clone, falling back to the base branch* (recommended): after the clone exists, read `codeo-<N>/.sbx/claude-image`; when the branch has no such file, read it from `origin`'s default branch in that clone (`git show origin/HEAD:.sbx/claude-image`). `CODEO_SBX_IMAGE` still overrides both. One download stays enough, the pin follows the repository, and a pin move reaches every sandbox created afterwards. Cost: a branch that changes the pin uses its own pin, which is what a pin-move branch wants to test.
+- *Keep it beside the script, and document a second download line:* the smallest change. A pin moved in the repository never reaches a host that downloaded it earlier, so two hosts can run different images without anyone seeing it.
+- *Put the digest in the script itself:* one file, no lookup. `.sbx/claude-image` goes away, moving the pin edits the script, and a host only gets the new pin by downloading the script again.
+
+**Answer:**
+_Pending._
+
+### Q11 — What should `end` count as "delivered", given that pull requests here are squash-merged and the branch is deleted at close? (qc F2)
+
+**Why it matters:** `end` lists every sandbox commit that is on no `origin` branch. After a squash merge and `/codeo:close`'s branch delete, the branch's own commits are on no `origin` branch, so `end` refuses in the normal case, and `--force` becomes the habit. That removes the protection Q5 asked for.
+
+**Options:**
+- *Count pull-request heads as delivered* (recommended): before the check, `end` also fetches `origin`'s `refs/pull/*/head` into the clone (`refs/remotes/origin/pr/*`), and a commit reachable from any of them counts as on `origin`. GitHub keeps a pull request's head after the branch is deleted, so the commits are still there to recover. A commit made in the sandbox after the last push is still listed, and so is a branch that was pushed, never opened as a pull request, and deleted. It needs only git, with no `gh` on the host. Cost: one fetch of every pull-request head (59 in this repository today); a non-GitHub `CODEO_REPO_URL` has no such refs and behaves as it does now.
+- *Ask GitHub through `gh`:* for each unpushed tip, `gh pr list --state merged --search <sha>`. More exact about "merged", but it needs `gh` and a login on the host and a network call per tip, and a commit pushed after the merge would need its own rule.
+- *Leave the check, and document `--force` after a merge:* no code. Every normal close ends with `--force`, which is the finding.
+
+**Answer:**
+_Pending._
+
+### Q12 — What should happen to `refs/sandboxes/codeo-<N>/*` in the host clone when a sandbox is removed? (qc F4)
+
+**Why it matters:** `sbx rm` keeps those refs (S9). A later sandbox for the same `<N>`, such as a stash resumed, inherits them, so its `end` lists the earlier sandbox's commits and refuses. After `--force` they are also the only copy of the unpushed commits, so they cannot simply be deleted.
+
+**Options:**
+- *Delete them when nothing was unpushed; set them aside after `--force`* (recommended): a plain `end` has proved every commit is on `origin`, so it deletes the refs after removing the sandbox. `end --force` moves them to `refs/codeo/ended/codeo-<N>/<UTC time>/*` and prints that name, so the commits stay recoverable and the next sandbox for `<N>` starts clean. Cost: set-aside refs stay until someone deletes them; the README gives the one command.
+- *Keep them, and have `issue` clear them when it creates a new sandbox:* the same result for the next sandbox, but `issue` would then delete refs holding unpushed commits, or need the same set-aside rule in a second place.
+- *Leave them:* no code. The second `end` for an issue number refuses for commits that were already dealt with.
+
+**Answer:**
+_Pending._
+
+### Q13 — When `./codeo-<N>` already exists and the sandbox does not, should `issue` update the clone before creating from it? (qc F3)
+
+**Why it matters:** `issue` checks only the clone's branch name. A sandbox recreated after `end`, or for a resumed stash, starts at the clone's old tip, misses what was pushed since, and its next push is rejected.
+
+**Options:**
+- *Fetch and fast-forward, and refuse when it cannot* (recommended): when the sandbox is missing and the clone exists, `issue` runs `git fetch origin` and `git merge --ff-only origin/<branch>` in the clone. A clone that has diverged, or has uncommitted changes that block the merge, gets one line naming the clone and the two ways out (settle it there, or remove the folder), and no sandbox is created. A clone that is ahead of `origin` is left as it is. When the sandbox already exists, the clone is not touched, as today.
+- *Refuse an existing clone when the sandbox is missing:* simplest and always safe, but every recreate means removing the folder by hand, and the folder may hold the set-aside refs from Q12.
+- *Warn and carry on:* prints how far behind the clone is and creates anyway. The stale start still happens.
+
+**Answer:**
+_Pending._
 
 ## Notes
 
@@ -283,3 +331,4 @@ sequenced:  none
 - 2026-11-17 — Q1-Q7 raised · cost: 3m · fable-5-2 118k in + 1.1M cached / 6k out · sonnet-5-5 76k in + 283k cached / 7k out
 - 2026-11-17 — Q1-Q7 answered in the conversation; plan approved and written: docs/plans/2026-11-17-sbx-issue-sandbox.md; overlap.sh raised Q8-Q9 · cost: 43m · fable-5-2 144k in + 1.6M cached / 22k out · opus-5-5 179k in + 2.4M cached / 34k out · sonnet-5-5 76k in + 283k cached / 7k out · engineering plugin unavailable, its structure applied directly
 - 2026-11-17 — planned: docs/plans/2026-11-17-sbx-issue-sandbox.md · cost: 46m · fable-5-2 144k in + 1.6M cached / 22k out · opus-5-5 183k in + 3.3M cached / 37k out · sonnet-5-5 76k in + 283k cached / 7k out · Q8-Q9 answered; engineering plugin unavailable, its structure applied directly
+- 2026-11-17 — round 2 opened after qc.md round 1; Q10-Q13 raised · cost: 1m · fable-5-2 196k in + 188k cached / 3k out
