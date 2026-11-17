@@ -41,7 +41,7 @@ must_contain "quotes the date and the threshold" 'quote its `touched:` line and 
 must_contain "parked fingerprint" '`parked:<N>:<touched date>`'
 must_contain "board fingerprint" '`board:<N>:<Status found>`'
 must_contain "send-back is In progress with a PR open" 'dossier at `.codeo/<N>/`'
-must_contain "mismatch names, never runs" 'named, never run'
+must_contain "mismatch names, never runs" 'a board mismatch: *fix it* (the `board.sh set <N> <status>` command, named, never run'
 must_contain "unavailable is not a mismatch" '`unavailable` is never a mismatch'
 
 if ((failures)); then

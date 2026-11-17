@@ -139,6 +139,11 @@ is the container the message names.
         `board:<N>:<Status found>`. With no board there is nothing to compare (the run's opening
         line already says the board is not configured). `unavailable` is never a mismatch: say
         once in the run's `## Outcome` that the board comparison was unavailable (`triage-07`).
+        One workflow is one question: the parked facts, a board mismatch and a stash or branch
+        finding for the same issue go into a single question, and each fingerprint is recorded in
+        the ledger with that question's decision. For the row with no expected Status, *fix it*
+        names `/codeo:close` in that issue's checkout (its stash puts the card in Ready, its abandon
+        in Backlog) in place of a `board.sh set` command: the workflow's state is what is off.
       - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list`. The lease on the config's
         environment resource (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .environment.resource`)
         is held more than a day, or by an issue whose last `qc.md` round is clear or whose PR is
@@ -242,7 +247,8 @@ is the container the message names.
        `/codeo:close` on its branch — named, never run) · *file it* · *dismiss (why)* · *defer*.
        Deleting a branch is never an option here; it is the engineer's to do.
      - a board mismatch: *fix it* (the `board.sh set <N> <status>` command, named, never run —
-       triage's own writes stay Ready and Backlog) · *dismiss (why)* · *defer*;
+       triage's own writes stay Ready and Backlog; for a workflow with no pull request or a closed
+       unmerged one, `/codeo:close` in that issue's checkout instead) · *dismiss (why)* · *defer*;
      - a filed issue never started: *mark Ready* (`board.sh set <N> ready`, run at step 5) ·
        *leave in the backlog* (the card moves to Backlog when it is not already there, run at step 5) —
        <!-- rule: triage-05 -->
@@ -271,6 +277,9 @@ is the container the message names.
      <!-- rule: triage-06 -->
      A script failure — the `project` token scope is the likely one, and the script names the
      fix — is reported, the item stays unrecorded, and it comes back next run.
+   - **Fix it** → record `fix named — <the command>`, name the command in the report, and run
+     nothing. A fix-named item is not among step 2's dropped decisions, so it comes back next
+     run while the mismatch persists.
    - **Already #N** → record the number.
    - **Dismiss** → record the reason in the engineer's words.
    - **Defer** → record it; it comes back next run.
