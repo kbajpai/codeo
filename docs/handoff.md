@@ -187,8 +187,7 @@ it.
       H-->>O: live.sh beat — force-push one parentless commit (REST if the push is refused)
       R->>O: fetch +refs/codeo/live/*:refs/codeo/live/* (--prune)
       R->>R: beat within 15 min? print "live:" line
-      S->>H: /codeo:close deletes the lock
-      H->>O: clear in the same command
+      S->>O: /codeo:close runs live.sh clear and deletes the lock in one command
       S->>H: SessionEnd
       H->>O: delete the ref
       Note over O,R: a crash deletes nothing; the line stops printing 15 min after the last beat

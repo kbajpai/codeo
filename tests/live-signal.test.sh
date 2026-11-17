@@ -163,6 +163,17 @@ done
     echo "FAIL $case_desc: no [CODEO_MACHINE ... same volume name]"
     failures=$((failures + 1))
 }
+handoff=$(<"$plugin_root/docs/handoff.md")
+[[ $handoff == *'S->>O: /codeo:close runs live.sh clear and deletes the lock in one command'* ]] || {
+    echo "FAIL $case_desc: no [S->>O close line]"
+    failures=$((failures + 1))
+}
+for gone in 'S->>H: /codeo:close deletes the lock' 'H->>O: clear in the same command'; do
+    [[ $handoff != *"$gone"* ]] || {
+        echo "FAIL $case_desc: still has [$gone]"
+        failures=$((failures + 1))
+    }
+done
 sleep 1
 
 if ((failures > 0)); then
