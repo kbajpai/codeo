@@ -173,18 +173,53 @@ cmd_issue() {
     check_name "codeo-$1"
 }
 
+# require_sandbox <N>: exit 1 naming the creating command unless the sandbox codeo-N exists (a stopped one
+# is fine: sbx exec starts it).
+require_sandbox() {
+    [[ "$(sandbox_state "codeo-$1")" != missing ]] ||
+        die "codeo-$1 does not exist: create it with codeo-sandbox.sh issue $1 <branch>"
+}
+
+# launch_code <uri>: open VS Code on the folder URI: CODEO_CODE when set; else with sbx.exe cmd.exe /c code
+# run from /mnt/c (a UNC working folder makes cmd.exe warn); else code.
+launch_code() {
+    if [[ -n "${CODEO_CODE:-}" ]]; then
+        "$CODEO_CODE" --folder-uri "$1"
+    elif ((windows == 1)); then
+        (
+            if [[ -d /mnt/c ]]; then cd /mnt/c; fi
+            cmd.exe /c code --folder-uri "$1"
+        )
+    else
+        code --folder-uri "$1"
+    fi
+}
+
 cmd_open() {
     (($# == 1)) || usage
     valid_number "$1" || usage
     pick_sbx
-    die 'not yet'
+    require_sandbox "$1"
+    local name=codeo-$1 path ssh=ssh
+    "$sbx" exec "$name" bash .devcontainer/scripts/window-title.sh || die "could not write the window title in $name"
+    path=$(sandbox_path "$name") || die "could not read the folder of $name"
+    path=${path//$'\r'/}
+    [[ -n "$path" ]] || die "could not read the folder of $name"
+    if ((windows == 1)); then ssh=ssh.exe; fi
+    "$ssh" "$name.sbx" -- true >/dev/null 2>&1 ||
+        die "$name.sbx does not resolve over SSH: run $sbx setup ssh, then open again"
+    launch_code "vscode-remote://ssh-remote+$name.sbx$path" || die "could not start VS Code"
 }
 
 cmd_shell() {
     (($# == 1)) || usage
     valid_number "$1" || usage
     pick_sbx
-    die 'not yet'
+    require_sandbox "$1"
+    if [[ -t 0 ]]; then
+        exec "$sbx" exec -it "codeo-$1" bash -l
+    fi
+    exec "$sbx" exec -i "codeo-$1" bash -l
 }
 
 cmd_end() {

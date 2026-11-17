@@ -44,7 +44,7 @@ sb_setup() {
     echo 'codeo-113' >"$sb_dir/lockname"
     : >"$sb_dir/trusted"
     local n
-    for n in sbx sbx.exe git git.exe code; do
+    for n in sbx sbx.exe git git.exe code ssh ssh.exe cmd.exe; do
         cat >"$sb_dir/bin/$n" <<'STUB'
 #!/bin/bash
 d=${0%/bin/*}
@@ -58,6 +58,8 @@ case "${0##*/} $1" in
             *devcontainer-start.sh*) echo "start-output" ;;
             *" pwd") echo "/sandbox/clone" ;;
         esac ;;
+    "ssh "* | "ssh.exe "*) [[ ! -e "$d/sshfail" ]] || exit 1 ;;
+    "cmd.exe "*) pwd >"$d/cmd_cwd" ;;
     "git clone") mkdir -p "${@: -1}/.git" ;;
     "git.exe config")
         case "$*" in *--get-all*) cat "$d/trusted" ;; esac ;;
@@ -331,18 +333,96 @@ sandbox_path_prints_the_working_folder() {
     [[ "$out" == /sandbox/clone ]] || fail "path was: $out"
 }
 
-# Tasks 11 and 12 replace this when they build open, shell and end.
-valid_open_shell_end_are_not_yet_built() {
+# Task 12 replaces this when it builds end.
+valid_end_is_not_yet_built() {
     sb_setup notyet
-    local args
-    for args in 'open 1' 'shell 1' 'end 1 --force'; do
-        # shellcheck disable=SC2086
-        sb_run $args
-        ((sb_rc != 0)) || fail "$args: exited 0"
-        [[ "$sb_err" == *"not yet"* ]] || fail "$args: stderr was: $sb_err"
-        [[ "$(sb_calls)" != *git* && "$(sb_calls)" != *create* && "$(sb_calls)" != *exec* ]] || fail "$args: calls: $(sb_calls)"
-    done
+    sb_run end 1 --force
+    ((sb_rc != 0)) || fail "exited 0"
+    [[ "$sb_err" == *"not yet"* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *git* && "$(sb_calls)" != *create* && "$(sb_calls)" != *exec* ]] || fail "calls: $(sb_calls)"
 }
+
+sb_err_lines() { wc -l <"$sb_dir/err" | tr -d ' '; }
+
+open_writes_the_title_and_opens_the_clone_folder() {
+    sb_setup open
+    echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
+    sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    local want
+    want=$'sbx ls\nsbx exec codeo-113 bash .devcontainer/scripts/window-title.sh\nsbx exec codeo-113 pwd\nssh codeo-113.sbx -- true\ncode --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone'
+    [[ "$(sb_calls)" == "$want" ]] || fail "calls: $(sb_calls)"
+    # CODEO_CODE replaces code
+    printf '#!/bin/bash\necho "mycode $*" >>"%s/calls"\n' "$sb_dir" >"$sb_dir/bin/mycode"
+    chmod +x "$sb_dir/bin/mycode"
+    : >"$sb_dir/calls"
+    CODEO_CODE=mycode sb_run open 113
+    ((sb_rc == 0)) || fail "CODEO_CODE exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\nmycode --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone' ]] || fail "CODEO_CODE calls: $(sb_calls)"
+    [[ "$(sb_calls)" != *$'\ncode '* ]] || fail "code also ran"
+}
+
+open_starts_a_stopped_sandbox_first() {
+    sb_setup openstopped
+    echo 'codeo-113 claude stopped' >"$sb_dir/sandboxes"
+    sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" != *"sbx run"* && "$(sb_calls)" != *"sbx start"* ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls | sed -n 2p)" == "sbx exec codeo-113 bash .devcontainer/scripts/window-title.sh" ]] || fail "calls: $(sb_calls)"
+}
+
+open_on_a_missing_sandbox_names_the_command_that_creates_it() {
+    sb_setup openmissing
+    sb_run open 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *"codeo-sandbox.sh issue 113 <branch>"* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_err_lines)" == 1 ]] || fail "stderr not one line: $sb_err"
+    [[ "$(sb_calls)" != *exec* ]] || fail "calls: $(sb_calls)"
+    sb_run shell 113
+    ((sb_rc == 1)) || fail "shell exited $sb_rc"
+    [[ "$sb_err" == *"codeo-sandbox.sh issue 113 <branch>"* ]] || fail "shell stderr was: $sb_err"
+}
+
+open_without_ssh_setup_says_to_run_setup_ssh() {
+    sb_setup opennossh
+    echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
+    : >"$sb_dir/sshfail"
+    sb_run open 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == "codeo-sandbox: codeo-113.sbx does not resolve over SSH: run sbx setup ssh, then open again" ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *$'\ncode '* ]] || fail "code ran: $(sb_calls)"
+    SB_SBX=sbx.exe sb_run open 113
+    ((sb_rc == 1)) || fail "sbx.exe exited $sb_rc"
+    [[ "$sb_err" == *"run sbx.exe setup ssh"* ]] || fail "sbx.exe stderr was: $sb_err"
+    [[ "$(sb_calls)" == *"ssh.exe codeo-113.sbx -- true"* && "$(sb_calls)" != *cmd.exe* ]] || fail "sbx.exe calls: $(sb_calls)"
+}
+
+open_with_sbx_exe_launches_through_cmd_exe() {
+    sb_setup opencmd
+    echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
+    SB_SBX=sbx.exe sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\nssh.exe codeo-113.sbx -- true\ncmd.exe /c code --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone' ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" != *$'\ncode '* ]] || fail "code ran directly: $(sb_calls)"
+    if [[ -d /mnt/c ]]; then
+        [[ "$(<"$sb_dir/cmd_cwd")" == /mnt/c ]] || fail "cmd.exe ran in $(<"$sb_dir/cmd_cwd")"
+    fi
+}
+
+shell_execs_bash_in_the_clone() {
+    sb_setup shell
+    echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
+    sb_run shell 113 </dev/null
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls | tail -n 1)" == "sbx exec -i codeo-113 bash -l" ]] || fail "calls: $(sb_calls)"
+    if command -v script >/dev/null 2>&1; then
+        : >"$sb_dir/calls"
+        echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
+        script -qec "env -u CODEO_SBX PATH='$sb_dir/bin:/usr/bin:/bin' '$bash_abs' '$script' shell 113" /dev/null >/dev/null 2>&1 || true
+        [[ "$(sb_calls | tail -n 1)" == "sbx exec -it codeo-113 bash -l" ]] || fail "tty calls: $(sb_calls)"
+    fi
+}
+
 
 cases=(
     usage_without_arguments_exits_2
@@ -368,7 +448,13 @@ cases=(
     issue_writes_the_sandbox_marker
     issue_name_that_disagrees_with_the_lock_is_one_todo
     sandbox_path_prints_the_working_folder
-    valid_open_shell_end_are_not_yet_built
+    valid_end_is_not_yet_built
+    open_writes_the_title_and_opens_the_clone_folder
+    open_starts_a_stopped_sandbox_first
+    open_on_a_missing_sandbox_names_the_command_that_creates_it
+    open_without_ssh_setup_says_to_run_setup_ssh
+    open_with_sbx_exe_launches_through_cmd_exe
+    shell_execs_bash_in_the_clone
 )
 
 for current in "${cases[@]}"; do
