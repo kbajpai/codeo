@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, finished. Q14-Q17 are answered (recommendations accepted). The footprint check prints nothing, and no exclusive resource is named. The round 3 plan is approved and written at `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md`, unstaged for the engineer to commit. The `scripts/lock.sh` `volume:` TODO (Q16) is still to be filed through `/codeo:issue`. Next: `/codeo:implement`, which pauses after Task 23 for the engineer's trial.
+Round 3, finished. Q14-Q17 are answered (recommendations accepted). The footprint check prints nothing, and no exclusive resource is named. The round 3 plan is approved and written at `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md`, unstaged for the engineer to commit. The `scripts/lock.sh` `volume:` TODO (Q16) is filed as #123. Next: `/codeo:implement`, which pauses after Task 23 for the engineer's trial.
 
 ## Questions
 
@@ -399,7 +399,7 @@ Paste the warning `rm` prints, then answer `y`.
 **Decisions** (Q14-Q17, recommendations accepted):
 - **Extension route (Q14).** Try a policy rule that allows `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io`, and keep `remote.SSH.defaultExtensions` (route A). If the trial fails, use `remote.downloadExtensionsLocally` and install the three by hand once per sandbox (route B). Rejected: `open` copying the extension files in itself (no known route).
 - **Detached (Q15).** `issue` and `open` both run `sbx run -d` unless the sandbox is already `running (detached)`. Rejected: `issue` alone (after a reboot, `open` would bring back a sandbox that stops again), and a manual step.
-- **Lock line (Q16).** The output order stays. The engineer reads the criterion as: the lock line is printed and the lock is taken. The `scripts/lock.sh` `volume:` TODO in a sandbox goes to `/codeo:issue`. Rejected: printing the lock line again at the end, and reordering the start script.
+- **Lock line (Q16).** The output order stays. The engineer reads the criterion as: the lock line is printed and the lock is taken. The `scripts/lock.sh` `volume:` TODO in a sandbox is filed as #123 through `/codeo:issue`. Rejected: printing the lock line again at the end, and reordering the start script.
 - **Uncommitted work (Q17).** `end` refuses changed or untracked files, stashes or a detached HEAD unless `--force`, and with `--force` says the work was not kept. Rejected: warn and remove, and documentation only.
 - **Found while planning.** The real `sbx ls` has a header row and a `●`/`○` marker, so `sandbox_state` reads every sandbox that exists as `stopped`. Task 24 fixes this.
 - F13-F16 go in as they stand: Tasks 28 and 29.
@@ -427,3 +427,4 @@ sequenced:  none
 - 2026-11-17 — planned: docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md (round 2) · cost: 113m · opus-5-5 411k in + 1.4M cached / 17k out · engineering plugin unavailable; its structure applied directly
 - 2026-11-18 — round 3 opened after qc.md round 2; Q14-Q17 raised · cost: 1m · fable-5-2 197k in + 188k cached / 2k out
 - 2026-11-18 — planned: docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md (round 3, after qc.md round 2; Q14-Q17 answered) · cost: 48m · fable-5-2 202k in + 584k cached / 6k out · opus-5-5 219k in + 4.2M cached / 27k out · engineering plugin unavailable; its structure applied directly
+- 2026-11-18 — /codeo:issue filed #123 for the lock.sh volume TODO in a sandbox (Q16)
