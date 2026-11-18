@@ -80,6 +80,15 @@ Calls made without a question. Each is mine; correct any of them in an answer ab
 - **Documentation the change moves:** `docs/handoff.md` (the lock's `container` bullet, and the live signal's machine name), `docs/extension-points.md` (`close/host-workflow`: *May rely on* gains `sandbox:`), `.sbx/README.md` (the lock line in the `issue` sequence, *Ending a sandbox*, the failed-fetch way out), `.devcontainer/README.md` (where close's removal command is described), and a `CHANGELOG.md` entry.
 - **Out of the plan, as the issue says:** `/codeo:cleanup` and `scripts/cleanup.sh` for sandboxes; `role.sh` classifying a sandbox as `unguarded`.
 
+## Outcome
+
+- **Plan:** `docs/plans/2026-11-18-sbx-sandbox-lock-follow-ups-131.md` (13 tasks, one pull request). Shape: an implementation plan under `docs/plans/`, no standing reference doc.
+- **Decisions:** the start script tells `lock.sh` (`take container --sandbox <name>`); the marker holds the sandbox's name, with `container-name.sh --docker` as the fallback for an empty one; tests only, no host task, so a real sandbox shows the change after the next release and pin bump; `end` removes nothing it could not read, with or without `--force`, and names `sbx rm --force codeo-<N>`; close covers finished, stash and abandon for a sandbox; sandboxes made before this change keep `volume: unknown`.
+- **Rejected:** `lock.sh` reading the marker itself; a new `host: sandbox` value; `--force` removing an unreadable sandbox; recognising old `volume: unknown` locks.
+- **Also in the plan:** the `live.test.sh` stamp fix (absolute path), F19-F21, the remaining #99 test gaps, and a `live.sh` machine label read from `sandbox:`.
+- **Documentation pages moved:** `docs/handoff.md`, `docs/extension-points.md`, `.sbx/README.md`, `.devcontainer/README.md`, `CHANGELOG.md` (no wiki module).
+- **Intake questions resolved here:** none. **Overlaps:** none; #133 and #126 are at `init` with no footprint.
+
 ### Footprint
 
 ```
@@ -89,8 +98,6 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
+
+- 2026-11-18 — planned: docs/plans/2026-11-18-sbx-sandbox-lock-follow-ups-131.md · cost: 1m · sonnet-5-5 58k in + 633k cached / 3k out
