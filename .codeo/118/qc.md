@@ -23,7 +23,7 @@ This branch adds one bullet at the end of `## Unreleased` and changes nothing el
 - **(b) Sequence after #100.** Hold this pull request until #100 is merged or closed, then re-run the round.
 - **(c) Re-scope.** Drop the `CHANGELOG.md` bullet from this change and file it separately after the release.
 
-**Answer:**
+**Answer:** (a) proceed and coordinate — 2026-11-18.
 
 ## Notes
 
