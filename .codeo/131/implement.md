@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The plan is committed and the branch already contains `origin/main`. No task is dispatched: `overlap.sh` found #133 touching three of this plan's files, and Q1 must be answered first.
+Round 1. Q1 is answered (proceed and coordinate). Q2 is open: #126 published a footprint overlapping `CHANGELOG.md` and `docs/handoff.md`. No task is dispatched until it is answered.
 
 ## Questions
 
@@ -22,6 +22,16 @@ Round 1. The plan is committed and the branch already contains `origin/main`. No
 
 **Answer:**
 Proceed and coordinate, my pick, as the engineer chose ("A", 2026-11-18). (Transcribed from the chat answer.)
+
+### Q2 — #126 (`feat/put-issue-number-branch-name`, kbajpai, at `plan`, waiting for `/codeo:implement`) also edits `glob:CHANGELOG.md` and `glob:docs/handoff.md`. How do we proceed?
+
+**Why it matters:** #126's footprint is new since Q1 was raised. This plan's Tasks 10 and 12 edit `docs/handoff.md` (the lock's `container` bullet, the live signal's machine paragraph) and `CHANGELOG.md`; #126 edits both too (and `docs/dossier.md`, `scripts/branch-name.sh`, `scripts/claim.sh`, `skills/init/SKILL.md`, none of which this plan touches). #126 has not started implementing (`changed:` lists only its plan).
+**Options:**
+- **Proceed and coordinate (my pick).** Same reasoning as Q1: the edits are small separate hunks, and whichever PR merges second resolves any textual conflict with `sync-main.sh`.
+- **Sequence after #126.** Wait for #126 to merge.
+- **Re-scope.** Drop Tasks 10 and 12 into a follow-up; needs `/codeo:plan` again.
+
+**Answer:**
 
 ## Notes
 
