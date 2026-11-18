@@ -325,6 +325,33 @@ set_aside_sandbox_refs() {
     echo "$prefix"
 }
 
+# uncommitted_work <name>: print what the sandbox's repository holds that no commit does: changes to files,
+# stashes, a detached HEAD (each list cut at 10 lines). Return 0 with no output when it is clean, 1 when an
+# exec fails. sbx exec from WSL can answer with CRLF, so \r is removed.
+uncommitted_work() {
+    local status stashes changes head n
+    status=$("$sbx" exec "$1" git status --porcelain --branch) || return 1
+    stashes=$("$sbx" exec "$1" git stash list) || return 1
+    status=${status//$'\r'/}
+    stashes=${stashes//$'\r'/}
+    head=$(head -n 1 <<<"$status")
+    changes=$(tail -n +2 <<<"$status")
+    if [[ -n "$changes" ]]; then
+        echo "$1 has uncommitted changes:"
+        head -n 10 <<<"$changes"
+        n=$(grep -c '' <<<"$changes")
+        if ((n > 10)); then echo "and $((n - 10)) more"; fi
+    fi
+    if [[ -n "$stashes" ]]; then
+        n=$(grep -c '' <<<"$stashes")
+        echo "$1 has $n stash(es):"
+        head -n 10 <<<"$stashes"
+        if ((n > 10)); then echo "and $((n - 10)) more"; fi
+    fi
+    if [[ "$head" == "## HEAD (no branch)" ]]; then echo "$1 is on a detached HEAD"; fi
+    return 0
+}
+
 cmd_end() {
     (($# == 1 || $# == 2)) || usage
     valid_number "$1" || usage
@@ -334,7 +361,7 @@ cmd_end() {
         force=1
     fi
     pick_sbx
-    local name=codeo-$1 dir=codeo-$1 state commits count refs prefix
+    local name=codeo-$1 dir=codeo-$1 state commits count refs prefix report
     state=$(sandbox_state "$name")
     [[ "$state" != missing ]] || die "no sandbox $name"
     [[ -d "$dir" ]] || die "no clone $dir here: cannot check $name for unpushed commits, nothing removed"
@@ -350,15 +377,21 @@ cmd_end() {
     fi
     commits=$(unpushed_commits "$dir" "$name") || die "could not list the commits of $name, nothing removed"
     count=0
-    if [[ -n "$commits" ]]; then
-        count=$(grep -c '' <<<"$commits")
-        if ((force == 0)); then
+    [[ -z "$commits" ]] || count=$(grep -c '' <<<"$commits")
+    report=$(uncommitted_work "$name") || die "could not check $name for uncommitted work, nothing removed"
+    if ((force == 0)) && [[ -n "$commits" || -n "$report" ]]; then
+        if [[ -n "$commits" ]]; then
             echo "$name has $count commit(s) on no origin branch:"
             head -n 10 <<<"$commits"
             if ((count > 10)); then echo "and $((count - 10)) more"; fi
-            echo "nothing removed: push them from the sandbox, or run: codeo-sandbox.sh end $1 --force"
-            return 1
         fi
+        if [[ -n "$report" ]]; then
+            echo "$report"
+            echo "nothing removed: commit and push it from the sandbox, or run: codeo-sandbox.sh end $1 --force"
+        else
+            echo "nothing removed: push them from the sandbox, or run: codeo-sandbox.sh end $1 --force"
+        fi
+        return 1
     fi
     "$sbx" rm --force "$name" || die "could not remove $name"
     if ((force == 0)); then
@@ -374,6 +407,7 @@ cmd_end() {
     else
         echo "removed $name; its $count unpushed commit(s) are kept in $prefix in ./$dir"
     fi
+    if [[ -n "$report" ]]; then echo "its uncommitted work was not kept"; fi
 }
 
 main() {

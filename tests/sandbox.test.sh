@@ -58,6 +58,10 @@ case "${0##*/} $1" in
         case "$*" in
             *container-name.sh*) cat "$d/lockname" ;;
             *devcontainer-start.sh*) echo "start-output" ;;
+            *"git status --porcelain --branch")
+                [[ ! -e "$d/statusfail" ]] || exit 1
+                if [[ -f "$d/status" ]]; then cat "$d/status"; else echo "## fix/x"; fi ;;
+            *"git stash list") [[ ! -f "$d/stashes" ]] || cat "$d/stashes" ;;
             *" pwd") if [[ -f "$d/sbxpwd" ]]; then cat "$d/sbxpwd"; else echo "/sandbox/clone"; fi ;;
         esac ;;
     "ssh "* | "ssh.exe "*) [[ ! -e "$d/sshfail" ]] || exit 1 ;;
@@ -572,6 +576,70 @@ end_force_removes_and_says_where_the_commits_are() {
     [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
 }
 
+end_with_uncommitted_changes_removes_nothing() {
+    end_setup enddirty
+    printf '## fix/x\n M a.txt\n?? b.txt\n' >"$sb_dir/status"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_out" == *"codeo-113 has uncommitted changes:"* && "$sb_out" == *" M a.txt"* && "$sb_out" == *"?? b.txt"* ]] || fail "stdout was: $sb_out"
+    [[ "$(tail -n 1 <<<"$sb_out")" == "nothing removed: commit and push it from the sandbox, or run: codeo-sandbox.sh end 113 --force" ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_with_a_stash_removes_nothing() {
+    end_setup endstash
+    echo 'stash@{0}: WIP on fix/x: abc work' >"$sb_dir/stashes"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_out" == *"has 1 stash(es):"* ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_on_a_detached_head_removes_nothing() {
+    end_setup enddetached
+    echo '## HEAD (no branch)' >"$sb_dir/status"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_out" == *"is on a detached HEAD"* ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_with_unpushed_and_uncommitted_lists_both() {
+    end_setup endboth
+    end_commit 1
+    printf '## fix/x\n M a.txt\n' >"$sb_dir/status"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_out" == *"has 1 commit(s)"* && "$sb_out" == *"has uncommitted changes:"* ]] || fail "stdout was: $sb_out"
+    [[ "$(tail -n 1 <<<"$sb_out")" == "nothing removed: commit and push it from the sandbox, or run: codeo-sandbox.sh end 113 --force" ]] || fail "stdout was: $sb_out"
+}
+
+end_force_with_uncommitted_work_says_it_is_not_kept() {
+    end_setup endforcedirty
+    printf '## fix/x\n M a.txt\n' >"$sb_dir/status"
+    sb_run end 113 --force
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
+    [[ "$(tail -n 1 <<<"$sb_out")" == "its uncommitted work was not kept" ]] || fail "stdout was: $sb_out"
+}
+
+end_with_a_failed_status_check_removes_nothing() {
+    end_setup endstatusfail
+    : >"$sb_dir/statusfail"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$(tail -n 1 <<<"$sb_err")" == "codeo-sandbox: could not check codeo-113 for uncommitted work, nothing removed" ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_with_crlf_status_is_clean() {
+    end_setup endcrlf
+    printf '## fix/x\r\n' >"$sb_dir/status"
+    sb_run end 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
+}
+
 end_with_nothing_to_lose_deletes_the_sandbox_refs() {
     end_setup endclear
     end_commit 1
@@ -1003,6 +1071,13 @@ cases=(
     end_with_nothing_to_lose_removes_the_sandbox
     end_with_an_unpushed_commit_removes_nothing
     end_force_removes_and_says_where_the_commits_are
+    end_with_uncommitted_changes_removes_nothing
+    end_with_a_stash_removes_nothing
+    end_on_a_detached_head_removes_nothing
+    end_with_unpushed_and_uncommitted_lists_both
+    end_force_with_uncommitted_work_says_it_is_not_kept
+    end_with_a_failed_status_check_removes_nothing
+    end_with_crlf_status_is_clean
     end_with_nothing_to_lose_deletes_the_sandbox_refs
     end_force_sets_the_refs_aside
     end_force_does_not_overwrite_refs_set_aside_earlier
