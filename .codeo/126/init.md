@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Draft, awaiting the engineer's approval at the review gate. Branch `feat/put-issue-number-branch-name` will be cut off `main` at `9f1446158255d557f79970bd3774d418af75c733`. The next step after the claim is `/codeo:plan`, run in this issue's own container.
+Branch `feat/put-issue-number-branch-name` cut off `main` at `9f1446158255d557f79970bd3774d418af75c733`, claimed and pushed. Nothing is open; the next step is `/codeo:plan`, run in this issue's own container.
 
 ## Questions
 
