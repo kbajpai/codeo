@@ -7,7 +7,7 @@
 
 ## Where this stands
 
-Drafting. Q1 and Q2 are open. No issue is drafted until they are answered.
+Drafted; waiting for the engineer's approval. Title: "Record an sbx sandbox in the workflow lock instead of a Docker volume". Labels: `enhancement`. No Issue Type (the repository defines none). Body: `body.md` beside this file.
 
 ## Questions
 
@@ -27,12 +27,14 @@ That advice is wrong for a sandbox: there is no volume to find, and `/codeo:clos
 - *Something else:* say what.
 
 **Answer:**
+Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ### Q2 — Is anything else out of scope for this issue?
 
 **Why it matters:** the issue's Out of Scope section. My proposal: `scripts/cleanup.sh` and `/codeo:cleanup` listing sandboxes (they only know Docker containers today) stay out, as a follow-up; so does any change to `.sbx/codeo-sandbox.sh` beyond what Q1 needs. Say if you want either in, or anything else out.
 
 **Answer:**
+Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ## Notes
 
