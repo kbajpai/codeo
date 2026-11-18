@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; two questions are open (Q1, Q2) and nothing is drafted past them. Four of the six acceptance criteria need no decision and are settled as the skill's own calls under `## Notes`; say so under either answer if one of them is wrong. The same-machine collision was reproduced here (below), and what it showed changes how Q2 reads: the beat that loses the ref lock loses it to a beat that has just published, so the signal is not stale.
+Q1 and Q2 are answered: stay silent, and document and test the same-machine collision. The footprint check against the other workflows in flight found one overlap, `CHANGELOG.md` with #99, raised as Q3; the draft waits on it. Four of the six acceptance criteria need no decision and are settled as the skill's own calls under `## Notes`; correct them in Q3's answer if one is wrong. The same-machine collision was reproduced here (below): the beat that loses the ref lock loses it to a beat that has just published, so the signal is not stale.
 
 ## Questions
 
@@ -34,6 +34,17 @@ Explored and brainstormed; two questions are open (Q1, Q2) and nothing is drafte
 
 **Answer:**
 (a) Document and test (engineer, in the conversation, 2026-11-18: "recommended for both"; recorded here by the skill).
+
+### Q3 — #99 also edits `CHANGELOG.md`: proceed and coordinate, sequence after #99, or re-scope?
+
+**Why it matters:** `overlap.sh` found `CHANGELOG.md` (and `glob:CHANGELOG.md`) in both footprints. #99 is branch `feat/make-sbx-issue-sandbox-usable`, assigned to kbajpai, at step `qc (working)`; it has already changed `CHANGELOG.md` on its branch. This plan adds one bullet there (the live-signal wording, the `SessionEnd` figure and the collision limit). Two bullets added in the same file on two branches usually merge with a textual conflict that `scripts/sync-main.sh` stops on and the later branch resolves by keeping both, as #116 did. No other file overlaps, and no `exclusive` resource is shared. If you pick sequencing, the changelog task waits until #99 has merged.
+
+**Options:**
+- **(a) Proceed and coordinate (recommended).** The changelog task is last, runs `bash scripts/sync-main.sh` first, and keeps both sides on a conflict. The same call #116's plan made for #113.
+- **(b) Sequence after #99.** Nothing in this plan starts until #99 merges.
+- **(c) Re-scope.** Leave the changelog bullet out of this change and add it in a later one.
+
+**Answer:**
 
 ## Notes
 
