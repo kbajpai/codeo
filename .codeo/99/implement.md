@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 2 (after plan.md round 2), finished. Tasks 15-21 are done and committed; the outcome is below. Task 22 is the engineer's acceptance run on their host. Next: `/codeo:qc`.
+Round 2 (after plan.md round 2), finished; Task 22 partly run (2026-11-18): steps 1-9 and 12 are under `## Acceptance`, steps 10 and 11 are owed on 2026-11-19, step 13 is not run. Two findings from the run go to `/codeo:qc`: `remote.SSH.defaultExtensions` is blocked by the sbx network policy, and `issue` never runs `run -d`, so sandboxes stop when idle. Next: steps 10-11, then `/codeo:qc`.
 
 ## Questions
 
@@ -351,6 +351,412 @@ sbx.exe rm --force codeo-p
 
 - **The `--folder-uri` form reaches Remote - SSH and names the right host.** Opening the folder depends on `*.sbx` resolving through Windows OpenSSH's config, which `sbx setup ssh` writes. That command is marked experimental. Task 11's `open` therefore has to check that the host resolves (`ssh.exe <name>.sbx -- true`), and if it does not, point the user to `sbx.exe setup ssh` rather than open a window that fails.
 - **VS Code asks for the platform** the first time it connects to each host. A new `codeo-<N>.sbx` asks again unless `remote.SSH.remotePlatform` maps it, or a `*.sbx` pattern covers it.
+
+## Acceptance
+
+Task 22 (round 2 plan), run by the engineer on their Windows host from WSL2, in `D:\Downloads	ask22`. The outputs are pasted as given, with the sbx banner art left out.
+
+### Step 2 — `bash codeo-sandbox.sh issue 99 feat/make-sbx-issue-sandbox-usable` (2026-11-18)
+
+```
+Cloning into 'codeo-99'...
+…
+    ✓ workspace — Git repository at D:\Downloads	ask22\codeo-99
+  SANDBOX
+    Name:       codeo-99
+    Agent:      claude
+    Kit:        docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    Workspace:  D:\Downloads	ask22\codeo-99 → /d/Downloads/task22/codeo-99 (rw)
+    Image:      docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    CPU:        2
+    Memory:     4g
+    ✓ Created sandbox codeo-99
+    … (banner: base Debian 13 (trixie), egress gateway proxy, kits claude 2.1.326)
+plugins: installed superpowers
+plugins: installed codeo v1.0.6
+plugins: superpowers, codeo v1.0.6
+lock: took the lock for #99 on feat/make-sbx-issue-sandbox-usable
+devcontainer-start: git identity: user.name set from GIT_AUTHOR_NAME
+devcontainer-start: git identity: user.email set from GIT_AUTHOR_EMAIL
+devcontainer-start: TODO — could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)
+```
+
+- Step 1 (download of `codeo-sandbox.sh` alone, no `claude-image` beside it) worked: `issue` created at the digest in `.sbx/claude-image` (`fd56087a…3593332`), which was read from the clone.
+- No `dubious ownership`.
+- The lock line is not the last line. Two identity lines and one TODO follow it. The TODO comes from `scripts/lock.sh:145`: a sandbox's workspace is a bind mount, not a Docker volume, so the lock's `volume:` line is left for the user. `scripts/` is out of this plan's scope; noted for `/codeo:qc`.
+
+### Step 2a — role check
+
+```
+$ sbx.exe exec codeo-99 test -e /run/.containerenv; echo $?
+
+    ✓ sandbox codeo-99 — started
+
+1
+$ sbx.exe exec codeo-99 bash .devcontainer/scripts/role.sh
+unguarded
+```
+
+- The sandbox has no `/run/.containerenv`, and `role.sh` prints `unguarded` there, so it has no `/.dockerenv` either. This confirms the `role.sh` gap: codeo's skills run in a sandbox with no role check. It is out of this plan's scope (`role.sh` markers); noted for `/codeo:qc`.
+- `sbx exec` printed `sandbox codeo-99 — started`. The sandbox had stopped by itself between step 2 and this step, with no `stop` issued. This is evidence for "Stopped sandboxes" (step 9).
+
+### Step 3 — identity, and a rerun that creates nothing
+
+```
+$ sbx.exe exec codeo-99 git config user.name
+
+    ✓ sandbox codeo-99 — started
+
+<the engineer's name>
+$ sbx.exe exec codeo-99 git config user.email
+<the engineer's email>
+$ bash codeo-sandbox.sh issue 99 feat/make-sbx-issue-sandbox-usable
+plugins: superpowers, codeo v1.0.6
+devcontainer-start: ready
+$ sbx.exe exec codeo-99 git config user.name
+<the engineer's name>
+$ sbx.exe exec codeo-99 git config user.email
+<the engineer's email>
+```
+
+The name and email are redacted here; they are the engineer's GitHub identity.
+- Both values print, and the rerun leaves them unchanged.
+- The rerun created nothing: no clone, no create, no clone fetch (the sandbox existed).
+- The sandbox had stopped by itself again before the first `exec`.
+
+### Step 4 — plugins
+
+```
+$ sbx.exe exec codeo-99 claude plugin list
+
+    ✓ sandbox codeo-99 — started
+
+Installed plugins:
+  ❯ codeo@codeo
+    Version: 1.0.6
+    Scope: user
+    Status: ✔ enabled
+  ❯ superpowers@superpowers-marketplace
+    Version: 7.0.2
+    Scope: user
+    Status: ✔ enabled
+```
+
+- codeo is at the pin in `.codeo/config.json` (`plugin.ref` `v1.0.6`).
+- `.codeo/config.json` does not pin superpowers. The installed copy is 7.0.2, the same version this session runs.
+- The sandbox had stopped by itself a third time.
+
+### Step 5 — push from inside, no login
+
+```
+$ sbx.exe exec codeo-99 git push origin HEAD:refs/heads/scratch/sbx-99-push
+
+    ✓ sandbox codeo-99 — started
+
+remote:
+remote: Create a pull request for 'scratch/sbx-99-push' on GitHub by visiting:
+remote:      https://github.com/kbajpai/codeo/pull/new/scratch/sbx-99-push
+remote:
+To https://github.com/kbajpai/codeo.git
+ * [new branch]      HEAD -> scratch/sbx-99-push
+$ git -C codeo-99 push origin --delete scratch/sbx-99-push
+To https://github.com/kbajpai/codeo.git
+ - [deleted]         scratch/sbx-99-push
+```
+
+- The push from inside the sandbox succeeded with no login prompt.
+- The scratch branch is deleted.
+- The sandbox had stopped by itself a fourth time.
+
+### Step 6 — VS Code
+
+```
+$ bash codeo-sandbox.sh open 99
+
+    ✓ sandbox codeo-99 — started
+
+window-title: codeo [#99]
+$ sbx.exe exec codeo-99 git status --short
+$ sbx.exe exec codeo-99 git log --oneline -3
+87c72ad docs(codeo): implement dossier for #99 — round 2
+1a942c2 docs: correct the sbx route's end and pin wording (#99, #86)
+0baf43c docs: the sbx route's pin source, clone refresh and ref handling (#99, #86)
+```
+
+- The first `open` attempt was redone. The engineer judged it to have gone wrong; `open` has no side effects to undo beyond the title it rewrites.
+- The sandbox's tree is clean, and its `HEAD` is `87c72ad`, the pushed tip.
+- The sandbox had stopped by itself a fifth time.
+
+Screenshot from the engineer, of the VS Code window after `open`:
+- The window title is `codeo [#99]`.
+- The Explorer shows `codeo-99 [SSH: codeo-99.sbx]`.
+- The status bar shows `SSH: codeo-99.sbx` and the branch `feat/make-sbx-issue-sandbox-usable`.
+- A Dev Containers toast offers "Reopen in Container" because the folder holds `.devcontainer/`. Taking it would leave the sandbox route. `.sbx/README.md` does not mention it yet.
+
+Screenshot from the engineer, of the Extensions view:
+- "SSH: Codeo-99.Sbx - Installed" lists one extension, GitHub Pull Requests (GitHub).
+- None of the three in `.sbx/README.md:16` (`anthropic.claude-code`, `timonwong.shellcheck`, `bierner.markdown-mermaid`) is installed on the sandbox side.
+- "Local - Installed" shows 37. The check of the user setting `remote.SSH.defaultExtensions` is pending.
+
+- Cause: the engineer's VS Code user settings had no `remote.SSH.defaultExtensions` key, so the prerequisite in `.sbx/README.md:16` was not set up. This is not a script fault. `remote.SSH.remotePlatform` already maps `codeo-99.sbx` to `linux`. The check is redone after the setting is added.
+
+After `remote.SSH.defaultExtensions` was added and `open 99` rerun, the engineer sent a screenshot:
+- "SSH: Codeo-99.Sbx - Installed" lists 0 extensions.
+- VS Code reported: `Failed to connect to the remote extension host server (Error: ExtensionInstallFailed(... Server returned 403 / Server returned 403 / Server returned 403 / Failed Installing Extensions: anthropic.claude-code, timonwong.shellcheck, bierner.markdown-mermaid))`.
+- **Not met.** The VS Code server inside the sandbox fetches extensions from the marketplace, and gets 403 three times. That matches the egress proxy refusing a host outside the `balanced` allow list (evaluation page D9/T11: a blocked host gets an immediate 403). The plan and `.sbx/README.md` assumed the setting was enough. Diagnosis in progress.
+
+```
+$ sbx.exe exec codeo-99 curl -sS -o /dev/null -w "%{http_code}
+" https://marketplace.visualstudio.com/
+200
+$ sbx.exe exec codeo-99 curl -sS -o /dev/null -w "%{http_code}
+" https://open-vsx.org/
+403
+```
+- The marketplace front page is allowed, so the 403 comes from another host the install uses. The candidates are the gallery API and the VSIX CDN.
+
+```
+$ sbx.exe exec codeo-99 curl … https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery
+405
+$ sbx.exe exec codeo-99 curl … https://anthropic.gallery.vsassets.io/
+403
+$ sbx.exe exec codeo-99 curl … https://anthropic.gallerycdn.vsassets.io/
+403
+$ sbx.exe exec codeo-99 curl … https://update.code.visualstudio.com/
+200
+$ sbx.exe exec codeo-99 sh -c "grep -ho 'https://…' ~/.vscode-server/data/logs/*/remoteagent.log | …"
+(nothing)
+```
+- **Cause.** The gallery API answers (405 to a GET), but the hosts that serve the extension files, `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io`, get the proxy's 403. The sandbox's `balanced` network policy does not allow them. As a result, `remote.SSH.defaultExtensions` cannot install anything on the sandbox side.
+- This is a finding against the plan. The README's extension step does not work under the default policy. Two fixes are possible: `remote.downloadExtensionsLocally` (VS Code fetches on the host and copies the files in), or allowing `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io` in the sbx policy.
+
+With `"remote.downloadExtensionsLocally": true` added and `open 99` rerun, the engineer's screenshot shows:
+- The same `ExtensionInstallFailed … Server returned 403 ×3` for all three extensions.
+- A second error, `Could not fetch remote environment`.
+- 0 extensions installed on the SSH side. The Explorer no longer shows the folder.
+
+`remote.downloadExtensionsLocally` does not cover `remote.SSH.defaultExtensions`. The VS Code server installs those itself at start-up, from inside the sandbox. The failed install also stops the remote extension host from starting, which is worse than having no setting at all: before the key was added, the window worked with no extensions.
+
+The engineer removed `remote.SSH.defaultExtensions`, kept `remote.downloadExtensionsLocally: true`, reran `open 99`, and installed Claude Code by hand with "Install in SSH: codeo-99.sbx". Screenshot:
+- "SSH: Codeo-99.Sbx - Installed" lists 2: Claude Code for VS Code (Anthropic) and GitHub Pull Requests.
+- No error toasts. The title is `codeo [#99]` and the status bar shows `SSH: codeo-99.sbx`, the branch and `Claude Code`.
+
+**Workaround found.** With `remote.downloadExtensionsLocally`, an extension installed from the window is downloaded on the host and copied into the sandbox, so it never meets the sandbox's network policy. `remote.SSH.defaultExtensions` cannot be used under the default policy, because the server installs that list itself and is blocked. The plan's "one step opens VS Code … with the three extensions" is therefore not met as written. The route the README should give is to set `remote.downloadExtensionsLocally` and install the three by hand (once per sandbox), or to allow `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io` in the sbx policy.
+
+Screenshot from the engineer, of `claude` running in the window's terminal:
+- The terminal tab title is `✳ codeo [#99] · b7178c8d - codeo-99`, so the session title starts with `codeo [#99]` (met).
+- Claude Code is v2.1.326, `/d/Downloads/task22/codeo-99`. The prompt shows "bypass permissions on", which is the sandbox kit's default.
+
+**Step 6 summary:**
+- Folder: met.
+- Window title `codeo [#99]`: met.
+- Session title: met.
+- Three extensions: **not met** as planned. `remote.SSH.defaultExtensions` is blocked by the sbx network policy; the workaround is above.
+
+### Step 7 — a second sandbox (N2 = 122 on `main`; no other issue has a branch on origin)
+
+```
+$ bash codeo-sandbox.sh issue 122 main
+Cloning into 'codeo-122'...
+…
+codeo-sandbox: no image pin: set CODEO_SBX_IMAGE to a file, or commit codeo-122/.sbx/claude-image, or put .sbx/claude-image on origin/HEAD (git show origin/HEAD:.sbx/claude-image)
+$ bash codeo-sandbox.sh open 122
+codeo-sandbox: codeo-122 does not exist: create it with codeo-sandbox.sh issue 122 <branch>
+```
+
+- This is correct behaviour, and it exercises Task 15's no-pin refusal on a real host. `main` (origin/HEAD) does not carry `.sbx/claude-image` until this branch merges, so neither the clone nor `origin/HEAD` has a pin. The refusal is one line naming all three sources, and nothing is created.
+- The run is repeated with `CODEO_SBX_IMAGE` pointing at `codeo-99/.sbx/claude-image`.
+
+The engineer reran with `CODEO_SBX_IMAGE=codeo-99/.sbx/claude-image bash codeo-sandbox.sh issue 122 main`, then `open 122`. Screenshot:
+- The second window is titled `codeo [home]`. The Explorer shows `codeo-122 [SSH: codeo-122.sbx]`, and the status bar shows `SSH: codeo-122.sbx` on `main`.
+- Next to `codeo [#99]`, the two window titles differ (met).
+
+```
+$ CODEO_SBX_IMAGE=codeo-99/.sbx/claude-image bash codeo-sandbox.sh issue 122 main
+    ✓ workspace — Git repository at D:\Downloads	ask22\codeo-122
+  SANDBOX
+    Name:       codeo-122
+    Kit:        docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    Image:      docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    CPU:        2
+    Memory:     4g
+  AGENT
+    ✓ assembled kit image ready (cached)
+    ✓ Created sandbox codeo-122
+    … (banner)
+plugins: installed superpowers
+plugins: installed codeo v1.0.6
+plugins: superpowers, codeo v1.0.6
+devcontainer-start: git identity: user.name set from GIT_AUTHOR_NAME
+devcontainer-start: git identity: user.email set from GIT_AUTHOR_EMAIL
+devcontainer-start: TODO — this container's folder is 'codeo-122' but its clone is on main with no lock, so it is the home container and 'docker ps' names it wrongly: remove it and open it again with the folder 'codeo-home' (.devcontainer/README.md)
+todo: the sandbox is codeo-122 but its clone holds no workflow lock: run /codeo:init #122 on its branch, then issue 122 <branch> again
+$ bash codeo-sandbox.sh open 122
+window-title: codeo [home]
+```
+
+- The existing `codeo-122` clone, with its sandbox missing, was refreshed silently (`fetch -q`, `merge --ff-only`; already up to date). There was no clone message, and the sandbox was created. This exercises Task 16's path.
+- `CODEO_SBX_IMAGE` won: the sandbox was created at the same digest as #99. This exercises Task 15's override.
+- Task 19's no-lock todo printed as specified.
+- The start script's own TODO, about a home clone in a `codeo-<N>` folder, is expected for `main` in a `codeo-122` folder.
+
+### Step 8 — `end` refuses an unpushed commit
+
+```
+$ sbx.exe exec codeo-99 git commit --allow-empty -m scratch
+    ✓ sandbox codeo-99 — started
+[feat/make-sbx-issue-sandbox-usable 37a09c4] scratch
+$ bash codeo-sandbox.sh end 99
+From git://127.0.0.1:60027/codeo-99
+ * [new branch]      feat/make-sbx-issue-sandbox-usable -> sandbox-codeo-99/feat/make-sbx-issue-sandbox-usable
+   87c72ad..37a09c4  feat/make-sbx-issue-sandbox-usable -> refs/sandboxes/codeo-99/feat/make-sbx-issue-sandbox-usable
+… (origin fetch)
+From https://github.com/kbajpai/codeo
+ * [new ref]         refs/pull/1/head   -> origin/pr/1
+ … (59 pull-request heads in all)
+codeo-99 has 1 commit(s) on no origin branch:
+37a09c4 scratch
+nothing removed: push them from the sandbox, or run: codeo-sandbox.sh end 99 --force
+$ sbx.exe ls
+  SANDBOX     AGENT    STATUS      PORTS                        WORKSPACE                       CREATED
+  codeo-122   claude   ● running   127.0.0.1:60026->9418/tcp4   D:\Downloads	ask22\codeo-122   4m
+  codeo-99    claude   ● running   127.0.0.1:60027->9418/tcp4   D:\Downloads	ask22\codeo-99    37m
+```
+
+- Met: the scratch commit is named, nothing is removed, and `codeo-99` is still listed.
+- The pull-request fetch (Task 17) ran against the real origin and fetched 59 heads into `origin/pr/*`.
+- Non-blocking, for `/codeo:qc`:
+  - The first `end` prints one line per pull-request head, about 60 lines.
+  - "on no origin branch" now also means "on no pull-request head".
+  - The sandbox fetch also writes a remote-tracking ref `sandbox-codeo-99/<branch>` (the sbx remote's own refspec), besides `refs/sandboxes/codeo-99/*`. `end` does not clear that ref.
+
+### Step 8a — `end` with nothing to lose, then recreate
+
+```
+$ sbx.exe exec codeo-99 git reset --hard HEAD~1
+    ✓ sandbox codeo-99 — started
+HEAD is now at 87c72ad docs(codeo): implement dossier for #99 — round 2
+$ bash codeo-sandbox.sh end 99
+From git://127.0.0.1:60028/codeo-99
+ * [new branch]      feat/make-sbx-issue-sandbox-usable -> sandbox-codeo-99/feat/make-sbx-issue-sandbox-usable
+ + 37a09c4...87c72ad feat/make-sbx-issue-sandbox-usable -> refs/sandboxes/codeo-99/feat/make-sbx-issue-sandbox-usable  (forced update)
+  warning: sandbox "codeo-99" runs on an in-container clone (--clone); commits the agent made inside it are lost on removal unless fetched first (…)
+  Removed sandbox codeo-99
+removed codeo-99
+$ sbx.exe ls
+  SANDBOX     AGENT    STATUS      PORTS                        WORKSPACE                       CREATED
+  codeo-122   claude   ● running   127.0.0.1:60026->9418/tcp4   D:\Downloads	ask22\codeo-122   5m
+$ bash codeo-sandbox.sh issue 99 feat/make-sbx-issue-sandbox-usable
+    ✓ workspace — Git repository at D:\Downloads	ask22\codeo-99
+    Image:      docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    ✓ Created sandbox codeo-99
+    … (banner)
+plugins: installed superpowers
+plugins: installed codeo v1.0.6
+plugins: superpowers, codeo v1.0.6
+lock: took the lock for #99 on feat/make-sbx-issue-sandbox-usable
+devcontainer-start: git identity: user.name set from GIT_AUTHOR_NAME
+devcontainer-start: git identity: user.email set from GIT_AUTHOR_EMAIL
+devcontainer-start: TODO — could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)
+```
+
+- Met (F2's normal case): with nothing unpushed, a plain `end` exited 0 with `removed codeo-99`, and the sandbox is gone from `ls`. No `--force` was needed.
+- Met (F3): `issue` reused the existing clone with no `Cloning into`, brought it up to origin silently, created the sandbox at the pinned digest, and took the lock again. It printed the same `scripts/lock.sh` volume TODO as in step 2.
+
+### Step 9 — stops
+
+Repeat 1:
+```
+$ sbx.exe stop codeo-122
+  Git remote sandbox-codeo-122 is restored when the sandbox next starts.
+  Stopped sandbox codeo-122
+$ sbx.exe run -d --name codeo-122
+    ✓ sandbox codeo-122 — attaching to the existing sandbox (workspace D:\Downloads	ask22\codeo-122)
+    ✓ sandbox codeo-122 — started
+    ✓ sandbox codeo-122 — running detached
+beeea403-6e58-4e82-931f-5031b28dadb2
+$ sbx.exe ls
+  SANDBOX     AGENT    STATUS                 PORTS                        WORKSPACE                       CREATED
+  codeo-122   claude   ● running (detached)   127.0.0.1:60030->9418/tcp4   D:\Downloads	ask22\codeo-122   6m
+  codeo-99    claude   ○ stopped                                           D:\Downloads	ask22\codeo-99    1m
+```
+
+- `codeo-99` was recreated by `issue` one minute earlier and is already `stopped`, with no `stop` issued. `codeo-122`, after `run -d`, shows `running (detached)`.
+- The working hypothesis for "Stopped sandboxes": a sandbox that `create` and `exec` brought up stops once nothing is attached, and one started with `run -d` stays up. The five `sandbox codeo-99 — started` lines in steps 2a-6 fit this. The remaining repeats and an idle check test it.
+
+Idle check:
+```
+$ sbx.exe run -d --name codeo-99
+    ✓ sandbox codeo-99 — attaching to the existing sandbox (workspace D:\Downloads	ask22\codeo-99)
+    ✓ sandbox codeo-99 — started
+    ✓ sandbox codeo-99 — running detached
+5eefb202-9e88-4ba9-96ec-9d61da59f46c
+$ sbx.exe ls
+  codeo-122   claude   ● running (detached)   127.0.0.1:60030->9418/tcp4   D:\Downloads	ask22\codeo-122   8m
+  codeo-99    claude   ● running (detached)   127.0.0.1:60031->9418/tcp4   D:\Downloads	ask22\codeo-99    2m
+(about four minutes idle)
+$ sbx.exe ls
+  codeo-122   claude   ● running (detached)   127.0.0.1:60030->9418/tcp4   D:\Downloads	ask22\codeo-122   11m
+  codeo-99    claude   ● running (detached)   127.0.0.1:60031->9418/tcp4   D:\Downloads	ask22\codeo-99    6m
+```
+
+Repeat 2:
+```
+$ sbx.exe stop codeo-122
+  Stopped sandbox codeo-122
+$ sbx.exe run -d --name codeo-122
+    ✓ sandbox codeo-122 — running detached
+$ sbx.exe ls
+  codeo-122   claude   ● running (detached)   127.0.0.1:60032->9418/tcp4   D:\Downloads	ask22\codeo-122   12m
+  codeo-99    claude   ● running (detached)   127.0.0.1:60031->9418/tcp4   D:\Downloads	ask22\codeo-99    6m
+```
+
+**Cause of the stops, found.** A sandbox that `sbx create` made, and that only `sbx exec` has touched since, stops by itself within about a minute of the last `exec`. One started with `sbx run -d` stays `running (detached)` while idle; both sandboxes held for four minutes here. Stopping and restarting one sandbox did not disturb the other.
+
+**Finding for `/codeo:qc`, which belongs to the plan.** The plan's `issue` creates the sandbox and runs the start script through `exec`, and never runs `run -d`. As a result:
+- every later `exec`, `open` and `shell` pays a cold start (the `sandbox … — started` lines);
+- a VS Code window can lose its host;
+- "Stopped sandboxes" in `.sbx/README.md` says the cause is not known.
+
+The likely fix is for `issue` to end with `sbx run -d --name codeo-<N>`, and for the README to state the cause.
+
+Repeats 3-10, run as one loop: `for i in 3 … 10; do sbx.exe stop codeo-122 >/dev/null; sbx.exe run -d --name codeo-122 >/dev/null; sbx.exe ls; done`. Each repeat printed the same lines:
+```
+== repeat <i>
+Git remote sandbox-codeo-122 is restored when the sandbox next starts.
+  ✓ sandbox codeo-122 — attaching to the existing sandbox (workspace D:\Downloads	ask22\codeo-122)
+  ✓ sandbox codeo-122 — started
+  ✓ sandbox codeo-122 — running detached
+  SANDBOX     AGENT    STATUS                 PORTS                        WORKSPACE                       CREATED
+  codeo-122   claude   ● running (detached)   127.0.0.1:600<33…40>->9418/tcp4   D:\Downloads	ask22\codeo-122   13m
+  codeo-99    claude   ● running (detached)   127.0.0.1:60031->9418/tcp4   D:\Downloads	ask22\codeo-99    7m-8m
+```
+
+- 10 of 10 repeats: `codeo-122` came back `running (detached)`, and `codeo-99` stayed `running (detached)` on the same port throughout. No sandbox stopped unasked during the stop trials.
+- The git daemon port of `codeo-122` moves on every start, from 60030 to 60040. sbx restores the `sandbox-codeo-122` remote's URL each time.
+
+### Step 12 — home dev container (folder trust)
+
+- The first attempt failed in the image build: `curl: (6) Could not resolve host: claude.ai` at the Dockerfile's `curl -fsSL https://claude.ai/install.sh | bash -s latest` line. This branch does not touch the Dockerfile. Afterwards, `curl` to `claude.ai` returned 302 and `docker run --rm alpine nslookup claude.ai` resolved, so this was a transient DNS failure. The retry built the container.
+- Screenshot after the retry:
+  - The status bar shows `Dev Container: codeo @ desktop-linux` on `feat/make-sbx-issue-sandbox-usable`, and the window title is `codeo [#99]`.
+  - Claude Code's Manage Plugins lists `codeo@codeo` at user scope and at project scope, both enabled, and `superpowers@superpowers-marketplace` enabled, among 12.
+  - Because the clone is this issue's branch, the start script took the #99 lock, so the "home" container is in fact an issue container. Round 1's Task 14 wording (clone the branch into `codeo-home`) causes this.
+
+- No "Trust this folder" dialog appeared when Claude Code opened (the engineer). Met.
+- After one message (`hi`), the Claude Code panel's session title is `codeo [#99] · 9bbb522c`. That is the `session-title.sh` hook registered in the project's `.claude/settings.json`, so the project settings were in effect in the first session (met). Before any message the panel showed `Untitled`, so the panel shows the title from the first prompt on.
+- `codeo@codeo` is enabled (met).
+- Remote Control was active in the session.
+- Still to do: the same checks after **Rebuild Container**.
+
+After **Dev Containers: Rebuild Container**, a screenshot shows a new session titled `codeo [#99] · 92aea675` after one message (`Hi`), with Remote Control active. The project hook is in effect after the rebuild (met). The engineer is to confirm no trust dialog and codeo enabled after the rebuild.
+
+- After the rebuild there was no trust dialog, and codeo is still enabled in `/plugin` (the engineer). Step 12 is met before and after the rebuild.
+
+### Steps 10, 11, 13
+
+- Step 10 (the next-day image check) and step 11 (cleanup with `end --force`) are still owed, for 2026-11-19.
+- Step 13 is not run. No issue other than #99 has a branch on origin, and step 12 already ran on an issue clone (it took the #99 lock), so with `main` step 13 would only repeat step 12.
 
 ## Notes
 
