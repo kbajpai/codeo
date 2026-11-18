@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Draft, awaiting approval at the review gate: branch `feat/make-sbx-sandbox-lock-follow` to be cut off `origin/main` at `9f1446158255d557f79970bd3774d418af75c733`. Next step: `/codeo:plan` in the issue's container.
+Initialized: branch `feat/make-sbx-sandbox-lock-follow` cut off `origin/main` at `9f1446158255d557f79970bd3774d418af75c733` and pushed. Next step: `/codeo:plan` in the issue's container.
 
 ## Questions
 
