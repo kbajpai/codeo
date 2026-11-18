@@ -134,3 +134,9 @@
 | `qc:103:F13-F14-F18-F23` | Triage in-flight judging: resume with no step to name, unstable `parked:` fingerprint, resume through Ready, wrong `waits:` for a resumed stash, doc and comment gaps | filed #122 | 2026-11-18 |
 | `issue:121` | #116 QC leftovers; filed 2026-11-18, board Status `Backlog` | leave in the backlog | 2026-11-18 |
 | `issue:122` | Triage in-flight judging leftovers from #103; filed 2026-11-18, board Status `Backlog` | leave in the backlog | 2026-11-18 |
+| `qc:99:F19-F21` | `.sbx/codeo-sandbox.sh`: no next step after a failed start-script exec, rerun needs a valid pin, `end` fetch failure names no way out | filed #125 | 2026-11-18 |
+| `qc:99:F24-minors` | #99's test gaps: devcontainer test fails inside an sbx sandbox, CHANGELOG read by line number, missing `run -d` and short-row tests | filed #125 | 2026-11-18 |
+| `qc:99:F17-F18-F22` | #99's evaluation-page wording contradictions | dismissed — the page records trials as they were (accepted recommendation) | 2026-11-18 |
+| `issue:123` | sbx sandbox lock records a Docker volume; filed 2026-11-18, board Status `none` | leave in the backlog | 2026-11-18 |
+| `issue:125` | #99 leftovers; filed 2026-11-18, board Status `none` | leave in the backlog | 2026-11-18 |
+| `issue:126` | Issue number in the branch name; filed 2026-11-18, board Status `none` | ready | 2026-11-18 |
