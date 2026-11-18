@@ -68,6 +68,15 @@ A — keep the refusal, reword the remedy. (Given in the conversation as "Q2 - A
 
 ## Notes
 
+### Footprint
+
+```
+files:      scripts/branch-name.sh, scripts/claim.sh, skills/init/SKILL.md, tests/branch-name.test.sh, tests/claim.test.sh, tests/init-skill.test.sh, docs/dossier.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-18-numbered-branch-names-126.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 Decided without a question, because the issue already answers them:
 
 - The slug rule is unchanged, including the exit 1 when no words are left in the title ("the type
