@@ -62,6 +62,22 @@ Q1-Q3 are answered: stay silent, document and test the same-machine collision, a
 
 **The collision spike.** A throwaway script in the session's scratch directory (not in the repository): the `tests/live-signal.test.sh` world, `gh` stubbed to fail, two `live.sh beat --force` started together in one clone. Forced: 5 of 30 rounds had one failed beat. Unforced with the stamp removed each round (the throttle race itself): 4 of 30. The failure line is the stubbed REST fallback's, after the push lost the lock.
 
+## Outcome
+
+2026-11-18.
+
+**Plan:** `docs/plans/2026-11-18-live-signal-leftovers-118.md` (approved by the engineer; left unstaged for review). Shape: a plan under `docs/plans/`, one pull request, no reference doc; four tasks, each proved by its test file and then `bash tests/run.sh`, none needing the shared environment.
+
+**Decisions.**
+- *F2, failure surfacing (Q1): stay silent.* The hook keeps discarding `beat`'s output; `beat --force` by hand prints the reason; `docs/handoff.md` already says so. Rejected: a once-per-reason warning in the session (a design change in three files that would also report the harmless collision), and a `/codeo:doctor` check filed as its own issue.
+- *Same-machine collision (Q2): document and test.* Two simultaneous beats from one checkout can lose the origin's ref lock, but the winner has just published, so the signal is fresh; reproduced here at 4-5 of 30 rounds. A test asserts both exit 0, one ref, a small age. Rejected: an atomic claim under `.git/` with stale-claim takeover.
+- *Overlap (Q3): proceed and coordinate* on `CHANGELOG.md` with #99; the changelog task is last, syncs first and keeps both sides.
+- *Calls made without a question:* the "refresh 0" case keeps `-100` and only its label changes; the hook header is re-wrapped at 100 columns and pinned by a test; the 20-second `SessionEnd` figure is documented as assuming the default `CODEO_LIVE_PUSH_TIMEOUT`, not derived (`hooks.json` is static); `live.sh`'s timeout comment names `ref put` and `ref delete`.
+
+**Documentation the plan changes:** `docs/handoff.md` (*Who is working right now*) and `CHANGELOG.md`. No wiki module.
+
+**Intake question resolved here:** init's open items, F2 and the collision, are decided as above.
+
 ### Footprint
 
 ```
@@ -70,10 +86,7 @@ wiki:       none
 exclusive:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-18 — Q1-Q2 raised · cost: 1m · fable-5-2 78k in + 494k cached / 5k out
+- 2026-11-18 — planned: docs/plans/2026-11-18-live-signal-leftovers-118.md · cost: 671m · fable-5-2 86k in + 815k cached / 10k out · sonnet-5-5 219k in + 1M cached / 15k out
