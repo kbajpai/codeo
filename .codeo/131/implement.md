@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1 is answered (proceed and coordinate). Q2 is open: #126 published a footprint overlapping `CHANGELOG.md` and `docs/handoff.md`. No task is dispatched until it is answered.
+Round 1. Q1 and Q2 are answered (proceed and coordinate); dispatching the plan's tasks.
 
 ## Questions
 
@@ -32,7 +32,7 @@ Proceed and coordinate, my pick, as the engineer chose ("A", 2026-11-18). (Trans
 - **Re-scope.** Drop Tasks 10 and 12 into a follow-up; needs `/codeo:plan` again.
 
 **Answer:**
-
+Proceed and coordinate, as the engineer chose (2026-11-18). (Transcribed from the chat answer.)
 ## Notes
 
 - `sync-main.sh` reported the branch already contains `origin/main`; nothing merged.
