@@ -209,9 +209,9 @@ assert_eq "force republishes" 1 "$([[ $second != "$first" ]] && echo 1 || echo 0
 assert_pushed_quietly force
 CODEO_LIVE_REFRESH_SECONDS=-100 run beat # negative: a small clock step back must not throttle
 third=$(ref_sha refs/codeo/live/104/codeo-104)
-assert_eq "a non-positive refresh interval never throttles" 1 \
+assert_eq "a negative refresh interval republishes" 1 \
     "$([[ $third != "$second" ]] && echo 1 || echo 0)"
-assert_pushed_quietly nonpositive
+assert_pushed_quietly negative
 
 case_desc=beat_replaces_the_signal_it_does_not_accumulate
 new_world; clone_with_lock 104 container codeo-104
@@ -497,12 +497,16 @@ assert_eq "no message file left" "" "$(ls "$clone/.git" | grep '^codeo-live-mess
 case_desc=two_simultaneous_beats_from_one_checkout_leave_a_fresh_signal
 new_world; clone_with_lock 104 container codeo-104
 for round in 1 2 3 4 5 6 7 8 9 10; do
+    before=$(ref_sha refs/codeo/live/104/codeo-104) # empty before round 1
     live "$clone" beat --force 2> "$scratch_root/err1" > /dev/null & pid1=$!
     live "$clone" beat --force 2> "$scratch_root/err2" > /dev/null & pid2=$!
     rc1=0 rc2=0
     wait "$pid1" || rc1=$?
     wait "$pid2" || rc2=$?
     assert_eq "round $round exits" "0 0" "$rc1 $rc2"
+    after=$(ref_sha refs/codeo/live/104/codeo-104)
+    assert_eq "round $round published" 1 \
+        "$([[ -n $after && $after != "$before" ]] && echo 1 || echo 0)"
     for f in err1 err2; do
         e=$(cat "$scratch_root/$f")
         [[ -z $e || $e == "live: could not publish"* ]] || {
