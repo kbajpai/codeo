@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 1. Tasks 1-13 are done and committed; the outcome is below. Task 14 is the engineer's acceptance run on their host. Next: `/codeo:qc`.
+Round 2 (after plan.md round 2), finished. Tasks 15-21 are done and committed; the outcome is below. Task 22 is the engineer's acceptance run on their host. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -391,6 +391,65 @@ sbx.exe rm --force codeo-p
 
 **Deferred minors from the task reviews** (in the SDD ledger, for QC to triage): Task 11 — the pty test skips silently without `script`, the ssh check has no `BatchMode`/`ConnectTimeout`, the folder URI is not percent-encoded; Task 12 — the refusal prints its hint on stdout, test gaps for a failed `exec true` start; Task 13 — README:137 should quote the exact `%(prefix)///wsl.localhost/…` safe.directory entry, `init.md:34` "Either way" reads as two routes, the README omits the `CODEO_CODE` override, one docs test greps two strings independently.
 
+
+### Round 2
+
+2026-11-18
+(after plan.md round 2)
+
+Plan: `docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md` (committed `c752e87`), answering `qc.md` round 1's F1-F8 as Q10-Q13 settled them.
+
+**Built.** Tasks 15-21 are done and committed. Each one passed its task review. Task 22 is the engineer's acceptance run on their host.
+
+| Task | Finding | Commits |
+|---|---|---|
+| 15 Pin read from `CODEO_SBX_IMAGE`, else the clone's `.sbx/claude-image`, else `origin/HEAD:.sbx/claude-image` | F1 | `b0464c9` |
+| 16 An existing clone is fast-forwarded to `origin/<branch>` before a missing sandbox is created | F3 | `034a6fc` |
+| 17 `end` fetches `+refs/pull/*/head:refs/remotes/origin/pr/*`, so a squash-merged branch counts as delivered | F2 | `c3ec483` |
+| 18 `end` deletes `refs/sandboxes/codeo-<N>/` after `rm`; `--force` moves them to `refs/codeo/ended/codeo-<N>/<UTC>/` | F4 | `cb71ff2` |
+| 19 ssh `BatchMode`/`ConnectTimeout`, `uri_path` percent-encoding, the no-lock todo, a test of the identity read from `~/.gitconfig` | F7, F8 | `987ef06` |
+| 20 An empty `.claude.json` reads as `{}` | F7 | `c9daf5b` |
+| 21 Documentation and `docs_*` tests | F1-F6, F8 | `0baf43c`, `1a942c2` (review fix) |
+
+**Documentation changed:**
+- `.sbx/README.md`: Getting the script, Commands, Ending a sandbox and its flowchart, The image pin, safe.directory, `CODEO_CODE`.
+- `.codeo/overlays/init.md`: "Whichever route".
+- `docs/dev-environment-sbx-evaluation.md:455`: the host script is named as it is.
+- `CHANGELOG.md`: this branch's sandbox-route bullet, amended.
+
+The token line (F6, README:11) already stated what T13 showed, so it is unchanged.
+
+**Build:** the `shell` suite's build is `true`, exit 0. No environment is configured, so nothing was deployed.
+
+**Base branch (step 2a):** `sync-main: the branch already contains origin/main`, at the start and again before this outcome.
+
+**Deviations and rulings.**
+- Task 15: `issue_pin_override_wins_over_the_clone` passed before the change. The override path was already there; the plan expected all four new cases to fail.
+- Task 15: `a_pin_that_is_not_a_digest_is_refused` no longer asserts that no clone happens, because the plan's order puts the clone before the pin read.
+- Task 16: a branch deleted on `origin` is detected with `git ls-remote --exit-code --heads origin <branch>`. A plain fetch leaves the stale `origin/<branch>` ref, so the merge alone would not catch it.
+- Task 16: the fetch runs with `-q`, so a refusal stays one stderr line.
+- Task 17: `end_lists_a_commit_made_after_the_pull_request_head` asserts exactly one listed commit. That is stricter than the plan, so it fails without the pull-request fetch.
+- Task 18: `end --force` with nothing unpushed also sets the refs aside, and its message reads "its refs are kept in <prefix>".
+- Task 18: earlier `end_*` assertions that `rm` is the last call were relaxed to "`rm` was called", because the ref steps now follow it.
+- Task 18 review: two cases appeared to pass before the change. That was a `set -e` abort hiding them. The reviewer ran the new tests against the old script and showed all four fail. Task 19 made the guilty `grep` non-fatal.
+- Task 19: `issue_takes_the_identity_from_the_host_gitconfig` passed at once, as the plan allowed; it covers an untested path. The test sets `GIT_CONFIG_GLOBAL` as well as `HOME`.
+- Task 19: `check_name` treats any lock output other than `codeo-<digits>` as "no lock".
+- Task 21 review fix (`1a942c2`): the flowchart and prose said a plain `end` and `end --force` with nothing unpushed both delete the refs; `--force` always sets them aside. The pin text implied a fallback past a set-but-missing `CODEO_SBX_IMAGE`; the script refuses instead. A CHANGELOG clause read as if `--force` replaces the `docker rm` line.
+- `tests/sandbox.test.sh` lost its executable bit in `034a6fc`; `c3ec483` restored it.
+- The sub-skill's final whole-branch review was not run here: `/codeo:qc`'s independent review is that gate (implement-09).
+
+**Deferred minors from the task reviews** (in the SDD ledger, for QC to triage):
+- Task 15: a present but empty clone pin file is refused, not passed over to `origin/HEAD`.
+- Task 16: no test for a dirty clone whose changes block the merge. It is the same code path as the diverged case.
+- Task 17: the pull-request refspec does not prune, so a deleted pull-request head stays counted as delivered.
+- Task 18: `end_force_sets_the_refs_aside` checks only the `work` ref.
+- Task 19: the identity test's `unset` runs in the suite's main shell. Older cases do the same, and no later case reads those variables.
+- Task 20: the whitespace-only `.claude.json` case is untested.
+- Task 21: the evaluation page's `:455` parenthesis keeps its issue numbers. The page is an evaluation record and cites issues throughout.
+
+**Gaps, unchanged from round 1:** `end` checks commits only. `role.sh` classifies a sandbox as `unguarded`; Task 22 checks `/run/.containerenv`.
+
 ## Log
 - 2026-11-17 — Tasks 1-4 and 7 done; paused at Task 5 for the engineer's trials · cost: 38m · opus-5-5 55k in + 9.1M cached / 19k out · sonnet-5-5 312k in + 4.2M cached / 44k out
 - 2026-11-17 — Tasks 6, 8-13 done (Task 12 fix round, Task 13 docs); merged origin/main; handed to /codeo:qc · cost: 12m · opus-5-5 63k in + 3M cached / 15k out · sonnet-5-5 165k in + 1.2M cached / 18k out
+- 2026-11-18 — round 2 (after plan.md round 2): Tasks 15-21 done, Task 21 one fix round; build passes; handed to /codeo:qc · cost: 64m · opus-5-5 105k in + 11.1M cached / 30k out · sonnet-5-5 634k in + 9.1M cached / 96k out
