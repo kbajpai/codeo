@@ -22,6 +22,7 @@ Explored and brainstormed; two questions are open (Q1, Q2) and nothing is drafte
 - **(c) Stay silent here, and file a `/codeo:doctor` check as its own issue.** `doctor` would run one forced beat and a `clear` and report the `live:` line. Nothing in this change; the persistent case is still found, by the command whose job is "why does codeo fail". Filed through `/codeo:issue`.
 
 **Answer:**
+(a) Stay silent (engineer, in the conversation, 2026-11-18: "recommended for both"; recorded here by the skill).
 
 ### Q2 — Two beats at once from one checkout: document the limit and test that it is harmless, or stop it happening?
 
@@ -32,6 +33,7 @@ Explored and brainstormed; two questions are open (Q1, Q2) and nothing is drafte
 - **(b) Handle it: one beat at a time per checkout (needed with Q1 (b)).** `beat` claims the throttle atomically before it publishes; a second beat that finds the claim returns at once, since the first is publishing the same thing. A claim older than twice `CODEO_LIVE_PUSH_TIMEOUT` plus a margin is taken over. The test asserts no warning in ten rounds. Two containers sharing a volume name are not covered: they are two checkouts, and `CODEO_MACHINE` is already the documented answer.
 
 **Answer:**
+(a) Document and test (engineer, in the conversation, 2026-11-18: "recommended for both"; recorded here by the skill).
 
 ## Notes
 
@@ -46,6 +48,14 @@ Explored and brainstormed; two questions are open (Q1, Q2) and nothing is drafte
 **Config.** No invariants document, no shared environment, no `wiki` module, no exclusive resources. One suite, `shell` (`bash tests/run.sh`, no `filter`), so each task's proof is the test file it changes run directly, then the whole suite.
 
 **The collision spike.** A throwaway script in the session's scratch directory (not in the repository): the `tests/live-signal.test.sh` world, `gh` stubbed to fail, two `live.sh beat --force` started together in one clone. Forced: 5 of 30 rounds had one failed beat. Unforced with the stamp removed each round (the throttle race itself): 4 of 30. The failure line is the stubbed REST fallback's, after the push lost the lock.
+
+### Footprint
+
+```
+files:      hooks/live-signal.sh, scripts/live.sh, tests/live.test.sh, tests/live-signal.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-18-live-signal-leftovers-118.md
+wiki:       none
+exclusive:  none
+```
 
 ## Outcome
 
