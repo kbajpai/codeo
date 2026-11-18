@@ -80,6 +80,15 @@ Calls made without a question. Each is mine; correct any of them in an answer ab
 - **Documentation the change moves:** `docs/handoff.md` (the lock's `container` bullet, and the live signal's machine name), `docs/extension-points.md` (`close/host-workflow`: *May rely on* gains `sandbox:`), `.sbx/README.md` (the lock line in the `issue` sequence, *Ending a sandbox*, the failed-fetch way out), `.devcontainer/README.md` (where close's removal command is described), and a `CHANGELOG.md` entry.
 - **Out of the plan, as the issue says:** `/codeo:cleanup` and `scripts/cleanup.sh` for sandboxes; `role.sh` classifying a sandbox as `unguarded`.
 
+### Footprint
+
+```
+files:      scripts/lock.sh, scripts/live.sh, .devcontainer/scripts/devcontainer-start.sh, .sbx/codeo-sandbox.sh, .sbx/README.md, .devcontainer/README.md, skills/close/SKILL.md, .codeo/overlays/close.md, docs/handoff.md, docs/extension-points.md, CHANGELOG.md, tests/lock.test.sh, tests/live.test.sh, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/close-removal.test.sh, docs/plans/2026-11-18-sbx-sandbox-lock-follow-ups-131.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
