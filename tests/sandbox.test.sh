@@ -989,9 +989,16 @@ docs_readme_gives_the_download_line() {
         "$repo/.sbx/README.md" 2>/dev/null || fail "the download line is missing"
 }
 
-docs_readme_gives_the_default_extensions_setting() {
-    grep -Fq '"remote.SSH.defaultExtensions": ["anthropic.claude-code", "timonwong.shellcheck", "bierner.markdown-mermaid"]' \
-        "$repo/.sbx/README.md" 2>/dev/null || fail "the defaultExtensions setting is missing"
+docs_readme_gives_the_extension_route() {
+    local readme="$repo/.sbx/README.md" s
+    for s in 'sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"' \
+        '"remote.SSH.defaultExtensions": ["anthropic.claude-code", "timonwong.shellcheck", "bierner.markdown-mermaid"]' \
+        'sbx policy rm network --resource' 'balanced'; do
+        grep -Fq -- "$s" "$readme" 2>/dev/null || fail "the README does not hold: $s"
+    done
+    if sed -n 9p "$repo/CHANGELOG.md" | grep -Fq 'with the extensions from the user setting `remote.SSH.defaultExtensions`;'; then
+        fail "CHANGELOG line 9 still says the extensions come from remote.SSH.defaultExtensions alone"
+    fi
 }
 
 docs_readme_says_end_replaces_the_docker_rm_line() {
@@ -1119,7 +1126,7 @@ cases=(
     docs_readme_documents_each_sub_command
     docs_readme_says_issue_and_open_run_detached
     docs_readme_gives_the_download_line
-    docs_readme_gives_the_default_extensions_setting
+    docs_readme_gives_the_extension_route
     docs_readme_says_end_replaces_the_docker_rm_line
     docs_readme_states_the_stops
     docs_readme_says_how_to_move_the_pin

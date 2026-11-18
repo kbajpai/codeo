@@ -10,6 +10,13 @@ The host is Linux or WSL2 (never macOS) with bash 4.3 or later, `git` and `curl`
 - `sbx login`.
 - `sbx secret set github --command 'gh auth token'`. The sandbox's `gh` holds a placeholder token that the sandbox's proxy replaces; the real token stays on the host, and pushes work.
 - `sbx setup ssh` (experimental). It makes the `*.sbx` hosts resolve, which `open` needs.
+- A one-time network rule for the VS Code extension gallery, set before the setting below. Under the default `balanced` policy the VS Code server in the sandbox gets `Server returned 403` from `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io`, and the failed install stops the remote extension host. `remote.downloadExtensionsLocally` does not cover `remote.SSH.defaultExtensions`, so the rule is the way:
+
+```bash
+sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"
+```
+
+  It adds two global rules, one per host, which apply to every sandbox. `sbx policy rm network --resource <host>` removes one of them, run once per host. From WSL2 the same line runs through `sbx.exe`.
 - VS Code with Remote - SSH, and this user setting, which installs the extensions in every sandbox:
 
 ```json
