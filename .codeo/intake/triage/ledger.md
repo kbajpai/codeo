@@ -129,3 +129,8 @@
 | `qc:113:G3-G7-R7-R8` | #113's remaining wording, documentation and test gaps | filed — folded into #99 with Q1 | 2026-11-17 |
 | `implement:104:polish` | #104's refresh label, header line, ref-lock collision and F2 | filed #118 | 2026-11-17 |
 | `issue:118` | Live-signal leftovers from #104; filed 2026-11-17, board Status `Backlog` | leave in the backlog — after #116 merges | 2026-11-17 |
+| `qc:116:F7-F10-F11` | #116's leftovers: criterion 13 unchecked on #107, Podman marker test name, stash/abandon pins searching the whole section | filed #121 | 2026-11-18 |
+| `qc:116:F8-F9` | `live.sh` timeout comment wording; the 20 s `SessionEnd` figure assumes the default push timeout | folded into #118 | 2026-11-18 |
+| `qc:103:F13-F14-F18-F23` | Triage in-flight judging: resume with no step to name, unstable `parked:` fingerprint, resume through Ready, wrong `waits:` for a resumed stash, doc and comment gaps | filed #122 | 2026-11-18 |
+| `issue:121` | #116 QC leftovers; filed 2026-11-18, board Status `Backlog` | leave in the backlog | 2026-11-18 |
+| `issue:122` | Triage in-flight judging leftovers from #103; filed 2026-11-18, board Status `Backlog` | leave in the backlog | 2026-11-18 |
