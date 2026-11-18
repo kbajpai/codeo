@@ -145,3 +145,4 @@
 | `issue:130` | tests/live.test.sh stamp check against the cwd; consolidated with #121 into #132 | already #132 — consolidated, engineer closes as superseded | 2026-11-18 |
 | `issue:131` | sbx lock and #99 follow-ups (consolidates #123, #125); filed 2026-11-18, board Status `Backlog` | ready | 2026-11-18 |
 | `issue:132` | Test-suite fixes from #116 and #100 (consolidates #121, #130); filed 2026-11-18, board Status `Backlog` | leave in the backlog — until #118 merges, as it edits `tests/live.test.sh` too | 2026-11-18 |
+| `issue:133` | A `codeo` host command for containers and sandboxes (Linux, bash); filed 2026-11-18, board Status `Backlog` | ready | 2026-11-18 |
