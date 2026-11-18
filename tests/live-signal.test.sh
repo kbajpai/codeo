@@ -174,6 +174,10 @@ for gone in 'S->>H: /codeo:close deletes the lock' 'H->>O: clear in the same com
         failures=$((failures + 1))
     }
 done
+
+case_desc=hook_header_fits_100_columns
+over=$(awk 'length > 100 {print FNR ": " length}' "$hook")
+assert_eq "lines over 100 columns" "" "$over"
 sleep 1
 
 if ((failures > 0)); then

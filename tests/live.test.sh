@@ -207,9 +207,11 @@ run beat --force
 second=$(ref_sha refs/codeo/live/104/codeo-104)
 assert_eq "force republishes" 1 "$([[ $second != "$first" ]] && echo 1 || echo 0)"
 assert_pushed_quietly force
-CODEO_LIVE_REFRESH_SECONDS=-100 run beat # negative: a small backward clock step must not throttle it
-assert_eq "refresh 0 republishes" 1 "$([[ $(ref_sha refs/codeo/live/104/codeo-104) != "$second" ]] && echo 1 || echo 0)"
-assert_pushed_quietly refresh0
+CODEO_LIVE_REFRESH_SECONDS=-100 run beat # negative: a small clock step back must not throttle
+third=$(ref_sha refs/codeo/live/104/codeo-104)
+assert_eq "a non-positive refresh interval never throttles" 1 \
+    "$([[ $third != "$second" ]] && echo 1 || echo 0)"
+assert_pushed_quietly nonpositive
 
 case_desc=beat_replaces_the_signal_it_does_not_accumulate
 new_world; clone_with_lock 104 container codeo-104
