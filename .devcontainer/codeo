@@ -74,11 +74,108 @@ HELP
     esac
 }
 
+# ensure_home: create the home directory and download any missing script into it.
+ensure_home() {
+    local dir base f name
+    dir=$(home_dir)
+    base=${CODEO_RAW_URL:-https://raw.githubusercontent.com/kbajpai/codeo/main}
+    mkdir -p "$dir"
+    for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh; do
+        name=${f##*/}
+        [[ -s "$dir/$name" ]] && continue
+        if ! curl -fsSL -o "$dir/$name.part" "$base/$f"; then
+            rm -f "$dir/$name.part"
+            die "could not download $base/$f"
+        fi
+        mv "$dir/$name.part" "$dir/$name"
+    done
+}
+
+# find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was
+# found. Uses a blob-less bare clone in the home directory, fetched on every lookup.
+find_branch() {
+    local n=$1 dir repo_url b
+    local -a found=()
+    dir=$(home_dir)
+    repo_url=${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}
+    if [[ ! -d "$dir/.lookup.git" ]]; then
+        git clone --bare --filter=blob:none "$repo_url" "$dir/.lookup.git" >&2 ||
+            die "could not clone $repo_url"
+    fi
+    git -C "$dir/.lookup.git" fetch --prune origin '+refs/heads/*:refs/heads/*' >&2 ||
+        die "could not fetch $repo_url"
+    while IFS= read -r b; do
+        [[ -n "$b" ]] || continue
+        if git -C "$dir/.lookup.git" cat-file -e "$b:.codeo/$n/init.md" 2>/dev/null; then
+            found+=("$b")
+        fi
+    done < <(git -C "$dir/.lookup.git" for-each-ref --format='%(refname:short)' refs/heads)
+    case ${#found[@]} in
+        1) printf '%s\n' "${found[0]}" ;;
+        0) die "no branch holds .codeo/$n/init.md; pass the branch: codeo issue $n <branch>" ;;
+        *) die "several branches hold .codeo/$n/init.md (${found[*]}); pass one: codeo issue $n <branch>" ;;
+    esac
+}
+
+# run_script <script> <args...>: run a script from the home directory; its exit status is ours.
+run_script() {
+    local script
+    script="$(home_dir)/$1"
+    shift
+    cd "$(home_dir)"
+    exec bash "$script" "$@"
+}
+
+# cmd_home [--rebuild]: start the home dev container.
+cmd_home() {
+    local a
+    for a in "$@"; do
+        [[ "$a" == --rebuild ]] || usage
+    done
+    ensure_home
+    run_script codeo-container.sh home "$@"
+}
+
+# cmd_issue <N> [<branch>] [--rebuild] [--container]: start work on issue N in a dev container.
+cmd_issue() {
+    [[ $# -ge 1 ]] || usage
+    local n=$1 branch="" rebuild="" a
+    shift
+    valid_number "$n" || usage
+    for a in "$@"; do
+        case "$a" in
+            --rebuild) rebuild=--rebuild ;;
+            --container) ;;
+            *)
+                [[ -z "$branch" ]] || usage
+                valid_branch "$a" || usage
+                branch=$a
+                ;;
+        esac
+    done
+    ensure_home
+    [[ -n "$branch" ]] || branch=$(find_branch "$n")
+    run_script codeo-container.sh issue "$n" "$branch" ${rebuild:+"$rebuild"}
+}
+
+# cmd_shell home|<N>: open a shell in the home or issue dev container.
+cmd_shell() {
+    [[ $# -eq 1 ]] || usage
+    if [[ "$1" != home ]]; then
+        valid_number "$1" || usage
+    fi
+    ensure_home
+    run_script codeo-container.sh shell "$1"
+}
+
 main() {
     [[ $# -gt 0 ]] || usage
     local cmd=$1
     shift
     case "$cmd" in
+        home) cmd_home "$@" ;;
+        issue) cmd_issue "$@" ;;
+        shell) cmd_shell "$@" ;;
         help | -h | --help) cmd_help "$@" ;;
         *) usage ;;
     esac

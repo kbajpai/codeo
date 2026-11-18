@@ -48,6 +48,32 @@ exit 0
 STUB
         chmod +x "$cm_dir/bin/$n"
     done
+    # git stub: for-each-ref prints the lines of $d/branches; cat-file -e <branch>:... succeeds when
+    # <branch> is a line of $d/has.
+    cat >"$cm_dir/bin/git" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "${0##*/} $*" >>"$d/calls"
+for a in "$@"; do
+    case "$a" in
+        for-each-ref) cat "$d/branches" 2>/dev/null || true; exit 0 ;;
+        *:.codeo/*/init.md) grep -qxF "${a%%:*}" "$d/has" 2>/dev/null && exit 0 || exit 1 ;;
+    esac
+done
+exit 0
+STUB
+    # curl stub: writes a stub script to the -o target.
+    cat >"$cm_dir/bin/curl" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "${0##*/} $*" >>"$d/calls"
+while [[ $# -gt 0 ]]; do
+    if [[ "$1" == -o ]]; then printf '#!/bin/bash\nexit 0\n' >"$2"; fi
+    shift
+done
+exit 0
+STUB
+    chmod +x "$cm_dir/bin/git" "$cm_dir/bin/curl"
     for n in codeo-container.sh codeo-sandbox.sh; do
         cat >"$cm_home/$n" <<'STUB'
 #!/bin/bash
@@ -82,7 +108,7 @@ t_unknown_command_usage() { expect_usage frobnicate; }
 
 t_bad_number_usage() {
     local a
-    for a in "issue abc" "issue 0" "issue 07" "shell x" "rm 1x"; do
+    for a in "issue abc" "issue 0" "issue 07" "shell x" "rm 1x" "shell 0"; do
         # shellcheck disable=SC2086
         expect_usage $a
     done
@@ -97,6 +123,125 @@ t_bad_branch_usage() {
 t_missing_arg_usage() {
     local a
     for a in issue shell rm open; do expect_usage "$a"; done
+}
+
+# expect_call <line>: the calls file holds exactly that line (a stub script call, with pwd).
+expect_call() {
+    grep -qxF "$1" "$cm_dir/calls" || fail "calls lack '$1'; have: $(tr '\n' '|' <"$cm_dir/calls")"
+}
+
+# expect_no_script: neither stub script was called.
+expect_no_script() {
+    ! grep -q 'codeo-.*\.sh' "$cm_dir/calls" || fail "a script was called: $(cat "$cm_dir/calls")"
+}
+
+t_home_runs_script() {
+    cm_setup "$current"
+    cd "$cm_dir/h"
+    cm_run home --rebuild
+    cd "$repo"
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    expect_call "codeo-container.sh home --rebuild pwd=$cm_home"
+}
+
+t_runs_from_any_directory() {
+    cm_setup "$current"
+    cd "$cm_dir/h"
+    cm_run issue 5 fix/x
+    cd "$repo"
+    expect_call "codeo-container.sh issue 5 fix/x pwd=$cm_home"
+}
+
+t_issue_with_branch() {
+    cm_setup "$current"
+    cm_run issue 5 fix/x
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    expect_call "codeo-container.sh issue 5 fix/x pwd=$cm_home"
+    ! grep -q '^git ' "$cm_dir/calls" || fail "git called with a branch given"
+}
+
+t_issue_accepts_valid_branch() {
+    cm_setup "$current"
+    cm_run issue 7 a/b.c-d
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-container.sh issue 7 a/b.c-d pwd=$cm_home"
+}
+
+t_issue_rebuild_flag() {
+    cm_setup "$current"
+    cm_run issue 5 fix/x --rebuild --container
+    expect_call "codeo-container.sh issue 5 fix/x --rebuild pwd=$cm_home"
+    cm_setup "$current-2"
+    printf 'fix/x\n' >"$cm_dir/branches"
+    printf 'fix/x\n' >"$cm_dir/has"
+    cm_run issue 5 --rebuild
+    expect_call "codeo-container.sh issue 5 fix/x --rebuild pwd=$cm_home"
+}
+
+t_sandbox_flag_still_usage() { expect_usage issue 5 --sandbox; }
+t_home_bad_flag_usage() { expect_usage home --bogus; }
+
+t_issue_branch_lookup_one() {
+    cm_setup "$current"
+    printf 'feat/a\nfeat/b\n' >"$cm_dir/branches"
+    printf 'feat/b\n' >"$cm_dir/has"
+    cm_run issue 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-container.sh issue 5 feat/b pwd=$cm_home"
+    grep -q '^git .*clone --bare --filter=blob:none https://github.com/kbajpai/codeo.git ' "$cm_dir/calls" || fail "no blob-less bare clone"
+    grep -q 'fetch --prune origin' "$cm_dir/calls" || fail "no fetch"
+}
+
+t_issue_lookup_none() {
+    cm_setup "$current"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    cm_run issue 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 ]] || fail "stderr not one line: $cm_err"
+    [[ "$cm_err" == "codeo: "* ]] || fail "stderr lacks 'codeo: ' prefix: $cm_err"
+    grep -q '5' <<<"$cm_err" || fail "stderr does not name the issue: $cm_err"
+    expect_no_script
+}
+
+t_issue_lookup_several() {
+    cm_setup "$current"
+    printf 'feat/a\nfeat/b\n' >"$cm_dir/branches"
+    printf 'feat/a\nfeat/b\n' >"$cm_dir/has"
+    cm_run issue 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 ]] || fail "stderr not one line: $cm_err"
+    [[ "$cm_err" == "codeo: "* ]] || fail "stderr lacks 'codeo: ' prefix: $cm_err"
+    { grep -q 'feat/a' <<<"$cm_err" && grep -q 'feat/b' <<<"$cm_err"; } || fail "stderr does not name both: $cm_err"
+    expect_no_script
+}
+
+t_shell_container() {
+    cm_setup "$current"
+    cm_run shell 5
+    expect_call "codeo-container.sh shell 5 pwd=$cm_home"
+    cm_setup "$current-2"
+    cm_run shell home
+    expect_call "codeo-container.sh shell home pwd=$cm_home"
+    ! grep -q '^git ' "$cm_dir/calls" || fail "git called for shell home"
+}
+
+t_first_use_downloads() {
+    cm_setup "$current"
+    rm -f "$cm_home"/*.sh
+    cm_run home
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local f
+    for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh; do
+        grep -q "^curl -fsSL -o $cm_home/.* https://raw.githubusercontent.com/kbajpai/codeo/main/$f\$" "$cm_dir/calls" || fail "no download of $f"
+    done
+    [[ -f "$cm_home/codeo-container.sh" && -f "$cm_home/codeo-sandbox.sh" ]] || fail "scripts not installed"
+}
+
+t_creates_home() {
+    cm_setup "$current"
+    rm -rf "$cm_home"
+    cm_run home
+    [[ -f "$cm_home/codeo-container.sh" ]] || fail "home not created and populated"
 }
 
 t_help_lists_commands() {
@@ -129,6 +274,19 @@ cases=(
     t_bad_number_usage
     t_bad_branch_usage
     t_missing_arg_usage
+    t_home_runs_script
+    t_runs_from_any_directory
+    t_issue_with_branch
+    t_issue_accepts_valid_branch
+    t_issue_rebuild_flag
+    t_sandbox_flag_still_usage
+    t_home_bad_flag_usage
+    t_issue_branch_lookup_one
+    t_issue_lookup_none
+    t_issue_lookup_several
+    t_shell_container
+    t_first_use_downloads
+    t_creates_home
     t_help_lists_commands
     t_executable_bash
     t_suite_covers
