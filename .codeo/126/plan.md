@@ -8,9 +8,7 @@
 
 ## Where this stands
 
-Q1 and Q2 are answered (both A). The plan is drafted as `.codeo/126/plan-draft.md` (not committed)
-and waits for the engineer's approval; after it the plan is written under `docs/plans/`, the
-footprint is checked against the other workflows in flight, and `## Outcome` is written.
+Q1 and Q2 are answered (both A) and the plan is approved and written as `docs/plans/2026-11-18-numbered-branch-names-126.md` (unstaged). Blocked on Q3, an overlap with #131 and #133; `## Outcome` is written once it is answered.
 
 ## Questions
 
@@ -66,6 +64,14 @@ the case at `tests/claim.test.sh:328` are reworded or removed.
 **Answer:**
 A — keep the refusal, reword the remedy. (Given in the conversation as "Q2 - A" on 2026-11-18, recorded here verbatim.)
 
+### Q3 — #131 and #133 also change `CHANGELOG.md`; #131 also changes `docs/handoff.md`. How do we coordinate?
+
+**Why it matters:** overlap check (`overlap.sh 126`) printed `131 glob:CHANGELOG.md`, `131 glob:docs/handoff.md` and `133 glob:CHANGELOG.md`. #131 is `feat/make-sbx-sandbox-lock-follow` (assignee kbajpai, step plan, waiting on its implement.md Q1) and #133 is `feat/codeo-command-host-short-bash` (assignee kbajpai, step plan, waiting on `/codeo:implement`). Each adds a bullet to the top of `CHANGELOG.md`, and I would add a `## Unreleased` heading there; #131 edits the `branch:` example area of `docs/handoff.md` that my task 4 also edits (line 39). The conflicts are textual and small, but whichever branch merges second has to resolve them. `exclusive:` is none for all three, so nothing is locked.
+
+**Options:** proceed and coordinate (each merge resolves its own `CHANGELOG.md` bullet and the one-line `handoff.md` hunk; recommended, since the edits are different lines) · sequence after #131 and #133 (this plan then writes `sequenced:`, and implement waits) · re-scope (drop the `handoff.md` example change and leave `feat/order-export` as it is, which removes the `docs/handoff.md` overlap but not the `CHANGELOG.md` ones).
+
+**Answer:**
+
 ## Notes
 
 ### Footprint
@@ -96,3 +102,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-18 — Q1-Q2 raised · cost: 1m · fable-5-2 67k in + 449k cached / 4k out
 - 2026-11-18 — Q1-Q2 answered (both A), plan drafted and awaiting approval · cost: unavailable (mid-pass)
+- 2026-11-18 — plan approved, written to docs/plans/2026-11-18-numbered-branch-names-126.md; Q3 raised (overlap with #131, #133) · cost: 5m · fable-5-2 83k in + 760k cached / 8k out · sonnet-5-5 108k in + 1.3M cached / 15k out
