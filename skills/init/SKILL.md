@@ -86,14 +86,10 @@ is the container the message names.
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" user login` is someone else's claim, and
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh"` listing this issue on a pushed branch is
    someone's workflow already under way. Either one stops the skill, naming the person and branch,
-   with one exception: `inflight.sh` listing this issue as `(working)` on the very branch
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/branch-name.sh" <N>` derives is not a second start but the
-   resume step 6 classifies, so that listing alone does not stop the skill. Another assignee stops
-   it regardless. So does a `(PR open)` listing on that branch — the workflow is waiting on its
-   pull request: finish it with `/codeo:close` in its checkout — and so does this issue's dossier
-   on a branch of any other name, a workflow under way that is never started a second time (the
-   issue was retitled after its `init`: restore the title, then run `init` again — step 6 finds
-   the branch by its derived name and makes the resume claim). Taking over someone else's claim
+   with one exception: `inflight.sh` listing this issue as `(working)` on any branch is not a
+   second start but the resume step 6 classifies, so that listing alone does not stop the skill. Another assignee stops
+   it regardless. So does a `(PR open)` listing on any branch — the workflow is waiting on its
+   pull request: finish it with `/codeo:close` in its checkout. Taking over someone else's claim
    needs the engineer to say so in so many words, and that override goes under `## Notes` in
    `init.md` verbatim — one line, `- <date> — override: "<the engineer's words>"` — in the
    dossier's first commit at step 9, or the resume's commit at step 6.
@@ -148,10 +144,20 @@ is the container the message names.
    `git status --porcelain --untracked-files=no` prints anything, stop and name the files: they
    are the engineer's to commit or stash first — never stash or discard them yourself.
 
-6. **Derive the branch name and check for collision.** The name comes from
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/branch-name.sh" <N>` — never chosen by the agent, so two
-   `init`s on one issue derive one name, and `init` never picks a different one itself. There is
-   no issue number in it. After the `git fetch origin` of step 5, in this order:
+6. **Find the branch by its dossier, else derive its name, and check for collision.** After the
+   `git fetch origin` of step 5:
+
+   - *Find the branch by its dossier first.* Run
+     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --branches` and read this issue's rows (one
+     `N<TAB>branch<TAB>dir` row per workflow). One row whose `dir` is `.codeo/<N>` names `<branch>`,
+     whatever it is called: it is a resume candidate, and the `--carries`, `--stash-live` and
+     resume sub-steps below run on it, with the derivation and the `ls-remote` skipped. A row whose
+     `dir` is `.codeo/done/<N>` is step 3's `(PR open)` stop. When this issue has more than one row, stop and
+     name every branch: one workflow is never started on two.
+   - *No row: derive.* The name comes from
+     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/branch-name.sh" <N>`, which prints
+     `<type>/<N>-<slug>` — never chosen by the agent, so two `init`s on one issue derive one name,
+     and `init` never picks a different one itself. Then, in this order:
 
    - `git ls-remote --exit-code --heads origin <branch>`. Exit 2, absent: nothing has the name,
      so go on to steps 7–11, a fresh claim (the push at step 9 is what settles a race).
@@ -160,11 +166,11 @@ is the container the message names.
      or only this issue's own archived dossier (`.codeo/done/<N>/`: #N has already been through
      `close`), or was merged into `<base>` and left behind, or is bare — cut from `<base>` with
      nothing of its own, for an issue `<base>` has archived: stop and quote both of its lines (the
-     engineer retitles the issue or waits for the other to close; an own archived dossier means
+     engineer renames or deletes that branch on origin, or waits for the other issue to close; an own archived dossier means
      the pull request is open, was closed unmerged, or was squash- or rebase-merged and its branch
      left — step 3 has already stopped the open case — so finish or verify it with `/codeo:close`
      in its checkout; a branch merged into `<base>` and left behind, or bare, is deleted, as
-     `close` normally does; retitle only for an issue reopened after its merge).
+     `close` normally does; rename only for an issue reopened after its merge).
      Exit 1 means the ref is missing: stop. Exit 0 means the branch carries this issue's
      `init.md`: it is a resume, and
      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/claim.sh" --stash-live <N> <branch> .` *always* runs
