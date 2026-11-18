@@ -98,7 +98,8 @@ sandbox_path() {
     "$sbx" exec "$1" pwd
 }
 
-# ensure_host_clone <N> <branch>: make ./codeo-N a clone on <branch>, or refuse one that is not.
+# ensure_host_clone <N> <branch>: make ./codeo-N a clone on <branch>, or refuse one that is not; an existing
+# clone whose sandbox is missing is fast-forwarded to origin/<branch> (refused when it cannot be).
 ensure_host_clone() {
     local dir=codeo-$1 branch=$2 current
     if [[ ! -e "$dir" ]]; then
@@ -110,6 +111,13 @@ ensure_host_clone() {
     current=$(git -C "$dir" branch --show-current) || die "could not read the branch of $dir"
     [[ "$current" == "$branch" ]] ||
         die "$dir is on '$current', not $branch: check out $branch there, or remove $dir, then run this again"
+    # A sandbox already made from the clone owns it now: leave it be. Otherwise bring it up to origin.
+    [[ "$(sandbox_state "$dir")" == missing ]] || return 0
+    git -C "$dir" fetch -q origin || die "git fetch origin in $dir failed: nothing was created"
+    git -C "$dir" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1 ||
+        die "origin has no branch origin/$branch: push it, then run this again"
+    git -C "$dir" merge --ff-only "origin/$branch" >/dev/null 2>&1 ||
+        die "$dir cannot be brought up to origin/$branch: settle it there, or remove $dir, then run this again"
 }
 
 # ensure_windows_trust <N>: with sbx.exe, make Windows git trust the clone through its \\wsl.localhost

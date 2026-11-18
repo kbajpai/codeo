@@ -342,6 +342,58 @@ issue_pin_override_wins_over_the_clone() {
     [[ "$(sb_calls)" == *"sbx create "*" $(pin_line c) ."* ]] || fail "calls: $(sb_calls)"
 }
 
+# advance_origin <name>: push one more commit to origin's fix/x from the seed; echoes nothing.
+advance_origin() {
+    $real_git -C "$sb_dir/seed" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m "$1"
+    $real_git -C "$sb_dir/seed" push -q "$sb_dir/origin.git" fix/x
+}
+
+issue_fast_forwards_a_stale_clone_before_creating() {
+    pin_setup stale a b
+    advance_origin ahead
+    sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$($real_git -C "$sb_dir/work/codeo-113" rev-parse HEAD)" == "$($real_git -C "$sb_dir/origin.git" rev-parse fix/x)" ]] ||
+        fail "clone is not at origin/fix/x"
+    [[ "$(sb_calls)" == *"sbx create "* ]] || fail "create did not run: $(sb_calls)"
+}
+
+issue_refuses_a_clone_that_cannot_fast_forward() {
+    pin_setup diverged a b
+    local c=$sb_dir/work/codeo-113 before
+    $real_git -C "$c" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m local
+    advance_origin remote
+    before=$($real_git -C "$c" rev-parse HEAD)
+    sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == "codeo-sandbox: codeo-113 cannot be brought up to origin/fix/x: settle it there, or remove codeo-113, then run this again" ]] ||
+        fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *"sbx create"* ]] || fail "create was called"
+    [[ "$($real_git -C "$c" rev-parse HEAD)" == "$before" ]] || fail "HEAD moved"
+}
+
+issue_refuses_when_origin_has_no_branch() {
+    pin_setup nobranch a b
+    $real_git -C "$sb_dir/origin.git" branch -q -D fix/x 2>/dev/null ||
+        $real_git -C "$sb_dir/origin.git" update-ref -d refs/heads/fix/x
+    sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *origin/fix/x* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *"sbx create"* ]] || fail "create was called"
+}
+
+issue_leaves_the_clone_alone_when_the_sandbox_exists() {
+    pin_setup present a b
+    advance_origin ahead
+    printf 'NAME AGENT STATUS\ncodeo-113 claude running (detached)\n' >"$sb_dir/sandboxes"
+    local before
+    before=$($real_git -C "$sb_dir/work/codeo-113" rev-parse HEAD)
+    sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$($real_git -C "$sb_dir/work/codeo-113" rev-parse HEAD)" == "$before" ]] || fail "HEAD moved"
+    [[ "$(sb_calls)" != *fetch* ]] || fail "fetch ran: $(sb_calls)"
+}
+
 the_pin_file_is_a_digest() {
     local line
     line=$(<"$(dirname "$script")/claude-image")
@@ -700,6 +752,10 @@ cases=(
     issue_reads_the_pin_from_the_default_branch_when_the_branch_has_none
     issue_without_any_pin_is_one_line
     issue_pin_override_wins_over_the_clone
+    issue_fast_forwards_a_stale_clone_before_creating
+    issue_refuses_a_clone_that_cannot_fast_forward
+    issue_refuses_when_origin_has_no_branch
+    issue_leaves_the_clone_alone_when_the_sandbox_exists
     issue_runs_the_start_script_with_the_identity
     issue_rerun_on_an_existing_sandbox_creates_nothing
     issue_writes_the_sandbox_marker
