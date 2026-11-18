@@ -1,4 +1,4 @@
-# Issue — new-sbx-sandbox-lock-and-follow-ups
+# Issue #131 — issue
 
 ## Outcome
 
