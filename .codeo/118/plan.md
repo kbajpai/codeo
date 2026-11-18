@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are answered: stay silent, document and test the same-machine collision, and proceed and coordinate on `CHANGELOG.md` with #99. The draft is written to `.codeo/118/plan-draft.md` and awaits the engineer's approval; no outcome is written until then. Four of the six acceptance criteria need no decision and are settled as the skill's own calls under `## Notes`; correct them in Q3's answer if one is wrong. The same-machine collision was reproduced here (below): the beat that loses the ref lock loses it to a beat that has just published, so the signal is not stale.
+Q1-Q3 are answered: stay silent, document and test the same-machine collision, and proceed and coordinate on `CHANGELOG.md` with #99. The engineer approved the draft and the plan is written to `docs/plans/2026-11-18-live-signal-leftovers-118.md` (unstaged, for review); the outcome is written and nothing is open. Next: `/codeo:implement`. Four of the six acceptance criteria needed no decision and were settled as the skill's own calls under `## Notes`. The same-machine collision was reproduced here (below): the beat that loses the ref lock loses it to a beat that has just published, so the signal is not stale.
 
 ## Questions
 
