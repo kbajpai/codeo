@@ -5,11 +5,11 @@
 | Issue | https://github.com/kbajpai/codeo/issues/99 |
 | Branch | `feat/make-sbx-issue-sandbox-usable` |
 | Plan | `docs/plans/2026-11-17-sbx-issue-sandbox.md` |
-| Updated | 2026-11-17 |
+| Updated | 2026-11-18 |
 
 ## Where this stands
 
-Round 2 (after plan.md round 2), finished; Task 22 partly run (2026-11-18): steps 1-9 and 12 are under `## Acceptance`, steps 10 and 11 are owed on 2026-11-19, step 13 is not run. Two findings from the run go to `/codeo:qc`: `remote.SSH.defaultExtensions` is blocked by the sbx network policy, and `issue` never runs `run -d`, so sandboxes stop when idle. Next: steps 10-11, then `/codeo:qc`.
+Round 2 (after plan.md round 2), finished; Task 22 run (2026-11-18): steps 1-12 are under `## Acceptance`, and step 13 is not run (the reason is recorded there). Two findings from the run go to `/codeo:qc`: `remote.SSH.defaultExtensions` is blocked by the sbx network policy, and `issue` never runs `run -d`, so sandboxes stop when idle. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -753,9 +753,62 @@ After **Dev Containers: Rebuild Container**, a screenshot shows a new session ti
 
 - After the rebuild there was no trust dialog, and codeo is still enabled in `/plugin` (the engineer). Step 12 is met before and after the rebuild.
 
-### Steps 10, 11, 13
+### Steps 10 and 11 — a later create, then `end --force` (2026-11-18, 11:40 UTC)
 
-- Step 10 (the next-day image check) and step 11 (cleanup with `end --force`) are still owed, for 2026-11-19.
+The engineer ran these from `D:\Downloads\task22`:
+
+```
+bash codeo-sandbox.sh end 122 --force
+CODEO_SBX_IMAGE=codeo-99/.sbx/claude-image bash codeo-sandbox.sh issue 122 main
+bash codeo-sandbox.sh end 99 --force
+bash codeo-sandbox.sh end 122 --force
+```
+
+The output, shortened:
+
+```
+    ✓ sandbox codeo-122 — started
+From git://127.0.0.1:60041/codeo-122
+ * [new branch]      main       -> sandbox-codeo-122/main
+… (fetch origin; then refs/pull/*/head -> origin/pr/*, 59 new refs)
+  Removed sandbox codeo-122
+removed codeo-122; its refs are kept in refs/codeo/ended/codeo-122/20261118T114014Z/ in ./codeo-122
+
+    ✓ workspace — Git repository at D:\Downloads\task22\codeo-122
+  SANDBOX
+    Name:       codeo-122
+    Kit:        docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    Image:      docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+  IMAGE
+    ✓ image — ready
+  AGENT
+    ✓ assembled kit image ready (cached)
+    ✓ Created sandbox codeo-122
+    … (banner: base Debian 13 (trixie), kits claude 2.1.326)
+plugins: superpowers, codeo v1.0.6
+devcontainer-start: git identity: user.name set from GIT_AUTHOR_NAME
+devcontainer-start: git identity: user.email set from GIT_AUTHOR_EMAIL
+devcontainer-start: TODO — this container's folder is 'codeo-122' but its clone is on main with no lock, so it is the home container …
+todo: the sandbox is codeo-122 but its clone holds no workflow lock: run /codeo:init #122 on its branch, then issue 122 <branch> again
+
+    ✓ sandbox codeo-99 — started
+From git://127.0.0.1:60043/codeo-99
+ * [new branch]      feat/make-sbx-issue-sandbox-usable -> sandbox-codeo-99/feat/make-sbx-issue-sandbox-usable
+… (fetch origin)
+  Removed sandbox codeo-99
+removed codeo-99; its refs are kept in refs/codeo/ended/codeo-99/20261118T114039Z/ in ./codeo-99
+
+  Removed sandbox codeo-122
+removed codeo-122; its refs are kept in refs/codeo/ended/codeo-122/20261118T114043Z/ in ./codeo-122
+```
+
+- **Step 10 is met.** The new `codeo-122` was created at the pinned digest `fd56087a…3593332`. Step 2's `codeo-99` used the same digest about eight hours earlier, on the engineer's previous calendar day, and the pin was first resolved on 2026-11-17 (S1). In UTC, steps 2 and 10 both fall on 2026-11-18. sbx reports the kit image as `(cached)`, so this run shows that the pin is honoured. It does not show that `:latest` stayed the same.
+- **Step 11 is met.** Each `end --force` removed its sandbox and named where its refs went: `refs/codeo/ended/codeo-122/20261118T114014Z/`, `refs/codeo/ended/codeo-99/20261118T114039Z/` and `refs/codeo/ended/codeo-122/20261118T114043Z/`. In `./codeo-122`, the first `end` also fetched the pull-request refs (`refs/pull/*/head -> origin/pr/*`).
+- The two `todo:` lines for `codeo-122` on `main` are expected, as in step 7.
+- Before each `rm`, sbx printed its own `--clone` warning that removal loses commits. By then `end` had already fetched the sandbox's branches.
+
+### Step 13
+
 - Step 13 is not run. No issue other than #99 has a branch on origin, and step 12 already ran on an issue clone (it took the #99 lock), so with `main` step 13 would only repeat step 12.
 
 ## Notes
