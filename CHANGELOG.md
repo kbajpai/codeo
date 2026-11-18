@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.7 — 2026-11-18
 
 Config schema: 1
 Shared state: adds `.codeo/intake/cleanup/` on the intake branch (written by `/codeo:cleanup`); adds `refs/codeo/live/<issue>/<machine>` on origin, an expiring signal written by the new hook and read by `inflight.sh`, which older versions ignore (no dossier convention changes).
