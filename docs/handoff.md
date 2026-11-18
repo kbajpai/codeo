@@ -170,7 +170,7 @@ it.
   live until its next one. Set `CODEO_MACHINE` in one of two containers with the same volume name working one
   issue: they share a ref, so one signal replaces the other. A `beat` up to the expiry ahead of
   the reader's clock counts as age 0, and one further ahead is not listed. The `SessionEnd` hook
-  gets 20 seconds, the two bounds of a `clear`. The signal adds nothing to the feature branch or its PR, and it is information only:
+  gets 20 seconds, the two bounds of a `clear` at the default `CODEO_LIVE_PUSH_TIMEOUT` of 8; set it to 10 or more and the hook can end `clear` during the REST delete, so the signal then only expires. The signal adds nothing to the feature branch or its PR, and it is information only:
   no script refuses or waits because a workflow is live. On a public repository it names the GitHub
   login (else `git config user.name`, else `unknown`), a machine label and the host kind
   (container, web or local), and never an email address. The machine is `CODEO_MACHINE`, else the

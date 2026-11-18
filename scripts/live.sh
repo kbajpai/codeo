@@ -44,15 +44,18 @@
 #   - The throttle stamp is written before the push, so a failed publish is not retried until the
 #     refresh interval has passed (or a --force beat).
 #   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
-#   - `clear` can take two bounds (the push `--delete`, then the REST delete), so the `SessionEnd` hook
-#     allows 20 seconds.
+#   - `clear` can take two bounds (the push `--delete`, then the REST delete), so the `SessionEnd`
+#     hook allows 20 seconds. That is two bounds at the default of 8; at 10 or more the hook can
+#     end `clear` during the REST delete, and the signal then only ages out after the TTL.
 #
 # Environment:
 #   CODEO_LIVE_REFRESH_SECONDS  minimum seconds between two unforced beats (default 300)
 #   CODEO_LIVE_TTL_SECONDS      how old a beat may be and still be listed (default 900)
 #   CODEO_MACHINE               the machine label, overriding the host's default
-#   CODEO_LIVE_PUSH_TIMEOUT     seconds each git push or fetch, the login lookup, and the REST fallback
-#                               (`github.sh ref put`, all its calls together) may take (default 8)
+#   CODEO_LIVE_PUSH_TIMEOUT     seconds each git push or fetch, the login lookup, and the REST
+#                               fallback may take (default 8); the fallback is `github.sh ref put`
+#                               for a `beat` and `github.sh ref delete` for a `clear`, all of its
+#                               calls together
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
