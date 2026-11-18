@@ -55,6 +55,15 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-18: "go with the 
 
 Intended shape: one plan under `docs/plans/` (`2026-11-18-release-v1-0-7.md`), modelled on `docs/plans/2026-11-14-release-v1-0-6.md`; no reference doc, since nothing is a standing decision.
 
+### Footprint
+
+```
+files:      .claude-plugin/plugin.json, CHANGELOG.md, .codeo/config.json, docs/plans/2026-11-18-release-v1-0-7.md, .codeo/100/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
