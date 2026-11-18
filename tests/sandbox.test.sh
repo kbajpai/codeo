@@ -491,7 +491,7 @@ issue_leaves_the_sandbox_running_detached() {
 
 issue_writes_the_sandbox_marker() {
     # shellcheck disable=SC2016
-    local state mark='sbx exec codeo-113 bash -c : > "$HOME/.codeo-sandbox"' calls
+    local state mark='sbx exec codeo-113 bash -c printf "%s\n" "$1" > "$HOME/.codeo-sandbox" _ codeo-113' calls
     for state in missing 'running (detached)'; do
         sb_setup "mark-${state%% *}"
         mkdir -p "$sb_dir/work/codeo-113/.git"

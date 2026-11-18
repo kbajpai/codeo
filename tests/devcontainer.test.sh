@@ -1520,6 +1520,35 @@ start_in_a_sandbox_skips_the_folder_check() {
     n=$(ds_todos "docker ps"); ((n == 0)) || fail "inside a sandbox, the folder TODO was listed: $ds_err"
 }
 
+start_in_a_sandbox_passes_the_sandbox_to_the_lock() {
+    ds_setup sbxlock || return 0
+    ds_lock_stub; ds_branch feat/x
+    printf 'codeo-122\n' > "$ds_dir/sandbox-mark"
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(cat "$ds_dir/lock-calls") == 'take container --sandbox codeo-122' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
+}
+
+# An empty marker names no sandbox, so the name comes from container-name.sh --docker (stubbed here: the real one
+# reads the lock, which is not taken yet at that point).
+start_with_an_empty_marker_names_the_sandbox_from_the_folder() {
+    ds_setup sbxempty || return 0
+    ds_lock_stub; ds_branch feat/x
+    printf '#!/usr/bin/env bash\necho codeo-122\n' > "$ds_dir/codeo-home/.devcontainer/scripts/container-name.sh"
+    : > "$ds_dir/sandbox-mark"
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(cat "$ds_dir/lock-calls") == 'take container --sandbox codeo-122' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
+}
+
+start_without_a_marker_takes_the_lock_as_before() {
+    ds_setup sbxnomark || return 0
+    ds_lock_stub; ds_branch feat/x
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/no-such-mark" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(cat "$ds_dir/lock-calls") == 'take container' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
+}
+
 start_trust_keeps_other_keys() {
     local key
     ds_setup trustkeep || return 0
@@ -2658,6 +2687,9 @@ cases=(
     start_leaves_no_temp_file_when_mv_fails
     start_trusts_the_clone_in_claude
     start_in_a_sandbox_skips_the_folder_check
+    start_in_a_sandbox_passes_the_sandbox_to_the_lock
+    start_with_an_empty_marker_names_the_sandbox_from_the_folder
+    start_without_a_marker_takes_the_lock_as_before
     start_trust_keeps_other_keys
     start_malformed_claude_state_is_a_todo
     start_claude_state_not_an_object_is_a_todo

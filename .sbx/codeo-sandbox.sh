@@ -147,7 +147,7 @@ ensure_windows_trust() {
 }
 
 # ensure_sandbox <N>: create the sandbox from inside the clone unless one by that name exists (a stopped
-# one is left alone: sbx exec starts it), then write the marker session-title.sh looks for. The marker is
+# one is left alone: sbx exec starts it), then write the marker session-title.sh looks for, holding the sandbox name. The marker is
 # written on every run, so a rerun repairs a missing one.
 ensure_sandbox() {
     local name=codeo-$1 state
@@ -157,7 +157,7 @@ ensure_sandbox() {
             die "could not create the sandbox $name"
     fi
     # shellcheck disable=SC2016
-    "$sbx" exec "$name" bash -c ': > "$HOME/.codeo-sandbox"' || die "could not mark the sandbox $name"
+    "$sbx" exec "$name" bash -c 'printf "%s\n" "$1" > "$HOME/.codeo-sandbox"' _ "$name" || die "could not mark the sandbox $name"
 }
 
 # git_is_usable: git is on PATH and will not open an installer (a Mac stub).
