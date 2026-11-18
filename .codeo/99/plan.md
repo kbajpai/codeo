@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 has opened (2026-11-18), after `qc.md` round 2 sent the branch back for F9 (the extension route) and F10 (sandboxes that stop when idle). Q14-Q17 are open. Round 3 is not drafted until they are answered. F13-F16 are implementation fixes and become tasks without a question.
+Round 3 (2026-11-18): Q14-Q17 are answered (recommendations accepted). The round 3 draft is `.codeo/99/plan-draft.md` (not committed) and is waiting for the engineer's approval.
 
 ## Questions
 
@@ -174,6 +174,7 @@ Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 - *`open` installs them:* the script would copy the extension files in itself. No route for this is known to work against a Remote-SSH host, and it needs its own trials.
 
 **Answer:**
+Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ### Q15 — Where should `sbx run -d` go, so a sandbox does not stop when idle? (qc F10)
 
@@ -185,6 +186,7 @@ Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 - *Leave it a documented manual step:* what the README says today. `/codeo:qc` found this blocking.
 
 **Answer:**
+Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ### Q16 — The `lock:` line is not the last line `issue` prints: change the output, or accept the order? (qc F11)
 
@@ -196,6 +198,7 @@ Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 - *Reorder the start script:* it would take the lock last. That changes the dev container's start for every user, which #85 rules out.
 
 **Answer:**
+Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ### Q17 — Should a plain `end` refuse when the sandbox holds uncommitted work? (qc F12)
 
@@ -207,6 +210,7 @@ Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 - *Leave it documented:* no change.
 
 **Answer:**
+Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ## Notes
 
