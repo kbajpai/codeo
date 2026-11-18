@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-All six questions are answered; the plan is drafted in `plan-draft.md` and waits for review.
+Planned: the plan is approved and saved at `docs/plans/2026-11-18-codeo-host-command-133.md` (unstaged). Next step: commit it, then `/codeo:implement`.
 
 What I found that shapes the questions:
 
@@ -132,6 +132,18 @@ Calls made without a question. Each is mine; correct any of them in an answer ab
 - **Documentation the change moves:** `.devcontainer/README.md` (*Opening a container from the command line*, *Removing a finished container*, *Rebuilding*: the `codeo` form beside each long command, and a short section on installing `codeo`), `.sbx/README.md` (*Getting the script*, *Commands*, *Ending a sandbox*), `CHANGELOG.md`. The repository `README.md` gets a line only if it already names the host scripts. No skill, overlay or printed command changes (out of scope).
 - **#131 is in flight** (`feat/make-sbx-sandbox-lock-follow`, kbajpai, at `init`, waiting on its own Q1-Q5). It has no footprint yet and its branch has changed nothing, so there is nothing to compare. From its dossier it will edit `.sbx/codeo-sandbox.sh`, `.sbx/README.md`, `.devcontainer/README.md` and `CHANGELOG.md`; this plan edits the last three. `codeo` only calls `end <N> [--force]`, whose interface #131 keeps under either answer to its Q3. The overlap is raised as a numbered question once either footprint exists (`overlap.sh`, at this plan's hand-off). #126 has no workflow in flight.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-18-codeo-host-command-133.md` — an implementation plan (7 tasks), no standing reference doc; the command is documented in the two READMEs.
+
+**Decisions:** `codeo` in `~/.local/bin`, everything else in `~/codeo` (Q1 A); command set as proposed, `rm` the only way to end a sandbox, `--rebuild` with `--sandbox` refused (Q2); container-or-sandbox found by looking at the host, saved default in `~/codeo/default`, `CODEO_KIND` not read (Q3 A); container `rm` checks fetch, uncommitted, stashes, detached HEAD and unpushed commits, `--force` also removes when the check cannot run, image removed too (Q4); `list` columns as proposed (Q5); proceed and coordinate with #131 on the two READMEs and `CHANGELOG.md` (Q6 A). Branch lookup through a blob-less bare clone, all-or-nothing update, argument checks first, as under `## Notes`.
+
+**Rejected:** `~/codeo` only and a piped installer (Q1 B, C); the saved default alone for existing issues (Q3 B); leaving the image and refusing `--force` when the check cannot run (Q4); sequencing after #131 or splitting the README edits out (Q6 B, C); `raw.githubusercontent.com` per branch and the GitHub API for the lookup.
+
+**Documentation moved:** `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md` (Task 7). The repository `README.md` names neither script and is unchanged. No wiki module.
+
+**Intake questions resolved:** none open at intake. No `/codeo:issue` filed; the `engineering` skills were not used (no new component or technology choice).
+
 ### Footprint
 
 ```
@@ -141,10 +153,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-18 — Q1-Q5 raised · cost: 1m · fable-5-2 77k in + 584k cached / 5k out
+- 2026-11-18 — planned: docs/plans/2026-11-18-codeo-host-command-133.md · cost: 3m · sonnet-5-5 79k in + 1.5M cached / 18k out
