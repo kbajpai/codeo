@@ -180,7 +180,10 @@ it.
   ref is refused it is written through the REST API, and where neither works nothing is published:
   the hook discards the output of `beat` and says nothing, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh"
   beat --force` run by hand prints the one `live:` line that says why. A failed publish is not
-  retried until the next refresh interval.
+  retried until the next refresh interval. Two beats started together from one checkout can both
+  push the same ref, and one can lose the origin's ref lock; the other has then just published, so
+  the signal is fresh either way. Two containers sharing a volume name are two checkouts of that
+  kind, and `CODEO_MACHINE` separates them.
 
   ```mermaid
   sequenceDiagram

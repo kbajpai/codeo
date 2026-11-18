@@ -154,7 +154,8 @@ bullet=$(awk '/^- \*\*Who is working right now/{f=1;print;next} f&&/^- \*\*/{exi
 bullet=${bullet//$'\n'/ }
 bullet=$(printf '%s' "$bullet" | tr -s ' ')
 for want in '/codeo:close` clears' '20 seconds' 'ahead of the reader' 'the login lookup' \
-    'at the default `CODEO_LIVE_PUSH_TIMEOUT`' 'can end `clear` during the REST delete'; do
+    'at the default `CODEO_LIVE_PUSH_TIMEOUT`' 'can end `clear` during the REST delete' \
+    "lose the origin's ref lock" 'fresh either way'; do
     [[ $bullet == *"$want"* ]] || {
         echo "FAIL $case_desc: no [$want]"
         failures=$((failures + 1))

@@ -43,6 +43,9 @@
 #     inside it, so a failing step never stops the caller.
 #   - The throttle stamp is written before the push, so a failed publish is not retried until the
 #     refresh interval has passed (or a --force beat).
+#   - Two beats started together from one checkout can both push the same ref, and one can
+#     lose the origin's ref lock; the other has then just published, so the signal is fresh
+#     either way.
 #   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
 #   - `clear` can take two bounds (the push `--delete`, then the REST delete), so the `SessionEnd`
 #     hook allows 20 seconds. That is two bounds at the default of 8; at 10 or more the hook can
