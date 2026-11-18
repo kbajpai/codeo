@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-All four tasks of `docs/plans/2026-11-18-live-signal-leftovers-118.md` are built and committed, each reviewed; the whole-branch review is clean and the build is green. Nothing is open. Next: `/codeo:qc`.
+Round 2 is built, reviewed and pushed: the two QC round 1 findings the engineer chose to fix, F1 and F2, are done in `tests/live.test.sh` (round 1: all four plan tasks built, whole-branch review clean). Nothing is open. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -39,6 +39,28 @@ None raised.
 - The changelog bullet sits after the #113 bullet and before the `/codeo:triage` bullet that came in from main, not as the very last one. Its sentence that the docs "now say" the session is deliberately not told overstates by a little: `docs/handoff.md` already said it, and this branch adds no new wording for it.
 - Task 3's review left two Minor notes, neither blocking: the final-round blind spot of the age check (a ref left by an earlier round passes if under 5 seconds old), and the test not saying which beat printed the `live:` line.
 
+
+### Round 2
+
+2026-11-18
+
+(send-back from qc.md round 1)
+
+QC round 1 was clear; the engineer chose to fix two of its six non-blocking findings, F1 and F2, and left F3-F6 for `/codeo:triage`. Both were checked against the code first and hold: the F1 label claimed a non-positive interval though the case runs `-100` only, and the concurrent-beats case never asserted that each round published.
+
+**Built** (`48aaae3`, `tests/live.test.sh` only, one sonnet implementer and a task review):
+- F1: the assert label is "a negative refresh interval republishes" and the `assert_pushed_quietly` label is `negative`; the `-100` command line and its check are unchanged.
+- F2: `two_simultaneous_beats_from_one_checkout_leave_a_fresh_signal` records the ref's sha before each round and asserts it is non-empty and changed after both beats finish. `tests/live.test.sh` ran 11 times without a flake.
+
+**Sync.** `sync-main.sh` merged `origin/main` (1 commit, the v1.0.7 release); it changed `CHANGELOG.md` only, which this round's change does not touch. It exited 1 after the clean merge, from `comm` complaining about sort order, as in round 1; `overlap.sh` printed only the settled #99 line.
+
+**Build:** the `shell` suite's build command exited 0.
+
+**Deviations from the plan:** the plan's Task 1 names the label "a non-positive refresh interval never throttles"; this round replaces it on the engineer's say-so, after QC, and the plan file is not edited. The implementer's red demonstration did not isolate the new assertion (the stub it used broke other cases too), so the assertion has not been shown to fail when both beats fail in a round. The task review's one residual risk: the `seq` counter in `live()` is read and written without a lock, so in a sub-millisecond window a counter value could repeat and, within one wall-clock second, make a published round read as unchanged. Very unlikely; recorded, not fixed.
+
+No whole-branch review this round: the diff is one test file, +6/-2, reviewed whole by the task reviewer.
+
 ## Log
 
 - 2026-11-18 — implemented tasks 1-4, whole-branch review clean, build green · cost: 33m · sonnet-5-5 412k in + 8.1M cached / 46k out
+- 2026-11-18 — round 2: F1 and F2 fixed in tests/live.test.sh, build green · cost: 17m · sonnet-5-5 108k in + 3.7M cached / 15k out
