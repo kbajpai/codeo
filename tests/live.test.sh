@@ -207,9 +207,11 @@ run beat --force
 second=$(ref_sha refs/codeo/live/104/codeo-104)
 assert_eq "force republishes" 1 "$([[ $second != "$first" ]] && echo 1 || echo 0)"
 assert_pushed_quietly force
-CODEO_LIVE_REFRESH_SECONDS=-100 run beat # negative: a small backward clock step must not throttle it
-assert_eq "refresh 0 republishes" 1 "$([[ $(ref_sha refs/codeo/live/104/codeo-104) != "$second" ]] && echo 1 || echo 0)"
-assert_pushed_quietly refresh0
+CODEO_LIVE_REFRESH_SECONDS=-100 run beat # negative: a small clock step back must not throttle
+third=$(ref_sha refs/codeo/live/104/codeo-104)
+assert_eq "a negative refresh interval republishes" 1 \
+    "$([[ $third != "$second" ]] && echo 1 || echo 0)"
+assert_pushed_quietly negative
 
 case_desc=beat_replaces_the_signal_it_does_not_accumulate
 new_world; clone_with_lock 104 container codeo-104
@@ -491,6 +493,37 @@ for round in 1 2 3 4 5 6 7 8 9 10; do
 done
 assert_eq "both refs exist" 2 "$(refs | grep -c .)"
 assert_eq "no message file left" "" "$(ls "$clone/.git" | grep '^codeo-live-message' || true)"
+
+case_desc=two_simultaneous_beats_from_one_checkout_leave_a_fresh_signal
+new_world; clone_with_lock 104 container codeo-104
+for round in 1 2 3 4 5 6 7 8 9 10; do
+    before=$(ref_sha refs/codeo/live/104/codeo-104) # empty before round 1
+    live "$clone" beat --force 2> "$scratch_root/err1" > /dev/null & pid1=$!
+    live "$clone" beat --force 2> "$scratch_root/err2" > /dev/null & pid2=$!
+    rc1=0 rc2=0
+    wait "$pid1" || rc1=$?
+    wait "$pid2" || rc2=$?
+    assert_eq "round $round exits" "0 0" "$rc1 $rc2"
+    after=$(ref_sha refs/codeo/live/104/codeo-104)
+    assert_eq "round $round published" 1 \
+        "$([[ -n $after && $after != "$before" ]] && echo 1 || echo 0)"
+    for f in err1 err2; do
+        e=$(cat "$scratch_root/$f")
+        [[ -z $e || $e == "live: could not publish"* ]] || {
+            echo "FAIL $case_desc: round $round $f: [$e]"
+            failures=$((failures + 1))
+        }
+    done
+done
+assert_eq "one ref" "refs/codeo/live/104/codeo-104" "$(refs)"
+run fetch
+run list --tsv
+assert_eq "one line" 1 "$(grep -c . <<< "$out")"
+age=$(cut -f5 <<< "$out")
+[[ $age =~ ^[0-5]$ ]] || {
+    echo "FAIL $case_desc: age [$age] is not fresh"
+    failures=$((failures + 1))
+}
 
 case_desc=fetch_prunes_a_cleared_signal
 new_world; clone_with_lock 104 container codeo-104

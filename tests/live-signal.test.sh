@@ -153,7 +153,9 @@ case_desc=docs_state_the_live_signal_limits
 bullet=$(awk '/^- \*\*Who is working right now/{f=1;print;next} f&&/^- \*\*/{exit} f{print}' "$plugin_root/docs/handoff.md")
 bullet=${bullet//$'\n'/ }
 bullet=$(printf '%s' "$bullet" | tr -s ' ')
-for want in '/codeo:close` clears' '20 seconds' 'ahead of the reader' 'the login lookup'; do
+for want in '/codeo:close` clears' '20 seconds' 'ahead of the reader' 'the login lookup' \
+    'at the default `CODEO_LIVE_PUSH_TIMEOUT`' 'can end `clear` during the REST delete' \
+    "lose the origin's ref lock" 'fresh either way'; do
     [[ $bullet == *"$want"* ]] || {
         echo "FAIL $case_desc: no [$want]"
         failures=$((failures + 1))
@@ -174,6 +176,22 @@ for gone in 'S->>H: /codeo:close deletes the lock' 'H->>O: clear in the same com
         failures=$((failures + 1))
     }
 done
+
+case_desc=live_sh_comment_names_both_bounded_calls
+entry=$(awk '/^#   CODEO_LIVE_PUSH_TIMEOUT/{f=1;print;next} f&&/^# {10,}/{print;next} {f=0}' \
+    "$plugin_root/scripts/live.sh")
+entry=${entry//$'\n'/ }
+entry=$(printf '%s' "$entry" | tr -s ' ')
+for want in 'github.sh ref put' 'github.sh ref delete'; do
+    [[ $entry == *"$want"* ]] || {
+        echo "FAIL $case_desc: no [$want]"
+        failures=$((failures + 1))
+    }
+done
+
+case_desc=hook_header_fits_100_columns
+over=$(awk 'length > 100 {print FNR ": " length}' "$hook")
+assert_eq "lines over 100 columns" "" "$over"
 sleep 1
 
 if ((failures > 0)); then
