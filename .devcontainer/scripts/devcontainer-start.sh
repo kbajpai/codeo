@@ -299,7 +299,7 @@ fi
 # 3d. Folder trust: record the clone as trusted in Claude Code's user state file, so the "Trust this folder?" dialog never appears.
 # The file is $CLAUDE_CONFIG_DIR/.claude.json, else $HOME/.claude.json; a missing one is created as {} with mode 600. Only the clone's own
 # key is set (.projects[<top>].hasTrustDialogAccepted), every other key kept. It runs after step 3 because `claude plugin ...` writes this file too.
-# A file that is not valid JSON, not an object, or whose projects is not an object is left untouched, and one TODO says so.
+# An empty or whitespace-only file counts as {}. A file that is not valid JSON, not an object, or whose projects is not an object is left untouched, and one TODO says so.
 trust_key=${top:-$clone}
 trust_state=${CLAUDE_CONFIG_DIR:+$CLAUDE_CONFIG_DIR/.claude.json}
 trust_state=${trust_state:-$HOME/.claude.json}
@@ -319,7 +319,7 @@ if [[ -f $trust_state ]]; then
     elif [[ $trust_kind != object ]]; then
         add_todo "$trust_state is not a JSON object and was left alone: fix it, then trust $trust_key in Claude Code"
     elif trust_tmp=$(mktemp "$(dirname "$trust_target")/.claude.json.XXXXXX" 2>/dev/null); then
-        if jq --arg p "$trust_key" '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' "$trust_target" > "$trust_tmp" 2>/dev/null \
+        if jq -n --arg p "$trust_key" '([inputs][0] // {}) | .projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' "$trust_target" > "$trust_tmp" 2>/dev/null \
             && [[ -s $trust_tmp ]] \
             && chmod --reference="$trust_target" -- "$trust_tmp" 2>/dev/null \
             && mv -- "$trust_tmp" "$trust_target"; then

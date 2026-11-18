@@ -1557,6 +1557,20 @@ start_trust_with_projects_not_an_object_is_a_todo() {
     n=$(ds_todos '.claude.json'); ((n == 1)) || fail "wanted one TODO naming .claude.json, got $n: $ds_err"
 }
 
+start_trust_fills_an_empty_state_file() {
+    local key n
+    ds_setup trustempty || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    key=$(ds_trust_key)
+    mkdir -p "$ds_dir/claude"
+    : > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0: $ds_err"
+    jq -e --arg p "$key" '. == {projects: {($p): {hasTrustDialogAccepted: true}}}' "$ds_dir/claude/.claude.json" >/dev/null \
+        || fail "an empty .claude.json was not filled: $(cat "$ds_dir/claude/.claude.json" 2>&1)"
+    n=$(ds_todos 'could not write'); ((n == 0)) || fail "wanted no could-not-write TODO, got $n: $ds_err"
+}
+
 start_trust_uses_the_resolved_top_level() {
     local key
     ds_setup trustlink || return 0
@@ -2635,6 +2649,7 @@ cases=(
     start_malformed_claude_state_is_a_todo
     start_claude_state_not_an_object_is_a_todo
     start_trust_with_projects_not_an_object_is_a_todo
+    start_trust_fills_an_empty_state_file
     start_trust_uses_the_resolved_top_level
     start_trust_leaves_no_temp_file
     start_writes_the_title
