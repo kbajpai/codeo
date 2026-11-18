@@ -504,7 +504,7 @@ end_with_nothing_to_lose_removes_the_sandbox() {
     sb_run end 113
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
     [[ "$sb_out" == "removed codeo-113" ]] || fail "stdout was: $sb_out"
-    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
 }
 
 end_with_an_unpushed_commit_removes_nothing() {
@@ -522,8 +522,60 @@ end_force_removes_and_says_where_the_commits_are() {
     end_commit 1
     sb_run end 113 --force
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
-    [[ "$sb_out" == *"refs/sandboxes/codeo-113/ in ./codeo-113"* ]] || fail "stdout was: $sb_out"
-    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+    [[ "$sb_out" =~ refs/codeo/ended/codeo-113/[0-9]{8}T[0-9]{6}Z/\ in\ ./codeo-113 ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
+}
+
+end_with_nothing_to_lose_deletes_the_sandbox_refs() {
+    end_setup endclear
+    end_commit 1
+    $real_git -C "$sb_dir/sandbox.git" push -q "$sb_dir/origin.git" refs/heads/work:refs/heads/work
+    sb_run end 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ -z "$($real_git -C "$sb_dir/work/codeo-113" for-each-ref refs/sandboxes/codeo-113/)" ]] || fail "refs remain"
+}
+
+end_force_sets_the_refs_aside() {
+    end_setup endaside
+    end_commit 1
+    sb_run end 113 --force
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    local c=$sb_dir/work/codeo-113 ref
+    [[ -z "$($real_git -C "$c" for-each-ref refs/sandboxes/codeo-113/)" ]] || fail "refs remain"
+    ref=$($real_git -C "$c" for-each-ref --format='%(refname)' refs/codeo/ended/codeo-113/ | grep '/work$')
+    [[ "$ref" =~ ^refs/codeo/ended/codeo-113/[0-9]{8}T[0-9]{6}Z/work$ ]] || fail "ref was: $ref"
+    [[ "$($real_git -C "$c" rev-parse "$ref")" == "$($real_git -C "$sb_dir/sandbox.git" rev-parse work)" ]] || fail "wrong tip"
+    [[ "$sb_out" == *"${ref%work}"* ]] || fail "stdout was: $sb_out"
+}
+
+end_force_does_not_overwrite_refs_set_aside_earlier() {
+    end_setup endclash
+    end_commit 1
+    printf '#!/bin/bash\necho 20260101T000000Z\n' >"$sb_dir/bin/date"
+    chmod +x "$sb_dir/bin/date"
+    local c=$sb_dir/work/codeo-113 early
+    early=$($real_git -C "$c" rev-parse HEAD)
+    $real_git -C "$c" update-ref refs/codeo/ended/codeo-113/20260101T000000Z/work "$early"
+    sb_run end 113 --force
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "${sb_err##*$'\n'}" == "codeo-sandbox: removed codeo-113, but could not set aside its refs under refs/sandboxes/codeo-113/ in ./codeo-113" ]] || fail "stderr was: $sb_err"
+    [[ "$($real_git -C "$c" rev-parse refs/codeo/ended/codeo-113/20260101T000000Z/work)" == "$early" ]] || fail "earlier ref changed"
+    [[ -n "$($real_git -C "$c" for-each-ref refs/sandboxes/codeo-113/work)" ]] || fail "refs moved"
+}
+
+a_second_sandbox_for_the_number_starts_clean() {
+    end_setup endsecond
+    end_commit 1
+    sb_run end 113 --force
+    ((sb_rc == 0)) || fail "first exited $sb_rc: $sb_err"
+    $real_git -C "$sb_dir/sandbox.git" branch -q -D work
+    $real_git -C "$sb_dir/sandbox.git" branch -q second main
+    $real_git -C "$sb_dir/sandbox.git" push -q "$sb_dir/origin.git" second
+    : >"$sb_dir/calls"
+    sb_run end 113
+    ((sb_rc == 0)) || fail "second exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *"sbx rm --force codeo-113"* ]] || fail "calls: $(sb_calls)"
+    [[ "$sb_out" == "removed codeo-113" ]] || fail "stdout was: $sb_out"
 }
 
 # end_pull_head <k>: publish the sandbox's branch work as refs/pull/<k>/head on origin, as a pull request
@@ -539,7 +591,7 @@ end_after_a_squash_merge_removes_the_sandbox() {
     sb_run end 113
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
     [[ "$sb_out" == "removed codeo-113" ]] || fail "stdout was: $sb_out"
-    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
 }
 
 end_lists_a_commit_made_after_the_pull_request_head() {
@@ -594,7 +646,7 @@ end_starts_a_stopped_sandbox_first() {
     local want
     want=$'sbx ls\nsbx exec codeo-113 true\ngit -C codeo-113 fetch sandbox-codeo-113'
     [[ "$(sb_calls)" == "$want"* ]] || fail "calls: $(sb_calls)"
-    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "no rm: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "no rm: $(sb_calls)"
 }
 
 end_on_a_missing_sandbox_is_one_line() {
@@ -629,7 +681,7 @@ end_force_with_no_sandbox_refs_removes() {
     $real_git -C "$sb_dir/work/codeo-113" config remote.sandbox-codeo-113.fetch '+refs/heads/*:refs/remotes/sandbox-codeo-113/*'
     sb_run end 113 --force
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
-    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
 }
 
 end_lists_at_most_ten_commits() {
@@ -648,7 +700,7 @@ end_with_sbx_exe_fetches_with_git_exe_from_the_clone() {
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
     [[ "$(<"$sb_dir/git.exe_cwd")" == "$sb_dir/work/codeo-113" ]] || fail "git.exe ran in: $(<"$sb_dir/git.exe_cwd")"
     [[ "$(sb_calls)" == *$'\ngit.exe fetch sandbox-codeo-113\n'* ]] || fail "calls: $(sb_calls)"
-    [[ "$(sb_calls)" == *$'\nsbx.exe rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'\nsbx.exe rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
 }
 
 open_writes_the_title_and_opens_the_clone_folder() {
@@ -813,6 +865,10 @@ cases=(
     end_with_nothing_to_lose_removes_the_sandbox
     end_with_an_unpushed_commit_removes_nothing
     end_force_removes_and_says_where_the_commits_are
+    end_with_nothing_to_lose_deletes_the_sandbox_refs
+    end_force_sets_the_refs_aside
+    end_force_does_not_overwrite_refs_set_aside_earlier
+    a_second_sandbox_for_the_number_starts_clean
     end_after_a_squash_merge_removes_the_sandbox
     end_lists_a_commit_made_after_the_pull_request_head
     end_with_a_failed_pull_request_fetch_removes_nothing

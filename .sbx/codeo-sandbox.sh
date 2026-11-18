@@ -259,6 +259,31 @@ fetch_sandbox() {
     fi
 }
 
+# clear_sandbox_refs <clone> <name>: delete every ref under refs/sandboxes/<name>/ in one transaction.
+clear_sandbox_refs() {
+    local lines
+    lines=$(git -C "$1" for-each-ref --format='delete %(refname) %(objectname)' "refs/sandboxes/$2/") || return 1
+    [[ -z "$lines" ]] && return 0
+    git -C "$1" update-ref --stdin <<<"$lines"
+}
+
+# set_aside_sandbox_refs <clone> <name>: move every ref under refs/sandboxes/<name>/ to
+# refs/codeo/ended/<name>/<UTC>/ in one transaction and print that prefix (nothing when there are no refs).
+# `create` refuses an existing ref, so a clash within one second fails the whole transaction and moves nothing.
+set_aside_sandbox_refs() {
+    local prefix lines ref sha rest
+    lines=$(git -C "$1" for-each-ref --format='%(objectname) %(refname)' "refs/sandboxes/$2/") || return 1
+    [[ -z "$lines" ]] && return 0
+    prefix=refs/codeo/ended/$2/$(date -u +%Y%m%dT%H%M%SZ)/ || return 1
+    local tx=
+    while read -r sha ref; do
+        rest=${ref#"refs/sandboxes/$2/"}
+        tx+="create $prefix$rest $sha"$'\n'"delete $ref $sha"$'\n'
+    done <<<"$lines"
+    printf '%s' "$tx" | git -C "$1" update-ref --stdin || return 1
+    echo "$prefix"
+}
+
 cmd_end() {
     (($# == 1 || $# == 2)) || usage
     valid_number "$1" || usage
@@ -268,7 +293,7 @@ cmd_end() {
         force=1
     fi
     pick_sbx
-    local name=codeo-$1 dir=codeo-$1 state commits count refs
+    local name=codeo-$1 dir=codeo-$1 state commits count refs prefix
     state=$(sandbox_state "$name")
     [[ "$state" != missing ]] || die "no sandbox $name"
     [[ -d "$dir" ]] || die "no clone $dir here: cannot check $name for unpushed commits, nothing removed"
@@ -283,21 +308,31 @@ cmd_end() {
         die "no branches of $name were found under refs/sandboxes/$name/ after the fetch, so nothing can be proved and nothing is removed: end $1 --force removes it anyway"
     fi
     commits=$(unpushed_commits "$dir" "$name") || die "could not list the commits of $name, nothing removed"
-    if [[ -z "$commits" ]]; then
-        "$sbx" rm --force "$name" || die "could not remove $name"
+    count=0
+    if [[ -n "$commits" ]]; then
+        count=$(grep -c '' <<<"$commits")
+        if ((force == 0)); then
+            echo "$name has $count commit(s) on no origin branch:"
+            head -n 10 <<<"$commits"
+            if ((count > 10)); then echo "and $((count - 10)) more"; fi
+            echo "nothing removed: push them from the sandbox, or run: codeo-sandbox.sh end $1 --force"
+            return 1
+        fi
+    fi
+    "$sbx" rm --force "$name" || die "could not remove $name"
+    if ((force == 0)); then
+        clear_sandbox_refs "$dir" "$name" || die "removed $name, but could not delete its refs under refs/sandboxes/$name/ in ./$dir"
         echo "removed $name"
         return 0
     fi
-    count=$(grep -c '' <<<"$commits")
-    if ((force == 0)); then
-        echo "$name has $count commit(s) on no origin branch:"
-        head -n 10 <<<"$commits"
-        if ((count > 10)); then echo "and $((count - 10)) more"; fi
-        echo "nothing removed: push them from the sandbox, or run: codeo-sandbox.sh end $1 --force"
-        return 1
+    prefix=$(set_aside_sandbox_refs "$dir" "$name") || die "removed $name, but could not set aside its refs under refs/sandboxes/$name/ in ./$dir"
+    if [[ -z "$prefix" ]]; then
+        echo "removed $name"
+    elif ((count == 0)); then
+        echo "removed $name; its refs are kept in $prefix in ./$dir"
+    else
+        echo "removed $name; its $count unpushed commit(s) are kept in $prefix in ./$dir"
     fi
-    "$sbx" rm --force "$name" || die "could not remove $name"
-    echo "removed $name; its $count unpushed commit(s) are kept in refs/sandboxes/$name/ in ./$dir"
 }
 
 main() {
