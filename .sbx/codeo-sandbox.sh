@@ -53,15 +53,14 @@ valid_branch() {
 }
 
 # sandbox_state <name>: print missing, stopped, running or detached from the rows of "$sbx" ls (name in
-# column 1, a header row skipped; a leading ● or ○ marker is dropped before the status). A failed ls is a die, so callers assign
-# the output to a variable before testing it.
+# column 1, a header row skipped; a leading marker word is dropped by position, so no locale matters).
+# A failed ls is a die, so callers assign the output to a variable before testing it.
 sandbox_state() {
     local name=$1 row_name agent status listing
     listing=$("$sbx" ls) || die "could not list sandboxes with $sbx"
     while read -r row_name agent status; do
         [[ "$row_name" == "$name" && "$agent" != AGENT ]] || continue
-        status=${status#[●○]}
-        status=${status# }
+        [[ "$status" == [a-z]* ]] || status=${status#* }
         case "$status" in
             "running (detached)"*) echo detached ;;
             running*) echo running ;;

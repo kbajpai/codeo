@@ -160,6 +160,8 @@ sandbox_state_reads_the_ls_rows() {
 ROWS
     out=$(PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c "$probe" _ "$script")
     [[ "$out" == "$want" ]] || fail "states with markers were: $out"
+    out=$(LC_ALL=C PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c "$probe" _ "$script")
+    [[ "$out" == "$want" ]] || fail "states with markers under LC_ALL=C were: $out"
     cat >"$sb_dir/sandboxes" <<'ROWS'
 codeo-a claude running (detached)
 codeo-b claude stopped
@@ -167,6 +169,8 @@ codeo-c claude running
 ROWS
     out=$(PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c "$probe" _ "$script")
     [[ "$out" == "$want" ]] || fail "states without markers were: $out"
+    out=$(LC_ALL=C PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c "$probe" _ "$script")
+    [[ "$out" == "$want" ]] || fail "states without markers under LC_ALL=C were: $out"
 }
 
 a_failed_ls_stops_issue_with_one_line() {
