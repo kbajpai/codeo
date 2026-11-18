@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q5 are answered. Q6 (the three files shared with #131) is open; the plan is drafted and shown once it is answered.
+All six questions are answered; the plan is drafted in `plan-draft.md` and waits for review.
 
 What I found that shapes the questions:
 
@@ -115,7 +115,7 @@ My proposal, one row each, containers first, sorted by number:
 - **B — sequence after #131.** This plan waits for #131 to merge, then edits the READMEs as #131 left them. No conflict, but #133 is held until #131 is planned, built and merged.
 - **C — re-scope.** Drop the README edits from this plan and file them as a separate issue to follow both. The acceptance criterion that names the READMEs would then be moved by the engineer.
 
-**Answer:**
+**Answer:** A — proceed and coordinate; `CHANGELOG.md` gets `## Unreleased` only if it is still absent when the task runs. (Engineer: "A", 2026-11-18.)
 
 ## Notes
 
