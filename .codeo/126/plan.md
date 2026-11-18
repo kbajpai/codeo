@@ -71,17 +71,9 @@ A — keep the refusal, reword the remedy. (Given in the conversation as "Q2 - A
 **Options:** proceed and coordinate (each merge resolves its own `CHANGELOG.md` bullet and the one-line `handoff.md` hunk; recommended, since the edits are different lines) · sequence after #131 and #133 (this plan then writes `sequenced:`, and implement waits) · re-scope (drop the `handoff.md` example change and leave `feat/order-export` as it is, which removes the `docs/handoff.md` overlap but not the `CHANGELOG.md` ones).
 
 **Answer:**
+A — proceed and coordinate. (Given in the conversation as "Q3 - A" on 2026-11-18, recorded here verbatim.)
 
 ## Notes
-
-### Footprint
-
-```
-files:      scripts/branch-name.sh, scripts/claim.sh, skills/init/SKILL.md, tests/branch-name.test.sh, tests/claim.test.sh, tests/init-skill.test.sh, docs/dossier.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-18-numbered-branch-names-126.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 Decided without a question, because the issue already answers them:
 
@@ -96,10 +88,38 @@ Decided without a question, because the issue already answers them:
 
 ## Outcome
 
-_Pending — written at the hand-off._
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-18-numbered-branch-names-126.md` (unstaged, for the engineer to commit) |
+| Shape | an executable plan under `docs/plans/`, four tasks; no reference doc, because no standing decision moves |
+
+**Decisions.**
+- Branch shape `<type>/<N>-<slug>`; type and slug derived as today, and a title with no words left still exits 1 (no `<type>/<N>` fallback).
+- Q1 A: `/codeo:init` finds a workflow by its dossier through `inflight.sh --branches` and derives the name only for a fresh claim. Rejected B, a `--legacy` flag on `branch-name.sh` that tries the new name and then the old: it exists only for the transition, a retitled issue still cannot resume, and one issue's legacy name can still be another's old branch.
+- Q2 A: `claim.sh --carries` keeps its refusal for a branch carrying another issue's dossier, with the remedy "rename or delete it on origin" and no retitle advice. Rejected B, folding it into the "not a pipeline branch" reading, which would call a branch that carries a dossier "not a pipeline branch".
+- Q3 A: proceed and coordinate with #131 and #133 over `CHANGELOG.md` (both) and `docs/handoff.md` (#131); `sequenced:` stays `none`. Rejected sequencing after both, and dropping the `handoff.md` example change.
+- One pull request.
+
+**Tasks.** 1 `branch-name.sh` and its test; 2 `claim.sh` message and its test; 3 `skills/init/SKILL.md` steps 3 and 6 and `tests/init-skill.test.sh`; 4 documentation. Each is proved with `bash tests/run.sh <pattern>`; the last runs the whole suite.
+
+**Documentation the plan changes.** `skills/init/SKILL.md` (steps 3 and 6), the branch example in `docs/dossier.md` and `docs/handoff.md`, and `CHANGELOG.md`. No wiki module is configured.
+
+**Intake questions resolved here.** The one `init.md` left to the plan, whether `claim.sh`'s same-title refusal is kept or dropped: kept in a narrower form (Q2 A).
+
+**Gap.** Acceptance criteria 3 and 4 are skill text, proved by wording checks in `tests/init-skill.test.sh`, not by running `init`.
+
+### Footprint
+
+```
+files:      scripts/branch-name.sh, scripts/claim.sh, skills/init/SKILL.md, tests/branch-name.test.sh, tests/claim.test.sh, tests/init-skill.test.sh, docs/dossier.md, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-18-numbered-branch-names-126.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Log
 
 - 2026-11-18 — Q1-Q2 raised · cost: 1m · fable-5-2 67k in + 449k cached / 4k out
 - 2026-11-18 — Q1-Q2 answered (both A), plan drafted and awaiting approval · cost: unavailable (mid-pass)
 - 2026-11-18 — plan approved, written to docs/plans/2026-11-18-numbered-branch-names-126.md; Q3 raised (overlap with #131, #133) · cost: 5m · fable-5-2 83k in + 760k cached / 8k out · sonnet-5-5 108k in + 1.3M cached / 15k out
+- 2026-11-18 — planned: docs/plans/2026-11-18-numbered-branch-names-126.md (Q1-Q3 answered; engineering skills not needed, no new component or technology choice) · cost: 5m · fable-5-2 83k in + 760k cached / 8k out · sonnet-5-5 112k in + 2.1M cached / 17k out
