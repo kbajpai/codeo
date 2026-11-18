@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Exploration is done and no plan is drafted yet. Q1-Q5 are open; the draft starts once they are answered. The calls I made without asking are under `## Notes`, so they can be corrected in the same pass.
+Q1-Q5 are answered. Q6 (the three files shared with #131) is open; the plan is drafted and shown once it is answered.
 
 What I found that shapes the questions:
 
@@ -103,6 +103,19 @@ My proposal, one row each, containers first, sorted by number:
 **Options:** as proposed · as proposed, plus a first row for `codeo-home` when it exists · start nothing, but read a stopped container's branch another way (say which) · changes, named in the answer.
 
 **Answer:** As proposed: containers first, a stopped container's branch `-`, no `codeo-home` row. (Engineer: "go with my picks".)
+
+### Q6 — How do we coordinate the three files this plan shares with #131?
+
+**Why it matters:** two parallel branches that edit the same README section or changelog block conflict at merge, and the second one to merge has to resolve it by hand.
+
+**What overlaps.** #131 (branch `feat/make-sbx-sandbox-lock-follow`, assignee kbajpai, step `init`, waiting on `/codeo:plan`) has a footprint that includes `glob:.devcontainer/README.md`, `glob:.sbx/README.md` and `glob:CHANGELOG.md`. This plan edits all three: the `codeo` form beside each long command in both READMEs (the sections *Opening a container from the command line*, *Removing a finished container*, *Rebuilding*; *Getting the script*, *Commands*, *Ending a sandbox*) and one changelog bullet. #131 also lists `.sbx/codeo-sandbox.sh`, which this plan never edits and only calls through `end <N> [--force]`. Neither branch has changed a file yet (`changed: none`).
+
+**Options:**
+- **A — proceed and coordinate (my pick).** Each plan edits different sections and adds its own changelog bullet under `## Unreleased`; whichever merges second rebases and keeps both. The plan adds `## Unreleased` to `CHANGELOG.md` only if it is still absent when the task runs.
+- **B — sequence after #131.** This plan waits for #131 to merge, then edits the READMEs as #131 left them. No conflict, but #133 is held until #131 is planned, built and merged.
+- **C — re-scope.** Drop the README edits from this plan and file them as a separate issue to follow both. The acceptance criterion that names the READMEs would then be moved by the engineer.
+
+**Answer:**
 
 ## Notes
 
