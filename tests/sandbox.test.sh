@@ -80,11 +80,14 @@ STUB
     done
 }
 
+# The Windows trust path carries the distro name; a case that needs it absent sets SB_NODISTRO.
+export WSL_DISTRO_NAME=${WSL_DISTRO_NAME:-Ubuntu}
+
 # sb_run <args...>: run the script with the stubs on PATH; sets sb_rc, sb_out, sb_err.
 sb_run() {
     sb_rc=0
     # shellcheck disable=SC2016
-    env -u CODEO_SBX PATH="$sb_dir/bin:/usr/bin:/bin" ${SB_SBX:+CODEO_SBX="$SB_SBX"} \
+    env -u CODEO_SBX ${SB_NODISTRO:+-u WSL_DISTRO_NAME} PATH="$sb_dir/bin:/usr/bin:/bin" ${SB_SBX:+CODEO_SBX="$SB_SBX"} \
         "$bash_abs" -c 'cd "$1" && shift && exec "$@"' _ "$sb_dir/work" "$bash_abs" "$script" "$@" >"$sb_dir/out" 2>"$sb_dir/err" || sb_rc=$?
     sb_out=$(<"$sb_dir/out")
     sb_err=$(<"$sb_dir/err")
@@ -272,6 +275,17 @@ issue_without_git_exe_prints_the_trust_command() {
     n=$(grep -c '^todo:.*git.exe config --global --add safe.directory %(prefix)///wsl.localhost/' <<<"$sb_out" || true)
     ((n == 1)) || fail "todo lines: $n in: $sb_out"
     [[ "$(sb_calls)" == *"sbx.exe create"* ]] || fail "create not called"
+}
+
+issue_without_wsl_distro_name_prints_the_trust_todo() {
+    sb_setup nodistro
+    rm "$sb_dir/bin/sbx"
+    SB_NODISTRO=1 sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    local n
+    n=$(grep -c '^todo: WSL_DISTRO_NAME is not set.*safe.directory' <<<"$sb_out" || true)
+    ((n == 1)) || fail "todo lines: $n in: $sb_out"
+    [[ "$(sb_calls)" != *"git.exe config --global --add"* ]] || fail "git.exe add called: $(sb_calls)"
 }
 
 issue_creates_with_the_limits() {
@@ -476,6 +490,7 @@ issue_leaves_the_sandbox_running_detached() {
 }
 
 issue_writes_the_sandbox_marker() {
+    # shellcheck disable=SC2016
     local state mark='sbx exec codeo-113 bash -c : > "$HOME/.codeo-sandbox"' calls
     for state in missing 'running (detached)'; do
         sb_setup "mark-${state%% *}"
@@ -1065,6 +1080,7 @@ cases=(
     issue_adds_the_windows_trust_line_once
     issue_skips_the_windows_trust_with_linux_sbx
     issue_without_git_exe_prints_the_trust_command
+    issue_without_wsl_distro_name_prints_the_trust_todo
     issue_creates_with_the_limits
     issue_creates_at_the_pinned_image
     a_pin_that_is_not_a_digest_is_refused

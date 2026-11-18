@@ -247,7 +247,11 @@ fi
 # should say what the lock does; folder-check.sh judges it. Captured, not read through `< <(…)`,
 # which would swallow its exit status: a check that itself fails is one TODO, never a stray error.
 # Its `todo:` lines become TODOs; it prints nothing else this script passes on.
-if folder_out=$(bash .devcontainer/scripts/folder-check.sh "$(basename "$clone")" 2>&1); then
+# Inside an sbx sandbox (the marker codeo-sandbox.sh writes, as session-title.sh reads it) the folder is not a
+# Docker name, so this advice does not apply and the check is skipped.
+if [[ -e ${CODEO_SANDBOX_MARK:-${HOME:-}/.codeo-sandbox} ]]; then
+    :
+elif folder_out=$(bash .devcontainer/scripts/folder-check.sh "$(basename "$clone")" 2>&1); then
     while IFS= read -r line; do
         case $line in
             todo:*) add_todo "${line#todo: }" ;;

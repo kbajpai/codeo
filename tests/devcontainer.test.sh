@@ -1508,6 +1508,18 @@ start_trusts_the_clone_in_claude() {
     [[ $(stat -c %a "$ds_dir/claude/.claude.json" 2>/dev/null) == 600 ]] || fail "mode is not 600: $(stat -c %a "$ds_dir/claude/.claude.json" 2>&1)"
 }
 
+start_in_a_sandbox_skips_the_folder_check() {
+    local n
+    ds_setup sbxfolder || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mv "$ds_dir/codeo-home" "$ds_dir/codeo-122"
+    DS_REPO="$ds_dir/codeo-122" ds_ready_run
+    n=$(ds_todos "docker ps"); ((n == 1)) || fail "without the marker, wanted the folder TODO once, got $n: $ds_err"
+    : > "$ds_dir/sandbox-mark"
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" DS_REPO="$ds_dir/codeo-122" ds_ready_run
+    n=$(ds_todos "docker ps"); ((n == 0)) || fail "inside a sandbox, the folder TODO was listed: $ds_err"
+}
+
 start_trust_keeps_other_keys() {
     local key
     ds_setup trustkeep || return 0
@@ -2645,6 +2657,7 @@ cases=(
     start_settings_keep_their_mode
     start_leaves_no_temp_file_when_mv_fails
     start_trusts_the_clone_in_claude
+    start_in_a_sandbox_skips_the_folder_check
     start_trust_keeps_other_keys
     start_malformed_claude_state_is_a_todo
     start_claude_state_not_an_object_is_a_todo

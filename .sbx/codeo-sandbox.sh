@@ -38,7 +38,6 @@ pick_sbx() {
     else
         die "sbx is not installed: install Docker Sandboxes (sbx), or from WSL2 make sbx.exe reachable on PATH"
     fi
-    # shellcheck disable=SC2034 # read by the sub-commands to come
     if [[ "${sbx##*/}" == *.exe ]]; then windows=1; else windows=0; fi
 }
 
@@ -132,6 +131,10 @@ ensure_host_clone() {
 ensure_windows_trust() {
     ((windows == 1)) || return 0
     local path
+    if [[ -z ${WSL_DISTRO_NAME:-} ]]; then
+        echo "todo: WSL_DISTRO_NAME is not set, so the clone's Windows path is not known: run git.exe config --global --add safe.directory %(prefix)///wsl.localhost/<distro>$(cd "codeo-$1" && pwd -P)"
+        return 0
+    fi
     path="%(prefix)///wsl.localhost/${WSL_DISTRO_NAME:-}$(cd "codeo-$1" && pwd -P)"
     if ! command -v git.exe >/dev/null 2>&1; then
         echo "todo: git on Windows does not trust the clone yet: run git.exe config --global --add safe.directory $path"
