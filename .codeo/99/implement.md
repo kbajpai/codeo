@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 2 (after plan.md round 2), finished; Task 22 run (2026-11-18): steps 1-12 are under `## Acceptance`, and step 13 is not run (the reason is recorded there). Two findings from the run go to `/codeo:qc`: `remote.SSH.defaultExtensions` is blocked by the sbx network policy, and `issue` never runs `run -d`, so sandboxes stop when idle. Next: `/codeo:qc`.
+Round 3 (after plan.md round 3, plan `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md`): started 2026-11-18. The branch already contains origin/main, and the overlap check prints nothing. Waiting on Task 23, the engineer's trial on their host (the extension policy rule, and `run -d` on a sandbox that is already running). Tasks 24-30 have not started. Next: the engineer runs Task 23 and pastes its output.
 
 ## Questions
 
