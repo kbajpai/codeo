@@ -29,7 +29,7 @@ What I found that shapes the questions:
 
 In the repository I would put the file at `.devcontainer/codeo` (no extension, executable), beside `codeo-container.sh`, which is the script every route needs; the `shell` suite's paths already cover it. Say so if you want a new top-level folder (for example `host/codeo`) instead, which also needs a line in `.codeo/config.json`.
 
-**Answer:**
+**Answer:** A — the command in `~/.local/bin`, everything else in `~/codeo`; the file is `.devcontainer/codeo`. (Engineer: "go with my picks", 2026-11-18.)
 
 ### Q2 — Is this the command set you want? And does your interim wrapper use names you want kept?
 
@@ -51,7 +51,7 @@ Two points to confirm: the sandbox's `end` is reached as `codeo rm <N>` only (no
 
 **Options:** as in the table · as in the table, plus `codeo end <N>` as a second name for a sandbox's `rm` · changes, named in the answer.
 
-**Answer:**
+**Answer:** As in the table; `codeo rm <N>` is the only way to end a sandbox, and `--rebuild` with `--sandbox` is refused. (Engineer: "go with my picks".)
 
 ### Q3 — For an issue that already exists on the host, how should `shell`, `open` and `rm` decide between container and sandbox?
 
@@ -62,7 +62,7 @@ Two points to confirm: the sandbox's `end` is reached as `codeo rm <N>` only (no
 
 The saved default is one word in `~/codeo/default` (written by `codeo default sandbox`); with no file it is `container`. `CODEO_KIND` in the environment is not read: one mechanism only. Say so if you would rather set it in the environment.
 
-**Answer:**
+**Answer:** A — look at the host; the saved default is `~/codeo/default`, `CODEO_KIND` is not read. (Engineer: "go with my picks".)
 
 ### Q4 — What must `codeo rm <N>` prove for a container before it removes it, and does it remove the image too?
 
@@ -82,7 +82,7 @@ My proposal, run through `docker exec` in `/workspaces/codeo-<N>` (a stopped con
 
 Unlike `end`, this check does not count a commit that is only on a pull request's head as delivered: in a container the branch is pushed to origin itself, so it does not arise. The Claude Code login on the volume is lost with it, as today; `rm` says so in its `removed` line.
 
-**Answer:**
+**Answer:** As proposed: fetch, refuse on uncommitted changes, stashes, detached HEAD or unpushed commits; `--force` skips the refusal and also removes when the check cannot run; the image `codeo-dev:codeo-<N>` is removed too, a failure there only a warning. (Engineer: "go with my picks".)
 
 ### Q5 — What should `codeo list` show?
 
@@ -102,7 +102,7 @@ My proposal, one row each, containers first, sorted by number:
 
 **Options:** as proposed · as proposed, plus a first row for `codeo-home` when it exists · start nothing, but read a stopped container's branch another way (say which) · changes, named in the answer.
 
-**Answer:**
+**Answer:** As proposed: containers first, a stopped container's branch `-`, no `codeo-home` row. (Engineer: "go with my picks".)
 
 ## Notes
 
@@ -118,6 +118,15 @@ Calls made without a question. Each is mine; correct any of them in an answer ab
 - **Tests:** one new file, `tests/codeo-command.test.sh`, with stub `docker`, `sbx`, `git`, `curl` and stub copies of the two scripts in a scratch `CODEO_HOME`, each logging its call; it covers every command, the three argument errors, the lookup with none, one and several matches, update's success and failed download, and `rm` for both kinds with and without `--force`.
 - **Documentation the change moves:** `.devcontainer/README.md` (*Opening a container from the command line*, *Removing a finished container*, *Rebuilding*: the `codeo` form beside each long command, and a short section on installing `codeo`), `.sbx/README.md` (*Getting the script*, *Commands*, *Ending a sandbox*), `CHANGELOG.md`. The repository `README.md` gets a line only if it already names the host scripts. No skill, overlay or printed command changes (out of scope).
 - **#131 is in flight** (`feat/make-sbx-sandbox-lock-follow`, kbajpai, at `init`, waiting on its own Q1-Q5). It has no footprint yet and its branch has changed nothing, so there is nothing to compare. From its dossier it will edit `.sbx/codeo-sandbox.sh`, `.sbx/README.md`, `.devcontainer/README.md` and `CHANGELOG.md`; this plan edits the last three. `codeo` only calls `end <N> [--force]`, whose interface #131 keeps under either answer to its Q3. The overlap is raised as a numbered question once either footprint exists (`overlap.sh`, at this plan's hand-off). #126 has no workflow in flight.
+
+### Footprint
+
+```
+files:      .devcontainer/codeo, .devcontainer/README.md, .sbx/README.md, CHANGELOG.md, tests/codeo-command.test.sh, docs/plans/2026-11-18-codeo-host-command-133.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
