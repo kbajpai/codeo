@@ -226,14 +226,14 @@ run beat --force
 assert_eq "no lock: exit" 0 "$rc"
 assert_eq "no lock: refs" "" "$(refs)"
 assert_eq "no lock: stderr" "" "$err"
-assert_eq "no lock: stamp" no "$([[ -e $(git -C "$clone" rev-parse --git-path codeo-live-beat) ]] && echo yes || echo no)"
+assert_eq "no lock: stamp" no "$([[ -e $(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-beat) ]] && echo yes || echo no)"
 clone_with_lock 104 local
 git -C "$clone" checkout -q main
 run beat --force
 assert_eq "base: exit" 0 "$rc"
 assert_eq "base: refs" "" "$(refs)"
 assert_eq "base: stderr" "" "$err"
-assert_eq "base: stamp" no "$([[ -e $(git -C "$clone" rev-parse --git-path codeo-live-beat) ]] && echo yes || echo no)"
+assert_eq "base: stamp" no "$([[ -e $(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-beat) ]] && echo yes || echo no)"
 
 case_desc=beat_publishes_nothing_for_a_lock_issue_list_would_drop
 for bad_issue in 0 0104 1234567890; do
@@ -367,12 +367,12 @@ assert_eq "hook never ran" no "$([[ -e $scratch_root/pre-push-ran ]] && echo yes
 case_desc=clear_deletes_the_ref_and_the_stamp
 new_world; clone_with_lock 104 container codeo-104
 run beat --force
-stamp=$(git -C "$clone" rev-parse --git-path codeo-live-beat)
-assert_eq "stamp written" yes "$([[ -e $clone/$stamp || -e $stamp ]] && echo yes || echo no)"
+stamp=$(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-beat)
+assert_eq "stamp written" yes "$([[ -e $stamp ]] && echo yes || echo no)"
 run clear
 assert_eq "exit" 0 "$rc"
 assert_eq "ref gone" "" "$(refs)"
-assert_eq "stamp gone" no "$([[ -e $clone/$stamp || -e $stamp ]] && echo yes || echo no)"
+assert_eq "stamp gone" no "$([[ -e $stamp ]] && echo yes || echo no)"
 
 case_desc=clear_of_a_missing_ref_exits_0
 new_world; clone_with_lock 104 container codeo-104
