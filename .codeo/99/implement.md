@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 3 (after plan.md round 3), finished here: Task 23 ran on the engineer's host, and Tasks 24-29 are done; the build passes. Task 30, the engineer's acceptance run, is next; then `/codeo:qc`.
+Round 3 (after plan.md round 3), finished. Task 23 ran on the engineer's host, Tasks 24-29 are done and the build passes, and Task 30, the acceptance run, met all six steps (under `## Acceptance`). Next: `/codeo:qc`.
 
 ## Questions
 
@@ -850,6 +850,58 @@ Step 6: `end 99` fetched the sandbox's branch and printed `removed codeo-99`. Th
 
 **Route A.** Task 27 documents the policy rule together with `remote.SSH.defaultExtensions`.
 
+### Task 30 — round 3 acceptance (2026-11-18)
+
+The run used this branch's script (`curl … feat/make-sbx-issue-sandbox-usable/.sbx/codeo-sandbox.sh`) and route A's settings: the policy rule from Task 23, plus `remote.SSH.defaultExtensions`.
+
+**Step 2, create and stay up: met.** `issue 99 feat/make-sbx-issue-sandbox-usable` created `codeo-99` at `fd56087a…3593332` and took the lock. It ended with:
+```
+  ✓ sandbox codeo-99 — attaching to the existing sandbox (workspace D:\Downloads\task22\codeo-99)
+  ✓ sandbox codeo-99 — running detached
+  SANDBOX    AGENT    STATUS                 PORTS                        WORKSPACE                      CREATED
+  codeo-99   claude   ● running (detached)   127.0.0.1:60047->9418/tcp4   D:\Downloads\task22\codeo-99   14s
+```
+After the idle wait it was still `● running (detached)`, on the same port, at `11m`.
+
+**Step 3, open and stay connected: met.** `open 99` printed `window-title: codeo [#99]`.
+- In the screenshot, the window is titled `codeo [#99]` and the status bar shows `SSH: codeo-99.sbx`.
+- `SSH: Codeo-99.Sbx - Installed` lists Claude Code for VS Code, Markdown Preview Mermaid Support and ShellCheck, installed by themselves. GitHub Pull Requests is synced from the engineer's settings.
+- The window stayed connected through the idle wait (the engineer: "Yes").
+- The Dev Containers extension offered "Reopen in Container" for the clone's `.devcontainer/`. The engineer was told to dismiss it.
+
+**Step 4, reopen a stopped sandbox: met.**
+```
+$ sbx.exe stop codeo-99
+  Stopped sandbox codeo-99
+$ bash codeo-sandbox.sh open 99
+  ✓ sandbox codeo-99 — attaching to the existing sandbox (workspace D:\Downloads\task22\codeo-99)
+  ✓ sandbox codeo-99 — running detached
+window-title: codeo [#99]
+$ sbx.exe ls
+  codeo-99   claude   ● running (detached)   127.0.0.1:60048->9418/tcp4   D:\Downloads\task22\codeo-99   12m
+```
+
+**Step 5, uncommitted work: met.**
+```
+$ sbx.exe exec codeo-99 touch scratch-uncommitted
+$ bash codeo-sandbox.sh end 99
+From git://127.0.0.1:60048/codeo-99
+ * [new branch]      feat/make-sbx-issue-sandbox-usable -> sandbox-codeo-99/feat/make-sbx-issue-sandbox-usable
+codeo-99 has uncommitted changes:
+?? scratch-uncommitted
+nothing removed: commit and push it from the sandbox, or run: codeo-sandbox.sh end 99 --force
+```
+
+**Step 6, clean, then end: met.**
+```
+$ sbx.exe exec codeo-99 rm scratch-uncommitted
+$ bash codeo-sandbox.sh end 99
+  Removed sandbox codeo-99
+removed codeo-99
+```
+
+- The `lock.sh` volume TODO printed again in step 2. That is #123.
+
 ## Notes
 
 - Ruling (Task 3): the "was not tried" check counts occurrences (15 → 14), not lines. `grep -c` counts lines, and the Host paragraph is one line that keeps its single mention.
@@ -954,7 +1006,7 @@ The token line (F6, README:11) already stated what T13 showed, so it is unchange
 
 Plan: `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md` (committed `2983d05`). It answers `qc.md` round 2's F9-F16, as settled by Q14-Q17.
 
-**Built.** Task 23 ran on the engineer's host (under `## Acceptance`). Tasks 24-29 are done and committed, and each passed its task review. Task 30 is the engineer's acceptance run on their host.
+**Built.** Task 23 ran on the engineer's host (under `## Acceptance`). Tasks 24-29 are done and committed, and each passed its task review. Task 30, the engineer's acceptance run, met steps 2-6 (under `## Acceptance`).
 
 | Task | Finding | Commits |
 |---|---|---|
