@@ -23,6 +23,7 @@ Exploration is done and no plan is drafted yet. Q1-Q5 are open (and the `live.te
 With A or B, the name comes from somewhere: under B I would have `codeo-sandbox.sh` write the sandbox's name into the marker (`codeo-<N>` in place of an empty file; the readers only test that it exists), and the start script pass that, falling back to `container-name.sh --docker` for an empty marker left by an older run. Say so if the marker should stay empty.
 
 **Answer:**
+B, my pick, as the engineer chose in the session ("All Picks", 2026-11-18): the start script passes `--sandbox <name>`; the marker holds the sandbox's name, with `container-name.sh --docker` as the fallback for an empty one. (Transcribed by the skill from the engineer's chat answer.)
 
 ### Q2 — The start script runs the installed plugin's `lock.sh` (pinned v1.0.7), not the clone's. Is a run in a real sandbox part of this plan?
 
@@ -32,6 +33,7 @@ With A or B, the name comes from somewhere: under B I would have `codeo-sandbox.
 - **Tests and one host task.** The plan ends with a task you run on the host: `issue <N> <branch>` on this branch, then in the sandbox remove `.codeo/active` and re-run the start script with `CODEO_ROOT` set to the clone, and check the lock's `sandbox:` line. I then ask which shell you use.
 
 **Answer:**
+Tests only, my pick, as the engineer chose in the session ("All Picks"). (Transcribed.)
 
 ### Q3 — When `end` cannot start or fetch the sandbox, should `--force` remove it anyway, or should the message only name the raw command?
 
@@ -41,6 +43,7 @@ With A or B, the name comes from somewhere: under B I would have `codeo-sandbox.
 - **`--force` goes on.** Without `--force` the line names `end <N> --force`; with it, `end` removes the sandbox, keeps whatever refs an earlier fetch left under `refs/codeo/ended/`, and says that what the sandbox held since then is gone. One command, at the cost of `--force` removing work it never saw.
 
 **Answer:**
+Message only, my pick, as the engineer chose in the session ("All Picks"). (Transcribed.)
 
 ### Q4 — What should `/codeo:close` say for a sandbox after a stash and after an abandon?
 
@@ -52,6 +55,7 @@ With A or B, the name comes from somewhere: under B I would have `codeo-sandbox.
 The follow-up skills (`/codeo:triage`, `/codeo:cleanup`, `/codeo:init`) are still named as running in the home container `codeo-home` under either option; tell me if the sandbox route has another home.
 
 **Answer:**
+All three, my pick, as the engineer chose in the session ("All Picks"); home container `codeo-home` stays the follow-up home. (Transcribed.)
 
 ### Q5 — A sandbox created before this change holds a lock with `volume: unknown`. Should close recognise it?
 
@@ -59,6 +63,7 @@ The follow-up skills (`/codeo:triage`, `/codeo:cleanup`, `/codeo:init`) are stil
 **Options:** leave it: the fix applies to locks taken from now on, and the README says an older sandbox is ended with `end <N>` (my pick) · the overlay also checks the marker for a lock with `volume: unknown`.
 
 **Answer:**
+Leave it, my pick, as the engineer chose in the session ("All Picks"). (Transcribed.)
 
 ## Notes
 
