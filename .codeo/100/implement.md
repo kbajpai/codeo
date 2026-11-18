@@ -29,4 +29,4 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-18 — Task 1 done: release PR #127 opened, tests and qc-verdict pass; waiting for the engineer's merge · cost: pending
+- 2026-11-18 — Task 1 done: release PR #127 opened, tests and qc-verdict pass; waiting for the engineer's merge · cost: 11m · sonnet-5-5 22k in + 1.7M cached / 5k out
