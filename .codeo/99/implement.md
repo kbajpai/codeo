@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 3 (after plan.md round 3, plan `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md`): started 2026-11-18. The branch already contains origin/main, and the overlap check prints nothing. Task 23 ran on the engineer's host: route A, and `run -d` works on a running sandbox (under `## Acceptance`). Tasks 24-29 are running here; Task 30 follows.
+Round 3 (after plan.md round 3), finished here: Task 23 ran on the engineer's host, and Tasks 24-29 are done; the build passes. Task 30, the engineer's acceptance run, is next; then `/codeo:qc`.
 
 ## Questions
 
@@ -947,7 +947,62 @@ The token line (F6, README:11) already stated what T13 showed, so it is unchange
 
 **Gaps, unchanged from round 1:** `end` checks commits only. `role.sh` classifies a sandbox as `unguarded`; Task 22 checks `/run/.containerenv`.
 
+### Round 3
+
+2026-11-18
+(after plan.md round 3)
+
+Plan: `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md` (committed `2983d05`). It answers `qc.md` round 2's F9-F16, as settled by Q14-Q17.
+
+**Built.** Task 23 ran on the engineer's host (under `## Acceptance`). Tasks 24-29 are done and committed, and each passed its task review. Task 30 is the engineer's acceptance run on their host.
+
+| Task | Finding | Commits |
+|---|---|---|
+| 23 Trial: the policy rule for `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io`, then `run -d` on a running sandbox | F9, F10 | — (host) |
+| 24 `sandbox_state` reads the real `sbx ls` layout (header row, `●`/`○` in any locale) and reports `detached`; a failed `sbx ls` stops the script | found while planning, F13 | `55b937d`, `4534ffd` (review fix) |
+| 25 `issue` and `open` leave the sandbox `running (detached)` | F10 | `ab2511f` |
+| 26 `end` refuses uncommitted changes, stashes or a detached HEAD unless `--force` | F12 | `7540534`, `285e8b2` (review fix) |
+| 27 The README documents route A: the policy rule plus `remote.SSH.defaultExtensions` | F9 | `0fc5ca9` |
+| 28 A TODO instead of a bad Windows path with no `WSL_DISTRO_NAME`; no folder-check TODO inside a sandbox; shellcheck tidy-up | F13 | `85f6b6e` |
+| 29 Evaluation page and README wording: one #86 trial range (T3 to T12), the token limited to what T13 showed, the stop cause stated | F14-F16 | `3a98326`, `8727638` (review fix) |
+
+**Documentation changed:**
+- `.sbx/README.md`:
+  - Prerequisites (the policy rule and why, and how to remove it; line 11's token wording);
+  - the Commands rows for `issue` and `open`;
+  - Ending a sandbox (text and flowchart);
+  - Stopped sandboxes.
+- `CHANGELOG.md:9`: the extension clause, and what `end` checks.
+- `docs/dev-environment-sbx-evaluation.md`: D1, D4, T13 Result, Fragility, Credentials, "Why not stay", and the #86 bullet.
+- `.devcontainer/scripts/devcontainer-start.sh`: step 3a′ is skipped under the sandbox marker. This is code, not a page.
+
+**Build:** the `shell` suite's build is `true`, exit 0. No environment is configured, so nothing was deployed.
+
+**Base branch (step 2a):** `sync-main: the branch already contains origin/main`, at the start and again before this outcome.
+
+**Deviations and rulings.**
+- Task 23 showed `run -d` attaching to a running sandbox and printing `running detached`, so Task 25 does not stop the sandbox first. The plan allowed either.
+- Task 23 gave route A, so Task 27 writes only that route.
+- Task 23: a bare `● running` (started by `exec` and never by `run -d`) was not seen on the host. Task 24 reads it from the documented layout.
+- Task 24 review fix (`4534ffd`): stripping the marker with a glob (`${status#[●○]}`) removed only one byte under `LC_ALL=C`, so every sandbox read as `stopped` again. The marker word is now dropped by position, and the test runs under `LC_ALL=C` too.
+- Task 25: `require_sandbox` leaves the state it read in `required_state`, and `open` passes it to `ensure_detached <name> [state]`. That way `open` makes one `sbx ls` call and `run -d` is call 2, as the plan's test asks. `open_writes_the_title_and_opens_the_clone_folder` now uses a `running (detached)` row.
+- Task 26 review fix (`285e8b2`): the first CRLF test passed with or without the `\r` strip. Two cases now guard it: a CRLF `## HEAD (no branch)` must refuse, and CRLF status and stash lines must print no CR. The flowchart label `-- --force -->` became `-- with --force -->`.
+- Task 28: `tests/sandbox.test.sh` exports `WSL_DISTRO_NAME=Ubuntu` when it is unset, and `SB_NODISTRO=1` unsets it for one case.
+- Task 29: the implementer also reworded three more sentences that made the same unshown token claim (Credentials, its isolation-gain sentence, "Why not stay"). The review found them accurate and in scope.
+- Task 29 review fix (`8727638`): README:11 still said the proxy replaces the token, which T13 does not show. The clause is gone.
+- `scripts/lock.sh`'s `volume:` TODO in a sandbox is #123 (Q16), filed during planning, and is not changed here.
+- The sub-skill's final whole-branch review was not run here. `/codeo:qc`'s independent review is that gate (implement-09).
+
+**Deferred minors from the task reviews** (in the SDD ledger, for QC to triage):
+- Task 24: the comment wrap at `sandbox_state`; no test for a row with fewer than three columns.
+- Task 25: comment wraps; `required_state` is an undeclared global; no failed-`run -d` test for `issue`, only for `open`.
+- Task 26: the flowchart's decision node is dense; the original CRLF case is weak on its own.
+- Task 27: the CHANGELOG check guards only that the old clause is gone; the `balanced` grep covers the whole README.
+- Task 28: the devcontainer test without the marker relies on the real `$HOME/.codeo-sandbox` being absent, so running the suite inside an sbx sandbox would fail it.
+- Task 29: the evaluation's T9 record still says "the two earlier stops are unexplained" (a trial record; a pointer is optional).
+
 ## Log
 - 2026-11-17 — Tasks 1-4 and 7 done; paused at Task 5 for the engineer's trials · cost: 38m · opus-5-5 55k in + 9.1M cached / 19k out · sonnet-5-5 312k in + 4.2M cached / 44k out
 - 2026-11-17 — Tasks 6, 8-13 done (Task 12 fix round, Task 13 docs); merged origin/main; handed to /codeo:qc · cost: 12m · opus-5-5 63k in + 3M cached / 15k out · sonnet-5-5 165k in + 1.2M cached / 18k out
 - 2026-11-18 — round 2 (after plan.md round 2): Tasks 15-21 done, Task 21 one fix round; build passes; handed to /codeo:qc · cost: 64m · opus-5-5 105k in + 11.1M cached / 30k out · sonnet-5-5 634k in + 9.1M cached / 96k out
+- 2026-11-18 — round 3 (after plan.md round 3): Task 23 on the host (route A); Tasks 24-29 done, three one-round review fixes; build passes; Task 30 next, then /codeo:qc · cost: 202m · opus-5-5 358k in + 23.6M cached / 41k out · sonnet-5-5 488k in + 7.5M cached / 76k out
