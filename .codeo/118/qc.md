@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 of the pass is paused at step 2: `overlap.sh` found #100 editing `CHANGELOG.md`, which no dossier of this issue has raised (round 1 mistook it for the settled #99 overlap). Q1 is open. The round 2 checks run so far are not written up yet; resume by answering Q1.
+Round 2 is done and clear: Q1 was answered (proceed and coordinate), the build and the whole `shell` suite pass, all six criteria are met, and the independent review found no blocking defect. F1 and F2 are fixed; F3-F9 are non-blocking and left for `/codeo:triage`. Next: `/codeo:close`.
 
 ## Questions
 
@@ -79,7 +79,43 @@ No `deploy=` line and no shared environment configured, so there is no `#### Env
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+### Round 2 — 2026-11-18
+
+Under review: the round 2 implement rework (48aaae3, the F1 and F2 fixes) on top of round 1.
+
+**Scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main` (exit 0). `overlap.sh 118`: `100 CHANGELOG.md` and `100 glob:CHANGELOG.md`, raised as Q1 and answered *proceed and coordinate*; nothing else new. `overlap.sh --outside 118`: nothing. `git diff origin/main...HEAD --stat`: 12 files, 502 insertions, 14 deletions (the 11 of round 1, plus `qc.md`). `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: the dossiers and `CHANGELOG.md`). No `deploy=` line and no shared environment, so no `#### Environment` block.
+
+**Build.** `shell` suite, `true`: exit 0.
+
+**Tests.** `shell` suite, `bash tests/run.sh`, run whole: exit 0, last line `all cases passed`.
+
+**Criteria.**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| The test label and its case match. | met — the label is now "a negative refresh interval republishes" (`negative`) and the case runs `CODEO_LIVE_REFRESH_SECONDS=-100`; round 1's F1 is fixed | `tests/live.test.sh:210-214`; no `refresh 0` left |
+| `hooks/live-signal.sh`'s header lines fit the file's line-length convention. | met | `hook_header_fits_100_columns` |
+| A test or the docs cover two concurrent beats from one machine. | met — a test and the docs; each round now asserts a new sha, so round 1's F2 is fixed | `tests/live.test.sh:497-526`; `docs/handoff.md:183-186`; `scripts/live.sh:46-48` |
+| The F2 decision is recorded in the plan. | met — "stay silent" | the plan, Global Constraints |
+| The `live.sh` comment names both calls the timeout bounds. | met | `scripts/live.sh:58-61`; `live_sh_comment_names_both_bounded_calls` |
+| The docs say the 20-second `SessionEnd` figure assumes the default `CODEO_LIVE_PUSH_TIMEOUT`. | met | `docs/handoff.md:173`; `scripts/live.sh:50-52` |
+
+**Documentation.** Unchanged from round 1 apart from the test edits: `docs/handoff.md` and `CHANGELOG.md` are in the diff and their claims hold against `live.sh` and `hooks.json`. No overlay rules, no invariants file, no wiki module.
+
+**Independent review.** Opus, given the criteria and the diff only. It ran `tests/live.test.sh` 5 times and `tests/live-signal.test.sh` 3 times (all passed) and ran an instrumented copy: in all 30 rounds across 3 runs one beat lost the push, so the concurrent case exercises the collision every round and each round's new-sha assertion holds. Every criterion met, no Critical or Important issue, verdict "Ready to merge: Yes". Its five Minor items are below.
+
+**Findings.** F1 (non-blocking in round 1) — fixed by 48aaae3. F2 (non-blocking in round 1) — fixed by 48aaae3. F3-F6 stand as in round 1 and are not raised again; this round's reviewer re-found F6 (the `CHANGELOG.md` clause on a session not being told, at `CHANGELOG.md:26`) and F4 (the sentence at `docs/handoff.md:184-186`). New, all non-blocking and none sending the change back:
+
+- **F7 — non-blocking, the plan's.** `docs/handoff.md:173` is 285 characters where its neighbours wrap at about 100; the 100-column criterion covers only the hook, so this is consistency.
+- **F8 — non-blocking, implement's.** `tests/live-signal.test.sh:181` uses the awk interval `/^# {10,}/`. The awk here handles it; mawk 1.3.3 (older Debian and Ubuntu images) reads `{10,}` as literal text, so the case would fail there with a false FAIL, never pass vacuously. `/^#          /` avoids it.
+- **F9 — non-blocking, the plan's.** `docs/handoff.md:173` and `scripts/live.sh:51`: "at 10 or more the hook can end `clear` during the REST delete" is imprecise: at 20 or more the hook can already be cut during the push `--delete`. "Can" stays true, so this is imprecision, not falsehood; it sits next to F5.
+
+Residual from the implement review, recorded not raised: the unlocked `seq` counter in `live()` (F3) could in theory make a published round look unchanged; the reviewer saw no flake in 8 runs and 30 instrumented rounds.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-18 — round 1: build, suite, six criteria met, independent review, six non-blocking findings · cost: 8m · opus-5-5 65k in + 333k cached / 7k out · sonnet-5-5 43k in + 2.4M cached / 8k out
 - 2026-11-18 — round 2 paused at step 2: Q1 raised (#100 also edits CHANGELOG.md) · cost: 1m · sonnet-5-5 25k in + 1.5M cached / 6k out
+- 2026-11-18 — round 2: Q1 answered, build, suite, six criteria met, independent review, F1/F2 fixed, three new non-blocking findings (F7-F9) · cost: 74m · opus-5-5 72k in + 742k cached / 11k out · sonnet-5-5 83k in + 2.7M cached / 10k out
