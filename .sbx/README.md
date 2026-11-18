@@ -81,7 +81,7 @@ flowchart TD
     U -- exec fails --> Z7[exit 1: could not check, nothing removed]
     U -- none, no unpushed commits, no --force --> R[sbx rm --force codeo-N] --> R1[delete the refs under refs/sandboxes/codeo-N/, print removed]
     U -- some, or unpushed commits, no --force --> Z4[list up to 10 commits, list the uncommitted work, exit 1, nothing removed]
-    U -- --force --> R2[sbx rm --force codeo-N]
+    U -- with --force --> R2[sbx rm --force codeo-N]
     R2 --> R3[move the refs to refs/codeo/ended/codeo-N/UTC/, say where they are kept]
     R3 -- uncommitted work --> R4[say its uncommitted work was not kept]
 ```

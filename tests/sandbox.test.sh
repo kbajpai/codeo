@@ -640,6 +640,26 @@ end_with_crlf_status_is_clean() {
     [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113'* ]] || fail "calls: $(sb_calls)"
 }
 
+end_on_a_crlf_detached_head_removes_nothing() {
+    end_setup endcrlfhead
+    printf '## HEAD (no branch)\r\n' >"$sb_dir/status"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_out" == *"is on a detached HEAD"* ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_with_crlf_status_and_stash_lines_prints_no_cr() {
+    end_setup endcrlflines
+    printf '## fix/x\r\n M a.txt\r\n' >"$sb_dir/status"
+    printf 'stash@{0}: WIP on fix/x: abc work\r\n' >"$sb_dir/stashes"
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_out" == *" M a.txt"* && "$sb_out" == *"has 1 stash(es):"* ]] || fail "stdout was: $sb_out"
+    [[ "$sb_out" != *$'\r'* ]] || fail "stdout has a CR: $(printf %q "$sb_out")"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
 end_with_nothing_to_lose_deletes_the_sandbox_refs() {
     end_setup endclear
     end_commit 1
@@ -1078,6 +1098,8 @@ cases=(
     end_force_with_uncommitted_work_says_it_is_not_kept
     end_with_a_failed_status_check_removes_nothing
     end_with_crlf_status_is_clean
+    end_on_a_crlf_detached_head_removes_nothing
+    end_with_crlf_status_and_stash_lines_prints_no_cr
     end_with_nothing_to_lose_deletes_the_sandbox_refs
     end_force_sets_the_refs_aside
     end_force_does_not_overwrite_refs_set_aside_earlier
