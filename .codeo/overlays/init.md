@@ -18,7 +18,7 @@ takes its lock from the `init.md` on it (`bash .devcontainer/scripts/devcontaine
 every skill commits its dossier onto it as it goes.
 
 **Hand off** to `/codeo:plan` — **in the issue's container.** This session is in the home
-container, where no lock exists, so `plan` run here stops. Print both ways to open it, with the
+container, where no lock exists, so `plan` run here stops. Print the ways to open it, with the
 number and branch filled in:
 
 - *In VS Code:* run Dev Containers: Clone Repository in Named Container Volume… (the
@@ -29,8 +29,9 @@ number and branch filled in:
   `bash codeo-container.sh issue <N> <branch>`. `codeo-container.sh` is the file the download line in
   `.devcontainer/README.md` saves; it needs only Docker. If `codeo-<N>` exists (a stash being resumed), remove it first with `docker rm -f codeo-<N>; docker volume rm codeo-<N>`, once `git status` in it shows nothing unpushed, or the command refuses. Then
   `bash codeo-container.sh shell <N>` opens a shell in `codeo-<N>`; start `claude` there.
+- *In a Docker Sandboxes sandbox:* on the host, run `bash codeo-sandbox.sh issue <N> <branch>`, then `bash codeo-sandbox.sh open <N>` (VS Code) or `bash codeo-sandbox.sh shell <N>`. `codeo-sandbox.sh` is the file the download line in `.sbx/README.md` saves. A sandbox is ended with `bash codeo-sandbox.sh end <N>`, not with `docker rm`.
 
-Either way, when the container has started its start script prints
+Whichever route, when the container has started its start script prints
 `lock: took the lock for #<N> on <branch>`; then run `/codeo:plan` there. If the start script
 lists a TODO instead, that comes first.
 

@@ -21,7 +21,8 @@
         "docs/**",
         "tests/**",
         ".devcontainer/**",
-        ".codeo/overlays/**"
+        ".codeo/overlays/**",
+        ".sbx/**"
       ],
       "build": "true",
       "test": "bash tests/run.sh",

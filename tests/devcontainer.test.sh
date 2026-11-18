@@ -1445,7 +1445,7 @@ start_settings_that_cannot_be_resolved_are_a_todo() {
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
     [[ $(cat "$ds_dir/claude/settings.json") == '{"a":1}' ]] || fail 'settings.json was changed'
-    n=$(ds_todos 'could not resolve'); ((n == 1)) || fail "wanted one 'could not resolve' TODO, got $n: $ds_err"
+    n=$(ds_todos 'could not resolve.*Remote Control'); ((n == 1)) || fail "wanted one 'could not resolve' TODO, got $n: $ds_err"
     n=$(ds_todos 'not valid JSON'); ((n == 0)) || fail "unexpected 'not valid JSON' TODO: $ds_err"
 }
 
@@ -1487,8 +1487,119 @@ start_leaves_no_temp_file_when_mv_fails() {
     chmod +x "$ds_dir/bin/mv"
     ds_ready_run
     ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
-    n=$(ds_todos 'could not write'); ((n == 1)) || fail "wanted one 'could not write' TODO, got $n: $ds_err"
-    [[ $(ls -A "$ds_dir/claude") == settings.json ]] || fail "leftover files: $(ls -A "$ds_dir/claude")"
+    n=$(ds_todos 'could not write.*Remote Control'); ((n == 1)) || fail "wanted one 'could not write' TODO, got $n: $ds_err"
+    [[ -z $(find "$ds_dir/claude" -name '.settings.*' -o -name '.claude.json.*') ]] || fail "leftover files: $(ls -A "$ds_dir/claude")"
+}
+
+# ds_trust_key: the path step 3d records, the physical path of the scratch clone.
+ds_trust_key() { (cd "$ds_dir/codeo-home" && pwd -P); }
+
+start_trusts_the_clone_in_claude() {
+    local key
+    ds_setup trustclaude || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    key=$(ds_trust_key)
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    jq -e --arg p "$key" '.projects[$p].hasTrustDialogAccepted == true' "$ds_dir/claude/.claude.json" >/dev/null \
+        || fail "the clone is not trusted: $(cat "$ds_dir/claude/.claude.json" 2>&1)"
+    jq -e --arg p "$key" '(.projects | keys) == [$p]' "$ds_dir/claude/.claude.json" >/dev/null \
+        || fail "projects holds more than the clone: $(cat "$ds_dir/claude/.claude.json" 2>&1)"
+    [[ $(stat -c %a "$ds_dir/claude/.claude.json" 2>/dev/null) == 600 ]] || fail "mode is not 600: $(stat -c %a "$ds_dir/claude/.claude.json" 2>&1)"
+}
+
+start_in_a_sandbox_skips_the_folder_check() {
+    local n
+    ds_setup sbxfolder || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mv "$ds_dir/codeo-home" "$ds_dir/codeo-122"
+    DS_REPO="$ds_dir/codeo-122" ds_ready_run
+    n=$(ds_todos "docker ps"); ((n == 1)) || fail "without the marker, wanted the folder TODO once, got $n: $ds_err"
+    : > "$ds_dir/sandbox-mark"
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" DS_REPO="$ds_dir/codeo-122" ds_ready_run
+    n=$(ds_todos "docker ps"); ((n == 0)) || fail "inside a sandbox, the folder TODO was listed: $ds_err"
+}
+
+start_trust_keeps_other_keys() {
+    local key
+    ds_setup trustkeep || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    key=$(ds_trust_key)
+    mkdir -p "$ds_dir/claude"
+    printf '{"numStartups":3,"projects":{"/x":{"a":1},"%s":{"allowedTools":["Bash"]}}}\n' "$key" > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ds_ready_run
+    jq -e --arg p "$key" '.numStartups == 3 and .projects["/x"].a == 1 and .projects[$p].allowedTools == ["Bash"] and .projects[$p].hasTrustDialogAccepted == true' \
+        "$ds_dir/claude/.claude.json" >/dev/null || fail "keys lost: $(cat "$ds_dir/claude/.claude.json")"
+}
+
+start_malformed_claude_state_is_a_todo() {
+    local n
+    ds_setup trustbad || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '{not json' > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/.claude.json") == '{not json' ]] || fail 'malformed .claude.json was changed'
+    n=$(ds_todos '.claude.json'); ((n == 1)) || fail "wanted one TODO naming .claude.json, got $n: $ds_err"
+}
+
+start_claude_state_not_an_object_is_a_todo() {
+    local n
+    ds_setup trustarr || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '[1]' > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/.claude.json") == '[1]' ]] || fail 'a non-object .claude.json was changed'
+    n=$(ds_todos '.claude.json'); ((n == 1)) || fail "wanted one TODO naming .claude.json, got $n: $ds_err"
+}
+
+start_trust_with_projects_not_an_object_is_a_todo() {
+    local n
+    ds_setup trustproj || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mkdir -p "$ds_dir/claude"
+    printf '{"projects":[]}' > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0"
+    [[ $(cat "$ds_dir/claude/.claude.json") == '{"projects":[]}' ]] || fail 'a .claude.json with array projects was changed'
+    n=$(ds_todos '.claude.json'); ((n == 1)) || fail "wanted one TODO naming .claude.json, got $n: $ds_err"
+}
+
+start_trust_fills_an_empty_state_file() {
+    local key n
+    ds_setup trustempty || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    key=$(ds_trust_key)
+    mkdir -p "$ds_dir/claude"
+    : > "$ds_dir/claude/.claude.json"
+    ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc, wanted 0: $ds_err"
+    jq -e --arg p "$key" '. == {projects: {($p): {hasTrustDialogAccepted: true}}}' "$ds_dir/claude/.claude.json" >/dev/null \
+        || fail "an empty .claude.json was not filled: $(cat "$ds_dir/claude/.claude.json" 2>&1)"
+    n=$(ds_todos 'could not write'); ((n == 0)) || fail "wanted no could-not-write TODO, got $n: $ds_err"
+}
+
+start_trust_uses_the_resolved_top_level() {
+    local key
+    ds_setup trustlink || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    key=$(ds_trust_key)
+    ln -s "$ds_dir/codeo-home" "$ds_dir/link" || { fail 'could not make the symlink'; return 0; }
+    DS_REPO="$ds_dir/link" ds_ready_run
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    jq -e --arg p "$key" '(.projects | keys) == [$p]' "$ds_dir/claude/.claude.json" >/dev/null \
+        || fail "the key is not the resolved path $key: $(cat "$ds_dir/claude/.claude.json" 2>&1)"
+}
+
+start_trust_leaves_no_temp_file() {
+    ds_setup trusttmp || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    ds_ready_run
+    [[ -z $(find "$ds_dir/claude" -name '.claude.json.*') ]] || fail "leftover files: $(ls -A "$ds_dir/claude")"
 }
 
 start_writes_the_title() {
@@ -2179,7 +2290,7 @@ st_run() {
     [[ -z ${ST_CMD_MODE:-} ]] || envs+=("CODEO_CMD_MODE=$ST_CMD_MODE")
     errf=$(mktemp -p "$pl_root")
     st_rc=0
-    st_out=$(cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
+    st_out=$(cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "CODEO_SANDBOX_MARK=${ST_MARK:-$pl_root/no-such-sandbox-mark}" "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
     st_err=$(<"$errf")
 }
 
@@ -2244,6 +2355,24 @@ session_title_with_both_variables_still_refreshes_the_window_title() {
     local ST_CMD_MODE=1 f=$st_dir/.vscode/settings.json
     st_run "$(st_json SessionStart $st_sid)" true
     [[ $(jq -r '."window.title"' "$f") == 'codeo [home]' ]] || fail "window.title $(jq -r '."window.title"' "$f" 2>&1)"
+}
+
+session_title_in_a_sandbox_names_the_issue() {
+    st_setup sandbox || return 0
+    local ST_MARK=$pl_root/sandbox-mark f=$st_dir/.vscode/settings.json
+    : >"$ST_MARK"
+    printf 'issue:   99\nbranch: feat/x\nstarted: now\n' >"$st_dir/.codeo/active"
+    st_run "$(st_json SessionStart $st_sid)" unset
+    ((st_rc == 0)) || fail "exit $st_rc"
+    [[ $(st_title) == 'codeo [#99] · a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(jq -r '."window.title"' "$f") == 'codeo [#99]' ]] || fail "window.title $(jq -r '."window.title"' "$f" 2>&1)"
+}
+
+session_title_is_silent_with_no_marker() {
+    st_setup no-marker || return 0
+    st_run "$(st_json SessionStart $st_sid)" unset
+    st_silent 'no marker'
+    [[ ! -e $st_dir/.vscode ]] || fail '.vscode was created'
 }
 
 session_title_on_a_prompt_after_clear() {
@@ -2415,6 +2544,16 @@ docs_say_two_same_named_containers_cannot_both_exist() {
     grep -q 'name already in use' "$readme" || fail 'the README lacks "name already in use"'
 }
 
+docs_readme_describes_folder_trust() {
+    local readme="$repo/.devcontainer/README.md"
+    grep -q 'hasTrustDialogAccepted' "$readme" || fail 'the README lacks hasTrustDialogAccepted'
+    grep -q 'Trust this folder' "$readme" || fail 'the README lacks "Trust this folder"'
+}
+
+docs_changelog_names_folder_trust() {
+    grep -q 'Trust this folder' "$repo/CHANGELOG.md" || fail 'CHANGELOG.md lacks "Trust this folder"'
+}
+
 docs_changelog_names_the_replay_sed_and_the_folder_limit() {
     local log="$repo/CHANGELOG.md"
     grep '(#52)' "$log" | grep -q 'tests/replay.test.sh' || fail 'the #52 bullet does not name tests/replay.test.sh'
@@ -2517,6 +2656,15 @@ cases=(
     start_settings_symlink_is_kept
     start_settings_keep_their_mode
     start_leaves_no_temp_file_when_mv_fails
+    start_trusts_the_clone_in_claude
+    start_in_a_sandbox_skips_the_folder_check
+    start_trust_keeps_other_keys
+    start_malformed_claude_state_is_a_todo
+    start_claude_state_not_an_object_is_a_todo
+    start_trust_with_projects_not_an_object_is_a_todo
+    start_trust_fills_an_empty_state_file
+    start_trust_uses_the_resolved_top_level
+    start_trust_leaves_no_temp_file
     start_writes_the_title
     start_env_vars_are_todos
     start_credential_variables_hide_the_login_advice
@@ -2564,6 +2712,8 @@ cases=(
     session_title_in_cmd_mode_accepts_any_value
     session_title_cmd_mode_writes_no_vscode_settings
     session_title_with_both_variables_still_refreshes_the_window_title
+    session_title_in_a_sandbox_names_the_issue
+    session_title_is_silent_with_no_marker
     session_title_on_a_prompt_after_clear
     session_title_keeps_an_existing_title
     session_title_is_silent_outside_a_dev_container
@@ -2579,6 +2729,8 @@ cases=(
     scripts_are_committed_executable
     docs_say_two_same_named_containers_cannot_both_exist
     docs_changelog_names_the_replay_sed_and_the_folder_limit
+    docs_readme_describes_folder_trust
+    docs_changelog_names_folder_trust
 )
 
 for current in "${cases[@]}"; do
