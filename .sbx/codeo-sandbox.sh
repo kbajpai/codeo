@@ -243,7 +243,8 @@ cmd_shell() {
 }
 
 # unpushed_commits <clone> <name>: print (one line each) the commits under refs/sandboxes/<name>/ that
-# are on no origin branch; return 0 with no output when there are none.
+# are on no origin branch and under no pull-request head (--remotes=origin covers refs/remotes/origin/pr/*,
+# which cmd_end fetches: a squash merge leaves the commits only there); return 0 with no output when none.
 unpushed_commits() {
     git -C "$1" rev-list --oneline --glob="refs/sandboxes/$2/*" --not --remotes=origin
 }
@@ -276,6 +277,7 @@ cmd_end() {
     fi
     fetch_sandbox "$dir" "$name" || die "could not fetch sandbox-$name into $dir, nothing removed"
     git -C "$dir" fetch origin || die "could not fetch origin: cannot prove anything is pushed, nothing removed"
+    git -C "$dir" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' || die "could not fetch the pull-request heads of origin: cannot prove anything is delivered, nothing removed"
     refs=$(git -C "$dir" for-each-ref --count=1 --format=x "refs/sandboxes/$name/") || die "could not read the refs of $dir, nothing removed"
     if [[ -z "$refs" ]] && ((force == 0)); then
         die "no branches of $name were found under refs/sandboxes/$name/ after the fetch, so nothing can be proved and nothing is removed: end $1 --force removes it anyway"

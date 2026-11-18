@@ -526,6 +526,49 @@ end_force_removes_and_says_where_the_commits_are() {
     [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
 }
 
+# end_pull_head <k>: publish the sandbox's branch work as refs/pull/<k>/head on origin, as a pull request
+# leaves it after a squash merge: no origin branch holds the commits.
+end_pull_head() {
+    $real_git -C "$sb_dir/sandbox.git" push -q "$sb_dir/origin.git" "refs/heads/work:refs/pull/$1/head"
+}
+
+end_after_a_squash_merge_removes_the_sandbox() {
+    end_setup endsquash
+    end_commit 2
+    end_pull_head 7
+    sb_run end 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$sb_out" == "removed codeo-113" ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" == *$'\nsbx rm --force codeo-113' ]] || fail "calls: $(sb_calls)"
+}
+
+end_lists_a_commit_made_after_the_pull_request_head() {
+    end_setup endafterpr
+    end_commit 1
+    end_pull_head 7
+    end_commit 1
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_out" == *"has 1 commit(s)"* && "$sb_out" == *"unpushed 1"* ]] || fail "stdout was: $sb_out"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
+end_with_a_failed_pull_request_fetch_removes_nothing() {
+    end_setup endprfetch
+    end_commit 1
+    end_pull_head 7
+    cat >"$sb_dir/bin/git" <<STUB
+#!/bin/bash
+echo "git \$*" >>"$sb_dir/calls"
+[[ "\$*" == *refs/pull/* ]] && exit 1
+exec "$real_git" "\$@"
+STUB
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$(tail -n 1 "$sb_dir/err")" == *"nothing removed"* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+}
+
 end_without_origin_removes_nothing() {
     end_setup endorigin
     $real_git -C "$sb_dir/work/codeo-113" remote set-url origin "$sb_dir/nowhere.git"
@@ -770,6 +813,9 @@ cases=(
     end_with_nothing_to_lose_removes_the_sandbox
     end_with_an_unpushed_commit_removes_nothing
     end_force_removes_and_says_where_the_commits_are
+    end_after_a_squash_merge_removes_the_sandbox
+    end_lists_a_commit_made_after_the_pull_request_head
+    end_with_a_failed_pull_request_fetch_removes_nothing
     end_without_origin_removes_nothing
     end_with_a_failed_sandbox_fetch_removes_nothing
     end_starts_a_stopped_sandbox_first
