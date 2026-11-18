@@ -106,7 +106,7 @@
 | `issue:99` | Make the sbx issue sandbox usable (consolidates #94, #85, #86, #114); board Status `Backlog` | ready | 2026-11-17 |
 | `qc:98:F1-F2` | #98 non-blocking minors: "step 10 fills it in" wording at `skills/plan/SKILL.md:232-233` (F1), `comm` shim inert under uutils (F2), ragged wrap at `:275-277` | dismissed — cosmetic, nothing breaks | 2026-11-15 |
 | `issue:100` | Release v1.0.7 once #70, #71, #96, #97, #98 close (all closed); board Status `Backlog` | ready | 2026-11-17 |
-| `issue:102` | `/codeo:issue` priority label when the project opts in; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `issue:102` | `/codeo:issue` priority labels; marked Ready on the engineer's request to schedule more issues | ready | 2026-11-18 |
 | `issue:103` | Let triage judge in-flight workflows from evidence; board Status `Backlog` | ready | 2026-11-17 |
 | `issue:104` | Publish a live-session signal for in-flight workflows; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
 | `qc:96:F16` | Changelog docs test reads only `## Unreleased`, so it fails on the release commit | filed #107 | 2026-11-15 |
@@ -116,13 +116,13 @@
 | `qc:97:F8-F21` | #97's non-blocking findings: `overlap.sh`, `qc-verdict.sh`, test guards, wording | filed #108 | 2026-11-15 |
 | `implement:96:login-persistence` | Claude's login does not survive a container rebuild | dismissed — nothing is lost, only a re-login | 2026-11-15 |
 | `issue:107` | Dev container follow-ups from #96; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
-| `issue:108` | Follow-ups #97 left; filed 2026-11-15, no branch, board Status `none` | leave in the backlog | 2026-11-15 |
+| `issue:108` | Follow-ups #97 left; marked Ready on the engineer's request to schedule more issues | ready | 2026-11-18 |
 | `qc:70:F9-F11-F12-J8` | #70's findings left for triage: Podman not detected by the role guard, `CODEO_CLEANUP_REMOVAL` in the production path, generic "home container only" wording, cleanup lists every archived issue | filed #116 | 2026-11-16 |
 | `qc:104:F10-F13-F14-F15-F16` | #104's findings left for triage (and F5, F7): lock-issue pattern mismatch, push-timeout wording, `ref delete` treats any Not Found as deleted, signal lingers after close, same-volume-name collision, future-dated beat, hook timeout | filed #116 | 2026-11-16 |
 | `qc:104:F3` | Web-session live signal's user label is the harness's git identity | filed #116 (referenced to #112; no requirement here) | 2026-11-16 |
 | `qc:71:F7-F9` | `board.sh set` prints one line per project; a board with no Backlog option fails every filing with no fix named; CHANGELOG omits the `issue:<N>` fingerprint change | filed #116 | 2026-11-16 |
 | `qc:107:F1-F3` | `rm -f -- ""` check unrecorded, CHANGELOG bullet overstates `codeo-root.sh`, weak title test | filed #116 | 2026-11-16 |
-| `issue:112` | Verify the live-session signal in a hosted web session; filed 2026-11-16, no branch, board Status `none` | leave in the backlog | 2026-11-16 |
+| `issue:112` | Verify the live-session signal in a hosted web session; marked Ready (needs a real hosted web session; best after #118 merges) | ready | 2026-11-18 |
 | `issue:114` | Dev container trusts the workspace folder in Claude Code; folded into #99 | already #99 — closed as superseded | 2026-11-17 |
 | `issue:116` | Follow-ups #70, #71, #104 and #107 left; filed 2026-11-16, board Status `none` | ready | 2026-11-16 |
 | `qc:113:G1-G2` | #113's container-first order in `codeo-container.sh` leaves a half-made container after a branch mismatch or failed clone | filed — folded into #99 | 2026-11-17 |
@@ -132,14 +132,16 @@
 | `qc:116:F7-F10-F11` | #116's leftovers: criterion 13 unchecked on #107, Podman marker test name, stash/abandon pins searching the whole section | filed #121 | 2026-11-18 |
 | `qc:116:F8-F9` | `live.sh` timeout comment wording; the 20 s `SessionEnd` figure assumes the default push timeout | folded into #118 | 2026-11-18 |
 | `qc:103:F13-F14-F18-F23` | Triage in-flight judging: resume with no step to name, unstable `parked:` fingerprint, resume through Ready, wrong `waits:` for a resumed stash, doc and comment gaps | filed #122 | 2026-11-18 |
-| `issue:121` | #116 QC leftovers; filed 2026-11-18, board Status `Backlog` | leave in the backlog | 2026-11-18 |
-| `issue:122` | Triage in-flight judging leftovers from #103; filed 2026-11-18, board Status `Backlog` | leave in the backlog | 2026-11-18 |
+| `issue:121` | #116 QC leftovers (tests, criterion 13); consolidated with #130 into #132 | already #132 — consolidated, engineer closes as superseded | 2026-11-18 |
+| `issue:122` | Triage in-flight judging leftovers from #103; marked Ready (shares docs/handoff.md with #108: run one at a time) | ready | 2026-11-18 |
 | `qc:99:F19-F21` | `.sbx/codeo-sandbox.sh`: no next step after a failed start-script exec, rerun needs a valid pin, `end` fetch failure names no way out | filed #125 | 2026-11-18 |
 | `qc:99:F24-minors` | #99's test gaps: devcontainer test fails inside an sbx sandbox, CHANGELOG read by line number, missing `run -d` and short-row tests | filed #125 | 2026-11-18 |
 | `qc:99:F17-F18-F22` | #99's evaluation-page wording contradictions | dismissed — the page records trials as they were (accepted recommendation) | 2026-11-18 |
-| `issue:123` | sbx sandbox lock records a Docker volume; filed 2026-11-18, board Status `none` | leave in the backlog | 2026-11-18 |
-| `issue:125` | #99 leftovers; filed 2026-11-18, board Status `none` | leave in the backlog | 2026-11-18 |
+| `issue:123` | sbx lock records a sandbox, not a volume; consolidated with #125 into #131 | already #131 — consolidated, engineer closes as superseded | 2026-11-18 |
+| `issue:125` | #99 sbx follow-ups; consolidated with #123 into #131 | already #131 — consolidated, engineer closes as superseded | 2026-11-18 |
 | `issue:126` | Issue number in the branch name; filed 2026-11-18, board Status `none` | ready | 2026-11-18 |
 | `qc:100:live-test-git-path` | `tests/live.test.sh` tests a relative `--git-path` result against the current directory, so the suite fails in a checkout with its own `.git/codeo-live-beat` | filed #130 | 2026-11-18 |
 | `qc:100:F2` | Archived `.codeo/100/plan.md` / `issue.md` stale status lines, two off-by-one changelog line numbers | dismissed — archived record only, nothing runs from it | 2026-11-18 |
-| `issue:130` | tests/live.test.sh stamp check against the cwd; filed 2026-11-18, board Status `Backlog` | leave in the backlog | 2026-11-18 |
+| `issue:130` | tests/live.test.sh stamp check against the cwd; consolidated with #121 into #132 | already #132 — consolidated, engineer closes as superseded | 2026-11-18 |
+| `issue:131` | sbx lock and #99 follow-ups (consolidates #123, #125); filed 2026-11-18, board Status `Backlog` | ready | 2026-11-18 |
+| `issue:132` | Test-suite fixes from #116 and #100 (consolidates #121, #130); filed 2026-11-18, board Status `Backlog` | leave in the backlog — until #118 merges, as it edits `tests/live.test.sh` too | 2026-11-18 |
