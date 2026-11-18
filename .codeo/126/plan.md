@@ -8,10 +8,9 @@
 
 ## Where this stands
 
-Exploration is done; nothing is drafted. Two decisions block the draft: how `/codeo:init` finds a
-workflow whose branch does not have the derived name (Q1), and what `claim.sh --carries` says when
-the derived name is taken by another issue's branch (Q2). The plan is drafted once both are
-answered.
+Q1 and Q2 are answered (both A). The plan is drafted as `.codeo/126/plan-draft.md` (not committed)
+and waits for the engineer's approval; after it the plan is written under `docs/plans/`, the
+footprint is checked against the other workflows in flight, and `## Outcome` is written.
 
 ## Questions
 
@@ -39,6 +38,7 @@ script changes and what steps 3 and 6 of `skills/init/SKILL.md` say.
 - No preference, you pick.
 
 **Answer:**
+A — look the branch up by its dossier. (Given in the conversation as "Q1 - A" on 2026-11-18, recorded here verbatim.)
 
 ### Q2 — What does `claim.sh --carries` say when the name is taken by another issue's branch?
 
@@ -64,6 +64,7 @@ the case at `tests/claim.test.sh:328` are reworded or removed.
 - No preference, you pick.
 
 **Answer:**
+A — keep the refusal, reword the remedy. (Given in the conversation as "Q2 - A" on 2026-11-18, recorded here verbatim.)
 
 ## Notes
 
@@ -85,3 +86,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-18 — Q1-Q2 raised · cost: 1m · fable-5-2 67k in + 449k cached / 4k out
+- 2026-11-18 — Q1-Q2 answered (both A), plan drafted and awaiting approval · cost: unavailable (mid-pass)
