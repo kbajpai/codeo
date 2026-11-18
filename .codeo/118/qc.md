@@ -8,11 +8,22 @@
 
 ## Where this stands
 
-Round 1 is written and clear: build and suite pass, all six criteria are met, and the independent review found nothing blocking. Six non-blocking findings are recorded for `/codeo:triage`. Next: `/codeo:close`.
+Round 2 of the pass is paused at step 2: `overlap.sh` found #100 editing `CHANGELOG.md`, which no dossier of this issue has raised (round 1 mistook it for the settled #99 overlap). Q1 is open. The round 2 checks run so far are not written up yet; resume by answering Q1.
 
 ## Questions
 
-None raised.
+### Q1 — #100 also edits `CHANGELOG.md`: proceed and coordinate, sequence after #100, or re-scope?
+
+**Why it matters:** `overlap.sh 118` prints `100 CHANGELOG.md` and `100 glob:CHANGELOG.md`: this workflow's footprint and #100's both name `CHANGELOG.md`. #100 is branch `chore/release-v1-0-7-once` ("Release v1.0.7 once #70, #71, #96, #97 and #98 are closed, and pin codeo to it", still open), assigned to kbajpai, at step `implement (working)`; its footprint is `.claude-plugin/plugin.json, CHANGELOG.md, .codeo/config.json, docs/plans/2026-11-18-release-v1-0-7.md, .codeo/100/**`. The release itself has landed on `main` (`7b25bc2 release: v1.0.7 (#127)`, merged into this branch at the start of round 2 with no conflict), while #100 is still open and its branch is still on origin. Round 1 of this file and `implement.md` read the same line as the #99 overlap that `plan.md` Q3 settled; they were wrong: #99 has merged and was a different workflow, and no dossier of this issue has raised #100.
+
+This branch adds one bullet at the end of `## Unreleased` and changes nothing else in `CHANGELOG.md`. If #100's branch still edits `## Unreleased` (retitling it to a version heading is what a release does), whichever of the two merges second gets a conflict in that file, and it is mine to resolve in `/codeo:close` or its own, not a code problem.
+
+**Options:**
+- **(a) Proceed and coordinate (recommended).** The release is already on `main`, the bullet merged in cleanly, and the conflict, if any, is one file with both sides kept. Verdict for round 2 is then written on the tree as it stands.
+- **(b) Sequence after #100.** Hold this pull request until #100 is merged or closed, then re-run the round.
+- **(c) Re-scope.** Drop the `CHANGELOG.md` bullet from this change and file it separately after the release.
+
+**Answer:**
 
 ## Notes
 
@@ -71,3 +82,4 @@ No `deploy=` line and no shared environment configured, so there is no `#### Env
 ## Log
 
 - 2026-11-18 — round 1: build, suite, six criteria met, independent review, six non-blocking findings · cost: 8m · opus-5-5 65k in + 333k cached / 7k out · sonnet-5-5 43k in + 2.4M cached / 8k out
+- 2026-11-18 — round 2 paused at step 2: Q1 raised (#100 also edits CHANGELOG.md) · cost: 1m · sonnet-5-5 25k in + 1.5M cached / 6k out
