@@ -55,6 +55,21 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-18: "go with the 
 
 Intended shape: one plan under `docs/plans/` (`2026-11-18-release-v1-0-7.md`), modelled on `docs/plans/2026-11-14-release-v1-0-6.md`; no reference doc, since nothing is a standing decision.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-18-release-v1-0-7.md` (unstaged, approved 2026-11-18) |
+| Shape | Plan under `docs/plans/`; no reference doc, since nothing is a standing decision |
+
+**Decisions.** Two pull requests: the release PR comes from `release/v1.0.7`, cut from `origin/main` in a worktree and opened by `/codeo:implement`, because `qc-verdict` fails a head carrying a live dossier; this branch carries the pin and the dossier. `main` is released as it stands, #99 included (init's scope decision). #118 also changes `CHANGELOG.md` and is not waited for (Q1 = proceed and coordinate): if it merges after the release PR opens, it writes its bullet under a new `## Unreleased` above `## v1.0.7`, which the release PR body says. You merge, tag (lightweight, `git tag v1.0.7 <SHA>`) and push with single commands; the agent runs the clean-clone test, publishes the GitHub Release in checklist step 8 form (title `v1.0.7`, changelog section only, no generated notes) after you say the tag is pushed, and checks the version after your rebuild. The changelog's three header lines stay as written, checked at planning.
+
+**Rejected.** Waiting for #118 (Q1). Re-titling the earlier `release: vX.Y.Z` Releases. Generated release notes.
+
+**Documentation pages the plan changes:** none. `docs/dev-environment-sbx-evaluation.md` names `1.0.6` only as recorded observations.
+
+**Risk for `/codeo:qc`.** Criteria 3-6 and 8 depend on your merge, tag and rebuild; criterion 7 is met when `/codeo:close`'s PR merges. Task 7 records a project-scope `codeo@codeo` entry that does not report 1.0.7 as a finding. Criterion 1 and 2 are re-read at Task 1 in case `main` moved.
+
 ### Footprint
 
 ```
@@ -64,10 +79,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-18 — Q1 raised · cost: 2m · fable-5-2 82k in + 661k cached / 6k out
+- 2026-11-18 — Q1 answered, draft approved; planned: docs/plans/2026-11-18-release-v1-0-7.md · cost: 9m · fable-5-2 88k in + 990k cached / 11k out · sonnet-5-5 93k in + 489k cached / 9k out
