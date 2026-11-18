@@ -53,6 +53,7 @@ echo "${0##*/} $*" >>"$d/calls"
 case "${0##*/} $1" in
     "sbx ls" | "sbx.exe ls") cat "$d/sandboxes" ;;
     "sbx create" | "sbx.exe create") pwd >"$d/create_cwd" ;;
+    "sbx run" | "sbx.exe run") [[ ! -e "$d/runfail" ]] || exit 1 ;;
     "sbx exec" | "sbx.exe exec")
         case "$*" in
             *container-name.sh*) cat "$d/lockname" ;;
@@ -441,16 +442,33 @@ issue_runs_the_start_script_with_the_identity() {
 }
 
 issue_rerun_on_an_existing_sandbox_creates_nothing() {
-    local state
-    for state in 'running (detached)' stopped; do
+    local state runs
+    for state in 'running (detached)' running stopped; do
         sb_setup "rerun-${state%% *}"
         mkdir -p "$sb_dir/work/codeo-113/.git"
         printf 'NAME AGENT STATUS\ncodeo-113 claude %s\n' "$state" >"$sb_dir/sandboxes"
         sb_run issue 113 fix/x
         ((sb_rc == 0)) || fail "$state: exited $sb_rc: $sb_err"
-        [[ "$(sb_calls)" != *"sbx create"* && "$(sb_calls)" != *"sbx run"* ]] || fail "$state: create or run: $(sb_calls)"
+        [[ "$(sb_calls)" != *"sbx create"* ]] || fail "$state: create: $(sb_calls)"
         [[ "$(sb_calls)" == *devcontainer-start.sh* ]] || fail "$state: no start exec"
+        runs=$(sb_calls | grep -c '^sbx run' || true)
+        if [[ $state == 'running (detached)' ]]; then
+            ((runs == 0)) || fail "$state: run called: $(sb_calls)"
+        else
+            { ((runs == 1)) && [[ "$(sb_calls)" == *'sbx run -d --name codeo-113'* ]]; } || fail "$state: runs=$runs: $(sb_calls)"
+        fi
     done
+}
+
+issue_leaves_the_sandbox_running_detached() {
+    sb_setup issuedetached
+    sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    local calls before
+    calls=$(sb_calls)
+    [[ "$(printf '%s\n' "$calls" | tail -n 1)" == 'sbx run -d --name codeo-113' ]] || fail "last call: $calls"
+    before=${calls%%sbx run -d*}
+    [[ "$before" == *devcontainer-start.sh* && "$before" == *container-name.sh* ]] || fail "order: $calls"
 }
 
 issue_writes_the_sandbox_marker() {
@@ -733,7 +751,7 @@ end_with_sbx_exe_fetches_with_git_exe_from_the_clone() {
 
 open_writes_the_title_and_opens_the_clone_folder() {
     sb_setup open
-    echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
+    echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
     sb_run open 113
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
     local want
@@ -749,13 +767,32 @@ open_writes_the_title_and_opens_the_clone_folder() {
     [[ "$(sb_calls)" != *$'\ncode '* ]] || fail "code also ran"
 }
 
-open_starts_a_stopped_sandbox_first() {
+open_starts_a_stopped_sandbox_detached() {
     sb_setup openstopped
     echo 'codeo-113 claude stopped' >"$sb_dir/sandboxes"
     sb_run open 113
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
-    [[ "$(sb_calls)" != *"sbx run"* && "$(sb_calls)" != *"sbx start"* ]] || fail "calls: $(sb_calls)"
-    [[ "$(sb_calls | sed -n 2p)" == "sbx exec codeo-113 bash .devcontainer/scripts/window-title.sh" ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls | sed -n 2p)" == "sbx run -d --name codeo-113" ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls | sed -n 3p)" == "sbx exec codeo-113 bash .devcontainer/scripts/window-title.sh" ]] || fail "calls: $(sb_calls)"
+}
+
+open_on_a_detached_sandbox_runs_nothing_more() {
+    sb_setup opendetached
+    echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
+    sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" != *"sbx run"* ]] || fail "calls: $(sb_calls)"
+}
+
+a_failed_run_d_is_one_line() {
+    sb_setup runfail
+    echo 'codeo-113 claude stopped' >"$sb_dir/sandboxes"
+    : >"$sb_dir/runfail"
+    sb_run open 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *"run -d --name codeo-113"* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_err_lines)" == 1 ]] || fail "stderr not one line: $sb_err"
+    [[ "$(sb_calls)" != *$'\ncode '* ]] || fail "code ran: $(sb_calls)"
 }
 
 open_on_a_missing_sandbox_names_the_command_that_creates_it() {
@@ -853,6 +890,12 @@ docs_readme_documents_each_sub_command() {
     done
 }
 
+docs_readme_says_issue_and_open_run_detached() {
+    local sec
+    sec=$(sed -n '/^## Stopped sandboxes/,/^## /p' "$repo/.sbx/README.md")
+    [[ "$sec" == *'run -d'* && "$sec" == *'`issue`'* && "$sec" == *'`open`'* ]] || fail "section was: $sec"
+}
+
 docs_readme_gives_the_download_line() {
     grep -Fq 'curl -fsSL -o codeo-sandbox.sh https://raw.githubusercontent.com/kbajpai/codeo/main/.sbx/codeo-sandbox.sh' \
         "$repo/.sbx/README.md" 2>/dev/null || fail "the download line is missing"
@@ -941,11 +984,14 @@ cases=(
     issue_leaves_the_clone_alone_when_the_sandbox_exists
     issue_runs_the_start_script_with_the_identity
     issue_rerun_on_an_existing_sandbox_creates_nothing
+    issue_leaves_the_sandbox_running_detached
     issue_writes_the_sandbox_marker
     issue_name_that_disagrees_with_the_lock_is_one_todo
     sandbox_path_prints_the_working_folder
     open_writes_the_title_and_opens_the_clone_folder
-    open_starts_a_stopped_sandbox_first
+    open_starts_a_stopped_sandbox_detached
+    open_on_a_detached_sandbox_runs_nothing_more
+    a_failed_run_d_is_one_line
     open_on_a_missing_sandbox_names_the_command_that_creates_it
     open_without_ssh_setup_says_to_run_setup_ssh
     open_with_sbx_exe_launches_through_cmd_exe
@@ -974,6 +1020,7 @@ cases=(
     end_lists_at_most_ten_commits
     end_with_sbx_exe_fetches_with_git_exe_from_the_clone
     docs_readme_documents_each_sub_command
+    docs_readme_says_issue_and_open_run_detached
     docs_readme_gives_the_download_line
     docs_readme_gives_the_default_extensions_setting
     docs_readme_says_end_replaces_the_docker_rm_line

@@ -192,6 +192,16 @@ check_name() {
     echo "todo: the sandbox is $name but its lock is for $lock: end it and run issue ${lock#codeo-} <branch>"
 }
 
+# ensure_detached <name> [state]: unless the state (read with sandbox_state when not given) is detached,
+# start the sandbox with sbx run -d (a stopped
+# or attached one is started or re-run detached) so it does not stop when idle.
+ensure_detached() {
+    local name=$1 state=${2:-}
+    [[ -n "$state" ]] || state=$(sandbox_state "$name")
+    [[ "$state" == detached ]] && return 0
+    "$sbx" run -d --name "$name" >/dev/null || die "could not start $name detached: run $sbx run -d --name $name"
+}
+
 cmd_issue() {
     (($# == 2)) || usage
     valid_number "$1" || usage
@@ -203,13 +213,15 @@ cmd_issue() {
     ensure_sandbox "$1"
     run_start "codeo-$1"
     check_name "codeo-$1"
+    ensure_detached "codeo-$1"
 }
 
-# require_sandbox <N>: exit 1 naming the creating command unless the sandbox codeo-N exists (a stopped one
+# require_sandbox <N>: leave the state in required_state; exit 1 naming the creating command unless the sandbox codeo-N exists (a stopped one
 # is fine: sbx exec starts it).
 require_sandbox() {
     local state
     state=$(sandbox_state "codeo-$1")
+    required_state=$state
     [[ "$state" != missing ]] ||
         die "codeo-$1 does not exist: create it with codeo-sandbox.sh issue $1 <branch>"
 }
@@ -249,6 +261,7 @@ cmd_open() {
     pick_sbx
     require_sandbox "$1"
     local name=codeo-$1 path ssh=ssh
+    ensure_detached "$name" "$required_state"
     "$sbx" exec "$name" bash .devcontainer/scripts/window-title.sh || die "could not write the window title in $name"
     path=$(sandbox_path "$name") || die "could not read the folder of $name"
     path=${path//$'\r'/}
