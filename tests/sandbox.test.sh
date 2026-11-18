@@ -43,6 +43,7 @@ sb_setup() {
     echo 'fix/x' >"$sb_dir/branch"
     echo 'codeo-113' >"$sb_dir/lockname"
     : >"$sb_dir/trusted"
+    cp "$(dirname "$script")/claude-image" "$sb_dir/default_pin"
     local n
     for n in sbx sbx.exe git git.exe code ssh ssh.exe cmd.exe; do
         cat >"$sb_dir/bin/$n" <<'STUB'
@@ -61,6 +62,8 @@ case "${0##*/} $1" in
     "ssh "* | "ssh.exe "*) [[ ! -e "$d/sshfail" ]] || exit 1 ;;
     "cmd.exe "*) pwd >"$d/cmd_cwd" ;;
     "git clone") mkdir -p "${@: -1}/.git" ;;
+    "git -C")
+        case "$*" in *"show origin/HEAD:.sbx/claude-image"*) [[ ! -f "$d/default_pin" ]] || cat "$d/default_pin" ;; esac ;;
     "git.exe config")
         case "$*" in *--get-all*) cat "$d/trusted" ;; esac ;;
 esac
@@ -263,12 +266,80 @@ a_pin_that_is_not_a_digest_is_refused() {
     CODEO_SBX_IMAGE="$sb_dir/image" sb_run issue 113 fix/x
     ((sb_rc == 1)) || fail "exited $sb_rc"
     [[ "$sb_err" == codeo-sandbox:*"$sb_dir/image"* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
-    [[ "$(sb_calls)" != *create* && "$(sb_calls)" != *clone* ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" != *create* ]] || fail "calls: $(sb_calls)"
     sb_setup nopin
     CODEO_SBX_IMAGE="$sb_dir/missing" sb_run issue 113 fix/x
     ((sb_rc == 1)) || fail "missing exited $sb_rc"
     [[ "$sb_err" == codeo-sandbox:*"$sb_dir/missing"* && "$sb_err" != *$'\n'* ]] || fail "missing stderr: $sb_err"
     [[ "$(sb_calls)" != *create* ]] || fail "calls: $(sb_calls)"
+}
+
+# pin_line <hex digit>: a pin line whose digest is 64 copies of that digit.
+pin_line() { printf 'docker.io/sbx/claude@sha256:%s\n' "$(printf '%64s' '' | tr ' ' "$1")"; }
+
+# pin_setup <name> <branch pin digit or -> <main pin digit or ->: a real origin whose fix/x branch and
+# main hold .sbx/claude-image with the given digest (- for no file), and a real clone codeo-113 on fix/x.
+pin_setup() {
+    sb_setup "$1"
+    local w=$sb_dir/work g="$real_git -c user.name=t -c user.email=t@example.com"
+    $real_git init -q -b main --bare "$sb_dir/origin.git"
+    $real_git init -q -b main "$sb_dir/seed"
+    $g -C "$sb_dir/seed" commit -q --allow-empty -m base
+    if [[ "$3" != - ]]; then
+        mkdir -p "$sb_dir/seed/.sbx"
+        pin_line "$3" >"$sb_dir/seed/.sbx/claude-image"
+        $real_git -C "$sb_dir/seed" add .sbx
+        $g -C "$sb_dir/seed" commit -q -m "main pin"
+    fi
+    $real_git -C "$sb_dir/seed" push -q "$sb_dir/origin.git" main
+    $g -C "$sb_dir/seed" checkout -q -b fix/x
+    if [[ "$2" != - ]]; then
+        mkdir -p "$sb_dir/seed/.sbx"
+        pin_line "$2" >"$sb_dir/seed/.sbx/claude-image"
+        $real_git -C "$sb_dir/seed" add .sbx
+        $g -C "$sb_dir/seed" commit -q -m "branch pin"
+    elif [[ "$3" != - ]]; then
+        $real_git -C "$sb_dir/seed" rm -q -r .sbx
+        $g -C "$sb_dir/seed" commit -q -m "no pin on the branch"
+    fi
+    $real_git -C "$sb_dir/seed" push -q "$sb_dir/origin.git" fix/x
+    $real_git clone -q --branch fix/x "$sb_dir/origin.git" "$w/codeo-113"
+    rm -f "$sb_dir/default_pin"
+    cat >"$sb_dir/bin/git" <<STUB
+#!/bin/bash
+echo "\${0##*/} \$*" >>"$sb_dir/calls"
+exec "$real_git" "\$@"
+STUB
+}
+
+issue_reads_the_pin_from_the_clone() {
+    pin_setup pinclone a b
+    sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *"sbx create "*" $(pin_line a) ."* ]] || fail "calls: $(sb_calls)"
+}
+
+issue_reads_the_pin_from_the_default_branch_when_the_branch_has_none() {
+    pin_setup pindefault - b
+    sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *"sbx create "*" $(pin_line b) ."* ]] || fail "calls: $(sb_calls)"
+}
+
+issue_without_any_pin_is_one_line() {
+    pin_setup pinnone - -
+    sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *CODEO_SBX_IMAGE*codeo-113/.sbx/claude-image*origin/HEAD:.sbx/claude-image* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *"sbx create"* ]] || fail "create was called"
+}
+
+issue_pin_override_wins_over_the_clone() {
+    pin_setup pinwins a b
+    pin_line c >"$sb_dir/image"
+    CODEO_SBX_IMAGE="$sb_dir/image" sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *"sbx create "*" $(pin_line c) ."* ]] || fail "calls: $(sb_calls)"
 }
 
 the_pin_file_is_a_digest() {
@@ -625,6 +696,10 @@ cases=(
     issue_creates_at_the_pinned_image
     a_pin_that_is_not_a_digest_is_refused
     the_pin_file_is_a_digest
+    issue_reads_the_pin_from_the_clone
+    issue_reads_the_pin_from_the_default_branch_when_the_branch_has_none
+    issue_without_any_pin_is_one_line
+    issue_pin_override_wins_over_the_clone
     issue_runs_the_start_script_with_the_identity
     issue_rerun_on_an_existing_sandbox_creates_nothing
     issue_writes_the_sandbox_marker

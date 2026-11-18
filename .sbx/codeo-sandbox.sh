@@ -68,15 +68,27 @@ sandbox_state() {
 # The pinned Claude image reference, passed to "sbx create" as its kit reference in place of the agent name.
 create_agent=''
 
-# read_pin: read the one-line pin file (CODEO_SBX_IMAGE, else claude-image next to this script) into
-# create_agent, refusing a missing file or a line that is not docker.io/sbx/claude@sha256:<64 hex>.
+# read_pin <N>: read the one-line pin into create_agent from the first of CODEO_SBX_IMAGE (a file path),
+# codeo-N/.sbx/claude-image, and origin/HEAD:.sbx/claude-image in the clone; refuse none of them, or a
+# line that is not docker.io/sbx/claude@sha256:<64 hex>.
 read_pin() {
-    local file=${CODEO_SBX_IMAGE:-$(dirname "${BASH_SOURCE[0]}")/claude-image} line=''
-    [[ -f "$file" ]] || die "the image pin $file is missing: it holds one line, docker.io/sbx/claude@sha256:<64 hex digits>"
-    read -r line <"$file" || [[ -n "$line" ]] || true
+    local dir=codeo-$1 source line=''
+    if [[ -n "${CODEO_SBX_IMAGE:-}" ]]; then
+        source=$CODEO_SBX_IMAGE
+        [[ -f "$source" ]] || die "the image pin $source is missing: it holds one line, docker.io/sbx/claude@sha256:<64 hex digits>"
+        read -r line <"$source" || [[ -n "$line" ]] || true
+    elif [[ -f "$dir/.sbx/claude-image" ]]; then
+        source=$dir/.sbx/claude-image
+        read -r line <"$source" || [[ -n "$line" ]] || true
+    else
+        source=origin/HEAD:.sbx/claude-image
+        line=$(git -C "$dir" show "$source" 2>/dev/null | head -n 1) || line=''
+        [[ -n "$line" ]] ||
+            die "no image pin: set CODEO_SBX_IMAGE to a file, or commit $dir/.sbx/claude-image, or put .sbx/claude-image on origin/HEAD (git show origin/HEAD:.sbx/claude-image)"
+    fi
     line=${line//$'\r'/}
     [[ "$line" =~ ^docker\.io/sbx/claude@sha256:[0-9a-f]{64}$ ]] ||
-        die "the image pin $file is not a digest: it must be one line, docker.io/sbx/claude@sha256:<64 hex digits>"
+        die "the image pin $source is not a digest: it must be one line, docker.io/sbx/claude@sha256:<64 hex digits>"
     create_agent=$line
 }
 
@@ -165,8 +177,8 @@ cmd_issue() {
     valid_number "$1" || usage
     valid_branch "$2" || usage
     pick_sbx
-    read_pin
     ensure_host_clone "$1" "$2"
+    read_pin "$1"
     ensure_windows_trust "$1"
     ensure_sandbox "$1"
     run_start "codeo-$1"
