@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 3 (after plan.md round 3, plan `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md`): started 2026-11-18. The branch already contains origin/main, and the overlap check prints nothing. Waiting on Task 23, the engineer's trial on their host (the extension policy rule, and `run -d` on a sandbox that is already running). Tasks 24-30 have not started. Next: the engineer runs Task 23 and pastes its output.
+Round 3 (after plan.md round 3, plan `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md`): started 2026-11-18. The branch already contains origin/main, and the overlap check prints nothing. Task 23 ran on the engineer's host: route A, and `run -d` works on a running sandbox (under `## Acceptance`). Tasks 24-29 are running here; Task 30 follows.
 
 ## Questions
 
@@ -810,6 +810,45 @@ removed codeo-122; its refs are kept in refs/codeo/ended/codeo-122/20261118T1140
 ### Step 13
 
 - Step 13 is not run. No issue other than #99 has a branch on origin, and step 12 already ran on an issue clone (it took the #99 lock), so with `main` step 13 would only repeat step 12.
+
+### Task 23 — the extension route and `run -d` (round 3 trial, 2026-11-18)
+
+Step 1, `sbx.exe policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"`, then `sbx.exe policy ls`:
+```
+  Added rule 3dbb2830-… to policy local (scope: global): *.gallery.vsassets.io [tcp]
+  Added rule 0db4c022-… to policy local (scope: global): *.gallerycdn.vsassets.io [tcp]
+  POLICY             SOURCE   APPLIES TO   SUMMARY
+  default-deny-all   local    all          network: deny when no rule decides
+  local-policy       local    all          network: 197 allow; filesystem read: 1 allow; filesystem write: 1 allow
+```
+
+Step 2: `issue 99 feat/make-sbx-issue-sandbox-usable` created `codeo-99` at `fd56087a…3593332` and took the lock. It also printed the `lock.sh` volume TODO, which is #123. sbx v0.53.0 offered v0.54.0; the engineer did not upgrade.
+
+Step 3: the first `sbx.exe ls`, 58 seconds after the create, already showed `○ stopped` (the idle stop). `run -d` attached and left it `● running (detached)`. A repeat was run so that `run -d` met a sandbox that was already running:
+```
+$ sbx.exe stop codeo-99
+  Stopped sandbox codeo-99
+$ sbx.exe exec codeo-99 true
+$ sbx.exe ls
+  codeo-99   claude   ● running (detached)   127.0.0.1:60046->9418/tcp4   D:\Downloads\task22\codeo-99   34m
+$ sbx.exe run -d --name codeo-99
+    ✓ sandbox codeo-99 — attaching to the existing sandbox (workspace D:\Downloads\task22\codeo-99)
+    ✓ sandbox codeo-99 — running detached
+56127225-9127-42c1-abcd-25c965688256
+$ sbx.exe ls
+  codeo-99   claude   ● running (detached)   127.0.0.1:60046->9418/tcp4   D:\Downloads\task22\codeo-99   34m
+```
+- `run -d` on a running sandbox succeeds and changes nothing, so Task 25 does not `stop` first.
+- A sandbox once started with `run -d` comes back `running (detached)` when a later `exec` starts it.
+- A bare `● running` (started by `exec` and never by `run -d`) was not seen on the host. Task 24 still reads it, from the documented layout.
+
+Step 4: in the Windows user settings, `remote.SSH.defaultExtensions` lists the three, and `remote.downloadExtensionsLocally` is removed.
+
+Step 5: `open 99` printed `window-title: codeo [#99]`. In the screenshot, the window is titled `codeo [#99]`, and `SSH: Codeo-99.Sbx - Installed` lists Claude Code for VS Code, Markdown Preview Mermaid Support and ShellCheck, installed with no 403. A fourth extension, GitHub Pull Requests, is synced from the engineer's settings.
+
+Step 6: `end 99` fetched the sandbox's branch and printed `removed codeo-99`. The policy rule is kept for Task 30.
+
+**Route A.** Task 27 documents the policy rule together with `remote.SSH.defaultExtensions`.
 
 ## Notes
 
