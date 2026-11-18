@@ -31,4 +31,4 @@ Went out on `qc.md` round 3: **Verdict: clear — forward to `/codeo:close`.** N
 
 ## Log
 
-- 2026-11-18 — opened #124; archived the dossier to `.codeo/done/99/` · board: In review on #99 · cost: COSTPLACEHOLDER
+- 2026-11-18 — opened #124; archived the dossier to `.codeo/done/99/` · board: In review on #99 · cost: 1m · sonnet-5-5 430k in + 1.3M cached / 5k out
