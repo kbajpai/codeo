@@ -177,6 +177,10 @@ check_name() {
     lock=$("$sbx" exec "$name" bash .devcontainer/scripts/container-name.sh --docker) || return 0
     lock=${lock//$'\r'/}
     [[ "$lock" == "$name" ]] && return 0
+    if [[ "$lock" != codeo-[1-9]* ]]; then
+        echo "todo: the sandbox is $name but its clone holds no workflow lock: run /codeo:init #${name#codeo-} on its branch, then issue ${name#codeo-} <branch> again"
+        return 0
+    fi
     echo "todo: the sandbox is $name but its lock is for $lock: end it and run issue ${lock#codeo-} <branch>"
 }
 
@@ -215,6 +219,20 @@ launch_code() {
     fi
 }
 
+# uri_path <path>: print the path with every byte outside A-Za-z0-9/._~- written %XX in upper-case hex
+# (byte-wise, so a multi-byte character becomes one %XX per byte).
+uri_path() {
+    local LC_ALL=C s=$1 out='' c i
+    for ((i = 0; i < ${#s}; i++)); do
+        c=${s:i:1}
+        case $c in
+            [A-Za-z0-9/._~-]) out+=$c ;;
+            *) out+=$(printf '%%%02X' "'$c") ;;
+        esac
+    done
+    printf '%s' "$out"
+}
+
 cmd_open() {
     (($# == 1)) || usage
     valid_number "$1" || usage
@@ -226,9 +244,9 @@ cmd_open() {
     path=${path//$'\r'/}
     [[ -n "$path" ]] || die "could not read the folder of $name"
     if ((windows == 1)); then ssh=ssh.exe; fi
-    "$ssh" "$name.sbx" -- true >/dev/null 2>&1 ||
+    "$ssh" -o BatchMode=yes -o ConnectTimeout=10 "$name.sbx" -- true >/dev/null 2>&1 ||
         die "$name.sbx does not resolve over SSH: run $sbx setup ssh, then open again"
-    launch_code "vscode-remote://ssh-remote+$name.sbx$path" || die "could not start VS Code"
+    launch_code "vscode-remote://ssh-remote+$name.sbx$(uri_path "$path")" || die "could not start VS Code"
 }
 
 cmd_shell() {

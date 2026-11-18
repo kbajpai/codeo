@@ -57,10 +57,11 @@ case "${0##*/} $1" in
         case "$*" in
             *container-name.sh*) cat "$d/lockname" ;;
             *devcontainer-start.sh*) echo "start-output" ;;
-            *" pwd") echo "/sandbox/clone" ;;
+            *" pwd") if [[ -f "$d/sbxpwd" ]]; then cat "$d/sbxpwd"; else echo "/sandbox/clone"; fi ;;
         esac ;;
     "ssh "* | "ssh.exe "*) [[ ! -e "$d/sshfail" ]] || exit 1 ;;
     "cmd.exe "*) pwd >"$d/cmd_cwd" ;;
+    "git config") [[ -z "${SB_REAL_GIT:-}" ]] || exec "$SB_REAL_GIT" "$@" ;;
     "git clone") mkdir -p "${@: -1}/.git" ;;
     "git -C")
         case "$*" in *"show origin/HEAD:.sbx/claude-image"*) [[ ! -f "$d/default_pin" ]] || cat "$d/default_pin" ;; esac ;;
@@ -542,7 +543,7 @@ end_force_sets_the_refs_aside() {
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
     local c=$sb_dir/work/codeo-113 ref
     [[ -z "$($real_git -C "$c" for-each-ref refs/sandboxes/codeo-113/)" ]] || fail "refs remain"
-    ref=$($real_git -C "$c" for-each-ref --format='%(refname)' refs/codeo/ended/codeo-113/ | grep '/work$')
+    ref=$($real_git -C "$c" for-each-ref --format='%(refname)' refs/codeo/ended/codeo-113/ | grep '/work$' || true)
     [[ "$ref" =~ ^refs/codeo/ended/codeo-113/[0-9]{8}T[0-9]{6}Z/work$ ]] || fail "ref was: $ref"
     [[ "$($real_git -C "$c" rev-parse "$ref")" == "$($real_git -C "$sb_dir/sandbox.git" rev-parse work)" ]] || fail "wrong tip"
     [[ "$sb_out" == *"${ref%work}"* ]] || fail "stdout was: $sb_out"
@@ -709,7 +710,7 @@ open_writes_the_title_and_opens_the_clone_folder() {
     sb_run open 113
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
     local want
-    want=$'sbx ls\nsbx exec codeo-113 bash .devcontainer/scripts/window-title.sh\nsbx exec codeo-113 pwd\nssh codeo-113.sbx -- true\ncode --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone'
+    want=$'sbx ls\nsbx exec codeo-113 bash .devcontainer/scripts/window-title.sh\nsbx exec codeo-113 pwd\nssh -o BatchMode=yes -o ConnectTimeout=10 codeo-113.sbx -- true\ncode --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone'
     [[ "$(sb_calls)" == "$want" ]] || fail "calls: $(sb_calls)"
     # CODEO_CODE replaces code
     printf '#!/bin/bash\necho "mycode $*" >>"%s/calls"\n' "$sb_dir" >"$sb_dir/bin/mycode"
@@ -753,7 +754,7 @@ open_without_ssh_setup_says_to_run_setup_ssh() {
     SB_SBX=sbx.exe sb_run open 113
     ((sb_rc == 1)) || fail "sbx.exe exited $sb_rc"
     [[ "$sb_err" == *"run sbx.exe setup ssh"* ]] || fail "sbx.exe stderr was: $sb_err"
-    [[ "$(sb_calls)" == *"ssh.exe codeo-113.sbx -- true"* && "$(sb_calls)" != *cmd.exe* ]] || fail "sbx.exe calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *"ssh.exe -o BatchMode=yes -o ConnectTimeout=10 codeo-113.sbx -- true"* && "$(sb_calls)" != *cmd.exe* ]] || fail "sbx.exe calls: $(sb_calls)"
 }
 
 open_with_sbx_exe_launches_through_cmd_exe() {
@@ -761,11 +762,46 @@ open_with_sbx_exe_launches_through_cmd_exe() {
     echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
     SB_SBX=sbx.exe sb_run open 113
     ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
-    [[ "$(sb_calls)" == *$'\nssh.exe codeo-113.sbx -- true\ncmd.exe /c code --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone' ]] || fail "calls: $(sb_calls)"
+    [[ "$(sb_calls)" == *$'\nssh.exe -o BatchMode=yes -o ConnectTimeout=10 codeo-113.sbx -- true\ncmd.exe /c code --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone' ]] || fail "calls: $(sb_calls)"
     [[ "$(sb_calls)" != *$'\ncode '* ]] || fail "code ran directly: $(sb_calls)"
     if [[ -d /mnt/c ]]; then
         [[ "$(<"$sb_dir/cmd_cwd")" == /mnt/c ]] || fail "cmd.exe ran in $(<"$sb_dir/cmd_cwd")"
     fi
+}
+
+open_checks_ssh_without_prompting() {
+    sb_setup openbatch
+    echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
+    sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\nssh -o BatchMode=yes -o ConnectTimeout=10 codeo-113.sbx'* ]] || fail "calls: $(sb_calls)"
+}
+
+open_percent_encodes_the_folder_path() {
+    sb_setup openenc
+    echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
+    echo '/wsl.localhost/U/home/a b/codeo-113' >"$sb_dir/sbxpwd"
+    sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\ncode --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/wsl.localhost/U/home/a%20b/codeo-113' ]] || fail "calls: $(sb_calls)"
+}
+
+issue_with_no_lock_says_to_start_the_workflow() {
+    sb_setup nolock
+    echo codeo-home >"$sb_dir/lockname"
+    sb_run issue 113 fix/x
+    local want='todo: the sandbox is codeo-113 but its clone holds no workflow lock: run /codeo:init #113 on its branch, then issue 113 <branch> again'
+    [[ "$sb_out" == *"$want"* ]] || fail "stdout was: $sb_out"
+    [[ "$(grep -c '^todo:' <<<"$sb_out")" == 1 ]] || fail "not exactly one todo: $sb_out"
+}
+
+issue_takes_the_identity_from_the_host_gitconfig() {
+    sb_setup gitcfg
+    mkdir -p "$sb_dir/home" "$sb_dir/work/codeo-113/.git"
+    printf '[user]\n\tname = Cfg Dev\n\temail = cfg@x.test\n' >"$sb_dir/home/.gitconfig"
+    unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL
+    HOME="$sb_dir/home" GIT_CONFIG_GLOBAL="$sb_dir/home/.gitconfig" SB_REAL_GIT="$real_git" sb_run issue 113 fix/x
+    [[ "$(sb_calls)" == *'env CODEO_CMD_MODE=1 GIT_AUTHOR_NAME=Cfg Dev GIT_AUTHOR_EMAIL=cfg@x.test bash .devcontainer'* ]] || fail "calls: $(sb_calls)"
 }
 
 shell_execs_bash_in_the_clone() {
@@ -861,6 +897,10 @@ cases=(
     open_on_a_missing_sandbox_names_the_command_that_creates_it
     open_without_ssh_setup_says_to_run_setup_ssh
     open_with_sbx_exe_launches_through_cmd_exe
+    open_checks_ssh_without_prompting
+    open_percent_encodes_the_folder_path
+    issue_with_no_lock_says_to_start_the_workflow
+    issue_takes_the_identity_from_the_host_gitconfig
     shell_execs_bash_in_the_clone
     end_with_nothing_to_lose_removes_the_sandbox
     end_with_an_unpushed_commit_removes_nothing
