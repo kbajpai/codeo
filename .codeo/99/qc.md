@@ -9,7 +9,7 @@
 
 ## Where this stands
 
-Round 2 is written below: back to `/codeo:plan` for two blocking findings from the host acceptance run (F9, the extension route; F10, sandboxes that stop when idle). Q1 is answered.
+Round 3 is written below: clear, forward to `/codeo:close`. All 28 criteria are met; F17-F24 are non-blocking.
 
 ## Questions
 
@@ -229,7 +229,119 @@ F9 and F10 come from the plan's design: the extension setting it chose, and an `
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 3 — 2026-11-18
+
+Under review: `implement.md`'s round 3 (Tasks 23-30), at `d962806`. Base `origin/main` (merge base `0dc7fa5`).
+
+#### Commands and output
+
+- `sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main` (exit 0).
+- `overlap.sh 99` → nothing printed (exit 0). `overlap.sh --outside 99` → nothing printed (exit 0).
+- `scope.sh origin/main HEAD` →
+  ```
+  scope: suite shell needed for unclassified paths:
+    .codeo/99/implement.md
+    .codeo/99/init.md
+    .codeo/99/plan.md
+    .codeo/99/qc.md
+    .codeo/config.json
+    CHANGELOG.md
+  suite.shell=true
+  ```
+- Build (`shell`: `true`) → exit 0.
+- Test (`shell`: `bash tests/run.sh`) → `all cases passed`, exit 0; `grep -c FAIL` on the log → 0.
+- Overlays `qc invariants-extra` and `qc wiki-rules` → exit 3 (none). There is no invariants file, no environment and no wiki module.
+- `git show --stat` of `f45a6da` and `279f193` `-- .devcontainer skills` → 0 lines each. `git diff origin/main...HEAD -- skills` → 0 lines.
+- Evaluation page:
+  - `grep -o 'was not tried' | wc -l` → 14;
+  - `grep -c 'stays outside the VM\|never holds the real token'` → 0;
+  - `grep -c 'cause unknown\|cause is not shown'` → 0;
+  - the #86 bullet (`:478`) cites "from trials T3 to T12".
+- Independent review (`QC review:`, opus) on `0dc7fa5..d962806`, given the criteria only: "With fixes", with 0 critical, 0 important and 9 minor.
+- Host evidence: Task 23 and Task 30 under `implement.md` `## Acceptance` (2026-11-18), together with round 2's Task 22 steps 1-12 for the criteria this round's code does not move.
+
+#### Criteria
+
+| Part | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| #94 | Image lines quoted, digest change stated, #86 agrees | met | evaluation page T3/T8/T10 and Fragility quote the shortened digests and say the digest changed; review minor F21 notes the "kit/image line" wording |
+| #94 | T13 settles the `gh` token; D1, Recommendation, Credentials cite it | met | T13 (`:424`), D1, Credentials; the wording is now limited to what T13 showed (`grep` → 0) |
+| #94 | Naming sentence no longer repeats or contradicts itself | met | U1 row, unchanged since round 1 |
+| #94 | U6, U8 → #85; U14 → #86; one trial range | met | `:477-478`; #86 cites "from trials T3 to T12" |
+| #94 | "1m47s", U4 file mode, "was not tried", Trials intro | met | `grep … \| wc -l` → 14; review minor F22 notes a second doubled "was not tried" at T12 (`:421`) |
+| #94 | `tests/run.sh` passes; no `.devcontainer`/`skills` diff | met | suite above; 0-line stats for the #94 commits `f45a6da` and `279f193` (judged on the part's own commits, as the plan's Global Constraints say; review minor F23) |
+| #85 | One documented command creates and starts the sandbox, ends with the lock line | met | Task 30 step 2 and Acceptance step 2: `issue` printed `lock: took the lock for #99 on …`, read as the engineer settled in plan.md Q16 (printed and taken; the start script's output order is unchanged) |
+| #85 | `user.name`/`user.email` print values; rerun changes neither | met | Acceptance step 3; `issue_takes_the_identity_from_the_host_gitconfig` |
+| #85 | `claude plugin list` shows both plugins at the pin | met | Acceptance step 4; Task 30 step 2 printed `plugins: superpowers, codeo v1.0.6` |
+| #85 | Name disagreeing with the lock gets one `todo:` | met | `issue_name_that_disagrees_with_the_lock_is_one_todo`; Task 28 keeps dev-container folder advice out of a sandbox |
+| #85 | No `dubious ownership` on first create, or the fix printed | met | Acceptance step 2, Task 30 step 2; `issue_without_wsl_distro_name_prints_the_trust_todo` |
+| #85 | `git push` from inside succeeds with no login | met | Acceptance step 5 |
+| #85 | `tests/run.sh` passes; dev container starts as before | met | suite above; Acceptance step 12 |
+| #86 | One step opens VS Code on the clone with the three extensions | met | Task 30 step 3: `open 99` gave `codeo [#99]` on `SSH: codeo-99.sbx` with Claude Code, Markdown Preview Mermaid and ShellCheck installed by themselves, after the one-time policy rule in `.sbx/README.md:13-23` |
+| #86 | Two sandboxes show different titles | met | Acceptance step 7 |
+| #86 | A session in a sandbox is titled with its issue | met | Acceptance step 6 |
+| #86 | Unpushed commit is not removed silently; nothing to lose removes it | met | Acceptance steps 8 and 8a; Task 30 steps 5 and 6 (uncommitted work is refused too); the `end_*` cases |
+| #86 | Same digest across days until the pin changes | met | Acceptance steps 2 and 10, and Task 30 step 2: `fd56087a…3593332` each time |
+| #86 | Cause of the stops stated, or shown not to occur in N repeats | met | `.sbx/README.md` Stopped sandboxes; Acceptance step 9 (10 of 10); Task 30 step 2 (`running (detached)` at 11m) |
+| #86 | `tests/run.sh` passes; dev container starts as before | met | suite above; Acceptance step 12 |
+| #114 | New home container: no trust dialog | met | Acceptance step 12 |
+| #114 | Same in an issue container and after rebuild | met | Acceptance step 12 (the #99 lock, and after **Rebuild Container**) |
+| #114 | `.claude/settings.json` in effect in the first session | met | Acceptance step 12 |
+| #114 | Only the clone folder is trusted | met | `start_trust_uses_the_resolved_top_level` |
+| #114 | Other keys kept | met | `start_trust_keeps_other_keys` |
+| #114 | Malformed state file left alone, TODO, exit 0 | met | `start_trust_with_projects_not_an_object_is_a_todo`, the malformed-file case, `start_trust_fills_an_empty_state_file` |
+| #114 | `tests/devcontainer.test.sh` covers the step | met | the `start_trust_*` cases |
+| #114 | `.devcontainer/README.md` and `CHANGELOG.md` describe it | met | `docs_readme_describes_folder_trust`, `docs_changelog_names_folder_trust` |
+
+#### Round 2's findings
+
+- F9 (blocking in round 2) — fixed by `0fc5ca9`: route A (the policy rule plus `remote.SSH.defaultExtensions`), shown by Tasks 23 and 30.
+- F10 (blocking in round 2) — fixed by `55b937d`, `4534ffd` and `ab2511f`: `issue` and `open` leave the sandbox `running (detached)`, shown by Task 30 steps 2-4.
+- F11 — settled by plan.md Q16. The `lock.sh` volume TODO is #123.
+- F12 — fixed by `7540534` and `285e8b2`; Task 30 step 5.
+- F13 — fixed by `55b937d` (`sandbox_state`) and `85f6b6e`.
+- F14-F16 — fixed by `3a98326` and `8727638`, apart from F17 below.
+
+#### Documentation
+
+The plan names `.sbx/README.md` (Prerequisites, Commands, Ending a sandbox and its flowchart, Stopped sandboxes), `CHANGELOG.md:9` and the evaluation page. The diff touches each of them, and each now says what the code does. The flowchart's Mermaid is not rendered here: no renderer is installed, and the project has no rule that requires one. Findings: F17 and F18 below.
+
+#### Findings
+
+All are non-blocking.
+
+- **F17 — non-blocking — `/codeo:implement`'s.** The evaluation page's T9 result ("the two earlier stops are unexplained") and the #86 bullet ("the unexplained stops") contradict the D4 row and the Fragility bullet, which state the cause.
+- **F18 — non-blocking — `/codeo:implement`'s.** The Credentials bullet says `gh auth status` "still listed `delete_repo`" (T6). T6 ran before T13, so "still" overstates it.
+- **F19 — non-blocking — `/codeo:plan`'s.** If the start-script `exec` fails, `issue` ends with sbx's own error and no `codeo-sandbox:` line naming the next step (`.sbx/codeo-sandbox.sh:182`).
+- **F20 — non-blocking — `/codeo:plan`'s.** Rerunning `issue` on an existing sandbox still needs a valid pin (`read_pin` comes before `ensure_sandbox`, `:214`). This is rare, because the pin is committed.
+- **F21 — non-blocking — `/codeo:plan`'s.** When `end`'s sandbox fetch fails, the message names no way out, even with `--force`. A broken sandbox can then be removed only with a raw `sbx rm --force` (`:374`).
+- **F22 — non-blocking — `/codeo:implement`'s.** T12 (`:421`) still says "was not tried" twice, and T3, T8 and T10 say "kit/image line" where the criterion says `Image:` lines. The digests were recorded shortened, and the page says so.
+- **F23 — non-blocking — note for `/codeo:close`.** The #94 criterion "`git diff --stat main -- .devcontainer skills` is empty" is met on that part's own commits, as the plan's Global Constraints say. On the consolidated branch, `.devcontainer/` has three changed files, which the #85, #86 and #114 parts require. The pull request description should say so.
+- **F24 — non-blocking — `/codeo:implement`'s.** Test gaps:
+  - `tests/sandbox.test.sh:1014` reads `CHANGELOG.md` line 9 by number;
+  - several deferred minors from the task reviews (the SDD ledger, listed in `implement.md` round 3) remain.
+
+  The one most worth doing is Task 28's: the devcontainer test without the marker fails if the suite runs inside an sbx sandbox.
+
+The review set these aside, with reasons:
+- the real `sbx` CLI's behaviour (the host trials are the evidence);
+- Claude Code's trust handling;
+- the README's host numbers;
+- clones under `/mnt/c`;
+- concurrent `.claude.json` writers;
+- stale refs left by a manual `sbx rm`;
+- the identity source;
+- "Why not migrate" read as the evaluation at its date;
+- shellcheck info notes.
+
+No issue was filed this pass. #123 was filed during planning.
+
+Every acceptance criterion is met, and none of F17-F24 blocks a merge. They can go to `/codeo:triage` after the merge, or into a follow-up.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 - 2026-11-17 — round 1: build and suite pass; 3 blocking findings from the plan's design (pin beside the downloaded script, end vs squash merges, stale clone on rerun); back to /codeo:plan · cost: 7m · opus-5-5 278k in + 5M cached / 38k out
 - 2026-11-18 — round 2 started: sync clean; overlap with #118 on CHANGELOG.md raised as Q1; stopped for the answer · cost: 0m · opus-5-5 19k in + 515k cached / 1k out
 - 2026-11-18 — round 2: build and suite pass; Q1 answered (proceed and coordinate with #118); 26 of 28 criteria met on host evidence; 2 blocking findings from the plan (defaultExtensions blocked by the sbx policy, idle sandboxes stop); back to /codeo:plan · cost: 16m · opus-5-5 174k in + 4.9M cached / 32k out
+- 2026-11-18 — round 3: build and suite pass; all 28 criteria met (host evidence: Tasks 22, 23, 30); 8 non-blocking findings; clear, forward to /codeo:close · cost: 11m · opus-5-5 149k in + 4.2M cached / 26k out
