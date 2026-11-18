@@ -140,3 +140,6 @@
 | `issue:123` | sbx sandbox lock records a Docker volume; filed 2026-11-18, board Status `none` | leave in the backlog | 2026-11-18 |
 | `issue:125` | #99 leftovers; filed 2026-11-18, board Status `none` | leave in the backlog | 2026-11-18 |
 | `issue:126` | Issue number in the branch name; filed 2026-11-18, board Status `none` | ready | 2026-11-18 |
+| `qc:100:live-test-git-path` | `tests/live.test.sh` tests a relative `--git-path` result against the current directory, so the suite fails in a checkout with its own `.git/codeo-live-beat` | filed #130 | 2026-11-18 |
+| `qc:100:F2` | Archived `.codeo/100/plan.md` / `issue.md` stale status lines, two off-by-one changelog line numbers | dismissed — archived record only, nothing runs from it | 2026-11-18 |
+| `issue:130` | tests/live.test.sh stamp check against the cwd; filed 2026-11-18, board Status `Backlog` | leave in the backlog | 2026-11-18 |
