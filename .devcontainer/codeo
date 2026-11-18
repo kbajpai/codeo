@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# codeo: the host command for working an issue in a dev container or a Docker Sandboxes (sbx)
+# sandbox. It wraps codeo-container.sh and codeo-sandbox.sh, which live in $CODEO_HOME (default
+# ~/codeo). Needs bash 4.3 or later on Linux; docker and sbx are each optional.
+#
+#   codeo help
+#
+# Every command checks its arguments first: a bad or missing argument, or an unknown command, prints
+# a usage on stderr, exits 2 and runs nothing. Add a command by writing a cmd_<name> function and
+# listing its name in the case in main.
+set -euo pipefail
+
+# die <message> [code]: print "codeo: <message>" on stderr and exit with code (default 1).
+die() {
+    echo "codeo: $1" >&2
+    exit "${2:-1}"
+}
+
+# usage: print the command list on stderr and exit 2.
+usage() {
+    cat >&2 <<'USAGE'
+usage: codeo <command> [args]
+  home [--rebuild]                                    start the home dev container
+  issue <N> [<branch>] [--rebuild] [--container|--sandbox]  start work on issue N
+  shell home|<N>                                      open a shell in the home or issue environment
+  open <N>                                            open the issue's sandbox in VS Code
+  list                                                list issue containers and sandboxes
+  rm <N> [--force]                                    remove the issue's container or sandbox
+  default [container|sandbox]                         show or set the default kind for issue
+  update                                              update codeo and its scripts
+  help                                                show this help
+USAGE
+    exit 2
+}
+
+# valid_number <N>: a positive integer without a leading zero.
+valid_number() {
+    [[ "$1" =~ ^[1-9][0-9]*$ ]]
+}
+
+# valid_branch <branch>: starts with a letter or digit, holds only A-Za-z0-9._/- and has no "..".
+valid_branch() {
+    [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ && "$1" != *..* ]]
+}
+
+# home_dir: print the directory holding the scripts and sandbox clones.
+home_dir() {
+    printf '%s\n' "${CODEO_HOME:-$HOME/codeo}"
+}
+
+# cmd_help: print the commands on stdout, and the PATH line when ~/.local/bin is not on PATH.
+cmd_help() {
+    [[ $# -eq 0 ]] || usage
+    cat <<'HELP'
+codeo: work a GitHub issue in a dev container or an sbx sandbox.
+
+  codeo home [--rebuild]                                    start the home dev container
+  codeo issue <N> [<branch>] [--rebuild] [--container|--sandbox]  start work on issue N
+  codeo shell home|<N>                                      open a shell in the home or issue environment
+  codeo open <N>                                            open the issue's sandbox in VS Code
+  codeo list                                                list issue containers and sandboxes
+  codeo rm <N> [--force]                                    remove the issue's container or sandbox
+  codeo default [container|sandbox]                         show or set the default kind for issue
+  codeo update                                              update codeo and its scripts
+  codeo help                                                show this help
+HELP
+    case ":$PATH:" in
+        *":$HOME/.local/bin:"*) ;;
+        *)
+            echo
+            echo '~/.local/bin is not on your PATH; add this line to your shell profile:'
+            echo 'export PATH="$HOME/.local/bin:$PATH"'
+            ;;
+    esac
+}
+
+main() {
+    [[ $# -gt 0 ]] || usage
+    local cmd=$1
+    shift
+    case "$cmd" in
+        help | -h | --help) cmd_help "$@" ;;
+        *) usage ;;
+    esac
+}
+
+main "$@"
