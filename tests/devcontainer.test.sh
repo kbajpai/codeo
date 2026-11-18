@@ -1529,14 +1529,13 @@ start_in_a_sandbox_passes_the_sandbox_to_the_lock() {
     [[ $(cat "$ds_dir/lock-calls") == 'take container --sandbox codeo-122' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
 }
 
-# An empty marker names no sandbox, so the name comes from container-name.sh --docker (stubbed here: the real one
-# reads the lock, which is not taken yet at that point).
+# An empty marker names no sandbox, so the name is the clone folder's.
 start_with_an_empty_marker_names_the_sandbox_from_the_folder() {
     ds_setup sbxempty || return 0
     ds_lock_stub; ds_branch feat/x
-    printf '#!/usr/bin/env bash\necho codeo-122\n' > "$ds_dir/codeo-home/.devcontainer/scripts/container-name.sh"
+    mv "$ds_dir/codeo-home" "$ds_dir/codeo-122"
     : > "$ds_dir/sandbox-mark"
-    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" ds_lock_ready
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" DS_REPO="$ds_dir/codeo-122" ds_lock_ready
     ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
     [[ $(cat "$ds_dir/lock-calls") == 'take container --sandbox codeo-122' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
 }

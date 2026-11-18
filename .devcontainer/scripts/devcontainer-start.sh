@@ -231,13 +231,13 @@ elif [[ $branch != "$base" ]]; then
         lock_rc=0
         lock_args=(take container)
         if [[ -e $mark ]]; then
-            # Inside a sandbox the lock records the sandbox: the marker's first line, else what container-name.sh says.
+            # Inside a sandbox the lock records the sandbox: the marker's first line, else the clone folder's name (the sandbox is named after it; lock.sh judges a bad value).
             IFS= read -r sbx_name < "$mark" || true
-            [[ -n $sbx_name ]] || sbx_name=$(bash .devcontainer/scripts/container-name.sh --docker 2>/dev/null) || sbx_name=
+            [[ -n $sbx_name ]] || sbx_name=$(basename "$clone")
             if [[ -n $sbx_name ]]; then
                 lock_args+=(--sandbox "$sbx_name")
             else
-                add_todo "the sandbox marker names no sandbox and container-name.sh failed: the lock records a volume"
+                add_todo "the sandbox marker names no sandbox and the clone folder has no name: the lock records a volume"
             fi
         fi
         lock_out=$(bash "$codeo_root/scripts/lock.sh" "${lock_args[@]}" 2>&1) || lock_rc=$?
