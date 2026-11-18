@@ -52,14 +52,21 @@ valid_branch() {
     [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ && "$1" != *..* ]]
 }
 
-# sandbox_state <name>: print missing, stopped or running from the rows of "$sbx" ls (name in column 1,
-# state word in column 3).
+# sandbox_state <name>: print missing, stopped, running or detached from the rows of "$sbx" ls (name in
+# column 1, a header row skipped; a leading ● or ○ marker is dropped before the status). A failed ls is a die, so callers assign
+# the output to a variable before testing it.
 sandbox_state() {
-    local name=$1 row_name _agent status _rest listing
+    local name=$1 row_name agent status listing
     listing=$("$sbx" ls) || die "could not list sandboxes with $sbx"
-    while read -r row_name _agent status _rest; do
-        [[ "$row_name" == "$name" ]] || continue
-        if [[ "$status" == running* ]]; then echo running; else echo stopped; fi
+    while read -r row_name agent status; do
+        [[ "$row_name" == "$name" && "$agent" != AGENT ]] || continue
+        status=${status#[●○]}
+        status=${status# }
+        case "$status" in
+            "running (detached)"*) echo detached ;;
+            running*) echo running ;;
+            *) echo stopped ;;
+        esac
         return 0
     done <<<"$listing"
     echo missing
@@ -101,7 +108,7 @@ sandbox_path() {
 # ensure_host_clone <N> <branch>: make ./codeo-N a clone on <branch>, or refuse one that is not; an existing
 # clone whose sandbox is missing is fast-forwarded to origin/<branch> (refused when it cannot be).
 ensure_host_clone() {
-    local dir=codeo-$1 branch=$2 current
+    local dir=codeo-$1 branch=$2 current state
     if [[ ! -e "$dir" ]]; then
         git clone --branch "$branch" "${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}" "$dir" ||
             die "git clone of $branch into $dir failed"
@@ -112,7 +119,8 @@ ensure_host_clone() {
     [[ "$current" == "$branch" ]] ||
         die "$dir is on '$current', not $branch: check out $branch there, or remove $dir, then run this again"
     # A sandbox already made from the clone owns it now: leave it be. Otherwise bring it up to origin.
-    [[ "$(sandbox_state "$dir")" == missing ]] || return 0
+    state=$(sandbox_state "$dir")
+    [[ "$state" == missing ]] || return 0
     git -C "$dir" fetch -q origin || die "git fetch origin in $dir failed: nothing was created"
     git -C "$dir" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1 ||
         die "origin has no branch origin/$branch: push it, then run this again"
@@ -140,8 +148,9 @@ ensure_windows_trust() {
 # one is left alone: sbx exec starts it), then write the marker session-title.sh looks for. The marker is
 # written on every run, so a rerun repairs a missing one.
 ensure_sandbox() {
-    local name=codeo-$1
-    if [[ "$(sandbox_state "$name")" == missing ]]; then
+    local name=codeo-$1 state
+    state=$(sandbox_state "$name")
+    if [[ "$state" == missing ]]; then
         (cd "$name" && "$sbx" create --clone --name "$name" --cpus 2 --memory 4g "$create_agent" .) ||
             die "could not create the sandbox $name"
     fi
@@ -200,7 +209,9 @@ cmd_issue() {
 # require_sandbox <N>: exit 1 naming the creating command unless the sandbox codeo-N exists (a stopped one
 # is fine: sbx exec starts it).
 require_sandbox() {
-    [[ "$(sandbox_state "codeo-$1")" != missing ]] ||
+    local state
+    state=$(sandbox_state "codeo-$1")
+    [[ "$state" != missing ]] ||
         die "codeo-$1 does not exist: create it with codeo-sandbox.sh issue $1 <branch>"
 }
 

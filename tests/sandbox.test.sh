@@ -149,16 +149,39 @@ codeo_sbx_overrides_both() {
 
 sandbox_state_reads_the_ls_rows() {
     sb_setup state
-    cat >"$sb_dir/sandboxes" <<'ROWS'
-NAME     AGENT   STATUS
-codeo-a  claude  running (detached)
-codeo-b  claude  stopped
-ROWS
     # shellcheck disable=SC2016
-    local probe='source "$1"; sbx=sbx; for n in codeo-a codeo-b codeo-c codeo claude; do echo "$n=$(sandbox_state $n)"; done'
-    local out
+    local probe='source "$1"; sbx=sbx; for n in codeo-a codeo-b codeo-c codeo-x SANDBOX; do echo "$n=$(sandbox_state $n)"; done'
+    local want=$'codeo-a=detached\ncodeo-b=stopped\ncodeo-c=running\ncodeo-x=missing\nSANDBOX=missing' out
+    cat >"$sb_dir/sandboxes" <<'ROWS'
+  SANDBOX     AGENT    STATUS                 PORTS                        WORKSPACE      CREATED
+  codeo-a     claude   ● running (detached)   127.0.0.1:60030->9418/tcp4   D:\w\codeo-a   6m
+  codeo-b     claude   ○ stopped                                           D:\w\codeo-b   1m
+  codeo-c     claude   ● running              127.0.0.1:60031->9418/tcp4   D:\w\codeo-c   1m
+ROWS
     out=$(PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c "$probe" _ "$script")
-    [[ "$out" == $'codeo-a=running\ncodeo-b=stopped\ncodeo-c=missing\ncodeo=missing\nclaude=missing' ]] || fail "states were: $out"
+    [[ "$out" == "$want" ]] || fail "states with markers were: $out"
+    cat >"$sb_dir/sandboxes" <<'ROWS'
+codeo-a claude running (detached)
+codeo-b claude stopped
+codeo-c claude running
+ROWS
+    out=$(PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c "$probe" _ "$script")
+    [[ "$out" == "$want" ]] || fail "states without markers were: $out"
+}
+
+a_failed_ls_stops_issue_with_one_line() {
+    sb_setup lsfail
+    cat >"$sb_dir/bin/sbx" <<'STUB'
+#!/bin/bash
+echo "sbx $*" >>"${0%/bin/*}/calls"
+[[ "$1" != ls ]] || exit 1
+exit 0
+STUB
+    chmod +x "$sb_dir/bin/sbx"
+    sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == "codeo-sandbox: could not list sandboxes with sbx" ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *"sbx create"* && "$(sb_calls)" != *"sbx exec"* ]] || fail "calls: $(sb_calls)"
 }
 
 the_script_is_committed_executable_with_a_bash_shebang() {
@@ -891,6 +914,7 @@ cases=(
     sbx_is_preferred_over_sbx_exe
     codeo_sbx_overrides_both
     sandbox_state_reads_the_ls_rows
+    a_failed_ls_stops_issue_with_one_line
     the_script_is_committed_executable_with_a_bash_shebang
     config_suite_covers_the_sandbox_folder
     issue_clones_the_branch_on_the_host
