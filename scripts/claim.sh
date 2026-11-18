@@ -19,8 +19,9 @@
 #   claim.sh --carries <issue> <branch> <repo>
 #       Reads origin/<branch> in <repo> (the caller fetches first) and says what the branch adds
 #       beyond origin/<base> under .codeo/: this issue's init.md, another issue's dossier (any
-#       .codeo/<M>/ or done/<M>/, the first by path), or none. `init` runs it when origin
-#       already has the derived branch name, to tell a resume from a collision.
+#       .codeo/<M>/ or done/<M>/, the first by path), or none. `init` runs it on the derived branch
+#       name when origin has it, and on a branch found by its dossier, to tell a resume from a
+#       collision.
 #         0  "claim: <branch> carries #N's init.md (| Issue | …)": this issue's branch, a resume
 #         2  one stdout line "claim: <branch> already exists on origin — pushed by <author, date>;
 #            it carries #M's dossier (| Issue | …)" (or "it carries no dossier"), then one line
