@@ -214,6 +214,16 @@ Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ## Notes
 
+### Footprint (round 3 draft)
+
+```
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md, docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md, CHANGELOG.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
+
 ### Confirmed for the #114 part (no question)
 
 The issue asks planning to confirm where the trust decision is stored. Claude Code's documentation (permissions page, "What runs before you trust a folder", and the `.claude` directory page, read 2026-11-17) says: a folder is trusted by `projects["<path>"].hasTrustDialogAccepted: true` in `~/.claude.json`; with `CLAUDE_CONFIG_DIR` set the file is `$CLAUDE_CONFIG_DIR/.claude.json`; in a git repository the path is the repository root; and trust of a parent folder does not count as trust of the folder. It also says the VS Code extension "asks for the same trust" in its "Trust this folder in Claude Code?" dialog. This container agrees: `/workspaces/.claude/.claude.json` has `projects["/workspaces/codeo-99"].hasTrustDialogAccepted: true`.
