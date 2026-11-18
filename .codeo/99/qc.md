@@ -5,15 +5,26 @@
 | Issue | https://github.com/kbajpai/codeo/issues/99 |
 | Branch | `feat/make-sbx-issue-sandbox-usable` |
 | Plan | `docs/plans/2026-11-17-sbx-issue-sandbox.md` |
-| Updated | 2026-11-17 |
+| Updated | 2026-11-18 |
 
 ## Where this stands
 
-Round 1 is written below: back to `/codeo:plan` for three blocking findings (F1-F3) the plan's own text leads to. Task 14, the engineer's host acceptance run, has not run; the criteria only it can show are `not yet checkable`.
+Round 2 has started (2026-11-18): step 2 raised Q1, an overlap with #118 on `CHANGELOG.md`. The pass stops until Q1 is answered, then goes on from step 2.
 
 ## Questions
 
-None.
+### Q1 — #118 also lists `CHANGELOG.md`: proceed and coordinate, sequence after #118, or re-scope?
+
+`overlap.sh 99` printed `118	CHANGELOG.md` and `118	glob:CHANGELOG.md`. #118 (branch `feat/live-signal-leftovers-104-refresh`, assignee kbajpai, step `init (working)`) lists `CHANGELOG.md` in its footprint and has changed no file yet (`changed: none`). This branch adds one bullet and amends another in the same file.
+
+**Why it matters:** QC cannot go past step 2 until this is settled. *Proceed* lets the pass go on now. *Sequence after #118* means #99 waits for #118 to merge before it goes to a pull request. *Re-scope* means this branch drops its `CHANGELOG.md` bullets.
+
+**Options:**
+- *Proceed and coordinate* (recommended): both changes add bullets to the changelog's unreleased list. Whichever merges second gets a small conflict and resolves it by keeping both bullets.
+- *Sequence after #118*: #99 waits for #118, which has not started work yet.
+- *Re-scope*: this branch drops its changelog bullets. Two acceptance criteria ask for `CHANGELOG.md` to describe the change, so this is not a real option.
+
+**Answer:**
 
 ## Notes
 
@@ -105,3 +116,4 @@ The code does what the plan says for F1-F3. In each case the plan's design is wh
 
 ## Log
 - 2026-11-17 — round 1: build and suite pass; 3 blocking findings from the plan's design (pin beside the downloaded script, end vs squash merges, stale clone on rerun); back to /codeo:plan · cost: 7m · opus-5-5 278k in + 5M cached / 38k out
+- 2026-11-18 — round 2 started: sync clean; overlap with #118 on CHANGELOG.md raised as Q1; stopped for the answer · cost: 0m · opus-5-5 19k in + 515k cached / 1k out
