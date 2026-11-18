@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1 is open. Nothing is drafted until it is answered.
+Q1 is answered (proceed and coordinate). The draft plan is at `.codeo/100/plan-draft.md`, awaiting the engineer's approval.
 
 What exploration found:
 - **The gate is met.** #70, #71, #96, #97, #98 and #99 all read `CLOSED` / `COMPLETED`.
@@ -45,6 +45,7 @@ I recommend *proceed and coordinate*: #118 has not started building, and the iss
 **Options:** proceed and coordinate · sequence after #118 · re-scope.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-18: "go with the recommended, proceed and coordinate"; recorded here by the skill).
 
 ## Notes
 
