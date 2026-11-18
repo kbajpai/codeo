@@ -94,4 +94,4 @@ flowchart TD
 
 ## Stopped sandboxes
 
-A sandbox has been seen stopped when its work was not finished; the cause is not known. `open`, `shell`, `end` and a repeated `issue` start a stopped sandbox themselves. To start it by hand, run `sbx run -d --name codeo-<N>`.
+A sandbox that only `sbx create` and `sbx exec` have started stops by itself about a minute after the last `exec` ends, with nothing attached to it. `issue` creates the sandbox that way, so a sandbox left idle after `issue` is soon `stopped`, and an open VS Code window loses its host. One started with `sbx run -d --name codeo-<N>` stays `running (detached)` while idle: two sandboxes started that way stayed up through four idle minutes, and ten stop-and-start cycles of one left the other running. `open`, `shell`, `end` and a repeated `issue` start a stopped sandbox themselves. To keep one up, run `sbx run -d --name codeo-<N>` after `issue`.
