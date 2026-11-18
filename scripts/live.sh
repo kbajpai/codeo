@@ -32,7 +32,7 @@
 #       machine: <label>
 #       host: <container|web|local>
 #       beat: <epoch seconds>
-#   The machine is $CODEO_MACHINE, else the container's volume, else `web-<first 8 of the session>`,
+#   The machine is $CODEO_MACHINE, else the container's volume or sandbox, else `web-<first 8 of the session>`,
 #   else `hostname`, cut to 64 characters of [A-Za-z0-9._-] and made a valid ref component. The
 #   commit's identity is codeo-live <codeo-live@invalid>, passed per command; no git config is read
 #   for it or written, and no email address goes in the message.
@@ -103,7 +103,7 @@ machine_label() {
         name=$CODEO_MACHINE
     else
         case $host in
-            container) name=$(lock_field volume) ;;
+            container) name=$(lock_field volume); [[ -n $name ]] || name=$(lock_field sandbox) ;;
             web) name=$(lock_field session) ; [[ -z $name || $name == unknown ]] || name=web-${name:0:8} ;;
         esac
         [[ -n $name && $name != unknown ]] || name=$(hostname 2> /dev/null || echo unknown)

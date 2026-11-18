@@ -260,6 +260,10 @@ assert_eq "local" "refs/codeo/live/104/$host_label" "$(refs)"
 new_world; clone_with_lock 104 container unknown
 run beat --force
 assert_eq "container, volume unknown" "refs/codeo/live/104/$host_label" "$(refs)"
+new_world; clone_with_lock 104 local
+printf 'issue:   104\nbranch:  feat/x\nstarted: 2026-11-15\nhost:    container\nsandbox: codeo-104\n' > "$clone/.codeo/active"
+run beat --force
+assert_eq "container, sandbox line" refs/codeo/live/104/codeo-104 "$(refs)"
 
 case_desc=user_falls_back_to_git_user_name_and_never_an_email
 new_world; clone_with_lock 104 container codeo-104
