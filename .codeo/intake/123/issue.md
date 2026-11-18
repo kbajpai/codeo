@@ -1,4 +1,4 @@
-# Issue new-lock-volume-in-sbx-sandbox — issue
+# Issue #123 — issue
 
 | | |
 |---|---|
@@ -7,7 +7,7 @@
 
 ## Where this stands
 
-Drafted; waiting for the engineer's approval. Title: "Record an sbx sandbox in the workflow lock instead of a Docker volume". Labels: `enhancement`. No Issue Type (the repository defines none). Body: `body.md` beside this file.
+Filed as #123 (https://github.com/kbajpai/codeo/issues/123), approved by the engineer 2026-11-18.
 
 ## Questions
 
@@ -43,6 +43,7 @@ Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ## Outcome
 
-_Pending — written at filing._
+Filed #123: "Record an sbx sandbox in the workflow lock instead of a Docker volume", label `enhancement`, no Issue Type. Body in `body.md`.
 
 ## Log
+- 2026-11-18 — filed #123 (delegated by /codeo:plan for #99, Q16) · cost: 7m · opus-5-5 16k in + 2.4M cached / 7k out
