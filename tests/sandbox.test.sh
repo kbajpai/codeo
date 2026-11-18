@@ -846,9 +846,33 @@ docs_readme_states_the_stops() {
 }
 
 docs_readme_says_how_to_move_the_pin() {
-    local readme="$repo/.sbx/README.md"
-    { grep -Fq '.sbx/claude-image' "$readme" && grep -Fq 'CHANGELOG' "$readme"; } 2>/dev/null ||
-        fail "the README does not say the pin moves by editing .sbx/claude-image with a CHANGELOG line"
+    grep -Eq '\.sbx/claude-image.*CHANGELOG|CHANGELOG.*\.sbx/claude-image' "$repo/.sbx/README.md" 2>/dev/null ||
+        fail "no README line has both .sbx/claude-image and CHANGELOG"
+}
+
+docs_readme_says_where_the_pin_is_read() {
+    local readme="$repo/.sbx/README.md" s
+    for s in 'CODEO_SBX_IMAGE' 'codeo-<N>/.sbx/claude-image' 'origin/HEAD'; do
+        grep -Fq -- "$s" "$readme" 2>/dev/null || fail "the README does not name $s"
+    done
+}
+
+docs_readme_says_where_forced_refs_go() {
+    grep -Fq 'refs/codeo/ended/codeo-<N>/' "$repo/.sbx/README.md" 2>/dev/null || fail "the README does not name refs/codeo/ended/codeo-<N>/"
+}
+
+docs_readme_names_codeo_code() {
+    grep -Fq 'CODEO_CODE' "$repo/.sbx/README.md" 2>/dev/null || fail "the README does not name CODEO_CODE"
+}
+
+docs_the_hand_off_says_whichever_route() {
+    local f="$repo/.codeo/overlays/init.md"
+    grep -Fq 'Whichever route' "$f" || fail "init overlay lacks 'Whichever route'"
+    ! grep -Fq 'Either way' "$f" || fail "init overlay still says 'Either way'"
+}
+
+docs_evaluation_page_names_the_script_as_it_is() {
+    ! grep -Fq 'does not exist yet' "$repo/docs/dev-environment-sbx-evaluation.md" || fail "the evaluation page says the script does not exist yet"
 }
 
 docs_changelog_names_the_sandbox_route() {
@@ -927,6 +951,11 @@ cases=(
     docs_readme_says_end_replaces_the_docker_rm_line
     docs_readme_states_the_stops
     docs_readme_says_how_to_move_the_pin
+    docs_readme_says_where_the_pin_is_read
+    docs_readme_says_where_forced_refs_go
+    docs_readme_names_codeo_code
+    docs_the_hand_off_says_whichever_route
+    docs_evaluation_page_names_the_script_as_it_is
     docs_changelog_names_the_sandbox_route
     docs_the_hand_off_names_the_third_route
 )

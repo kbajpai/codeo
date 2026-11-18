@@ -26,14 +26,14 @@ Download the script once:
 curl -fsSL -o codeo-sandbox.sh https://raw.githubusercontent.com/kbajpai/codeo/main/.sbx/codeo-sandbox.sh
 ```
 
-Run the commands from the directory that holds the downloaded file. The clone `codeo-<N>` is made in that directory. `codeo-sandbox.sh` reads the image pin from `claude-image` beside it; `CODEO_SBX_IMAGE` names another file, and `CODEO_REPO_URL` names another repository to clone (default `https://github.com/kbajpai/codeo.git`).
+Run the commands from the directory that holds the downloaded file. The clone `codeo-<N>` is made in that directory. The script reads the image pin from the first of these that exists: the file `CODEO_SBX_IMAGE` names; `codeo-<N>/.sbx/claude-image` in the clone; `.sbx/claude-image` on `origin/HEAD` of the clone (`git -C codeo-<N> show origin/HEAD:.sbx/claude-image`). No file beside the script is read. `CODEO_REPO_URL` names another repository to clone (default `https://github.com/kbajpai/codeo.git`), and `CODEO_CODE` names the VS Code program `open` runs, in place of `code`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `bash codeo-sandbox.sh issue <N> <branch>` | Clones `<branch>` into `./codeo-<N>` (or checks the clone is on `<branch>`), creates the sandbox `codeo-<N>` with 2 CPUs and 4 GB of memory at the pinned image, and runs the dev container's start script in it. That prints `lock: took the lock for #<N> on <branch>` and then `ready` or `TODO` lines. Run again, it creates nothing and starts a stopped sandbox. It prints one `todo:` line when the sandbox's lock names another issue. |
-| `bash codeo-sandbox.sh open <N>` | Writes the window title in the sandbox and opens the sandbox's working folder in VS Code over SSH (`codeo-<N>.sbx`). It checks `ssh codeo-<N>.sbx -- true` first (`ssh.exe` with `sbx.exe`) and, when that fails, says to run `sbx setup ssh`. |
+| `bash codeo-sandbox.sh issue <N> <branch>` | Clones `<branch>` into `./codeo-<N>` (or checks the clone is on `<branch>`; when the clone exists and the sandbox does not, it fetches `origin` and fast-forwards the clone to `origin/<branch>`, and stops with one line when it cannot), creates the sandbox `codeo-<N>` with 2 CPUs and 4 GB of memory at the pinned image, and runs the dev container's start script in it. That prints `lock: took the lock for #<N> on <branch>` and then `ready` or `TODO` lines. Run again, it creates nothing and starts a stopped sandbox. It prints one `todo:` line when the sandbox's lock names another issue. |
+| `bash codeo-sandbox.sh open <N>` | Writes the window title in the sandbox and opens the sandbox's working folder in VS Code over SSH (`codeo-<N>.sbx`). It checks `ssh codeo-<N>.sbx -- true` first, without a prompt and with a 10-second timeout (`ssh.exe` with `sbx.exe`) and, when that fails, says to run `sbx setup ssh`. |
 | `bash codeo-sandbox.sh shell <N>` | Opens a login bash in the sandbox's working folder. Start `claude` there. |
 | `bash codeo-sandbox.sh end <N> [--force]` | Removes the sandbox when nothing in it is unpushed (see Ending a sandbox). |
 
@@ -55,7 +55,7 @@ sequenceDiagram
     S-->>E: one todo: line when the lock names another issue
 ```
 
-With `sbx.exe` from WSL2, the sandbox's working folder is `/wsl.localhost/$WSL_DISTRO_NAME<the clone's path on the host>`, and only Windows Git can fetch from the sandbox. `issue` adds a `safe.directory` entry for that path to Windows Git's global config once, or prints the `git.exe config` line as a `todo:` when `git.exe` is missing; `end` fetches with `git.exe`.
+With `sbx.exe` from WSL2, the sandbox's working folder is `/wsl.localhost/$WSL_DISTRO_NAME<the clone's path on the host>`, and only Windows Git can fetch from the sandbox. `issue` adds a `safe.directory` entry to Windows Git's global config once, or prints the `git.exe config` line as a `todo:` when `git.exe` is missing; `end` fetches with `git.exe`. The entry is written `%(prefix)///wsl.localhost/<distro><the clone's path on the host>`, which is the clone's path as Windows Git sees it.
 
 The start script turns on `remoteControlAtStartup` in the sandbox, as it does in a dev container. That is untried in a sandbox, and so is Remote Control from one.
 
@@ -72,21 +72,23 @@ flowchart TD
     D -- fails --> Z2[exit 1, nothing removed]
     D --> F[git fetch origin]
     F -- fails --> Z3[exit 1: cannot prove anything is pushed, nothing removed]
-    F --> E{any branch under refs/sandboxes/codeo-N/?}
+    F --> P[git fetch origin pull-request heads into refs/remotes/origin/pr/]
+    P -- fails --> Z6[exit 1: cannot prove anything is delivered, nothing removed]
+    P --> E{any branch under refs/sandboxes/codeo-N/?}
     E -- none, no --force --> Z5[exit 1: nothing can be proved, nothing removed]
-    E -- some, or --force --> G{commits under refs/sandboxes/codeo-N/ not on any origin branch?}
-    G -- none --> R[sbx rm --force codeo-N, print removed]
+    E -- some, or --force --> G{commits under refs/sandboxes/codeo-N/ not on any origin branch or pull-request head?}
+    G -- none --> R[sbx rm --force codeo-N] --> R1[delete the refs under refs/sandboxes/codeo-N/, print removed]
     G -- some, no --force --> Z4[list up to 10 commits, exit 1, nothing removed]
-    G -- some, --force --> R2[sbx rm --force codeo-N, say the commits are kept in refs/sandboxes/codeo-N/]
+    G -- some, --force --> R2[sbx rm --force codeo-N] --> R3[move the refs to refs/codeo/ended/codeo-N/UTC/, say where they are kept]
 ```
 
-`end` fetches the sandbox's branches into `refs/sandboxes/codeo-<N>/` in `./codeo-<N>` and lists the commits that are on no `origin` branch. With none, it removes the sandbox. With some, it removes nothing and lists up to 10 of them: push them from the sandbox, or run `end <N> --force`, which removes the sandbox and keeps the commits in `refs/sandboxes/codeo-<N>/` in the clone. It also refuses when the fetch leaves no branches under that prefix, because then nothing can be proved; `--force` removes it anyway. It needs the clone `./codeo-<N>` and refuses without it.
+`end` fetches the sandbox's branches into `refs/sandboxes/codeo-<N>/` in `./codeo-<N>`, fetches `origin` and its pull-request heads (`refs/remotes/origin/pr/*`), and lists the commits that are on no `origin` branch and no pull-request head: a commit reachable from a pull request's head counts as delivered. With none, it removes the sandbox and deletes the refs under `refs/sandboxes/codeo-<N>/`. With some, it removes nothing and lists up to 10 of them: push them from the sandbox, or run `end <N> --force`, which removes the sandbox and sets the refs aside under `refs/codeo/ended/codeo-<N>/<UTC>/` in the clone (`<UTC>` is the time as `20261118T021500Z`). Recover them with `git -C codeo-<N> log refs/codeo/ended/codeo-<N>/<UTC>/<branch>`; delete them with `git -C codeo-<N> for-each-ref --format='delete %(refname)' refs/codeo/ended/codeo-<N>/ | git -C codeo-<N> update-ref --stdin`. A ref step that fails after the removal is one line naming the clone, and exits 1, because the sandbox is already gone. `end` also refuses when the fetch leaves no branches under that prefix, because then nothing can be proved; `--force` removes it anyway. It needs the clone `./codeo-<N>` and refuses without it.
 
 `end` checks commits only. Uncommitted changes, stashes and work on a detached HEAD in the sandbox are not detected: commit them on a branch and push them first.
 
 ## The image pin
 
-`.sbx/claude-image` is one line, the Claude image as `docker.io/sbx/claude@sha256:<64 hex digits>`. `issue` creates the sandbox from it, and refuses a file that is missing or holds anything else. Moving the pin is an edit to that file, with a line in `CHANGELOG.md`. A sandbox that exists keeps the image it was created from.
+`.sbx/claude-image` is one line, the Claude image as `docker.io/sbx/claude@sha256:<64 hex digits>`. `issue` creates the sandbox from it, reading it from `CODEO_SBX_IMAGE`, else `codeo-<N>/.sbx/claude-image`, else `origin/HEAD:.sbx/claude-image` in the clone, and refuses when none exists or the line holds anything else. Moving the pin is an edit to `.sbx/claude-image`, with a line in `CHANGELOG.md`. A sandbox that exists keeps the image it was created from.
 
 ## Stopped sandboxes
 
