@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1
+Shared state: new branches are named <type>/<N>-<slug>; branches already cut keep their names and are found by their dossier
+Safe to bump mid-workflow: yes
+
+- `/codeo:init` cuts `<type>/<N>-<slug>`, so the issue is readable from the branch (`feat/118-live-signal-leftovers-104-refresh`); `branch-name.sh` prints the number, `init` finds a workflow under way by its dossier whatever its branch is called, so a branch cut under the old shape resumes and an issue retitled after its init does too, and `claim.sh` no longer tells you to retitle an issue whose name another issue's dossier holds (#126).
+
 ## v1.0.7 — 2026-11-18
 
 Config schema: 1

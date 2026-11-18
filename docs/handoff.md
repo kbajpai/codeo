@@ -36,7 +36,7 @@ and `.codeo/active` in that checkout is the binding:
 
 ```
 issue:   12
-branch:  feat/order-export
+branch:  feat/12-order-export
 started: 2026-03-04
 host:    local
 ```
