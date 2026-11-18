@@ -29,4 +29,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-18 — Task 1 done: release PR #127 opened, tests and qc-verdict pass; waiting for the engineer's merge · cost: 11m · sonnet-5-5 22k in + 1.7M cached / 5k out
-- 2026-11-18 — Tasks 2-3 done: #127 merged as 7b25bc2475ad1b9e66f8a85b364355425dbde2e2 (`origin/main` tip); worktree removed; clean clone at that SHA reports version 1.0.7 and `bash tests/run.sh` ends `all cases passed`; waiting for the engineer's tag push · cost: see round outcome
+- 2026-11-18 — Tasks 2-3 done: #127 merged as 7b25bc2475ad1b9e66f8a85b364355425dbde2e2 (`origin/main` tip); worktree removed; clean clone at that SHA reports version 1.0.7 and `bash tests/run.sh` ends `all cases passed`; waiting for the engineer's tag push · cost: 17m · sonnet-5-5 24k in + 2.4M cached / 7k out
