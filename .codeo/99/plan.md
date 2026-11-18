@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 (2026-11-18): Q14-Q17 are answered (recommendations accepted). The round 3 draft is `.codeo/99/plan-draft.md` (not committed) and is waiting for the engineer's approval.
+Round 3, finished. Q14-Q17 are answered (recommendations accepted). The footprint check prints nothing, and no exclusive resource is named. The round 3 plan is approved and written at `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md`, unstaged for the engineer to commit. The `scripts/lock.sh` `volume:` TODO (Q16) is still to be filed through `/codeo:issue`. Next: `/codeo:implement`, which pauses after Task 23 for the engineer's trial.
 
 ## Questions
 
@@ -214,16 +214,6 @@ Accepted the recommendation (engineer, in the conversation, 2026-11-18).
 
 ## Notes
 
-### Footprint (round 3 draft)
-
-```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md, docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md, CHANGELOG.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
-
 ### Confirmed for the #114 part (no question)
 
 The issue asks planning to confirm where the trust decision is stored. Claude Code's documentation (permissions page, "What runs before you trust a folder", and the `.claude` directory page, read 2026-11-17) says: a folder is trusted by `projects["<path>"].hasTrustDialogAccepted: true` in `~/.claude.json`; with `CLAUDE_CONFIG_DIR` set the file is `$CLAUDE_CONFIG_DIR/.claude.json`; in a git repository the path is the repository root; and trust of a parent folder does not count as trust of the folder. It also says the VS Code extension "asks for the same trust" in its "Trust this folder in Claude Code?" dialog. This container agrees: `/workspaces/.claude/.claude.json` has `projects["/workspaces/codeo-99"].hasTrustDialogAccepted: true`.
@@ -395,10 +385,34 @@ Paste the warning `rm` prints, then answer `y`.
 
 **Documentation the plan changes:** `.sbx/README.md`, `.codeo/overlays/init.md`, `docs/dev-environment-sbx-evaluation.md:455`, `CHANGELOG.md`.
 
+### Round 3
+
+2026-11-18
+(send-back from qc.md round 2)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md` (approved 2026-11-18, unstaged for the engineer to commit) |
+| Shape | An executable plan under `docs/plans/`, following round 2's plan, with tasks numbered 23-30 |
+| Tasks | 8. Tasks 24-29 are proved by `bash tests/run.sh`. Tasks 23 (a trial) and 30 (acceptance) run on the engineer's host. Implementation pauses after Task 23 for its result |
+
+**Decisions** (Q14-Q17, recommendations accepted):
+- **Extension route (Q14).** Try a policy rule that allows `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io`, and keep `remote.SSH.defaultExtensions` (route A). If the trial fails, use `remote.downloadExtensionsLocally` and install the three by hand once per sandbox (route B). Rejected: `open` copying the extension files in itself (no known route).
+- **Detached (Q15).** `issue` and `open` both run `sbx run -d` unless the sandbox is already `running (detached)`. Rejected: `issue` alone (after a reboot, `open` would bring back a sandbox that stops again), and a manual step.
+- **Lock line (Q16).** The output order stays. The engineer reads the criterion as: the lock line is printed and the lock is taken. The `scripts/lock.sh` `volume:` TODO in a sandbox goes to `/codeo:issue`. Rejected: printing the lock line again at the end, and reordering the start script.
+- **Uncommitted work (Q17).** `end` refuses changed or untracked files, stashes or a detached HEAD unless `--force`, and with `--force` says the work was not kept. Rejected: warn and remove, and documentation only.
+- **Found while planning.** The real `sbx ls` has a header row and a `●`/`○` marker, so `sandbox_state` reads every sandbox that exists as `stopped`. Task 24 fixes this.
+- F13-F16 go in as they stand: Tasks 28 and 29.
+
+**Documentation the plan changes:**
+- `.sbx/README.md`: Prerequisites, Commands, Ending a sandbox, Stopped sandboxes, line 11.
+- `CHANGELOG.md:9`.
+- `docs/dev-environment-sbx-evaluation.md`: D1, D4, T13, Fragility and the #86 bullet.
+
 ### Footprint
 
 ```
-files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md, CHANGELOG.md
+files:      .devcontainer/scripts/devcontainer-start.sh, .devcontainer/scripts/session-title.sh, .devcontainer/README.md, .sbx/**, tests/devcontainer.test.sh, tests/sandbox.test.sh, tests/init-overlay.test.sh, .codeo/config.json, .codeo/overlays/init.md, docs/dev-environment-sbx-evaluation.md, docs/plans/2026-11-17-sbx-issue-sandbox.md, docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md, docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md, CHANGELOG.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -412,3 +426,4 @@ sequenced:  none
 - 2026-11-17 — round 2 opened after qc.md round 1; Q10-Q13 raised · cost: 1m · fable-5-2 196k in + 188k cached / 3k out
 - 2026-11-17 — planned: docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md (round 2) · cost: 113m · opus-5-5 411k in + 1.4M cached / 17k out · engineering plugin unavailable; its structure applied directly
 - 2026-11-18 — round 3 opened after qc.md round 2; Q14-Q17 raised · cost: 1m · fable-5-2 197k in + 188k cached / 2k out
+- 2026-11-18 — planned: docs/plans/2026-11-18-sbx-issue-sandbox-round-3.md (round 3, after qc.md round 2; Q14-Q17 answered) · cost: 48m · fable-5-2 202k in + 584k cached / 6k out · opus-5-5 219k in + 4.2M cached / 27k out · engineering plugin unavailable; its structure applied directly
