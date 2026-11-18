@@ -4,11 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/99 |
 | Branch | `feat/make-sbx-issue-sandbox-usable` |
-| Updated | 2026-11-17 |
+| Updated | 2026-11-18 |
 
 ## Where this stands
 
-Round 2, finished. Q10-Q13 are answered (recommendations accepted), the footprint check prints nothing and no exclusive resource is named. The round 2 plan is approved and written at `docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md`, unstaged for the engineer to commit. Next: `/codeo:implement`.
+Round 3 has opened (2026-11-18), after `qc.md` round 2 sent the branch back for F9 (the extension route) and F10 (sandboxes that stop when idle). Q14-Q17 are open. Round 3 is not drafted until they are answered. F13-F16 are implementation fixes and become tasks without a question.
 
 ## Questions
 
@@ -163,6 +163,50 @@ Accepted the recommendation (engineer, in the conversation, 2026-11-17).
 
 **Answer:**
 Accepted the recommendation (engineer, in the conversation, 2026-11-17).
+
+### Q14 — How should the three extensions get into a sandbox window, now that `remote.SSH.defaultExtensions` is blocked? (qc F9)
+
+**Why it matters:** the route Q4 chose does not work. The VS Code server inside the sandbox downloads that list itself, the sbx `balanced` policy answers `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io` with 403, and the failed install stops the remote extension host (Acceptance step 6). The README, the CHANGELOG line and one test all carry the setting. The routes differ in what you do per sandbox and in what the sandboxes may reach.
+
+**Options:**
+- *Allow the two download hosts in the sbx network policy, and keep `remote.SSH.defaultExtensions`* (recommended): a one-time step per machine, documented in the README's setup. After it, `open` alone gives a window with the three extensions, which is what the criterion asks for. It lets every sandbox on your machine reach Microsoft's extension CDN. The exact `sbx policy` command is not yet tried, so the plan's first task is a short trial on your host. If the trial fails, the plan falls back to the next option, and says so.
+- *Install by hand, once per sandbox:* the README drops `remote.SSH.defaultExtensions`, sets `remote.downloadExtensionsLocally`, and tells you to install the three with "Install in SSH" in each new sandbox's window. You showed this works. No policy change, but three installs for every new sandbox, and the criterion's "one documented step" becomes "one step, plus a one-time install per sandbox".
+- *`open` installs them:* the script would copy the extension files in itself. No route for this is known to work against a Remote-SSH host, and it needs its own trials.
+
+**Answer:**
+
+### Q15 — Where should `sbx run -d` go, so a sandbox does not stop when idle? (qc F10)
+
+**Why it matters:** a sandbox that only `create` and `exec` started stops about a minute after it goes idle, and an open VS Code window loses its host. One started with `sbx run -d --name codeo-<N>` stayed up in 10 of 10 repeats (Acceptance step 9). `issue` and `open` never run it. `run -d` also starts an idle Claude Code process in the sandbox, which is what keeps it up.
+
+**Options:**
+- *`issue` and `open` both make sure it is running detached* (recommended): after the start script, `issue` runs `sbx run -d --name codeo-<N>` unless the sandbox is already `running`. `open` does the same before it starts VS Code, so a sandbox that stopped (a reboot, a manual `stop`) comes back the same way. `shell` and `end` keep starting it through `exec`, since they are short. The README's "Stopped sandboxes" section then describes this.
+- *`issue` only:* simpler, but after a reboot or a manual `stop`, `open` starts the sandbox through `exec`, and the window drops a minute after it goes idle.
+- *Leave it a documented manual step:* what the README says today. `/codeo:qc` found this blocking.
+
+**Answer:**
+
+### Q16 — The `lock:` line is not the last line `issue` prints: change the output, or accept the order? (qc F11)
+
+**Why it matters:** the #85 criterion says the command "ends with `lock: took the lock for #<N> on <branch>`". On your host the start script printed that line, then two identity lines, then a TODO from `scripts/lock.sh:145` about a missing `volume:` line (a sandbox's folder is a bind mount, not a Docker volume). `/codeo:qc` marked the criterion "not met as written". The order comes from the dev container's start script, which the sandbox shares.
+
+**Options:**
+- *Accept the order, and file the `lock.sh` TODO as its own issue* (recommended): you rule that the criterion is satisfied when the lock line is printed and the lock is taken. The README already describes the real order. The misleading `volume:` TODO in a sandbox goes to `/codeo:issue`, because `scripts/` ships to every project and is outside this issue.
+- *Make `issue` print the lock line last:* `issue` would capture the start script's output and print the `lock:` line again at the end. The criterion then holds literally, at the cost of a repeated line and output that arrives only when the start script finishes.
+- *Reorder the start script:* it would take the lock last. That changes the dev container's start for every user, which #85 rules out.
+
+**Answer:**
+
+### Q17 — Should a plain `end` refuse when the sandbox holds uncommitted work? (qc F12)
+
+**Why it matters:** `end` checks for unpushed commits only. Uncommitted changes, untracked files and stashes in the sandbox are removed with it, and the only output is `removed codeo-<N>`. The README documents this limit, and the criterion names only unpushed commits, so `/codeo:qc` did not block on it. Its reviewer rated it Important against the issue's "no lost work on removal" goal.
+
+**Options:**
+- *Refuse without `--force`, and list what would be lost* (recommended): before `rm`, `end` runs `git status --porcelain` and `git stash list` inside the sandbox. If either prints anything, `end` lists it (at most ten lines each), removes nothing, and names `--force`. `--force` removes the sandbox anyway. Uncommitted work cannot be fetched to the host, so with `--force` it is lost, and the output says so.
+- *Warn and remove:* `end` prints what is being lost and removes the sandbox. Nothing is silent, but the work is still gone.
+- *Leave it documented:* no change.
+
+**Answer:**
 
 ## Notes
 
@@ -353,3 +397,4 @@ sequenced:  none
 - 2026-11-17 — planned: docs/plans/2026-11-17-sbx-issue-sandbox.md · cost: 46m · fable-5-2 144k in + 1.6M cached / 22k out · opus-5-5 183k in + 3.3M cached / 37k out · sonnet-5-5 76k in + 283k cached / 7k out · Q8-Q9 answered; engineering plugin unavailable, its structure applied directly
 - 2026-11-17 — round 2 opened after qc.md round 1; Q10-Q13 raised · cost: 1m · fable-5-2 196k in + 188k cached / 3k out
 - 2026-11-17 — planned: docs/plans/2026-11-17-sbx-issue-sandbox-round-2.md (round 2) · cost: 113m · opus-5-5 411k in + 1.4M cached / 17k out · engineering plugin unavailable; its structure applied directly
+- 2026-11-18 — round 3 opened after qc.md round 2; Q14-Q17 raised · cost: 1m · fable-5-2 197k in + 188k cached / 2k out
