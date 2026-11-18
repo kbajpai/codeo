@@ -159,9 +159,10 @@ is the container the message names.
      `<type>/<N>-<slug>` — never chosen by the agent, so two `init`s on one issue derive one name,
      and `init` never picks a different one itself. Then, in this order:
 
-   - `git ls-remote --exit-code --heads origin <branch>`. Exit 2, absent: nothing has the name,
+   - Only when there was no row: `git ls-remote --exit-code --heads origin <branch>`. Exit 2, absent: nothing has the name,
      so go on to steps 7–11, a fresh claim (the push at step 9 is what settles a race).
-   - Exit 0, present: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/claim.sh" --carries <N> <branch> .`.
+   - Exit 0, present — or a resume candidate found by its dossier, which comes straight here with
+     no `ls-remote`: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/claim.sh" --carries <N> <branch> .`.
      Exit 2 is a collision, not a resume — the branch carries another issue's dossier, no dossier,
      or only this issue's own archived dossier (`.codeo/done/<N>/`: #N has already been through
      `close`), or was merged into `<base>` and left behind, or is bare — cut from `<base>` with

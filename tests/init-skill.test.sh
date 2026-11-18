@@ -28,7 +28,7 @@ step() {
 # $1 case, $2 step number, $3 fixed string the step must contain.
 step_contains() {
     local text
-    text=$(step "$2")
+    text=$(step "$2" | tr '\n' ' ' | tr -s ' ')
     [[ -n $text ]] || { fail "$1 — no step $2 in the skill"; return; }
     grep -qF -- "$3" <<<"$text" || fail "$1 — step $2 has no [$3]"
 }
@@ -36,7 +36,7 @@ step_contains() {
 # $1 case, $2 step number, $3 fixed string the step must not contain.
 step_lacks() {
     local text
-    text=$(step "$2")
+    text=$(step "$2" | tr '\n' ' ' | tr -s ' ')
     [[ -n $text ]] || { fail "$1 — no step $2 in the skill"; return; }
     ! grep -qF -- "$3" <<<"$text" || fail "$1 — step $2 still has [$3]"
 }
