@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Stopped at step 3, before the pull request is opened. QC round 1 is clear, the tree is clean and pushed, the branch merges cleanly with origin/main, and no pull request exists yet. One overlap is open: Q1.
+Pull request #139 is open and waiting on the engineer to review and merge it. The dossier is archived under `.codeo/done/102/`.
 
 ## Questions
 
@@ -26,8 +26,15 @@ Step 3 so far: QC round 1's verdict is clear (`**Verdict: clear — forward to `
 
 ## Outcome
 
-_Pending — written when the pull request is opened._
+### Round 1 — pull request opened
+
+2026-11-19
+
+#139 https://github.com/kbajpai/codeo/pull/139
+
+Went out on `qc.md` round 1, verdict: **clear — forward to `/codeo:close`.** No override. Q1 (overlap with #112) answered: proceed and coordinate.
 
 ## Log
 
 - 2026-11-19 — Q1 raised (overlap with #112), stopped at step 3 · cost: 0m · sonnet-5-5 88k in + 481k cached / 2k out
+- 2026-11-19 — Q1 answered; opened PR #139, archived the dossier · board: In review on #102 · cost: 2m · sonnet-5-5 99k in + 1.2M cached / 6k out
