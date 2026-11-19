@@ -45,6 +45,22 @@ Either Backlog or Ready, as recommended (engineer, in the conversation, 2026-11-
 **Answer:**
 `waits:` only, as recommended (engineer, in the conversation, 2026-11-19: "I accept all your recommendations").
 
+### Q4 — `glob:CHANGELOG.md` overlaps #102's plan. How do the two changes share it?
+
+**Why it matters:** #102 (`feat/codeo-issue-assign-every-filed`, assigned to kbajpai, at `plan`, owes `/codeo:implement`, a live session on it) lists `CHANGELOG.md` in its footprint, and so does this plan's Task 5, which adds one bullet and extends the `Shared state:` line under `## Unreleased`. Two bullets in one section merge, but the `Shared state:` line is one line both may edit, and whichever merges second resolves a conflict by hand.
+**Options:** proceed and coordinate · sequence after #102 · re-scope.
+**Recommendation:** proceed and coordinate. Task 5 is already last, runs `bash scripts/sync-main.sh` first and keeps both sides on a conflict; sequencing would hold #122 for a one-line collision.
+
+**Answer:**
+
+### Q5 — `glob:docs/skills.md` overlaps #102's plan. How do the two changes share it?
+
+**Why it matters:** #102 also lists `docs/skills.md` in its footprint (it will edit `/codeo:issue`'s section). This plan's Task 4 edits only line 224 in `/codeo:triage`'s section, so a textual conflict is unlikely, but the file is the same one `tests/skills-doc.test.sh` checks section by section, and both changes must leave it passing.
+**Options:** proceed and coordinate · sequence after #102 · re-scope.
+**Recommendation:** proceed and coordinate. The two edits sit in different `## <skill>` sections, and Task 4's proof runs `bash tests/run.sh skills-doc`.
+
+**Answer:**
+
 ## Notes
 
 Calls the draft will make unless an answer above changes them. They are shown again in the draft for review.
@@ -73,3 +89,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-19 — Q1-Q3 raised · cost: 3m · fable-5-2 83k in + 518k cached / 4k out
+- 2026-11-19 — plan approved and written; footprint overlaps #102 on CHANGELOG.md and docs/skills.md, Q4-Q5 raised · cost: 150m · fable-5-2 92k in + 864k cached / 8k out · sonnet-5-5 130k in + 1.4M cached / 21k out
