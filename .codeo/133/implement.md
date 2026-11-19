@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 done: the qc round 1 findings are fixed (F1 blocking, F3-F8 non-blocking). Nothing is open. Next step: `/codeo:qc`.
+Round 3 done: the CI test failure from close.md round 2 is fixed, with QC round 2's F9-F17. Nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -69,8 +69,29 @@ Each finding was checked against the code before work began; F1 and F3-F8 all he
 
 **Environment:** no shared environment is configured. `sync-main.sh` found the branch already contains `origin/main`; `overlap.sh` printed nothing.
 
+
+### Round 3 — 2026-11-19
+
+(send-back from close.md round 2)
+
+The finding was checked against the code and the CI log before work began; it holds. `sync-main.sh` merged `origin/main` (#126; it changed `CHANGELOG.md`) cleanly into the branch (`9b7ce8c`); no conflict, nothing in the outcome to resolve; `overlap.sh` printed nothing. Two fix commits, then a scoped re-review (sonnet): all findings addressed, no new Critical or Important breakage.
+
+- **CI failure — fixed (`6c77860`).** `t_list_no_programs` removed the `docker` stub but ran `codeo` with `PATH=$cm_dir/bin:/usr/bin:/bin`, so the GitHub runner's real `docker` answered and `codeo list` exited 0. Every test run now uses `PATH="$cm_dir/bin:$cm_dir/sys"`, where `sys` (built by `cm_sys` in `cm_setup`) symlinks only the tools codeo and the stubs need and never `docker`, `sbx`, `git` or `curl`. A new test, `t_run_path_has_no_host_programs`, plants fake programs on the outer `PATH` and proves the run cannot see them. With a fake `docker` and `sbx` first on the outer `PATH` the suite passes; the old tests reproduce the CI error under that setup.
+- **QC round 2 findings, `b0999d9`:** F9 the lookup clone is re-pointed at `CODEO_REPO_URL` before the fetch; F10 the branch check uses `git rev-parse -q --verify`, which needs no blob download, so a network failure is no longer read as "branch lacks the file"; F11 `rm` says `no container codeo-<N> found` when the container does not exist; F12 a container is stopped again only when its state was known not to be running; F13 `list` shows `paused` and `restarting`; F14-F16 README wording (failed listings, "all or nothing", the `.sbx/README.md` `shell` and `open` rows); F17 the two overlong comments wrapped.
+
+**Documentation pages changed:** `.devcontainer/README.md`, `.sbx/README.md`.
+
+**Build result:** suite `shell`, build command `true`: exit 0. `bash tests/run.sh codeo-command` prints `all cases passed`. The full suite is qc's.
+
+**Deviations from the plan:** none.
+
+**Deferred minors (for qc and triage):** `cm_sys` skips a tool it cannot find without a message; a few comment lines are still long (`.devcontainer/codeo` about `:357` and `:425`, `tests/codeo-command.test.sh:111`) and the test header comment wraps oddly; `rm --container` does not check that the container exists before `container_check`, so a missing container is found only after a failed start; `docker start` of a paused container is as before. No `Ruling:` was made.
+
+**Environment:** no shared environment is configured.
+
 ## Log
 
 - 2026-11-18 — Q1 raised · cost: 0m · sonnet-5-5 11k in + 341k cached / 770 out
 - 2026-11-18 — implemented: 7 tasks + 2 task fix rounds + final-review fix wave · build: true (exit 0) · cost: 86m · sonnet-5-5 1.1M in + 31.2M cached / 232k out
 - 2026-11-19 — implemented round 2 (send-back from qc round 1): F1 and F3-F8 fixed in bb31110, re-review clean · build: true (exit 0) · cost: 8m · sonnet-5-5 256k in + 3.1M cached / 31k out
+- 2026-11-19 — implemented round 3 (send-back from close round 2): CI test isolation fixed in 6c77860, F9-F17 in b0999d9, re-review clean · build: true (exit 0) · cost: 12m · sonnet-5-5 163k in + 4.9M cached / 28k out
