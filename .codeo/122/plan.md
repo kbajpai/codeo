@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored `scripts/inflight.sh`, `scripts/claim.sh`, `skills/triage/SKILL.md`, `skills/init/SKILL.md`, `docs/handoff.md`, `docs/skills.md` and the two test files (`tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Three choices change what gets built and are raised as Q1-Q3. Everything else is settled and listed under `## Notes` as the calls the draft will make. Blocked on Q1-Q3; no draft yet.
+Explored `scripts/inflight.sh`, `scripts/claim.sh`, `skills/triage/SKILL.md`, `skills/init/SKILL.md`, `docs/handoff.md`, `docs/skills.md` and the two test files (`tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Three choices change what gets built and are raised as Q1-Q3. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q3 answered as recommended; drafting.
 
 ## Questions
 
@@ -22,6 +22,7 @@ Explored `scripts/inflight.sh`, `scripts/claim.sh`, `skills/triage/SKILL.md`, `s
 - Stop asking about an unassigned workflow that is within the threshold; list it in the run's `## Outcome` with a note that nobody is assigned. This reverses part of #103's Q4.
 
 **Answer:**
+As proposed, as recommended (engineer, in the conversation, 2026-11-19: "I accept all your recommendations").
 
 ### Q2 — What board Status does triage expect while an abandon is live (F18)?
 
@@ -31,6 +32,7 @@ Explored `scripts/inflight.sh`, `scripts/claim.sh`, `skills/triage/SKILL.md`, `s
 - Accept Ready only when the ledger holds a *resume* decision for that issue, otherwise Backlog. More exact, but the rule then depends on the model reading the ledger correctly while judging the board, and a hand-moved card is flagged.
 
 **Answer:**
+Either Backlog or Ready, as recommended (engineer, in the conversation, 2026-11-19: "I accept all your recommendations").
 
 ### Q3 — For a resumed stash, does `step:` change as well as `waits:` (F19)?
 
@@ -41,6 +43,7 @@ Explored `scripts/inflight.sh`, `scripts/claim.sh`, `skills/triage/SKILL.md`, `s
 - Also make `step:` and the `--tsv` column look past a spent stash or abandon, so they print `init`. This changes what `--tsv` consumers see and the header's definition of the last step.
 
 **Answer:**
+`waits:` only, as recommended (engineer, in the conversation, 2026-11-19: "I accept all your recommendations").
 
 ## Notes
 
