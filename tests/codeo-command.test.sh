@@ -538,7 +538,7 @@ t_host_kinds_exact_name() {
 # rm_stubs: replace the docker stub with one that answers rm. docker ps with {{.State}} prints
 # "codeo-5 $(dstate)" (running when absent), other docker ps prints "codeo-5"; docker exec ... git -C
 # <dir> <sub> prints $d/g_<sub> (g_branch defaults to main) and fails for fetch when fetch_fail
-# exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist.
+# exists, or for the git subcommand named in exec_fail; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist.
 rm_stubs() {
     cat >"$cm_dir/bin/docker" <<'STUB'
 #!/bin/bash
@@ -554,6 +554,7 @@ case "$1" in
     exec)
         sub=$6
         [[ "$sub" != fetch || ! -e "$d/fetch_fail" ]] || exit 1
+        [[ "$sub" != "$(cat "$d/exec_fail" 2>/dev/null)" ]] || exit 1
         if [[ "$sub" == branch && ! -e "$d/g_branch" ]]; then echo main; else cat "$d/g_$sub" 2>/dev/null || true; fi ;;
 esac
 exit 0
@@ -647,12 +648,33 @@ t_rm_container_detached() {
 }
 
 t_rm_container_cuts_at_ten() {
-    cm_setup "$current"
-    rm_stubs
-    seq 1 25 | sed 's/^/?? file/' >"$cm_dir/g_status"
-    cm_run rm 5 --container
-    [[ "$(grep -c '?? file' <<<"$cm_err")" -eq 10 ]] || fail "not cut at 10: $cm_err"
-    expect_nothing_removed
+    local k
+    for k in status stash rev-list; do
+        cm_setup "$current-$k"
+        rm_stubs
+        seq 1 25 | sed 's/^/line/' >"$cm_dir/g_$k"
+        cm_run rm 5 --container
+        [[ "$(grep -c '^  line' <<<"$cm_err")" -eq 10 ]] || fail "$k: not cut at 10: $cm_err"
+        expect_nothing_removed
+    done
+}
+
+t_rm_exec_failure_is_not_clean() {
+    local k
+    for k in status stash branch rev-list; do
+        cm_setup "$current-$k"
+        rm_stubs
+        echo "$k" >"$cm_dir/exec_fail"
+        cm_run rm 5 --container
+        expect_refused 'docker rm -f codeo-5; docker volume rm codeo-5'
+        cm_setup "$current-$k-force"
+        rm_stubs
+        echo "$k" >"$cm_dir/exec_fail"
+        cm_run rm 5 --container --force
+        [[ "$cm_status" -eq 0 ]] || fail "$k --force: exit $cm_status, err: $cm_err"
+        grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "$k --force: not removed"
+        grep -qi 'could not' <<<"$cm_out" || fail "$k --force: no could-not-check note: $cm_out"
+    done
 }
 
 t_rm_container_force() {
@@ -701,11 +723,13 @@ t_rm_removal_failure_dies() {
     touch "$cm_dir/rm_fail"
     cm_run rm 5 --container
     [[ "$cm_status" -eq 1 && "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "rm -f: $cm_status $cm_err"
+    ! grep -q removed <<<"$cm_out" || fail "rm -f: stdout says removed: $cm_out"
     cm_setup "$current-2"
     rm_stubs
     touch "$cm_dir/vol_fail"
     cm_run rm 5 --container
     [[ "$cm_status" -eq 1 && "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "volume rm: $cm_status $cm_err"
+    ! grep -q removed <<<"$cm_out" || fail "volume rm: stdout says removed: $cm_out"
 }
 
 t_rm_stopped_container_started_first() {
@@ -793,6 +817,7 @@ cases=(
     t_rm_container_stash
     t_rm_container_detached
     t_rm_container_cuts_at_ten
+    t_rm_exec_failure_is_not_clean
     t_rm_container_force
     t_rm_container_cannot_check
     t_rm_image_failure_warns
