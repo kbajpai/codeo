@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Drafted, awaiting review: branch `feat/follow-ups-97-left-overlap` to be cut off `origin/main` at `4a4572e9624bad14b5753a3f455190a31789b290`. Next step: `/codeo:plan` in the issue's container.
+Initialized: branch `feat/follow-ups-97-left-overlap` cut off `origin/main` at `4a4572e9624bad14b5753a3f455190a31789b290` and pushed. Next step: `/codeo:plan` in the issue's container.
 
 ## Questions
 
@@ -39,4 +39,4 @@ None.
 
 ## Log
 
-- 2026-11-19 — drafted for review
+- 2026-11-19 — initialized: branch feat/follow-ups-97-left-overlap off main at 4a4572e · cost: 1m · sonnet-5-5 20k in + 650k cached / 3k out
