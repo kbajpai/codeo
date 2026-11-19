@@ -55,12 +55,15 @@ sequenceDiagram
     S->>G: git clone --branch branch into ./codeo-N (or check the clone is on branch)
     S->>G: git.exe safe.directory line, only with sbx.exe and only when missing
     S->>X: create --clone --name codeo-N at the pinned image (only when it does not exist; else start it)
-    S->>B: write the sandbox marker
+    S->>B: write the sandbox marker, holding the sandbox's name codeo-N
     S->>B: env CODEO_CMD_MODE=1 GIT_AUTHOR_* bash .devcontainer/scripts/devcontainer-start.sh
     B-->>E: lock: took the lock for #N on branch, then ready or TODO lines
+    S-->>E: one codeo-sandbox: line naming the next step, when the start script fails
     S->>B: container-name.sh --docker, compared with codeo-N
     S-->>E: one todo: line when the lock names another issue
 ```
+
+The marker holds the sandbox's name, `codeo-<N>`. The start script reads it and takes the lock with `sandbox: codeo-<N>` and no volume line. A sandbox made before the marker held the name keeps `volume: unknown` in its lock, and `end <N>` ends it all the same. When the start script fails, `issue` ends with one `codeo-sandbox:` line that names the next step: fix the cause and run `issue <N> <branch>` again, or run `shell <N>` to look inside.
 
 With `sbx.exe` from WSL2, the sandbox's working folder is `/wsl.localhost/$WSL_DISTRO_NAME<the clone's path on the host>`, and only Windows Git can fetch from the sandbox. `issue` adds a `safe.directory` entry to Windows Git's global config once, or prints the `git.exe config` line as a `todo:` when `git.exe` is missing; `end` fetches with `git.exe`. The entry is written `%(prefix)///wsl.localhost/<distro><the clone's path on the host>`, which is the clone's path as Windows Git sees it.
 
@@ -76,7 +79,7 @@ flowchart TD
     B -- no --> Z1[exit 1: no sandbox codeo-N]
     B -- yes --> C[start it if stopped]
     C --> D[git fetch sandbox-codeo-N in ./codeo-N]
-    D -- fails --> Z2[exit 1, nothing removed]
+    D -- fails --> Z2[exit 1, nothing removed: names sbx rm --force codeo-N]
     D --> F[git fetch origin]
     F -- fails --> Z3[exit 1: cannot prove anything is pushed, nothing removed]
     F --> P[git fetch origin pull-request heads into refs/remotes/origin/pr/]
@@ -96,6 +99,8 @@ flowchart TD
 `end` fetches the sandbox's branches into `refs/sandboxes/codeo-<N>/` in `./codeo-<N>`, fetches `origin` and its pull-request heads (`refs/remotes/origin/pr/*`), and lists the commits that are on no `origin` branch and no pull-request head: a commit reachable from a pull request's head counts as delivered. With none, a plain `end` removes the sandbox and deletes the refs under `refs/sandboxes/codeo-<N>/`. With some, it removes nothing and lists up to 10 of them: push them from the sandbox, or run `end <N> --force`, which removes the sandbox, with or without unpushed commits, and sets the refs aside under `refs/codeo/ended/codeo-<N>/<UTC>/` in the clone (`<UTC>` is the time as `20261118T021500Z`). Recover them with `git -C codeo-<N> log refs/codeo/ended/codeo-<N>/<UTC>/<branch>`; delete them with `git -C codeo-<N> for-each-ref --format='delete %(refname)' refs/codeo/ended/codeo-<N>/ | git -C codeo-<N> update-ref --stdin`. A ref step that fails after the removal is one line naming the clone, and exits 1, because the sandbox is already gone. `end` also refuses when the fetch leaves no branches under that prefix, because then nothing can be proved; `--force` removes it anyway. It needs the clone `./codeo-<N>` and refuses without it.
 
 `end` also looks inside the sandbox before it removes anything, with `git status --porcelain --branch` and `git stash list` run through `sbx exec`. It lists uncommitted changes (up to 10 lines), stashes (up to 10) and a detached HEAD, and removes nothing while any of them is there: commit and push from the sandbox, or run `end <N> --force`, which removes the sandbox and says `its uncommitted work was not kept`. Uncommitted work is not saved under `refs/codeo/ended/`. When the check itself fails, `end` removes nothing, with or without `--force`.
+
+When `end` cannot start the sandbox or fetch from it, it also removes nothing, with or without `--force`, and exits 1 with one line that names `sbx rm --force codeo-<N>`. That command removes the sandbox and discards whatever it holds, so run it only when nothing in the sandbox is wanted.
 
 ## The image pin
 

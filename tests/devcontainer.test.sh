@@ -1513,11 +1513,50 @@ start_in_a_sandbox_skips_the_folder_check() {
     ds_setup sbxfolder || return 0
     ds_identity || { fail 'could not set the scratch git identity'; return 0; }
     mv "$ds_dir/codeo-home" "$ds_dir/codeo-122"
-    DS_REPO="$ds_dir/codeo-122" ds_ready_run
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/no-such-mark" DS_REPO="$ds_dir/codeo-122" ds_ready_run
     n=$(ds_todos "docker ps"); ((n == 1)) || fail "without the marker, wanted the folder TODO once, got $n: $ds_err"
     : > "$ds_dir/sandbox-mark"
     DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" DS_REPO="$ds_dir/codeo-122" ds_ready_run
     n=$(ds_todos "docker ps"); ((n == 0)) || fail "inside a sandbox, the folder TODO was listed: $ds_err"
+}
+
+# ds_run sets HOME to a scratch folder; a marker in the caller's HOME must not count.
+start_without_the_marker_ignores_the_callers_home_marker() {
+    local n
+    ds_setup sbxhome || return 0
+    ds_identity || { fail 'could not set the scratch git identity'; return 0; }
+    mv "$ds_dir/codeo-home" "$ds_dir/codeo-122"
+    mkdir -p "$ds_dir/outer"; : > "$ds_dir/outer/.codeo-sandbox"
+    HOME="$ds_dir/outer" DS_REPO="$ds_dir/codeo-122" ds_ready_run
+    n=$(ds_todos "docker ps"); ((n == 1)) || fail "a marker in the caller's HOME hid the folder TODO, got $n: $ds_err"
+}
+
+start_in_a_sandbox_passes_the_sandbox_to_the_lock() {
+    ds_setup sbxlock || return 0
+    ds_lock_stub; ds_branch feat/x
+    printf 'codeo-122\n' > "$ds_dir/sandbox-mark"
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(cat "$ds_dir/lock-calls") == 'take container --sandbox codeo-122' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
+}
+
+# An empty marker names no sandbox, so the name is the clone folder's.
+start_with_an_empty_marker_names_the_sandbox_from_the_folder() {
+    ds_setup sbxempty || return 0
+    ds_lock_stub; ds_branch feat/x
+    mv "$ds_dir/codeo-home" "$ds_dir/codeo-122"
+    : > "$ds_dir/sandbox-mark"
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/sandbox-mark" DS_REPO="$ds_dir/codeo-122" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(cat "$ds_dir/lock-calls") == 'take container --sandbox codeo-122' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
+}
+
+start_without_a_marker_takes_the_lock_as_before() {
+    ds_setup sbxnomark || return 0
+    ds_lock_stub; ds_branch feat/x
+    DS_SET="CODEO_SANDBOX_MARK=$ds_dir/no-such-mark" ds_lock_ready
+    ((ds_rc == 0)) || fail "exit $ds_rc: $ds_err"
+    [[ $(cat "$ds_dir/lock-calls") == 'take container' ]] || fail "wrong arguments: $(cat "$ds_dir/lock-calls")"
 }
 
 start_trust_keeps_other_keys() {
@@ -2658,6 +2697,10 @@ cases=(
     start_leaves_no_temp_file_when_mv_fails
     start_trusts_the_clone_in_claude
     start_in_a_sandbox_skips_the_folder_check
+    start_without_the_marker_ignores_the_callers_home_marker
+    start_in_a_sandbox_passes_the_sandbox_to_the_lock
+    start_with_an_empty_marker_names_the_sandbox_from_the_folder
+    start_without_a_marker_takes_the_lock_as_before
     start_trust_keeps_other_keys
     start_malformed_claude_state_is_a_todo
     start_claude_state_not_an_object_is_a_todo

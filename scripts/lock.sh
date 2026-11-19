@@ -3,9 +3,10 @@
 # dev container's start script (host container), a web session's start script (host web) and a
 # plain checkout (host local, which the default init takes itself). Only a web session needs the
 # branch-checkout step below; container and local differ only in the line that identifies the
-# checkout: a container records its volume, and a plain checkout has nothing to identify.
+# checkout: a container records its volume (or its sandbox, when told with --sandbox), and a plain
+# checkout has nothing to identify.
 #
-#   lock.sh take <container|web|local> [session-id]
+#   lock.sh take <container|web|local> [--sandbox <name>] [session-id]
 #       Writes $CODEO_STATE_DIR/active from the working tree's dossier and prints what it did, or
 #       a TODO line when it could not. Never fails the caller.
 set -euo pipefail
@@ -43,7 +44,16 @@ stale_local() {
 }
 
 take() {
-    local host=${1:?container, web or local} session=${2:-} todo=() refused=
+    local host=${1:?container, web or local} session todo=() refused= sandbox= sandbox_flag=
+    shift
+    # --sandbox <name> is read only for a container, and shifted off before the session id.
+    if [[ ${1:-} == --sandbox ]]; then
+        sandbox_flag=1
+        sandbox=${2:-}
+        shift
+        (($# == 0)) || shift
+    fi
+    session=${1:-}
 
     if [[ $host == web ]]; then
         # Exactly one live dossier in the working tree, whose recorded branch differs from what
@@ -136,11 +146,16 @@ take() {
             {
                 printf 'issue:   %s\nbranch:  %s\nstarted: %s\nhost:    %s\n' \
                     "$n" "$branch" "$(date -u +%Y-%m-%d)" "$host"
-                if [[ $host == container ]]; then
+                if [[ $host == container && -n $sandbox_flag && $sandbox =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+                    # Told which sandbox this checkout runs in: record it, not a volume.
+                    printf 'sandbox: %s\n' "$sandbox"
+                elif [[ $host == container ]]; then
+                    [[ -z $sandbox_flag ]] ||
+                        todo+=("--sandbox needs a name of letters, digits, ., _ and -: the lock records a volume instead")
                     # A host convention (the dev container mounts its volume at /workspaces), kept in
                     # the core for parity with web sessions; the host module will own it later.
                     volume=$(awk '$5 == "/workspaces" { n = split($4, p, "/"); if (p[n] == "_data") print p[n - 1] }' \
-                        /proc/self/mountinfo | head -n 1)
+                        "${CODEO_MOUNTINFO:-/proc/self/mountinfo}" 2>/dev/null | head -n 1) || volume=
                     printf 'volume:  %s\n' "${volume:-unknown}"
                     [[ -n $volume ]] || todo+=("could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)")
                 elif [[ $host == local ]]; then
@@ -160,5 +175,5 @@ take() {
 
 case ${1:-} in
     take) shift; take "$@" ;;
-    *) echo "usage: lock.sh take <container|web|local> [session-id]" >&2; exit 1 ;;
+    *) echo "usage: lock.sh take <container|web|local> [--sandbox <name>] [session-id]" >&2; exit 1 ;;
 esac

@@ -145,6 +145,57 @@ assert_contains "issue" "issue:   38" "$active"
 assert_contains "host" "host:    container" "$active"
 assert_not_contains "no session line" "session:" "$active"
 
+# --- container, sandbox lock ---------------------------------------------------------------------
+case_desc="container, sandbox lock"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+marker=$(fresh_marker)
+out=$(run_lock "$repo" "$marker" container --sandbox codeo-38)
+active=$(cat "$repo/.codeo/active")
+assert_contains "sandbox line" "sandbox: codeo-38" "$active"
+assert_contains "host" "host:    container" "$active"
+assert_not_contains "no volume line" "volume:" "$active"
+assert_not_contains "no TODO" "TODO" "$out"
+
+# --- container, sandbox name refused ---------------------------------------------------------------
+case_desc="container, sandbox name refused"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+marker=$(fresh_marker)
+out=$(run_lock "$repo" "$marker" container --sandbox 'a b')
+active=$(cat "$repo/.codeo/active")
+assert_contains "refusal" "--sandbox needs a name" "$out"
+assert_contains "volume line" "volume:" "$active"
+assert_not_contains "no sandbox line" "sandbox:" "$active"
+
+# --- container, volume read ------------------------------------------------------------------------
+case_desc="container, volume read"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+marker=$(fresh_marker)
+mountinfo="$scratch_root/mountinfo.read"
+echo '100 1 0:50 /var/lib/docker/volumes/codeo-38/_data /workspaces rw - ext4 /dev/x rw' > "$mountinfo"
+out=$(CODEO_MOUNTINFO="$mountinfo" run_lock "$repo" "$marker" container)
+active=$(cat "$repo/.codeo/active")
+assert_contains "volume" "volume:  codeo-38" "$active"
+assert_not_contains "no TODO" "TODO" "$out"
+
+# --- container, volume unreadable ------------------------------------------------------------------
+case_desc="container, volume unreadable"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+marker=$(fresh_marker)
+mountinfo="$scratch_root/mountinfo.empty"
+: > "$mountinfo"
+out=$(CODEO_MOUNTINFO="$mountinfo" run_lock "$repo" "$marker" container)
+active=$(cat "$repo/.codeo/active")
+assert_contains "volume unknown" "volume:  unknown" "$active"
+assert_contains "TODO" "could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)" "$out"
+
 # --- container, already locked -------------------------------------------------------------------
 case_desc="container, already locked"
 repo=$(fresh_repo)
