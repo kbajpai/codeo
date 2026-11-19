@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 is written and the change goes back to `/codeo:implement`: one blocking finding (F24, `rm` refuses a finished, squash-merged issue). Nothing is open.
+Round 5 is written: clear, forward to `/codeo:close`. No blocking finding; F29-F32 are non-blocking. Nothing is open.
 
 ## Questions
 
@@ -244,9 +244,66 @@ No issue was filed for this pass.
 
 **Verdict: back to `/codeo:implement`.**
 
+
+### Round 5 — 2026-11-19
+
+Re-checks `implement.md` round 5 (send-back from round 4; fix commit `d954b25`), the whole pass again from step 0. HEAD `c11233c`, merge base `fcda349`.
+
+Commands run this pass:
+
+```
+role.sh --check qc: exit 0
+sync-main.sh --abort-on-conflict: "sync-main: the branch already contains origin/main" (exit 0); after git fetch, HEAD..origin/main: 0 commits
+overlap.sh 133: nothing printed · overlap.sh --outside 133: nothing printed
+scope.sh origin/main HEAD: suite shell needed for unclassified paths (.codeo/133/*, CHANGELOG.md); suite.shell=true
+no invariants, no qc overlay rules, no environment
+build (suite shell, `true`): exit 0
+bash tests/run.sh (suite shell, whole): exit 0 — "all cases passed"
+PATH="<fake docker and sbx>:$PATH" bash tests/run.sh codeo-command: all cases passed
+round 5's tests against the round 4 code (scratch worktree at HEAD with .devcontainer/codeo from eda7a80) — failing assertions per test:
+  5 t_codeo_sbx_honoured · 3 t_issue_lookup_invalid_branch · 1 t_rm_commits_under_no_ref_refuse · 1 t_rm_container_clean
+  4 t_rm_pr_fetch_fails · 3 t_rm_pr_head_delivered · 2 t_rm_pr_head_detached_delivered · 1 t_rm_sandbox
+  1 t_rm_volume_failure_says_container_removed
+  — every new or changed test fails without the fix
+git diff origin/main --stat -- CHANGELOG.md: 1 file changed, 2 insertions(+)
+github.sh pr checks 136 at c11233c: tests success · qc-verdict failure (the dossier is live during the send-back; close archives it)
+```
+
+Independent review (opus, description "QC review: …", given the criteria and the squash-merge context only): no Critical, one Important, three Minor; its verdict "With fixes". It re-ran `rm` on a squash-merged issue with real git (branch deleted on origin from inside the clone, the commits only under `refs/pull/9/head`): clean, and `docker rm -f`, `volume rm` and `rmi` ran; a container with one local commit was refused, naming it. Its remark that the branch needs a rebase onto `origin/main` is wrong: the branch contains `origin/main` (0 commits behind).
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | One download line installs `codeo`; `codeo help` prints the commands | met | `t_help_lists_commands`, `t_help_names_kind_flags` |
+| 2 | `codeo update` replaces all three; a failed download changes nothing | met | `t_update_replaces_three`, `t_update_failed_download_changes_nothing` and the refused-file and partial-move cases |
+| 3 | `home`, `shell`, `issue` run the container script from the `codeo` directory | met | `t_home_runs_script`, `t_runs_from_any_directory`, `t_shell_container` |
+| 4 | `issue <N>` with no branch uses the origin branch carrying `.codeo/<N>/init.md`; none or several: one line, nothing created | met | `t_issue_branch_lookup_one`, `t_issue_lookup_none`, `t_issue_lookup_several`, `t_issue_lookup_invalid_branch`; the reviewer re-ran the lookup with real git |
+| 5 | Container or sandbox by flag or saved default; sandbox create, open, shell, end reachable | met | `t_issue_sandbox_flag`, `t_issue_default_sandbox`, `t_open_sandbox`, `t_shell_sandbox`, `t_rm_sandbox`, `t_codeo_sbx_honoured` |
+| 6 | `list` shows each container and sandbox with number and branch, nothing misleading when none | met | `t_list_rows`, `t_list_docker_down`, `t_list_sbx_down`, `t_list_one_down_nothing_shown`, `t_list_no_programs`; stopped-container branch `-` is F2 |
+| 7 | `rm` refuses naming unpushed or uncommitted work; removes container and volume, or the sandbox, when there is none; override removes anyway | met — F29 non-blocking | `t_rm_pr_head_delivered`, `t_rm_pr_head_detached_delivered`, `t_rm_commits_under_no_ref_refuse`, `t_rm_pr_fetch_fails`, `t_rm_container_*`, `t_rm_sandbox`; the reviewer's real-git run on a squash-merged issue |
+| 8 | Bad number, missing argument, unknown command: usage line, non-zero exit, nothing run | met | `expect_usage` cases, `t_home_rebuild_twice_usage` |
+| 9 | Stub test covering each command, argument errors, lookup none/one/several; `tests/run.sh` passes | met | `bash tests/run.sh`: exit 0; also with fake host programs on `PATH`; CI `tests` success at `c11233c` |
+| 10 | Both READMEs show the `codeo` forms beside the long ones; CHANGELOG entry | met — F31 non-blocking | `.devcontainer/README.md`, `.sbx/README.md`; `CHANGELOG.md` diff against `origin/main` is the one bullet |
+
+**Documentation check.** The READMEs say commits under a pull-request head count as delivered, `CODEO_SBX` is documented, and the `rm` wording matches the code; no "now", "no longer" or issue number in the READMEs. The changelog bullet's wording is F31.
+
+**Findings**
+
+- F24 (blocking in round 4) — fixed by `d954b25`; the reviewer confirmed it with real git. F25-F28 (non-blocking in round 4) — fixed by `d954b25`, F25 with the follow-up below.
+- **F29 — non-blocking — `/codeo:implement`'s.** `.devcontainer/codeo:499-502`: on any non-zero exit of `codeo-sandbox.sh end`, a refusal over unpushed or uncommitted work included, `codeo rm <N>` adds `codeo: to remove it anyway: sbx rm --force codeo-<N>`. That is true but steers the user to the one way that skips everything `end --force` does (setting the sandbox's refs aside under `refs/codeo/ended/`, saying what was not kept), while `codeo rm <N> --force`, which works from any directory, is not named; the script's own suggestion `codeo-sandbox.sh end <N> --force` works only from `~/codeo`. Nothing is removed by `codeo` itself, so not blocking. Cause: round 4's F25 asked for exactly this hint on every non-zero exit; the qc wording did not separate a refusal from a sandbox the script could not read. Better: name `codeo rm <N> --force` on a refusal, and give the `sbx rm --force` line only when `end --force` itself failed. The README sentence on ending a sandbox should match.
+- **F30 — non-blocking — `/codeo:implement`'s.** `.devcontainer/codeo:517-519,533`: `rm <N> --container --force` with no container and no volume prints `--force: no container codeo-<N> found; removing its volume and image anyway`, then `removed container codeo-<N> but could not remove volume codeo-<N>` — no container was removed (reproduced).
+- **F31 — non-blocking — `/codeo:implement`'s.** `CHANGELOG.md:9`: the bullet describes review-round fixes as changes ("says so instead of "could not check"", "a failed volume removal says the container is already removed", "points its branch-lookup clone at the current `CODEO_REPO_URL`"), which a reader takes for behaviour a release once had; none did. It should describe what the command does.
+- **F32 — non-blocking — `/codeo:implement`'s.** `.devcontainer/codeo:461`: the refusal lists unpushed commits as bare hashes; `codeo-sandbox.sh` uses `--oneline`.
+- F2 (plan Q5) and F21 (plan Q1) stand as recorded. Deferred minors from `implement.md` rounds 3-5 are not re-raised.
+- Reviewer's "declined to judge" list was read; nothing in it is a finding (fetching every pull-request head, a closed-unmerged PR head counting as delivered, both matching `codeo-sandbox.sh end`; the commands `/codeo:close` prints are out of scope).
+
+No issue was filed for this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-19 — qc round 1: back to implement (F1 blocking: list/shell/open/rm read a failing docker/sbx as none) · cost: 6m · opus-5-5 355k in + 2.4M cached / 18k out · sonnet-5-5 37k in + 1.1M cached / 2k out
 - 2026-11-19 — qc round 2: clear (F1 fixed; F9-F17 non-blocking) · cost: 6m · opus-5-5 226k in + 1.9M cached / 19k out
 - 2026-11-19 — qc round 3: back to implement (F18 blocking: CHANGELOG entry misplaced by the main merges; CI fix and F9-F17 verified) · cost: 6m · opus-5-5 332k in + 2.2M cached / 21k out
 - 2026-11-19 — qc round 4: back to implement (F24 blocking: rm refuses a squash-merged issue whose branch close deleted; F18 fixed) · cost: 6m · opus-5-5 385k in + 2.5M cached / 22k out
+- 2026-11-19 — qc round 5: clear (F24 fixed and confirmed with real git; F29-F32 non-blocking) · cost: 7m · opus-5-5 434k in + 2.5M cached / 20k out
