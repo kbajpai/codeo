@@ -655,6 +655,26 @@ assert_eq "exit code" 1 "$rc"
 assert_eq "stdout empty" "" "$out"
 assert_contains "stderr names the failure" "label list" "$(cat "$err_file")"
 
+case_desc="label create sends the name"
+reset_case
+write_fixture POST "repos/$repo/labels" <<'JSON'
+{"name":"priority: high"}
+JSON
+if out=$(bash "$script" label create 'priority: high' 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 0 "$rc"
+assert_eq "stdout empty" "" "$out"
+assert_contains "method" "METHOD=POST" "$(cat "$calls_log")"
+assert_contains "path" "PATH=repos/$repo/labels" "$(cat "$calls_log")"
+assert_contains "name field" "name=priority: high" "$(cat "$calls_log")"
+
+case_desc="label create failure"
+reset_case
+mark_fail POST "repos/$repo/labels"
+if out=$(bash "$script" label create 'priority: high' 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout empty" "" "$out"
+assert_contains "stderr names the failure" "label create priority: high" "$(cat "$err_file")"
+
 printf 'live: 104 m\n' > "$scratch_dir/live-msg.txt"
 ref_fixtures() {
     write_fixture GET "repos/$repo/git/ref/heads/main" <<'JSON'
