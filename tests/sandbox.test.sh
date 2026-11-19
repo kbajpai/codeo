@@ -1117,6 +1117,16 @@ docs_readme_says_where_forced_refs_go() {
     grep -Fq 'refs/codeo/ended/codeo-<N>/' "$repo/.sbx/README.md" 2>/dev/null || fail "the README does not name refs/codeo/ended/codeo-<N>/"
 }
 
+docs_readme_says_how_a_unreadable_sandbox_is_removed() {
+    grep -Fq 'sbx rm --force codeo-<N>' "$repo/.sbx/README.md" 2>/dev/null ||
+        fail "the README does not name sbx rm --force codeo-<N> for a sandbox end cannot read"
+}
+
+docs_readme_says_the_marker_names_the_sandbox() {
+    grep -Fq 'sandbox: codeo-<N>' "$repo/.sbx/README.md" 2>/dev/null ||
+        fail "the README does not say the lock takes sandbox: codeo-<N>"
+}
+
 docs_readme_names_codeo_code() {
     grep -Fq 'CODEO_CODE' "$repo/.sbx/README.md" 2>/dev/null || fail "the README does not name CODEO_CODE"
 }
@@ -1229,6 +1239,8 @@ cases=(
     docs_readme_says_how_to_move_the_pin
     docs_readme_says_where_the_pin_is_read
     docs_readme_says_where_forced_refs_go
+    docs_readme_says_how_a_unreadable_sandbox_is_removed
+    docs_readme_says_the_marker_names_the_sandbox
     docs_readme_names_codeo_code
     docs_the_hand_off_says_whichever_route
     docs_evaluation_page_names_the_script_as_it_is
