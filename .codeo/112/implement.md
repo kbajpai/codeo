@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1: the web-session run (Tasks 1-5) is done and recorded under Notes; both writes were refused. Next: file F1-F3 with `/codeo:issue`, comment on #112, then Task 7 (documentation). Earlier state: `origin/main` merged (`2cbbf5d`); baseline read before the run: `bash scripts/inflight.sh --live` lists #108 and #112 on `container` hosts only; the tip of `origin/feat/verify-live-session-signal-hosted` is `2cbbf5d8ae925d68185250280afb3f34031ec43a`.
+Round 1: the web-session run (Tasks 1-5) is done and recorded under Notes; both writes were refused. Next: comment on #112 and write Task 7 (documentation). F1-F3 are not filed: `/codeo:issue` refuses in this container and they are listed under Notes for the home checkout. Earlier state: `origin/main` merged (`2cbbf5d`); baseline read before the run: `bash scripts/inflight.sh --live` lists #108 and #112 on `container` hosts only; the tip of `origin/feat/verify-live-session-signal-hosted` is `2cbbf5d8ae925d68185250280afb3f34031ec43a`.
 
 ## Questions
 
@@ -38,6 +38,14 @@ Source: the engineer's screenshots of the hosted session on `feat/verify-live-se
 | 6 | both writes refused: record the text, state #104's criterion | **#104's criterion "it works in a web session" is not met**; follow-up F1 below |
 
 **Findings to file** (nothing is fixed here): F1 — a hosted session cannot publish the signal by either path (design change); F2 — `codeo` is not installed in the web session, so no hook runs there; F3 — in a web session the signal would name `Claude` and the machine `vm` (lock taken without a session id).
+
+### Later work — to file with `/codeo:issue` in the home checkout
+
+`/codeo:issue` refused here (`/codeo:issue runs in the home container, but this container's role is issue:112`), so nothing is filed and no number exists. File these three from the home container; each draft's substance is the finding above.
+
+- To file: a hosted web session cannot publish the live-session signal by either path (`git push` to `refs/codeo/live/…` gets HTTP 403 from the agent proxy, `github.sh ref put` is refused with "Write access to this GitHub API path is not permitted through this proxy (HTTP 403)"); #104's criterion "it works in a web session" is not met, so the design must change (F1).
+- To file: the `codeo` plugin is not installed in the hosted web session although `.claude/settings.json` enables `codeo@codeo`, so the live-signal hook cannot fire there (F2).
+- To file: in a web session the signal would name `Claude` (`git config user.name`) rather than the engineer's login and the machine `vm` rather than `web-<8 characters>`, because `lock.sh take web` ran without a session id and the lock says `session: unknown` (F3).
 
 ## Outcome
 
