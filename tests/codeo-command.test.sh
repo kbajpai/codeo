@@ -36,6 +36,7 @@ trap 'rm -rf "$scratch"' EXIT
 cm_setup() {
     cm_dir="$scratch/$1"
     cm_home="$cm_dir/home"
+    cm_script=""
     mkdir -p "$cm_dir/bin" "$cm_home" "$cm_dir/h"
     : >"$cm_dir/calls"
     local n
@@ -94,7 +95,7 @@ STUB
 cm_run() {
     cm_status=0
     env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:/usr/bin:/bin" \
-        "$bash_abs" "$script" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
+        "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
 }
@@ -764,6 +765,116 @@ t_rm_container_detected() {
     expect_no_script
 }
 
+# update_setup <name>: cm_setup plus an installed copy of codeo in $cm_dir/inst (cm_script), installed
+# scripts with known "old" bodies, a curl stub that serves $cm_dir/body_<file> (a #! script by
+# default) and fails for a file named in $cm_dir/fail, and an mv stub that logs to calls.
+update_setup() {
+    cm_setup "$1"
+    mkdir -p "$cm_dir/inst"
+    cp "$script" "$cm_dir/inst/codeo"
+    cm_script="$cm_dir/inst/codeo"
+    printf '#!/bin/bash\n# old container\n' >"$cm_home/codeo-container.sh"
+    printf '#!/bin/bash\n# old sandbox\n' >"$cm_home/codeo-sandbox.sh"
+    cat >"$cm_dir/bin/curl" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "curl $*" >>"$d/calls"
+out=""
+url=""
+while [[ $# -gt 0 ]]; do
+    [[ "$1" == -o ]] && { out=$2; shift; }
+    url=$1
+    shift
+done
+f=${url##*/}
+if grep -qxF "$f" "$d/fail" 2>/dev/null; then exit 22; fi
+if [[ -e "$d/body_$f" ]]; then cp "$d/body_$f" "$out"; else printf '#!/bin/bash\n# new %s\n' "$f" >"$out"; fi
+STUB
+    cat >"$cm_dir/bin/mv" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "mv $*" >>"$d/calls"
+exec /bin/mv "$@"
+STUB
+    chmod +x "$cm_dir/bin/curl" "$cm_dir/bin/mv"
+}
+
+# update_snapshot: print a checksum of the three installed files.
+update_snapshot() {
+    cksum "$cm_home/codeo-container.sh" "$cm_home/codeo-sandbox.sh" "$cm_dir/inst/codeo"
+}
+
+# expect_update_untouched <before-snapshot> <file-named-in-error>: update failed with one codeo: line
+# naming the file, nothing installed changed and no temporary file or directory is left.
+expect_update_untouched() {
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 ]] || fail "stderr is not one line: $cm_err"
+    [[ "$cm_err" == codeo:*"$2"* ]] || fail "stderr does not name $2: $cm_err"
+    [[ "$(update_snapshot)" == "$1" ]] || fail "installed files changed"
+    local left
+    left=$(find "$cm_home" -mindepth 1 \( -name '.update.*' -o -name '*.part' \) | head -n 3)
+    [[ -z "$left" ]] || fail "leftovers: $left"
+    [[ "$(ls -A "$cm_dir/inst")" == codeo ]] || fail "inst holds more than codeo: $(ls -A "$cm_dir/inst")"
+}
+
+t_update_replaces_three() {
+    update_setup "$current"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    [[ "$cm_out" == "updated codeo and both scripts" ]] || fail "stdout: $cm_out"
+    grep -q 'new codeo-container.sh' "$cm_home/codeo-container.sh" || fail "container script not replaced"
+    grep -q 'new codeo-sandbox.sh' "$cm_home/codeo-sandbox.sh" || fail "sandbox script not replaced"
+    grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not replaced"
+    [[ -x "$cm_home/codeo-container.sh" && -x "$cm_home/codeo-sandbox.sh" && -x "$cm_dir/inst/codeo" ]] ||
+        fail "an installed file is not executable"
+    [[ "$(grep -c '^curl .*-fsSL' "$cm_dir/calls")" -eq 3 ]] || fail "want three curl -fsSL calls: $(cat "$cm_dir/calls")"
+    local mvs
+    mvs=$(grep '^mv ' "$cm_dir/calls")
+    [[ "$(tail -n 1 <<<"$mvs")" == "mv "*" $cm_dir/inst/codeo" ]] || fail "last mv is not onto codeo: $mvs"
+    [[ "$(grep -c " $cm_dir/inst/codeo\$" <<<"$mvs")" -eq 1 ]] || fail "codeo moved more than once: $mvs"
+    [[ "$mvs" == *" $cm_home/codeo-container.sh"* && "$mvs" == *" $cm_home/codeo-sandbox.sh"* ]] ||
+        fail "scripts not moved into home: $mvs"
+    [[ -z "$(find "$cm_home" -name '.update.*')" ]] || fail "temp directory left"
+}
+
+t_update_failed_download_changes_nothing() {
+    update_setup "$current"
+    echo codeo-sandbox.sh >"$cm_dir/fail"
+    local before
+    before=$(update_snapshot)
+    cm_run update
+    expect_update_untouched "$before" codeo-sandbox.sh
+    ! grep -q '^mv ' "$cm_dir/calls" || fail "mv ran: $(grep '^mv ' "$cm_dir/calls")"
+}
+
+t_update_empty_file_refused() {
+    update_setup "$current"
+    : >"$cm_dir/body_codeo-sandbox.sh"
+    local before
+    before=$(update_snapshot)
+    cm_run update
+    expect_update_untouched "$before" codeo-sandbox.sh
+}
+
+t_update_not_a_script_refused() {
+    update_setup "$current"
+    printf '<html><body>404: Not Found</body></html>\n' >"$cm_dir/body_codeo"
+    local before
+    before=$(update_snapshot)
+    cm_run update
+    expect_update_untouched "$before" codeo
+}
+
+t_update_without_scripts() {
+    update_setup "$current"
+    rm -rf "$cm_home"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    [[ -s "$cm_home/codeo-container.sh" && -s "$cm_home/codeo-sandbox.sh" ]] || fail "scripts not installed"
+}
+
+t_update_usage_extra_args() { expect_usage update now; }
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -824,6 +935,12 @@ cases=(
     t_rm_removal_failure_dies
     t_rm_stopped_container_started_first
     t_rm_container_detected
+    t_update_replaces_three
+    t_update_failed_download_changes_nothing
+    t_update_empty_file_refused
+    t_update_not_a_script_refused
+    t_update_without_scripts
+    t_update_usage_extra_args
 )
 
 for current in "${cases[@]}"; do

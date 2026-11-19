@@ -414,6 +414,47 @@ cmd_rm() {
     echo "removed $name (the Claude Code login on its volume is gone with it)"
 }
 
+# upd_tmp and upd_new: what cmd_update's cleanup removes.
+upd_tmp=""
+upd_new=""
+upd_cleanup() {
+    [[ -z "$upd_tmp" ]] || rm -rf "$upd_tmp"
+    [[ -z "$upd_new" ]] || rm -f "$upd_new"
+}
+
+# cmd_update: replace codeo and both scripts with the latest from the raw URL, all or nothing. All
+# three are downloaded into a fresh directory in the home directory, each non-empty and starting with
+# "#!"; only then are the scripts moved into place, and codeo itself last, through a temporary file
+# beside the installed codeo so the running copy is replaced atomically, never truncated. Any failure
+# removes what was made and changes nothing installed. Needs no script to be present beforehand.
+cmd_update() {
+    [[ $# -eq 0 ]] || usage
+    local dir base self self_dir f name
+    dir=$(home_dir)
+    base=${CODEO_RAW_URL:-https://raw.githubusercontent.com/kbajpai/codeo/main}
+    self=$(readlink -f "${BASH_SOURCE[0]}")
+    self_dir=${self%/*}
+    mkdir -p "$dir"
+    trap upd_cleanup EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    upd_tmp=$(mktemp -d "$dir/.update.XXXXXX") || die "could not create a temporary directory in $dir"
+    for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh .devcontainer/codeo; do
+        name=${f##*/}
+        curl -fsSL -o "$upd_tmp/$name" "$base/$f" 2>/dev/null || die "could not download $base/$f; nothing changed"
+        [[ -s "$upd_tmp/$name" ]] || die "$base/$f is empty; nothing changed"
+        [[ "$(head -c2 "$upd_tmp/$name")" == "#!" ]] || die "$base/$f is not a script; nothing changed"
+    done
+    upd_new=$(mktemp "$self_dir/.codeo.XXXXXX") || die "could not write beside $self; nothing changed"
+    cp "$upd_tmp/codeo" "$upd_new" || die "could not write beside $self; nothing changed"
+    chmod +x "$upd_tmp/codeo-container.sh" "$upd_tmp/codeo-sandbox.sh" "$upd_new"
+    mv -f "$upd_tmp/codeo-container.sh" "$dir/codeo-container.sh"
+    mv -f "$upd_tmp/codeo-sandbox.sh" "$dir/codeo-sandbox.sh"
+    mv -f "$upd_new" "$self"
+    upd_new=""
+    echo "updated codeo and both scripts"
+}
+
 main() {
     [[ $# -gt 0 ]] || usage
     local cmd=$1
@@ -426,6 +467,7 @@ main() {
         list) cmd_list "$@" ;;
         rm) cmd_rm "$@" ;;
         default) cmd_default "$@" ;;
+        update) cmd_update "$@" ;;
         help | -h | --help) cmd_help "$@" ;;
         *) usage ;;
     esac
