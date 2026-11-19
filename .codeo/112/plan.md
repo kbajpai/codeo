@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q5 are answered and the plan is drafted in `.codeo/112/plan-draft.md` (not committed). Two questions are open, both overlaps with other workflows (Q6, Q7): answer them, then run `/codeo:plan` again for the approval gate.
+Q1-Q7 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md` (unstaged, for review).
 
 ## Questions
 
@@ -70,6 +70,7 @@ As recommended: yes, one or two sentences in `docs/handoff.md` and a `CHANGELOG.
 - **Re-scope** — drop the `CHANGELOG.md` bullet and put the result in `docs/handoff.md` only.
 
 **Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-19: "Approved", given on the draft with Q6 and Q7 open; the planner reads that as taking the recommended option. Correct this line if another was meant).
 
 ### Q7 — #108 also changes `docs/handoff.md` and `CHANGELOG.md`. Proceed, sequence or re-scope?
 
@@ -80,6 +81,7 @@ As recommended: yes, one or two sentences in `docs/handoff.md` and a `CHANGELOG.
 - **Re-scope** — record the result in the dossier and the issue only, with no documentation task.
 
 **Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-19: "Approved"; read the same way as Q6).
 
 ## Notes
 
@@ -99,7 +101,16 @@ As recommended: yes, one or two sentences in `docs/handoff.md` and a `CHANGELOG.
 
 **Other workflows in flight** (`inflight.sh --except 112`, re-run 2026-11-19 after the answers). #102 (qc) overlaps on `CHANGELOG.md` (Q6); #108 (qc) overlaps on `docs/handoff.md` and `CHANGELOG.md` (Q7). #122, which the first run listed, has since left the list. #132 is at `init` with no footprint yet, so its `changed:` line is all there is to compare and shows no overlap. No exclusive resource is configured.
 
-**Draft.** `.codeo/112/plan-draft.md` holds the 7-task plan, to be written to `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md` after approval. Planned footprint: `files:` `docs/handoff.md`, `CHANGELOG.md`, `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md`; `wiki:` none; `exclusive:` none; `sequenced:` none unless Q6 or Q7 says otherwise.
+**Plan.** Written to `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md` after approval (unstaged).
+
+### Footprint
+
+```
+files:      docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
