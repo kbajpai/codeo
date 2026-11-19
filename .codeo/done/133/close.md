@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Sent back: #136 failed its `tests` check in CI, so the change returns to `/codeo:implement`. Next step: `/codeo:implement`.
+The pull request is updated and waiting for review and merge. Next step: the engineer reviews and merges it, then runs `/codeo:close` again.
 
 ## Questions
 
@@ -48,7 +48,17 @@ Also on origin since this pull request opened: an *Update branch* merge of `orig
 
 qc round at review: 2
 
+
+### Round 3 — pull request updated
+
+2026-11-19
+
+(send-back from close.md round 2)
+
+#136 https://github.com/kbajpai/codeo/pull/136 went back through `/codeo:implement` (rounds 3-5) and `/codeo:qc` (rounds 3-5); `qc.md` round 5 cleared it with ``**Verdict: clear — forward to `/codeo:close`.**`` (quoted in plain text; its number, 5, is above the `qc round at review: 2` this send-back recorded). No override. The CI `tests` check passes on the pushed tip. The base branch merges cleanly (`git merge-tree` exit 0); `overlap.sh 133` printed nothing.
+
 ## Log
 
 - 2026-11-19 — opened #136 off qc round 2's clear verdict; dossier archived to `.codeo/done/133/` · board: In progress → In review on #3 Codeo · cost: 0m · sonnet-5-5 168k in + 616k cached / 3k out
 - 2026-11-19 — send-back: #136 failed its tests check (t_list_no_programs reaches a real docker on CI); dossier back to .codeo/133/ · board: In review → In progress on #3 Codeo · cost: 68m · sonnet-5-5 180k in + 2.7M cached / 8k out
+- 2026-11-19 — updated #136 off qc round 5's clear verdict after the round 2 send-back; dossier archived to .codeo/done/133/ · board: In progress → In review on #3 Codeo · cost: 0m · sonnet-5-5 359k in + 420k cached / 2k out
