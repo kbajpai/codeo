@@ -108,7 +108,8 @@ ensure_home() {
 }
 
 # find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was
-# found. Uses a blob-less bare clone in the home directory, fetched on every lookup.
+# found. Uses a blob-less bare clone in the home directory, pointed at the current repository URL and
+# fetched on every lookup; rev-parse needs only the trees the fetch brought, never a blob.
 find_branch() {
     local n=$1 dir repo_url b refs
     local -a found=()
@@ -122,13 +123,15 @@ find_branch() {
         }
         mv "$dir/.lookup.git.part" "$dir/.lookup.git"
     fi
+    git -C "$dir/.lookup.git" remote set-url origin "$repo_url" >&2 ||
+        die "could not point the lookup clone at $repo_url"
     git -C "$dir/.lookup.git" fetch -q --prune origin '+refs/heads/*:refs/heads/*' >&2 ||
         die "could not fetch $repo_url"
     refs=$(git -C "$dir/.lookup.git" for-each-ref --format='%(refname:lstrip=2)' refs/heads) ||
         die "could not list branches of $repo_url"
     while IFS= read -r b; do
         [[ -n "$b" ]] || continue
-        if git -C "$dir/.lookup.git" cat-file -e "$b:.codeo/$n/init.md" 2>/dev/null; then
+        if git -C "$dir/.lookup.git" rev-parse -q --verify "$b:.codeo/$n/init.md" >/dev/null 2>&1; then
             found+=("$b")
         fi
     done <<<"$refs"
@@ -308,7 +311,8 @@ cmd_open() {
     run_script codeo-sandbox.sh open "$target"
 }
 
-# print_sorted <rows>: print "<N>\t<row>" lines sorted by N, without the number column; return 1 when empty.
+# print_sorted <rows>: print "<N>\t<row>" lines sorted by N, without the number column; return 1 when
+# empty.
 print_sorted() {
     [[ -n "$1" ]] || return 1
     sort -n -t $'\t' -k1,1 <<<"$1" | cut -f2-
@@ -317,8 +321,9 @@ print_sorted() {
 # cmd_list: print one row per issue container or sandbox, "#<N>  <kind>  <state>  <branch>",
 # containers first, each kind by number. Needs neither the scripts nor a download. A missing program
 # is skipped; both programs missing is an error. A program that is installed but fails to list is
-# reported on stderr, what the other shows is still printed, and the exit status is 1. Nothing is started or exec'd into
-# a stopped environment: a stopped container's branch is "-".
+# reported on stderr, what the other shows is still printed, and the exit status is 1. Nothing is
+# started or exec'd into a stopped environment: a container that is not running has branch "-", and
+# its state is paused or restarting when docker says so, else stopped.
 cmd_list() {
     [[ $# -eq 0 ]] || usage
     local listing name state branch dir agent status n rows shown=0 failed=0
@@ -338,7 +343,7 @@ cmd_list() {
             if [[ "$state" == running ]]; then
                 branch=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || branch=""
             else
-                state=stopped
+                case "$state" in paused | restarting) ;; *) state=stopped ;; esac
             fi
             rows+="$n"$'\t'"#$n  container  $state  ${branch:--}"$'\n'
         done <<<"$listing"
@@ -398,19 +403,26 @@ stop_started() {
 # container_check <N>: check the issue container's repository for work that exists only there. Starts
 # a stopped container first. Prints one heading per kind found (up to 10 lines each) and returns 0
 # when clean, 1 when something would be lost, 2 when the check could not run (cannot start, fetch or
-# exec failed). When it returns non-zero it stops again a container it started.
+# exec failed), 3 when there is no such container. When it returns non-zero it stops again a container
+# it knows it started.
 container_check() {
-    local name="codeo-$1" listing state="" row rest dirty=0 out kind started=0
+    local name="codeo-$1" listing state="" row rest dirty=0 out kind started=0 listed=0
     local -A found=()
     local -a kinds=(status stash branch revs)
     if listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
+        listed=1
         while read -r row rest _; do
             [[ "$row" == "$name" ]] && state=$rest
         done <<<"$listing"
     fi
     if [[ "$state" != running ]]; then
-        docker start "$name" >/dev/null 2>&1 </dev/null || return 2
-        started=1
+        if ! docker start "$name" >/dev/null 2>&1 </dev/null; then
+            # No such container is told apart from any other failure only by a listing that worked.
+            if [[ "$listed" -eq 1 && -z "$state" ]]; then return 3; fi
+            return 2
+        fi
+        # Only a container listed as not running was started by us; with no listing it may have been running.
+        [[ "$listed" -eq 0 ]] || started=1
     fi
     docker exec "$name" git -C "/workspaces/$name" fetch origin >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
     found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
@@ -467,6 +479,10 @@ cmd_rm() {
             echo "--force: not kept from $name:"
             printf '%s\n' "$report"
             ;;
+        3)
+            [[ -n "$force" ]] || die "no container $name found; nothing removed"
+            echo "--force: no container $name found; removing its volume and image anyway"
+            ;;
         *)
             [[ -n "$force" ]] ||
                 die "could not check $name for unsaved work; nothing removed (to remove it anyway: docker rm -f $name; docker volume rm $name)"
@@ -494,10 +510,11 @@ upd_cleanup() {
 }
 
 # cmd_update: replace codeo and both scripts with the latest from the raw URL; a failed
-# download changes nothing. All three are downloaded into a fresh directory in the home directory, each non-empty and starting with
-# "#!"; only then are the scripts moved into place, and codeo itself last, through a temporary file
-# beside the installed codeo so the running copy is replaced atomically, never truncated. Any failure
-# removes what was made and changes nothing installed. Needs no script to be present beforehand.
+# download changes nothing. All three are downloaded into a fresh directory in the home directory,
+# each non-empty and starting with "#!"; only then are the scripts moved into place, and codeo itself
+# last, through a temporary file beside the installed codeo so the running copy is replaced atomically,
+# never truncated. Any failure removes what was made and changes nothing installed. Needs no script
+# to be present beforehand.
 cmd_update() {
     [[ $# -eq 0 ]] || usage
     local dir base self self_dir f name

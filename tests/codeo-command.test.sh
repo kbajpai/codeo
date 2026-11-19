@@ -108,7 +108,7 @@ STUB
 # cm_run <args...>: run codeo with a clean environment; set cm_status, cm_out and cm_err.
 cm_run() {
     cm_status=0
-    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" \
+    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} \
         "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
@@ -330,6 +330,27 @@ t_lookup_clone_atomic() {
     [[ ! -e "$cm_home/.lookup.git/stale" ]] || fail "stale part kept"
 }
 
+t_lookup_checks_file_without_blob() {
+    cm_setup "$current"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    printf 'feat/a\n' >"$cm_dir/has"
+    cm_run issue 5
+    grep -qF -- "rev-parse -q --verify feat/a:.codeo/5/init.md" "$cm_dir/calls" || fail "no rev-parse --verify: $(tr '\n' '|' <"$cm_dir/calls")"
+    ! grep -q "cat-file" "$cm_dir/calls" || fail "cat-file fetches a blob"
+}
+
+t_lookup_repoints_clone_at_url() {
+    cm_setup "$current"
+    mkdir -p "$cm_home/.lookup.git"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    printf 'feat/a\n' >"$cm_dir/has"
+    CODEO_REPO_URL=https://example.test/new.git cm_run issue 5
+    local set fetch
+    set=$(grep -n "remote set-url origin https://example.test/new.git$" "$cm_dir/calls" | head -1 | cut -d: -f1) || true
+    fetch=$(grep -n "fetch -q --prune origin" "$cm_dir/calls" | head -1 | cut -d: -f1) || true
+    [[ -n "$set" && -n "$fetch" && "$set" -lt "$fetch" ]] || fail "set-url not before fetch: $(tr '\n' '|' <"$cm_dir/calls")"
+}
+
 t_lookup_uses_lstrip() {
     cm_setup "$current"
     printf 'feat/a\n' >"$cm_dir/branches"
@@ -497,14 +518,14 @@ t_list_rows() {
     cm_setup "$current"
     list_stubs
     rm -f "$cm_home"/*.sh
-    printf 'codeo-140 exited\ncodeo-home running\ncodeo-131 running\ncodeo-9 paused\nother running\n' >"$cm_dir/docker_out"
+    printf 'codeo-140 exited\ncodeo-home running\ncodeo-131 running\ncodeo-9 paused\ncodeo-10 restarting\nother running\n' >"$cm_dir/docker_out"
     printf 'fix/a\n' >"$cm_dir/dbranch_codeo-131"
     printf 'NAME AGENT STATUS\ncodeo-133 claude running\ncodeo-12 claude stopped\ncodeo-5 claude running (detached)\nnotcodeo-7 claude running\n' >"$cm_dir/sbx_out"
     printf 'feat/s\n' >"$cm_dir/gbranch_codeo-133"
     mkdir -p "$cm_home/codeo-133"
     cm_run list
     local want
-    want=$'#9  container  stopped  -\n#131  container  running  fix/a\n#140  container  stopped  -\n#5  sandbox  detached  -\n#12  sandbox  stopped  -\n#133  sandbox  running  feat/s'
+    want=$'#9  container  paused  -\n#10  container  restarting  -\n#131  container  running  fix/a\n#140  container  stopped  -\n#5  sandbox  detached  -\n#12  sandbox  stopped  -\n#133  sandbox  running  feat/s'
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     [[ "$cm_out" == "$want" ]] || fail "output: $cm_out"
     ! grep -qE '^(docker (start|exec codeo-(140|9) )|sbx exec|curl)' "$cm_dir/calls" || fail "started something: $(cat "$cm_dir/calls")"
@@ -696,6 +717,31 @@ t_rm_refusal_stops_started_container() {
     ! grep -q '^docker stop' "$cm_dir/calls" || fail "stopped a container that was running"
 }
 
+t_rm_container_not_found() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/gone" "$cm_dir/start_fail"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 1 && "$cm_err" == "codeo: no container codeo-5 found"* ]] || fail "$cm_status $cm_err"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 ]] || fail "not one line: $cm_err"
+    ! grep -q "^docker rm" "$cm_dir/calls" || fail "removed something"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/start_fail"
+    echo exited >"$cm_dir/dstate"
+    cm_run rm 5 --container
+    grep -q "unsaved work" <<<"$cm_err" || fail "existing container that will not start: $cm_err"
+}
+
+t_rm_unlisted_state_not_stopped_by_us() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/ps_fail" "$cm_dir/fetch_fail"
+    cm_run rm 5 --container
+    grep -q "^docker start codeo-5" "$cm_dir/calls" || fail "did not try to start"
+    ! grep -q "^docker stop" "$cm_dir/calls" || fail "stopped a container that may have been running: $(tr '\n' '|' <"$cm_dir/calls")"
+}
+
 t_list_extra_args_usage() { expect_usage list now; }
 
 t_host_kinds_exact_name() {
@@ -722,7 +768,9 @@ d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
 case "$1" in
     ps)
-        if [[ -e "$d/gone_after_rm" ]] && grep -q "^docker rm" "$d/calls"; then :
+        [[ ! -e "$d/ps_fail" ]] || exit 1
+        if [[ -e "$d/gone" ]]; then :
+        elif [[ -e "$d/gone_after_rm" ]] && grep -q "^docker rm" "$d/calls"; then :
         elif [[ "$*" == *State* ]]; then echo "codeo-5 $(cat "$d/dstate" 2>/dev/null || echo running)"; else echo codeo-5; fi ;;
     start) [[ ! -e "$d/start_fail" ]] || exit 1 ;;
     rm) [[ ! -e "$d/rm_fail" ]] || exit 1 ;;
@@ -1173,6 +1221,8 @@ cases=(
     t_download_failure
     t_download_not_script
     t_lookup_clone_atomic
+    t_lookup_checks_file_without_blob
+    t_lookup_repoints_clone_at_url
     t_lookup_uses_lstrip
     t_issue_sandbox_flag
     t_issue_default_sandbox
@@ -1201,6 +1251,8 @@ cases=(
     t_lookup_branch_list_failure
     t_help_names_kind_flags
     t_rm_refusal_stops_started_container
+    t_rm_container_not_found
+    t_rm_unlisted_state_not_stopped_by_us
     t_list_extra_args_usage
     t_host_kinds_exact_name
     t_rm_sandbox
