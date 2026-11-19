@@ -184,12 +184,26 @@ warn_listing() {
     return 0
 }
 
+# sbx_prog: print the sbx program to run, as codeo-sandbox.sh picks it (CODEO_SBX, else sbx, else sbx.exe);
+# return 1 when none is installed.
+sbx_prog() {
+    if [[ -n "${CODEO_SBX:-}" ]]; then
+        printf '%s\n' "$CODEO_SBX"
+    elif command -v sbx >/dev/null 2>&1; then
+        echo sbx
+    elif command -v sbx.exe >/dev/null 2>&1; then
+        echo sbx.exe
+    else
+        return 1
+    fi
+}
+
 # host_kinds <N>: print container and/or sandbox, one per line, for each that holds codeo-<N> on this
 # host, and return 3 when an installed program could not list (it says so on stderr; the other kind
 # still counts). A missing docker or sbx program is skipped silently. A sandbox counts only when the
 # first column of a row of sbx ls is exactly codeo-<N>.
 host_kinds() {
-    local name="codeo-$1" listing row failed=0
+    local name="codeo-$1" listing row failed=0 sbx
     if command -v docker >/dev/null 2>&1; then
         if listing=$(docker ps -a --format '{{.Names}}' 2>&1); then
             if grep -qxF "$name" <<<"$listing"; then echo container; fi
@@ -198,8 +212,8 @@ host_kinds() {
             failed=1
         fi
     fi
-    if command -v sbx >/dev/null 2>&1; then
-        if listing=$(sbx ls 2>&1); then
+    if sbx=$(sbx_prog); then
+        if listing=$("$sbx" ls 2>&1); then
             while read -r row _; do
                 if [[ "$row" == "$name" ]]; then
                     echo sandbox
@@ -267,7 +281,11 @@ cmd_issue() {
     kind=${kind_flag:-$(saved_default)}
     [[ "$kind" == container || -z "$rebuild" ]] || usage "--rebuild applies only to a container, and the kind here is a sandbox"
     ensure_home
-    [[ -n "$branch" ]] || branch=$(find_branch "$n")
+    if [[ -z "$branch" ]]; then
+        branch=$(find_branch "$n")
+        valid_branch "$branch" ||
+            die "branch $branch found on origin is not a name codeo accepts; pass a branch: codeo issue $n <branch>"
+    fi
     run_script "codeo-$kind.sh" issue "$n" "$branch" ${rebuild:+"$rebuild"}
 }
 
@@ -329,8 +347,8 @@ print_sorted() {
 # its state is paused or restarting when docker says so, else stopped.
 cmd_list() {
     [[ $# -eq 0 ]] || usage
-    local listing name state branch dir agent status n rows shown=0 failed=0
-    command -v docker >/dev/null 2>&1 || command -v sbx >/dev/null 2>&1 ||
+    local listing name state branch dir agent status n rows shown=0 failed=0 sbx
+    command -v docker >/dev/null 2>&1 || sbx_prog >/dev/null ||
         die "neither docker nor sbx is installed: nothing to list"
     rows=""
     if ! command -v docker >/dev/null 2>&1; then
@@ -354,9 +372,9 @@ cmd_list() {
     fi
     rows=""
     dir=$(home_dir)
-    if ! command -v sbx >/dev/null 2>&1; then
+    if ! sbx=$(sbx_prog); then
         :
-    elif ! listing=$(sbx ls 2>&1); then
+    elif ! listing=$("$sbx" ls 2>&1); then
         warn_listing "sbx sandboxes" "$listing"
         failed=1
     else
@@ -428,6 +446,9 @@ container_check() {
         [[ "$listed" -eq 0 ]] || started=1
     fi
     docker exec "$name" git -C "/workspaces/$name" fetch origin >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
+    # Commits under a pull-request head count as delivered: /codeo:close deletes the branch on origin after a
+    # squash merge, so the pull-request heads are what still hold them. Failing to fetch them proves nothing.
+    docker exec "$name" git -C "/workspaces/$name" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
     found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
@@ -473,7 +494,13 @@ cmd_rm() {
     kind=$(detect_kind "$n" "$kind_flag")
     if [[ "$kind" == sandbox ]]; then
         ensure_home
-        run_script codeo-sandbox.sh end "$n" ${force:+--force}
+        # Not run_script: it execs, and a failure needs the by-hand hint after the script's own output.
+        cd "$(home_dir)"
+        bash "$(home_dir)/codeo-sandbox.sh" end "$n" ${force:+--force} || rc=$?
+        if [[ "$rc" -ne 0 ]]; then
+            echo "codeo: to remove it anyway: sbx rm --force codeo-$n" >&2
+        fi
+        exit "$rc"
     fi
     name="codeo-$n"
     report=$(container_check "$n") || rc=$?
@@ -503,7 +530,7 @@ cmd_rm() {
             die "could not remove container $name"
         fi
     fi
-    docker volume rm "$name" >/dev/null 2>&1 </dev/null || die "could not remove volume $name"
+    docker volume rm "$name" >/dev/null 2>&1 </dev/null || die "removed container $name but could not remove volume $name"
     docker rmi "codeo-dev:$name" >/dev/null 2>&1 </dev/null ||
         echo "codeo: warning: could not remove image codeo-dev:$name" >&2
     echo "removed $name (the Claude Code login on its volume is gone with it)"

@@ -108,7 +108,7 @@ STUB
 # cm_run <args...>: run codeo with a clean environment; set cm_status, cm_out and cm_err.
 cm_run() {
     cm_status=0
-    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} \
+    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} ${CODEO_SBX:+CODEO_SBX="$CODEO_SBX"} \
         "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
@@ -790,6 +790,13 @@ case "$1" in
     exec)
         sub=$6
         [[ "$sub" != fetch || ! -e "$d/fetch_fail" ]] || exit 1
+        [[ "$*" != *refs/pull/* || ! -e "$d/prfetch_fail" ]] || exit 1
+        # once the pull-request head fetch ran: rev-list prints nothing when rev_pr_covered exists, and
+        # branch -r --contains prints g_branch_r_pr when that exists
+        prf=0
+        ! grep -q 'refs/pull/' "$d/calls" || prf=1
+        if [[ "$prf" -eq 1 && "$sub" == rev-list && -e "$d/rev_pr_covered" ]]; then exit 0; fi
+        if [[ "$prf" -eq 1 && "$sub" == branch && "$*" == *" -r "* && -e "$d/g_branch_r_pr" ]]; then cat "$d/g_branch_r_pr"; exit 0; fi
         [[ "$sub" != "$(cat "$d/exec_fail" 2>/dev/null)" ]] || exit 1
         if [[ "$sub" == branch && "$*" == *" -r "* ]]; then cat "$d/g_branch_r" 2>/dev/null || true
         elif [[ "$sub" == branch && ! -e "$d/g_branch" ]]; then echo main; else cat "$d/g_$sub" 2>/dev/null || true; fi ;;
@@ -822,6 +829,11 @@ t_rm_sandbox() {
     cm_run rm 5 --sandbox
     [[ "$cm_status" -eq 3 ]] || fail "exit $cm_status, want 3"
     expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
+    grep -qxF 'codeo: to remove it anyway: sbx rm --force codeo-5' <<<"$cm_err" || fail "no by-hand hint: $cm_err"
+    cm_setup "$current-3"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    ! grep -q 'to remove it anyway' <<<"$cm_err" || fail "hint on success: $cm_err"
 }
 
 t_rm_sandbox_force() {
@@ -844,7 +856,7 @@ t_rm_container_clean() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local want
-    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
+    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
     [[ "$(cat "$cm_dir/calls")" == "$want" ]] || fail "calls: $(tr '\n' '|' <"$cm_dir/calls")"
     [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
     grep -qi 'login' <<<"$cm_out" || fail "no login note: $cm_out"
@@ -1219,6 +1231,93 @@ t_update_through_symlink() {
     [[ "$(ls -A "$cm_dir/inst")" == codeo ]] || fail "inst holds more than codeo"
 }
 
+t_rm_pr_head_delivered() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    touch "$cm_dir/rev_pr_covered"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "not removed"
+    grep -qF 'fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*' "$cm_dir/calls" || fail "no pull-request head fetch"
+}
+
+t_rm_pr_head_detached_delivered() {
+    cm_setup "$current"
+    rm_stubs
+    : >"$cm_dir/g_branch"
+    printf '  origin/pr/7\n' >"$cm_dir/g_branch_r_pr"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "not removed"
+}
+
+t_rm_pr_fetch_fails() {
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/prfetch_fail"
+    cm_run rm 5 --container
+    expect_refused 'could not check'
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "started container not stopped"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/prfetch_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "--force: not removed"
+}
+
+t_rm_commits_under_no_ref_refuse() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5 --container
+    expect_refused abc1234
+    grep -qF 'refs/pull/' "$cm_dir/calls" || fail "pull-request head fetch not made"
+}
+
+t_rm_volume_failure_says_container_removed() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/vol_fail"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    grep -qF 'removed container codeo-5 but could not remove volume codeo-5' <<<"$cm_err" || fail "stderr: $cm_err"
+}
+
+t_codeo_sbx_honoured() {
+    cm_setup "$current"
+    mkdir -p "$cm_dir/alt"
+    rm -f "$cm_dir/bin/sbx"
+    cat >"$cm_dir/alt/mysbx" <<'STUB'
+#!/bin/bash
+d=${0%/alt/*}
+echo "mysbx $*" >>"$d/calls"
+printf 'NAME AGENT STATUS\ncodeo-5 claude running\n'
+STUB
+    chmod +x "$cm_dir/alt/mysbx"
+    CODEO_SBX="$cm_dir/alt/mysbx" cm_run shell 5
+    [[ "$cm_status" -eq 0 ]] || fail "shell: exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh shell 5 pwd=$cm_home"
+    grep -qx 'mysbx ls' "$cm_dir/calls" || fail "CODEO_SBX not used by host_kinds"
+    : >"$cm_dir/calls"
+    CODEO_SBX="$cm_dir/alt/mysbx" cm_run list
+    [[ "$cm_status" -eq 0 ]] || fail "list: exit $cm_status, err: $cm_err"
+    grep -q '^#5  sandbox' <<<"$cm_out" || fail "list lacks the sandbox: $cm_out"
+    grep -qx 'mysbx ls' "$cm_dir/calls" || fail "CODEO_SBX not used by list"
+}
+
+t_issue_lookup_invalid_branch() {
+    cm_setup "$current"
+    printf 'feat/a b\n' >"$cm_dir/branches"
+    printf 'feat/a b\n' >"$cm_dir/has"
+    cm_run issue 5
+    [[ "$cm_status" -eq 1 && "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "$cm_status $cm_err"
+    grep -qF 'is not a name codeo accepts; pass a branch: codeo issue 5 <branch>' <<<"$cm_err" || fail "stderr: $cm_err"
+    expect_no_script
+}
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -1312,6 +1411,13 @@ cases=(
     t_shell_home_sandbox_usage
     t_rm_force_container_gone
     t_rm_force_failing_rm_still_listed_dies
+    t_rm_pr_head_delivered
+    t_rm_pr_head_detached_delivered
+    t_rm_pr_fetch_fails
+    t_rm_commits_under_no_ref_refuse
+    t_rm_volume_failure_says_container_removed
+    t_codeo_sbx_honoured
+    t_issue_lookup_invalid_branch
 )
 
 for current in "${cases[@]}"; do

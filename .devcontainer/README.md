@@ -75,12 +75,13 @@ The container is the same as the VS Code route's: the same name, 4 GB memory cap
 - Claude Code's login and sessions live on the container's own volume, at `/workspaces/.claude` (`CLAUDE_CONFIG_DIR`). A rebuild keeps them. `docker volume rm codeo-<N>` removes them.
 - The terminal's title is set once by `shell`, and the prompt `dev@codeo-<N>` names the terminal after that. The session title is set by the same hook as in VS Code.
 
-Two variables change where the script reads from:
+Two variables change where the script reads from, and `CODEO_SBX` picks the sbx program:
 
 | Variable | Meaning |
 |---|---|
 | `CODEO_REPO_URL` | The repository to build from and clone. Default `https://github.com/kbajpai/codeo.git`. |
 | `CODEO_CONTEXT` | The `.devcontainer` directory of a local clone, used only to build the image; the repository is still cloned from `CODEO_REPO_URL`. |
+| `CODEO_SBX` | The sbx program `codeo list`, `codeo shell`, `codeo open` and `codeo rm` ask whether a sandbox exists, and `codeo-sandbox.sh` runs; else `sbx`, else `sbx.exe`. |
 
 ## Installing the `codeo` command
 
@@ -161,9 +162,9 @@ After an abandon it prints none either. With the branch kept, the container hold
 - uncommitted or untracked files (`git status --porcelain`);
 - stashes (`git stash list`);
 - a detached HEAD;
-- commits on a local branch that are on no `origin` branch (`git rev-list --branches --not --remotes=origin`).
+- commits on a local branch that are on no `origin` branch and under no pull-request head (`git rev-list --branches --not --remotes=origin`, after `git fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*'`). A squash-merged issue, whose branch `/codeo:close` deleted on origin, is therefore clean: its commits are under the pull-request head, and a detached HEAD under one counts as delivered too.
 
-A refusal removes nothing and names `codeo rm <N> --force`. When the check cannot run (the container will not start, the fetch fails, or an `exec` fails) it also removes nothing, and says how to remove the container by hand. `--force` skips the refusal, prints what it did not keep, and removes also when the check cannot run, saying so. A clean container is removed without it. The removal is `docker rm -f codeo-<N>`, `docker volume rm codeo-<N>` and `docker rmi codeo-dev:codeo-<N>`; a failed container or volume removal stops with an error, and a failed image removal is only a warning. It ends with `removed codeo-<N>` and a reminder that the Claude Code login on the volume is gone with it. For a sandbox `codeo rm <N> [--force]` runs `bash codeo-sandbox.sh end <N> [--force]` (see `.sbx/README.md`).
+A refusal removes nothing and names `codeo rm <N> --force`. When the check cannot run (the container will not start, either fetch fails, or an `exec` fails) it also removes nothing, and says how to remove the container by hand. `--force` skips the refusal, prints what it did not keep, and removes also when the check cannot run, saying so. A clean container is removed without it. The removal is `docker rm -f codeo-<N>`, `docker volume rm codeo-<N>` and `docker rmi codeo-dev:codeo-<N>`; a failed container or volume removal stops with an error (a volume failure says the container is already removed), and a failed image removal is only a warning. It ends with `removed codeo-<N>` and a reminder that the Claude Code login on the volume is gone with it. For a sandbox `codeo rm <N> [--force]` runs `bash codeo-sandbox.sh end <N> [--force]` (see `.sbx/README.md`); when that exits non-zero, `codeo` adds one line to stderr, `to remove it anyway: sbx rm --force codeo-<N>`.
 
 The two `/codeo:` commands above only print. The printed `docker rm -f codeo-<N>; docker volume rm codeo-<N>` serves a container opened from the command line too; removing its volume also removes its Claude Code login. Such a container also leaves the image `codeo-dev:codeo-<N>`, removed with `docker image rm codeo-dev:codeo-<N>`. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
 
