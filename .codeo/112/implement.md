@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1: the web-session run (Tasks 1-5) is done and recorded under Notes; both writes were refused. Next: comment on #112 and write Task 7 (documentation). F1-F3 are not filed: `/codeo:issue` refuses in this container and they are listed under Notes for the home checkout. Earlier state: `origin/main` merged (`2cbbf5d`); baseline read before the run: `bash scripts/inflight.sh --live` lists #108 and #112 on `container` hosts only; the tip of `origin/feat/verify-live-session-signal-hosted` is `2cbbf5d8ae925d68185250280afb3f34031ec43a`.
+Round 1 done: the web-session check is recorded (both writes refused), the documentation is written and the suite passes. F1-F3 are not filed (/codeo:issue refuses here); see Notes → Later work. Next: /codeo:qc.
 
 ## Questions
 
@@ -49,8 +49,17 @@ Source: the engineer's screenshots of the hosted session on `feat/verify-live-se
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Round 1, 2026-11-19. Plan: `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md`.
+
+**Built.** Tasks 1-5, the web-session run, were done by the engineer in a hosted session and recorded under `## Notes` (commands, output, the six criteria). Result: both writes are refused (`git push` HTTP 403; `github.sh ref put` "Write access to this GitHub API path is not permitted through this proxy (HTTP 403)"), so #104's criterion "it works in a web session" is **not met**; the branch tip was unchanged; `codeo` is not installed in the web session, so the hook cannot fire; the signal would have named `Claude` and the machine `vm` (lock taken without a session id). Tasks 2-4 had nothing to read and are recorded as not reachable; Task 3's explicit `ref put`/`ref delete` pair was not run, since `beat`'s own REST fallback already showed the proxy's answer. Task 6: the summary comment is posted on #112 (`github.sh pr comments 112` contains it). The three follow-ups (F1-F3) are **not filed**: `/codeo:issue` refuses in this container (role `issue:112`), so they sit under `## Notes → Later work` for the home checkout. Task 7: `docs/handoff.md` (*Who is working right now*) and one `CHANGELOG.md` bullet state what a web session does.
+
+**Documentation pages changed:** `docs/handoff.md`, `CHANGELOG.md`.
+
+**Build.** The `shell` suite's `build` is `true`: rc 0. (`bash tests/run.sh` also ran after the documentation edit: `all cases passed`; grading is `/codeo:qc`'s.)
+
+**Deviations from the plan.** (1) Task 6 step 2 (file F1-F3 with `/codeo:issue`) could not run here; the findings are recorded as later work instead. (2) The Task 1 prompt was run in two pieces and the engineer added `cat .codeo/active`; the plan's `claude plugin list` output came from a screenshot, so the quoted wording is approximate. (3) `origin/main` was merged at the start of the round (`2cbbf5d`, #122's `docs/handoff.md` changes); no `also changed on main` overlap with this plan's footprint beyond `docs/handoff.md`, which Task 7 re-read before editing. No environment is configured, so there is no deployment.
+
 
 ## Log
 
-- 2026-11-19 — round 1 started: synced origin/main (2cbbf5d), paused at Task 1 for the web session · cost: counted in the round's final line
+- 2026-11-19 — round 1: web-session check recorded (both writes refused), docs written, build rc 0 · cost: 19m · sonnet-5-5 56k in + 4.4M cached / 19k out
