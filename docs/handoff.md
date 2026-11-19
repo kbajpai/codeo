@@ -181,11 +181,11 @@ it.
   reader's own clock judges the age. `CODEO_LIVE_REFRESH_SECONDS` (300), `CODEO_LIVE_TTL_SECONDS`
   (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings; the last bounds each git push or fetch, the login lookup and the REST fallback as a whole. Where a push to that
   ref is refused it is written through the REST API, and where neither works nothing is published.
-  A hosted web session is such a place: its proxy accepts pushes only to the session's own
-  development branch and refuses the REST write, so a web session publishes no signal and
-  `inflight.sh` shows no `live:` line for it; the hook runs there only when the plugin is installed in
-  the session, and a lock taken without a session id (`session: unknown`) gives the machine label
-  the hostname instead of `web-` plus the session id. Where nothing is published
+  A hosted web session has been seen to be such a place: a push to the signal ref and the REST
+  write both returned HTTP 403, so it publishes no signal and `inflight.sh` shows no `live:` line
+  for it. The hook runs there only when the plugin is installed in the session, and a lock taken
+  without a session id (`session: unknown`) gives the machine label the hostname instead of
+  `web-` plus the session id. Where nothing is published
   the hook discards the output of `beat` and says nothing, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh"
   beat --force` run by hand prints the one `live:` line that says why. A failed publish is not
   retried until the next refresh interval. Two beats started together from one checkout can both
