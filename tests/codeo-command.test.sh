@@ -2,7 +2,8 @@
 # Guards .devcontainer/codeo, the host command that wraps codeo-container.sh and codeo-sandbox.sh.
 # Each case is a function named in the final cases=( ... ) array; add a case by writing a function
 # and listing it. The command runs under env -i with PATH holding only stub docker, sbx, git and
-# curl (plus /usr/bin and /bin) against a scratch directory whose calls file logs every stub call
+# curl plus sys/ links to plain system tools (never docker, sbx, git or curl) against a scratch
+# directory whose calls file logs every stub call
 # and every call of the stub scripts in a stub $CODEO_HOME. It checks the argument checks (usage on
 # stderr, exit 2, no call made), the help text, and that the file is committed executable with a
 # bash shebang and covered by the config suite.
@@ -30,6 +31,18 @@ fail() {
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 
+# cm_sys: $cm_dir/sys holds links to the plain system tools codeo and the stubs use, and never docker,
+# sbx, git or curl, so a program a case removes from bin/ is missing whatever the host has installed.
+cm_sys() {
+    local t p
+    mkdir -p "$cm_dir/sys"
+    for t in bash env cat grep sed sort cut head tail tr wc mkdir mv cp rm chmod mktemp readlink \
+        dirname basename ls sleep date find id; do
+        p=$(PATH=/usr/bin:/bin command -v "$t" 2>/dev/null) || continue
+        ln -sf "$p" "$cm_dir/sys/$t"
+    done
+}
+
 # cm_setup <name>: a scratch directory cm_dir with stubs in bin/ that log "<stub> <args>" to calls,
 # and a $CODEO_HOME (cm_home) holding stub codeo-container.sh and codeo-sandbox.sh that log
 # "<script> <args> pwd=<cwd>" to calls.
@@ -39,6 +52,7 @@ cm_setup() {
     cm_script=""
     mkdir -p "$cm_dir/bin" "$cm_home" "$cm_dir/h"
     : >"$cm_dir/calls"
+    cm_sys
     local n
     for n in docker sbx git curl; do
         cat >"$cm_dir/bin/$n" <<'STUB'
@@ -94,7 +108,7 @@ STUB
 # cm_run <args...>: run codeo with a clean environment; set cm_status, cm_out and cm_err.
 cm_run() {
     cm_status=0
-    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:/usr/bin:/bin" \
+    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" \
         "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
@@ -420,6 +434,19 @@ t_open_container_refused() {
     cm_run open 5 --container
     [[ "$cm_status" -eq 1 ]] || fail "--container: exit $cm_status, want 1"
     expect_no_script
+}
+
+t_run_path_has_no_host_programs() {
+    cm_setup "$current"
+    # A real docker, sbx, git or curl on the host's PATH must not be visible to a run.
+    local fake="$scratch/hostbin" n out
+    mkdir -p "$fake"
+    for n in docker sbx git curl; do printf '#!/bin/bash\necho host-%s\n' "$n" >"$fake/$n"; chmod +x "$fake/$n"; done
+    rm -f "$cm_dir/bin/docker" "$cm_dir/bin/sbx" "$cm_dir/bin/git" "$cm_dir/bin/curl"
+    out=$(PATH="$fake:$PATH" env -i PATH="$cm_dir/bin:$cm_dir/sys" "$bash_abs" -c 'command -v docker sbx git curl' 2>&1) || true
+    [[ -z "$out" ]] || fail "a run's PATH finds host programs: $out"
+    PATH="$fake:$PATH" cm_run list
+    [[ "$cm_status" -eq 1 && "$cm_err" == "codeo: neither docker nor sbx is installed"* ]] || fail "list: $cm_status $cm_err"
 }
 
 t_no_docker_program() {
@@ -1067,7 +1094,7 @@ t_relative_codeo_home() {
     cm_setup "$current"
     cd "$cm_dir"
     cm_status=0
-    env -i HOME="$cm_dir/h" CODEO_HOME=home PATH="$cm_dir/bin:/usr/bin:/bin" \
+    env -i HOME="$cm_dir/h" CODEO_HOME=home PATH="$cm_dir/bin:$cm_dir/sys" \
         "$bash_abs" "$script" home >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cd "$repo"
     cm_err=$(cat "$cm_dir/err")
@@ -1078,11 +1105,11 @@ t_relative_codeo_home() {
 t_home_unset() {
     cm_setup "$current"
     cm_status=0
-    env -i PATH="$cm_dir/bin:/usr/bin:/bin" "$bash_abs" "$script" help >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
+    env -i PATH="$cm_dir/bin:$cm_dir/sys" "$bash_abs" "$script" help >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     [[ "$cm_status" -eq 0 ]] || fail "help with HOME unset: exit $cm_status, err: $(cat "$cm_dir/err")"
     grep -q 'export PATH=' "$cm_dir/out" || fail "help lacks the PATH line"
     cm_status=0
-    env -i PATH="$cm_dir/bin:/usr/bin:/bin" "$bash_abs" "$script" home >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
+    env -i PATH="$cm_dir/bin:$cm_dir/sys" "$bash_abs" "$script" home >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_err=$(cat "$cm_dir/err")
     [[ "$cm_status" -eq 1 && "$cm_err" == "codeo: set CODEO_HOME or HOME" ]] || fail "home: $cm_status $cm_err"
     [[ ! -s "$cm_dir/calls" ]] || fail "made calls: $(cat "$cm_dir/calls")"
@@ -1157,6 +1184,7 @@ cases=(
     t_shell_container_found
     t_open_sandbox
     t_open_container_refused
+    t_run_path_has_no_host_programs
     t_no_docker_program
     t_sandbox_uses_home_clone
     t_list_rows
