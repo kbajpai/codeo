@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written: clear, forward to `/codeo:close`. No blocking finding; nine non-blocking findings (F9-F17) are routed to `/codeo:implement` or triage. Nothing is open.
+Round 3 is written and the change goes back to `/codeo:implement`: one blocking finding (F18, the misplaced CHANGELOG entry). Nothing is open.
 
 ## Questions
 
@@ -132,7 +132,64 @@ No issue was filed for this pass.
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+
+### Round 3 — 2026-11-19
+
+Re-checks `implement.md` round 3 (send-back from `close.md` round 2: the CI `tests` failure; fix commits `6c77860`, `b0999d9`), the whole pass again from step 0. HEAD `9156929`, merge base `fcda349`.
+
+Commands run this pass:
+
+```
+role.sh --check qc: exit 0
+sync-main.sh --abort-on-conflict: "sync-main: the branch already contains origin/main" (exit 0)
+overlap.sh 133: nothing printed · overlap.sh --outside 133: nothing printed
+scope.sh origin/main HEAD
+  scope: suite shell needed for unclassified paths: .codeo/133/close.md, implement.md, init.md, issue.md, plan.md, qc.md, CHANGELOG.md
+  suite.shell=true
+no invariants, no qc overlay rules, no environment
+build (suite shell, `true`): exit 0
+bash tests/run.sh (suite shell, whole): exit 0 — "all cases passed"
+PATH="<fake docker and sbx, each printing a line and exiting 0>:$PATH" bash tests/run.sh codeo-command: all cases passed (the CI condition)
+github.sh pr checks 136 at 9156929: tests completed success · qc-verdict completed failure (the dossier is live during the send-back; close archives it)
+```
+
+The whole suite passes in this checkout this time, `live.test.sh` included.
+
+Independent review (opus, description "QC review: …", given the criteria only): no Critical, no Important, six Minor; its verdict "With fixes", naming the CHANGELOG placement as the one item to fix. Each was checked against the code.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | One download line installs `codeo`; `codeo help` prints the commands | met | `t_help_lists_commands`, `t_help_names_kind_flags` |
+| 2 | `codeo update` replaces all three; a failed download changes nothing | met | `t_update_replaces_three`, `t_update_failed_download_changes_nothing` and the refused-file and partial-move cases |
+| 3 | `home`, `shell`, `issue` run the container script from the `codeo` directory | met | `t_home_runs_script`, `t_runs_from_any_directory`, `t_shell_container` |
+| 4 | `issue <N>` with no branch uses the origin branch carrying `.codeo/<N>/init.md`; none or several: one line, nothing created | met | `t_issue_branch_lookup_one`, `t_issue_lookup_none`, `t_issue_lookup_several`, `t_lookup_checks_file_without_blob`, `t_lookup_repoints_clone_at_url`; the reviewer re-ran the lookup with real git over `file://` |
+| 5 | Container or sandbox by flag or saved default; sandbox create, open, shell, end reachable | met | `t_issue_sandbox_flag`, `t_issue_default_sandbox`, `t_open_sandbox`, `t_shell_sandbox`, `t_rm_sandbox` |
+| 6 | `list` shows each container and sandbox with number and branch, nothing misleading when none | met | `t_list_rows`, `t_list_docker_down`, `t_list_sbx_down`, `t_list_one_down_nothing_shown`, `t_list_no_programs` (now isolated from host programs) |
+| 7 | `rm` refuses naming unpushed or uncommitted work; removes container and volume, or the sandbox; override removes anyway | met | `t_rm_container_*`, `t_rm_container_not_found`, `t_rm_refusal_stops_started_container`, `t_rm_unlisted_state_not_stopped_by_us`, `t_rm_sandbox` |
+| 8 | Bad number, missing argument, unknown command: usage line, non-zero exit, nothing run | met | `expect_usage` cases, `t_home_rebuild_twice_usage` |
+| 9 | Stub test covering each command, argument errors, lookup none/one/several; `tests/run.sh` passes | met | `bash tests/run.sh`: exit 0, all cases passed; `t_run_path_has_no_host_programs`; CI `tests` check success at `9156929` |
+| 10 | Both READMEs show the `codeo` forms beside the long ones; CHANGELOG entry | not met | F18: the entry is there but sits inside the `## Unreleased` header block and the blank line before `## v1.0.7` is gone; the READMEs are met (F23 non-blocking) |
+
+**Documentation check.** `.devcontainer/README.md` and `.sbx/README.md` match the code on failed listings, the `paused`/`restarting` states, the kind flags and `update`; no "now", "no longer" or issue number. `CHANGELOG.md` is F18.
+
+**Findings**
+
+- F1 (blocking in round 1) — fixed by `bb31110`. The CI `tests` failure from `close.md` round 2 — fixed by `6c77860`: every test run uses `PATH=$cm_dir/bin:$cm_dir/sys`, and the suite passes with fake host programs first on `PATH` and on the CI runner. F9-F17 (non-blocking in round 2) — fixed by `b0999d9`.
+- **F18 — blocking — `/codeo:implement`'s.** `CHANGELOG.md:3-13`: the `codeo` bullet sits between `## Unreleased` and its `Config schema: 1` / `Shared state: …` / `Safe to bump mid-workflow: yes` lines, after a double blank line, and the blank line before `## v1.0.7 — 2026-11-18` is gone. Every section on `origin/main` reads heading, blank line, those three lines, blank line, bullets; the release plans under `docs/plans/` rely on that shape, and on `main` the misplaced bullet would push the section's upgrade notes, which operators read before a bump, below an unrelated entry. Cause: the merges of `origin/main` (`2141d44`, `9b7ce8c`) brought in #126's header lines around this branch's bullet, and nothing re-placed it, against the agreement at plan Q6 and implement Q1 that whichever merges second keeps both entries intact. Needed: the bullet below `Safe to bump mid-workflow: yes` with the other bullets, one blank line after the heading, and the blank line before `## v1.0.7` restored.
+- **F19 — non-blocking — `/codeo:implement`'s.** `.devcontainer/codeo:227-229`: when one listing fails and the other finds `codeo-<N>`, `shell`/`open`/`rm` use the found kind after a warning, so the "both exist, pick one" rule is skipped silently (reproduced: docker down, sbx lists `codeo-5`, `codeo rm 5` runs `codeo-sandbox.sh end 5`). Nothing is lost (`end` has its own check), and `t_shell_docker_down_sandbox_found` asserts the behaviour; requiring a kind flag in that case would be safer.
+- **F20 — non-blocking — `/codeo:implement`'s.** `.devcontainer/codeo:431,477`: a detached HEAD alone makes `rm` refuse with "holds work that exists only there", which is untrue when that commit is on origin. Safe, but the message overstates.
+- **F21 — non-blocking — the plan's.** `~/codeo` is also what `git clone` of this repository creates in `~`; there codeo writes its scripts, `default`, `.lookup.git` and `codeo-<N>` clones into the user's checkout. Documented (`CODEO_HOME`), nothing lost; a name choice from plan Q1.
+- **F22 — non-blocking — `/codeo:implement`'s.** `tests/codeo-command.test.sh:67-68`: the git stub's comment still says `cat-file -e`; it answers `rev-parse`.
+- **F23 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md` (Installing): "Otherwise the exit status is the called script's" is not true for `list`, container `rm`, `default` or `update`, which call no script.
+- Reviewer's "declined to judge" list was read; nothing in it is a finding (an `issue` lookup that finds none still creates `~/codeo` and `.lookup.git`, read as "creates no container or sandbox"; out-of-scope platforms; `codeo-sandbox.sh`'s own rules).
+- Carried as deferred minors from `implement.md` round 3, not re-raised: `cm_sys` skips a missing tool silently; a few long comment lines.
+
+No issue was filed for this pass.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-19 — qc round 1: back to implement (F1 blocking: list/shell/open/rm read a failing docker/sbx as none) · cost: 6m · opus-5-5 355k in + 2.4M cached / 18k out · sonnet-5-5 37k in + 1.1M cached / 2k out
 - 2026-11-19 — qc round 2: clear (F1 fixed; F9-F17 non-blocking) · cost: 6m · opus-5-5 226k in + 1.9M cached / 19k out
+- 2026-11-19 — qc round 3: back to implement (F18 blocking: CHANGELOG entry misplaced by the main merges; CI fix and F9-F17 verified) · cost: 6m · opus-5-5 332k in + 2.2M cached / 21k out
