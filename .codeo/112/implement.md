@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 done: the web-session check is recorded (both writes refused), the documentation is written and the suite passes. F1-F3 are not filed (/codeo:issue refuses here); see Notes → Later work. Next: /codeo:qc.
+Round 2 done: qc round 1 findings addressed; the follow-up is #138; documentation corrected. Next: /codeo:qc.
 
 ## Questions
 
@@ -43,9 +43,9 @@ Source: the engineer's screenshots of the hosted session on `feat/verify-live-se
 
 `/codeo:issue` refused here (`/codeo:issue runs in the home container, but this container's role is issue:112`), so nothing is filed and no number exists. File these three from the home container; each draft's substance is the finding above.
 
-- To file: a hosted web session cannot publish the live-session signal by either path (`git push` to `refs/codeo/live/…` gets HTTP 403 from the agent proxy, `github.sh ref put` is refused with "Write access to this GitHub API path is not permitted through this proxy (HTTP 403)"); #104's criterion "it works in a web session" is not met, so the design must change (F1).
-- To file: the `codeo` plugin is not installed in the hosted web session although `.claude/settings.json` enables `codeo@codeo`, so the live-signal hook cannot fire there (F2).
-- To file: in a web session the signal would name `Claude` (`git config user.name`) rather than the engineer's login and the machine `vm` rather than `web-<8 characters>`, because `lock.sh take web` ran without a session id and the lock says `session: unknown` (F3).
+- To file: a hosted web session cannot publish the live-session signal by either path (`git push` to `refs/codeo/live/…` gets HTTP 403 from the agent proxy, `github.sh ref put` is refused with "Write access to this GitHub API path is not permitted through this proxy (HTTP 403)"); #104's criterion "it works in a web session" is not met, so the design must change (F1). Filed together as #138.
+- To file: the `codeo` plugin is not installed in the hosted web session although `.claude/settings.json` enables `codeo@codeo`, so the live-signal hook cannot fire there (F2). Filed together as #138.
+- To file: in a web session the signal would name `Claude` (`git config user.name`) rather than the engineer's login and the machine `vm` rather than `web-<8 characters>`, because `lock.sh take web` ran without a session id and the lock says `session: unknown` (F3). Filed together as #138.
 
 ## Outcome
 
@@ -60,6 +60,29 @@ Round 1, 2026-11-19. Plan: `docs/plans/2026-11-19-verify-live-signal-hosted-sess
 **Deviations from the plan.** (1) Task 6 step 2 (file F1-F3 with `/codeo:issue`) could not run here; the findings are recorded as later work instead. (2) The Task 1 prompt was run in two pieces and the engineer added `cat .codeo/active`; the plan's `claude plugin list` output came from a screenshot, so the quoted wording is approximate. (3) `origin/main` was merged at the start of the round (`2cbbf5d`, #122's `docs/handoff.md` changes); no `also changed on main` overlap with this plan's footprint beyond `docs/handoff.md`, which Task 7 re-read before editing. No environment is configured, so there is no deployment.
 
 
+### Round 2 — 2026-11-19
+
+(send-back from qc.md round 1)
+
+**Sync.** `bash scripts/sync-main.sh`: `sync-main: the branch already contains origin/main`, exit 0; `overlap.sh 112` printed nothing.
+
+**What each finding came to** (each checked against the files before acting):
+- **F1 — fixed.** `CHANGELOG.md`: the bullet no longer says the follow-ups are "filed separately"; it says #138 tracks the follow-up.
+- **F2 — resolved by the engineer.** F1-F3 were filed together as one issue, #138 ("The live-session signal does not work in a hosted web session: both writes are refused, the hook is not installed and the labels are wrong"), from the home checkout. It stands as the follow-up criteria 3, 5 and 6 ask for: the design change (both writes refused), the missing plugin (hook cannot fire) and the labels. The three "To file" lines under *Later work* now name it.
+- **F3 — fixed here; the wording in #138 is the engineer's to judge.** Criterion 3 was recorded as "would have named `Claude`". `beat` asks `github.sh user login` (`GET /user`) first and falls back to `git config user.name` only when that fails (`scripts/live.sh:114-118`); the run's output does not show that call or its result. Corrected record: **the user the signal would have named was not determined by the run**; `git config user.name` there is `Claude`, and `scripts/github.sh:31-33` documents `GET /user` as refused on a web session's proxy, which would make `Claude` the label unless `CODEO_GITHUB_LOGIN` is set. This replaces row 3's "the label it would have had is `Claude`". #138's item 3 states `Claude` on that documented basis; if the engineer wants the observed value, the one command is `git log -1 --format=%B` on the commit the web session built.
+- **F4 — fixed.** `docs/handoff.md` now states what was observed (a push to the signal ref and the REST write both returned HTTP 403) and drops the "development branch only" rule, which was the session's own reading of one refusal.
+- **F5 — fixed.** `CHANGELOG.md` says only that the session had no `codeo` plugin installed; the cause is not claimed.
+- **F6 — fixed in part.** `docs/handoff.md` says the web session "has been seen to be" such a place instead of stating a permanent property. `ref delete` was never run in the web session, so `clear`'s REST path there is **unverified**; that is recorded here and left to #138, whose design change decides what `clear` does in a web session.
+
+**Criteria after this round.** 1: not met (both writes refused). 2: untestable (nothing published). 3: the user was not determined; the follow-up is #138. 4: met for the tip. 5: the hook cannot fire there (no plugin); the follow-up is #138. 6: #104's criterion "it works in a web session" is not met; the follow-up is #138.
+
+**Documentation pages changed:** `docs/handoff.md` (*Who is working right now*), `CHANGELOG.md`.
+
+**Build.** The `shell` suite's `build` is `true`: rc 0.
+
+**Deviations from the plan.** None beyond round 1's. One comment is posted on #112 correcting round 1's comment (the follow-up is #138; the user was not determined).
+
 ## Log
 
 - 2026-11-19 — round 1: web-session check recorded (both writes refused), docs written, build rc 0 · cost: 19m · sonnet-5-5 56k in + 4.4M cached / 19k out
+- 2026-11-19 — round 2 (send-back from qc round 1): F1, F3-F6 fixed, F2 resolved by #138 filed from the home checkout, build rc 0 · cost: 1m · sonnet-5-5 31k in + 1.6M cached / 9k out
