@@ -73,7 +73,7 @@ number: `qc:<N>:<finding id>` (`N1`, `P1`, … as the dossier numbers them, else
 finding's first words), `implement:<N>:<slug>`, `stash:<N>`, `branch:<name>`,
 `intake:<dir>`, `issue:<N>`, `lease:<resource>:<N>`, `unclosed:<N>`, `review:<PR>:<comment id>`,
 `doc:<path>:<slug>`, `todo:<path>:<slug of the comment>`, `parked:<N>:<touched date>`,
-`board:<N>:<Status found>`.
+`unassigned:<N>`, `board:<N>:<Status found>`.
 
 A filed issue that was never started
 has one fingerprint, `issue:<N>`, whichever source finds it; `intake:<dir>`
@@ -112,10 +112,13 @@ is the container the message names.
       - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh"` for every workflow on a pushed branch,
         with its last step, assignee and the `touched:`, `waits:` and `verdict:` lines. Read the
         threshold with `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.triage.parkedDays // 7'`.
-        A workflow whose `touched:` day count is more than the threshold, or that is assigned to
-        nobody, is asked about as parked work: quote its `touched:` line and the threshold
-        (`triage.parkedDays`), with its `waits:`, `verdict:` and `step:` lines. The fingerprint is
-        `parked:<N>:<touched date>`, so a dismissal holds until the workflow is touched again.
+        A workflow whose `touched:` day count is more than the threshold is asked about as parked
+        work, and so is one assigned to nobody: quote its `touched:` line and the threshold
+        (`triage.parkedDays`), with its `waits:`, `verdict:` and `step:` lines. The age's
+        fingerprint is `parked:<N>:<touched date>`, so a dismissal holds until the workflow is
+        touched again and goes quiet again. No assignee's fingerprint
+        is `unassigned:<N>`, which carries no date, so a dismissal of it holds across pushes.
+        A workflow that is both carries both fingerprints in its one question.
         One within the threshold and assigned is
         listed in the run's `## Outcome` with its `touched:` and `waits:` lines and not asked about.
         A workflow whose block carries a `live:` line has a session working it now: quote the line as
@@ -131,11 +134,13 @@ is the container the message names.
         |---|---|
         | dossier at `.codeo/<N>/`, no live stash or abandon | In progress (`board.statuses.inProgress`) |
         | dossier at `.codeo/<N>/`, stash live | Ready (`board.statuses.ready`) |
-        | dossier at `.codeo/<N>/`, abandon live | Backlog (`board.statuses.backlog`) |
+        | dossier at `.codeo/<N>/`, abandon live | Backlog (`board.statuses.backlog`), or Ready (`board.statuses.ready`) |
         | dossier at `.codeo/done/<N>/`, pull request open | In review (`board.statuses.inReview`) |
         | dossier at `.codeo/done/<N>/`, no pull request, or closed unmerged | none fits: always a mismatch |
         | pull request merged | not compared: the existing `unclosed:<N>` item covers it |
 
+        An abandon stays live until `/codeo:init` writes its resume line, and *resume* sets Ready
+        before that, so Ready is not a mismatch for a live abandon.
         A Status of `none` or `unset` is a mismatch. A mismatch is a question quoting the `status`
         line, the `step:` line and the pull request's state; the fingerprint is
         `board:<N>:<Status found>`. With no board there is nothing to compare (the run's opening
@@ -252,8 +257,8 @@ is the container the message names.
      - a finding or a review thread: *file it* · *already #N* · *dismiss (why)* · *defer*;
      - parked work: *resume* (for a workflow whose `waits:` starts `resume — `, with a board,
        `board.sh set <N> ready` at step 5, then `/codeo:init #<N>` or `/codeo:close` on its branch
-       — named, never run; for one raised only for its age, the step its `waits:` line shows, to
-       run in that issue's checkout, with no card move) · *file it* · *dismiss (why)* · *defer*.
+       — named, never run; for any other, what its `waits:` line shows, as step 5's **Resume**
+       says, with no card move) · *file it* · *dismiss (why)* · *defer*.
        Deleting a branch is never an option here; it is the engineer's to do.
      - a board mismatch: *fix it* (the `board.sh set <N> <status>` command, named, never run —
        triage's own writes stay Ready and Backlog; for a workflow with no pull request or a closed
@@ -302,9 +307,14 @@ is the container the message names.
    - **Resume** → with a board, and only for a workflow whose `waits:` starts `resume — `,
      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> ready` — the stash already set it, but
      a lost checkout may not have — recorded the same way, then name the command in the report.
-     For a workflow raised only for its age, *resume* names the step its `waits:` line shows, to
-     run in that issue's checkout, and makes no card move. A script failure is reported and the
-     resume still named.
+     For a workflow with no live stash or abandon, whether raised for its age or for having no
+     assignee, *resume* names what its `waits:` line shows, to be done in that issue's checkout,
+     and makes no card move: a step (`/codeo:plan`, `/codeo:implement`, `/codeo:qc` or
+     `/codeo:close`) is named as the command to run;
+     `engineer — …` names the dossier files and question numbers to answer;
+     `review — dossier archived` names the pull request awaiting review;
+     `nothing known` names the checkout and quotes the `step:` line, and says no step can be named.
+     A script failure is reported and the resume still named.
 
 6. **Record and report.** Append every decision to the ledger — built from the intake branch's
    copy, as above — write the run's `## Outcome` (what was found, what was decided, the issue
