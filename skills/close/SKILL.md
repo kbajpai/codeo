@@ -529,8 +529,8 @@ is the container the message names.
     on exit 1, 2 or 4, report the one `codeo:` line it printed and use the default.
     - **`host: web`** — nothing to remove: the hosted session is done once the engineer closes it.
     - **`host: container`** — the checkout is a container, which this skill cannot remove from
-      inside it. Name the lock's `volume:` line, which identifies the container, and say that the
-      container and its volume are removed with commands that run on the host, not inside this
+      inside it. Name the lock's `volume:` or `sandbox:` line: either identifies what the host
+      removes. Say that the removal is done with commands that run on the host, not inside this
       container, and that the engineer runs `git status` in that clone first: unpushed work is
       lost with the volume.
     - **`host: local`** — nothing to remove: the checkout is the engineer's own, the local branch
