@@ -539,7 +539,7 @@ t_host_kinds_exact_name() {
 # rm_stubs: replace the docker stub with one that answers rm. docker ps with {{.State}} prints
 # "codeo-5 $(dstate)" (running when absent), other docker ps prints "codeo-5"; docker exec ... git -C
 # <dir> <sub> prints $d/g_<sub> (g_branch defaults to main) and fails for fetch when fetch_fail
-# exists, or for the git subcommand named in exec_fail; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist.
+# exists, or for the git subcommand named in exec_fail; docker ps lists nothing once docker rm ran when gone_after_rm exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist.
 rm_stubs() {
     cat >"$cm_dir/bin/docker" <<'STUB'
 #!/bin/bash
@@ -547,7 +547,8 @@ d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
 case "$1" in
     ps)
-        if [[ "$*" == *State* ]]; then echo "codeo-5 $(cat "$d/dstate" 2>/dev/null || echo running)"; else echo codeo-5; fi ;;
+        if [[ -e "$d/gone_after_rm" ]] && grep -q "^docker rm" "$d/calls"; then :
+        elif [[ "$*" == *State* ]]; then echo "codeo-5 $(cat "$d/dstate" 2>/dev/null || echo running)"; else echo codeo-5; fi ;;
     start) [[ ! -e "$d/start_fail" ]] || exit 1 ;;
     rm) [[ ! -e "$d/rm_fail" ]] || exit 1 ;;
     volume) [[ ! -e "$d/vol_fail" ]] || exit 1 ;;
@@ -733,6 +734,27 @@ t_rm_removal_failure_dies() {
     ! grep -q removed <<<"$cm_out" || fail "volume rm: stdout says removed: $cm_out"
 }
 
+t_rm_force_container_gone() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/rm_fail" "$cm_dir/gone_after_rm"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "volume kept: $(tr '\n' '|' <"$cm_dir/calls")"
+    grep -q '^docker rmi codeo-dev:codeo-5' "$cm_dir/calls" || fail "image kept"
+    [[ "$cm_out" == *"removed codeo-5"* ]] || fail "no removed line: $cm_out"
+}
+
+t_rm_force_failing_rm_still_listed_dies() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/rm_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 1 && "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "$cm_status $cm_err"
+    ! grep -q removed <<<"$cm_out" || fail "stdout says removed: $cm_out"
+    ! grep -qE '^docker (volume|rmi)' "$cm_dir/calls" || fail "went on to remove: $(tr '\n' '|' <"$cm_dir/calls")"
+}
+
 t_rm_stopped_container_started_first() {
     cm_setup "$current"
     rm_stubs
@@ -893,6 +915,64 @@ t_update_partial_final_mv() { expect_update_partial 3 "both scripts are new, cod
 
 t_update_usage_extra_args() { expect_usage update now; }
 
+t_relative_codeo_home() {
+    cm_setup "$current"
+    cd "$cm_dir"
+    cm_status=0
+    env -i HOME="$cm_dir/h" CODEO_HOME=home PATH="$cm_dir/bin:/usr/bin:/bin" \
+        "$bash_abs" "$script" home >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
+    cd "$repo"
+    cm_err=$(cat "$cm_dir/err")
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-container.sh home pwd=$cm_home"
+}
+
+t_home_unset() {
+    cm_setup "$current"
+    cm_status=0
+    env -i PATH="$cm_dir/bin:/usr/bin:/bin" "$bash_abs" "$script" help >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
+    [[ "$cm_status" -eq 0 ]] || fail "help with HOME unset: exit $cm_status, err: $(cat "$cm_dir/err")"
+    grep -q 'export PATH=' "$cm_dir/out" || fail "help lacks the PATH line"
+    cm_status=0
+    env -i PATH="$cm_dir/bin:/usr/bin:/bin" "$bash_abs" "$script" home >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
+    cm_err=$(cat "$cm_dir/err")
+    [[ "$cm_status" -eq 1 && "$cm_err" == "codeo: set CODEO_HOME or HOME" ]] || fail "home: $cm_status $cm_err"
+    [[ ! -s "$cm_dir/calls" ]] || fail "made calls: $(cat "$cm_dir/calls")"
+}
+
+t_home_dir_uncreatable() {
+    cm_setup "$current"
+    : >"$cm_dir/afile"
+    cm_home="$cm_dir/afile/sub"
+    cm_run home
+    [[ "$cm_status" -eq 1 && "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: could not create $cm_home" ]] ||
+        fail "$cm_status $cm_err"
+    [[ ! -s "$cm_dir/calls" ]] || fail "made calls: $(cat "$cm_dir/calls")"
+}
+
+t_rebuild_saved_sandbox_usage() {
+    cm_setup "$current"
+    echo sandbox >"$cm_home/default"
+    cm_run issue 5 fix/x --rebuild
+    [[ "$cm_status" -eq 2 ]] || fail "exit $cm_status, want 2"
+    grep -q '^usage:' "$cm_dir/err" || fail "no usage: line"
+    grep -q '^codeo: --rebuild applies only to a container' "$cm_dir/err" || fail "no reason: $cm_err"
+    [[ ! -s "$cm_dir/calls" ]] || fail "made calls: $(cat "$cm_dir/calls")"
+}
+
+t_shell_home_sandbox_usage() { expect_usage shell home --sandbox; }
+
+t_update_through_symlink() {
+    update_setup "$current"
+    ln -s "$cm_dir/inst/codeo" "$cm_dir/link"
+    cm_script="$cm_dir/link"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    [[ -L "$cm_dir/link" ]] || fail "symlink replaced"
+    grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "target not replaced"
+    [[ "$(ls -A "$cm_dir/inst")" == codeo ]] || fail "inst holds more than codeo"
+}
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -961,6 +1041,14 @@ cases=(
     t_update_usage_extra_args
     t_update_partial_second_mv
     t_update_partial_final_mv
+    t_update_through_symlink
+    t_relative_codeo_home
+    t_home_unset
+    t_home_dir_uncreatable
+    t_rebuild_saved_sandbox_usage
+    t_shell_home_sandbox_usage
+    t_rm_force_container_gone
+    t_rm_force_failing_rm_still_listed_dies
 )
 
 for current in "${cases[@]}"; do

@@ -16,7 +16,7 @@ die() {
     exit "${2:-1}"
 }
 
-# usage: print the command list on stderr and exit 2.
+# usage [<message>]: print the command list on stderr, then the message as one codeo: line, and exit 2.
 usage() {
     cat >&2 <<'USAGE'
 usage: codeo <command> [args]
@@ -30,6 +30,7 @@ usage: codeo <command> [args]
   update                                              update codeo and its scripts
   help                                                show this help
 USAGE
+    [[ -z "${1:-}" ]] || echo "codeo: $1" >&2
     exit 2
 }
 
@@ -45,7 +46,13 @@ valid_branch() {
 
 # home_dir: print the directory holding the scripts and sandbox clones.
 home_dir() {
-    printf '%s\n' "${CODEO_HOME:-$HOME/codeo}"
+    local d=${CODEO_HOME:-}
+    if [[ -z "$d" ]]; then
+        [[ -n "${HOME:-}" ]] || die "set CODEO_HOME or HOME"
+        d=$HOME/codeo
+    fi
+    case $d in /*) ;; *) d=$PWD/$d ;; esac
+    printf '%s\n' "$d"
 }
 
 # cmd_help: print the commands on stdout, and the PATH line when ~/.local/bin is not on PATH.
@@ -65,7 +72,7 @@ codeo: work a GitHub issue in a dev container or an sbx sandbox.
   codeo help                                                show this help
 HELP
     case ":$PATH:" in
-        *":$HOME/.local/bin:"*) ;;
+        *":${HOME:-}/.local/bin:"*) ;;
         *)
             echo
             echo '~/.local/bin is not on your PATH; add this line to your shell profile:'
@@ -84,7 +91,7 @@ ensure_home() {
     local dir base f name
     dir=$(home_dir)
     base=$(raw_base)
-    mkdir -p "$dir"
+    mkdir -p "$dir" 2>/dev/null || die "could not create $dir"
     for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh; do
         name=${f##*/}
         [[ -s "$dir/$name" ]] && continue
@@ -152,8 +159,9 @@ cmd_home() {
 # saved_default: print the saved default kind, container when the file is absent or holds anything
 # but container or sandbox.
 saved_default() {
-    local v=""
-    [[ -r "$(home_dir)/default" ]] && IFS= read -r v <"$(home_dir)/default" || true
+    local v="" d
+    d=$(home_dir)
+    [[ -r "$d/default" ]] && IFS= read -r v <"$d/default" || true
     case "$v" in
         sandbox) echo sandbox ;;
         *) echo container ;;
@@ -221,7 +229,7 @@ cmd_issue() {
         esac
     done
     kind=${kind_flag:-$(saved_default)}
-    [[ "$kind" == container || -z "$rebuild" ]] || usage
+    [[ "$kind" == container || -z "$rebuild" ]] || usage "--rebuild applies only to a container, and the kind here is a sandbox"
     ensure_home
     [[ -n "$branch" ]] || branch=$(find_branch "$n")
     run_script "codeo-$kind.sh" issue "$n" "$branch" ${rebuild:+"$rebuild"}
@@ -329,7 +337,7 @@ cmd_default() {
         0) saved_default ;;
         1)
             [[ "$1" == container || "$1" == sandbox ]] || usage
-            mkdir -p "$(home_dir)"
+            mkdir -p "$(home_dir)" || die "could not create $(home_dir)"
             printf '%s\n' "$1" >"$(home_dir)/default"
             ;;
         *) usage ;;
@@ -412,7 +420,12 @@ cmd_rm() {
             echo "--force: could not check $name for unsaved work; removing anyway"
             ;;
     esac
-    docker rm -f "$name" >/dev/null 2>&1 </dev/null || die "could not remove container $name"
+    if ! docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
+        # With --force a container that is already gone is fine: its volume and image still go.
+        if [[ -z "$force" ]] || docker ps -a --format '{{.Names}}' 2>/dev/null </dev/null | grep -qxF "$name"; then
+            die "could not remove container $name"
+        fi
+    fi
     docker volume rm "$name" >/dev/null 2>&1 </dev/null || die "could not remove volume $name"
     docker rmi "codeo-dev:$name" >/dev/null 2>&1 </dev/null ||
         echo "codeo: warning: could not remove image codeo-dev:$name" >&2
