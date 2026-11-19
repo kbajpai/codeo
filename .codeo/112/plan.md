@@ -64,6 +64,7 @@ As recommended: yes, one or two sentences in `docs/handoff.md` and a `CHANGELOG.
 ### Q6 — #102 also changes `CHANGELOG.md`. Proceed, sequence or re-scope?
 
 **Why it matters:** the plan adds one bullet to `CHANGELOG.md` (Task 7). #102 (`feat/codeo-issue-assign-every-filed`, kbajpai, at `qc`) has `CHANGELOG.md` in its footprint. Two bullets under `## Unreleased` on parallel branches conflict textually at worst; if you would rather avoid even that, Task 7's CHANGELOG step can wait for #102 to merge.
+**Overlap (as `overlap.sh` prints it):** #102 `glob:CHANGELOG.md`.
 **Options:**
 - **Proceed and coordinate (recommended)** — each branch adds its own bullet; whichever merges second keeps both.
 - **Sequence after #102** — Task 7 starts after #102 is merged; `sequenced:` names #102.
@@ -75,6 +76,7 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 ### Q7 — #108 also changes `docs/handoff.md` and `CHANGELOG.md`. Proceed, sequence or re-scope?
 
 **Why it matters:** Task 7 edits `docs/handoff.md` (*Who is working right now*) and `CHANGELOG.md`; #108 (`feat/follow-ups-97-left-overlap`, kbajpai, at `qc`) lists both in its footprint. Which passage of `docs/handoff.md` #108 changes is not visible from its footprint line; this plan touches one paragraph, the live-signal bullet.
+**Overlap (as `overlap.sh` prints it):** #108 `glob:CHANGELOG.md` and #108 `glob:docs/handoff.md`.
 **Options:**
 - **Proceed and coordinate (recommended)** — the edits are in different passages, and `/codeo:implement` merges `origin/main` each round (`sync-main.sh`) and re-reads the lines it edits first.
 - **Sequence after #108** — Task 7 starts after #108 merges; `sequenced:` names #108.
@@ -92,7 +94,7 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 **Calls I am making unless told otherwise.**
 - The web session is bound to this branch and this issue (`bash scripts/lock.sh take web` in a checkout of `feat/verify-live-session-signal-hosted`), so the signal it publishes is `refs/codeo/live/112/web-<8>`. This container may show as a second live session on #112 at the same time; that is two lines, which is the designed behaviour.
 - The "other clone" that reads the signal is this dev container. `/codeo:implement` runs `bash scripts/inflight.sh --live` and `bash scripts/inflight.sh` here within a minute of your saying the web session has published.
-- The web-session tasks are marked `Runs on: the engineer's host` because only you can open one. A hosted session is Linux with bash, so no shell question is asked and its commands are labelled `Shell: bash`.
+- The web-session tasks are marked `Runs on: the engineer's host` because only you can open one. Its commands are single Linux commands that a shell passes through unchanged, so no shell question is asked and no `Shell:` label is needed.
 - The user label is recorded first as the session has it, with `CODEO_GITHUB_LOGIN` unset or as found. Then one more `beat --force` runs with `CODEO_GITHUB_LOGIN=kbajpai` to record that the override reaches the signal. If the first run names something other than your login, that is recorded and a follow-up is filed with `/codeo:issue`, per the third criterion.
 - The scripts under test are the branch's own (`bash scripts/live.sh` from the checkout), which match v1.0.7 for `live.sh`, `github.sh` and the hook. The hook check uses whatever the session has installed (Q1).
 - Nothing the check finds is fixed here. Each finding (a refused push, a refused REST call, a wrong user, a hook that does not fire) becomes its own issue through `/codeo:issue`, and the plan names which criterion each one closes as "recorded and filed".
