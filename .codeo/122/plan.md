@@ -57,6 +57,15 @@ Calls the draft will make unless an answer above changes them. They are shown ag
 - **F23.** Noted in a comment: the comment above `close_send_back` says rounds are read only inside `## Outcome` and that the heading match is a prefix match, as in `last_qc_round`. No behaviour change.
 - **Other workflows in flight.** #102 (`feat/codeo-issue-assign-every-filed`) and #108 (`feat/follow-ups-97-left-overlap`), both assigned to kbajpai and at `init` with no footprint and no changed files yet, so there is nothing to compare so far. The footprint check runs again once this plan's footprint is written.
 
+### Footprint
+
+```
+files:      scripts/inflight.sh, skills/triage/SKILL.md, docs/handoff.md, docs/skills.md, tests/inflight.test.sh, tests/triage-skill.test.sh, CHANGELOG.md, docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
