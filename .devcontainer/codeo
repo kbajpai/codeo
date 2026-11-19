@@ -287,7 +287,7 @@ cmd_list() {
             n=${BASH_REMATCH[1]}
             branch=""
             if [[ "$state" == running ]]; then
-                branch=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null) || branch=""
+                branch=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || branch=""
             else
                 state=stopped
             fi
@@ -331,6 +331,89 @@ cmd_default() {
     esac
 }
 
+# container_check <N>: check the issue container's repository for work that exists only there. Starts
+# a stopped container first. Prints one heading per kind found (up to 10 lines each) and returns 0
+# when clean, 1 when something would be lost, 2 when the check could not run (cannot start, fetch or
+# exec failed).
+container_check() {
+    local name="codeo-$1" listing state="" row rest dirty=0 out kind
+    local -A found=()
+    local -a kinds=(status stash branch revs)
+    if listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
+        while read -r row rest _; do
+            [[ "$row" == "$name" ]] && state=$rest
+        done <<<"$listing"
+    fi
+    if [[ "$state" != running ]]; then
+        docker start "$name" >/dev/null 2>&1 </dev/null || return 2
+    fi
+    docker exec "$name" git -C "/workspaces/$name" fetch origin >/dev/null 2>&1 </dev/null || return 2
+    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain 2>/dev/null </dev/null) || return 2
+    found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || return 2
+    out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || return 2
+    [[ -n "$out" ]] && found[branch]="" || found[branch]="HEAD is detached"
+    found[revs]=$(docker exec "$name" git -C "/workspaces/$name" rev-list --branches --not --remotes=origin 2>/dev/null </dev/null) || return 2
+    for kind in "${kinds[@]}"; do
+        [[ -n "${found[$kind]}" ]] || continue
+        dirty=1
+        case "$kind" in
+            status) echo "uncommitted or untracked files:" ;;
+            stash) echo "stashes:" ;;
+            branch) echo "detached HEAD:" ;;
+            revs) echo "commits not pushed to origin:" ;;
+        esac
+        head -n 10 <<<"${found[$kind]}" | sed 's/^/  /'
+    done
+    return "$dirty"
+}
+
+# cmd_rm <N> [--force] [--container|--sandbox]: remove the issue's container or sandbox. A container
+# is checked for unsaved work first; --force skips the refusal and removes even when the check cannot
+# run.
+cmd_rm() {
+    local n="" force="" a kind name rc=0 report
+    for a in "$@"; do
+        case "$a" in
+            --force) force=1 ;;
+            --container | --sandbox) parse_kind_flag "$a" ;;
+            -*) usage ;;
+            *)
+                [[ -z "$n" ]] || usage
+                n=$a
+                ;;
+        esac
+    done
+    [[ -n "$n" ]] && valid_number "$n" || usage
+    kind=$(detect_kind "$n" "$kind_flag")
+    if [[ "$kind" == sandbox ]]; then
+        ensure_home
+        run_script codeo-sandbox.sh end "$n" ${force:+--force}
+    fi
+    name="codeo-$n"
+    report=$(container_check "$n") || rc=$?
+    case "$rc" in
+        0) ;;
+        1)
+            if [[ -z "$force" ]]; then
+                printf '%s\n' "$report" >&2
+                die "$name holds work that exists only there; nothing removed (codeo rm $n --force removes it anyway)"
+            fi
+            echo "--force: not kept from $name:"
+            printf '%s\n' "$report"
+            ;;
+        *)
+            [[ -n "$force" ]] ||
+                die "could not check $name for unsaved work; nothing removed (to remove it anyway: docker rm -f $name; docker volume rm $name)"
+            echo "--force: could not check $name for unsaved work; removing anyway"
+            ;;
+    esac
+    docker rm -f "$name" >/dev/null 2>&1 </dev/null || die "could not remove container $name"
+    docker volume rm "$name" >/dev/null 2>&1 </dev/null || die "could not remove volume $name"
+    docker rmi "codeo-dev:$name" >/dev/null 2>&1 </dev/null ||
+        echo "codeo: warning: could not remove image codeo-dev:$name" >&2
+    echo "removed $name (the Claude Code login on its volume is gone with it)"
+}
+
 main() {
     [[ $# -gt 0 ]] || usage
     local cmd=$1
@@ -341,6 +424,7 @@ main() {
         shell) cmd_shell "$@" ;;
         open) cmd_open "$@" ;;
         list) cmd_list "$@" ;;
+        rm) cmd_rm "$@" ;;
         default) cmd_default "$@" ;;
         help | -h | --help) cmd_help "$@" ;;
         *) usage ;;

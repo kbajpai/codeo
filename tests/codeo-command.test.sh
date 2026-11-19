@@ -535,6 +535,211 @@ t_host_kinds_exact_name() {
     expect_no_script
 }
 
+# rm_stubs: replace the docker stub with one that answers rm. docker ps with {{.State}} prints
+# "codeo-5 $(dstate)" (running when absent), other docker ps prints "codeo-5"; docker exec ... git -C
+# <dir> <sub> prints $d/g_<sub> (g_branch defaults to main) and fails for fetch when fetch_fail
+# exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist.
+rm_stubs() {
+    cat >"$cm_dir/bin/docker" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "${0##*/} $*" >>"$d/calls"
+case "$1" in
+    ps)
+        if [[ "$*" == *State* ]]; then echo "codeo-5 $(cat "$d/dstate" 2>/dev/null || echo running)"; else echo codeo-5; fi ;;
+    start) [[ ! -e "$d/start_fail" ]] || exit 1 ;;
+    rm) [[ ! -e "$d/rm_fail" ]] || exit 1 ;;
+    volume) [[ ! -e "$d/vol_fail" ]] || exit 1 ;;
+    rmi) [[ ! -e "$d/rmi_fail" ]] || exit 1 ;;
+    exec)
+        sub=$6
+        [[ "$sub" != fetch || ! -e "$d/fetch_fail" ]] || exit 1
+        if [[ "$sub" == branch && ! -e "$d/g_branch" ]]; then echo main; else cat "$d/g_$sub" 2>/dev/null || true; fi ;;
+esac
+exit 0
+STUB
+    chmod +x "$cm_dir/bin/docker"
+}
+
+# expect_nothing_removed: no docker rm, volume rm or rmi call was made.
+expect_nothing_removed() {
+    ! grep -qE '^docker (rm|volume|rmi)' "$cm_dir/calls" || fail "removed something: $(tr '\n' '|' <"$cm_dir/calls")"
+}
+
+# expect_refused <text>: exit 1, stderr names <text>, nothing removed.
+expect_refused() {
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -qF -- "$1" <<<"$cm_err" || fail "stderr lacks '$1': $cm_err"
+    expect_nothing_removed
+}
+
+t_rm_sandbox() {
+    cm_setup "$current"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
+    cm_setup "$current-2"
+    echo 3 >"$cm_dir/status"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 3 ]] || fail "exit $cm_status, want 3"
+    expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
+}
+
+t_rm_sandbox_force() {
+    cm_setup "$current"
+    cm_run rm --force 5 --sandbox
+    expect_call "codeo-sandbox.sh end 5 --force pwd=$cm_home"
+}
+
+t_rm_usage() {
+    expect_usage rm 5 --container --sandbox
+    expect_usage rm 5 --bogus
+    expect_usage rm abc --force
+    expect_usage rm 5 6
+    expect_usage rm --force
+}
+
+t_rm_container_clean() {
+    cm_setup "$current"
+    rm_stubs
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local want
+    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
+    [[ "$(cat "$cm_dir/calls")" == "$want" ]] || fail "calls: $(tr '\n' '|' <"$cm_dir/calls")"
+    [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
+    grep -qi 'login' <<<"$cm_out" || fail "no login note: $cm_out"
+    expect_no_script
+}
+
+t_rm_container_untracked() {
+    cm_setup "$current"
+    rm_stubs
+    printf '?? f\n' >"$cm_dir/g_status"
+    cm_run rm 5 --container
+    expect_refused '?? f'
+}
+
+t_rm_container_unpushed() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5 --container
+    expect_refused abc1234
+}
+
+t_rm_container_stash() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'stash@{0}: WIP on x\n' >"$cm_dir/g_stash"
+    cm_run rm 5 --container
+    expect_refused 'stash@{0}'
+}
+
+t_rm_container_detached() {
+    cm_setup "$current"
+    rm_stubs
+    : >"$cm_dir/g_branch"
+    cm_run rm 5 --container
+    expect_refused "detached HEAD"
+    grep -qi 'detached' <<<"$cm_err" || fail "no detached heading: $cm_err"
+}
+
+t_rm_container_cuts_at_ten() {
+    cm_setup "$current"
+    rm_stubs
+    seq 1 25 | sed 's/^/?? file/' >"$cm_dir/g_status"
+    cm_run rm 5 --container
+    [[ "$(grep -c '?? file' <<<"$cm_err")" -eq 10 ]] || fail "not cut at 10: $cm_err"
+    expect_nothing_removed
+}
+
+t_rm_container_force() {
+    cm_setup "$current"
+    rm_stubs
+    printf '?? f\n' >"$cm_dir/g_status"
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "not removed"
+    grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "volume kept"
+    grep -qF '?? f' <<<"$cm_out" || fail "does not say what was not kept: $cm_out"
+    grep -qF abc1234 <<<"$cm_out" || fail "does not list unpushed: $cm_out"
+    [[ "$cm_out" == *"removed codeo-5"* ]] || fail "no removed line: $cm_out"
+}
+
+t_rm_container_cannot_check() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/fetch_fail"
+    cm_run rm 5 --container
+    expect_refused 'docker rm -f codeo-5; docker volume rm codeo-5'
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "not one line: $cm_err"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/fetch_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "--force: not removed"
+    grep -qi 'could not' <<<"$cm_out$cm_err" || fail "--force: no could-not-check note: $cm_out $cm_err"
+}
+
+t_rm_image_failure_warns() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/rmi_fail"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    grep -qi 'warning' <<<"$cm_err" || fail "no warning: $cm_err"
+    [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
+}
+
+t_rm_removal_failure_dies() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/rm_fail"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 1 && "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "rm -f: $cm_status $cm_err"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/vol_fail"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 1 && "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "volume rm: $cm_status $cm_err"
+}
+
+t_rm_stopped_container_started_first() {
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local start fetch
+    start=$(grep -n '^docker start codeo-5' "$cm_dir/calls" | head -1 | cut -d: -f1)
+    fetch=$(grep -n 'fetch origin' "$cm_dir/calls" | head -1 | cut -d: -f1)
+    [[ -n "$start" && -n "$fetch" && "$start" -lt "$fetch" ]] || fail "start not before fetch: $(tr '\n' '|' <"$cm_dir/calls")"
+    cm_setup "$current-2"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/start_fail"
+    cm_run rm 5
+    expect_refused 'docker rm -f codeo-5; docker volume rm codeo-5'
+}
+
+t_rm_container_detected() {
+    cm_setup "$current"
+    rm_stubs
+    cm_run rm 5
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "container not detected: $cm_err"
+    cm_setup "$current-2"
+    rm_stubs
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run rm 5
+    [[ "$cm_status" -eq 1 ]] || fail "both kinds: exit $cm_status, want 1"
+    expect_nothing_removed
+    expect_no_script
+}
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -579,6 +784,21 @@ cases=(
     t_list_docker_down
     t_list_extra_args_usage
     t_host_kinds_exact_name
+    t_rm_sandbox
+    t_rm_sandbox_force
+    t_rm_usage
+    t_rm_container_clean
+    t_rm_container_untracked
+    t_rm_container_unpushed
+    t_rm_container_stash
+    t_rm_container_detached
+    t_rm_container_cuts_at_ten
+    t_rm_container_force
+    t_rm_container_cannot_check
+    t_rm_image_failure_warns
+    t_rm_removal_failure_dies
+    t_rm_stopped_container_started_first
+    t_rm_container_detected
 )
 
 for current in "${cases[@]}"; do
