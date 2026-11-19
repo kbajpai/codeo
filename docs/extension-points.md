@@ -442,7 +442,7 @@ should carry the commit's short sha; report anything else.
 
 **Where.** `/codeo:close`, step 17, the last report.
 
-**May rely on.** The lock's host line (`volume:` or `session:`), the issue number and the branch.
+**May rely on.** The lock's host line (`volume:`, `sandbox:` or `session:`), the issue number and the branch.
 
 **Expected back.** What the engineer does next with this checkout, for instance how to remove it,
 as ordered commands or prose, and, when this checkout can no longer run the follow-up skills, the

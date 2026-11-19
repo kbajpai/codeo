@@ -57,10 +57,13 @@ case "${0##*/} $1" in
     "sbx exec" | "sbx.exe exec")
         case "$*" in
             *container-name.sh*) cat "$d/lockname" ;;
-            *devcontainer-start.sh*) echo "start-output" ;;
+            *devcontainer-start.sh*)
+                echo "start-output"
+                [[ ! -e "$d/startfail" ]] || exit 1 ;;
             *"git status --porcelain --branch")
                 [[ ! -e "$d/statusfail" ]] || exit 1
                 if [[ -f "$d/status" ]]; then cat "$d/status"; else echo "## fix/x"; fi ;;
+            *"codeo-113 true") [[ ! -e "$d/truefail" ]] || exit 1 ;;
             *"git stash list") [[ ! -f "$d/stashes" ]] || cat "$d/stashes" ;;
             *" pwd") if [[ -f "$d/sbxpwd" ]]; then cat "$d/sbxpwd"; else echo "/sandbox/clone"; fi ;;
         esac ;;
@@ -153,6 +156,16 @@ codeo_sbx_overrides_both() {
     sb_setup override
     [[ "$(SB_SBX=/x/mysbx sb_pick)" == "/x/mysbx 0" ]] || fail "override picked: $(SB_SBX=/x/mysbx sb_pick)"
     [[ "$(SB_SBX=/x/my.exe sb_pick)" == "/x/my.exe 1" ]] || fail "exe override picked: $(SB_SBX=/x/my.exe sb_pick)"
+}
+
+sandbox_state_ignores_a_row_with_fewer_than_three_columns() {
+    sb_setup shortrow
+    # shellcheck disable=SC2016
+    local probe='source "$1"; sbx=sbx; sandbox_state codeo-113' out
+    # A row with no status column reads as stopped, the same as an empty status: it is not treated as missing.
+    echo 'codeo-113 claude' >"$sb_dir/sandboxes"
+    out=$(PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c "$probe" _ "$script")
+    [[ "$out" == stopped ]] || fail "a two-column row read as: $out"
 }
 
 sandbox_state_reads_the_ls_rows() {
@@ -491,7 +504,7 @@ issue_leaves_the_sandbox_running_detached() {
 
 issue_writes_the_sandbox_marker() {
     # shellcheck disable=SC2016
-    local state mark='sbx exec codeo-113 bash -c : > "$HOME/.codeo-sandbox"' calls
+    local state mark='sbx exec codeo-113 bash -c printf "%s\n" "$1" > "$HOME/.codeo-sandbox" _ codeo-113' calls
     for state in missing 'running (detached)'; do
         sb_setup "mark-${state%% *}"
         mkdir -p "$sb_dir/work/codeo-113/.git"
@@ -502,6 +515,25 @@ issue_writes_the_sandbox_marker() {
         [[ "${calls%%"$mark"*}" != *devcontainer-start.sh* ]] || fail "$state: marker after the start script"
         [[ "${calls#*"$mark"}" == *devcontainer-start.sh* ]] || fail "$state: no start script after the marker"
     done
+}
+
+issue_names_the_next_step_when_the_start_script_fails() {
+    sb_setup startfail
+    : >"$sb_dir/startfail"
+    sb_run issue 113 fix/x
+    local want='codeo-sandbox: the start script failed in codeo-113: fix what it printed above, then run codeo-sandbox.sh issue 113 fix/x again, or codeo-sandbox.sh shell 113 to look inside'
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$sb_err" == "$want" ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *container-name.sh* && "$(sb_calls)" != *"sbx run"* ]] || fail "calls: $(sb_calls)"
+}
+
+issue_rerun_needs_no_pin() {
+    sb_setup norepin
+    mkdir -p "$sb_dir/work/codeo-113/.git"
+    printf 'NAME AGENT STATUS\ncodeo-113 claude running (detached)\n' >"$sb_dir/sandboxes"
+    CODEO_SBX_IMAGE="$sb_dir/no-such-pin" sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" != *"sbx create"* ]] || fail "create: $(sb_calls)"
 }
 
 issue_name_that_disagrees_with_the_lock_is_one_todo() {
@@ -782,9 +814,37 @@ end_without_origin_removes_nothing() {
 end_with_a_failed_sandbox_fetch_removes_nothing() {
     end_setup endfetch
     $real_git -C "$sb_dir/work/codeo-113" remote set-url sandbox-codeo-113 "$sb_dir/nowhere.git"
-    sb_run end 113
-    ((sb_rc == 1)) || fail "exited $sb_rc"
-    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+    local form
+    for form in "" --force; do
+        sb_run end 113 $form
+        ((sb_rc == 1)) || fail "[$form] exited $sb_rc"
+        [[ "$(sb_calls)" != *" rm "* ]] || fail "[$form] rm ran: $(sb_calls)"
+        [[ "$sb_err" == *"could not fetch sandbox-codeo-113 into codeo-113"* ]] || fail "[$form] stderr was: $sb_err"
+        [[ "$sb_err" == *"nothing in it could be read, so nothing can be proved or kept; to remove it anyway run: sbx rm --force codeo-113"* ]] || fail "[$form] stderr was: $sb_err"
+        if [[ -n "$form" ]]; then
+            [[ "$sb_err" == *"(--force cannot keep commits it could not fetch), nothing removed"* ]] || fail "[$form] stderr was: $sb_err"
+        else
+            [[ "$sb_err" != *"--force cannot keep"* && "$sb_err" == *"nothing removed"* ]] || fail "[$form] stderr was: $sb_err"
+        fi
+    done
+}
+
+end_names_a_way_out_when_a_stopped_sandbox_cannot_start() {
+    end_setup endnostart
+    echo 'codeo-113 claude stopped' >"$sb_dir/sandboxes"
+    : >"$sb_dir/truefail"
+    local form
+    for form in "" --force; do
+        sb_run end 113 $form
+        ((sb_rc == 1)) || fail "[$form] exited $sb_rc"
+        [[ "$(sb_calls)" != *" rm "* ]] || fail "[$form] rm ran: $(sb_calls)"
+        [[ "$sb_err" == *"could not start codeo-113"* && "$sb_err" == *"to remove it anyway run: sbx rm --force codeo-113"* ]] || fail "[$form] stderr was: $sb_err"
+        if [[ -n "$form" ]]; then
+            [[ "$sb_err" == *"(--force cannot keep commits it could not fetch), nothing removed"* ]] || fail "[$form] stderr was: $sb_err"
+        else
+            [[ "$sb_err" == *"nothing removed"* && "$sb_err" != *"--force cannot keep"* ]] || fail "[$form] stderr was: $sb_err"
+        fi
+    done
 }
 
 end_starts_a_stopped_sandbox_first() {
@@ -896,6 +956,17 @@ a_failed_run_d_is_one_line() {
     [[ "$sb_err" == *"run -d --name codeo-113"* ]] || fail "stderr was: $sb_err"
     [[ "$(sb_err_lines)" == 1 ]] || fail "stderr not one line: $sb_err"
     [[ "$(sb_calls)" != *$'\ncode '* ]] || fail "code ran: $(sb_calls)"
+}
+
+issue_with_a_failed_run_d_is_one_line() {
+    sb_setup issuerunfail
+    mkdir -p "$sb_dir/work/codeo-113/.git"
+    echo 'codeo-113 claude stopped' >"$sb_dir/sandboxes"
+    : >"$sb_dir/runfail"
+    sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *"run -d --name codeo-113"* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_err_lines)" == 1 ]] || fail "stderr not one line: $sb_err"
 }
 
 open_on_a_missing_sandbox_names_the_command_that_creates_it() {
@@ -1011,9 +1082,14 @@ docs_readme_gives_the_extension_route() {
         'sbx policy rm network --resource' 'balanced'; do
         grep -Fq -- "$s" "$readme" 2>/dev/null || fail "the README does not hold: $s"
     done
-    if sed -n 9p "$repo/CHANGELOG.md" | grep -Fq 'with the extensions from the user setting `remote.SSH.defaultExtensions`;'; then
-        fail "CHANGELOG line 9 still says the extensions come from remote.SSH.defaultExtensions alone"
-    fi
+    # Anchor: the bullets that name .sbx/codeo-sandbox.sh and the sbx policy allow network rule, found by content, not by line.
+    local bullets
+    bullets=$(grep -E '^- .*\.sbx/codeo-sandbox\.sh' "$repo/CHANGELOG.md" | grep -F 'sbx policy allow network')
+    [[ -n "$bullets" ]] || fail "no CHANGELOG bullet names .sbx/codeo-sandbox.sh and the sbx policy allow network rule"
+    [[ "$bullets" != *'with the extensions from the user setting `remote.SSH.defaultExtensions`;'* ]] ||
+        fail "the CHANGELOG bullet still says the extensions come from remote.SSH.defaultExtensions alone"
+    [[ "$bullets" == *'which needs a one-time `sbx policy allow network` rule'* ]] ||
+        fail "the CHANGELOG bullet does not say the extension route needs a one-time sbx policy allow network rule"
 }
 
 docs_readme_says_end_replaces_the_docker_rm_line() {
@@ -1041,6 +1117,16 @@ docs_readme_says_where_forced_refs_go() {
     grep -Fq 'refs/codeo/ended/codeo-<N>/' "$repo/.sbx/README.md" 2>/dev/null || fail "the README does not name refs/codeo/ended/codeo-<N>/"
 }
 
+docs_readme_says_how_a_unreadable_sandbox_is_removed() {
+    grep -Fq 'sbx rm --force codeo-<N>' "$repo/.sbx/README.md" 2>/dev/null ||
+        fail "the README does not name sbx rm --force codeo-<N> for a sandbox end cannot read"
+}
+
+docs_readme_says_the_marker_names_the_sandbox() {
+    grep -Fq 'sandbox: codeo-<N>' "$repo/.sbx/README.md" 2>/dev/null ||
+        fail "the README does not say the lock takes sandbox: codeo-<N>"
+}
+
 docs_readme_names_codeo_code() {
     grep -Fq 'CODEO_CODE' "$repo/.sbx/README.md" 2>/dev/null || fail "the README does not name CODEO_CODE"
 }
@@ -1059,6 +1145,12 @@ docs_changelog_names_the_sandbox_route() {
     grep -Eq '^- .*\.sbx/codeo-sandbox\.sh.*\(#99' "$repo/CHANGELOG.md" || fail "no CHANGELOG bullet for the sandbox route"
 }
 
+docs_changelog_names_the_sandbox_lock() {
+    local hits
+    hits=$(grep -E '^- .*--sandbox.*\(#131' "$repo/CHANGELOG.md" || true)
+    [[ -n "$hits" ]] || fail "no CHANGELOG bullet for the sandbox lock"
+}
+
 docs_the_hand_off_names_the_third_route() {
     grep -Fq 'bash codeo-sandbox.sh issue <N> <branch>' "$repo/.codeo/overlays/init.md" || fail "init overlay lacks the sandbox route"
     grep -Fq '.sbx/README.md' "$repo/.devcontainer/README.md" || fail "the dev container README does not point at .sbx/README.md"
@@ -1071,6 +1163,7 @@ cases=(
     sbx_is_preferred_over_sbx_exe
     codeo_sbx_overrides_both
     sandbox_state_reads_the_ls_rows
+    sandbox_state_ignores_a_row_with_fewer_than_three_columns
     a_failed_ls_stops_issue_with_one_line
     the_script_is_committed_executable_with_a_bash_shebang
     config_suite_covers_the_sandbox_folder
@@ -1097,12 +1190,15 @@ cases=(
     issue_rerun_on_an_existing_sandbox_creates_nothing
     issue_leaves_the_sandbox_running_detached
     issue_writes_the_sandbox_marker
+    issue_names_the_next_step_when_the_start_script_fails
+    issue_rerun_needs_no_pin
     issue_name_that_disagrees_with_the_lock_is_one_todo
     sandbox_path_prints_the_working_folder
     open_writes_the_title_and_opens_the_clone_folder
     open_starts_a_stopped_sandbox_detached
     open_on_a_detached_sandbox_runs_nothing_more
     a_failed_run_d_is_one_line
+    issue_with_a_failed_run_d_is_one_line
     open_on_a_missing_sandbox_names_the_command_that_creates_it
     open_without_ssh_setup_says_to_run_setup_ssh
     open_with_sbx_exe_launches_through_cmd_exe
@@ -1133,6 +1229,7 @@ cases=(
     end_without_origin_removes_nothing
     end_with_a_failed_sandbox_fetch_removes_nothing
     end_starts_a_stopped_sandbox_first
+    end_names_a_way_out_when_a_stopped_sandbox_cannot_start
     end_on_a_missing_sandbox_is_one_line
     end_without_the_clone_is_one_line
     end_with_no_sandbox_refs_removes_nothing
@@ -1148,10 +1245,13 @@ cases=(
     docs_readme_says_how_to_move_the_pin
     docs_readme_says_where_the_pin_is_read
     docs_readme_says_where_forced_refs_go
+    docs_readme_says_how_a_unreadable_sandbox_is_removed
+    docs_readme_says_the_marker_names_the_sandbox
     docs_readme_names_codeo_code
     docs_the_hand_off_says_whichever_route
     docs_evaluation_page_names_the_script_as_it_is
     docs_changelog_names_the_sandbox_route
+    docs_changelog_names_the_sandbox_lock
     docs_the_hand_off_names_the_third_route
 )
 
