@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The dossier, the issue skill, `doctor.sh`, `github.sh`, `lib/env.sh`, the inventory, `docs/skills.md` and their tests are read. Nothing is drafted: Q1-Q5 decide the config key, the label names, what the skill proposes from, one line of doctor's output and who creates the labels. Each carries a recommendation, so "as recommended" is a full answer.
+Round 1 done. The plan is approved and written; Q1-Q5 are answered, no lock is needed and no overlap was found. Next step: /codeo:implement.
 
 ## Questions
 
@@ -80,6 +80,22 @@ Decisions taken without a question, each stated in the draft for you to overrule
 - This project pins plugin `v1.0.7`, so turning the setting on in `.codeo/config.json` takes effect here only once a release carrying this change is pinned. The criterion asks for the config and the labels, not the release.
 - Other workflows in flight (#108, #122) are at `init` with no footprint and no changed files, so there is nothing to compare yet; the check runs again before the hand-off.
 
+## Outcome
+
+Plan: `docs/plans/2026-11-19-issue-priority-label-102.md` (approved 2026-11-19; left unstaged for the engineer). Shape: a scoped, executable plan under `$PLANS`; no reference doc, since the behaviour is documented in `docs/skills.md` and the inventory.
+
+**Decisions** (Q1-Q5, all answered "as recommended"):
+- Setting: `issue.priority: true`, a boolean under a new `issue` object, off for anything else. Rejected: a label-name mapping, and a top-level `priority{}` object.
+- Labels: `priority: blocker`, `priority: high`, `priority: medium`, `priority: low`. Rejected: `priority/<x>`, and bare names.
+- Proposal from a fixed four-line rubric in the skill, the reason quoting the line applied. Rejected: a new `issue/priority-rubric` extension point, and no rubric.
+- Doctor prints a `priority-labels` line only when the setting is on, nothing when off. Rejected: a line always.
+- A new `github.sh label create <name>` verb is the one command the report, doctor and the plan use; the four labels on `kbajpai/codeo` are created by Task 5 after approval. Rejected: engineer-run creation, and a raw `gh api` line.
+- Taken without a question: `issue-07` is rewritten in place (still nine `issue` rules); a label missing from the `label list` is left out of the filing call and named in the report; one pull request; triage needs no change.
+
+**Documentation the plan changes:** `docs/skills.md` (issue and doctor sections), `docs/skills-inventory.md` (`issue-07`), `CHANGELOG.md`; header comments of `scripts/github.sh`, `scripts/doctor.sh`, `lib/env.sh`. No wiki module.
+
+**Intake question resolved:** the setting's name and shape (open at intake) is Q1 above; `init.md` still records it as open at intake. The labels on GitHub are the plan's Task 5, confirmed by approving the plan.
+
 ### Footprint
 
 ```
@@ -89,10 +105,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-19 — Q1-Q5 raised · cost: 2m · fable-5-2 88k in + 598k cached / 8k out
+- 2026-11-19 — planned: docs/plans/2026-11-19-issue-priority-label-102.md · cost: 145m · fable-5-2 92k in + 834k cached / 9k out · sonnet-5-5 234k in + 834k cached / 14k out
