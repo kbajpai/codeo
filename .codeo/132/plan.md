@@ -95,6 +95,15 @@ Decided from the code, no question needed:
   document, no shared environment, no wiki module. The `shell` suite has no `filter`, so each
   task's proof is its test file, then `bash tests/run.sh`.
 
+### Footprint
+
+```
+files:      tests/role.test.sh, tests/close-skill.test.sh, docs/plans/2026-11-19-test-suite-gaps-132.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
