@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-The plan (`docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md`) is committed and pushed after the engineer confirmed it final. `bash scripts/sync-main.sh` found the branch already contains `origin/main`. `overlap.sh` now reports three overlaps with #108, which pushed its plan after this plan was approved. No task has been dispatched; Q1-Q3 are open.
+The plan (`docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md`) is committed and pushed after the engineer confirmed it final. `bash scripts/sync-main.sh` found the branch already contains `origin/main`. `overlap.sh` now reports three overlaps with #108, which pushed its plan after this plan was approved. Q1-Q3 (the #108 overlaps) are answered proceed and coordinate; tasks are being dispatched.
 
 ## Questions
 
@@ -19,6 +19,7 @@ The plan (`docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md`) is
 **Recommendation:** proceed and coordinate, as for #102: Task 5 runs last, syncs first, and keeps both sides on a conflict.
 
 **Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-19: "proceed & coordinate").
 
 ### Q2 — `glob:docs/handoff.md` overlaps #108's plan. How do the two changes share it?
 
@@ -27,6 +28,7 @@ The plan (`docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md`) is
 **Recommendation:** proceed and coordinate. Task 4 touches one sentence, and whichever merges second resolves a textual conflict there.
 
 **Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-19: "proceed & coordinate").
 
 ### Q3 — `glob:docs/skills.md` overlaps #108's plan. How do the two changes share it?
 
@@ -35,6 +37,7 @@ The plan (`docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md`) is
 **Recommendation:** proceed and coordinate, as for #102.
 
 **Answer:**
+Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-19: "proceed & coordinate").
 
 ## Notes
 
