@@ -182,7 +182,7 @@ it.
   (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings; the last bounds each git push or fetch, the login lookup and the REST fallback as a whole. Where a push to that
   ref is refused it is written through the REST API, and where neither works nothing is published.
   A hosted web session has been seen to be such a place: a push to the signal ref and the REST
-  write both returned HTTP 403, so it publishes no signal and `inflight.sh` shows no `live:` line
+  write of its commit (`git/commits`) both returned HTTP 403, so it publishes no signal and `inflight.sh` shows no `live:` line
   for it. The hook runs there only when the plugin is installed in the session, and a lock taken
   without a session id (`session: unknown`) gives the machine label the hostname instead of
   `web-` plus the session id. Where nothing is published

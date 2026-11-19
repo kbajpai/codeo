@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 done: qc round 1 findings addressed; the follow-up is #138; documentation corrected. Next: /codeo:qc.
+Round 3 done: qc round 2's F8 and F9 are fixed; F7 (the run quoted verbatim) needs the engineer's raw session output and is reported, not done. The follow-up is #138. Next: /codeo:qc.
 
 ## Questions
 
@@ -38,6 +38,10 @@ Source: the engineer's screenshots of the hosted session on `feat/verify-live-se
 | 6 | both writes refused: record the text, state #104's criterion | **#104's criterion "it works in a web session" is not met**; follow-up F1 below |
 
 **Findings to file** (nothing is fixed here): F1 — a hosted session cannot publish the signal by either path (design change); F2 — `codeo` is not installed in the web session, so no hook runs there; F3 — in a web session the signal would name `Claude` and the machine `vm` (lock taken without a session id).
+
+### Note on the web run (from qc round 2, F8)
+
+The `vm` machine label is a consequence of how the check ran: the prompt ran `bash scripts/lock.sh take web` with no session id, so the lock read `session: unknown` and `live.sh` fell back to the hostname (`scripts/live.sh:107-109`). `scripts/lock.sh:3` says a web lock normally comes from a web session's start script, which passes the id (`lock.sh:9`). Whether a real web session's start script passes one was not tested. #138's item 3 presents `vm` as what a web session does; the one-line correction (the run supplied no id) is the engineer's to add there.
 
 ### Later work — to file with `/codeo:issue` in the home checkout
 
@@ -82,7 +86,27 @@ Round 1, 2026-11-19. Plan: `docs/plans/2026-11-19-verify-live-signal-hosted-sess
 
 **Deviations from the plan.** None beyond round 1's. One comment is posted on #112 correcting round 1's comment (the follow-up is #138; the user was not determined).
 
+### Round 3 — 2026-11-19
+
+(send-back from qc.md round 2)
+
+**Sync.** `bash scripts/sync-main.sh`: `sync-main: the branch already contains origin/main`, exit 0; `overlap.sh 112` printed nothing.
+
+**What each finding came to.** Round 2's F1-F6 are the ones round 2 of this file already answered (F1, F3-F6 fixed; F2 is #138); the findings new in qc round 2 are:
+- **F7 — not changed; needs the engineer.** The recorded run is a transcription of screenshots and quotes no `bash -x` trace line. Making it verbatim needs the session's output as text, which only the engineer can copy out of the hosted session. The record says the wording is approximate where the images were small; the two refusal texts it quotes (`HTTP 403` on the push, and "Write access to this GitHub API path is not permitted through this proxy (HTTP 403)") are the ones the engineer's session printed. If a verbatim record is wanted, paste the session's output and it goes under Notes in the next round.
+- **F8 — fixed in the record.** A note under Notes says the run supplied no session id, so `vm` follows from the test and not from a web session as such; the correction to #138's item 3 is left to the engineer.
+- **F9 — fixed.** `docs/handoff.md` and `CHANGELOG.md` now say the REST write *of the signal's commit* (`git/commits`) returned HTTP 403, which is the one call that was refused; the ref `PATCH`/`POST` and `ref delete` were never reached, and `clear`'s REST path in a web session stays unverified (recorded in round 2).
+
+**Criteria after this round.** Unchanged from round 2: 1 not met, 2 untestable, 3 the user was not determined (follow-up #138), 4 met for the tip, 5 the hook cannot fire there (follow-up #138), 6 #104's criterion is not met (follow-up #138).
+
+**Documentation pages changed:** `docs/handoff.md` (*Who is working right now*) and `CHANGELOG.md`, one phrase each.
+
+**Build.** The `shell` suite's `build` is `true`: rc 0.
+
+**Deviations from the plan.** None beyond the earlier rounds'. F7 is reported, not done.
+
 ## Log
 
 - 2026-11-19 — round 1: web-session check recorded (both writes refused), docs written, build rc 0 · cost: 19m · sonnet-5-5 56k in + 4.4M cached / 19k out
 - 2026-11-19 — round 2 (send-back from qc round 1): F1, F3-F6 fixed, F2 resolved by #138 filed from the home checkout, build rc 0 · cost: 1m · sonnet-5-5 31k in + 1.6M cached / 9k out
+- 2026-11-19 — round 3 (send-back from qc round 2): F8, F9 fixed, F7 reported (needs the raw session output), build rc 0 · cost: 1m · sonnet-5-5 16k in + 1.1M cached / 3k out
