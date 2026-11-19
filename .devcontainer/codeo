@@ -83,9 +83,13 @@ ensure_home() {
     for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh; do
         name=${f##*/}
         [[ -s "$dir/$name" ]] && continue
-        if ! curl -fsSL -o "$dir/$name.part" "$base/$f"; then
+        if ! curl -fsSL -o "$dir/$name.part" "$base/$f" 2>/dev/null; then
             rm -f "$dir/$name.part"
             die "could not download $base/$f"
+        fi
+        if [[ "$(head -c2 "$dir/$name.part")" != "#!" ]]; then
+            rm -f "$dir/$name.part"
+            die "$base/$f is not a script"
         fi
         mv "$dir/$name.part" "$dir/$name"
     done
@@ -99,8 +103,12 @@ find_branch() {
     dir=$(home_dir)
     repo_url=${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}
     if [[ ! -d "$dir/.lookup.git" ]]; then
-        git clone --bare --filter=blob:none "$repo_url" "$dir/.lookup.git" >&2 ||
+        rm -rf "$dir/.lookup.git.part"
+        git clone --bare --filter=blob:none "$repo_url" "$dir/.lookup.git.part" >&2 || {
+            rm -rf "$dir/.lookup.git.part"
             die "could not clone $repo_url"
+        }
+        mv "$dir/.lookup.git.part" "$dir/.lookup.git"
     fi
     git -C "$dir/.lookup.git" fetch --prune origin '+refs/heads/*:refs/heads/*' >&2 ||
         die "could not fetch $repo_url"
@@ -109,7 +117,7 @@ find_branch() {
         if git -C "$dir/.lookup.git" cat-file -e "$b:.codeo/$n/init.md" 2>/dev/null; then
             found+=("$b")
         fi
-    done < <(git -C "$dir/.lookup.git" for-each-ref --format='%(refname:short)' refs/heads)
+    done < <(git -C "$dir/.lookup.git" for-each-ref --format='%(refname:lstrip=2)' refs/heads)
     case ${#found[@]} in
         1) printf '%s\n' "${found[0]}" ;;
         0) die "no branch holds .codeo/$n/init.md; pass the branch: codeo issue $n <branch>" ;;
@@ -136,16 +144,70 @@ cmd_home() {
     run_script codeo-container.sh home "$@"
 }
 
-# cmd_issue <N> [<branch>] [--rebuild] [--container]: start work on issue N in a dev container.
+# saved_default: print the saved default kind, container when the file is absent or holds anything
+# but container or sandbox.
+saved_default() {
+    local v=""
+    [[ -r "$(home_dir)/default" ]] && IFS= read -r v <"$(home_dir)/default" || true
+    case "$v" in
+        sandbox) echo sandbox ;;
+        *) echo container ;;
+    esac
+}
+
+# host_kinds <N>: print container and/or sandbox, one per line, for each that holds codeo-<N> on this
+# host. A missing docker or sbx program, or a failing call, counts as none of that kind. A sandbox
+# counts only when the first column of a row of sbx ls is exactly codeo-<N>.
+host_kinds() {
+    local name="codeo-$1" listing row
+    if command -v docker >/dev/null 2>&1 && listing=$(docker ps -a --format '{{.Names}}' 2>/dev/null); then
+        if grep -qxF "$name" <<<"$listing"; then echo container; fi
+    fi
+    if command -v sbx >/dev/null 2>&1 && listing=$(sbx ls 2>/dev/null); then
+        while read -r row _; do
+            if [[ "$row" == "$name" ]]; then
+                echo sandbox
+                break
+            fi
+        done <<<"$listing"
+    fi
+}
+
+# detect_kind <N> <flag-or-empty>: print the kind to use for an existing issue environment: the flag
+# when given, else the one kind found on the host; die when none or both exist.
+detect_kind() {
+    local n=$1 flag=$2 kinds
+    if [[ -n "$flag" ]]; then
+        echo "$flag"
+        return 0
+    fi
+    kinds=$(host_kinds "$n")
+    case "$kinds" in
+        container | sandbox) echo "$kinds" ;;
+        "") die "no container or sandbox codeo-$n found; start one with: codeo issue $n" ;;
+        *) die "both a container and a sandbox codeo-$n exist; add --container or --sandbox to pick one" ;;
+    esac
+}
+
+# parse_kind_flag <flag>: set kind_flag from --container or --sandbox; usage when the other was
+# already given.
+kind_flag=""
+parse_kind_flag() {
+    local k=${1#--}
+    [[ -z "$kind_flag" || "$kind_flag" == "$k" ]] || usage
+    kind_flag=$k
+}
+
+# cmd_issue <N> [<branch>] [--rebuild] [--container|--sandbox]: start work on issue N.
 cmd_issue() {
     [[ $# -ge 1 ]] || usage
-    local n=$1 branch="" rebuild="" a
+    local n=$1 branch="" rebuild="" a kind
     shift
     valid_number "$n" || usage
     for a in "$@"; do
         case "$a" in
             --rebuild) rebuild=--rebuild ;;
-            --container) ;;
+            --container | --sandbox) parse_kind_flag "$a" ;;
             *)
                 [[ -z "$branch" ]] || usage
                 valid_branch "$a" || usage
@@ -153,19 +215,67 @@ cmd_issue() {
                 ;;
         esac
     done
+    kind=${kind_flag:-$(saved_default)}
+    [[ "$kind" == container || -z "$rebuild" ]] || usage
     ensure_home
     [[ -n "$branch" ]] || branch=$(find_branch "$n")
-    run_script codeo-container.sh issue "$n" "$branch" ${rebuild:+"$rebuild"}
+    run_script "codeo-$kind.sh" issue "$n" "$branch" ${rebuild:+"$rebuild"}
 }
 
-# cmd_shell home|<N>: open a shell in the home or issue dev container.
+# parse_target <args...>: set target (home or N) and kind_flag from one target and an optional kind
+# flag in either order; usage otherwise.
+target=""
+parse_target() {
+    local a
+    for a in "$@"; do
+        case "$a" in
+            --container | --sandbox) parse_kind_flag "$a" ;;
+            *)
+                [[ -z "$target" ]] || usage
+                target=$a
+                ;;
+        esac
+    done
+    [[ -n "$target" ]] || usage
+}
+
+# cmd_shell home|<N> [--container|--sandbox]: open a shell in the home or issue environment.
 cmd_shell() {
-    [[ $# -eq 1 ]] || usage
-    if [[ "$1" != home ]]; then
-        valid_number "$1" || usage
+    parse_target "$@"
+    if [[ "$target" == home ]]; then
+        [[ -z "$kind_flag" ]] || usage
+        ensure_home
+        run_script codeo-container.sh shell home
     fi
+    valid_number "$target" || usage
     ensure_home
-    run_script codeo-container.sh shell "$1"
+    local kind
+    kind=$(detect_kind "$target" "$kind_flag")
+    run_script "codeo-$kind.sh" shell "$target"
+}
+
+# cmd_open <N> [--container|--sandbox]: open the issue's sandbox in VS Code.
+cmd_open() {
+    parse_target "$@"
+    valid_number "$target" || usage
+    local kind
+    kind=$(detect_kind "$target" "$kind_flag")
+    [[ "$kind" == sandbox ]] || die "codeo-$target is a container; open works on sandboxes only"
+    ensure_home
+    run_script codeo-sandbox.sh open "$target"
+}
+
+# cmd_default [container|sandbox]: show the saved default kind, or save one.
+cmd_default() {
+    case $# in
+        0) saved_default ;;
+        1)
+            [[ "$1" == container || "$1" == sandbox ]] || usage
+            mkdir -p "$(home_dir)"
+            printf '%s\n' "$1" >"$(home_dir)/default"
+            ;;
+        *) usage ;;
+    esac
 }
 
 main() {
@@ -176,6 +286,8 @@ main() {
         home) cmd_home "$@" ;;
         issue) cmd_issue "$@" ;;
         shell) cmd_shell "$@" ;;
+        open) cmd_open "$@" ;;
+        default) cmd_default "$@" ;;
         help | -h | --help) cmd_help "$@" ;;
         *) usage ;;
     esac

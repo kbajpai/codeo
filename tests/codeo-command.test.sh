@@ -44,6 +44,7 @@ cm_setup() {
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+cat "$d/${0##*/}_out" 2>/dev/null || true
 exit 0
 STUB
         chmod +x "$cm_dir/bin/$n"
@@ -56,6 +57,7 @@ d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
 for a in "$@"; do
     case "$a" in
+        clone) mkdir -p "${@: -1}"; exit 0 ;;
         for-each-ref) cat "$d/branches" 2>/dev/null || true; exit 0 ;;
         *:.codeo/*/init.md) grep -qxF "${a%%:*}" "$d/has" 2>/dev/null && exit 0 || exit 1 ;;
     esac
@@ -67,8 +69,11 @@ STUB
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+[[ ! -e "$d/curl_fail" ]] || exit 22
 while [[ $# -gt 0 ]]; do
-    if [[ "$1" == -o ]]; then printf '#!/bin/bash\nexit 0\n' >"$2"; fi
+    if [[ "$1" == -o ]]; then
+        if [[ -e "$d/curl_body" ]]; then cp "$d/curl_body" "$2"; else printf '#!/bin/bash\nexit 0\n' >"$2"; fi
+    fi
     shift
 done
 exit 0
@@ -79,7 +84,7 @@ STUB
 #!/bin/bash
 d=${0%/home/*}
 echo "${0##*/} $* pwd=$(pwd)" >>"$d/calls"
-exit 0
+exit "$(cat "$d/status" 2>/dev/null || echo 0)"
 STUB
         chmod +x "$cm_home/$n"
     done
@@ -132,7 +137,7 @@ expect_call() {
 
 # expect_no_script: neither stub script was called.
 expect_no_script() {
-    ! grep -q 'codeo-.*\.sh' "$cm_dir/calls" || fail "a script was called: $(cat "$cm_dir/calls")"
+    ! grep -q '^codeo-.*\.sh ' "$cm_dir/calls" || fail "a script was called: $(cat "$cm_dir/calls")"
 }
 
 t_home_runs_script() {
@@ -178,7 +183,6 @@ t_issue_rebuild_flag() {
     expect_call "codeo-container.sh issue 5 fix/x --rebuild pwd=$cm_home"
 }
 
-t_sandbox_flag_still_usage() { expect_usage issue 5 --sandbox; }
 t_home_bad_flag_usage() { expect_usage home --bogus; }
 
 t_issue_branch_lookup_one() {
@@ -217,12 +221,13 @@ t_issue_lookup_several() {
 
 t_shell_container() {
     cm_setup "$current"
+    printf 'codeo-5\n' >"$cm_dir/docker_out"
     cm_run shell 5
     expect_call "codeo-container.sh shell 5 pwd=$cm_home"
     cm_setup "$current-2"
     cm_run shell home
     expect_call "codeo-container.sh shell home pwd=$cm_home"
-    ! grep -q '^git ' "$cm_dir/calls" || fail "git called for shell home"
+    ! grep -q '^\(git\|docker\|sbx\) ' "$cm_dir/calls" || fail "lookup called for shell home"
 }
 
 t_first_use_downloads() {
@@ -268,6 +273,173 @@ t_suite_covers() {
         "$repo/.codeo/config.json" >/dev/null || fail "shell suite does not cover .devcontainer/codeo"
 }
 
+t_exit_status_passthrough() {
+    cm_setup "$current"
+    echo 7 >"$cm_dir/status"
+    cm_run home
+    [[ "$cm_status" -eq 7 ]] || fail "exit $cm_status, want 7"
+}
+
+t_download_failure() {
+    cm_setup "$current"
+    rm -f "$cm_home"/*.sh
+    touch "$cm_dir/curl_fail"
+    cm_run home
+    [[ "$cm_status" -ne 0 ]] || fail "exit 0 after a failed download"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "stderr not one codeo: line: $cm_err"
+    ! compgen -G "$cm_home/*.part" >/dev/null || fail ".part left behind"
+    expect_no_script
+}
+
+t_download_not_script() {
+    cm_setup "$current"
+    rm -f "$cm_home"/*.sh
+    printf '<html>404</html>\n' >"$cm_dir/curl_body"
+    cm_run home
+    [[ "$cm_status" -ne 0 ]] || fail "exit 0 for a non-script download"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "stderr not one codeo: line: $cm_err"
+    ! compgen -G "$cm_home/*.part" >/dev/null || fail ".part left behind"
+    [[ ! -e "$cm_home/codeo-container.sh" ]] || fail "bad file installed"
+    expect_no_script
+}
+
+t_lookup_clone_atomic() {
+    cm_setup "$current"
+    mkdir -p "$cm_home/.lookup.git.part"
+    touch "$cm_home/.lookup.git.part/stale"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    printf 'feat/a\n' >"$cm_dir/has"
+    cm_run issue 5
+    grep -q "clone --bare --filter=blob:none .* $cm_home/.lookup.git.part\$" "$cm_dir/calls" || fail "clone not into .lookup.git.part"
+    [[ -d "$cm_home/.lookup.git" && ! -e "$cm_home/.lookup.git.part" ]] || fail "part not renamed"
+    [[ ! -e "$cm_home/.lookup.git/stale" ]] || fail "stale part kept"
+}
+
+t_lookup_uses_lstrip() {
+    cm_setup "$current"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    printf 'feat/a\n' >"$cm_dir/has"
+    cm_run issue 5
+    grep -q 'for-each-ref --format=%(refname:lstrip=2) refs/heads' "$cm_dir/calls" || fail "no lstrip=2"
+}
+
+t_issue_sandbox_flag() {
+    cm_setup "$current"
+    cm_run issue 5 fix/x --sandbox
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh issue 5 fix/x pwd=$cm_home"
+}
+
+t_issue_default_sandbox() {
+    cm_setup "$current"
+    cm_run default sandbox
+    cm_run issue 5 fix/x
+    expect_call "codeo-sandbox.sh issue 5 fix/x pwd=$cm_home"
+    cm_setup "$current-2"
+    echo sandbox >"$cm_home/default"
+    cm_run issue 5 fix/x --container
+    expect_call "codeo-container.sh issue 5 fix/x pwd=$cm_home"
+    cm_setup "$current-3"
+    echo bogus >"$cm_home/default"
+    cm_run issue 5 fix/x
+    expect_call "codeo-container.sh issue 5 fix/x pwd=$cm_home"
+}
+
+t_issue_rebuild_sandbox_usage() {
+    expect_usage issue 5 fix/x --rebuild --sandbox
+    expect_usage issue 5 --container --sandbox
+}
+
+t_default_show_and_save() {
+    cm_setup "$current"
+    cm_run default
+    [[ "$cm_out" == container ]] || fail "no file: printed '$cm_out'"
+    cm_run default sandbox
+    [[ "$(cat "$cm_home/default")" == sandbox ]] || fail "default not saved"
+    cm_run default
+    [[ "$cm_out" == sandbox ]] || fail "printed '$cm_out', want sandbox"
+    expect_usage default bogus
+    expect_usage default sandbox extra
+}
+
+t_shell_sandbox() {
+    cm_setup "$current"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\ncodeo-55 claude running\n' >"$cm_dir/sbx_out"
+    cm_run shell 5
+    expect_call "codeo-sandbox.sh shell 5 pwd=$cm_home"
+}
+
+t_shell_neither() {
+    cm_setup "$current"
+    printf 'NAME AGENT STATUS\ncodeo-55 claude running\n' >"$cm_dir/sbx_out"
+    printf 'codeo-6\n' >"$cm_dir/docker_out"
+    cm_run shell 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "not one line: $cm_err"
+    grep -q 'codeo issue 5' <<<"$cm_err" || fail "does not name codeo issue 5: $cm_err"
+    expect_no_script
+}
+
+t_shell_both() {
+    cm_setup "$current"
+    printf 'codeo-5\n' >"$cm_dir/docker_out"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run shell 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "not one line: $cm_err"
+    { grep -q -- '--container' <<<"$cm_err" && grep -q -- '--sandbox' <<<"$cm_err"; } || fail "no flags named: $cm_err"
+    expect_no_script
+    cm_run shell 5 --sandbox
+    expect_call "codeo-sandbox.sh shell 5 pwd=$cm_home"
+    cm_run shell --container 5
+    expect_call "codeo-container.sh shell 5 pwd=$cm_home"
+}
+
+t_shell_container_found() {
+    cm_setup "$current"
+    printf 'codeo-5\n' >"$cm_dir/docker_out"
+    cm_run shell 5
+    expect_call "codeo-container.sh shell 5 pwd=$cm_home"
+}
+
+t_open_sandbox() {
+    cm_setup "$current"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run open 5
+    expect_call "codeo-sandbox.sh open 5 pwd=$cm_home"
+}
+
+t_open_container_refused() {
+    cm_setup "$current"
+    printf 'codeo-5\n' >"$cm_dir/docker_out"
+    cm_run open 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "not one line: $cm_err"
+    expect_no_script
+    cm_run open 5 --container
+    [[ "$cm_status" -eq 1 ]] || fail "--container: exit $cm_status, want 1"
+    expect_no_script
+}
+
+t_no_docker_program() {
+    cm_setup "$current"
+    rm -f "$cm_dir/bin/docker"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run shell 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh shell 5 pwd=$cm_home"
+}
+
+t_sandbox_uses_home_clone() {
+    cm_setup "$current"
+    mkdir -p "$cm_dir/h/codeo-5"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cd "$cm_dir/h"
+    cm_run shell 5
+    cd "$repo"
+    expect_call "codeo-sandbox.sh shell 5 pwd=$cm_home"
+}
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -279,7 +451,6 @@ cases=(
     t_issue_with_branch
     t_issue_accepts_valid_branch
     t_issue_rebuild_flag
-    t_sandbox_flag_still_usage
     t_home_bad_flag_usage
     t_issue_branch_lookup_one
     t_issue_lookup_none
@@ -290,6 +461,23 @@ cases=(
     t_help_lists_commands
     t_executable_bash
     t_suite_covers
+    t_exit_status_passthrough
+    t_download_failure
+    t_download_not_script
+    t_lookup_clone_atomic
+    t_lookup_uses_lstrip
+    t_issue_sandbox_flag
+    t_issue_default_sandbox
+    t_issue_rebuild_sandbox_usage
+    t_default_show_and_save
+    t_shell_sandbox
+    t_shell_neither
+    t_shell_both
+    t_shell_container_found
+    t_open_sandbox
+    t_open_container_refused
+    t_no_docker_program
+    t_sandbox_uses_home_clone
 )
 
 for current in "${cases[@]}"; do
