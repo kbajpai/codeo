@@ -74,11 +74,11 @@ case_rule() {
     # $1 label. Prints its row of the exceptions table; fails the case when the table has none.
     row_for() {
         local r
-        r=$(grep -F "$1\` |" <<<"$block" || true)
+        r=$(grep -F "| \`$1\` |" <<<"$block" || true)
         [[ -n $r ]] || { fail "docs/handoff.md has no row for [$1]"; return 0; }
         printf '%s\n' "$r"
     }
-    for row in 'lock kept' 'stash — interrupted' 'stash — completed' 'issue — not Ready'; do
+    for row in 'close — lock kept' 'stash — interrupted' 'stash — completed' 'issue — not Ready'; do
         row_for "$row" >/dev/null
     done
     local nl ai ab ur
@@ -203,7 +203,7 @@ case_close_step17_lead() {
     local s
     s=$(step "$close" 17)
     [[ -n $s ]] || { fail "no step 17 in skills/close/SKILL.md"; return; }
-    lacks "$s" 'Report** that the workflow is finished'
+    lacks "$(flat "$s")" 'Report** that the workflow is finished'
     lacks "$(flat "$s")" 'End with the closing block: the goal is the loose ends found'
 }
 
@@ -300,6 +300,25 @@ case_bites() {
     out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" host-workflow-fetch 2>&1) &&
         fail "the abandon section without the fetch clause passed host-workflow-fetch"
     [[ $out == *host-workflow-fetch* ]] || fail "host-workflow-fetch failed without naming itself: $out"
+
+    # The old step 17 lead wrapped over two lines: the guard reads the step flattened.
+    cp "$pristine" "$copy"
+    sed -i 's/^17\. \*\*Report\*\* how the close ended:.*$/17. **Report** that the workflow\n    is finished. Read the lock'"'"'s `host` line, and its `volume:` or/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the wrapped step 17 lead mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" close-step17-lead 2>&1) &&
+        fail "the wrapped old step 17 lead passed close-step17-lead"
+    [[ $out == *close-step17-lead* ]] || fail "close-step17-lead failed without naming itself: $out"
+
+    # A handoff row renamed so it only contains the label makes rule fail, naming the row.
+    sed -i 's/`close — lock kept`/`close — stale lock kept`/' "$t/docs/handoff.md"
+    cmp -s "$root/docs/handoff.md" "$t/docs/handoff.md" && fail "the renamed row mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" rule 2>&1) &&
+        fail "the renamed handoff row passed rule"
+    [[ $out == *"close — lock kept"* ]] || fail "rule failed without naming the row: $out"
+    cp "$root/docs/handoff.md" "$t/docs/handoff.md"
+
+    rm -rf "$t"
+    trap - RETURN
     return 0
 }
 
@@ -318,6 +337,9 @@ for c in "${all[@]}"; do
     case_name=$c
     "case_${c//-/_}"
 done
+
+case_name=bites
+[[ -z $(trap -p RETURN) ]] || fail "a RETURN trap outlived case_bites"
 
 if ((failures == 0)); then
     echo "all cases passed"
