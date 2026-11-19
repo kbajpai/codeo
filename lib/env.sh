@@ -33,6 +33,7 @@
 #                           inReview → In review, done → Done); any other name passes through as an
 #                           option name.
 #   labelTypes{}            issue label -> branch type
+#   issue{priority}         optional; priority is a bool, default false: true makes /codeo:issue give every issue it files exactly one priority label (priority: blocker, high, medium or low) and makes /codeo:doctor check the four labels exist
 #   suites[]{name,paths[],build,test,filter,parallel} test suites and the paths that trigger them.
 #                           parallel is a bool, default false: true means the suite may run together
 #                           with other parallel suites.
