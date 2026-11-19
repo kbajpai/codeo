@@ -33,16 +33,20 @@ Download the script once:
 curl -fsSL -o codeo-sandbox.sh https://raw.githubusercontent.com/kbajpai/codeo/main/.sbx/codeo-sandbox.sh
 ```
 
+The `codeo` command runs this script for you: `codeo issue <N> [<branch>] --sandbox`, `codeo open <N>`, `codeo shell <N>`, `codeo rm <N>` and `codeo list` stand for the commands below. Install it as `.devcontainer/README.md` describes in *Installing the `codeo` command*. `codeo` runs the script from `~/codeo` (`CODEO_HOME`), so the clone `codeo-<N>` is made there, whatever directory the command is run from. It downloads the script into `~/codeo` the first time, and `codeo update` replaces it.
+
 Run the commands from the directory that holds the downloaded file. The clone `codeo-<N>` is made in that directory. When `CODEO_SBX_IMAGE` is set, the script reads the image pin from the file it names, and refuses when that file is missing. Otherwise it reads `codeo-<N>/.sbx/claude-image` in the clone, then `.sbx/claude-image` on `origin/HEAD` of the clone (`git -C codeo-<N> show origin/HEAD:.sbx/claude-image`). No file beside the script is read. `CODEO_REPO_URL` names another repository to clone (default `https://github.com/kbajpai/codeo.git`), and `CODEO_CODE` names the VS Code program `open` runs, in place of `code`.
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `bash codeo-sandbox.sh issue <N> <branch>` | Clones `<branch>` into `./codeo-<N>` (or checks the clone is on `<branch>`; when the clone exists and the sandbox does not, it fetches `origin` and fast-forwards the clone to `origin/<branch>`, and stops with one line when it cannot), creates the sandbox `codeo-<N>` with 2 CPUs and 4 GB of memory at the pinned image, and runs the dev container's start script in it. That prints `lock: took the lock for #<N> on <branch>` and then `ready` or `TODO` lines. Run again, it creates nothing and starts a stopped sandbox. It prints one `todo:` line when the sandbox's lock names another issue. It ends by leaving the sandbox running detached (`sbx run -d`), so it does not stop when idle. |
-| `bash codeo-sandbox.sh open <N>` | Starts the sandbox detached first (`sbx run -d`) when it is not, writes the window title in the sandbox and opens the sandbox's working folder in VS Code over SSH (`codeo-<N>.sbx`). It checks `ssh codeo-<N>.sbx -- true` first, without a prompt and with a 10-second timeout (`ssh.exe` with `sbx.exe`) and, when that fails, says to run `sbx setup ssh`. |
-| `bash codeo-sandbox.sh shell <N>` | Opens a login bash in the sandbox's working folder. Start `claude` there. |
-| `bash codeo-sandbox.sh end <N> [--force]` | Removes the sandbox when nothing in it is unpushed or uncommitted (see Ending a sandbox). |
+| Command | `codeo` form | What it does |
+|---|---|---|
+| `bash codeo-sandbox.sh issue <N> <branch>` | `codeo issue <N> [<branch>] --sandbox` | Clones `<branch>` into `./codeo-<N>` (or checks the clone is on `<branch>`; when the clone exists and the sandbox does not, it fetches `origin` and fast-forwards the clone to `origin/<branch>`, and stops with one line when it cannot), creates the sandbox `codeo-<N>` with 2 CPUs and 4 GB of memory at the pinned image, and runs the dev container's start script in it. That prints `lock: took the lock for #<N> on <branch>` and then `ready` or `TODO` lines. Run again, it creates nothing and starts a stopped sandbox. It prints one `todo:` line when the sandbox's lock names another issue. It ends by leaving the sandbox running detached (`sbx run -d`), so it does not stop when idle. |
+| `bash codeo-sandbox.sh open <N>` | `codeo open <N>` | Starts the sandbox detached first (`sbx run -d`) when it is not, writes the window title in the sandbox and opens the sandbox's working folder in VS Code over SSH (`codeo-<N>.sbx`). It checks `ssh codeo-<N>.sbx -- true` first, without a prompt and with a 10-second timeout (`ssh.exe` with `sbx.exe`) and, when that fails, says to run `sbx setup ssh`. |
+| `bash codeo-sandbox.sh shell <N>` | `codeo shell <N>` | Opens a login bash in the sandbox's working folder. Start `claude` there. |
+| `bash codeo-sandbox.sh end <N> [--force]` | `codeo rm <N> [--force]` | Removes the sandbox when nothing in it is unpushed or uncommitted (see Ending a sandbox). |
+
+`codeo issue <N> --sandbox` finds the branch when none is given: the branch that holds `.codeo/<N>/init.md` on origin (see *Installing the `codeo` command* in `.devcontainer/README.md`). `codeo default sandbox` saves sandbox, in `~/codeo/default`, as the kind `codeo issue <N>` uses without a flag; `codeo default container` saves the other, and `codeo default` shows it. `codeo open`, `codeo shell` and `codeo rm` find the kind from the host, a sandbox `codeo-<N>` in `sbx ls` or a container of that name; `--sandbox` picks when both exist. `codeo open <N>` works on a sandbox only. `codeo list` prints one row per issue container or sandbox: `#<N>  sandbox  <state>  <branch>` for a sandbox, where the state is `running`, `detached` or `stopped` and the branch comes from the clone `~/codeo/codeo-<N>` (`-` with no clone).
 
 ```mermaid
 sequenceDiagram
@@ -68,7 +72,7 @@ The start script turns on `remoteControlAtStartup` in the sandbox, as it does in
 
 ## Ending a sandbox
 
-`end <N>` replaces the `docker rm -f codeo-<N>; docker volume rm codeo-<N>` line that `/codeo:close` and `/codeo:cleanup` print for a dev container. Close any VS Code window connected to `codeo-<N>.sbx` first: the removal uses `sbx rm --force`, which cuts the window off.
+`end <N>`, or `codeo rm <N>` (which runs `bash codeo-sandbox.sh end <N>` from `~/codeo` and passes `--force` on), replaces the `docker rm -f codeo-<N>; docker volume rm codeo-<N>` line that `/codeo:close` and `/codeo:cleanup` print for a dev container. `codeo rm` is the only way `codeo` ends a sandbox, and the rules below are the script's. Close any VS Code window connected to `codeo-<N>.sbx` first: the removal uses `sbx rm --force`, which cuts the window off.
 
 ```mermaid
 flowchart TD
