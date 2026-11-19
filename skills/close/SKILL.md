@@ -515,7 +515,7 @@ is the container the message names.
     push failed above, keep it: say what failed, and that running `/codeo:close` again in this
     checkout finishes the close.
 
-17. **Report** how the close ended: finished when step 16 deleted `.codeo/active`, lock kept when it did not. Read the lock's `host` line, and its `volume:` or
+17. **Report** how the close ended: finished when step 16 deleted `.codeo/active`, lock kept when it did not. Read the lock's `host` line, and its `volume:`, `sandbox:` or
     `session:` line, before step 16 deletes it. When step 16 deleted `.codeo/active`, fetch the
     project's host workflow, relay it, then the nothing-is-lost sentence and the `/codeo:triage`
     suggestion below. When it kept the lock, skip that fetch and say nothing of the checkout or
@@ -525,7 +525,7 @@ is the container the message names.
     Fetch the project's host workflow with
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlay.sh" close host-workflow`: on exit 0, relay the
     printed text to the engineer as what they do next with this checkout, filling in the lock's
-    `volume:` or `session:` line where it asks — it is theirs to run, never this skill's; on exit 3, the default below, by the lock's host;
+    `volume:`, `sandbox:` or `session:` line where it asks — it is theirs to run, never this skill's; on exit 3, the default below, by the lock's host;
     on exit 1, 2 or 4, report the one `codeo:` line it printed and use the default.
     - **`host: web`** — nothing to remove: the hosted session is done once the engineer closes it.
     - **`host: container`** — the checkout is a container, which this skill cannot remove from

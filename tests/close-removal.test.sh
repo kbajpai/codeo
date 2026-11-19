@@ -54,10 +54,21 @@ check_overlay() {
         [[ "$aband" == *"$needle"* ]] || { echo "check d: the abandon paragraph lacks $needle"; return 1; }
     done
     sbx='When the lock has a `sandbox:` line'${text#*'When the lock has a `sandbox:` line'}
+    sbx=${sbx%%'For a `container` lock with neither'*}
     sbx=${sbx%%'For any other host'*}
     if [[ "$sbx" == *'docker rm'* || "$sbx" == *'docker volume rm'* ]]; then
         echo "check e: the sandbox section names a removal command"; return 1
     fi
+    local sstash saband
+    sstash='After a stash:'${sbx#*'After a stash:'}
+    sstash=${sstash%%'After an abandon:'*}
+    saband='After an abandon:'${sbx#*'After an abandon:'}
+    for needle in 'print no removal command' 'codeo-home'; do
+        [[ "$sstash" == *"$needle"* ]] || { echo "check f: the sandbox stash paragraph lacks $needle"; return 1; }
+    done
+    for needle in 'print no removal command' 'codeo-home' '--force' 'only copy'; do
+        [[ "$saband" == *"$needle"* ]] || { echo "check f: the sandbox abandon paragraph lacks $needle"; return 1; }
+    done
 }
 msg=$(check_overlay "$out") || fail "$msg"
 
@@ -72,11 +83,13 @@ mutant 'a removal command in the abandon paragraph' \
     "${out/'When the lock has a `sandbox:` line'/"$cmd
 When the lock has a \`sandbox:\` line"}" 'check b: the abandon'
 mutant 'a removal command in the sandbox section' \
-    "${out/'For any other host'/"docker rm -f x
-For any other host"}" 'check e:'
+    "${out/'For a `container` lock with neither'/"docker rm -f x
+For a \`container\` lock with neither"}" 'check e:'
 mutant 'a removal command in the stash paragraph' \
     "${out/'After an abandon:'/"$cmd
 After an abandon:"}" 'check b: the stash'
+mutant 'the sandbox abandon paragraph without --force' \
+    "${out/'refuses without `--force`'/'refuses'}" 'check f: the sandbox abandon'
 mutant 'the removal command deleted from the finished paragraph' \
     "${out/"$cmd"/'(removed)'}" 'check a:'
 

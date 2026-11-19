@@ -22,4 +22,4 @@ After a stash: print no removal command. The sandbox may stay. To resume, run `/
 
 After an abandon: print no removal command. `/codeo:triage` runs in the home container, `codeo-home`, and that is the closing block's first step. When the branch was kept, `bash codeo-sandbox.sh end <N>` is safe on the host. When the branch was deleted, the sandbox holds the only copy of the work, and `end` refuses without `--force`: say so.
 
-For any other host there is nothing to remove: say so.
+For a `container` lock with neither a `volume:` nor a `sandbox:` line, print no command and say to find the container with `docker ps` on the host. For any other host there is nothing to remove: say so.
