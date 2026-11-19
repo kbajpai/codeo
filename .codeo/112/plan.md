@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q7 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md` (unstaged, for review).
+Planned. Q1-Q7 are answered, the engineer approved the draft, and the plan is written to `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md` (unstaged, for review). The footprint is recorded and checked against every other workflow in flight; nothing is open. The next step is to review and commit the plan, then `/codeo:implement`.
 
 ## Questions
 
@@ -105,6 +105,23 @@ Proceed and coordinate, as recommended (engineer, in the conversation, 2026-11-1
 
 **Plan.** Written to `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md` after approval (unstaged).
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md` — 7 tasks, unstaged for review. **Shape:** a plan under `docs/plans/` only (the `REQUIRED SUB-SKILL` banner, Goal / Architecture / Tech Stack / Spec / Global Constraints, checkbox tasks), with a decisions table and a sequence diagram folded in. No separate reference doc: the result is recorded in the dossier and the issue, and `docs/handoff.md` carries what outlives it. `engineering:system-design` and `engineering:architecture` were not applied: nothing is designed and no technology is chosen, since the work is a check.
+
+**What was decided** (Q1-Q7; Q2-Q5 as recommended):
+- **Procedure (Q2).** A written procedure the web session runs from pasted prompts; nothing ships in the plugin. Rejected: `scripts/live-check.sh` and a test, which would ship to every project for a check one maintainer runs.
+- **REST fallback (Q3).** Exercised directly (`github.sh ref put` and `ref delete` on `refs/codeo/live/112/rest-check`), so it is verified even when the push works. Rejected: only when the push is refused.
+- **Record (Q4).** Full output in `.codeo/112/implement.md` and a four-answer summary comment on #112. Rejected: either alone.
+- **Documentation (Q5).** One passage in `docs/handoff.md` (*Who is working right now*) and one `CHANGELOG.md` bullet, stating what the check found. Rejected: no documentation change.
+- **Plugin in the web session (Q1).** An environment setup script installs it; the version is recorded by Task 1 and decides Task 5. The answer did not name the ref or say whether the script takes the lock, so Task 1 takes it (idempotent) and records `claude plugin list`.
+- **Overlaps (Q6, Q7).** #102 on `glob:CHANGELOG.md` and #108 on `glob:CHANGELOG.md` and `glob:docs/handoff.md`: proceed and coordinate for both, read from the engineer's "Approved" on the draft.
+- **Tasks.** Tasks 1, 3 and 5 run in the hosted web session (`Runs on: the engineer's host`, single neutral Linux commands, no `Shell:` label); Tasks 2 and 4 read from this container; Task 6 records, files each finding with `/codeo:issue` and states #104's criterion; Task 7 is the documentation. No task needs a lease: no shared environment is configured. Nothing the check finds is fixed here.
+
+**Documentation the plan changes:** `docs/handoff.md` → *Parallel workflows* → *Who is working right now* (the sentences on a refused push and on the user the signal names) and `CHANGELOG.md` (one bullet; `Shared state:` unchanged). `README.md`, `docs/dossier.md` and `docs/skills.md` do not move. No wiki pages.
+
+**Intake question resolved:** none; init left nothing open.
+
 ### Footprint
 
 ```
@@ -114,11 +131,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-19 — raised Q1-Q5; nothing drafted
 - 2026-11-19 — Q1-Q5 answered in the conversation; drafted; raised overlap questions Q6-Q7
+- 2026-11-19 — planned: docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md · cost: 77m · fable-5-2 88k in + 700k cached / 10k out · sonnet-5-5 117k in + 1.5M cached / 23k out · no /codeo:issue filed; engineering:system-design and engineering:architecture not applied (nothing designed, no technology chosen)
