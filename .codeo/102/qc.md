@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 stopped at step 2. The branch already contains `origin/main`, and `overlap.sh 102` reported a new overlap with #108 (Q1). No build, suite, criterion or review has run yet; the pass resumes from step 2 once Q1 is answered.
+Round 1 in progress: Q1 (overlap with #108) is answered, proceed and coordinate; the pass resumes from step 2.
 
 ## Questions
 
@@ -18,6 +18,7 @@ Round 1 stopped at step 2. The branch already contains `origin/main`, and `overl
 **Options:** proceed and coordinate · sequence after #108 · re-scope. *Recommended: proceed and coordinate — different sections, #108 has not started building, and this branch is ready for review.*
 
 **Answer:**
+Proceed and coordinate. (Answered in the conversation, 2026-11-19.)
 
 ## Notes
 
