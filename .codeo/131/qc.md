@@ -78,4 +78,4 @@ No issue was filed by this pass.
 **Verdict: clear — forward to `/codeo:close`.**
 
 ## Log
-- 2026-11-19 · qc round 1 · clear, 4 non-blocking findings · cost: 5m · opus-5-5 181k in + 2.1M cached / 19k out · sonnet-5-5 91k in + 29k cached / 458 out
+- 2026-11-19 — qc round 1 · clear, 4 non-blocking findings · cost: 5m · opus-5-5 181k in + 2.1M cached / 19k out · sonnet-5-5 91k in + 29k cached / 458 out
