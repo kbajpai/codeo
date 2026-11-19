@@ -6,6 +6,7 @@
 #   closing-exits.test.sh [case]
 #       Cases: rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
 #       init-lock-wording issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
+#       abandon-summaries
 #       close-step17-lead stash-prose bites. CLOSING_EXITS_ROOT points the checks at another tree.
 #       No argument runs them all; an unknown case exits 2. Prints "all cases passed" and exits 0, or
 #       a FAIL line per failure and exits 1.
@@ -213,6 +214,16 @@ case_abandon_interrupted() {
     [[ $head != */codeo:* ]] || fail "another command comes before /codeo:close"
 }
 
+case_abandon_summaries() {
+    local row line
+    row=$(grep -F '| `abandon — finished` |' "$doc" || true)
+    [[ -n $row ]] || { fail "docs/handoff.md has no row for [abandon — finished]"; return 0; }
+    has "$(flat "$row")" 'last copy'
+    line=$(grep -F 'an abandon that finished' "$root/docs/skills.md" || true)
+    [[ -n $line ]] || { fail "docs/skills.md has no line naming [an abandon that finished]"; return 0; }
+    has "$(flat "$line")" 'last copy'
+}
+
 case_close_step17_lead() {
     local s
     s=$(step "$close" 17)
@@ -338,7 +349,7 @@ case_bites() {
 
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
     init-lock-wording issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
-    close-step17-lead stash-prose host-workflow-fetch bites)
+    abandon-summaries close-step17-lead stash-prose host-workflow-fetch bites)
 
 if (($# > 0)); then
     known=0
