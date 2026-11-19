@@ -97,22 +97,21 @@ valid_date() { [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && date -u -d "$1" +%s >
 # Each replaces the best so far when its date is >= it, so a tie goes to the later candidate (a dossier
 # over the tip, a log over `Updated`). A date that does not parse is skipped, never fatal.
 touched_of() {
-    local sha=$1 dir=$2 step best_d best_s d text
-    best_d=$(git log -1 --format=%cs "$sha" 2>/dev/null || true)
-    valid_date "$best_d" || return 0
-    best_s="branch tip"
+    local sha=$1 dir=$2 step best_d="" best_s="" d text tip
+    tip=$(git log -1 --format=%cs "$sha" 2>/dev/null || true)
+    if valid_date "$tip"; then best_d=$tip best_s="branch tip"; fi
     for step in "${steps[@]}"; do
         text=$(git show "$sha:$dir/$step.md" 2>/dev/null | tr -d '\r') || continue
         d=$(printf '%s\n' "$text" | awk -F'|' '/^\| *Updated *\|/ { gsub(/ /, "", $3); print $3; exit }')
-        if valid_date "$d" && [[ ! $d < $best_d ]]; then best_d=$d best_s="$step.md Updated"; fi
+        if valid_date "$d" && { [[ -z $best_d ]] || [[ ! $d < $best_d ]]; }; then best_d=$d best_s="$step.md Updated"; fi
         d=$(printf '%s\n' "$text" | awk '
             /^## Log/ { l = 1; next }
             /^## / { l = 0 }
             l && /^- [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]( |$)/ { if ($2 > m) m = $2 }
             END { print m }')
-        if valid_date "$d" && [[ ! $d < $best_d ]]; then best_d=$d best_s="$step.md log"; fi
+        if valid_date "$d" && { [[ -z $best_d ]] || [[ ! $d < $best_d ]]; }; then best_d=$d best_s="$step.md log"; fi
     done
-    printf '%s\t%s\n' "$best_d" "$best_s"
+    if [[ -n $best_d ]]; then printf '%s\t%s\n' "$best_d" "$best_s"; fi
 }
 
 # Whole calendar days from a YYYY-MM-DD to today (CODEO_TODAY, else `date +%F`), never below 0.
@@ -203,6 +202,8 @@ marker_round() {
 
 # `<m> <k>` when close.md's last `### Round <m>` is a send-back (`— review feedback`, `— conflicts with …`);
 # <k> is the `qc round at review: <k>` that round records, empty when it records none. Else nothing.
+# Rounds are read only inside `## Outcome`, and `/^## Outcome/` is a prefix match (as in `last_qc_round`), so
+# a heading such as `## Outcome notes` opens the section too.
 close_send_back() {
     { git show "$1:$2/close.md" 2>/dev/null || true; } | tr -d '\r' | awk "$fence_awk"'
         !f && t ~ /^## Outcome/ { o = 1; next }
