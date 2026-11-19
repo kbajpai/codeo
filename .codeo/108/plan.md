@@ -21,6 +21,7 @@ Exploration is done and no plan is drafted yet. Every item in the issue was chec
 - **C — fail on any failed diff.** Pair mode exits 1 for another workflow's failed diff as well. Strictest, and one unrelated branch with a broken history stops every other workflow's steps.
 
 **Answer:**
+A, my pick, as the engineer chose in the session ("Accept all your recommendations", 2026-11-19): a failed diff of this branch exits 1 in both modes; in pair mode another workflow's failed diff warns on stderr and carries on. (Transcribed by the skill from the engineer's chat answer.)
 
 ### Q2 — `beyond-50`: a case shaped like two pages, or only a comment that says it cannot page?
 
@@ -30,6 +31,7 @@ Exploration is done and no plan is drafted yet. Every item in the issue was chec
 - **B — comment only.** Drop the 60-row half, keep the two greps, and say the stub cannot page. Honest, and the blank-row path stays unexercised.
 
 **Answer:**
+A, my pick, as the engineer chose in the session. (Transcribed.)
 
 ### Q3 — The two CHANGELOG clauses are in the released `## v1.0.7` section. Edit them in place?
 
@@ -39,6 +41,7 @@ Exploration is done and no plan is drafted yet. Every item in the issue was chec
 - **B — leave v1.0.7 as released.** The `## Unreleased` bullet carries the correction ("v1.0.7's entry said …; in fact …") and line 32 is untouched. The acceptance criterion "the two CHANGELOG clauses match the code" is then met only by reading both entries together.
 
 **Answer:**
+A, my pick, as the engineer chose in the session: edit the two clauses in place and note the correction under `## Unreleased`. (Transcribed.)
 
 ### Q4 — After a `lock: TODO` that follows a taken lock, should `/codeo:init` hand off to `/codeo:plan`?
 
@@ -48,6 +51,7 @@ Exploration is done and no plan is drafted yet. Every item in the issue was chec
 - **B — hand off when the lock was taken.** Init reads the `took the lock` line: with it, a TODO is quoted as a fix to make and `/codeo:plan` runs next in the same session; without it, the no-lock block as today. Matches the handoff row most closely, and it is a behaviour change to init's step 11 and its closing blocks (and their cases in `tests/closing-exits.test.sh` and `tests/init-skill.test.sh`).
 
 **Answer:**
+A, my pick, as the engineer chose in the session: wording only. (Transcribed.)
 
 ### Q5 — Two neighbours of the listed items: take them in this plan, or leave them for triage?
 
@@ -59,6 +63,7 @@ Exploration is done and no plan is drafted yet. Every item in the issue was chec
 Answer with *take* or *leave* for each, or "your picks".
 
 **Answer:**
+Your picks, as the engineer chose in the session: (a) take it, (b) leave it. (Transcribed.)
 
 ## Notes
 
