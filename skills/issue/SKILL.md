@@ -126,14 +126,28 @@ is the container the message names.
    `issue-types` printed, based on content (the names are whatever the organisation defines). When
    it prints nothing — a user-owned repository has no Issue Types — propose no type at all. Propose
    only labels that already exist and fit.
+
+   **Priority** is proposed only when the project turned it on: read
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .issue.priority`. When it prints `true`,
+   propose exactly one of `priority: blocker`, `priority: high`, `priority: medium` or
+   `priority: low`, chosen from this rubric, with a one-line reason naming the rubric line that
+   applied:
+   - `blocker`: work already in flight cannot continue, or the base branch or a release is broken, until this is fixed.
+   - `high`: a defect or gap that affects normal use and has no acceptable workaround, or work a committed piece of work depends on.
+   - `medium`: worth doing; there is a workaround, or the effect is limited, and the default when neither `blocker`, `high` nor `low` fits.
+   - `low`: polish, cleanup, or a follow-up nobody is waiting on.
+
+   When it prints anything else, or nothing, propose no priority and add no priority label. A priority a calling skill passes along is ignored; the proposal is this skill's, made at the gate.
    <!-- rule: issue-07 -->
-   Do not set `Priority` or `Effort` custom fields — that's human triage judgment this skill has
-   no basis to make.
+   Set a Priority only when `issue.priority` is on and only with the engineer's approval at the review gate, as a label; never set `Effort` or any custom field.
 
 6. **Review gate — do not skip or shortcut this:**
    - Present the full drafted title, body, proposed Issue Type, and proposed labels in the
      conversation itself, and record the same draft in the dossier,
-     committed to the intake branch as in step 3.
+     committed to the intake branch as in step 3. With `issue.priority` on, the draft also shows
+     the proposed priority and its one-line reason.
+     Changing it at the gate files the issue with the engineer's choice. If the engineer wants no priority, say the setting makes one required
+     and ask again.
    - Nothing below this line runs while a question in the dossier is still open.
    - Surface any unknown that is going into the issue as its own open question.
    - Ask for explicit approval, requested changes, or rejection.
@@ -161,6 +175,10 @@ is the container the message names.
    gh api "repos/$OWNER/$NAME/issues" -f title='<title>' -F body=@<body file> \
      -f 'labels[]=<label>' -f 'labels[]=<label>'
    ```
+
+   With the priority on, add the approved label as `-f 'labels[]=priority: <name>'` only when
+   `label list` printed it. When it did not, file the issue without it. A missing priority label never fails the filing: the report names the missing label and the command that creates it,
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" label create '<label>'`, and says the issue has no priority label.
 
    This needs nothing but `gh`'s login, so it works the same on any machine; no GitHub MCP server
    is involved anywhere in this skill.
