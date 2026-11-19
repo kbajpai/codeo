@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Plan committed and confirmed final; Q1 (overlap with #122) answered: proceed and coordinate. Starting the tasks.
+All six tasks are done and pushed; Q1 is answered. Next step: /codeo:qc.
 
 ## Questions
 
@@ -24,7 +24,25 @@ Proceed and coordinate. (Taken from the engineer's "Commit, Push & /codeo:implem
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Plan: `docs/plans/2026-11-19-issue-priority-label-102.md`, all six tasks done, each reviewed on sonnet with no Critical or Important finding, and a whole-branch review ready to merge.
+
+**Built** (commits `67674f4`, `9844eb7`, `0f889ea`, `53663c1`, `176ac95`):
+- Task 1 — `scripts/github.sh label create <name>`.
+- Task 2 — `lib/env.sh` header documents `issue{priority}`; `scripts/doctor.sh` runs a `priority-labels` check only when `issue.priority` is exactly `true` (no line, and no `gh` call, otherwise).
+- Task 3 — `skills/issue/SKILL.md` steps 5-7 and rule `issue-07` (rubric, one-line reason at the gate, label filed only if it exists, Effort never set); `docs/skills-inventory.md` `[issue-07]` and its pinned hash regenerated.
+- Task 4 — `docs/skills.md` (issue and doctor sections) and one `CHANGELOG.md` Unreleased entry.
+- Task 5 — the four labels `priority: blocker|high|medium|low` created on `kbajpai/codeo` through the new verb; `issue.priority: true` in `.codeo/config.json`. `bash scripts/doctor.sh` prints `ok priority-labels: all four exist`.
+- Task 6 — `bash tests/run.sh`: `all cases passed`.
+
+**Documentation pages changed:** `docs/skills.md`, `docs/skills-inventory.md`, `CHANGELOG.md`; header comments of `scripts/github.sh`, `scripts/doctor.sh`, `lib/env.sh`.
+
+**Build result:** the one configured suite (`shell`) has `build: true`; its test run passed as above.
+
+**Deviations from the plan:** none. Overlap with #122 (`CHANGELOG.md`, `docs/skills.md`) was answered proceed-and-coordinate (Q1); the edits stay in the `issue` and `doctor` sections and one Unreleased entry.
+
+**Left for `/codeo:qc` (Minor, none blocking):** the scope sentences in the skill and `docs/skills.md` ("and that is all it does", "does nothing else") are pinned by existing tests and now omit the priority label; `docs/skills.md` and the changelog say "on" where doctor and the skill need exactly `true`, and do not mention that the skill asks again when every priority is declined; the new prose has a few unwrapped long lines in `skills/issue/SKILL.md`; the `issue-07 keeps its comment` test pins nothing new; the gate does not say a proposed priority label is missing from the repository (the filing report does). The plugin pin is `v1.0.7`, so the setting has no effect in this project until a release carrying this change is pinned.
+
 
 ## Log
 
+- 2026-11-19 — implemented: all six tasks of docs/plans/2026-11-19-issue-priority-label-102.md; build and tests pass · cost: 27m · sonnet-5-5 377k in + 8.7M cached / 47k out
