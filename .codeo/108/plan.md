@@ -88,6 +88,15 @@ Your picks, as the engineer chose in the session: (a) take it, (b) leave it. (Tr
 
 **Other workflows in flight** (`inflight.sh --except 108`, 2026-11-19): #102 `feat/codeo-issue-assign-every-filed` and #122 `feat/triage-s-flight-judging-103`, both assigned to kbajpai, both at `init` with plan questions open, `changed: none`. Neither has a footprint yet, so there is nothing to compare beyond that; the check runs again at the hand-off.
 
+### Footprint
+
+```
+files:      scripts/overlap.sh, scripts/qc-verdict.sh, scripts/board.sh, tests/overlap.test.sh, tests/qc-verdict.test.sh, tests/board.test.sh, tests/closing-exits.test.sh, tests/qc-skill.test.sh, skills/init/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, docs/plans/2026-11-19-follow-ups-97-left-108.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
