@@ -63,3 +63,4 @@ Round 1, 2026-11-19. Plan: `docs/plans/2026-11-19-verify-live-signal-hosted-sess
 ## Log
 
 - 2026-11-19 — round 1: web-session check recorded (both writes refused), docs written, build rc 0 · cost: 19m · sonnet-5-5 56k in + 4.4M cached / 19k out
+- 2026-11-19 — round 1 done: web-session check recorded (both writes refused), docs and changelog written, three findings left for the home checkout · cost: 22m · opus-5-5 200k in + 700k cached / 2k out · sonnet-5-5 59k in + 5M cached / 22k out
