@@ -1145,6 +1145,12 @@ docs_changelog_names_the_sandbox_route() {
     grep -Eq '^- .*\.sbx/codeo-sandbox\.sh.*\(#99' "$repo/CHANGELOG.md" || fail "no CHANGELOG bullet for the sandbox route"
 }
 
+docs_changelog_names_the_sandbox_lock() {
+    local hits
+    hits=$(grep -E '^- .*--sandbox.*\(#131' "$repo/CHANGELOG.md" || true)
+    [[ -n "$hits" ]] || fail "no CHANGELOG bullet for the sandbox lock"
+}
+
 docs_the_hand_off_names_the_third_route() {
     grep -Fq 'bash codeo-sandbox.sh issue <N> <branch>' "$repo/.codeo/overlays/init.md" || fail "init overlay lacks the sandbox route"
     grep -Fq '.sbx/README.md' "$repo/.devcontainer/README.md" || fail "the dev container README does not point at .sbx/README.md"
@@ -1245,6 +1251,7 @@ cases=(
     docs_the_hand_off_says_whichever_route
     docs_evaluation_page_names_the_script_as_it_is
     docs_changelog_names_the_sandbox_route
+    docs_changelog_names_the_sandbox_lock
     docs_the_hand_off_names_the_third_route
 )
 
