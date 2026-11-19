@@ -18,6 +18,7 @@ Stopped at step 3, before the pull request is opened. QC round 1 is clear, the t
 **Options:** proceed and coordinate · sequence after #112 · re-scope. *Recommended: proceed and coordinate: one changelog line each, different entries, and this branch has cleared QC.*
 
 **Answer:**
+Proceed and coordinate. (Answered in the conversation, 2026-11-19.)
 
 ## Notes
 
