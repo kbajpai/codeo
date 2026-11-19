@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1 and Q2 are answered (proceed and coordinate); dispatching the plan's tasks.
+Round 1 is done and handed off to `/codeo:qc`.
 
 ## Questions
 
@@ -41,6 +41,22 @@ Proceed and coordinate, as the engineer chose (2026-11-18). (Transcribed from th
 
 ## Outcome
 
-_Pending — written at the hand-off._
+Round 1. All 13 tasks of the plan are done, each reviewed, and the whole-branch review came back clean.
+
+**Built.**
+- `scripts/lock.sh` takes `--sandbox <name>` and writes a `sandbox:` line with no `volume:` line; the dev container lock is unchanged. `scripts/live.sh` labels a sandbox lock's machine with the sandbox name.
+- The start script passes `--sandbox`, naming the sandbox from the marker, else the clone folder's name. `.sbx/codeo-sandbox.sh` writes the sandbox name into the marker, names the way out when the start script fails, needs no pin for an existing sandbox, and `end` names `sbx rm --force` for a sandbox it cannot read.
+- `/codeo:close` (overlay and SKILL.md) covers finished, stash and abandon for a sandbox lock and names `codeo-sandbox.sh end <N>`.
+- Tests: lock, live, devcontainer, sandbox and close-removal suites gained cases for each criterion (failed `run -d`, no-pin rerun, `end` with and without `--force`, the no-marker case with `$HOME/.codeo-sandbox` present).
+- Pages: `docs/handoff.md`, `docs/extension-points.md`, `.sbx/README.md` (marker, `issue` diagram, unreadable-sandbox paragraph), `.devcontainer/README.md`, `CHANGELOG.md` (`## Unreleased`).
+
+**Deviation from plan.md Q1.** Its fallback wording would have recorded `codeo-home` when the marker is empty. The start script now falls back to the clone folder's name (commit `e5f838a`).
+
+**Build and tests.** Suite `shell`, build `true`: nothing to build. `bash tests/run.sh` passes ("all cases passed", exit 0), also with `HOME` holding a `.codeo-sandbox`. No shared environment: no lease, no deploy. All 12 acceptance criteria in init.md are covered by a test or a page change; no test reads `CHANGELOG.md` by line number.
+
+**Base branch.** `sync-main.sh`: the branch already contains `origin/main`. Overlaps with #133 and #126 were handled by "proceed and coordinate" (Q1, Q2); the second PR to merge resolves any conflict in the README, CHANGELOG and handoff pages.
+
+**Note.** The installed plugin (v1.0.7) `lock.sh` ignores `--sandbox` for container hosts, so a real sandbox shows the `sandbox:` line only after a plugin release and pin bump.
 
 ## Log
+- 2026-11-19 · implement round 1 · all 13 tasks done · cost: 131m · sonnet-5-5 1.1M in + 27M cached / 152k out
