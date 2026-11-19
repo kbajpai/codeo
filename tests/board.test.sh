@@ -272,6 +272,7 @@ grep -q "project item-delete 1 --owner acme --id ITEM_NEW" "$GH_STUB_LOG" || fai
 
 # A project whose title cannot be read says so, not that the add failed.
 GH_STUB_VIEW_FAILS=1 GH_STUB_ROWS="$url\t\t\t\t" run set 7 Ready
+[[ $rc -eq 1 ]] || fail "title-read-fails: rc=$rc"
 [[ $err == *"could not read the title of project #1"* ]] || fail "title-read-fails: err=$err"
 [[ $err != *"could not add #7 to project #1"* ]] || fail "title-read-fails blamed the add: err=$err"
 
@@ -373,16 +374,20 @@ GH_STUB_ROWS="$P2" run status 7
 printf '%s\n' "$with_board" > "$config"
 
 # An issue on more than 50 project items: the lookup must follow every page of projectItems.
-# The stub answers every call alike, so it cannot page; (a) asserts the call asks gh to paginate
-# and reads the cursor, (b) that a card sitting 60th in the rows is still found and written.
+# The stub answers every call alike, so it cannot page: only the request is proved here, that it
+# asks gh to paginate and reads the cursor.
 GH_STUB_ROWS="$P2" run status 7
 grep -q "api graphql .*--paginate" "$GH_STUB_LOG" || fail "beyond-50: the lookup has no --paginate"
 grep -q "endCursor" "$GH_STUB_LOG" || fail "beyond-50: the lookup query does not read endCursor"
-filler="$url\tITEM_F\tTodo\t9\tOther"
-rows=$filler
-for _ in $(seq 2 59); do rows+="\n$filler"; done
-GH_STUB_EDIT_FAILS=PROJ_1 GH_STUB_ROWS="$rows\n$P1" run set 7 Ready
-[[ $rc -ne 0 ]] || fail "beyond-50: a failed write on the 60th row must exit non-zero: rc=$rc"
-! grep -q "item-delete" "$GH_STUB_LOG" || fail "beyond-50: the existing card was removed as if this run had added it"
+# --paginate with a --jq filter prints a blank row for a first page with none of the owner's items,
+# then the card's row from the next page; the blank row must not hide the card or add a second one.
+for order in "blank-first:$url\t\t\t\t\n$P2" "blank-last:$P2\n$url\t\t\t\t"; do
+    rows=${order#*:}
+    GH_STUB_ROWS="$rows" run status 7
+    [[ $rc -eq 0 && $out == Ready ]] || fail "beyond-50 ${order%%:*}: status rc=$rc err=$err out=$out"
+    GH_STUB_ROWS="$rows" run set 7 "In progress"
+    [[ $rc -eq 0 && $out == *"Ready → In progress on #2"* ]] || fail "beyond-50 ${order%%:*}: set rc=$rc err=$err out=$out"
+    ! grep -q "project item-add 2" "$GH_STUB_LOG" || fail "beyond-50 ${order%%:*}: the card was added a second time"
+done
 
 echo "board.test.sh: all cases passed"
