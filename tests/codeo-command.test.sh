@@ -440,6 +440,101 @@ t_sandbox_uses_home_clone() {
     expect_call "codeo-sandbox.sh shell 5 pwd=$cm_home"
 }
 
+# list_stubs: replace the docker and git stubs with ones that answer list: docker ps prints
+# $d/docker_out, docker exec codeo-<N> ... prints $d/dbranch_codeo-<N>, and git -C <dir> branch
+# --show-current prints $d/gbranch_<basename dir>; a docker_fail file makes docker exit 1.
+list_stubs() {
+    cat >"$cm_dir/bin/docker" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "${0##*/} $*" >>"$d/calls"
+[[ ! -e "$d/docker_fail" ]] || exit 1
+case "$1" in
+    ps) cat "$d/docker_out" 2>/dev/null || true ;;
+    exec) cat "$d/dbranch_$2" 2>/dev/null || true ;;
+esac
+exit 0
+STUB
+    cat >"$cm_dir/bin/git" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "${0##*/} $*" >>"$d/calls"
+[[ "$1" == -C ]] && cat "$d/gbranch_${2##*/}" 2>/dev/null
+exit 0
+STUB
+    chmod +x "$cm_dir/bin/docker" "$cm_dir/bin/git"
+}
+
+t_list_rows() {
+    cm_setup "$current"
+    list_stubs
+    rm -f "$cm_home"/*.sh
+    printf 'codeo-140 exited\ncodeo-home running\ncodeo-131 running\ncodeo-9 paused\nother running\n' >"$cm_dir/docker_out"
+    printf 'fix/a\n' >"$cm_dir/dbranch_codeo-131"
+    printf 'NAME AGENT STATUS\ncodeo-133 claude running\ncodeo-12 claude stopped\ncodeo-5 claude running (detached)\nnotcodeo-7 claude running\n' >"$cm_dir/sbx_out"
+    printf 'feat/s\n' >"$cm_dir/gbranch_codeo-133"
+    mkdir -p "$cm_home/codeo-133"
+    cm_run list
+    local want
+    want=$'#9  container  stopped  -\n#131  container  running  fix/a\n#140  container  stopped  -\n#5  sandbox  detached  -\n#12  sandbox  stopped  -\n#133  sandbox  running  feat/s'
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_out" == "$want" ]] || fail "output: $cm_out"
+    ! grep -qE '^(docker (start|exec codeo-(140|9) )|sbx exec|curl)' "$cm_dir/calls" || fail "started something: $(cat "$cm_dir/calls")"
+    [[ ! -e "$cm_home/codeo-container.sh" ]] || fail "downloaded a script"
+    grep -q "^git -C $cm_home/codeo-133 branch --show-current" "$cm_dir/calls" || fail "no sandbox branch read"
+    grep -q '^docker exec codeo-131 git -C /workspaces/codeo-131 branch --show-current' "$cm_dir/calls" || fail "no container branch read"
+}
+
+t_list_empty() {
+    cm_setup "$current"
+    list_stubs
+    printf 'codeo-home running\n' >"$cm_dir/docker_out"
+    printf 'NAME AGENT STATUS\n' >"$cm_dir/sbx_out"
+    cm_run list
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    [[ "$cm_out" == "no issue containers or sandboxes" ]] || fail "output: $cm_out"
+}
+
+t_list_no_programs() {
+    cm_setup "$current"
+    rm -f "$cm_dir/bin/docker" "$cm_dir/bin/sbx"
+    cm_run list
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "stderr not one codeo: line: $cm_err"
+}
+
+t_list_docker_down() {
+    cm_setup "$current"
+    list_stubs
+    touch "$cm_dir/docker_fail"
+    printf 'NAME AGENT STATUS\ncodeo-133 claude running\n' >"$cm_dir/sbx_out"
+    cm_run list
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    [[ "$cm_out" == "#133  sandbox  running  -" ]] || fail "output: $cm_out"
+    [[ -z "$cm_err" ]] || fail "stderr: $cm_err"
+    cm_setup "$current-2"
+    rm -f "$cm_dir/bin/sbx"
+    printf 'codeo-4 running\n' >"$cm_dir/docker_out"
+    list_stubs
+    cm_run list
+    [[ "$cm_out" == "#4  container  running  -" && "$cm_status" -eq 0 ]] || fail "sbx missing: $cm_status $cm_out"
+}
+
+t_list_extra_args_usage() { expect_usage list now; }
+
+t_host_kinds_exact_name() {
+    cm_setup "$current"
+    printf 'codeo-50\ncodeo-home\n' >"$cm_dir/docker_out"
+    cm_run shell 5
+    [[ "$cm_status" -eq 1 ]] || fail "codeo-50 matched codeo-5: exit $cm_status"
+    expect_no_script
+    cm_setup "$current-2"
+    printf 'NAME AGENT STATUS\ncodeo-9 codeo-5 running\n' >"$cm_dir/sbx_out"
+    cm_run shell 5
+    [[ "$cm_status" -eq 1 ]] || fail "codeo-5 in column 2 matched: exit $cm_status"
+    expect_no_script
+}
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -478,6 +573,12 @@ cases=(
     t_open_container_refused
     t_no_docker_program
     t_sandbox_uses_home_clone
+    t_list_rows
+    t_list_empty
+    t_list_no_programs
+    t_list_docker_down
+    t_list_extra_args_usage
+    t_host_kinds_exact_name
 )
 
 for current in "${cases[@]}"; do

@@ -265,6 +265,59 @@ cmd_open() {
     run_script codeo-sandbox.sh open "$target"
 }
 
+# print_sorted <rows>: print "<N>\t<row>" lines sorted by N, without the number column; return 1 when empty.
+print_sorted() {
+    [[ -n "$1" ]] || return 1
+    sort -n -t $'\t' -k1,1 <<<"$1" | cut -f2-
+}
+
+# cmd_list: print one row per issue container or sandbox, "#<N>  <kind>  <state>  <branch>",
+# containers first, each kind by number. Needs neither the scripts nor a download. A missing program
+# or a failing call is skipped; both programs missing is an error. Nothing is started or exec'd into
+# a stopped environment: a stopped container's branch is "-".
+cmd_list() {
+    [[ $# -eq 0 ]] || usage
+    local listing name state branch dir agent status n rows shown=0
+    command -v docker >/dev/null 2>&1 || command -v sbx >/dev/null 2>&1 ||
+        die "neither docker nor sbx is installed: nothing to list"
+    rows=""
+    if command -v docker >/dev/null 2>&1 && listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
+        while read -r name state _; do
+            [[ "$name" =~ ^codeo-([0-9]+)$ ]] || continue
+            n=${BASH_REMATCH[1]}
+            branch=""
+            if [[ "$state" == running ]]; then
+                branch=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null) || branch=""
+            else
+                state=stopped
+            fi
+            rows+="$n"$'\t'"#$n  container  $state  ${branch:--}"$'\n'
+        done <<<"$listing"
+        if print_sorted "${rows%$'\n'}"; then shown=1; fi
+    fi
+    rows=""
+    dir=$(home_dir)
+    if command -v sbx >/dev/null 2>&1 && listing=$(sbx ls 2>/dev/null); then
+        while read -r name agent status; do
+            [[ "$name" =~ ^codeo-([0-9]+)$ && "$agent" != AGENT ]] || continue
+            n=${BASH_REMATCH[1]}
+            [[ "$status" == [a-z]* ]] || status=${status#* }
+            case "$status" in
+                "running (detached)"*) state=detached ;;
+                running*) state=running ;;
+                *) state=stopped ;;
+            esac
+            branch=""
+            if [[ -d "$dir/$name" ]]; then
+                branch=$(git -C "$dir/$name" branch --show-current 2>/dev/null) || branch=""
+            fi
+            rows+="$n"$'\t'"#$n  sandbox  $state  ${branch:--}"$'\n'
+        done <<<"$listing"
+        if print_sorted "${rows%$'\n'}"; then shown=1; fi
+    fi
+    ((shown)) || echo "no issue containers or sandboxes"
+}
+
 # cmd_default [container|sandbox]: show the saved default kind, or save one.
 cmd_default() {
     case $# in
@@ -287,6 +340,7 @@ main() {
         issue) cmd_issue "$@" ;;
         shell) cmd_shell "$@" ;;
         open) cmd_open "$@" ;;
+        list) cmd_list "$@" ;;
         default) cmd_default "$@" ;;
         help | -h | --help) cmd_help "$@" ;;
         *) usage ;;
