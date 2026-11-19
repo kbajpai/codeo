@@ -28,15 +28,31 @@ step() {
 # $1 case, $2 step number, $3 fixed string the step must contain.
 step_contains() {
     local text
-    text=$(step "$2")
+    text=$(step "$2" | tr '\n' ' ' | tr -s ' ')
     [[ -n $text ]] || { fail "$1 — no step $2 in the skill"; return; }
     grep -qF -- "$3" <<<"$text" || fail "$1 — step $2 has no [$3]"
+}
+
+# $1 case, $2 step number, $3 fixed string the step must not contain.
+step_lacks() {
+    local text
+    text=$(step "$2" | tr '\n' ' ' | tr -s ' ')
+    [[ -n $text ]] || { fail "$1 — no step $2 in the skill"; return; }
+    ! grep -qF -- "$3" <<<"$text" || fail "$1 — step $2 still has [$3]"
 }
 
 # Step 7: the draft carries every section, in dossier-check's order, Questions included.
 step_contains "the draft names the section order" 7 '`## Where this stands`, `## Questions`, `## Outcome`, `## Log`'
 step_contains "an empty Questions section says None." 7 '`None.`'
 step_contains "Notes is optional" 7 '`## Notes` only when there is something to keep'
+
+# Step 6: a resume is found by its dossier, not by a derived name.
+step_contains "step 6 finds the branch by its dossier" 6 'scripts/inflight.sh" --branches'
+step_contains "step 6 names the new shape" 6 '<type>/<N>-<slug>'
+step_contains "step 6 stops on two branches for one issue" 6 'more than one row'
+step_lacks "step 6 no longer says the number is absent" 6 'There is no issue number in it.'
+# Whole file, not step 3: step() stops at step 3's first rule comment (init-02), so it would pass vacuously.
+! grep -qF -- 'restore the title' "$skill" || fail "step 3 no longer says restore the title — the skill still has [restore the title]"
 
 if ((failures)); then
     echo "$failures case(s) failed"

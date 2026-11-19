@@ -155,7 +155,7 @@ says so and stops.
 | | |
 |---|---|
 | Issue | https://example.com/acme/shop/issues/12 |
-| Branch | `feat/order-export` |
+| Branch | `feat/12-order-export` |
 | Updated | 2026-03-04 |
 
 ## Where this stands

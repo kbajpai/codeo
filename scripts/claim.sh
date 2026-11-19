@@ -19,12 +19,13 @@
 #   claim.sh --carries <issue> <branch> <repo>
 #       Reads origin/<branch> in <repo> (the caller fetches first) and says what the branch adds
 #       beyond origin/<base> under .codeo/: this issue's init.md, another issue's dossier (any
-#       .codeo/<M>/ or done/<M>/, the first by path), or none. `init` runs it when origin
-#       already has the derived branch name, to tell a resume from a collision.
+#       .codeo/<M>/ or done/<M>/, the first by path), or none. `init` runs it on the derived branch
+#       name when origin has it, and on a branch found by its dossier, to tell a resume from a
+#       collision.
 #         0  "claim: <branch> carries #N's init.md (| Issue | …)": this issue's branch, a resume
 #         2  one stdout line "claim: <branch> already exists on origin — pushed by <author, date>;
 #            it carries #M's dossier (| Issue | …)" (or "it carries no dossier"), then one line
-#            saying what to do: retitle #N or wait for #M, or rename or delete a branch that is
+#            saying what to do: rename or delete the branch on origin, as for a branch that is
 #            not a pipeline one. When the branch carries only #N's OWN archived dossier
 #            (.codeo/done/<N>/…) the second line says so: "claim: <branch> carries only #N's
 #            own archived dossier — #N has already been through close; finish or verify it with
@@ -207,7 +208,7 @@ if [[ $mode == carries ]]; then
         echo "claim: $branch carries only #$n's own archived dossier — #$n has already been through close; finish or verify it with close in its container, and retitle #$n only for an issue reopened after its merge"
     elif [[ -n $other ]]; then
         echo "claim: $branch already exists on origin — pushed by $pusher; it carries $what${other_line:+ ($other_line)}"
-        echo "claim: #$n's title derives the same branch name as #$other's — retitle #$n (the first five words after a leading [tag] and the stop words are the name: branch-name.sh), or wait for #$other to close"
+        echo "claim: $branch carries #$other's dossier, not #$n's — rename or delete it on origin (init cuts <type>/<N>-<slug>, so a branch with another issue's dossier under that name was pushed by hand)"
     elif merged_and_left "$repo" "$ref"; then
         if bare_branch "$repo" "$ref"; then
             echo "claim: $branch already exists on origin — pushed by $pusher; it is bare — cut from $base with nothing of its own, and $base holds #$n's archive"

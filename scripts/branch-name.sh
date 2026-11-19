@@ -3,12 +3,12 @@
 # rather than whatever each run happens to think of.
 #
 #   branch-name.sh <issue>
-#       Prints <type>/<slug> and exits 0. The type is the one the first of the issue's labels that
+#       Prints <type>/<N>-<slug> and exits 0. The type is the one the first of the issue's labels that
 #       the config's labelTypes maps (default: enhancement -> feat, bug -> fix, documentation ->
 #       docs), else chore. The slug is the title with one leading [...] group stripped,
 #       lower-cased, every run of characters outside [a-z0-9] turned into a separator, the stop
-#       words dropped, and the first five words kept, joined by `-`. The issue number is never
-#       part of it. Exits 1 when no words are left in the title.
+#       words dropped, and the first five words kept, joined by `-`. The issue number follows the
+#       type, so two issues with one title derive two names. Exits 1 when no words are left in the title.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
@@ -49,4 +49,4 @@ done
 
 ((${#words[@]})) || die "no words left in the title of #$n"
 slug=$(IFS=-; echo "${words[*]}")
-echo "$type/$slug"
+echo "$type/$n-$slug"
