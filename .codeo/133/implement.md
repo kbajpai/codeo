@@ -4,11 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/133 |
 | Branch | `feat/codeo-command-host-short-bash` |
-| Updated | 2026-11-18 |
+| Updated | 2026-11-19 |
 
 ## Where this stands
 
-Implemented: all seven plan tasks are built and reviewed. Next step: `/codeo:qc`.
+Round 2 done: the qc round 1 findings are fixed (F1 blocking, F3-F8 non-blocking). Nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -48,7 +48,29 @@ Whole-branch review fix wave: `rm --force` of a container that is already gone s
 
 **Environment:** no shared environment is configured: no lease, no deploy. `sync-main.sh` found the branch already contains `origin/main`; `overlap.sh` printed nothing after the Q1 answer.
 
+
+### Round 2 — 2026-11-19
+
+(send-back from qc.md round 1)
+
+Each finding was checked against the code before work began; F1 and F3-F8 all held. One fix commit, `bb31110`, then a scoped re-review (sonnet): all findings addressed, no new breakage.
+
+- **F1 (blocking) — fixed.** An installed `docker` or `sbx` whose listing fails is now reported on stderr (`codeo: could not list docker containers` / `sbx sandboxes`, plus the program's first error line). `list` prints `no issue containers or sandboxes` only when every installed program answered, and exits 1 after the warnings when one failed. `shell`, `open` and `rm` die with `could not ask docker or sbx whether codeo-<N> exists; …` when nothing is found and a listing failed; one kind found is still used. `t_list_docker_down` now asserts this; new tests cover sbx down, one program down, `shell`/`open`/`rm` with a failed listing, and docker down with the sandbox found.
+- **F3** `-q` on `git clone --bare` and `git fetch`. **F4** `codeo home` takes at most one argument. **F5** `--container|--sandbox` in the usage and help text and in the `shell` and `rm` rows of `.devcontainer/README.md` and the `rm` row of `.sbx/README.md`. **F6** the changelog and the `cmd_update` comment say a failed download changes nothing, not "all or nothing". **F7** `find_branch` reads the ref listing into a variable and dies when it fails. **F8** `cmd_update` reports a failed `mkdir`; `rm` stops a container it started for the check when it then refuses or cannot check.
+- **F2** is not work: a stopped container's `-` branch is the engineer's plan Q5 answer; a change of it is a `/codeo:plan` round. No question raised here.
+
+**Documentation pages changed:** `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md`.
+
+**Build result:** suite `shell`, build command `true`: exit 0. `bash tests/run.sh codeo-command` prints `all cases passed`. The full suite is qc's.
+
+**Deviations from the plan:** none. The implementer made one commit instead of an F1 commit plus a second one; both touch the same hunks.
+
+**Deferred minors (for qc and triage):** two comment lines in `.devcontainer/codeo` are overlong; the `shell` and `open` rows of `.sbx/README.md` do not show the kind flags; `.devcontainer/README.md:17` still says "It is all or nothing" beside the part-way case; `container_check`'s own `docker ps -a` failure reads as "state unknown" and goes on to `docker start`; plus the round 1 carried minors. No whole-branch review was run for this small round. No `Ruling:` was made.
+
+**Environment:** no shared environment is configured. `sync-main.sh` found the branch already contains `origin/main`; `overlap.sh` printed nothing.
+
 ## Log
 
 - 2026-11-18 — Q1 raised · cost: 0m · sonnet-5-5 11k in + 341k cached / 770 out
 - 2026-11-18 — implemented: 7 tasks + 2 task fix rounds + final-review fix wave · build: true (exit 0) · cost: 86m · sonnet-5-5 1.1M in + 31.2M cached / 232k out
+- 2026-11-19 — implemented round 2 (send-back from qc round 1): F1 and F3-F8 fixed in bb31110, re-review clean · build: true (exit 0) · cost: 8m · sonnet-5-5 256k in + 3.1M cached / 31k out
