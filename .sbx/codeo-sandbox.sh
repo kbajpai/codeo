@@ -356,6 +356,14 @@ uncommitted_work() {
     return 0
 }
 
+# die_unreadable <name> <force> <what>: end could not start or fetch from the sandbox, so nothing in it was read; it
+# removes nothing, with or without --force, and names sbx rm --force as the way to remove it anyway.
+die_unreadable() {
+    local note=""
+    [[ "$2" == 0 ]] || note=" (--force cannot keep commits it could not fetch)"
+    die "$3$note, nothing removed: nothing in it could be read, so nothing can be proved or kept; to remove it anyway run: $sbx rm --force $1"
+}
+
 cmd_end() {
     (($# == 1 || $# == 2)) || usage
     valid_number "$1" || usage
@@ -370,9 +378,9 @@ cmd_end() {
     [[ "$state" != missing ]] || die "no sandbox $name"
     [[ -d "$dir" ]] || die "no clone $dir here: cannot check $name for unpushed commits, nothing removed"
     if [[ "$state" == stopped ]]; then
-        "$sbx" exec "$name" true || die "could not start $name, nothing removed"
+        "$sbx" exec "$name" true || die_unreadable "$name" "$force" "could not start $name"
     fi
-    fetch_sandbox "$dir" "$name" || die "could not fetch sandbox-$name into $dir, nothing removed"
+    fetch_sandbox "$dir" "$name" || die_unreadable "$name" "$force" "could not fetch sandbox-$name into $dir"
     git -C "$dir" fetch origin || die "could not fetch origin: cannot prove anything is pushed, nothing removed"
     git -C "$dir" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' || die "could not fetch the pull-request heads of origin: cannot prove anything is delivered, nothing removed"
     refs=$(git -C "$dir" for-each-ref --count=1 --format=x "refs/sandboxes/$name/") || die "could not read the refs of $dir, nothing removed"

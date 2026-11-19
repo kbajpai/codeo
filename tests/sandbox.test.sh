@@ -63,6 +63,7 @@ case "${0##*/} $1" in
             *"git status --porcelain --branch")
                 [[ ! -e "$d/statusfail" ]] || exit 1
                 if [[ -f "$d/status" ]]; then cat "$d/status"; else echo "## fix/x"; fi ;;
+            *"codeo-113 true") [[ ! -e "$d/truefail" ]] || exit 1 ;;
             *"git stash list") [[ ! -f "$d/stashes" ]] || cat "$d/stashes" ;;
             *" pwd") if [[ -f "$d/sbxpwd" ]]; then cat "$d/sbxpwd"; else echo "/sandbox/clone"; fi ;;
         esac ;;
@@ -803,9 +804,37 @@ end_without_origin_removes_nothing() {
 end_with_a_failed_sandbox_fetch_removes_nothing() {
     end_setup endfetch
     $real_git -C "$sb_dir/work/codeo-113" remote set-url sandbox-codeo-113 "$sb_dir/nowhere.git"
-    sb_run end 113
-    ((sb_rc == 1)) || fail "exited $sb_rc"
-    [[ "$(sb_calls)" != *" rm "* ]] || fail "rm ran: $(sb_calls)"
+    local form
+    for form in "" --force; do
+        sb_run end 113 $form
+        ((sb_rc == 1)) || fail "[$form] exited $sb_rc"
+        [[ "$(sb_calls)" != *" rm "* ]] || fail "[$form] rm ran: $(sb_calls)"
+        [[ "$sb_err" == *"could not fetch sandbox-codeo-113 into codeo-113"* ]] || fail "[$form] stderr was: $sb_err"
+        [[ "$sb_err" == *"nothing in it could be read, so nothing can be proved or kept; to remove it anyway run: sbx rm --force codeo-113"* ]] || fail "[$form] stderr was: $sb_err"
+        if [[ -n "$form" ]]; then
+            [[ "$sb_err" == *"(--force cannot keep commits it could not fetch), nothing removed"* ]] || fail "[$form] stderr was: $sb_err"
+        else
+            [[ "$sb_err" != *"--force cannot keep"* && "$sb_err" == *"nothing removed"* ]] || fail "[$form] stderr was: $sb_err"
+        fi
+    done
+}
+
+end_names_a_way_out_when_a_stopped_sandbox_cannot_start() {
+    end_setup endnostart
+    echo 'codeo-113 claude stopped' >"$sb_dir/sandboxes"
+    : >"$sb_dir/truefail"
+    local form
+    for form in "" --force; do
+        sb_run end 113 $form
+        ((sb_rc == 1)) || fail "[$form] exited $sb_rc"
+        [[ "$(sb_calls)" != *" rm "* ]] || fail "[$form] rm ran: $(sb_calls)"
+        [[ "$sb_err" == *"could not start codeo-113"* && "$sb_err" == *"to remove it anyway run: sbx rm --force codeo-113"* ]] || fail "[$form] stderr was: $sb_err"
+        if [[ -n "$form" ]]; then
+            [[ "$sb_err" == *"(--force cannot keep commits it could not fetch), nothing removed"* ]] || fail "[$form] stderr was: $sb_err"
+        else
+            [[ "$sb_err" == *"nothing removed"* && "$sb_err" != *"--force cannot keep"* ]] || fail "[$form] stderr was: $sb_err"
+        fi
+    done
 }
 
 end_starts_a_stopped_sandbox_first() {
@@ -1156,6 +1185,7 @@ cases=(
     end_without_origin_removes_nothing
     end_with_a_failed_sandbox_fetch_removes_nothing
     end_starts_a_stopped_sandbox_first
+    end_names_a_way_out_when_a_stopped_sandbox_cannot_start
     end_on_a_missing_sandbox_is_one_line
     end_without_the_clone_is_one_line
     end_with_no_sandbox_refs_removes_nothing
