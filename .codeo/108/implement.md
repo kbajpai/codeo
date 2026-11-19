@@ -8,11 +8,20 @@
 
 ## Where this stands
 
-Round 1 is built: the plan's nine tasks are done and committed on the branch (`531e55b`..`d019a6e`), each task reviewed, then one whole-branch review (ready to hand off). The build command (`true`) exits 0. Next: `/codeo:qc`.
+Round 2 is waiting on Q1: `overlap.sh 108` now reports #112 on `CHANGELOG.md` and `docs/handoff.md`. Nothing is dispatched until it is answered. The round fixes qc round 1 (F1 blocking; F2, F3, F5 alongside).
 
 ## Questions
 
-None.
+### Q1 — #112 touches `CHANGELOG.md` and `docs/handoff.md`, which this branch also changes. How should we go on?
+
+**Why it matters:** `bash scripts/overlap.sh 108` printed `112 CHANGELOG.md`, `112 docs/handoff.md` and the two `glob:` forms. #112 (branch `feat/verify-live-session-signal-hosted`, assignee kbajpai, step qc, waiting on `/codeo:implement`, round 2) plans exactly those files and has changed them. This branch changes `CHANGELOG.md` (the `(#108)` bullet and the two v1.0.7 clauses) and `docs/handoff.md` (the `abandon — finished` row); round 2 may touch `docs/skills.md` (F5) too. Whichever merges second hits a conflict in `CHANGELOG.md`, at least.
+**Options:**
+- **A — proceed and coordinate (my pick).** Round 2 touches no file round 1 did not, so the overlap is no bigger than before; the one that merges second resolves the changelog and handoff conflict through `sync-main`.
+- **B — sequence after #112.** Hold this round until #112 has merged, then start from the new base.
+- **C — re-scope.** Drop the `docs/handoff.md` and `CHANGELOG.md` edits from this branch.
+
+**Answer:**
+
 
 ## Outcome
 
@@ -44,3 +53,4 @@ None.
 ## Log
 
 - 2026-11-19 — round 1 built: nine plan tasks, ten commits, build passes, whole-branch review ready · cost: 23m · sonnet-5-5 592k in + 23.5M cached / 88k out
+- 2026-11-19 — round 2 started: sent back from qc round 1; overlap with #112 raised as Q1, nothing built yet · cost: 0m · sonnet-5-5 85k in + 357k cached / 2k out
