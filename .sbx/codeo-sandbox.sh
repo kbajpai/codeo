@@ -72,6 +72,8 @@ sandbox_state() {
 
 # The pinned Claude image reference, passed to "sbx create" as its kit reference in place of the agent name.
 create_agent=''
+# The state require_sandbox read for the sandbox, passed on to ensure_detached.
+required_state=''
 
 # read_pin <N>: read the one-line pin into create_agent from the first of CODEO_SBX_IMAGE (a file path),
 # codeo-N/.sbx/claude-image, and origin/HEAD:.sbx/claude-image in the clone; refuse none of them, or a

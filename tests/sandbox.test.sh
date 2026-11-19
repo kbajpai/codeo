@@ -158,6 +158,16 @@ codeo_sbx_overrides_both() {
     [[ "$(SB_SBX=/x/my.exe sb_pick)" == "/x/my.exe 1" ]] || fail "exe override picked: $(SB_SBX=/x/my.exe sb_pick)"
 }
 
+sandbox_state_ignores_a_row_with_fewer_than_three_columns() {
+    sb_setup shortrow
+    # shellcheck disable=SC2016
+    local probe='source "$1"; sbx=sbx; sandbox_state codeo-113' out
+    # A row with no status column reads as stopped, the same as an empty status: it is not treated as missing.
+    echo 'codeo-113 claude' >"$sb_dir/sandboxes"
+    out=$(PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" -c "$probe" _ "$script")
+    [[ "$out" == stopped ]] || fail "a two-column row read as: $out"
+}
+
 sandbox_state_reads_the_ls_rows() {
     sb_setup state
     # shellcheck disable=SC2016
@@ -948,6 +958,17 @@ a_failed_run_d_is_one_line() {
     [[ "$(sb_calls)" != *$'\ncode '* ]] || fail "code ran: $(sb_calls)"
 }
 
+issue_with_a_failed_run_d_is_one_line() {
+    sb_setup issuerunfail
+    mkdir -p "$sb_dir/work/codeo-113/.git"
+    echo 'codeo-113 claude stopped' >"$sb_dir/sandboxes"
+    : >"$sb_dir/runfail"
+    sb_run issue 113 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$sb_err" == *"run -d --name codeo-113"* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_err_lines)" == 1 ]] || fail "stderr not one line: $sb_err"
+}
+
 open_on_a_missing_sandbox_names_the_command_that_creates_it() {
     sb_setup openmissing
     sb_run open 113
@@ -1061,9 +1082,14 @@ docs_readme_gives_the_extension_route() {
         'sbx policy rm network --resource' 'balanced'; do
         grep -Fq -- "$s" "$readme" 2>/dev/null || fail "the README does not hold: $s"
     done
-    if sed -n 9p "$repo/CHANGELOG.md" | grep -Fq 'with the extensions from the user setting `remote.SSH.defaultExtensions`;'; then
-        fail "CHANGELOG line 9 still says the extensions come from remote.SSH.defaultExtensions alone"
-    fi
+    # Anchor: the bullets that name .sbx/codeo-sandbox.sh and the sbx policy allow network rule, found by content, not by line.
+    local bullets
+    bullets=$(grep -E '^- .*\.sbx/codeo-sandbox\.sh' "$repo/CHANGELOG.md" | grep -F 'sbx policy allow network')
+    [[ -n "$bullets" ]] || fail "no CHANGELOG bullet names .sbx/codeo-sandbox.sh and the sbx policy allow network rule"
+    [[ "$bullets" != *'with the extensions from the user setting `remote.SSH.defaultExtensions`;'* ]] ||
+        fail "the CHANGELOG bullet still says the extensions come from remote.SSH.defaultExtensions alone"
+    [[ "$bullets" == *'which needs a one-time `sbx policy allow network` rule'* ]] ||
+        fail "the CHANGELOG bullet does not say the extension route needs a one-time sbx policy allow network rule"
 }
 
 docs_readme_says_end_replaces_the_docker_rm_line() {
@@ -1121,6 +1147,7 @@ cases=(
     sbx_is_preferred_over_sbx_exe
     codeo_sbx_overrides_both
     sandbox_state_reads_the_ls_rows
+    sandbox_state_ignores_a_row_with_fewer_than_three_columns
     a_failed_ls_stops_issue_with_one_line
     the_script_is_committed_executable_with_a_bash_shebang
     config_suite_covers_the_sandbox_folder
@@ -1155,6 +1182,7 @@ cases=(
     open_starts_a_stopped_sandbox_detached
     open_on_a_detached_sandbox_runs_nothing_more
     a_failed_run_d_is_one_line
+    issue_with_a_failed_run_d_is_one_line
     open_on_a_missing_sandbox_names_the_command_that_creates_it
     open_without_ssh_setup_says_to_run_setup_ssh
     open_with_sbx_exe_launches_through_cmd_exe
