@@ -19,7 +19,8 @@
 #       grades a later round); the step qc's last verdict leaves owing, read from the `(send-back from …)` and
 #       `(after plan.md round <j>…)` markers (`/codeo:close` when clear, else `/codeo:plan`, `/codeo:implement`
 #       or `/codeo:qc`); with no verdict, the step after the last finished one (init: `/codeo:plan`, plan:
-#       `/codeo:implement`, implement: `/codeo:qc`); else `nothing known`. `verdict:` follows it, only when
+#       `/codeo:implement`, implement: `/codeo:qc`), looking past a spent stash or abandon; else `nothing known`.
+#       `verdict:` follows it, only when
 #       qc.md's last round has a bold Verdict/Routing span: `round <k> — <span>`. Human blocks only; no network.
 #       --branches prints one `N<TAB>branch<TAB>dir` line per workflow (dir is <state>/N or
 #       <state>/done/N, <state> being the .codeo directory) and nothing else — no assignee lookup, so no `gh` call, and nothing at
@@ -74,9 +75,11 @@ state_rel=${CODEO_STATE_DIR#"$CODEO_PROJECT_ROOT"/}
 git fetch -q --prune origin 2>/dev/null || echo "inflight: fetch failed; reading what is already here" >&2
 
 # The last step, in pipeline order, whose dossier has an `## Outcome` that is not still pending.
+# A step named in the optional third argument is not a candidate.
 last_step() {
-    local ref=$1 dir=$2 step done=
+    local ref=$1 dir=$2 skip=${3:-} step done=
     for step in "${steps[@]}"; do
+        [[ $step == "$skip" ]] && continue
         git show "$ref:$dir/$step.md" 2>/dev/null | awk '
             /^## Outcome/ { o = 1; next }
             /^## / { o = 0 }
@@ -229,7 +232,8 @@ last_qc_round() {
 # question (`engineer — plan.md Q2; qc.md Q1`); an archived dossier (`review — dossier archived`); the round
 # close sent back (`/codeo:implement`, then `/codeo:qc` until qc re-grades); qc's last verdict (clear:
 # `/codeo:close`; back to plan or implement: that step until its round answers the verdict's round, then
-# `/codeo:qc`); else the step after the last one finished; else `nothing known`. Any failure falls to the next.
+# `/codeo:qc`); else the step after the last one finished, looking past a spent stash or abandon (a `close`
+# outcome that no rule above took); else `nothing known`. Any failure falls to the next.
 waits_of() {
     local sha=$1 dir=$2 state_token=$3 branch=$4 n=$5 verdict=$6 step=$7
     local s q parts= out rc=0 lead= sb m k j qcr
@@ -277,6 +281,7 @@ waits_of() {
                 return 0 ;;
         esac
     fi
+    if [[ $step == close ]]; then step=$(last_step "$sha" "$dir" close); fi
     case $step in
         init) echo "/codeo:plan" ;;
         plan) echo "/codeo:implement" ;;

@@ -980,6 +980,49 @@ assert_contains "line" "  touched:   2026-11-15 (init.md log), 2 days ago" "$(t_
 case_desc="touched_log_ties_updated"
 assert_contains "line" "  touched:   2026-11-15 (plan.md log), 2 days ago" "$(t_block 28)"
 
+# waits: — a spent stash or abandon (resumed) is looked past to the step that is really owed.
+for n in 62 63 64 65; do
+    printf '{"number":%s,"labels":[],"assignees":[]}' "$n" > "$stub_dir/GET_repos_o_n_issues_$n.json"
+done
+for n in 62 63 64 65; do
+    park=stashed after=stash
+    [[ $n == 64 ]] && park=abandoned after=abandon
+    started=Started.
+    [[ $n == 65 ]] && started='_Pending — written at the hand-off._'
+    w_dossier $n init "# init
+
+## Outcome
+
+$started
+
+## Log
+
+- 2026-11-12 — resumed: by alice after the $after of 2026-11-10"
+    [[ $n == 63 ]] && raw_dossier "$w_origin" $n plan 2026-11-10 "# plan
+
+## Outcome
+
+Done."
+    raw_dossier "$w_origin" $n close 2026-11-10 "# close
+
+## Outcome
+
+### Round 1 — $park"
+done
+git -C "$w_origin" checkout -q main
+git -C "$w_clone" fetch -q
+w_out=$(run_today "$w_clone")
+
+case_desc="waits_after_a_resumed_stash_in_planning"
+assert_contains "plan owed" "  waits:     /codeo:plan" "$(w_block 62)"
+assert_contains "step still says close" "  step:      close (working)" "$(w_block 62)"
+case_desc="waits_after_a_resumed_stash_with_a_plan"
+assert_contains "implement owed" "  waits:     /codeo:implement" "$(w_block 63)"
+case_desc="waits_after_a_resumed_abandon"
+assert_contains "plan owed" "  waits:     /codeo:plan" "$(w_block 64)"
+case_desc="waits_nothing_known_when_only_the_park_is_finished"
+assert_contains "line" "  waits:     nothing known" "$(w_block 65)"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
