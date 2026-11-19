@@ -80,6 +80,15 @@ Decisions taken without a question, each stated in the draft for you to overrule
 - This project pins plugin `v1.0.7`, so turning the setting on in `.codeo/config.json` takes effect here only once a release carrying this change is pinned. The criterion asks for the config and the labels, not the release.
 - Other workflows in flight (#108, #122) are at `init` with no footprint and no changed files, so there is nothing to compare yet; the check runs again before the hand-off.
 
+### Footprint
+
+```
+files:      scripts/github.sh, scripts/doctor.sh, lib/env.sh, skills/issue/SKILL.md, docs/skills-inventory.md, docs/skills.md, CHANGELOG.md, tests/fixtures/skills-inventory.rules.sha256, tests/github.test.sh, tests/doctor.test.sh, tests/issue-skill.test.sh, .codeo/config.json, docs/plans/2026-11-19-issue-priority-label-102.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
