@@ -147,7 +147,9 @@ is the container the message names.
 6. **Find the branch by its dossier, else derive its name, and check for collision.** After the
    `git fetch origin` of step 5:
 
-   - *Find the branch by its dossier first.* Run
+   - *Find the branch by its dossier first.* Fetch every branch head with
+     `git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'`; stop on failure.
+     This is required even in a single-branch clone. Then run
      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --branches` and read this issue's rows (one
      `N<TAB>branch<TAB>dir` row per workflow). One row whose `dir` is `.codeo/<N>` names `<branch>`,
      whatever it is called: it is a resume candidate, and the `--carries`, `--stash-live` and
