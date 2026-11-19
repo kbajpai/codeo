@@ -133,6 +133,6 @@ sequenced:  none
 
 ## Log
 
-- 2026-11-19 — raised Q1-Q5; nothing drafted
-- 2026-11-19 — Q1-Q5 answered in the conversation; drafted; raised overlap questions Q6-Q7
+- 2026-11-19 — raised Q1-Q5; nothing drafted · cost: counted in the planned line below
+- 2026-11-19 — Q1-Q5 answered in the conversation; drafted; raised overlap questions Q6-Q7 · cost: counted in the planned line below
 - 2026-11-19 — planned: docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md · cost: 77m · fable-5-2 88k in + 700k cached / 10k out · sonnet-5-5 117k in + 1.5M cached / 23k out · no /codeo:issue filed; engineering:system-design and engineering:architecture not applied (nothing designed, no technology chosen)
