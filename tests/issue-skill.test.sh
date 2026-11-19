@@ -82,6 +82,9 @@ must_contain "issue-07 keeps its comment" '<!-- rule: issue-07 -->'
 doc_has "inventory has the new issue-07" docs/skills-inventory.md "Priority only under issue.priority and with the engineer's approval at the gate, as a label; never Effort."
 if grep -qF 'Never set Priority or Effort.' "$plugin_root/docs/skills-inventory.md"; then fail "the old issue-07 text is still in the inventory"; fi
 if grep -qF 'Do not set `Priority` or `Effort`' "$skill"; then fail "the old issue-07 text is still in the skill"; fi
+doc_has "skills.md names the setting" docs/skills.md 'issue.priority'
+doc_has "skills.md names a priority label" docs/skills.md 'priority: blocker'
+doc_has "the changelog names the setting" CHANGELOG.md 'issue.priority'
 doc_has "triage still files through issue" skills/triage/SKILL.md '/codeo:issue'
 
 if ((failures)); then
