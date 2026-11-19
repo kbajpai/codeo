@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing is drafted yet. Q1-Q5 are open and the plan waits on them. Answer under each `**Answer:**`, then run `/codeo:plan` again.
+Q1-Q5 are answered and the plan is drafted in `.codeo/112/plan-draft.md` (not committed). Two questions are open, both overlaps with other workflows (Q6, Q7): answer them, then run `/codeo:plan` again for the approval gate.
 
 ## Questions
 
@@ -18,6 +18,7 @@ Explored and brainstormed; nothing is drafted yet. Q1-Q5 are open and the plan w
 **Options:** none to pick from. Please say where the install happens (an environment setup script, a marketplace setting on your account, something else), which ref it installs, and whether that same script runs `lock.sh take web`.
 
 **Answer:**
+An environment setup script installs the plugin (engineer, in the conversation, 2026-11-19: "an environment setup script"). The answer does not say which ref the script installs or whether it runs `lock.sh take web`; the planner treats both as facts the check records, not as blockers. Task 1 takes the lock itself (idempotent) and records `claude plugin list`; Task 5 branches on the installed version. Correct this line if the version should be decided first.
 
 ### Q2 — Should the check be a written procedure only, or also a script kept in the repository?
 
@@ -27,6 +28,7 @@ Explored and brainstormed; nothing is drafted yet. Q1-Q5 are open and the plan w
 - **A script, `scripts/live-check.sh`, with a test** — one command that publishes, reports which path carried it, checks the branch tip, clears, and prints a transcript. Repeatable after any proxy or release change, but it ships to every project that installs the plugin for a check only this repository's maintainer runs, and it needs its own test cases against a local origin.
 
 **Answer:**
+As recommended: a written procedure only (engineer, in the conversation, 2026-11-19: "your recommendations").
 
 ### Q3 — If the push works, should the check still try the REST fallback on its own?
 
@@ -36,6 +38,7 @@ Explored and brainstormed; nothing is drafted yet. Q1-Q5 are open and the plan w
 - **Only if the push is refused** — the check follows `live.sh` exactly and records REST as "not exercised" when the push carries the write.
 
 **Answer:**
+As recommended: try the REST fallback directly (engineer, in the conversation, 2026-11-19).
 
 ### Q4 — Where is the result recorded?
 
@@ -46,6 +49,7 @@ Explored and brainstormed; nothing is drafted yet. Q1-Q5 are open and the plan w
 - **A comment on #112 only** — the full transcript as an issue comment; the dossier points at it.
 
 **Answer:**
+As recommended: `.codeo/112/implement.md` and a summary comment on #112 (engineer, in the conversation, 2026-11-19).
 
 ### Q5 — Should the documentation say what the check found?
 
@@ -53,6 +57,27 @@ Explored and brainstormed; nothing is drafted yet. Q1-Q5 are open and the plan w
 **Options:**
 - **Yes: one or two sentences in `docs/handoff.md` and a `CHANGELOG.md` bullet (recommended)** — what carries the signal in a web session, which user it names there and how `CODEO_GITHUB_LOGIN` changes that, as facts about what the system does. A fix for anything that does not work stays out, per the issue.
 - **No** — the record in the dossier and the issue is enough; any documentation change rides with the follow-up issues.
+
+**Answer:**
+As recommended: yes, one or two sentences in `docs/handoff.md` and a `CHANGELOG.md` bullet (engineer, in the conversation, 2026-11-19).
+
+### Q6 — #102 also changes `CHANGELOG.md`. Proceed, sequence or re-scope?
+
+**Why it matters:** the plan adds one bullet to `CHANGELOG.md` (Task 7). #102 (`feat/codeo-issue-assign-every-filed`, kbajpai, at `qc`) has `CHANGELOG.md` in its footprint. Two bullets under `## Unreleased` on parallel branches conflict textually at worst; if you would rather avoid even that, Task 7's CHANGELOG step can wait for #102 to merge.
+**Options:**
+- **Proceed and coordinate (recommended)** — each branch adds its own bullet; whichever merges second keeps both.
+- **Sequence after #102** — Task 7 starts after #102 is merged; `sequenced:` names #102.
+- **Re-scope** — drop the `CHANGELOG.md` bullet and put the result in `docs/handoff.md` only.
+
+**Answer:**
+
+### Q7 — #108 also changes `docs/handoff.md` and `CHANGELOG.md`. Proceed, sequence or re-scope?
+
+**Why it matters:** Task 7 edits `docs/handoff.md` (*Who is working right now*) and `CHANGELOG.md`; #108 (`feat/follow-ups-97-left-overlap`, kbajpai, at `qc`) lists both in its footprint. Which passage of `docs/handoff.md` #108 changes is not visible from its footprint line; this plan touches one paragraph, the live-signal bullet.
+**Options:**
+- **Proceed and coordinate (recommended)** — the edits are in different passages, and `/codeo:implement` merges `origin/main` each round (`sync-main.sh`) and re-reads the lines it edits first.
+- **Sequence after #108** — Task 7 starts after #108 merges; `sequenced:` names #108.
+- **Re-scope** — record the result in the dossier and the issue only, with no documentation task.
 
 **Answer:**
 
@@ -72,7 +97,9 @@ Explored and brainstormed; nothing is drafted yet. Q1-Q5 are open and the plan w
 - One pull request. No `scripts/`, `hooks/` or `skills/` file changes unless Q2 is answered with the script.
 - If both writes are refused, the plan's last task records the refusal text and states #104's criterion "it works in a web session" as not met, in the record chosen at Q4.
 
-**Other workflows in flight** (`inflight.sh --except 112`, 2026-11-19). #102 at implement and #122 at qc both have `CHANGELOG.md` in their footprints, #122 and #108 have `docs/handoff.md`. They overlap with this plan only if Q5 is answered yes; the overlap questions are raised once the footprint is drafted. #132 is at `init` with no footprint yet.
+**Other workflows in flight** (`inflight.sh --except 112`, re-run 2026-11-19 after the answers). #102 (qc) overlaps on `CHANGELOG.md` (Q6); #108 (qc) overlaps on `docs/handoff.md` and `CHANGELOG.md` (Q7). #122, which the first run listed, has since left the list. #132 is at `init` with no footprint yet, so its `changed:` line is all there is to compare and shows no overlap. No exclusive resource is configured.
+
+**Draft.** `.codeo/112/plan-draft.md` holds the 7-task plan, to be written to `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md` after approval. Planned footprint: `files:` `docs/handoff.md`, `CHANGELOG.md`, `docs/plans/2026-11-19-verify-live-signal-hosted-session-112.md`; `wiki:` none; `exclusive:` none; `sequenced:` none unless Q6 or Q7 says otherwise.
 
 ## Outcome
 
@@ -81,3 +108,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-19 — raised Q1-Q5; nothing drafted
+- 2026-11-19 — Q1-Q5 answered in the conversation; drafted; raised overlap questions Q6-Q7
