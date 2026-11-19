@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 done: the CI test failure from close.md round 2 is fixed, with QC round 2's F9-F17. Nothing is open. Next step: `/codeo:qc`.
+Round 4 done: the qc round 3 finding F18 (blocking) is fixed, with F19, F20, F22 and F23. Nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -89,9 +89,33 @@ The finding was checked against the code and the CI log before work began; it ho
 
 **Environment:** no shared environment is configured.
 
+
+### Round 4 — 2026-11-19
+
+(send-back from qc.md round 3)
+
+Each finding was checked against the code before work began; F18-F20, F22 and F23 held. `sync-main.sh` found the branch already contains `origin/main`; `overlap.sh` printed nothing. One fix commit, `27c68a2`, then a scoped re-review (sonnet): all findings addressed, no Critical or Important breakage.
+
+- **F18 (blocking) — fixed.** `CHANGELOG.md` has the heading, one blank line, the three metadata lines, a blank line, then the bullets, with the blank line before `## v1.0.7` restored; `git diff origin/main -- CHANGELOG.md` is only the added `codeo` bullet and its blank line, and the other bullets are byte-identical to `origin/main`. No test in `tests/` checks the changelog shape.
+- **F19** `shell`, `open` and `rm` refuse (without a kind flag) when one listing failed even though the other kind was found, naming the failed program and asking for `--container` or `--sandbox`; a flag still proceeds. `t_shell_docker_down_sandbox_found` now asserts the refusal, and `t_shell_docker_down_sandbox_flag` the flag case.
+- **F20** a detached HEAD in a container is reported as unsaved work only when no remote-tracking branch contains it; a failing `git branch -r --contains` makes the check fail, never pass. New test `t_rm_container_detached_pushed`.
+- **F22** the git stub comment says `rev-parse`. **F23** the README says the called script's exit status applies to `home`, `issue`, `shell`, `open` and `rm` of a sandbox.
+- **F21** is not work: `~/codeo` as the default home is the engineer's plan Q1 choice; a change of it is a `/codeo:plan` round. No question raised here.
+
+**Documentation pages changed:** `CHANGELOG.md`, `.devcontainer/README.md`.
+
+**Build result:** suite `shell`, build command `true`: exit 0. `bash tests/run.sh codeo-command` prints `all cases passed`. The full suite is qc's.
+
+**Deviations from the plan:** none.
+
+**Deferred minors (for qc and triage):** the comment above `detect_kind` still says it dies only when none was found; `branch -r --contains` counts any remote-tracking ref, not only `origin`; the git-failure path of the detached-HEAD check has no test of its own; plus round 3's: `cm_sys` skips a missing tool silently and a few comment lines are long. No `Ruling:` was made.
+
+**Environment:** no shared environment is configured.
+
 ## Log
 
 - 2026-11-18 — Q1 raised · cost: 0m · sonnet-5-5 11k in + 341k cached / 770 out
 - 2026-11-18 — implemented: 7 tasks + 2 task fix rounds + final-review fix wave · build: true (exit 0) · cost: 86m · sonnet-5-5 1.1M in + 31.2M cached / 232k out
 - 2026-11-19 — implemented round 2 (send-back from qc round 1): F1 and F3-F8 fixed in bb31110, re-review clean · build: true (exit 0) · cost: 8m · sonnet-5-5 256k in + 3.1M cached / 31k out
 - 2026-11-19 — implemented round 3 (send-back from close round 2): CI test isolation fixed in 6c77860, F9-F17 in b0999d9, re-review clean · build: true (exit 0) · cost: 12m · sonnet-5-5 163k in + 4.9M cached / 28k out
+- 2026-11-19 — implemented round 4 (send-back from qc round 3): F18 changelog shape fixed with F19, F20, F22, F23 in 27c68a2, re-review clean · build: true (exit 0) · cost: 8m · sonnet-5-5 356k in + 3.7M cached / 17k out
