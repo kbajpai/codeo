@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written and the change goes back to `/codeo:implement`: one blocking finding (F1). Nothing is open.
+Round 2 is written: clear, forward to `/codeo:close`. No blocking finding; nine non-blocking findings (F9-F17) are routed to `/codeo:implement` or triage. Nothing is open.
 
 ## Questions
 
@@ -71,6 +71,68 @@ No issue was filed for this pass.
 
 **Verdict: back to `/codeo:implement`.**
 
+
+### Round 2 — 2026-11-19
+
+Re-checks `implement.md` round 2 (fix commit `bb31110`), the whole pass again from step 0. HEAD `548e0f2`.
+
+Commands run this pass:
+
+```
+role.sh --check qc: exit 0
+sync-main.sh --abort-on-conflict: "sync-main: the branch already contains origin/main" (exit 0)
+overlap.sh 133: nothing printed · overlap.sh --outside 133: nothing printed
+scope.sh origin/main HEAD
+  scope: suite shell needed for unclassified paths: .codeo/133/implement.md, init.md, issue.md, plan.md, qc.md, CHANGELOG.md
+  suite.shell=true
+overlay.sh qc invariants-extra: exit 3 (none) · overlay.sh qc wiki-rules: exit 3 (none) · no invariants, no environment
+build (suite shell, `true`): exit 0
+bash tests/run.sh (suite shell, whole): exit 1 — only live.test.sh:
+  FAIL: beat_without_a_lock_or_on_the_base_branch_does_nothing — no lock: stamp: want [no] got [yes]
+  FAIL: beat_without_a_lock_or_on_the_base_branch_does_nothing — base: stamp: want [no] got [yes]
+  FAIL: clear_deletes_the_ref_and_the_stamp — stamp gone: want [no] got [yes]
+  3 assertion(s) failed / failed: live.test.sh
+bash tests/run.sh codeo-command: all cases passed (85 test functions)
+```
+
+`live.test.sh` is the same environmental failure as round 1: the stamp `.git/codeo-live-beat` (written 2026-11-19 12:50 by the live hook) is present in this checkout, the test expects it absent, round 1 showed it passes in a clean `origin/main` worktree, and the branch touches nothing under `scripts/`, `hooks/` or `tests/live.test.sh`. Not a finding against this change.
+
+Independent review (opus, description "QC review: …", given the criteria only): no Critical, two Important, four Minor; its verdict "With fixes". Its findings are F9-F14 below, each checked against the code.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | One download line installs `codeo`; `codeo help` prints the commands | met | `t_help_lists_commands`, `t_help_names_kind_flags`; the line in `.devcontainer/README.md` and `CHANGELOG.md` |
+| 2 | `codeo update` replaces all three; a failed download changes nothing | met | `t_update_replaces_three`, `t_update_failed_download_changes_nothing` and the refused-file and partial-move cases |
+| 3 | `home`, `shell`, `issue` run the container script from the `codeo` directory | met | `t_home_runs_script`, `t_runs_from_any_directory`, `t_shell_container` |
+| 4 | `issue <N>` with no branch uses the origin branch carrying `.codeo/<N>/init.md`; none or several: one line, nothing created | met — with F10 (a failed lazy blob fetch is read as "not there"; non-blocking) and F9 | `t_issue_branch_lookup_one`, `t_issue_lookup_none`, `t_issue_lookup_several`, `t_lookup_quiet_git`, `t_lookup_branch_list_failure`; the reviewer re-ran the lookup with real git against a local repository |
+| 5 | Container or sandbox by flag or saved default; sandbox create, open, shell, end reachable | met | `t_issue_sandbox_flag`, `t_issue_default_sandbox`, `t_open_sandbox`, `t_shell_sandbox`, `t_rm_sandbox` |
+| 6 | `list` shows each container and sandbox with number and branch, nothing misleading when none | met | `t_list_docker_down`, `t_list_sbx_down`, `t_list_one_down_nothing_shown`; `.devcontainer/codeo` `cmd_list` prints "no issue containers or sandboxes" only when every installed program answered. F13, F14 non-blocking |
+| 7 | `rm` refuses naming unpushed or uncommitted work; removes container and volume, or the sandbox; override removes anyway | met | `t_rm_container_clean`, `t_rm_container_unpushed` and the untracked/stash/detached cases, `t_rm_container_force`, `t_rm_refusal_stops_started_container`, `t_rm_listing_down_nothing_found`, `t_rm_sandbox` |
+| 8 | Bad number, missing argument, unknown command: usage line, non-zero exit, nothing run | met | `expect_usage` cases (exit 2, `usage:` line, empty calls log), `t_home_rebuild_twice_usage` |
+| 9 | Stub test covering each command, argument errors, lookup none/one/several; `tests/run.sh` passes | met | `tests/codeo-command.test.sh`: all cases passed; the whole `tests/run.sh` fails only on the environmental `live.test.sh` above |
+| 10 | Both READMEs show the `codeo` forms beside the long ones; CHANGELOG entry | met | `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md` `## Unreleased`; F15, F16 non-blocking |
+
+**Documentation check.** The READMEs and the changelog match the code on every behaviour round 2 changed (failed listings, `home` arguments, kind flags, the update wording in `CHANGELOG.md`); no "now", "no longer" or issue number in the READMEs. Gaps are F14-F16.
+
+**Findings**
+
+- F1 (blocking in round 1) — fixed by `bb31110`: a failing installed `docker`/`sbx` is reported on stderr, `list` exits 1 and withholds "no issue containers or sandboxes", and `shell`/`open`/`rm` say they could not ask. F3-F8 (non-blocking in round 1) — fixed by `bb31110`. F2 stands as recorded in round 1 (the engineer's plan Q5 answer).
+- **F9 — non-blocking — `/codeo:implement`'s.** `find_branch` (`.devcontainer/codeo:117-126`) clones `.lookup.git` once and fetches its saved `origin` thereafter, so a later change of `CODEO_REPO_URL` is ignored while the error message names the new URL; the reviewer reproduced a false "no branch holds .codeo/11/init.md" against a fork. Cause: no `remote set-url` (or URL-keyed clone) before the fetch. Rare: the default URL is fixed and a fork user sets it before first use.
+- **F10 — non-blocking — `/codeo:implement`'s.** `git cat-file -e <branch>:.codeo/<N>/init.md` (`:131`) lazily downloads the blob in the blob-less clone; a network failure there exits 128 and is read as "this branch does not hold it", so a transient failure can give a false "no branch holds", or, with two matching branches, pick the other as the single match. Cause: an existence check that needs the network and treats every failure as absence. `git rev-parse -q --verify "<branch>:<path>"` reads only trees the clone already has. Narrow window (right after a successful fetch), hence non-blocking; same class as round 1's F1.
+- **F11 — non-blocking — `/codeo:implement`'s.** `codeo rm <N> --container` with no such container: `detect_kind` takes the flag unchecked, `docker start` fails, and the user reads "could not check codeo-N for unsaved work" (with `--force`: "could not remove volume") instead of "no container codeo-N".
+- **F12 — non-blocking — `/codeo:implement`'s.** `container_check` (`:406-414`): when `docker ps` fails but `docker start` succeeds, a container that was already running is marked started and is stopped again on refusal. Needs a flaky daemon.
+- **F13 — non-blocking — `/codeo:implement`'s.** `cmd_list` (`:338-342`) shows every docker state but `running` as `stopped`, so `paused` and `restarting` containers read as stopped.
+- **F14 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md`'s `codeo list` paragraph does not say that a failed listing prints a warning on stderr, withholds the "no issue containers or sandboxes" line and exits 1.
+- **F15 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md:99` still says "It is all or nothing" for `codeo update`, then describes the part-way case; round 1's F6 reworded only the changelog.
+- **F16 — non-blocking — `/codeo:implement`'s.** `.sbx/README.md`'s `shell` and `open` rows do not show `--container|--sandbox`; the `rm` row does.
+- **F17 — non-blocking — `/codeo:implement`'s.** Two comment lines in `.devcontainer/codeo` (about `:291` and `:438`) are overlong after the round 2 rewording.
+- Reviewer's "declined to judge" list was read; nothing in it is a finding (stopped container `-` is F2; ignored files in the rm check and the sandbox branch read from the host clone are by design; real Docker/sbx is out of scope).
+
+No issue was filed for this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-19 — qc round 1: back to implement (F1 blocking: list/shell/open/rm read a failing docker/sbx as none) · cost: 6m · opus-5-5 355k in + 2.4M cached / 18k out · sonnet-5-5 37k in + 1.1M cached / 2k out
+- 2026-11-19 — qc round 2: clear (F1 fixed; F9-F17 non-blocking) · cost: 6m · opus-5-5 226k in + 1.9M cached / 19k out
