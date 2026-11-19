@@ -46,4 +46,4 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-19 — Q1-Q3 raised (overlaps with #108) · cost: pending
+- 2026-11-19 — Q1-Q3 raised (overlaps with #108) · cost: 1m · sonnet-5-5 13k in + 1.1M cached / 3k out
