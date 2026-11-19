@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q3 are answered (each the recommendation). The draft is `.codeo/132/plan-draft.md`, awaiting the engineer's approval. Two things are already decided by the code and
+Planned. Q1-Q3 answered, plan approved and saved; next step is `/codeo:implement`.
 need no answer (see `## Notes`): the `role.test.sh` case is renamed, and the two
 `close-skill.test.sh` pins each get a paragraph-scoped helper. #118 has merged (`9f14461`), so
 the intake note "plan this after #118 merges" is satisfied.
@@ -95,6 +95,21 @@ Decided from the code, no question needed:
   document, no shared environment, no wiki module. The `shell` suite has no `filter`, so each
   task's proof is its test file, then `bash tests/run.sh`.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-19-test-suite-gaps-132.md` (unstaged, awaiting the engineer's commit). Shape: one executable plan under `docs/plans/`, five tasks, no reference doc.
+
+**Decisions.**
+- `tests/live.test.sh` is not edited: #131 (`df2cdf9`) already made the three stamp assertions absolute. Task 3 proves criteria 4, 5 and 6 and reports them (Q1, verify only). Rejected: adding a guard case that reads the file's own source.
+- `both_markers_are_guarded_the_same` is renamed `both_markers_present_is_guarded` with a comment; `containerenv_alone_is_guarded` stays the case that pins the Podman check. Rejected: strengthening it, since a case with both markers cannot fail on the `/run/.containerenv` check alone.
+- The stash and abandon pins use a new `paragraph_contains_flat` helper that requires exactly one matching paragraph; `skills/close/SKILL.md` is unchanged.
+- #116's criterion 13 is met as written: the `rc=0` output is posted on #107, the checkbox is ticked in #116's body, and #116 gets a linking comment (Q2). Rejected: striking it, or leaving it to the engineer.
+- No `CHANGELOG.md` bullet (Q3), which also keeps the plan clear of #102, #108 and #122.
+
+**Documentation moved:** none (no page under `docs/`, no wiki module).
+
+**Intake questions resolved here:** none; intake left none open.
+
 ### Footprint
 
 ```
@@ -104,10 +119,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-19 — Q1-Q3 raised · cost: 1m · fable-5-2 64k in + 461k cached / 5k out
+- 2026-11-19 — planned: docs/plans/2026-11-19-test-suite-gaps-132.md · cost: 129m · fable-5-2 82k in + 766k cached / 9k out · sonnet-5-5 192k in + 619k cached / 14k out
