@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Exploration is done and no plan is drafted yet. Every item in the issue was checked against `main` at `4a4572e`: six are already met there (listed under `## Notes`), the rest stand. Q1-Q5 are open; the draft starts once they are answered. The calls I made without asking are under `## Notes`, so they can be corrected in the same pass.
+The plan is approved and written to `docs/plans/2026-11-19-follow-ups-97-left-108.md` (unstaged, for review). Q1-Q5 are answered. The footprint check now finds #102 and #122, which have since planned the same `CHANGELOG.md` and `docs/skills.md` (and, for #122, `docs/handoff.md`); Q6-Q7 are open and `## Outcome` stays pending until they are answered. The calls I made without asking are under `## Notes`.
 
 ## Questions
 
@@ -65,6 +65,20 @@ Answer with *take* or *leave* for each, or "your picks".
 **Answer:**
 Your picks, as the engineer chose in the session: (a) take it, (b) leave it. (Transcribed.)
 
+### Q6 — #102 (`feat/codeo-issue-assign-every-filed`, kbajpai, at `plan`) also plans `glob:CHANGELOG.md` and `glob:docs/skills.md`. Proceed, sequence or re-scope?
+
+**Why it matters:** the overlap check pairs this plan's footprint with #102's on `glob:CHANGELOG.md` and `glob:docs/skills.md`. Here, Task 8 adds a bullet at the top of `## Unreleased` and edits two clauses on line 32 (the v1.0.7 section), and Task 7 edits one `/codeo:close` bullet in `docs/skills.md` (line 196). #102 plans an `/codeo:issue` change, so its `docs/skills.md` hunk is presumably the issue section and its CHANGELOG hunk another `## Unreleased` bullet; it has no changed files yet, so nothing is compared line by line. Sequencing would put Tasks 7-8 behind #102 for hunks that do not touch each other.
+**Options:** *proceed and coordinate* (my pick: the second branch to merge rebases the `## Unreleased` bullets; the hunks are in different places) · *sequence after #102* · *re-scope* (drop Task 7 or 8 from this plan).
+
+**Answer:**
+
+### Q7 — #122 (`feat/triage-s-flight-judging-103`, kbajpai, at `plan`) also plans `glob:CHANGELOG.md`, `glob:docs/handoff.md` and `glob:docs/skills.md`. Proceed, sequence or re-scope?
+
+**Why it matters:** the overlap check pairs this plan's footprint with #122's on `glob:CHANGELOG.md`, `glob:docs/handoff.md` and `glob:docs/skills.md`. Task 7 here edits the `abandon — finished` row of `docs/handoff.md` (line 450) and one `/codeo:close` bullet of `docs/skills.md` (line 196); Task 8 edits `CHANGELOG.md`. #122 changes triage's in-flight judging, so its `docs/handoff.md` and `docs/skills.md` hunks are presumably in the triage and in-flight text rather than the closing-block rows. It has no changed files yet, so nothing is compared line by line.
+**Options:** *proceed and coordinate* (my pick, as Q6) · *sequence after #122* · *re-scope*.
+
+**Answer:**
+
 ## Notes
 
 **Already met on `main` at `4a4572e`** (checked by reading the files; the plan changes none of their text and adds a pin only where the list says none exists):
@@ -104,3 +118,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-19 — Q1-Q5 raised · cost: 2m · fable-5-2 114k in + 1.2M cached / 11k out
+- 2026-11-19 — plan approved and written; Q6-Q7 raised (overlap with #102, #122) · cost: 158m · fable-5-2 123k in + 1.6M cached / 17k out · sonnet-5-5 156k in + 2M cached / 26k out
