@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-The plan is approved and written to `docs/plans/2026-11-19-follow-ups-97-left-108.md` (unstaged, for review). Q1-Q5 are answered. The footprint check now finds #102 and #122, which have since planned the same `CHANGELOG.md` and `docs/skills.md` (and, for #122, `docs/handoff.md`); Q6-Q7 are open and `## Outcome` stays pending until they are answered. The calls I made without asking are under `## Notes`.
+The plan is approved and written to `docs/plans/2026-11-19-follow-ups-97-left-108.md` (unstaged, for review). Q1-Q7 are answered, the footprint is recorded and `## Outcome` is written. Next: review and commit the plan, then `/codeo:implement`.
 
 ## Questions
 
@@ -71,6 +71,7 @@ Your picks, as the engineer chose in the session: (a) take it, (b) leave it. (Tr
 **Options:** *proceed and coordinate* (my pick: the second branch to merge rebases the `## Unreleased` bullets; the hunks are in different places) · *sequence after #102* · *re-scope* (drop Task 7 or 8 from this plan).
 
 **Answer:**
+Proceed and coordinate, my pick, as the engineer chose in the session ("Accept your recommendations", 2026-11-19). (Transcribed.)
 
 ### Q7 — #122 (`feat/triage-s-flight-judging-103`, kbajpai, at `plan`) also plans `glob:CHANGELOG.md`, `glob:docs/handoff.md` and `glob:docs/skills.md`. Proceed, sequence or re-scope?
 
@@ -78,6 +79,7 @@ Your picks, as the engineer chose in the session: (a) take it, (b) leave it. (Tr
 **Options:** *proceed and coordinate* (my pick, as Q6) · *sequence after #122* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate, my pick, as the engineer chose in the session. (Transcribed.)
 
 ## Notes
 
@@ -102,6 +104,25 @@ Your picks, as the engineer chose in the session: (a) take it, (b) leave it. (Tr
 
 **Other workflows in flight** (`inflight.sh --except 108`, 2026-11-19): #102 `feat/codeo-issue-assign-every-filed` and #122 `feat/triage-s-flight-judging-103`, both assigned to kbajpai, both at `init` with plan questions open, `changed: none`. Neither has a footprint yet, so there is nothing to compare beyond that; the check runs again at the hand-off.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-19-follow-ups-97-left-108.md` (unstaged at the hand-off, for the engineer to review and commit) |
+| Shape | `$PLANS` implementation plan, nine tasks; no reference doc, nothing here is a standing decision |
+
+**Decisions** (Q1-Q7, all the recommended option):
+- `overlap.sh` exits 1 with `overlap: cannot diff <range>` when this branch's own diff cannot be made, in both modes; another workflow's failed diff warns on stderr and its footprint is still compared. Rejected: `--outside` only (keeps the silent "no overlap" in pair mode); failing on any diff (one broken branch elsewhere would stop every workflow). An empty `--base ""` or `--head ""` exits 1.
+- `beyond-50` becomes a two-page-shaped case (a blank row, then the card's row) beside the two greps; the 60-row half goes. Rejected: a comment only.
+- The two clauses on `CHANGELOG.md:32` are edited in place and the correction is noted under `## Unreleased`. Rejected: leaving the released entry as it is.
+- `/codeo:init` after a `lock: TODO` that follows a taken lock: wording only, no hand-off change. Rejected: handing off to `/codeo:plan` when the lock was taken (a behaviour change the issue rules out).
+- Taken beyond the issue: the untested `--head` plan at a live (non-`done/`) path (Q5a). Left for `/codeo:triage`: the unanchored `## Outcome` match in `scripts/inflight.sh` and `scripts/dossier-check.sh` (Q5b).
+- Overlap with #102 and #122 on `CHANGELOG.md`, `docs/skills.md` and (#122) `docs/handoff.md`: proceed and coordinate (Q6, Q7). `sequenced:` stays `none`.
+
+**Already met on `main`, so not redone:** an unresolved `--base`/`--head` is an error; the header describes `--base` alone; `skills/qc/SKILL.md` step 6 agrees with step 8 and says how a second round shows; `skills/close/SKILL.md`'s abandon text is conditioned on the branch being kept.
+
+**Documentation pages the plan changes:** `skills/init/SKILL.md` (Task 6), `docs/handoff.md` and `docs/skills.md` (Task 7), `CHANGELOG.md` (Task 8). No wiki pages (no wiki module). No environment, lease or host tasks; no invariants document; no exclusive resource to lock. `engineering:system-design` and `engineering:architecture` are not installed and not needed (no new component, no technology choice).
+
 ### Footprint
 
 ```
@@ -111,11 +132,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-19 — Q1-Q5 raised · cost: 2m · fable-5-2 114k in + 1.2M cached / 11k out
 - 2026-11-19 — plan approved and written; Q6-Q7 raised (overlap with #102, #122) · cost: 158m · fable-5-2 123k in + 1.6M cached / 17k out · sonnet-5-5 156k in + 2M cached / 26k out
+- 2026-11-19 — planned: docs/plans/2026-11-19-follow-ups-97-left-108.md; Q6-Q7 answered, overlaps with #102 and #122 coordinated; engineering skills unavailable and not needed · cost: 215m · fable-5-2 123k in + 1.6M cached / 17k out · sonnet-5-5 158k in + 2.8M cached / 29k out
