@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-The plan (`docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md`) is committed and pushed after the engineer confirmed it final. `bash scripts/sync-main.sh` found the branch already contains `origin/main`. `overlap.sh` now reports three overlaps with #108, which pushed its plan after this plan was approved. Q1-Q3 (the #108 overlaps) are answered proceed and coordinate; tasks are being dispatched.
+The plan (`docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md`) is committed and pushed after the engineer confirmed it final. `bash scripts/sync-main.sh` found the branch already contains `origin/main`. `overlap.sh` now reports three overlaps with #108, which pushed its plan after this plan was approved. Q1-Q3 (the #108 overlaps) were answered proceed and coordinate. All five tasks are built and reviewed; the hand-off is `/codeo:qc`.
 
 ## Questions
 
@@ -45,8 +45,23 @@ Plan Q4 and Q5 (this issue's `plan.md`) already settled the same two files for #
 
 ## Outcome
 
-_Pending — written at the hand-off._
+**Built, from `docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md` (all five tasks, each reviewed by a fresh reviewer: spec met, no Critical or Important finding):**
+- Task 1 (`a2057e3`): `scripts/inflight.sh` — `last_step` takes an optional step to skip, and `waits_of`'s fallback uses it for `close`, so a resumed stash or abandon reads the step before it (`/codeo:plan`, `/codeo:implement`, `/codeo:qc`) and `nothing known` when only the park is finished. `step:` and `--tsv` are unchanged. Four new cases in `tests/inflight.test.sh` (issues 62-65).
+- Task 2 (`c4f1d8e`): `touched_of` reads the dossier dates when the branch tip's date does not parse; a comment on `close_send_back` states its scope. No new test, by plan: git's `%cs` always parses.
+- Task 3 (`fbeaa99`): `skills/triage/SKILL.md` — fingerprint `unassigned:<N>` (no date), a live abandon expects Backlog or Ready, *resume* names something for every `waits:` value; ten wording checks in `tests/triage-skill.test.sh`, the old `owed step` check replaced.
+- Task 4 (`a11ab57`): `docs/handoff.md` (the `waits:` values in script order, ending `nothing known`) and `docs/skills.md` (the `/codeo:close` case, the unassigned rule, abandon at Backlog or Ready).
+- Task 5 (`66b429b`): `CHANGELOG.md` — one bullet and the `Shared state:` note for `unassigned:<N>` ledger rows.
+- The plan file itself was committed at the engineer's confirmation (`e2f7530`).
+
+**Documentation pages changed:** `docs/handoff.md`, `docs/skills.md`, `CHANGELOG.md`, as the plan named. No unplanned page was written, and no plan gap turned up.
+
+**Build:** the `shell` suite's build command is `true`: exit 0. The full suite ran in each task's implementer run and ended `all cases passed`; the whole-branch review's own full run timed out and it ran `inflight` and `triage-skill` instead, so `/codeo:qc` runs the full suite.
+
+**Deviations from the plan:** none. The plan's Task 4 grep proofs were illustrative and the implementer adapted the pattern to the sentence it wrote (a preflight ruling). `bash scripts/sync-main.sh` reports the branch already contains `origin/main`; `overlap.sh` prints nothing (the #108 overlaps were answered proceed and coordinate in Q1-Q3, #102's in the plan's Q4-Q5).
+
+**Whole-branch review (sonnet, per the project's no-escalation rule):** ready to merge; no Critical or Important finding. Minors left as they are: cosmetic line wraps in the `inflight.sh` header, `handoff.md` and the triage skill; the new tests do not assert directly that a live stash still leads with `resume — …` (cases 34, 35 and 55 cover it); a working dossier whose last finished step is `qc` with no verdict still prints `nothing known`, which predates this branch.
 
 ## Log
 
 - 2026-11-19 — Q1-Q3 raised (overlaps with #108) · cost: 1m · sonnet-5-5 13k in + 1.1M cached / 3k out
+- 2026-11-19 — built: 5 tasks, build exit 0, handed to /codeo:qc · cost: 37m · sonnet-5-5 433k in + 16.2M cached / 56k out
