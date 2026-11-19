@@ -72,43 +72,47 @@ run_name() { (cd "$project" && bash "$fake_plugin/scripts/branch-name.sh" "$1");
 
 case_desc="branch-name.sh"
 canned 120 '[Task] Work through the backlog of pipeline and environment chores (consolidates #72, #73)' enhancement ci
-assert_eq "#120" "feat/work-backlog-pipeline-environment-chores" "$(run_name 120)"
+assert_eq "#120" "feat/120-work-backlog-pipeline-environment-chores" "$(run_name 120)"
 canned 73 '[Task] Refuse a lease while the environment carries migrations the incoming branch does not have' enhancement
-assert_eq "#73" "feat/refuse-lease-while-environment-carries" "$(run_name 73)"
+assert_eq "#73" "feat/73-refuse-lease-while-environment-carries" "$(run_name 73)"
 canned 5 'Fix the thing' bug
-assert_eq "bug label" "fix/fix-thing" "$(run_name 5)"
+assert_eq "bug label" "fix/5-fix-thing" "$(run_name 5)"
 canned 6 'Docs: a page' documentation
-assert_eq "documentation label" "docs/docs-page" "$(run_name 6)"
+assert_eq "documentation label" "docs/6-docs-page" "$(run_name 6)"
 canned 7 'Three words only'
-assert_eq "no type label, fewer than five words" "chore/three-words-only" "$(run_name 7)"
+assert_eq "no type label, fewer than five words" "chore/7-three-words-only" "$(run_name 7)"
 canned 8 'Fix   the---THING!!   now  '
-assert_eq "runs of separators and case" "chore/fix-thing-now" "$(run_name 8)"
+assert_eq "runs of separators and case" "chore/8-fix-thing-now" "$(run_name 8)"
 canned 9 '[Bug] the of a'
 status=0; out=$(run_name 9 2>&1) || status=$?
 assert_eq "nothing left: exit" 1 "$status"
 assert_contains "nothing left: message" "no words left" "$out"
 assert_eq "same input, same name" "$(run_name 120)" "$(run_name 120)"
+canned 20 'Same title' enhancement
+canned 21 'Same title' enhancement
+assert_eq "same title, issue 20" "feat/20-same-title" "$(run_name 20)"
+assert_eq "same title, issue 21" "feat/21-same-title" "$(run_name 21)"
 
 case_desc="a config without labelTypes is quiet"
 err=$(run_name 5 2>&1 >/dev/null) || true
 assert_eq "stderr empty" "" "$err"
-assert_eq "name still right" "fix/fix-thing" "$(run_name 5 2>/dev/null)"
+assert_eq "name still right" "fix/5-fix-thing" "$(run_name 5 2>/dev/null)"
 
 case_desc="the config's labelTypes replace the defaults"
 write_config '"labelTypes":{"story":"feat","defect":"fix"}'
 canned 10 'Add a widget' story
-assert_eq "mapped label" "feat/add-widget" "$(run_name 10)"
+assert_eq "mapped label" "feat/10-add-widget" "$(run_name 10)"
 canned 11 'Add a widget' defect enhancement
-assert_eq "first mapped label wins" "fix/add-widget" "$(run_name 11)"
+assert_eq "first mapped label wins" "fix/11-add-widget" "$(run_name 11)"
 canned 12 'Add a widget' enhancement
-assert_eq "a default no longer mapped is chore" "chore/add-widget" "$(run_name 12)"
+assert_eq "a default no longer mapped is chore" "chore/12-add-widget" "$(run_name 12)"
 write_config
 
 case_desc="branch_name_quotes_a_title_with_spaces_and_glob_characters"
 canned 13 'Handle * and [x]? in "my file" *.sh' bug
-assert_eq "glob characters stay inert" "fix/handle-x-my-file-sh" "$(run_name 13)"
+assert_eq "glob characters stay inert" "fix/13-handle-x-my-file-sh" "$(run_name 13)"
 canned 14 '* ? [a-z]* x' 
-assert_eq "only glob characters and a stop word" "chore/z-x" "$(run_name 14)"
+assert_eq "only glob characters and a stop word" "chore/14-z-x" "$(run_name 14)"
 assert_eq "nothing was created or expanded" "alpha.sh beta.sh x" "$(cd "$project" && ls | tr '\n' ' ' | sed 's/ $//')"
 
 if ((failures)); then
