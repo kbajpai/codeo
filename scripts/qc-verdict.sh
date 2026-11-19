@@ -118,7 +118,8 @@ done <<<"$judged"
 # `judged`, so a PR that only deletes under done/ reports nothing here either. An archive that is
 # touched but whose qc.md is not in the diff is named, not judged: reporting "no archived
 # dossier" for it read as if nothing were touched at all. Not failing
-# here is by design.
+# here is by design. Of these, only the archives the PR delivers (`delivered`, below) are
+# footprint-checked.
 touched=$(git diff --name-only --diff-filter=AMR "$base" "$head_ref" -- "$state_rel/done/" \
     | sed -nE "s#^$state_re/done/([0-9]+)/.*#\\1#p" | sort -un)
 # Only archives whose plan.md the diff adds or renames into place (delivered) are footprint-checked.
