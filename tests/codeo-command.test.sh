@@ -794,6 +794,7 @@ STUB
 #!/bin/bash
 d=${0%/bin/*}
 echo "mv $*" >>"$d/calls"
+[[ "$(grep -c "^mv " "$d/calls")" == "$(cat "$d/mv_fail_at" 2>/dev/null)" ]] && exit 1
 exec /bin/mv "$@"
 STUB
     chmod +x "$cm_dir/bin/curl" "$cm_dir/bin/mv"
@@ -827,6 +828,7 @@ t_update_replaces_three() {
     grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not replaced"
     [[ -x "$cm_home/codeo-container.sh" && -x "$cm_home/codeo-sandbox.sh" && -x "$cm_dir/inst/codeo" ]] ||
         fail "an installed file is not executable"
+    [[ "$(stat -c %a "$cm_home/codeo-container.sh" "$cm_home/codeo-sandbox.sh" "$cm_dir/inst/codeo" | sort -u)" == 755 ]] || fail "installed files are not all mode 755"
     [[ "$(grep -c '^curl .*-fsSL' "$cm_dir/calls")" -eq 3 ]] || fail "want three curl -fsSL calls: $(cat "$cm_dir/calls")"
     local mvs
     mvs=$(grep '^mv ' "$cm_dir/calls")
@@ -872,6 +874,22 @@ t_update_without_scripts() {
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
     [[ -s "$cm_home/codeo-container.sh" && -s "$cm_home/codeo-sandbox.sh" ]] || fail "scripts not installed"
 }
+
+# expect_update_partial <fail-at> <new-files-text>: the <fail-at>th mv fails; one codeo: line says
+# the update is partial and what is new, and the temporary directory and file are gone.
+expect_update_partial() {
+    update_setup "$current"
+    echo "$1" >"$cm_dir/mv_fail_at"
+    cm_run update
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$(wc -l <"$cm_dir/err")" -eq 1 ]] || fail "stderr is not one line: $cm_err"
+    [[ "$cm_err" == "codeo: update failed part-way: "*"$2"* ]] || fail "stderr: $cm_err"
+    [[ -z "$(find "$cm_home" -name '.update.*')" ]] || fail "temp directory left"
+    [[ "$(ls -A "$cm_dir/inst")" == codeo ]] || fail "inst holds more than codeo: $(ls -A "$cm_dir/inst")"
+}
+
+t_update_partial_second_mv() { expect_update_partial 2 "codeo-container.sh is new, codeo-sandbox.sh and codeo are still old"; }
+t_update_partial_final_mv() { expect_update_partial 3 "both scripts are new, codeo is still old"; }
 
 t_update_usage_extra_args() { expect_usage update now; }
 
@@ -941,6 +959,8 @@ cases=(
     t_update_not_a_script_refused
     t_update_without_scripts
     t_update_usage_extra_args
+    t_update_partial_second_mv
+    t_update_partial_final_mv
 )
 
 for current in "${cases[@]}"; do
