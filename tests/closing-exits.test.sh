@@ -5,7 +5,7 @@
 #
 #   closing-exits.test.sh [case]
 #       Cases: rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-#       issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
+#       init-lock-wording issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
 #       close-step17-lead stash-prose bites. CLOSING_EXITS_ROOT points the checks at another tree.
 #       No argument runs them all; an unknown case exits 2. Prints "all cases passed" and exits 0, or
 #       a FAIL line per failure and exits 1.
@@ -139,6 +139,20 @@ case_init_no_lock() {
     s=$(step "$init" 11)
     [[ -n $s ]] || { fail "no step 11 in skills/init/SKILL.md"; return; }
     lacks "$s" 'Either way, end with the closing block'
+}
+
+# Some lock: TODO lines print after the lock was written, so step 11 must not say a TODO means no lock.
+case_init_lock_wording() {
+    local s
+    s=$(step "$init" 11)
+    [[ -n $s ]] || { fail "no step 11 in skills/init/SKILL.md"; return; }
+    s=$(flat "$s")
+    lacks "$s" 'there is no lock'
+    has "$s" 'lock already taken'
+    has "$s" 'took the lock'
+    has "$s" 'lock.sh" take local'
+    para "$init" '**Closing block — no lock:**' || return 0
+    lacks "$(flat "$p")" '/codeo:plan'
 }
 
 # Reads step 8 of the issue skill; both Ready cases also need it to read the board.
@@ -323,7 +337,7 @@ case_bites() {
 }
 
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-    issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
+    init-lock-wording issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
     close-step17-lead stash-prose host-workflow-fetch bites)
 
 if (($# > 0)); then
