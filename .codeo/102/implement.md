@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Stopped before any task. Two things need the engineer: the plan file `docs/plans/2026-11-19-issue-priority-label-102.md` is still uncommitted (step 2 asks for confirmation that it is final, outside this file), and `overlap.sh` found two overlaps with #122 (Q1). The branch already contains `origin/main`; no code is written.
+Plan committed and confirmed final; Q1 (overlap with #122) answered: proceed and coordinate. Starting the tasks.
 
 ## Questions
 
@@ -18,6 +18,7 @@ Stopped before any task. Two things need the engineer: the plan file `docs/plans
 **Options:** proceed and coordinate (keep each branch's edits to its own sections, whoever merges second resolves the changelog list) · sequence after #122 · re-scope. *Recommended: proceed and coordinate — the edits are in different sections and #122 has no changed files yet.*
 
 **Answer:**
+Proceed and coordinate. (Taken from the engineer's "Commit, Push & /codeo:implement" in the conversation, 2026-11-19, as a go-ahead on the recommended option; that reading is the assistant's.)
 
 ## Notes
 
