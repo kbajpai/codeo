@@ -47,7 +47,8 @@ typed by hand, and it never fails its caller — what it could not do it prints 
 the base branch it takes no lock. `host` says what kind of checkout took it:
 
 - **`container`** — a dev container; a `volume:` line follows, identifying the container so it can
-  be found again.
+  be found again. When its start script ran in an sbx sandbox, a `sandbox:` line with the sandbox's
+  name (for example `sandbox: codeo-113`) follows instead; a lock never carries both.
 - **`web`** — a hosted session; a `session:` line follows. It is the only host that checks the
   issue's branch out at bind time, when the session started on another branch, and it refuses —
   taking no lock, with a `TODO` saying how to reconcile — when the two have diverged or a local
@@ -174,7 +175,7 @@ it.
   no script refuses or waits because a workflow is live. On a public repository it names the GitHub
   login (else `git config user.name`, else `unknown`), a machine label and the host kind
   (container, web or local), and never an email address. The machine is `CODEO_MACHINE`, else the
-  container's volume, else `web-` plus the web session's first 8 characters, else the hostname. The
+  container's volume, else its sandbox, else `web-` plus the web session's first 8 characters, else the hostname. The
   reader's own clock judges the age. `CODEO_LIVE_REFRESH_SECONDS` (300), `CODEO_LIVE_TTL_SECONDS`
   (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings; the last bounds each git push or fetch, the login lookup and the REST fallback as a whole. Where a push to that
   ref is refused it is written through the REST API, and where neither works nothing is published:
@@ -443,7 +444,7 @@ Exits whose next command is not the default:
 | `close — lock kept` | `/codeo:close` |
 | `stash — interrupted` | `/codeo:close --stash` |
 | `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed, in the checkout the project's host workflow names, when it names one |
-| `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again; a `lock: TODO` printed after the lock was taken (the volume name unreadable on `host: container`) needs the fix alone |
+| `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again; a `lock: TODO` printed after the lock was taken (neither a volume name nor a sandbox name readable on `host: container`) needs the fix alone |
 | `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
 | `issue — Status unreadable` | the fix its line names (for example `gh auth refresh -s project`), then `/codeo:triage`, then `/codeo:init #<N>` |
 | `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up, in the checkout the project's host workflow names, when it names one |

@@ -3,10 +3,12 @@
 ## Unreleased
 
 Config schema: 1
-Shared state: new branches are named <type>/<N>-<slug>; branches already cut keep their names and are found by their dossier
+Shared state: new branches are named <type>/<N>-<slug>; branches already cut keep their names and are found by their dossier. A lock taken before #131 keeps `volume: unknown`, and a lock taken for an sbx sandbox carries `sandbox: <name>` in its place (an older reader sees an unknown key).
 Safe to bump mid-workflow: yes
 
 - `/codeo:init` cuts `<type>/<N>-<slug>`, so the issue is readable from the branch (`feat/118-live-signal-leftovers-104-refresh`); `branch-name.sh` prints the number, `init` finds a workflow under way by its dossier whatever its branch is called, so a branch cut under the old shape resumes and an issue retitled after its init does too, and `claim.sh` no longer tells you to retitle an issue whose name another issue's dossier holds (#126).
+
+- A workflow hosted in an sbx sandbox names the sandbox in its lock. `scripts/lock.sh take container --sandbox <name>` writes `sandbox: <name>` in place of `volume:`, `scripts/live.sh` names the sandbox's live signal after the sandbox, and the close overlay names `bash codeo-sandbox.sh end <N>` for a sandbox lock at a finished close and no removal command for a stash or an abandon; `.devcontainer/README.md` says so. The sbx script names the next step when the start script fails (F19), asks for no pin when the sandbox already exists on a rerun (F20), and has `end` name `sbx rm --force codeo-<N>` when it cannot read the sandbox (F21). The remaining #99 test gaps are closed, and the `tests/live.test.sh` stamp checks read the path absolutely. The real sandbox shows the lock change only after a release carries it and the pin moves, because the start script runs the installed plugin's `lock.sh` (#131, #123, #125).
 
 ## v1.0.7 — 2026-11-18
 

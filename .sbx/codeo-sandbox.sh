@@ -72,6 +72,8 @@ sandbox_state() {
 
 # The pinned Claude image reference, passed to "sbx create" as its kit reference in place of the agent name.
 create_agent=''
+# The state require_sandbox read for the sandbox, passed on to ensure_detached.
+required_state=''
 
 # read_pin <N>: read the one-line pin into create_agent from the first of CODEO_SBX_IMAGE (a file path),
 # codeo-N/.sbx/claude-image, and origin/HEAD:.sbx/claude-image in the clone; refuse none of them, or a
@@ -146,18 +148,19 @@ ensure_windows_trust() {
     git.exe config --global --add safe.directory "$path" || die "git.exe could not add $path to safe.directory"
 }
 
-# ensure_sandbox <N>: create the sandbox from inside the clone unless one by that name exists (a stopped
-# one is left alone: sbx exec starts it), then write the marker session-title.sh looks for. The marker is
+# ensure_sandbox <N>: read the image pin and create the sandbox from inside the clone unless one by that name exists (a stopped
+# one is left alone: sbx exec starts it), then write the marker session-title.sh looks for, holding the sandbox name. The marker is
 # written on every run, so a rerun repairs a missing one.
 ensure_sandbox() {
     local name=codeo-$1 state
     state=$(sandbox_state "$name")
     if [[ "$state" == missing ]]; then
+        read_pin "$1"
         (cd "$name" && "$sbx" create --clone --name "$name" --cpus 2 --memory 4g "$create_agent" .) ||
             die "could not create the sandbox $name"
     fi
     # shellcheck disable=SC2016
-    "$sbx" exec "$name" bash -c ': > "$HOME/.codeo-sandbox"' || die "could not mark the sandbox $name"
+    "$sbx" exec "$name" bash -c 'printf "%s\n" "$1" > "$HOME/.codeo-sandbox"' _ "$name" || die "could not mark the sandbox $name"
 }
 
 # git_is_usable: git is on PATH and will not open an installer (a Mac stub).
@@ -211,10 +214,10 @@ cmd_issue() {
     valid_branch "$2" || usage
     pick_sbx
     ensure_host_clone "$1" "$2"
-    read_pin "$1"
     ensure_windows_trust "$1"
     ensure_sandbox "$1"
-    run_start "codeo-$1"
+    run_start "codeo-$1" ||
+        die "the start script failed in codeo-$1: fix what it printed above, then run codeo-sandbox.sh issue $1 $2 again, or codeo-sandbox.sh shell $1 to look inside"
     check_name "codeo-$1"
     ensure_detached "codeo-$1"
 }
@@ -355,6 +358,14 @@ uncommitted_work() {
     return 0
 }
 
+# die_unreadable <name> <force> <what>: end could not start or fetch from the sandbox, so nothing in it was read; it
+# removes nothing, with or without --force, and names sbx rm --force as the way to remove it anyway.
+die_unreadable() {
+    local note=""
+    [[ "$2" == 0 ]] || note=" (--force cannot keep commits it could not fetch)"
+    die "$3$note, nothing removed: nothing in it could be read, so nothing can be proved or kept; to remove it anyway run: $sbx rm --force $1"
+}
+
 cmd_end() {
     (($# == 1 || $# == 2)) || usage
     valid_number "$1" || usage
@@ -369,9 +380,9 @@ cmd_end() {
     [[ "$state" != missing ]] || die "no sandbox $name"
     [[ -d "$dir" ]] || die "no clone $dir here: cannot check $name for unpushed commits, nothing removed"
     if [[ "$state" == stopped ]]; then
-        "$sbx" exec "$name" true || die "could not start $name, nothing removed"
+        "$sbx" exec "$name" true || die_unreadable "$name" "$force" "could not start $name"
     fi
-    fetch_sandbox "$dir" "$name" || die "could not fetch sandbox-$name into $dir, nothing removed"
+    fetch_sandbox "$dir" "$name" || die_unreadable "$name" "$force" "could not fetch sandbox-$name into $dir"
     git -C "$dir" fetch origin || die "could not fetch origin: cannot prove anything is pushed, nothing removed"
     git -C "$dir" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' || die "could not fetch the pull-request heads of origin: cannot prove anything is delivered, nothing removed"
     refs=$(git -C "$dir" for-each-ref --count=1 --format=x "refs/sandboxes/$name/") || die "could not read the refs of $dir, nothing removed"

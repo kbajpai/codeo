@@ -193,6 +193,8 @@ bash .devcontainer/scripts/plugins.sh || add_todo "plugins.sh did not finish: fi
 # TODOs; when it exits non-zero its output is not printed, the one failure TODO carries it. The plugin is pinned and not ours: the `|| rc=$?` guard is
 # for a crash or a changed interface after a pin bump, where a non-zero exit would otherwise end this
 # script under set -e before its TODO list.
+mark=${CODEO_SANDBOX_MARK:-${HOME:-}/.codeo-sandbox}
+sbx_name=
 branch=$(git branch --show-current 2>/dev/null || true)
 base=$(jq -r '.baseBranch // "main"' .codeo/config.json 2>/dev/null || true)
 [[ -n $base ]] || base=main
@@ -227,7 +229,18 @@ elif [[ -z $branch ]]; then
 elif [[ $branch != "$base" ]]; then
     if codeo_root=$(bash .devcontainer/scripts/codeo-root.sh 2>/dev/null); then
         lock_rc=0
-        lock_out=$(bash "$codeo_root/scripts/lock.sh" take container 2>&1) || lock_rc=$?
+        lock_args=(take container)
+        if [[ -e $mark ]]; then
+            # Inside a sandbox the lock records the sandbox: the marker's first line, else the clone folder's name (the sandbox is named after it; lock.sh judges a bad value).
+            IFS= read -r sbx_name < "$mark" || true
+            [[ -n $sbx_name ]] || sbx_name=$(basename "$clone")
+            if [[ -n $sbx_name ]]; then
+                lock_args+=(--sandbox "$sbx_name")
+            else
+                add_todo "the sandbox marker names no sandbox and the clone folder has no name: the lock records a volume"
+            fi
+        fi
+        lock_out=$(bash "$codeo_root/scripts/lock.sh" "${lock_args[@]}" 2>&1) || lock_rc=$?
         if ((lock_rc == 0)); then
             while IFS= read -r line; do
                 case $line in
@@ -249,7 +262,7 @@ fi
 # Its `todo:` lines become TODOs; it prints nothing else this script passes on.
 # Inside an sbx sandbox (the marker codeo-sandbox.sh writes, as session-title.sh reads it) the folder is not a
 # Docker name, so this advice does not apply and the check is skipped.
-if [[ -e ${CODEO_SANDBOX_MARK:-${HOME:-}/.codeo-sandbox} ]]; then
+if [[ -e $mark ]]; then
     :
 elif folder_out=$(bash .devcontainer/scripts/folder-check.sh "$(basename "$clone")" 2>&1); then
     while IFS= read -r line; do
