@@ -69,7 +69,7 @@ while IFS= read -r path; do
     # starting '### ' (three '#') does not match '^## ' (two '#' then a space), so the round
     # headings inside stay in scope.
     outcome=$(awk '
-        /^## Outcome/ { in_outcome = 1; next }
+        /^## Outcome[[:space:]]*$/ { in_outcome = 1; next }
         in_outcome && /^## / { exit }
         in_outcome { print }
     ' <<<"$content")
@@ -121,7 +121,7 @@ done <<<"$judged"
 # here is by design.
 touched=$(git diff --name-only --diff-filter=AMR "$base" "$head_ref" -- "$state_rel/done/" \
     | sed -nE "s#^$state_re/done/([0-9]+)/.*#\\1#p" | sort -un)
-# Archives whose plan.md the diff adds or renames into place: only these are footprint-checked.
+# Only archives whose plan.md the diff adds or renames into place (delivered) are footprint-checked.
 delivered=$(git diff --name-only --diff-filter=AR "$base" "$head_ref" -- ":(glob)$state_rel/done/*/plan.md" \
     | sed -nE "s#^$state_re/done/([0-9]+)/plan\\.md\$#\\1#p" | sort -un)
 for n in $touched; do
@@ -130,7 +130,7 @@ for n in $touched; do
     # the union, so a path outside every `files` glob was never planned for.
     if grep -qxF "$n" <<<"$delivered" && plan=$(git show "$head_ref:$state_rel/done/$n/plan.md" 2>/dev/null); then
         plan_round=$(awk '
-            /^## Outcome/ { o = 1; next }
+            /^## Outcome[[:space:]]*$/ { o = 1; next }
             o && /^## / { exit }
             o && /^### Round [0-9]+/ { k = $3 + 0; if (k > max) max = k }
             END { print max + 0 }
