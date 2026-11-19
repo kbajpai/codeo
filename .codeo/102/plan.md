@@ -21,6 +21,7 @@ Round 1. The dossier, the issue skill, `doctor.sh`, `github.sh`, `lib/env.sh`, t
 - A top-level `priority{...}` object whose presence turns it on.
 
 **Answer:**
+As recommended. (Answered in the conversation, 2026-11-19.)
 
 ### Q2 — What are the four labels called on GitHub?
 
@@ -31,6 +32,7 @@ Round 1. The dossier, the issue skill, `doctor.sh`, `github.sh`, `lib/env.sh`, t
 - Bare `blocker`, `high`, `medium`, `low` — the issue's own words, but `high` alone says nothing on an issue's label row.
 
 **Answer:**
+As recommended. (Answered in the conversation, 2026-11-19.)
 
 ### Q3 — What does the skill propose a priority from?
 
@@ -45,6 +47,7 @@ Round 1. The dossier, the issue skill, `doctor.sh`, `github.sh`, `lib/env.sh`, t
 - No rubric: the skill judges from the issue's content alone.
 
 **Answer:**
+As recommended. (Answered in the conversation, 2026-11-19.)
 
 ### Q4 — With the setting off, does `/codeo:doctor` print a line for the priority check?
 
@@ -54,6 +57,7 @@ Round 1. The dossier, the issue skill, `doctor.sh`, `github.sh`, `lib/env.sh`, t
 - A line always, `ok priority-labels: not enabled` when off.
 
 **Answer:**
+As recommended. (Answered in the conversation, 2026-11-19.)
 
 ### Q5 — Who creates the four labels on `kbajpai/codeo`, and with which command?
 
@@ -64,6 +68,7 @@ Round 1. The dossier, the issue skill, `doctor.sh`, `github.sh`, `lib/env.sh`, t
 - No new verb: the report prints a raw `gh api repos/<owner>/<name>/labels -f name=…` line, and you create the labels by hand.
 
 **Answer:**
+As recommended. (Answered in the conversation, 2026-11-19.)
 
 ## Notes
 
