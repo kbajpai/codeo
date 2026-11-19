@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 done: the qc round 3 finding F18 (blocking) is fixed, with F19, F20, F22 and F23. Nothing is open. Next step: `/codeo:qc`.
+Round 5 done: the qc round 4 finding F24 (blocking) is fixed, with F25-F28. Nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -112,6 +112,27 @@ Each finding was checked against the code before work began; F18-F20, F22 and F2
 
 **Environment:** no shared environment is configured.
 
+
+### Round 5 — 2026-11-19
+
+(send-back from qc.md round 4)
+
+Each finding was checked against the code before work began; F24-F28 held. `sync-main.sh` found the branch already contains `origin/main`; `overlap.sh` printed nothing. One fix commit, `d954b25`, then a scoped re-review (sonnet) that also ran the F24 commands against real git: all findings addressed, no Critical or Important breakage.
+
+- **F24 (blocking) — fixed.** `container_check` now also runs `git fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*'` in the container, as `codeo-sandbox.sh`'s `end` does, so commits under a pull-request head count as delivered in both the unpushed-commits check and the detached-HEAD check; a failed pull-request fetch is "could not check" (the started container is stopped again; `--force` removes anyway), never clean. The re-review reproduced the finished-issue case with real git (a branch pushed, a `refs/pull/1/head` on origin, the branch deleted): the plain fetch listed the commit, the pull-request fetch made it disappear, and a commit under no ref was still listed. The stub tests (`t_rm_pr_head_delivered`, `t_rm_pr_head_detached_delivered`, `t_rm_pr_fetch_fails`, `t_rm_commits_under_no_ref_refuse`) model the fetch as a flag; each was seen failing before the fix. The READMEs and the changelog bullet say commits under a pull-request head count as delivered.
+- **F25** `rm` of a sandbox runs the script without `exec`, keeps its exit status, and on a non-zero status prints `codeo: to remove it anyway: sbx rm --force codeo-<N>`. **F26** `list`, `shell`, `open` and `rm` use `CODEO_SBX`, else `sbx`, else `sbx.exe`, the order `codeo-sandbox.sh` uses; documented. **F27** `rm` says `removed container <name> but could not remove volume <name>`. **F28** a branch found by the lookup is checked with `valid_branch` before any script runs.
+- **F2** stands as the engineer's plan Q5 choice; **F21** as plan Q1.
+
+**Documentation pages changed:** `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md`.
+
+**Build result:** suite `shell`, build command `true`: exit 0. `bash tests/run.sh codeo-command` prints `all cases passed`. The full suite is qc's.
+
+**Deviations from the plan:** none.
+
+**Deferred minors (for qc and triage):** the F27 message says "removed container" even on the `--force` path where the container was already gone before `docker rm -f`; the F25 hint always names `sbx`, even when `CODEO_SBX` or `sbx.exe` is in use; the stub tests model the pull-request fetch as a flag, not real refs; a git remote with no `refs/pull/*` behaves as before; plus rounds 3 and 4's. No `Ruling:` was made.
+
+**Environment:** no shared environment is configured.
+
 ## Log
 
 - 2026-11-18 — Q1 raised · cost: 0m · sonnet-5-5 11k in + 341k cached / 770 out
@@ -119,3 +140,4 @@ Each finding was checked against the code before work began; F18-F20, F22 and F2
 - 2026-11-19 — implemented round 2 (send-back from qc round 1): F1 and F3-F8 fixed in bb31110, re-review clean · build: true (exit 0) · cost: 8m · sonnet-5-5 256k in + 3.1M cached / 31k out
 - 2026-11-19 — implemented round 3 (send-back from close round 2): CI test isolation fixed in 6c77860, F9-F17 in b0999d9, re-review clean · build: true (exit 0) · cost: 12m · sonnet-5-5 163k in + 4.9M cached / 28k out
 - 2026-11-19 — implemented round 4 (send-back from qc round 3): F18 changelog shape fixed with F19, F20, F22, F23 in 27c68a2, re-review clean · build: true (exit 0) · cost: 8m · sonnet-5-5 356k in + 3.7M cached / 17k out
+- 2026-11-19 — implemented round 5 (send-back from qc round 4): F24 rm counts pull-request heads as delivered, with F25-F28, in d954b25, re-review clean · build: true (exit 0) · cost: 16m · sonnet-5-5 442k in + 4.6M cached / 26k out
