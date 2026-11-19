@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored `scripts/inflight.sh`, `scripts/claim.sh`, `skills/triage/SKILL.md`, `skills/init/SKILL.md`, `docs/handoff.md`, `docs/skills.md` and the two test files (`tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Three choices change what gets built and are raised as Q1-Q3. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q3 answered as recommended; drafting.
+Explored `scripts/inflight.sh`, `scripts/claim.sh`, `skills/triage/SKILL.md`, `skills/init/SKILL.md`, `docs/handoff.md`, `docs/skills.md` and the two test files (`tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Three choices change what gets built and are raised as Q1-Q3. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q3 answered as recommended; the plan is approved and written (unstaged) at `docs/plans/2026-11-19-triage-in-flight-judging-follow-ups-122.md`. Blocked on Q4-Q5, the overlaps with #102; `## Outcome` stays pending until they are answered.
 
 ## Questions
 
