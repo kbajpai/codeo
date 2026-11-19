@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is waiting on Q1: `overlap.sh 108` now reports #112 on `CHANGELOG.md` and `docs/handoff.md`. Nothing is dispatched until it is answered. The round fixes qc round 1 (F1 blocking; F2, F3, F5 alongside).
+Round 2 is built: qc round 1 findings F1, F2, F3 and F5 are fixed. The build command (`true`) exits 0. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -21,7 +21,7 @@ Round 2 is waiting on Q1: `overlap.sh 108` now reports #112 on `CHANGELOG.md` an
 - **C — re-scope.** Drop the `docs/handoff.md` and `CHANGELOG.md` edits from this branch.
 
 **Answer:**
-
+A, proceed and coordinate, as the engineer chose in the session ("proceed & coordinate", 2026-11-19). (Transcribed by the skill from the engineer's chat answer.)
 
 ## Outcome
 
@@ -50,7 +50,25 @@ Round 2 is waiting on Q1: `overlap.sh 108` now reports #112 on `CHANGELOG.md` an
 
 **Plan gap, not fixed here:** no task covers the skills and docs that run `overlap.sh <N>` (`skills/qc/SKILL.md:92,166`, `skills/close/SKILL.md:216`, `skills/implement/SKILL.md:84`, `docs/handoff.md:207`). A failed diff used to print nothing and read as "no overlap"; it now exits 1 with `overlap: cannot diff …`, and none of those texts says a non-zero exit is a failure to report. A skill following a non-zero exit will likely surface it anyway. For the engineer to take into `/codeo:qc` or `/codeo:triage`.
 
+### Round 2 — 2026-11-19
+
+(send-back from qc.md round 1)
+
+Step 2a: `sync-main` said the branch already contains `origin/main`. `overlap.sh 108` printed #112 on `CHANGELOG.md` and `docs/handoff.md`; Q1 was answered *proceed and coordinate*. Round 2 touches no file round 1 did not.
+
+**Built** (done directly by the controller: four small edits that no plan task covers):
+
+- F1 (blocking): `tests/closing-exits.test.sh` — the `bites` mutation for `row_for` now renames `` `close — lock kept` `` to `` `stale close — lock kept` ``, which only a whole-label match rejects. Checked: with `row_for` reverted to the old suffix grep, `bites` fails (`the renamed handoff row passed rule`).
+- F2: `tests/qc-verdict.test.sh` — new case "a ### Round 2 under a heading that only starts with ## Outcome is not a second round" (a plan.md with a `### Round 2` under `## Outcomes`). Checked: with line 134 of `scripts/qc-verdict.sh` reverted to `/^## Outcome/`, the case fails (`round 2 footprint omits: c.txt`).
+- F3: the case formerly at `:795` is now named "docs/plans files a PR adds are not counted as paths it changed".
+- F5: `docs/skills.md:196` says that when the unmerged branch was deleted the host clean-up is left out and `/codeo:triage` stays.
+
+**Documentation pages changed:** `docs/skills.md`. **Build:** `true` → exit 0; `bash tests/run.sh` also printed `all cases passed` (evidence for `/codeo:qc`, not a grade). Mutations were restored; `scripts/` is unchanged this round.
+
+**Not taken:** F4 and F6 are `/codeo:plan`'s, left to the engineer or `/codeo:triage`.
+
 ## Log
 
 - 2026-11-19 — round 1 built: nine plan tasks, ten commits, build passes, whole-branch review ready · cost: 23m · sonnet-5-5 592k in + 23.5M cached / 88k out
 - 2026-11-19 — round 2 started: sent back from qc round 1; overlap with #112 raised as Q1, nothing built yet · cost: 0m · sonnet-5-5 85k in + 357k cached / 2k out
+- 2026-11-19 — round 2 built: F1, F2, F3, F5 fixed, build and suite pass; Q1 (#112 overlap) answered proceed and coordinate · cost: 11m · sonnet-5-5 101k in + 2.1M cached / 8k out

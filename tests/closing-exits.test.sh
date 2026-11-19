@@ -334,8 +334,8 @@ case_bites() {
         fail "the wrapped old step 17 lead passed close-step17-lead"
     [[ $out == *close-step17-lead* ]] || fail "close-step17-lead failed without naming itself: $out"
 
-    # A handoff row renamed so it only contains the label makes rule fail, naming the row.
-    sed -i 's/`close — lock kept`/`close — stale lock kept`/' "$t/docs/handoff.md"
+    # A handoff row whose label only ends with the real one (a prefix added) makes rule fail, naming the row; a suffix match would still accept it.
+    sed -i 's/`close — lock kept`/`stale close — lock kept`/' "$t/docs/handoff.md"
     cmp -s "$root/docs/handoff.md" "$t/docs/handoff.md" && fail "the renamed row mutation changed nothing"
     out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" rule 2>&1) &&
         fail "the renamed handoff row passed rule"

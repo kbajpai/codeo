@@ -193,7 +193,7 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 ### Hand-offs and non-goals
 
 - Hands off to `/codeo:implement` when review asks for changes or the branch conflicts with the base branch (a send-back); otherwise to nobody. The workflow ends when the merged branch is cleaned up and the lock released.
-- Its closing block is per exit (see `docs/handoff.md` → Closing block): `/codeo:close` while the lock is kept, after an interrupted abandon as well, `/codeo:close --stash` for an interrupted stash, and, once finished, `/codeo:triage` then the host clean-up, an abandon that finished included, unless the unmerged branch was deleted (the checkout is then the last copy). A completed stash names `/codeo:init #<N>`, with a manual Ready repair first when the board move failed.
+- Its closing block is per exit (see `docs/handoff.md` → Closing block): `/codeo:close` while the lock is kept, after an interrupted abandon as well, `/codeo:close --stash` for an interrupted stash, and, once finished, `/codeo:triage` then the host clean-up, an abandon that finished included; when the unmerged branch was deleted (the checkout is then the last copy) the host clean-up is left out, `/codeo:triage` stays. A completed stash names `/codeo:init #<N>`, with a manual Ready repair first when the board move failed.
 - Never touches code, tests, documentation pages, the plan's text, the issue's text, another skill's dossier file, or the base branch.
 - Does not merge, approve or review the pull request, and does not answer review comments on the implementer's behalf beyond a summary of what changed.
 - Does not re-run the build, the suites or the acceptance criteria; that is `/codeo:qc`'s.
