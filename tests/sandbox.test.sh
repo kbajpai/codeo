@@ -57,7 +57,9 @@ case "${0##*/} $1" in
     "sbx exec" | "sbx.exe exec")
         case "$*" in
             *container-name.sh*) cat "$d/lockname" ;;
-            *devcontainer-start.sh*) echo "start-output" ;;
+            *devcontainer-start.sh*)
+                echo "start-output"
+                [[ ! -e "$d/startfail" ]] || exit 1 ;;
             *"git status --porcelain --branch")
                 [[ ! -e "$d/statusfail" ]] || exit 1
                 if [[ -f "$d/status" ]]; then cat "$d/status"; else echo "## fix/x"; fi ;;
@@ -502,6 +504,25 @@ issue_writes_the_sandbox_marker() {
         [[ "${calls%%"$mark"*}" != *devcontainer-start.sh* ]] || fail "$state: marker after the start script"
         [[ "${calls#*"$mark"}" == *devcontainer-start.sh* ]] || fail "$state: no start script after the marker"
     done
+}
+
+issue_names_the_next_step_when_the_start_script_fails() {
+    sb_setup startfail
+    : >"$sb_dir/startfail"
+    sb_run issue 113 fix/x
+    local want='codeo-sandbox: the start script failed in codeo-113: fix what it printed above, then run codeo-sandbox.sh issue 113 fix/x again, or codeo-sandbox.sh shell 113 to look inside'
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$sb_err" == "$want" ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *container-name.sh* && "$(sb_calls)" != *"sbx run"* ]] || fail "calls: $(sb_calls)"
+}
+
+issue_rerun_needs_no_pin() {
+    sb_setup norepin
+    mkdir -p "$sb_dir/work/codeo-113/.git"
+    printf 'NAME AGENT STATUS\ncodeo-113 claude running (detached)\n' >"$sb_dir/sandboxes"
+    CODEO_SBX_IMAGE="$sb_dir/no-such-pin" sb_run issue 113 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" != *"sbx create"* ]] || fail "create: $(sb_calls)"
 }
 
 issue_name_that_disagrees_with_the_lock_is_one_todo() {
@@ -1097,6 +1118,8 @@ cases=(
     issue_rerun_on_an_existing_sandbox_creates_nothing
     issue_leaves_the_sandbox_running_detached
     issue_writes_the_sandbox_marker
+    issue_names_the_next_step_when_the_start_script_fails
+    issue_rerun_needs_no_pin
     issue_name_that_disagrees_with_the_lock_is_one_todo
     sandbox_path_prints_the_working_folder
     open_writes_the_title_and_opens_the_clone_folder

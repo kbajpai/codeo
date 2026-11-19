@@ -146,13 +146,14 @@ ensure_windows_trust() {
     git.exe config --global --add safe.directory "$path" || die "git.exe could not add $path to safe.directory"
 }
 
-# ensure_sandbox <N>: create the sandbox from inside the clone unless one by that name exists (a stopped
+# ensure_sandbox <N>: read the image pin and create the sandbox from inside the clone unless one by that name exists (a stopped
 # one is left alone: sbx exec starts it), then write the marker session-title.sh looks for, holding the sandbox name. The marker is
 # written on every run, so a rerun repairs a missing one.
 ensure_sandbox() {
     local name=codeo-$1 state
     state=$(sandbox_state "$name")
     if [[ "$state" == missing ]]; then
+        read_pin "$1"
         (cd "$name" && "$sbx" create --clone --name "$name" --cpus 2 --memory 4g "$create_agent" .) ||
             die "could not create the sandbox $name"
     fi
@@ -211,10 +212,10 @@ cmd_issue() {
     valid_branch "$2" || usage
     pick_sbx
     ensure_host_clone "$1" "$2"
-    read_pin "$1"
     ensure_windows_trust "$1"
     ensure_sandbox "$1"
-    run_start "codeo-$1"
+    run_start "codeo-$1" ||
+        die "the start script failed in codeo-$1: fix what it printed above, then run codeo-sandbox.sh issue $1 $2 again, or codeo-sandbox.sh shell $1 to look inside"
     check_name "codeo-$1"
     ensure_detached "codeo-$1"
 }
