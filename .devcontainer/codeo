@@ -226,7 +226,10 @@ detect_kind() {
     fi
     kinds=$(host_kinds "$n") || failed=1
     case "$kinds" in
-        container | sandbox) echo "$kinds" ;;
+        container | sandbox)
+            ((failed == 0)) || die "could not ask docker or sbx whether codeo-$n exists as the other kind; pick one with --container or --sandbox"
+            echo "$kinds"
+            ;;
         "")
             ((failed == 0)) || die "could not ask docker or sbx whether codeo-$n exists; fix that, or pick one with --container or --sandbox"
             die "no container or sandbox codeo-$n found; start one with: codeo issue $n"
@@ -428,7 +431,12 @@ container_check() {
     found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    [[ -n "$out" ]] && found[branch]="" || found[branch]="HEAD is detached"
+    found[branch]=""
+    if [[ -z "$out" ]]; then
+        # A detached HEAD is unsaved work only when no origin branch contains it.
+        out=$(docker exec "$name" git -C "/workspaces/$name" branch -r --contains HEAD 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
+        [[ -n "$out" ]] || found[branch]="HEAD is detached"
+    fi
     found[revs]=$(docker exec "$name" git -C "/workspaces/$name" rev-list --branches --not --remotes=origin 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     for kind in "${kinds[@]}"; do
         [[ -n "${found[$kind]}" ]] || continue

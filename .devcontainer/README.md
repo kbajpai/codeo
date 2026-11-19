@@ -111,7 +111,7 @@ With no `<branch>`, `codeo issue <N>` looks for the branch that holds `.codeo/<N
 
 `codeo list` prints one row per issue container or sandbox, containers first, each kind by number: `#<N>  <kind>  <state>  <branch>`. The state of a container is `running`, `paused`, `restarting` or `stopped`, and of a sandbox `running`, `detached` or `stopped`. The branch is read from the running container or from the sandbox's clone in `~/codeo`, and is `-` for a stopped container or a sandbox with no clone. `list` starts nothing. When an installed program fails to list, `codeo list` prints a warning on stderr, still prints what the other program shows, withholds `no issue containers or sandboxes` and exits 1. With nothing to list it prints `no issue containers or sandboxes`; with neither `docker` nor `sbx` installed it says so and exits 1.
 
-A bad or missing argument, or an unknown command, prints the usage on stderr and exits 2 without running `docker`, `sbx`, `git`, `curl` or a script. Otherwise the exit status is the called script's.
+A bad or missing argument, or an unknown command, prints the usage on stderr and exits 2 without running `docker`, `sbx`, `git`, `curl` or a script. Otherwise, for the commands that run a script (`home`, `issue`, `shell`, `open`, and `rm` of a sandbox), the exit status is the called script's.
 
 ## What the start script does
 

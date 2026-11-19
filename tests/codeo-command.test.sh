@@ -64,7 +64,7 @@ exit 0
 STUB
         chmod +x "$cm_dir/bin/$n"
     done
-    # git stub: for-each-ref prints the lines of $d/branches; cat-file -e <branch>:... succeeds when
+    # git stub: for-each-ref prints the lines of $d/branches; rev-parse <branch>:... succeeds when
     # <branch> is a line of $d/has.
     cat >"$cm_dir/bin/git" <<'STUB'
 #!/bin/bash
@@ -656,9 +656,20 @@ t_shell_docker_down_sandbox_found() {
     touch "$cm_dir/docker_fail"
     printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
     cm_run shell 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -q 'could not list docker containers' <<<"$cm_err" || fail "no warning: $cm_err"
+    grep -q 'as the other kind; pick one with --container or --sandbox' <<<"$cm_err" || fail "no die: $cm_err"
+    expect_no_script
+}
+
+t_shell_docker_down_sandbox_flag() {
+    cm_setup "$current"
+    list_stubs
+    touch "$cm_dir/docker_fail"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run shell 5 --sandbox
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     expect_call "codeo-sandbox.sh shell 5 pwd=$cm_home"
-    grep -q 'could not list docker containers' <<<"$cm_err" || fail "no warning: $cm_err"
 }
 
 t_home_rebuild_twice_usage() { expect_usage home --rebuild --rebuild; }
@@ -780,7 +791,8 @@ case "$1" in
         sub=$6
         [[ "$sub" != fetch || ! -e "$d/fetch_fail" ]] || exit 1
         [[ "$sub" != "$(cat "$d/exec_fail" 2>/dev/null)" ]] || exit 1
-        if [[ "$sub" == branch && ! -e "$d/g_branch" ]]; then echo main; else cat "$d/g_$sub" 2>/dev/null || true; fi ;;
+        if [[ "$sub" == branch && "$*" == *" -r "* ]]; then cat "$d/g_branch_r" 2>/dev/null || true
+        elif [[ "$sub" == branch && ! -e "$d/g_branch" ]]; then echo main; else cat "$d/g_$sub" 2>/dev/null || true; fi ;;
 esac
 exit 0
 STUB
@@ -870,6 +882,17 @@ t_rm_container_detached() {
     cm_run rm 5 --container
     expect_refused "detached HEAD"
     grep -qi 'detached' <<<"$cm_err" || fail "no detached heading: $cm_err"
+}
+
+t_rm_container_detached_pushed() {
+    cm_setup "$current"
+    rm_stubs
+    : >"$cm_dir/g_branch"
+    printf '  origin/main\n' >"$cm_dir/g_branch_r"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -qi 'detached' <<<"$cm_err$cm_out" || fail "reported a pushed detached HEAD: $cm_err"
+    grep -q '^docker rm' "$cm_dir/calls" || fail "not removed"
 }
 
 t_rm_container_cuts_at_ten() {
@@ -1246,6 +1269,7 @@ cases=(
     t_shell_listing_down_nothing_found
     t_rm_listing_down_nothing_found
     t_shell_docker_down_sandbox_found
+    t_shell_docker_down_sandbox_flag
     t_home_rebuild_twice_usage
     t_lookup_quiet_git
     t_lookup_branch_list_failure
@@ -1263,6 +1287,7 @@ cases=(
     t_rm_container_unpushed
     t_rm_container_stash
     t_rm_container_detached
+    t_rm_container_detached_pushed
     t_rm_container_cuts_at_ten
     t_rm_exec_failure_is_not_clean
     t_rm_container_force
