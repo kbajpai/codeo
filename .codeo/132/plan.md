@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored, nothing drafted yet. Blocked on Q1-Q3. Two things are already decided by the code and
+Round 1. Q1-Q3 are answered (each the recommendation). The draft is `.codeo/132/plan-draft.md`, awaiting the engineer's approval. Two things are already decided by the code and
 need no answer (see `## Notes`): the `role.test.sh` case is renamed, and the two
 `close-skill.test.sh` pins each get a paragraph-scoped helper. #118 has merged (`9f14461`), so
 the intake note "plan this after #118 merges" is satisfied.
@@ -34,6 +34,7 @@ and the `|| -e $stamp` half is gone. In this checkout, which has its own `.git/c
   unnoticed. One more test that reads its own source; the suite has a few of these already.
 
 **Answer:**
+Verify only (engineer, in the conversation, 2026-11-19: "Accept all your recommendations"; recorded here by the skill).
 
 ### Q2 — #116's criterion 13: strike it on #116, or post the output on #107 and tick it?
 
@@ -54,6 +55,7 @@ which issues that task writes to and what it says.
   `/codeo:qc` reads it from the issue once you have edited it.
 
 **Answer:**
+Post and tick (engineer, in the conversation, 2026-11-19: "Accept all your recommendations"; recorded here by the skill).
 
 ### Q3 — Does this change get a `CHANGELOG.md` bullet?
 
@@ -72,6 +74,7 @@ plan's footprint, where it overlaps three workflows in flight, all assigned to k
   as their own questions, as `overlap.sh` prints them.
 
 **Answer:**
+No bullet (engineer, in the conversation, 2026-11-19: "Accept all your recommendations"; recorded here by the skill).
 
 ## Notes
 
