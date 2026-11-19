@@ -102,9 +102,9 @@ When `~/.local/bin` is not on `PATH`, `codeo help` ends with the one line to add
 |---|---|---|
 | `codeo home [--rebuild]` | `bash codeo-container.sh home [--rebuild]` | Opens the home container. |
 | `codeo issue <N> [<branch>] [--rebuild]` | `bash codeo-container.sh issue <N> <branch> [--rebuild]` | Opens the issue container `codeo-<N>`. |
-| `codeo shell home` or `codeo shell <N>` | `bash codeo-container.sh shell home` or `shell <N>` | Opens a shell in the home container, or in the issue's container or sandbox. |
+| `codeo shell home` or `codeo shell <N> [--container\|--sandbox]` | `bash codeo-container.sh shell home` or `shell <N>` | Opens a shell in the home container, or in the issue's container or sandbox. |
 | `codeo list` | none | Lists the issue containers and sandboxes. |
-| `codeo rm <N> [--force]` | `docker rm -f codeo-<N>; docker volume rm codeo-<N>` | Removes the issue's container after a safe check (see *Removing a finished container*). |
+| `codeo rm <N> [--force] [--container\|--sandbox]` | `docker rm -f codeo-<N>; docker volume rm codeo-<N>` | Removes the issue's container after a safe check (see *Removing a finished container*). |
 | `codeo update`, `codeo help` | none | Update the command and the scripts; print the commands. |
 
 With no `<branch>`, `codeo issue <N>` looks for the branch that holds `.codeo/<N>/init.md` on origin: it fetches `.lookup.git` on every lookup and tests each origin branch. One match is the branch. With none, or with several, it prints one line naming what it found, asks for `codeo issue <N> <branch>` and starts nothing. `issue` starts a container or a sandbox: `--container` or `--sandbox` says which, else the saved default in `~/codeo/default` (`codeo default container` or `codeo default sandbox` saves it, `codeo default` shows it, and a container is the default when none is saved). `--rebuild` is a usage error when the kind is a sandbox, whether by flag or by the saved default; the usage message says why. `shell`, `open` and `rm` look at the host instead: a Docker container `codeo-<N>` and an sbx sandbox `codeo-<N>`. When only one exists it is used; with neither, `codeo` prints one line naming `codeo issue <N>` and exits 1; with both, it prints one line and `--container` or `--sandbox` picks. `.sbx/README.md` describes the sandbox side.

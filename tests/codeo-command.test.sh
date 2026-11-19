@@ -59,7 +59,7 @@ echo "${0##*/} $*" >>"$d/calls"
 for a in "$@"; do
     case "$a" in
         clone) mkdir -p "${@: -1}"; exit 0 ;;
-        for-each-ref) cat "$d/branches" 2>/dev/null || true; exit 0 ;;
+        for-each-ref) [[ ! -e "$d/foreach_fail" ]] || exit 1; cat "$d/branches" 2>/dev/null || true; exit 0 ;;
         *:.codeo/*/init.md) grep -qxF "${a%%:*}" "$d/has" 2>/dev/null && exit 0 || exit 1 ;;
     esac
 done
@@ -193,8 +193,8 @@ t_issue_branch_lookup_one() {
     cm_run issue 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     expect_call "codeo-container.sh issue 5 feat/b pwd=$cm_home"
-    grep -q '^git .*clone --bare --filter=blob:none https://github.com/kbajpai/codeo.git ' "$cm_dir/calls" || fail "no blob-less bare clone"
-    grep -q 'fetch --prune origin' "$cm_dir/calls" || fail "no fetch"
+    grep -q '^git .*clone --bare -q --filter=blob:none https://github.com/kbajpai/codeo.git ' "$cm_dir/calls" || fail "no blob-less bare clone"
+    grep -q 'fetch -q --prune origin' "$cm_dir/calls" || fail "no fetch"
 }
 
 t_issue_lookup_none() {
@@ -311,7 +311,7 @@ t_lookup_clone_atomic() {
     printf 'feat/a\n' >"$cm_dir/branches"
     printf 'feat/a\n' >"$cm_dir/has"
     cm_run issue 5
-    grep -q "clone --bare --filter=blob:none .* $cm_home/.lookup.git.part\$" "$cm_dir/calls" || fail "clone not into .lookup.git.part"
+    grep -q "clone --bare -q --filter=blob:none .* $cm_home/.lookup.git.part\$" "$cm_dir/calls" || fail "clone not into .lookup.git.part"
     [[ -d "$cm_home/.lookup.git" && ! -e "$cm_home/.lookup.git.part" ]] || fail "part not renamed"
     [[ ! -e "$cm_home/.lookup.git/stale" ]] || fail "stale part kept"
 }
@@ -449,7 +449,7 @@ list_stubs() {
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
-[[ ! -e "$d/docker_fail" ]] || exit 1
+if [[ -e "$d/docker_fail" ]]; then cat "$d/docker_err" >&2 2>/dev/null; exit 1; fi
 case "$1" in
     ps) cat "$d/docker_out" 2>/dev/null || true ;;
     exec) cat "$d/dbranch_$2" 2>/dev/null || true ;;
@@ -504,21 +504,169 @@ t_list_no_programs() {
     [[ "$(wc -l <"$cm_dir/err")" -eq 1 && "$cm_err" == "codeo: "* ]] || fail "stderr not one codeo: line: $cm_err"
 }
 
+# sbx_down_stub: an sbx that logs, prints $d/sbx_err on stderr and exits 1.
+sbx_down_stub() {
+    cat >"$cm_dir/bin/sbx" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "${0##*/} $*" >>"$d/calls"
+cat "$d/sbx_err" >&2 2>/dev/null || true
+exit 1
+STUB
+    chmod +x "$cm_dir/bin/sbx"
+}
+
 t_list_docker_down() {
     cm_setup "$current"
     list_stubs
     touch "$cm_dir/docker_fail"
+    printf 'Cannot connect to the Docker daemon\nsecond line\n' >"$cm_dir/docker_err"
     printf 'NAME AGENT STATUS\ncodeo-133 claude running\n' >"$cm_dir/sbx_out"
     cm_run list
-    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
     [[ "$cm_out" == "#133  sandbox  running  -" ]] || fail "output: $cm_out"
-    [[ -z "$cm_err" ]] || fail "stderr: $cm_err"
+    [[ "$cm_err" == $'codeo: could not list docker containers\n  Cannot connect to the Docker daemon' ]] || fail "stderr: $cm_err"
     cm_setup "$current-2"
     rm -f "$cm_dir/bin/sbx"
     printf 'codeo-4 running\n' >"$cm_dir/docker_out"
     list_stubs
     cm_run list
-    [[ "$cm_out" == "#4  container  running  -" && "$cm_status" -eq 0 ]] || fail "sbx missing: $cm_status $cm_out"
+    [[ "$cm_out" == "#4  container  running  -" && "$cm_status" -eq 0 && -z "$cm_err" ]] || fail "sbx missing: $cm_status $cm_out $cm_err"
+}
+
+t_list_sbx_down() {
+    cm_setup "$current"
+    list_stubs
+    sbx_down_stub
+    printf 'daemon not running\n' >"$cm_dir/sbx_err"
+    printf 'codeo-4 running\n' >"$cm_dir/docker_out"
+    cm_run list
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$cm_out" == "#4  container  running  -" ]] || fail "output: $cm_out"
+    [[ "$cm_err" == $'codeo: could not list sbx sandboxes\n  daemon not running' ]] || fail "stderr: $cm_err"
+}
+
+t_list_one_down_nothing_shown() {
+    cm_setup "$current"
+    list_stubs
+    touch "$cm_dir/docker_fail"
+    printf 'NAME AGENT STATUS\n' >"$cm_dir/sbx_out"
+    cm_run list
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ -z "$cm_out" ]] || fail "printed on stdout: $cm_out"
+    [[ "$cm_err" == "codeo: could not list docker containers" ]] || fail "stderr: $cm_err"
+    cm_setup "$current-2"
+    list_stubs
+    touch "$cm_dir/docker_fail"
+    rm -f "$cm_dir/bin/sbx"
+    cm_run list
+    [[ "$cm_status" -eq 1 && -z "$cm_out" ]] || fail "docker only, failing: $cm_status $cm_out"
+    grep -q 'could not list docker containers' <<<"$cm_err" || fail "no warning: $cm_err"
+}
+
+# detect_down_setup <name>: docker fails, sbx lists no codeo-5.
+detect_down_setup() {
+    cm_setup "$1"
+    list_stubs
+    touch "$cm_dir/docker_fail"
+    printf 'NAME AGENT STATUS\ncodeo-55 claude running\n' >"$cm_dir/sbx_out"
+}
+
+expect_could_not_ask() {
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -qF 'codeo: could not ask docker or sbx whether codeo-5 exists; fix that, or pick one with --container or --sandbox' <<<"$cm_err" || fail "stderr: $cm_err"
+    ! grep -q 'codeo issue 5' <<<"$cm_err" || fail "tells the engineer to start one: $cm_err"
+    grep -q 'could not list docker containers' <<<"$cm_err" || fail "no listing warning: $cm_err"
+}
+
+t_shell_listing_down_nothing_found() {
+    detect_down_setup "$current"
+    cm_run shell 5
+    expect_could_not_ask
+    expect_no_script
+}
+
+t_rm_listing_down_nothing_found() {
+    detect_down_setup "$current"
+    cm_run rm 5
+    expect_could_not_ask
+    expect_no_script
+    expect_nothing_removed
+    cm_setup "$current-2"
+    list_stubs
+    sbx_down_stub
+    printf 'codeo-4\n' >"$cm_dir/docker_out"
+    cm_run open 5
+    [[ "$cm_status" -eq 1 ]] || fail "open: exit $cm_status"
+    grep -q 'could not ask docker or sbx' <<<"$cm_err" || fail "open: stderr: $cm_err"
+    expect_no_script
+}
+
+t_shell_docker_down_sandbox_found() {
+    cm_setup "$current"
+    list_stubs
+    touch "$cm_dir/docker_fail"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run shell 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh shell 5 pwd=$cm_home"
+    grep -q 'could not list docker containers' <<<"$cm_err" || fail "no warning: $cm_err"
+}
+
+t_home_rebuild_twice_usage() { expect_usage home --rebuild --rebuild; }
+
+t_lookup_quiet_git() {
+    cm_setup "$current"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    printf 'feat/a\n' >"$cm_dir/has"
+    cm_run issue 5
+    grep -q '^git clone --bare -q ' "$cm_dir/calls" || fail "clone not quiet: $(cat "$cm_dir/calls")"
+    grep -q 'fetch -q --prune origin' "$cm_dir/calls" || fail "fetch not quiet"
+}
+
+t_lookup_branch_list_failure() {
+    cm_setup "$current"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    printf 'feat/a\n' >"$cm_dir/has"
+    touch "$cm_dir/foreach_fail"
+    cm_run issue 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -q 'could not list branches of' <<<"$cm_err" || fail "stderr: $cm_err"
+    expect_no_script
+}
+
+t_help_names_kind_flags() {
+    cm_setup "$current"
+    cm_run help
+    local c
+    for c in 'shell home|<N> [--container|--sandbox]' 'open <N> [--container|--sandbox]' 'rm <N> [--force] [--container|--sandbox]'; do
+        grep -qF -- "$c" <<<"$cm_out" || fail "help lacks '$c'"
+    done
+    cm_run frob
+    for c in 'shell home|<N> [--container|--sandbox]' 'open <N> [--container|--sandbox]' 'rm <N> [--force] [--container|--sandbox]'; do
+        grep -qF -- "$c" <<<"$cm_err" || fail "usage lacks '$c'"
+    done
+}
+
+t_rm_refusal_stops_started_container() {
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5
+    expect_refused abc1234
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "no docker stop: $(tr '\n' '|' <"$cm_dir/calls")"
+    cm_setup "$current-2"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/fetch_fail"
+    cm_run rm 5
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "cannot-check: no docker stop"
+    cm_setup "$current-3"
+    rm_stubs
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5
+    ! grep -q '^docker stop' "$cm_dir/calls" || fail "stopped a container that was running"
 }
 
 t_list_extra_args_usage() { expect_usage list now; }
@@ -1015,6 +1163,16 @@ cases=(
     t_list_empty
     t_list_no_programs
     t_list_docker_down
+    t_list_sbx_down
+    t_list_one_down_nothing_shown
+    t_shell_listing_down_nothing_found
+    t_rm_listing_down_nothing_found
+    t_shell_docker_down_sandbox_found
+    t_home_rebuild_twice_usage
+    t_lookup_quiet_git
+    t_lookup_branch_list_failure
+    t_help_names_kind_flags
+    t_rm_refusal_stops_started_container
     t_list_extra_args_usage
     t_host_kinds_exact_name
     t_rm_sandbox

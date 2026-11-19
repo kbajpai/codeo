@@ -20,15 +20,15 @@ die() {
 usage() {
     cat >&2 <<'USAGE'
 usage: codeo <command> [args]
-  home [--rebuild]                                    start the home dev container
+  home [--rebuild]                                          start the home dev container
   issue <N> [<branch>] [--rebuild] [--container|--sandbox]  start work on issue N
-  shell home|<N>                                      open a shell in the home or issue environment
-  open <N>                                            open the issue's sandbox in VS Code
-  list                                                list issue containers and sandboxes
-  rm <N> [--force]                                    remove the issue's container or sandbox
-  default [container|sandbox]                         show or set the default kind for issue
-  update                                              update codeo and its scripts
-  help                                                show this help
+  shell home|<N> [--container|--sandbox]                    open a shell in the home or issue environment
+  open <N> [--container|--sandbox]                          open the issue's sandbox in VS Code
+  list                                                      list issue containers and sandboxes
+  rm <N> [--force] [--container|--sandbox]                  remove the issue's container or sandbox
+  default [container|sandbox]                               show or set the default kind for issue
+  update                                                    update codeo and its scripts
+  help                                                      show this help
 USAGE
     [[ -z "${1:-}" ]] || echo "codeo: $1" >&2
     exit 2
@@ -61,15 +61,15 @@ cmd_help() {
     cat <<'HELP'
 codeo: work a GitHub issue in a dev container or an sbx sandbox.
 
-  codeo home [--rebuild]                                    start the home dev container
+  codeo home [--rebuild]                                          start the home dev container
   codeo issue <N> [<branch>] [--rebuild] [--container|--sandbox]  start work on issue N
-  codeo shell home|<N>                                      open a shell in the home or issue environment
-  codeo open <N>                                            open the issue's sandbox in VS Code
-  codeo list                                                list issue containers and sandboxes
-  codeo rm <N> [--force]                                    remove the issue's container or sandbox
-  codeo default [container|sandbox]                         show or set the default kind for issue
-  codeo update                                              update codeo and its scripts
-  codeo help                                                show this help
+  codeo shell home|<N> [--container|--sandbox]                    open a shell in the home or issue environment
+  codeo open <N> [--container|--sandbox]                          open the issue's sandbox in VS Code
+  codeo list                                                      list issue containers and sandboxes
+  codeo rm <N> [--force] [--container|--sandbox]                  remove the issue's container or sandbox
+  codeo default [container|sandbox]                               show or set the default kind for issue
+  codeo update                                                    update codeo and its scripts
+  codeo help                                                      show this help
 HELP
     case ":$PATH:" in
         *":${HOME:-}/.local/bin:"*) ;;
@@ -110,26 +110,28 @@ ensure_home() {
 # find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was
 # found. Uses a blob-less bare clone in the home directory, fetched on every lookup.
 find_branch() {
-    local n=$1 dir repo_url b
+    local n=$1 dir repo_url b refs
     local -a found=()
     dir=$(home_dir)
     repo_url=${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}
     if [[ ! -d "$dir/.lookup.git" ]]; then
         rm -rf "$dir/.lookup.git.part"
-        git clone --bare --filter=blob:none "$repo_url" "$dir/.lookup.git.part" >&2 || {
+        git clone --bare -q --filter=blob:none "$repo_url" "$dir/.lookup.git.part" >&2 || {
             rm -rf "$dir/.lookup.git.part"
             die "could not clone $repo_url"
         }
         mv "$dir/.lookup.git.part" "$dir/.lookup.git"
     fi
-    git -C "$dir/.lookup.git" fetch --prune origin '+refs/heads/*:refs/heads/*' >&2 ||
+    git -C "$dir/.lookup.git" fetch -q --prune origin '+refs/heads/*:refs/heads/*' >&2 ||
         die "could not fetch $repo_url"
+    refs=$(git -C "$dir/.lookup.git" for-each-ref --format='%(refname:lstrip=2)' refs/heads) ||
+        die "could not list branches of $repo_url"
     while IFS= read -r b; do
         [[ -n "$b" ]] || continue
         if git -C "$dir/.lookup.git" cat-file -e "$b:.codeo/$n/init.md" 2>/dev/null; then
             found+=("$b")
         fi
-    done < <(git -C "$dir/.lookup.git" for-each-ref --format='%(refname:lstrip=2)' refs/heads)
+    done <<<"$refs"
     case ${#found[@]} in
         1) printf '%s\n' "${found[0]}" ;;
         0) die "no branch holds .codeo/$n/init.md; pass the branch: codeo issue $n <branch>" ;;
@@ -146,8 +148,9 @@ run_script() {
     exec bash "$script" "$@"
 }
 
-# cmd_home [--rebuild]: start the home dev container.
+# cmd_home [--rebuild]: start the home dev container; at most one argument.
 cmd_home() {
+    [[ $# -le 1 ]] || usage
     local a
     for a in "$@"; do
         [[ "$a" == --rebuild ]] || usage
@@ -168,36 +171,63 @@ saved_default() {
     esac
 }
 
+# warn_listing <what> <output>: report on stderr that a listing failed, then the program's first
+# stderr line, indented, when it printed one.
+warn_listing() {
+    local first
+    echo "codeo: could not list $1" >&2
+    first=${2%%$'\n'*}
+    [[ -z "$first" ]] || echo "  $first" >&2
+    return 0
+}
+
 # host_kinds <N>: print container and/or sandbox, one per line, for each that holds codeo-<N> on this
-# host. A missing docker or sbx program, or a failing call, counts as none of that kind. A sandbox
-# counts only when the first column of a row of sbx ls is exactly codeo-<N>.
+# host, and return 3 when an installed program could not list (it says so on stderr; the other kind
+# still counts). A missing docker or sbx program is skipped silently. A sandbox counts only when the
+# first column of a row of sbx ls is exactly codeo-<N>.
 host_kinds() {
-    local name="codeo-$1" listing row
-    if command -v docker >/dev/null 2>&1 && listing=$(docker ps -a --format '{{.Names}}' 2>/dev/null); then
-        if grep -qxF "$name" <<<"$listing"; then echo container; fi
+    local name="codeo-$1" listing row failed=0
+    if command -v docker >/dev/null 2>&1; then
+        if listing=$(docker ps -a --format '{{.Names}}' 2>&1); then
+            if grep -qxF "$name" <<<"$listing"; then echo container; fi
+        else
+            warn_listing "docker containers" "$listing"
+            failed=1
+        fi
     fi
-    if command -v sbx >/dev/null 2>&1 && listing=$(sbx ls 2>/dev/null); then
-        while read -r row _; do
-            if [[ "$row" == "$name" ]]; then
-                echo sandbox
-                break
-            fi
-        done <<<"$listing"
+    if command -v sbx >/dev/null 2>&1; then
+        if listing=$(sbx ls 2>&1); then
+            while read -r row _; do
+                if [[ "$row" == "$name" ]]; then
+                    echo sandbox
+                    break
+                fi
+            done <<<"$listing"
+        else
+            warn_listing "sbx sandboxes" "$listing"
+            failed=1
+        fi
     fi
+    ((failed == 0)) || return 3
+    return 0
 }
 
 # detect_kind <N> <flag-or-empty>: print the kind to use for an existing issue environment: the flag
-# when given, else the one kind found on the host; die when none or both exist.
+# when given, else the one kind found on the host; die when none or both exist, or when none was
+# found and a listing failed.
 detect_kind() {
-    local n=$1 flag=$2 kinds
+    local n=$1 flag=$2 kinds failed=0
     if [[ -n "$flag" ]]; then
         echo "$flag"
         return 0
     fi
-    kinds=$(host_kinds "$n")
+    kinds=$(host_kinds "$n") || failed=1
     case "$kinds" in
         container | sandbox) echo "$kinds" ;;
-        "") die "no container or sandbox codeo-$n found; start one with: codeo issue $n" ;;
+        "")
+            ((failed == 0)) || die "could not ask docker or sbx whether codeo-$n exists; fix that, or pick one with --container or --sandbox"
+            die "no container or sandbox codeo-$n found; start one with: codeo issue $n"
+            ;;
         *) die "both a container and a sandbox codeo-$n exist; add --container or --sandbox to pick one" ;;
     esac
 }
@@ -286,15 +316,21 @@ print_sorted() {
 
 # cmd_list: print one row per issue container or sandbox, "#<N>  <kind>  <state>  <branch>",
 # containers first, each kind by number. Needs neither the scripts nor a download. A missing program
-# or a failing call is skipped; both programs missing is an error. Nothing is started or exec'd into
+# is skipped; both programs missing is an error. A program that is installed but fails to list is
+# reported on stderr, what the other shows is still printed, and the exit status is 1. Nothing is started or exec'd into
 # a stopped environment: a stopped container's branch is "-".
 cmd_list() {
     [[ $# -eq 0 ]] || usage
-    local listing name state branch dir agent status n rows shown=0
+    local listing name state branch dir agent status n rows shown=0 failed=0
     command -v docker >/dev/null 2>&1 || command -v sbx >/dev/null 2>&1 ||
         die "neither docker nor sbx is installed: nothing to list"
     rows=""
-    if command -v docker >/dev/null 2>&1 && listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
+    if ! command -v docker >/dev/null 2>&1; then
+        :
+    elif ! listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>&1); then
+        warn_listing "docker containers" "$listing"
+        failed=1
+    else
         while read -r name state _; do
             [[ "$name" =~ ^codeo-([0-9]+)$ ]] || continue
             n=${BASH_REMATCH[1]}
@@ -310,7 +346,12 @@ cmd_list() {
     fi
     rows=""
     dir=$(home_dir)
-    if command -v sbx >/dev/null 2>&1 && listing=$(sbx ls 2>/dev/null); then
+    if ! command -v sbx >/dev/null 2>&1; then
+        :
+    elif ! listing=$(sbx ls 2>&1); then
+        warn_listing "sbx sandboxes" "$listing"
+        failed=1
+    else
         while read -r name agent status; do
             [[ "$name" =~ ^codeo-([0-9]+)$ && "$agent" != AGENT ]] || continue
             n=${BASH_REMATCH[1]}
@@ -328,6 +369,9 @@ cmd_list() {
         done <<<"$listing"
         if print_sorted "${rows%$'\n'}"; then shown=1; fi
     fi
+    if ((failed)); then
+        return 1
+    fi
     ((shown)) || echo "no issue containers or sandboxes"
 }
 
@@ -344,12 +388,19 @@ cmd_default() {
     esac
 }
 
+# stop_started <name> <started>: stop the container again when container_check started it, so a refusal
+# leaves it as found; a failing stop is ignored.
+stop_started() {
+    [[ "$2" -eq 0 ]] || docker stop "$1" >/dev/null 2>&1 </dev/null || true
+    return 0
+}
+
 # container_check <N>: check the issue container's repository for work that exists only there. Starts
 # a stopped container first. Prints one heading per kind found (up to 10 lines each) and returns 0
 # when clean, 1 when something would be lost, 2 when the check could not run (cannot start, fetch or
-# exec failed).
+# exec failed). When it returns non-zero it stops again a container it started.
 container_check() {
-    local name="codeo-$1" listing state="" row rest dirty=0 out kind
+    local name="codeo-$1" listing state="" row rest dirty=0 out kind started=0
     local -A found=()
     local -a kinds=(status stash branch revs)
     if listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
@@ -359,13 +410,14 @@ container_check() {
     fi
     if [[ "$state" != running ]]; then
         docker start "$name" >/dev/null 2>&1 </dev/null || return 2
+        started=1
     fi
-    docker exec "$name" git -C "/workspaces/$name" fetch origin >/dev/null 2>&1 </dev/null || return 2
-    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain 2>/dev/null </dev/null) || return 2
-    found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || return 2
-    out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || return 2
+    docker exec "$name" git -C "/workspaces/$name" fetch origin >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
+    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
+    found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
+    out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     [[ -n "$out" ]] && found[branch]="" || found[branch]="HEAD is detached"
-    found[revs]=$(docker exec "$name" git -C "/workspaces/$name" rev-list --branches --not --remotes=origin 2>/dev/null </dev/null) || return 2
+    found[revs]=$(docker exec "$name" git -C "/workspaces/$name" rev-list --branches --not --remotes=origin 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     for kind in "${kinds[@]}"; do
         [[ -n "${found[$kind]}" ]] || continue
         dirty=1
@@ -377,6 +429,7 @@ container_check() {
         esac
         head -n 10 <<<"${found[$kind]}" | sed 's/^/  /'
     done
+    ((dirty == 0)) || stop_started "$name" $started
     return "$dirty"
 }
 
@@ -440,8 +493,8 @@ upd_cleanup() {
     [[ -z "$upd_new" ]] || rm -f "$upd_new"
 }
 
-# cmd_update: replace codeo and both scripts with the latest from the raw URL, all or nothing. All
-# three are downloaded into a fresh directory in the home directory, each non-empty and starting with
+# cmd_update: replace codeo and both scripts with the latest from the raw URL; a failed
+# download changes nothing. All three are downloaded into a fresh directory in the home directory, each non-empty and starting with
 # "#!"; only then are the scripts moved into place, and codeo itself last, through a temporary file
 # beside the installed codeo so the running copy is replaced atomically, never truncated. Any failure
 # removes what was made and changes nothing installed. Needs no script to be present beforehand.
@@ -452,7 +505,7 @@ cmd_update() {
     base=$(raw_base)
     self=$(readlink -f "${BASH_SOURCE[0]}")
     self_dir=${self%/*}
-    mkdir -p "$dir"
+    mkdir -p "$dir" 2>/dev/null || die "could not create $dir"
     trap upd_cleanup EXIT
     trap 'exit 130' INT
     trap 'exit 143' TERM
