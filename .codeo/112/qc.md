@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 done, back to `/codeo:implement`: two blocking findings (a changelog sentence that is not true, and the follow-up issues three criteria require are not filed), plus four non-blocking corrections that ride in the same round.
+Round 2 done (a second pass over the same tree), back to `/codeo:implement`: F1 (an untrue changelog sentence) and F2 (the three follow-up issues the criteria require are not filed) block; F3-F9 are non-blocking and ride in the same round. F2 needs you first: file the three follow-ups in the home container.
 
 ## Questions
 
@@ -54,6 +54,44 @@ Out of scope, recorded once: the `issue.md` dossier-check failures (`## Outcome`
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-19
+
+A second full pass over the same tree. Round 1 (`de0833e`) was committed while this pass was running; the diff reviewed here ends at `7603954`, and `de0833e` adds only `qc.md`, so both rounds judged the same code and documentation.
+
+**Sync.** `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0. `overlap.sh 112` and `overlap.sh --outside 112` printed nothing.
+
+**Scope.** `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified `.codeo/112/*` and `CHANGELOG.md`, plus `docs/**`). No `deploy=` line: no environment is configured. `overlay.sh qc invariants-extra` and `qc wiki-rules` both exit 3 (none).
+
+**Build and tests.** The `shell` suite's `build` is `true`: `build rc=0`. `bash tests/run.sh` (whole): `all cases passed`, `suite rc=0`.
+
+**Acceptance criteria.** Unchanged from round 1; no code or page changed in between. Each row is judged again from this pass's reading of `implement.md` → Notes and the comment on #112.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | `beat --force` publishing, and which path | not met — neither path carried it (HTTP 403 on both) | `implement.md` Notes, Task 1 |
+| 2 | another clone lists the session and the `live:` line | untestable — nothing was published | `implement.md` Notes, Tasks 2-4 |
+| 3 | the user the signal names, and the follow-up | not met — user not determined (F3), follow-up not filed (F2) | `implement.md` criteria table, row 3 |
+| 4 | branch tip unchanged, and clear removes the session | met for the tip (`4b55d8e…` before and after); the clear half has nothing to remove | `implement.md` Notes, Task 1 |
+| 5 | the hook publishes by itself, or it is recorded and filed | not met — recorded, follow-up not filed (F2) | `implement.md` Notes, Task 5 |
+| 6 | both writes refused: text recorded, #104's criterion stated not met, follow-up filed | not met — text and statement recorded, follow-up not filed (F2) | `implement.md` Notes; comment on #112 |
+
+**Documentation check.** `docs/handoff.md` and `CHANGELOG.md` against `scripts/live.sh`, `scripts/lock.sh` and `scripts/github.sh`: the machine-label and user-fallback statements match the code (`live.sh:107-118`, `github.sh:31-33`); the claims F1, F4, F5 and F6 of round 1 stand, plus F7-F9 below.
+
+**Independent review** (opus, given the acceptance criteria and the diff only, no dossier). Its assessment, quoted: "With fixes. The check was run, and its central verdict (both writes refused, #104's web criterion not met) is supported by the code paths and the recorded tip SHA. But the CHANGELOG claims follow-ups were filed when none were, three criteria still need those follow-ups, and handoff.md states an unobserved proxy rule as fact." Its Critical list was empty. It agrees with round 1's F1, F2, F4, F5 and F6; the findings round 1 did not have are below, each checked against the files.
+
+**Findings new in this round** (round 1's F1-F6 stand, are not raised again, and F1 and F2 remain the blocking ones).
+
+- **F7 — non-blocking, `/codeo:implement`'s.** The recorded run is a transcription of screenshots (`implement.md` Notes: "the wording is approximate where the image was small"), and no `bash -x` trace line is quoted. Criterion 6 says the issue "records the refusal text", and the plan's Task 6 asks for the commands and outputs quoted; the two refusal texts, on which the "not met" rests, can be checked only against screenshots nobody can open from the issue. Fix direction: ask the engineer for the session's output as text (or attach the screenshots to #112) and quote the two refusal lines verbatim.
+- **F8 — non-blocking, `/codeo:implement`'s.** The `vm` machine label is a consequence of how the check ran: the plan's prompt ran `bash scripts/lock.sh take web` with no session id, while `scripts/lock.sh:3` says a web lock comes from the web session's start script, which passes one (`lock.sh:9`, `[session-id]`). `CHANGELOG.md:9` and F3's issue draft present `vm` as what a web session does. Fix direction: say the run supplied no id, and make F3's question whether the real start script passes one.
+- **F9 — non-blocking, `/codeo:implement`'s.** "refuses the REST write" (`docs/handoff.md:184`, `CHANGELOG.md:9`) rests on the `POST git/commits` call alone; the ref `PATCH`/`POST` and `ref delete` were never reached (the explicit pair was skipped). Fix direction: say "the commit write", and note that `clear`'s REST path is unverified, as round 1's F6 already asks for F1's draft.
+
+Not a finding against this diff (`qc-02`), said once: `docs/handoff.md:188-189` still says `beat --force` by hand "prints the one `live:` line that says why", and in this run the line was only `could not create the commit` (`live.sh:166`'s `last_line` keeps `github.sh`'s `die` line, not `gh`'s 403). The sentence predates this change; it belongs in F1's issue draft.
+
+**Routing.** F1 and F2 block, and F2 needs the engineer first: file the three follow-ups from the home container (the drafts are in `implement.md` → Notes → Later work, with F3 reworded by F3 and F8), then `/codeo:implement` puts their numbers in the criteria table, the changelog bullet and the comment, and rewrites the handoff and changelog sentences F4-F6 and F9 name. F3-F9 ride in that round and open none of their own.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-19 — round 1: back to `/codeo:implement` (2 blocking, 4 non-blocking) · cost: 0m · opus-5-5 209k in + 511k cached / 1k out · sonnet-5-5 3k in + 236k cached / 5k out
+- 2026-11-19 — round 2: back to `/codeo:implement` (same blocking findings as round 1, F7-F9 added) · cost: 6m · opus-5-5 290k in + 2.3M cached / 13k out · sonnet-5-5 263k in + 2.6M cached / 11k out
