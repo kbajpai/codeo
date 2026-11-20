@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done: back to `/codeo:implement`. One blocking finding (F1): the `bites` mutation meant to show `row_for`'s whole-label match also fails under the old suffix match, so criterion 3 is not shown for that guard. Everything else holds: the build and the full suite pass on the merged tree and five of the six criteria are met. Five non-blocking notes (F2-F6) ride along.
+Round 2, stopped at step 2: back to `/codeo:implement`. Merging `origin/main` conflicts on `CHANGELOG.md` (#102's `d3e957c`); the merge was aborted and nothing else ran. Round 1's findings are recapped in round 2.
 
 ## Questions
 
@@ -17,6 +17,8 @@ None.
 ## Notes
 
 Environment: none configured, so no lease check and no environment block. Overlaps: `overlap.sh 108` printed nothing (the #102 and #122 pairs are named in Q6 and Q7 of `plan.md`). `sync-main` merged `origin/main` (one commit, #122's `41368e7`) into the branch as `47c56b0`; it changed `CHANGELOG.md`, `docs/handoff.md` and `docs/skills.md`, all three also touched here, and a check afterwards showed this branch's edits to each still in place (`last copy` once in each doc, the `(#108)` bullet at the top of `## Unreleased`).
+
+Round 2: `overlap.sh 108` printed `112	glob:CHANGELOG.md` and `112	glob:docs/handoff.md` — the #112 overlap already raised and answered (proceed and coordinate) as Q1 in `implement.md`; not raised again here. `overlap.sh --outside 108` printed nothing. `scope.sh origin/main HEAD` → `suite.shell=true`.
 
 ## Outcome
 
@@ -61,6 +63,38 @@ Environment: none configured, so no lease check and no environment block. Overla
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-20
+
+(after implement.md round 2)
+
+**Commands and output (this pass).**
+
+- `bash .devcontainer/scripts/role.sh --check qc` → exit 0.
+- `bash scripts/sync-main.sh --abort-on-conflict` → `sync-main: conflict: CHANGELOG.md`, exit 2. The merge was aborted; `git status --short` is empty. `origin/main` gained one commit since round 1: `d3e957c feat: /codeo:issue proposes a priority label when the project opts in (#102) (#139)`, which also edits `CHANGELOG.md`.
+
+The pass stops here by rule: a conflict with the base branch is a send-back, and `qc` resolves nothing. No build, suite, review or criterion was run on this round's diff.
+
+**Criteria.**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| `overlap.sh --outside <N> --base nosuchref` exits non-zero with a message; `--base ""` exits non-zero | not yet checkable — pass stopped at step 2 | — |
+| `qc-verdict.sh` does not treat `## Outcomes` as `## Outcome`; the two new cases exist and pass | not yet checkable — pass stopped at step 2 | — |
+| Each test guard named above fails when the text it guards is re-wrapped or the behaviour is broken (shown by a mutation) | not yet checkable — pass stopped at step 2 | — |
+| `skills/init/SKILL.md`, `docs/handoff.md`, `skills/close/SKILL.md`, `docs/skills.md` and `skills/qc/SKILL.md` no longer disagree on the points named; a test pins each | not yet checkable — pass stopped at step 2 | — |
+| The two CHANGELOG clauses match the code | not yet checkable — pass stopped at step 2 | — |
+| `bash tests/run.sh` passes and `CHANGELOG.md` records the change | not yet checkable — pass stopped at step 2 | — |
+
+**Findings.**
+
+- F1 (blocking in round 1) — addressed by `b48e624`, per `implement.md` round 2; not re-checked, since this pass stopped at step 2.
+- **F7 — blocking, `/codeo:implement`'s.** `CHANGELOG.md` conflicts with `origin/main` (#102's `d3e957c`, merged after round 1). Both sides add to `## Unreleased`; the resolution keeps both bullets and this branch's two v1.0.7 clause corrections. #102 also changes `docs/skills.md`, which this branch edits (F5): it did not conflict, but the resolution should re-check line 196. This is the conflict implement.md Q1 anticipated with #112; it came from #102 instead.
+
+**Routing.** A conflict with the base branch goes back to `/codeo:implement`, whose step 2a merges `origin/main` and resolves `CHANGELOG.md`. The next `/codeo:qc` runs the whole pass, round 3, on the merged tree.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-19 — qc round 1: build and suite pass on the merged tree; five of six criteria met; one blocking finding (F1), five non-blocking (F2-F6); back to `/codeo:implement` · cost: 5m · opus-5-5 391k in + 4.3M cached / 21k out · sonnet-5-5 296k in + 686k cached / 1k out
+- 2026-11-20 — qc round 2: stopped at step 2, `CHANGELOG.md` conflicts with origin/main (#102); back to `/codeo:implement` · cost: 0m · opus-5-5 121k in + 177k cached / 1k out
