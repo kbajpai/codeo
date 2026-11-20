@@ -36,5 +36,8 @@
     "projects": [
       3
     ]
+  },
+  "issue": {
+    "priority": true
   }
 }

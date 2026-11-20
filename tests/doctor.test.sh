@@ -26,6 +26,10 @@ case "$1 ${2:-}" in
         [[ -z "${GH_AUTH_FAIL:-}" ]] || { echo "To get started with GitHub CLI, please run:  gh auth login" >&2; exit 4; }
         [[ -z "${GH_NO_SCOPES_HEADER:-}" ]] || { printf 'HTTP/2.0 200 OK\r\n\r\n{"login":"me"}\n'; exit 0; }
         printf 'HTTP/2.0 200 OK\r\nX-Oauth-Scopes: %s\r\n\r\n{"login":"me"}\n' "${GH_SCOPES:-repo, project}" ;;
+    "api --paginate")
+        [[ -z "${GH_LABELS_FAIL:-}" ]] || { echo "boom" >&2; exit 1; }
+        if [[ -v GH_LABELS ]]; then printf '%s\n' "$GH_LABELS"
+        else printf '%s\n' "priority: blocker" "priority: high" "priority: medium" "priority: low" "bug"; fi ;;
     "api repos/"*)
         jq -n --arg c "${GH_CHECKS:-tests qc-verdict}" '[{type:"required_status_checks",parameters:{required_status_checks:($c|split(" ")|map({context:.}))}}]' ;;
     "project view")
@@ -290,6 +294,50 @@ doctor_codename_is_skipped_when_the_config_is_unusable() {
     grep -qx 'fail codename: skipped: config is unusable' <<<"$out" || fail "unusable config: $out"
 }
 
+doctor_priority_labels_ok_when_all_four_exist() {
+    jq '.issue.priority = true' <<<"$healthy" > .codeo/config.json
+    run
+    [[ $rc -eq 0 ]] || fail "expected exit 0, got $rc: $out"
+    grep -q '^ok priority-labels: all four exist' <<<"$out" || fail "no priority-labels line: $out"
+    [[ $(wc -l <<<"$out") -eq 12 ]] || fail "expected twelve lines: $out"
+}
+
+doctor_priority_labels_fail_names_the_missing_one() {
+    jq '.issue.priority = true' <<<"$healthy" > .codeo/config.json
+    GH_LABELS=$'priority: blocker\npriority: high\npriority: medium' run
+    [[ $rc -ne 0 ]] || fail "expected non-zero"
+    grep -q '^fail priority-labels: missing: priority: low' <<<"$out" || fail "no missing line: $out"
+    grep -qF "label create 'priority: low'" <<<"$out" || fail "no create command: $out"
+}
+
+doctor_priority_labels_fail_when_labels_cannot_be_read() {
+    jq '.issue.priority = true' <<<"$healthy" > .codeo/config.json
+    GH_LABELS_FAIL=1 run
+    [[ $rc -ne 0 ]] || fail "expected non-zero"
+    grep -qx "fail priority-labels: cannot read the repository's labels" <<<"$out" || fail "no read failure: $out"
+}
+
+doctor_priority_labels_say_nothing_when_off() {
+    local v
+    for v in 'false' '"true"' 'null' ''; do
+        if [[ -n $v ]]; then jq --argjson v "$v" '.issue.priority = $v' <<<"$healthy" > .codeo/config.json
+        else echo "$healthy" > .codeo/config.json; fi
+        GH_LABELS_FAIL=1 run
+        [[ $rc -eq 0 ]] || fail "expected exit 0 for '$v', got $rc: $out"
+        ! grep -q 'priority-labels' <<<"$out" || fail "line printed for '$v': $out"
+        [[ $(wc -l <<<"$out") -eq 11 ]] || fail "expected eleven lines for '$v': $out"
+    done
+}
+
+doctor_priority_labels_say_nothing_when_the_config_is_unusable() {
+    echo '{ not json' > .codeo/config.json
+    run
+    ! grep -q 'priority-labels' <<<"$out" || fail "line printed: $out"
+    jq '.issue.priority = true | .schema = 9' <<<"$healthy" > .codeo/config.json
+    GH_LABELS_FAIL=1 run
+    ! grep -q 'priority-labels' <<<"$out" || fail "line printed for schema 9: $out"
+}
+
 for c in doctor_overlays_ok_with_trailing_whitespace_and_crlf doctor_overlays_fail_on_a_duplicate_section \
     doctor_overlays_hint_at_a_double_space_heading doctor_superpowers_json_without_plugins_key_is_not_a_fail \
     doctor_overlays_ok_when_none doctor_overlays_ok_counts_sections \
@@ -304,7 +352,10 @@ for c in doctor_overlays_ok_with_trailing_whitespace_and_crlf doctor_overlays_fa
     doctor_reports_a_todo_marker_as_a_config_failure_and_skips_the_ruleset doctor_passes_a_healthy_project doctor_fails_when_the_board_scope_is_missing \
     doctor_ignores_the_project_scope_without_a_board doctor_fails_when_a_suite_command_is_not_installed \
     doctor_fails_when_the_ruleset_lacks_a_required_check doctor_reports_every_failure_not_only_the_first \
-    doctor_survives_an_unusable_config; do
+    doctor_survives_an_unusable_config \
+    doctor_priority_labels_ok_when_all_four_exist doctor_priority_labels_fail_names_the_missing_one \
+    doctor_priority_labels_fail_when_labels_cannot_be_read doctor_priority_labels_say_nothing_when_off \
+    doctor_priority_labels_say_nothing_when_the_config_is_unusable; do
     "$c"
 done
 echo "all cases passed"

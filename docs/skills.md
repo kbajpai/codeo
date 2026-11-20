@@ -25,10 +25,14 @@ Turns a raw idea, bug report, or out-of-scope finding into a well-formed GitHub 
 
 The skill drafts and files the issue, puts it in the board's Backlog when the project has a board, and does nothing else. It captures the what and why (problem, requirements, acceptance criteria), not the how: contracts, diagrams and design belong to `/codeo:plan`. It is standalone: it files the issue, reports the number, and stops. When another skill calls it, that skill passes the finding and the context it already has but does not answer the questions on the engineer's behalf, and filing returns control to the caller with the new issue's number.
 
+With `issue.priority` on, the skill also proposes one of the labels `priority: blocker`, `priority: high`, `priority: medium` or `priority: low`, with a one-line reason, at the review gate, and files the engineer's choice as a label on the issue. With the setting off or absent it proposes no priority and adds no priority label. A priority label that does not exist in the repository never fails the filing: the issue is filed without it and the report names the `github.sh label create` command that creates it. The skill never sets Effort.
+
 ### Reads and writes
 
 - Reads existing issues, the relevant code, and whatever context a calling skill passes.
 - Reads the new issue's board Status (`board.sh status`) when a board is configured.
+- Reads the repository's labels when `issue.priority` is on.
+- Writes the issue's priority label, under `issue.priority` only.
 - Writes the new issue's board Status, to Backlog only, through `board.sh set <N> backlog`, when a board is configured; a failed move is reported and never fails the filing. With no board it makes no `board.sh` call.
 - Writes the GitHub issue, and `.codeo/intake/<N>/issue.md`, drafted under `new-<slug>/` and renamed once the number exists. The dossier is committed only to the intake branch, through `scripts/intake.sh`, which never checks that branch out. Nothing goes on the default branch or on a feature branch: no branch is cut and no commit is made where a PR could pick it up.
 
@@ -292,7 +296,7 @@ None.
 
 Checks that codeo is ready in a project: config, GitHub login and scopes, board, branch ruleset, suite commands and dependencies, reporting every failure. It runs `scripts/doctor.sh` from the project root. It triggers on "check codeo", "codeo doctor", "doctor", "is codeo set up", "why does codeo fail".
 
-The script runs eleven checks: config, schema, codename, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays and superpowers. It prints one `ok` or `fail` line per check, runs every check even after a failure, and exits non-zero if any failed. The ruleset check reads the effective rules for the base branch and compares the required status checks with `ci.requiredChecks`.
+The script runs eleven checks: config, schema, codename, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays and superpowers, plus a twelfth, `priority-labels`, only when `issue.priority` is on; it checks that the four `priority:` labels exist. It prints one `ok` or `fail` line per check, runs every check even after a failure, and exits non-zero if any failed. The ruleset check reads the effective rules for the base branch and compares the required status checks with `ci.requiredChecks`.
 
 ### Reads and writes
 
