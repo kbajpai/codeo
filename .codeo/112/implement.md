@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 done: qc round 2's F8 and F9 are fixed; F7 (the run quoted verbatim) needs the engineer's raw session output and is reported, not done. The follow-up is #138. Next: /codeo:qc.
+Round 4 done: `origin/main` (#102) merged with `CHANGELOG.md` resolved by keeping both bullets, and qc round 3's F11 fixed; F7 needs the engineer's raw session output and is reported, not done. The follow-up is #138. Next: /codeo:qc.
 
 ## Questions
 
@@ -105,8 +105,29 @@ Round 1, 2026-11-19. Plan: `docs/plans/2026-11-19-verify-live-signal-hosted-sess
 
 **Deviations from the plan.** None beyond the earlier rounds'. F7 is reported, not done.
 
+### Round 4 — 2026-11-20
+
+(send-back from qc.md round 3)
+
+**Sync.** `bash scripts/sync-main.sh`: conflict in `CHANGELOG.md` (exit 2), the first work of this round. It came from #102's merge to `main` (`d3e957c`), whose `## Unreleased` bullet sits where this branch's bullet was added. Resolved against both changes' intent, as the plan's Q6 settled (*proceed and coordinate*): both bullets kept, `main`'s first and this branch's after it, each unchanged; no marker is left. The merge is committed (`3353f9b`). #102's other changes (`.codeo/config.json`, `docs/skills.md`, `docs/skills-inventory.md`, `lib/env.sh`, `scripts/doctor.sh`, `scripts/github.sh`, `skills/issue/SKILL.md`, tests, its plan and dossier) merged without conflict and none is in this plan's footprint. `overlap.sh 112` and `overlap.sh --outside 112` printed nothing.
+
+**What each finding came to** (checked against the files first):
+- **F10 — fixed.** The conflict above.
+- **F11 — fixed.** `docs/handoff.md` (*Who is working right now*) now says the machine label is `web-` plus the first 8 characters of the session id, as the line above it and `scripts/live.sh:109` do. Committed inside the merge commit.
+- **F7 — reported, not done.** The refusal texts are quoted from screenshots; making them verbatim needs the web session's output as text, which only the engineer can copy out of the hosted session. Nothing in the repository can supply it.
+- **The "says why" sentence and #138's text** (qc round 3's "said once"): not this diff's, left to the engineer.
+
+**Criteria.** Unchanged from rounds 2 and 3: 1 not met (both writes refused), 2 untestable, 3 the user was not determined and the engineer accepted that with #138 (qc Q1), 4 met for the tip, 5 the hook cannot fire there (#138), 6 #104's criterion is not met (#138).
+
+**Documentation pages changed:** `docs/handoff.md` (one phrase), `CHANGELOG.md` (conflict resolution only).
+
+**Build.** The `shell` suite's `build` is `true`: rc 0.
+
+**Deviations from the plan.** None beyond the earlier rounds'. F7 is reported, not done.
+
 ## Log
 
 - 2026-11-19 — round 1: web-session check recorded (both writes refused), docs written, build rc 0 · cost: 19m · sonnet-5-5 56k in + 4.4M cached / 19k out
 - 2026-11-19 — round 2 (send-back from qc round 1): F1, F3-F6 fixed, F2 resolved by #138 filed from the home checkout, build rc 0 · cost: 1m · sonnet-5-5 31k in + 1.6M cached / 9k out
 - 2026-11-19 — round 3 (send-back from qc round 2): F8, F9 fixed, F7 reported (needs the raw session output), build rc 0 · cost: 1m · sonnet-5-5 16k in + 1.1M cached / 3k out
+- 2026-11-20 — round 4 (send-back from qc round 3): merged origin/main (CHANGELOG.md conflict, both bullets kept), F11 fixed, F7 reported, build rc 0 · cost: 0m · sonnet-5-5 303k in + 1M cached / 1k out
