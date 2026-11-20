@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 done, back to `/codeo:implement`: `origin/main` moved (#102) and `CHANGELOG.md` conflicts with this branch; F10 blocks, F7 and F11 ride along. Everything else judged earlier in this pass was clean (build rc 0, `all cases passed` on `54d324b`, no Critical review finding), but the next pass runs whole on the merged tree.
+Round 4 done, clear: the merged tree builds (rc 0), `bash tests/run.sh` passes, no blocking finding is left, and #138 is the follow-up the criteria ask for. F7 (the refusal texts are approximate) and F12 (one changelog verb) are non-blocking and ride to the pull request. Next: `/codeo:close`.
 
 ## Questions
 
@@ -127,8 +127,46 @@ Not a finding against this diff (`qc-02`), said once: `docs/handoff.md:188-189` 
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 4 — 2026-11-20
+
+**Sync.** `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main` (`d3e957c`, #102), exit 0, so there are no `also changed on main:` lines. `overlap.sh 112` printed nothing; `overlap.sh --outside 112` printed nothing. `HEAD` was `b7d07cc` for the whole pass and `origin/main` did not move.
+
+**Scope.** `scope.sh origin/main HEAD`: `suite.shell=true` (`docs/**` and the unclassified `.codeo/112/*` and `CHANGELOG.md`). No `deploy=` line: no environment is configured. `git diff origin/main...HEAD --stat`: 8 files (`CHANGELOG.md`, `docs/handoff.md`, the plan, `.codeo/112/*`), 643 insertions, 1 deletion; nothing under `scripts/`, `lib/`, `hooks/` or `skills/`.
+
+**Build.** The `shell` suite's `build` is `true`: `build rc=0`.
+
+**Tests.** `bash tests/run.sh` (the `shell` suite, whole, on `b7d07cc`): `all cases passed`.
+
+**Acceptance criteria.** The evidence is the web-session record in `implement.md` → Notes → Round 1, the two comments on #112 and issue #138; the diff itself is documentation.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | `beat --force` publishing the signal, and which path | not met — nothing was published: the push (HTTP 403) and the REST fallback (`git/commits`, HTTP 403) were both refused. The issue provides for this outcome in criterion 6 | `implement.md` Notes, Task 1 |
+| 2 | another clone lists the session and the `live:` line | untestable — nothing was published | `implement.md` Notes, Tasks 2-4 |
+| 3 | the user the signal names, or what it named and the follow-up | met — through the "or" branch: the record says the user was not determined, the engineer accepted that (Q1), and #138 is filed | `implement.md` criteria table; Q1; #138 |
+| 4 | branch tip unchanged, and clear removes the session | met for the tip (`4b55d8e97c31…` before and after); the clear half has nothing to remove, and `clear`'s REST path in a web session is recorded as unverified | `implement.md` Notes, Task 1 |
+| 5 | the hook publishes by itself, or the issue records it does not and files the follow-up | met — through the "or" branch: `codeo` is not installed in the web session (`claude plugin list`), recorded, and #138 is filed | `implement.md` Notes, Task 5; #138 |
+| 6 | both writes refused: text, #104's criterion not met, follow-up filed | met — both refusal texts are recorded on #112 (quoted approximately, F7), #104's criterion "it works in a web session" is stated as not met, and #138 is the design-change follow-up | comments on #112; `implement.md`; #138 |
+
+**Documentation check.** `docs/handoff.md` (*Who is working right now*) and `CHANGELOG.md` against `scripts/live.sh`, `scripts/github.sh` and `scripts/lock.sh`: the hostname fallback for `session: unknown` (`live.sh:107-109`), the 8-character suffix, the user fallback (`github.sh:31-44`) and the named `git/commits` refusal (`github.sh:257-277`: the recorded `could not create the commit` is the `die` after both GETs) all match. The merge kept `main`'s `CHANGELOG.md` content intact (the reviewer diffed `d3e957c:CHANGELOG.md` against `b7d07cc:CHANGELOG.md`: one inserted bullet and a blank line; no conflict markers). The plan's claim that no other page moves holds: the diff changes no behaviour `README.md`, `docs/dossier.md` or `docs/skills.md` describe.
+
+**Independent review** (opus, given the criteria and the diff only). Its assessment, quoted: "With fixes. The diff's two documentation changes are accurate against `live.sh`, `github.sh` and `lock.sh`, and the merge preserved `main`'s CHANGELOG. Criterion 6, the outcome that applies here, is met, with #138 filed. What remains is evidence quality rather than code." Its Critical list was empty. Its Important finding is F7; its Minor items are checked below.
+
+**Findings.**
+
+- **F7 — non-blocking, `/codeo:implement`'s, third round running.** The two refusal texts on #112 are transcribed from screenshots and quoted approximately; no raw `bash -x` line is quoted. It is evidence quality: the texts are the ones the web session printed, and criterion 6's "records the refusal text" is met in substance. Closing it needs the session's output as text, which only the engineer can copy out; pasting it on #112 (or into the pull request) does it, and no code changes.
+- **F12 — non-blocking, `/codeo:implement`'s.** `CHANGELOG.md` says `inflight.sh` "showed no `live:` line for that session". The run listed signals with `inflight.sh --live` and `live.sh list --tsv`, not the plain `inflight.sh` that prints the `live:` line; the conclusion follows from no `112/vm` ref existing, but "showed" reads as observed. "listed no web session" says what was seen.
+- **Said once, not a finding against this diff (`qc-02`).** The sentence in `docs/handoff.md` that `beat --force` by hand "prints the one `live:` line that says why" predates this change; the web run's line named the failed step (`could not create the commit`) and the HTTP reason showed only under `bash -x` (`live.sh:166`'s `last_line`).
+- **Outside the diff, the engineer's.** #138's text still says the signal "would therefore name the user `Claude`" and the machine `vm`, keeps the "development branch only" reading, and lists `git/refs` among the refused calls; #112's correction comment and the shipped pages withdrew or qualified each of those. Worth aligning before anyone starts #138.
+- **F1-F6 and F8-F11 (blocking in round 1: F1, F2; blocking in round 3: F10) — fixed or resolved** by `1173f37`, #138, `54d324b`, the merge `3353f9b` and the note in `implement.md`.
+
+No issue was filed for this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-19 — round 1: back to `/codeo:implement` (2 blocking, 4 non-blocking) · cost: 0m · opus-5-5 209k in + 511k cached / 1k out · sonnet-5-5 3k in + 236k cached / 5k out
 - 2026-11-19 — round 2: back to `/codeo:implement` (same blocking findings as round 1, F7-F9 added) · cost: 6m · opus-5-5 290k in + 2.3M cached / 13k out · sonnet-5-5 263k in + 2.6M cached / 11k out
 - 2026-11-20 — round 3: back to `/codeo:implement` (merge conflict in CHANGELOG.md with origin/main at d3e957c) · cost: 47m · opus-5-5 332k in + 1.1M cached / 10k out · sonnet-5-5 59k in + 5.7M cached / 16k out
+- 2026-11-20 — round 4: clear — forward to `/codeo:close` (no blocking finding; F7, F12 non-blocking) · cost: 6m · opus-5-5 375k in + 1.1M cached / 9k out · sonnet-5-5 24k in + 1.4M cached / 1k out
