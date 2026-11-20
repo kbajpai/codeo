@@ -6,15 +6,20 @@ I read `.devcontainer/codeo` as it stands on `origin/main` before asking. Alread
 
 ## Questions
 
-1. **Leave out what is already fixed?** — F26 and the two threads above look fixed on `origin/main`. Proposed: the issue lists them under *Reference* as "reported, appear fixed, confirm and drop in `/codeo:plan`", not as requirements. Yes, or keep them as requirements?
+1. *(answered yes)* **Leave out what is already fixed?** — F26 and the two threads above look fixed on `origin/main`. Proposed: the issue lists them under *Reference* as "reported, appear fixed, confirm and drop in `/codeo:plan`", not as requirements. Yes, or keep them as requirements?
 
-2. **What does "done" mean for the long tail?** — F3, F4, F7, F8, F10-F13, F20, F27, F28 and the seven *outdated* review threads are small or may be fixed already. Proposed: every item is either fixed or ruled out with a reason recorded in `/codeo:plan`'s dossier, the five that can lose work or print false advice (F19, F29, F30, the write-after-check race, the stale-ref/untracked checks) are acceptance criteria of their own, and the rest share one criterion. Or: only the five, and the tail dismissed?
+2. *(answered yes)* **What does "done" mean for the long tail?** — F3, F4, F7, F8, F10-F13, F20, F27, F28 and the seven *outdated* review threads are small or may be fixed already. Proposed: every item is either fixed or ruled out with a reason recorded in `/codeo:plan`'s dossier, the five that can lose work or print false advice (F19, F29, F30, the write-after-check race, the stale-ref/untracked checks) are acceptance criteria of their own, and the rest share one criterion. Or: only the five, and the tail dismissed?
 
-3. **Consolidate with the #133 wording leftovers?** — triage Q9 (F5/F16, F14, F15, F6/F31, F17, F22, F23, F21) is the same file and README, and you asked to consolidate, but you did not answer Q9. Proposed: fold them in as one acceptance criterion ("the README, help text and changelog match what the command does"). Fold in, or keep them out (they stay deferred in the ledger)?
+3. *(answered fold in)* **Consolidate with the #133 wording leftovers?** — triage Q9 (F5/F16, F14, F15, F6/F31, F17, F22, F23, F21) is the same file and README, and you asked to consolidate, but you did not answer Q9. Proposed: fold them in as one acceptance criterion ("the README, help text and changelog match what the command does"). Fold in, or keep them out (they stay deferred in the ledger)?
+
+## Draft
+
+Title: `codeo` host command: close the leftovers from #133 (unsafe or false `rm` output, concurrent first use, and wording)
+Type: none (user-owned repository). Label: `bug`. Body: `body.md` in this directory.
 
 ## Outcome
 
-Open: Q1-Q3. The draft is held until they are answered.
+Q1-Q3 answered. Draft written; awaiting approval at the review gate.
 
 ## Log
 
