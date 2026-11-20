@@ -15,7 +15,8 @@
 #   when the owner is a user, who has none), user login,
 #   pr list-for-branch|view|get|reviews|comments|review-comments|checks|create [--draft]|comment, run list,
 #   workflow dispatch <workflow-file> <ref> (prints nothing on success; the ref must carry the
-#   workflow file and the caller needs `actions: write`), label list,
+#   workflow file and the caller needs `actions: write`), label list | label create <name>
+#   (prints nothing on success; an existing label fails),
 #   ref put <ref> <message-file> (prints the new root commit's sha) | ref delete <ref> (prints
 #   nothing, also when the ref is already gone); both only for refs/codeo/live/<issue>/<machine>.
 set -euo pipefail
@@ -235,9 +236,19 @@ case $group in
         ;;
     label)
         sub=${1:?label subcommand}; shift
-        [[ $sub == list ]] || die "unknown label subcommand: $sub"
-        out=$(gh api --paginate "repos/$repo/labels" -q '.[].name') || die "label list: GET failed"
-        [[ -z $out ]] || printf '%s\n' "$out"
+        case $sub in
+            list)
+                out=$(gh api --paginate "repos/$repo/labels" -q '.[].name') || die "label list: GET failed"
+                [[ -z $out ]] || printf '%s\n' "$out"
+                ;;
+            create)
+                label=${1:?label name}
+                # GitHub's default colour; an existing label fails the POST (422) like any other error.
+                gh api -X POST "repos/$repo/labels" -f "name=$label" >/dev/null \
+                    || die "label create $label: POST failed"
+                ;;
+            *) die "unknown label subcommand: $sub" ;;
+        esac
         ;;
     ref)
         sub=${1:?ref subcommand}; shift
@@ -283,6 +294,6 @@ case $group in
         esac
         ;;
     *)
-        die "usage: github.sh issue view|assignee-add|assignee-remove|search|list-all | issue-types | user login | pr list-for-branch|view|get|reviews|comments|review-comments|checks|create|comment | run list | workflow dispatch | label list | ref put|delete"
+        die "usage: github.sh issue view|assignee-add|assignee-remove|search|list-all | issue-types | user login | pr list-for-branch|view|get|reviews|comments|review-comments|checks|create|comment | run list | workflow dispatch | label list|create | ref put|delete"
         ;;
 esac
