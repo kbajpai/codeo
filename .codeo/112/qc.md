@@ -8,11 +8,18 @@
 
 ## Where this stands
 
-Round 2 done (a second pass over the same tree), back to `/codeo:implement`: F1 (an untrue changelog sentence) and F2 (the three follow-up issues the criteria require are not filed) block; F3-F9 are non-blocking and ride in the same round. F2 needs you first: file the three follow-ups in the home container.
+Round 3 done, back to `/codeo:implement`: `origin/main` moved (#102) and `CHANGELOG.md` conflicts with this branch; F10 blocks, F7 and F11 ride along. Everything else judged earlier in this pass was clean (build rc 0, `all cases passed` on `54d324b`, no Critical review finding), but the next pass runs whole on the merged tree.
 
 ## Questions
 
-None.
+### Q1 — Is "not determined" plus the follow-up enough for criterion 3?
+
+**Why it matters:** criterion 3 reads "the user the signal names is the engineer's GitHub login, or the issue records what it named instead and files the follow-up". The web run never showed which user it would have named (`beat` asks `GET /user` first, and the run's output does not show the result), so the record says "not determined" and #138 is the follow-up. Whether that meets the criterion decides if it is `met` or sends the change back for one more command in the web session (`git log -1 --format=%B 52794a4` there).
+**Options:** accept as is (recommended) · get the value first, and send back.
+
+**Answer:**
+Accept as is (engineer, in the conversation, 2026-11-20, from the question tool's options).
+
 
 ## Outcome
 
@@ -91,7 +98,37 @@ Not a finding against this diff (`qc-02`), said once: `docs/handoff.md:188-189` 
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-20
+
+**Sync.** `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: conflict: CHANGELOG.md`, exit 2; the merge was aborted and the tree is as before (`git status` clean at `54d324b`, no `MERGE_HEAD`). `origin/main` moved by `d3e957c` (#102, `feat: /codeo:issue proposes a priority label when the project opts in`), whose changes include `CHANGELOG.md`, `docs/skills.md`, `docs/skills-inventory.md`, `lib/env.sh`, `scripts/doctor.sh`, `scripts/github.sh`, `skills/issue/SKILL.md` and tests. Of those, only `CHANGELOG.md` is also changed by this branch: the plan's Q6, answered *proceed and coordinate*, expected exactly this text conflict. `overlap.sh 112` and `overlap.sh --outside 112` printed nothing.
+
+**What this pass found before the sync stopped it, on `54d324b` as it stood** (not re-run on the merged tree, so none of it is a verdict on what will merge): the `shell` suite's build is `true` (rc 0) and `bash tests/run.sh` printed `all cases passed` on `54d324b`. An independent review (opus, criteria and diff only, `41368e7..1582131`) found nothing Critical; `54d324b`'s one-phrase change on top (`docs/handoff.md` and `CHANGELOG.md` name the `git/commits` write as the refused REST call) was read here against `scripts/github.sh:257-261` and matches it.
+
+**Acceptance criteria.** The pass stopped at step 2, so every row reads `not yet checkable`; the standing facts from rounds 1 and 2 are added for the engineer, not as this round's evidence.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | `beat --force` publishing, and which path | not yet checkable — pass stopped at step 2 (rounds 1-2: both writes refused, the criterion's negative form is criterion 6) | `implement.md` Notes |
+| 2 | another clone lists the session and the `live:` line | not yet checkable — pass stopped at step 2 (nothing was published) | `implement.md` Notes |
+| 3 | the user the signal names, or what it named and the follow-up | not yet checkable — pass stopped at step 2 (Q1: the engineer accepts "not determined" plus #138) | `implement.md` Notes; #138 |
+| 4 | branch tip unchanged, and clear removes the session | not yet checkable — pass stopped at step 2 | `implement.md` Notes |
+| 5 | the hook publishes by itself, or the issue records it does not and files the follow-up | not yet checkable — pass stopped at step 2 (the plugin is not installed there; #138) | `implement.md` Notes; #138 |
+| 6 | both writes refused: text, #104's criterion not met, follow-up filed | not yet checkable — pass stopped at step 2 (text and "not met" are recorded; #138 is filed) | `implement.md` Notes; #138 |
+
+**Findings.**
+
+- **F10 — blocking, `/codeo:implement`'s.** `CHANGELOG.md` conflicts with `origin/main` at `d3e957c` (#102). Resolve it keeping both bullets, as Q6 settled: this branch's bullet and #102's, in the order `main` has them, then `git commit` and re-run the pass. Nothing else conflicts.
+- **F1-F6, F8 and F9 (blocking in round 1: F1, F2) — fixed or resolved**: `1173f37` (F1, F3-F6), #138 (F2), `54d324b` (F9) and the note in `implement.md` (F8).
+- **F7 — non-blocking, `/codeo:implement`'s, unchanged.** The recorded refusal texts come from screenshots and are quoted approximately; making them verbatim needs the session's output as text, which only the engineer can copy out.
+- **F11 — non-blocking, `/codeo:implement`'s.** `docs/handoff.md` says a lock taken without a session id gives the machine label the hostname instead of "`web-` plus the session id", where the line above and `live.sh` say the first 8 characters of the session id. Say "`web-` plus the session id's first 8 characters".
+- **Said once, not a finding against this diff (`qc-02`).** The sentence in `docs/handoff.md` that `beat --force` by hand "prints the one `live:` line that says why" predates this change; in the web run the line only named the step (`could not create the commit`), and the HTTP reason showed only under `bash -x` (`scripts/live.sh:166`'s `last_line`). #138's text does not mention it, and it also still carries three claims this branch's pages dropped as unsupported (the proxy's "development branch only" reading, `.claude/settings.json` as the reason the plugin is missing, and `git/refs` among the refused calls); both are the engineer's to put in #138.
+
+**Routing.** F10 blocks and is `/codeo:implement`'s: a conflict with the base branch, whose fix is a merge `qc` does not make. F7 and F11 ride in that round. Because the merge changes the tree, the next pass runs whole, with a new review.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-19 — round 1: back to `/codeo:implement` (2 blocking, 4 non-blocking) · cost: 0m · opus-5-5 209k in + 511k cached / 1k out · sonnet-5-5 3k in + 236k cached / 5k out
 - 2026-11-19 — round 2: back to `/codeo:implement` (same blocking findings as round 1, F7-F9 added) · cost: 6m · opus-5-5 290k in + 2.3M cached / 13k out · sonnet-5-5 263k in + 2.6M cached / 11k out
+- 2026-11-20 — round 3: back to `/codeo:implement` (merge conflict in CHANGELOG.md with origin/main at d3e957c) · cost: 47m · opus-5-5 332k in + 1.1M cached / 10k out · sonnet-5-5 59k in + 5.7M cached / 16k out
