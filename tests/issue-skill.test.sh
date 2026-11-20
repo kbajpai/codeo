@@ -56,6 +56,37 @@ must_contain 'set prints one line per project' 'one line per project'
 must_contain 'the Backlog fix is named' 'board.statuses.backlog'
 doc_has "skills.md's scope sentence names the board write" docs/skills.md "puts it in the board's Backlog when the project has a board, and does nothing else"
 
+# #102: the skill proposes, shows and files a priority label when issue.priority is on.
+must_contain "step 5 reads the setting" 'config.sh" get .issue.priority'
+must_contain "step 5 says what on is" 'prints `true`'
+for name in blocker high medium low; do
+    must_contain "step 5 names the $name label" "priority: $name"
+    doc_has "doctor checks the $name label" scripts/doctor.sh "priority: $name"
+done
+must_contain "rubric blocker" 'work already in flight cannot continue, or the base branch or a release is broken, until this is fixed'
+must_contain "rubric high" 'a defect or gap that affects normal use and has no acceptable workaround, or work a committed piece of work depends on'
+must_contain "rubric medium" 'worth doing; there is a workaround, or the effect is limited, and the default when neither `blocker`, `high` nor `low` fits'
+must_contain "rubric low" 'polish, cleanup, or a follow-up nobody is waiting on'
+must_contain "the reason names the rubric line" 'one-line reason'
+must_contain "off means no priority" 'When it prints anything else, or nothing, propose no priority and add no priority label'
+must_contain "a caller's priority is ignored" "A priority a calling skill passes along is ignored; the proposal is this skill's, made at the gate"
+must_contain "the gate shows the priority" 'the proposed priority and its one-line reason'
+must_contain "a change at the gate is honoured" "Changing it at the gate files the issue with the engineer's choice"
+must_contain "no priority means asking again" 'the setting makes one required'
+must_contain "the label goes in the call" "-f 'labels[]=priority: <name>'"
+must_contain "a missing label never fails the filing" 'A missing priority label never fails the filing'
+must_contain "the report names the create command" 'github.sh" label create '"'<label>'"
+must_contain "the report says no priority label" 'has no priority label'
+must_contain "issue-07 text" 'Set a Priority only when `issue.priority` is on and only with the engineer'"'"'s approval at the review gate, as a label; never set `Effort` or any custom field.'
+must_contain "issue-07 keeps its comment" '<!-- rule: issue-07 -->'
+doc_has "inventory has the new issue-07" docs/skills-inventory.md "Priority only under issue.priority and with the engineer's approval at the gate, as a label; never Effort."
+if grep -qF 'Never set Priority or Effort.' "$plugin_root/docs/skills-inventory.md"; then fail "the old issue-07 text is still in the inventory"; fi
+if grep -qF 'Do not set `Priority` or `Effort`' "$skill"; then fail "the old issue-07 text is still in the skill"; fi
+doc_has "skills.md names the setting" docs/skills.md 'issue.priority'
+doc_has "skills.md names a priority label" docs/skills.md 'priority: blocker'
+doc_has "the changelog names the setting" CHANGELOG.md 'issue.priority'
+doc_has "triage still files through issue" skills/triage/SKILL.md '/codeo:issue'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

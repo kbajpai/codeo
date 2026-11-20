@@ -185,7 +185,7 @@ it.
   write of its commit (`git/commits`) both returned HTTP 403, so it publishes no signal and `inflight.sh` shows no `live:` line
   for it. The hook runs there only when the plugin is installed in the session, and a lock taken
   without a session id (`session: unknown`) gives the machine label the hostname instead of
-  `web-` plus the session id. Where nothing is published
+  `web-` plus the first 8 characters of the session id. Where nothing is published
   the hook discards the output of `beat` and says nothing, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh"
   beat --force` run by hand prints the one `live:` line that says why. A failed publish is not
   retried until the next refresh interval. Two beats started together from one checkout can both
