@@ -218,7 +218,9 @@ containerenv_alone_is_guarded() {
     check_matrix issue:70 70
 }
 
-both_markers_are_guarded_the_same() {
+# Both stubs present is still guarded, and it passes on the dockerenv stub alone,
+# so containerenv_alone_is_guarded is the case that pins the /run/.containerenv check.
+both_markers_present_is_guarded() {
     mk bothenv codeo-70 feat/x 'issue: 70' || return 0
     : >"$containerenv"
     role_is issue:70
@@ -360,7 +362,7 @@ cases=(
     lock_without_an_issue_line_is_no_lock
     no_dockerenv_is_unguarded
     containerenv_alone_is_guarded
-    both_markers_are_guarded_the_same
+    both_markers_present_is_guarded
     remote_is_unguarded
     other_folders_are_unguarded
     not_a_clone_fails

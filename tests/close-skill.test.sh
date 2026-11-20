@@ -94,6 +94,18 @@ section_contains_flat() {
     grep -qF -- "$3" <<<"$text" || fail "$1 — section [$2] has no [$3]"
 }
 
+# $1 case, $2 section heading, $3 fixed string that picks out one paragraph (blank-line separated)
+# of the section, $4 fixed string that paragraph must contain once flattened. Fails unless exactly
+# one paragraph holds the anchor, so a pin cannot be met by a neighbouring paragraph.
+paragraph_contains_flat() {
+    local count text
+    [[ -n $(section "$2") ]] || { fail "$1 — no section [## $2] in the skill"; return; }
+    count=$(section "$2" | awk -v a="$3" 'BEGIN{RS=""} index($0,a) {n++} END{print n+0}')
+    [[ $count -eq 1 ]] || { fail "$1 — $count paragraphs of [$2] hold [$3], want exactly 1"; return; }
+    text=$(section "$2" | awk -v a="$3" 'BEGIN{RS=""} index($0,a)' | tr '\n' ' ' | tr -s ' ')
+    grep -qF -- "$4" <<<"$text" || fail "$1 — the paragraph of [$2] holding [$3] has no [$4]"
+}
+
 # $1 case, $2 section heading, $3 fixed string, $4 fixed string that must come later in it.
 section_order() {
     local text
@@ -318,8 +330,8 @@ section_contains "an open pull request stays open" "$stash_section" 'stays open'
 section_contains "the abandon deletes the branch only on request" "$stash_section" 'same confirmation as step 14'
 section_order "a stash deletes the lock last" "$stash_section" 'lease release-all <N>' 'Delete `.codeo/active`'
 step_contains "step 16 clears the live signal with the lock" 16 'live.sh" clear; rm -f .codeo/active'
-section_contains_flat "a stash clears the signal with the lock" "$stash_section" 'Delete `.codeo/active` last, as step 16 does, with the signal cleared'
-section_contains_flat "an abandon clears the signal with the lock" "$stash_section" 'the lock is deleted last, as a stash does, as step 16 does, with the signal cleared'
+paragraph_contains_flat "a stash clears the signal with the lock" "$stash_section" 'Then write beneath the round what the environment is left carrying' 'Delete `.codeo/active` last, as step 16 does, with the signal cleared'
+paragraph_contains_flat "an abandon clears the signal with the lock" "$stash_section" 'Work that never merged is kept unless someone says otherwise' 'the lock is deleted last, as a stash does, as step 16 does, with the signal cleared'
 for id in close-11 close-12 close-13; do
     section_contains "$id sits in the stash section" "$stash_section" "<!-- rule: $id -->"
 done
