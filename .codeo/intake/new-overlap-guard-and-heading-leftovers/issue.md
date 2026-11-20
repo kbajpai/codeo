@@ -16,7 +16,7 @@ No open issue covers these (`issue search` finds only closed #97, #108, #116).
 
 ## Outcome
 
-Open: Q1-Q2. Draft held until they are answered.
+Q1 plan decides, Q2 agreed. Draft written; awaiting approval at the review gate (title: Close the #108 leftovers: overlap.sh failures read as no overlap, the ## Outcome heading rule, and the init closing block; label bug; body.md).
 
 ## Log
 
