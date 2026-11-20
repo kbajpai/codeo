@@ -20,14 +20,17 @@
 #       Prints `M<TAB>what` for each other workflow M that overlaps issue N's branch and has not
 #       been raised yet, sorted; `what` is a path, `exclusive:<name>`,
 #       `glob:<glob>` or `wiki:<Page>`. Prints nothing when there
-#       is no new overlap. Exit 0 always — a usage error is the only exit 1.
+#       is no new overlap. Exit 1 on a usage error or when this branch cannot be diffed
+#       (`overlap: cannot diff <range>`); another workflow whose diff cannot be made is skipped with
+#       `overlap: skipping #<M>'s changed paths` on stderr, its footprint still compared, and the run exits 0.
 #   overlap.sh --outside <N> [--base <ref>] [--head <ref>]
 #       Prints this branch's changed paths that match none of its own `files` globs, one per line.
 #       With --head the diff is `git diff --name-only <base>...<head>` (--base defaults to
 #       origin/<baseBranch>) and the plan is read from <head> (`<state>/<N>/plan.md`, else
 #       `<state>/done/<N>/plan.md`) instead of the working tree; either ref is any commit-ish.
 #       --base and --head are valid only with --outside.
-#       A given ref that does not resolve to a commit is an error (exit 1).
+#       A given ref that is empty or does not resolve to a commit is an error (exit 1), and so is a
+#       diff git cannot make (exit 1, `overlap: cannot diff <range>`).
 #       Given alone, --base changes only the diff base: `git diff --name-only <base>...HEAD`, with the
 #       plan read from the working tree.
 #
@@ -40,7 +43,11 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 
-usage() { echo "usage: overlap.sh [--outside] <N> [--base <ref>] [--head <ref>]" >&2; exit 1; }
+usage() {
+    echo "usage: overlap.sh <N>" >&2
+    echo "       overlap.sh --outside <N> [--base <ref>] [--head <ref>]" >&2
+    exit 1
+}
 
 outside=
 [[ ${1:-} == --outside ]] && { outside=1; shift; }
@@ -53,8 +60,8 @@ given_head=
 while (($# > 0)); do
     [[ -n $outside ]] && (($# >= 2)) || usage
     case $1 in
-        --base) given_base=$2 ;;
-        --head) given_head=$2 ;;
+        --base) [[ -n $2 ]] || { echo "overlap: --base needs a ref" >&2; exit 1; }; given_base=$2 ;;
+        --head) [[ -n $2 ]] || { echo "overlap: --head needs a ref" >&2; exit 1; }; given_head=$2 ;;
         *) usage ;;
     esac
     shift 2
@@ -63,8 +70,8 @@ done
 cd "$(git rev-parse --show-toplevel)"
 export LC_ALL=C
 
-# A given ref must resolve to a commit: `changes()` swallows git errors, so an unresolved ref
-# would read as "nothing outside the footprint".
+# A given ref must resolve to a commit: an unresolved ref gives a clearer error here than the diff's,
+# and `changes()` would fail on it all the same.
 for ref in "$given_base" "$given_head"; do
     [[ -z $ref ]] && continue
     git rev-parse --verify --quiet "$ref^{commit}" >/dev/null 2>&1 || { echo "overlap: cannot resolve $ref" >&2; exit 1; }
@@ -108,7 +115,13 @@ literals() {
 }
 
 # Changed paths against origin/<base> for a ref, dossiers left out.
-changes() { git diff --name-only "${given_base:-origin/$base}...$1" -- . ":!$state_rel" 2>/dev/null || true; }
+# changes <ref>: the changed paths against origin/<base>, dossiers left out; or `overlap: cannot diff <range>`
+# on stderr and return 1 when git cannot make the diff (a missing ref, no merge base).
+changes() {
+    local range="${given_base:-origin/$base}...$1" out
+    out=$(git diff --name-only "$range" -- . ":!$state_rel" 2>/dev/null) || { echo "overlap: cannot diff $range" >&2; return 1; }
+    [[ -z $out ]] || printf '%s\n' "$out"
+}
 
 # matches <path> <glob...>: true when the path matches any glob.
 matches() {
@@ -143,7 +156,8 @@ fi
 mapfile -t my_globs < <(footprint files <<<"$myplan")
 my_wiki=()
 [[ -z $wiki_on ]] || mapfile -t my_wiki < <(footprint wiki <<<"$myplan")
-mapfile -t mine < <(changes "${given_head:-HEAD}")
+mine_out=$(changes "${given_head:-HEAD}") || exit 1
+mapfile -t mine < <(printf '%s' "$mine_out")
 
 if [[ -n $outside ]]; then
     for p in "${mine[@]}"; do
@@ -204,7 +218,12 @@ while IFS=$'\t' read -r m branch dir; do
     mapfile -t their_excl < <(footprint exclusive <<<"$theirplan")
     their_wiki=()
     [[ -z $wiki_on ]] || mapfile -t their_wiki < <(footprint wiki <<<"$theirplan")
-    mapfile -t theirs < <(changes "$sha")
+    if theirs_out=$(changes "$sha"); then
+        mapfile -t theirs < <(printf '%s' "$theirs_out")
+    else
+        echo "overlap: skipping #$m's changed paths" >&2
+        theirs=()
+    fi
     universe=$(printf '%s\n' "${tree[@]}" "${mine[@]}" "${theirs[@]}" \
         "$(literals "${my_globs[@]}")" "$(literals "${their_globs[@]}")" | sort -u)
     # Membership by associative array: a quiet-grep pipe quits at its first match and a writer still

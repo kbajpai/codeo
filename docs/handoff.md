@@ -449,7 +449,7 @@ Exits whose next command is not the default:
 | `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again; a `lock: TODO` printed after the lock was taken (neither a volume name nor a sandbox name readable on `host: container`) needs the fix alone |
 | `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
 | `issue — Status unreadable` | the fix its line names (for example `gh auth refresh -s project`), then `/codeo:triage`, then `/codeo:init #<N>` |
-| `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up, in the checkout the project's host workflow names, when it names one |
+| `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up, in the checkout the project's host workflow names, when it names one, unless the engineer had the unmerged branch deleted: the checkout is then the last copy, theirs to keep or remove knowingly |
 | `abandon — interrupted` | `/codeo:close` |
 
 ## Spinning out subagents

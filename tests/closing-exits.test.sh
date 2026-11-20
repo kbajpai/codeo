@@ -5,7 +5,8 @@
 #
 #   closing-exits.test.sh [case]
 #       Cases: rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-#       issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
+#       init-lock-wording issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
+#       abandon-summaries
 #       close-step17-lead stash-prose bites. CLOSING_EXITS_ROOT points the checks at another tree.
 #       No argument runs them all; an unknown case exits 2. Prints "all cases passed" and exits 0, or
 #       a FAIL line per failure and exits 1.
@@ -74,11 +75,11 @@ case_rule() {
     # $1 label. Prints its row of the exceptions table; fails the case when the table has none.
     row_for() {
         local r
-        r=$(grep -F "$1\` |" <<<"$block" || true)
+        r=$(grep -F "| \`$1\` |" <<<"$block" || true)
         [[ -n $r ]] || { fail "docs/handoff.md has no row for [$1]"; return 0; }
         printf '%s\n' "$r"
     }
-    for row in 'lock kept' 'stash — interrupted' 'stash — completed' 'issue — not Ready'; do
+    for row in 'close — lock kept' 'stash — interrupted' 'stash — completed' 'issue — not Ready'; do
         row_for "$row" >/dev/null
     done
     local nl ai ab ur
@@ -141,6 +142,20 @@ case_init_no_lock() {
     lacks "$s" 'Either way, end with the closing block'
 }
 
+# Some lock: TODO lines print after the lock was written, so step 11 must not say a TODO means no lock.
+case_init_lock_wording() {
+    local s
+    s=$(step "$init" 11)
+    [[ -n $s ]] || { fail "no step 11 in skills/init/SKILL.md"; return; }
+    s=$(flat "$s")
+    lacks "$s" 'there is no lock'
+    has "$s" 'lock already taken'
+    has "$s" 'took the lock'
+    has "$s" 'lock.sh" take local'
+    para "$init" '**Closing block — no lock:**' || return 0
+    lacks "$(flat "$p")" '/codeo:plan'
+}
+
 # Reads step 8 of the issue skill; both Ready cases also need it to read the board.
 issue_step8() {
     local s
@@ -199,11 +214,21 @@ case_abandon_interrupted() {
     [[ $head != */codeo:* ]] || fail "another command comes before /codeo:close"
 }
 
+case_abandon_summaries() {
+    local row line
+    row=$(grep -F '| `abandon — finished` |' "$doc" || true)
+    [[ -n $row ]] || { fail "docs/handoff.md has no row for [abandon — finished]"; return 0; }
+    has "$(flat "$row")" 'last copy'
+    line=$(grep -F 'an abandon that finished' "$root/docs/skills.md" || true)
+    [[ -n $line ]] || { fail "docs/skills.md has no line naming [an abandon that finished]"; return 0; }
+    has "$(flat "$line")" 'last copy'
+}
+
 case_close_step17_lead() {
     local s
     s=$(step "$close" 17)
     [[ -n $s ]] || { fail "no step 17 in skills/close/SKILL.md"; return; }
-    lacks "$s" 'Report** that the workflow is finished'
+    lacks "$(flat "$s")" 'Report** that the workflow is finished'
     lacks "$(flat "$s")" 'End with the closing block: the goal is the loose ends found'
 }
 
@@ -300,12 +325,31 @@ case_bites() {
     out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" host-workflow-fetch 2>&1) &&
         fail "the abandon section without the fetch clause passed host-workflow-fetch"
     [[ $out == *host-workflow-fetch* ]] || fail "host-workflow-fetch failed without naming itself: $out"
+
+    # The old step 17 lead wrapped over two lines: the guard reads the step flattened.
+    cp "$pristine" "$copy"
+    sed -i 's/^17\. \*\*Report\*\* how the close ended:.*$/17. **Report** that the workflow\n    is finished. Read the lock'"'"'s `host` line, and its `volume:` or/' "$copy"
+    ! cmp -s "$pristine" "$copy" || fail "the wrapped step 17 lead mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" close-step17-lead 2>&1) &&
+        fail "the wrapped old step 17 lead passed close-step17-lead"
+    [[ $out == *close-step17-lead* ]] || fail "close-step17-lead failed without naming itself: $out"
+
+    # A handoff row whose label only ends with the real one (a prefix added) makes rule fail, naming the row; a suffix match would still accept it.
+    sed -i 's/`close — lock kept`/`stale close — lock kept`/' "$t/docs/handoff.md"
+    cmp -s "$root/docs/handoff.md" "$t/docs/handoff.md" && fail "the renamed row mutation changed nothing"
+    out=$(CLOSING_EXITS_ROOT=$t bash "${BASH_SOURCE[0]}" rule 2>&1) &&
+        fail "the renamed handoff row passed rule"
+    [[ $out == *"close — lock kept"* ]] || fail "rule failed without naming the row: $out"
+    cp "$root/docs/handoff.md" "$t/docs/handoff.md"
+
+    rm -rf "$t"
+    trap - RETURN
     return 0
 }
 
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-    issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
-    close-step17-lead stash-prose host-workflow-fetch bites)
+    init-lock-wording issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
+    abandon-summaries close-step17-lead stash-prose host-workflow-fetch bites)
 
 if (($# > 0)); then
     known=0
@@ -318,6 +362,9 @@ for c in "${all[@]}"; do
     case_name=$c
     "case_${c//-/_}"
 done
+
+case_name=bites
+[[ -z $(trap -p RETURN) ]] || fail "a RETURN trap outlived case_bites"
 
 if ((failures == 0)); then
     echo "all cases passed"

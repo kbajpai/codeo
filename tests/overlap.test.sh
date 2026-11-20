@@ -364,6 +364,81 @@ for refs in "--base main --head no-such-ref" "--base no-such-ref --head feat/h";
     grep -q 'overlap: cannot resolve no-such-ref' "$scratch_root/err" || { echo "no 'cannot resolve' on stderr ($refs)"; exit 1; }
 done
 
+
+# errs <clone> <args...> — stdout to $out, stderr to $err, exit code to $rc.
+errs() {
+    local clone=$1
+    shift
+    rc=0
+    out=$(cd "$clone" && bash "$plugin/scripts/overlap.sh" "$@" 2>"$scratch_root/err") || rc=$?
+    err=$(cat "$scratch_root/err")
+}
+
+case_desc="--outside with an empty --base or --head is an error"
+clone=$(head_repo 'a.txt')
+for flag in base head; do
+    errs "$clone" --outside 7 "--$flag" ""
+    assert_eq "exit (--$flag)" 1 "$rc"
+    assert_eq "stdout (--$flag)" "" "$out"
+    [[ $err == *"overlap: --$flag needs a ref"* ]] || { echo "FAIL: $case_desc — no '--$flag needs a ref' on stderr: [$err]"; failures=$((failures + 1)); }
+done
+
+case_desc="--outside with --base alone reads the plan from the working tree"
+clone=$(head_repo 'a.txt')
+git -C "$clone" checkout -q feat/h
+assert_eq "lines" "b.txt" "$(run "$clone" --outside 7 --base main)"
+
+case_desc="--outside against a base with no merge base is an error, not an empty diff"
+clone=$(head_repo 'a.txt')
+root=$(git -C "$clone" commit-tree -m x 4b825dc642cb6eb9a060e54bf8d69288fbee4904)
+errs "$clone" --outside 7 --base "$root"
+assert_eq "exit (base)" 1 "$rc"
+assert_eq "stdout (base)" "" "$out"
+[[ $err == *"overlap: cannot diff"* ]] || { echo "FAIL: $case_desc — no 'cannot diff' on stderr: [$err]"; failures=$((failures + 1)); }
+errs "$clone" --outside 7 --base "$root" --head feat/h
+assert_eq "exit (base, head)" 1 "$rc"
+assert_eq "stdout (base, head)" "" "$out"
+[[ $err == *"overlap: cannot diff"* ]] || { echo "FAIL: $case_desc — no 'cannot diff' on stderr (head): [$err]"; failures=$((failures + 1)); }
+
+case_desc="pair mode: this branch's diff failing is an error"
+clone=$(scenario 'Clips/Endpoints/**')
+git -C "$clone" update-ref -d refs/remotes/origin/main
+errs "$clone" 7
+assert_eq "exit" 1 "$rc"
+assert_eq "stdout" "" "$out"
+[[ $err == *"overlap: cannot diff origin/main...HEAD"* ]] || { echo "FAIL: $case_desc — no 'cannot diff origin/main...HEAD' on stderr: [$err]"; failures=$((failures + 1)); }
+
+case_desc="pair mode: another workflow's diff failing is skipped with a warning"
+clone=$(scenario 'Terraform/**')
+o=$(origin_of "$clone")
+git -C "$o" checkout -q --orphan feat/c
+git -C "$o" rm -rq -f .
+commit_file "$o" Other/c.txt
+plan "$o" 11 'Terraform/**' none
+git -C "$o" checkout -q main
+git -C "$clone" fetch -q origin
+errs "$clone" 7
+assert_eq "exit" 0 "$rc"
+[[ $err == *"overlap: skipping #11's changed paths"* ]] || { echo "FAIL: $case_desc — no skipping warning on stderr: [$err]"; failures=$((failures + 1)); }
+[[ $out == *"11${tab}glob:Terraform/**"* ]] || { echo "FAIL: $case_desc — footprint overlap with #11 not printed: [$out]"; failures=$((failures + 1)); }
+
+case_desc="--outside on a branch that changed nothing prints nothing"
+clone=$(head_repo 'a.txt')
+git -C "$clone" checkout -q -b same main
+assert_eq "lines" "" "$(run "$clone" --outside 7)"
+errs "$clone" --outside 7
+assert_eq "exit" 0 "$rc"
+
+case_desc="--outside --head reads a plan at the live dossier path"
+clone=$(head_repo none)
+git -C "$clone" checkout -q feat/h
+mkdir -p "$clone/.codeo/7"
+printf '# Plan\n\n### Footprint\n\n```\nfiles:      a.txt\nwiki:       none\nexclusive:  none\n```\n' > "$clone/.codeo/7/plan.md"
+git -C "$clone" add .codeo/7
+git -C "$clone" commit -q -m "live plan"
+git -C "$clone" checkout -q main
+assert_eq "lines" "b.txt" "$(run "$clone" --outside 7 --base main --head feat/h)"
+
 case_desc="nothing in flight"
 origin=$(mktemp -d "$scratch_root/origin.XXXXXX")
 git -C "$origin" -c init.defaultBranch=main init -q

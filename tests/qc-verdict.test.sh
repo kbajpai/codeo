@@ -753,6 +753,88 @@ assert_eq "exit code" 1 "$rc"
 assert_contains "names the plan" ".codeo/done/7/plan.md" "$out"
 assert_contains "names the round and path" "round 2 footprint omits: a.txt" "$out"
 
+case_desc="a heading that only starts with ## Outcome is not the outcome"
+dir=$(new_repo)
+mkdir -p "$dir/.codeo/done/7"
+printf '%s\n' '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}' > "$dir/.codeo/config.json"
+printf '## Outcomes\n\n### Round 1 — 2026-09-01\n\n**Verdict: clear.**\n\n## Log\n\n- x\n' > "$dir/.codeo/done/7/qc.md"
+echo a > "$dir/a.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m base
+base=$(git -C "$dir" rev-parse HEAD)
+echo 'late note' >> "$dir/.codeo/done/7/qc.md"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m head
+head=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 1 "$rc"
+assert_contains "no round in outcome" "no ### Round in ## Outcome" "$out"
+
+case_desc="a ### Round 2 outside ## Outcome is not a second round"
+dir=$(new_repo)
+mkdir -p "$dir/.codeo/done/7"
+printf '%s\n' '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}' > "$dir/.codeo/config.json"
+echo a > "$dir/a.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m base
+base=$(git -C "$dir" rev-parse HEAD)
+qc_md '### Round 1 — 2026-09-01
+
+**Verdict: clear.**' > "$dir/.codeo/done/7/qc.md"
+printf '# Plan\n\n## Outcome\n\nOne round.\n\n## Notes\n\n### Round 2 — 2026-09-02\n\nNot a round.\n\n### Footprint\n\n```\nfiles:      b.txt\nwiki:       none\nexclusive:  none\n```\n\n## Log\n\n- x\n' > "$dir/.codeo/done/7/plan.md"
+echo a > "$dir/a.txt"
+echo b > "$dir/b.txt"
+echo c > "$dir/c.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m head
+head=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
+case_desc="docs/plans files a PR adds are not counted as paths it changed"
+dir=$(new_repo)
+mkdir -p "$dir/.codeo/done/7" "$dir/docs/plans"
+printf '%s\n' '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}' > "$dir/.codeo/config.json"
+echo z > "$dir/z.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m base
+base=$(git -C "$dir" rev-parse HEAD)
+qc_md '### Round 1 — 2026-09-01
+
+**Verdict: clear.**' > "$dir/.codeo/done/7/qc.md"
+archive_plan 'b.txt' > "$dir/.codeo/done/7/plan.md"
+echo x > "$dir/docs/plans/x.md"
+echo b > "$dir/b.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m head
+head=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
+case_desc="a ### Round 2 under a heading that only starts with ## Outcome is not a second round"
+dir=$(new_repo)
+mkdir -p "$dir/.codeo/done/7"
+printf '%s\n' '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}' > "$dir/.codeo/config.json"
+echo a > "$dir/a.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m base
+base=$(git -C "$dir" rev-parse HEAD)
+qc_md '### Round 1 — 2026-09-01
+
+**Verdict: clear.**' > "$dir/.codeo/done/7/qc.md"
+printf '# Plan\n\n## Outcome\n\nOne round.\n\n## Outcomes\n\n### Round 2 — 2026-09-02\n\nNot a round.\n\n### Footprint\n\n```\nfiles:      b.txt\nwiki:       none\nexclusive:  none\n```\n\n## Log\n\n- x\n' > "$dir/.codeo/done/7/plan.md"
+echo a > "$dir/a.txt"
+echo b > "$dir/b.txt"
+echo c > "$dir/c.txt"
+git -C "$dir" add -A
+git -C "$dir" commit -q -m head
+head=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir" "$base" "$head"
+assert_eq "exit code" 0 "$rc"
+assert_lacks "no omission" "omits" "$out"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
