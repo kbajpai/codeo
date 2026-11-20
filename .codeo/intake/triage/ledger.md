@@ -146,3 +146,28 @@
 | `issue:131` | sbx lock and #99 follow-ups (consolidates #123, #125); filed 2026-11-18, board Status `Backlog` | ready | 2026-11-18 |
 | `issue:132` | Test-suite fixes from #116 and #100 (consolidates #121, #130); board Status `Backlog`, held for #118 which has merged (PR #129) | ready | 2026-11-18 |
 | `issue:133` | A `codeo` host command for containers and sandboxes (Linux, bash); filed 2026-11-18, board Status `Backlog` | ready | 2026-11-18 |
+| `qc:133:code-leftovers` | #133's `codeo` host command: F19, F25, F29, F30 and the smaller QC findings, with the unresolved PR #136 threads | filed #143 | 2026-11-20 |
+| `review:136:4629636234` | PR #136 thread: prune stale origin refs before the volume safety check | filed #143 | 2026-11-20 |
+| `review:136:4629636301` | PR #136 thread: request untracked files explicitly in the safety check | filed #143 | 2026-11-20 |
+| `review:136:4629636350` | PR #136 thread: refuse an incomplete kind lookup before removal | filed #143 | 2026-11-20 |
+| `review:136:4629636391` | PR #136 thread: write between the check and `docker rm -f` | filed #143 | 2026-11-20 |
+| `review:136:4629636455` | PR #136 thread: bind-mounted container vs a same-named volume | filed #143 | 2026-11-20 |
+| `review:136:4629636491` | PR #136 thread: concurrent first-use commands share one `.part` | filed #143 | 2026-11-20 |
+| `review:136:4629636540` | PR #136 thread: concurrent first-time lookups share `.lookup.git.part` | filed #143 | 2026-11-20 |
+| `review:136:4629636595` | PR #136 thread: honour `CODEO_REPO_URL` for the lookup cache (appears fixed on main) | filed #143 | 2026-11-20 |
+| `review:136:4629636654` | PR #136 thread: resolve the tree entry, not `cat-file -e` (appears fixed on main) | filed #143 | 2026-11-20 |
+| `review:136:4629636698` | PR #136 thread: relative `CODEO_CONTEXT` / `CODEO_SBX_IMAGE` overrides | filed #143 | 2026-11-20 |
+| `review:136:4629636750` | PR #136 thread: honour `CODEO_SBX` for discovery (appears fixed on main) | filed #143 | 2026-11-20 |
+| `qc:133:wording-leftovers` | #133's README, help-text, comment and changelog wording findings; folded into #143 at the engineer's request | filed #143 | 2026-11-20 |
+| `qc:108:F4-F6-F10` | #108: overlap.sh failure read as "no overlap", unanchored `## Outcome` heading, init closing block with no next command | filed #144 | 2026-11-20 |
+| `qc:108:nits-F2-F3-F5-F8-F9` | #108's test-name, comment and wording nits | dismissed — nits, only F4/F6/F10 were worth an issue (engineer) | 2026-11-20 |
+| `issue:138` | Live-session signal in hosted web sessions; filed, never started, board Status `Backlog` | backlog | 2026-11-20 |
+| `qc:132:F1` | `paragraph_contains_flat` whitespace-only line hardening | dismissed — nothing in today's skill triggers it | 2026-11-20 |
+| `qc:112:F7-F12` | #112's approximate refusal texts and one changelog verb | dismissed — #138 carries the substance | 2026-11-20 |
+| `qc:102:F1-F2-F5` | #102 priority setting: `"true"` string vs doctor, second priority label, unquoted path | deferred | 2026-11-20 |
+| `qc:102:F3-F4` | #102 wording findings | deferred | 2026-11-20 |
+| `qc:126:F1-F4` | #126 stale `claim.sh` text and old-style-branch transition gap | deferred | 2026-11-20 |
+| `qc:126:F5` | #126 hard-coded `.codeo/<N>` in step 6 | deferred | 2026-11-20 |
+| `qc:122:F1-F5` | #122 triage/inflight wording, `unassigned:<N>` re-asked each run | deferred | 2026-11-20 |
+| `qc:131:F1-F4` | #131 sandbox-lock leftovers | deferred | 2026-11-20 |
+| `unclosed:132` | `fix/fix-test-suite-gaps-left` still on origin after PR #140 merged | deferred | 2026-11-20 |
