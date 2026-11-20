@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is built: qc round 1 findings F1, F2, F3 and F5 are fixed. The build command (`true`) exits 0. Next: `/codeo:qc`.
+Round 3 is built: `origin/main` (#102) is merged, `CHANGELOG.md` conflict resolved. The build command (`true`) exits 0. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -67,8 +67,19 @@ Step 2a: `sync-main` said the branch already contains `origin/main`. `overlap.sh
 
 **Not taken:** F4 and F6 are `/codeo:plan`'s, left to the engineer or `/codeo:triage`.
 
+### Round 3 — 2026-11-20
+
+(send-back from qc.md round 2)
+
+Step 2a: `sync-main` merged `origin/main` and conflicted on `CHANGELOG.md` (#102's `d3e957c`); it also changed `docs/skills-inventory.md`, `docs/skills.md`, `scripts/doctor.sh`, `scripts/github.sh`, `skills/issue/SKILL.md`, `lib/env.sh` and their tests, which merged cleanly. `overlap.sh 108` printed only the #112 pair already answered in Q1.
+
+**Resolved:** `CHANGELOG.md` — both bullets kept under `## Unreleased` (this branch's `(#108)` bullet first, then #102's priority-label bullet), a blank line between them, no markers left. The two corrected v1.0.7 clauses are intact. `docs/skills.md` still carries the last-copy clause with `/codeo:triage` staying (F5), now at line 200. Merge commit `11e29b8`.
+
+**Built:** nothing else this round. **Build:** `true` → exit 0; `bash tests/run.sh` on the merged tree also printed `all cases passed` (evidence for `/codeo:qc`, not a grade). `overlap.sh --outside 108` printed nothing.
+
 ## Log
 
 - 2026-11-19 — round 1 built: nine plan tasks, ten commits, build passes, whole-branch review ready · cost: 23m · sonnet-5-5 592k in + 23.5M cached / 88k out
 - 2026-11-19 — round 2 started: sent back from qc round 1; overlap with #112 raised as Q1, nothing built yet · cost: 0m · sonnet-5-5 85k in + 357k cached / 2k out
 - 2026-11-19 — round 2 built: F1, F2, F3, F5 fixed, build and suite pass; Q1 (#112 overlap) answered proceed and coordinate · cost: 11m · sonnet-5-5 101k in + 2.1M cached / 8k out
+- 2026-11-20 — round 3: merged origin/main, resolved the CHANGELOG.md conflict with #102, build and suite pass · cost: 6m · sonnet-5-5 33k in + 625k cached / 1k out
