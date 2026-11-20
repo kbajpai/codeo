@@ -1,4 +1,4 @@
-# New issue — issue
+# Issue #144 — issue
 
 Called from `/codeo:triage` (run 10, 2026-11-20, Q2): the engineer answered *file it* for F4, F6 and F10 only; the nits (F2, F3, F5, F8, F9) are dismissed. Problem as understood: #108 (`overlap.sh`, `qc-verdict.sh` error handling) closed clear with three non-blocking findings nobody filed (`.codeo/done/108/qc.md` rounds 1 and 3; `implement.md` calls F6 "Plan gap, not fixed here"). Read against `origin/main` on 2026-11-20, all three are still there:
 
@@ -16,8 +16,9 @@ No open issue covers these (`issue search` finds only closed #97, #108, #116).
 
 ## Outcome
 
-Q1 plan decides, Q2 agreed. Draft written; awaiting approval at the review gate (title: Close the #108 leftovers: overlap.sh failures read as no overlap, the ## Outcome heading rule, and the init closing block; label bug; body.md).
+Filed as #144 after approval.
 
 ## Log
 
 2026-11-20 — questions raised · cost: unavailable
+2026-11-20 — approved and filed as #144 · cost: unavailable
