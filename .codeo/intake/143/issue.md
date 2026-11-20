@@ -1,4 +1,4 @@
-# New issue — issue
+# Issue #143 — issue
 
 Called from `/codeo:triage` (run 10, 2026-11-20, Q1): the engineer answered *file it* and asked to consolidate. Problem as understood: `.devcontainer/codeo` (the host command from #133, PR #136, merged) shipped with `qc.md` findings F2-F32 recorded as non-blocking and 11 review threads from the Copilot reviewer left unresolved; `codeo rm` deletes containers, volumes and sandboxes, so the ones that can remove unsaved work or print false advice are worth an issue of their own. No open issue covers it (`issue search` found only closed #133, #131, #123, #125).
 
@@ -19,8 +19,9 @@ Type: none (user-owned repository). Label: `bug`. Body: `body.md` in this direct
 
 ## Outcome
 
-Q1-Q3 answered. Draft written; awaiting approval at the review gate.
+Filed as #143 after approval.
 
 ## Log
 
 2026-11-20 — questions raised · cost: unavailable
+2026-11-20 — approved and filed as #143 · cost: unavailable
