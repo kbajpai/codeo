@@ -26,7 +26,7 @@ in prose exist (only the script's existence is checked).
 - [issue-05] Acceptance criteria are checkable outcomes, not a contract.
 - [issue-06] File through REST because `gh issue create` cannot set the Issue Type; take the number and URL from
   the response, never reconstruct them.
-- [issue-07] Never set Priority or Effort.
+- [issue-07] Priority only under issue.priority and with the engineer's approval at the gate, as a label; never Effort.
 - [issue-08] A refusal from the role check ends the step; no override.
 - [issue-09] A failed Backlog move never fails the filing; report the number and quote the fix.
 

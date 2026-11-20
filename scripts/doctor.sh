@@ -4,7 +4,7 @@
 #
 #   doctor.sh
 #
-# Checks: config, schema, codename, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays, superpowers.
+# Checks: config, schema, codename, gh-auth, gh-scopes, board, priority-labels (only when issue.priority is true), ruleset, suites, deps, overlays, superpowers.
 # Every GitHub read is `gh api` except the board check's `gh project view`, which is GraphQL-backed; nothing uses the
 # GraphQL-backed `gh issue|pr|run`.
 # The ruleset check reads the effective rules for the base branch from
@@ -113,6 +113,28 @@ else
         report ok board "every configured project is readable"
     else
         report fail board "not readable: ${bad[*]}"
+    fi
+fi
+
+# priority-labels: only when issue.priority is exactly true (a bool); any other value, or an unusable
+# config, prints nothing. Reads the repository's labels with plain `gh api`.
+if [[ $config_ok -eq 1 && $(cfg '.issue.priority == true') == true ]]; then
+    priority_labels=("priority: blocker" "priority: high" "priority: medium" "priority: low")
+    repo="$(cfg .repo.owner)/$(cfg .repo.name)"
+    if ! command -v gh >/dev/null 2>&1 || ! labels=$(gh api --paginate "repos/$repo/labels" -q '.[].name' 2>/dev/null); then
+        report fail priority-labels "cannot read the repository's labels"
+    else
+        missing=()
+        for l in "${priority_labels[@]}"; do
+            grep -Fxq -- "$l" <<<"$labels" || missing+=("$l")
+        done
+        if [[ ${#missing[@]} -eq 0 ]]; then
+            report ok priority-labels "all four exist"
+        else
+            joined=$(printf '%s, ' "${missing[@]}")
+            cmds=""; for l in "${missing[@]}"; do cmds+="bash $CODEO_PLUGIN_ROOT/scripts/github.sh label create '$l'; "; done
+            report fail priority-labels "missing: ${joined%, }; create each with: ${cmds%; }"
+        fi
     fi
 fi
 
