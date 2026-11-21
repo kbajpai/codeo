@@ -130,6 +130,15 @@ Calls I made, to correct if wrong:
 - `codeo-sandbox.sh` and `codeo-container.sh` do not change, as the issue says.
 - No invariants document, no shared environment and no `wiki` module are configured, so there is no invariants check, no lease task and `wiki: none`.
 
+### Footprint
+
+```
+files:      .devcontainer/codeo, .devcontainer/README.md, .sbx/README.md, tests/codeo-command.test.sh, CHANGELOG.md, docs/plans/2026-11-21-codeo-host-command-leftovers-143.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
