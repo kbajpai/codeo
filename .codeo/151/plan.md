@@ -105,6 +105,7 @@ Only the scope you asked for writes a project's file, as recommended (engineer, 
 - None: F10 and F11 only.
 
 **Answer:**
+Fold in all five (F13, F14, F16, F17, F18), as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q9 — F12 and F15 are known limits: accept them, document them, or fix them?
 
@@ -118,6 +119,7 @@ Only the scope you asked for writes a project's file, as recommended (engineer, 
 - Fix F12 now (compare the project's own file's `ref` too); accept F15. Adds a branch to the installer and a test.
 
 **Answer:**
+Accept both and document them, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ## Notes
 
