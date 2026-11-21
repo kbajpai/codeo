@@ -3,7 +3,8 @@
 # Each case is a function named in the final cases=( ... ) array; add a case by writing a function
 # and listing it. install.sh runs with PATH holding only a scratch bin/ (stubs for claude, git, gh
 # and the system package managers, plus symlinks to the real basic utilities), so no real tool is
-# ever called. Every stub claude call is logged, space-joined, to $STUB_DIR/calls; every stub git
+# ever called. A stub git ls-remote exits with the number in $STUB_DIR/ls-fail when that file exists,
+# and exits 2 under --exit-code when the tag is not in $STUB_DIR/tags. Every stub claude call is logged, space-joined, to $STUB_DIR/calls; every stub git
 # call to $STUB_DIR/git-calls; any package-manager or sudo call to $STUB_DIR/pkg-calls. This file
 # covers the usage errors (exit 2 before any claude or git call) and the prerequisite check (exit 1,
 # every missing tool named in one run, nothing installed).
@@ -53,7 +54,7 @@ in_setup() {
     mkdir -p "$in_dir/bin" "$in_dir/work" "$STUB_DIR" "$CLAUDE_CONFIG_DIR/plugins"
     local n p
     for n in bash env cat grep sed awk sort mkdir rm cp mv date tr head tail cut dirname basename \
-        mktemp jq ls wc printf uname; do
+        mktemp jq ls wc printf uname timeout; do
         p=$(command -v "$n" 2>/dev/null || true)
         [[ -z $p || $p != /* ]] || ln -s "$p" "$in_dir/bin/$n"
     done
@@ -77,6 +78,10 @@ STUB
 #!/usr/bin/env bash
 echo "\$*" >>"\$STUB_DIR/git-calls"
 if [[ \${1:-} == ls-remote ]]; then
+    [[ ! -f "\$STUB_DIR/ls-fail" ]] || exit "\$(cat "\$STUB_DIR/ls-fail")"
+    if [[ " \$* " == *" --exit-code "* ]]; then
+        grep -q "\${*: -1}\$" "\$STUB_DIR/tags" || exit 2
+    fi
     cat "\$STUB_DIR/tags"
     exit 0
 fi
@@ -166,11 +171,69 @@ expect_no_pkg_calls() {
     [[ ! -s $STUB_DIR/pkg-calls ]] || fail "a package manager was called: $(cat "$STUB_DIR/pkg-calls")"
 }
 
+t_latest_is_highest_release() {
+    in_setup latest
+    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.10\nc\trefs/tags/v1.0.7\nd\trefs/tags/v2.0.0-rc1\ne\trefs/tags/nightly\n' >"$STUB_DIR/tags"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == 'install: release v1.0.10' ]] || fail "stdout: $in_out"
+    grep -q 'ls-remote --tags --refs https://github.com/kbajpai/codeo v\*' "$STUB_DIR/git-calls" \
+        || fail "ls-remote call: $(cat "$STUB_DIR/git-calls")"
+    [[ ! -s $STUB_DIR/calls ]] || fail "claude was called"
+}
+
+t_given_tag_checked() {
+    in_setup given
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run --version v1.0.7
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    grep -q 'ls-remote --exit-code --tags https://github.com/kbajpai/codeo refs/tags/v1.0.7$' "$STUB_DIR/git-calls" \
+        || fail "ls-remote call: $(cat "$STUB_DIR/git-calls")"
+}
+
+t_bare_version_gets_v() {
+    in_setup bare
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run --version 1.0.7
+    [[ $in_out == 'install: release v1.0.7' ]] || fail "stdout: $in_out"
+    grep -q 'refs/tags/v1.0.7$' "$STUB_DIR/git-calls" || fail "call: $(cat "$STUB_DIR/git-calls")"
+}
+
+t_missing_tag_stops() {
+    in_setup missing_tag
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run --version v9.9.9
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == 'install: release v9.9.9 not found in kbajpai/codeo' ]] || fail "stderr: $in_err"
+    [[ ! -s $STUB_DIR/calls ]] || fail "claude was called"
+}
+
+t_offline_stops() {
+    in_setup offline
+    echo 128 >"$STUB_DIR/ls-fail"
+    in_run
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == 'install: cannot read the latest release: check the network and try again' ]] || fail "stderr: $in_err"
+    [[ ! -s $STUB_DIR/calls ]] || fail "claude was called"
+    in_run --version v1.0.7
+    [[ $in_rc -eq 1 ]] || fail "given tag offline: exit $in_rc, want 1"
+    [[ $in_err == 'install: cannot read the releases: check the network and try again' ]] || fail "stderr: $in_err"
+}
+
+t_no_tags_stops() {
+    in_setup no_tags
+    in_run
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == 'install: cannot read the latest release: check the network and try again' ]] || fail "stderr: $in_err"
+    [[ ! -s $STUB_DIR/calls ]] || fail "claude was called"
+}
+
 t_no_args_ok_up_to_prereqs() {
     in_setup no_args
+    printf 'a1\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc, want 0 (stderr: $in_err)"
-    [[ -z $in_out && -z $in_err ]] || fail "expected silence, got out=$in_out err=$in_err"
+    [[ $in_out == 'install: release v1.0.7' && -z $in_err ]] || fail "out=$in_out err=$in_err"
     in_run --version v1.0.7 --scope project
     [[ $in_rc -eq 0 ]] || fail "valid args: exit $in_rc, want 0 (stderr: $in_err)"
     in_run --version 1.0.7
@@ -223,6 +286,7 @@ t_bad_scope_usage() {
 
 t_old_bash() {
     in_setup old_bash
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
     CODEO_TEST_BASH_VERSION=3.2 in_run
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == *'install: bash 4.3 or later is required (found 3.2)'* ]] || fail "stderr: $in_err"
@@ -290,6 +354,12 @@ t_script_is_executable_with_bash_shebang() {
 }
 
 cases=(
+    t_latest_is_highest_release
+    t_given_tag_checked
+    t_bare_version_gets_v
+    t_missing_tag_stops
+    t_offline_stops
+    t_no_tags_stops
     t_no_args_ok_up_to_prereqs
     t_help_prints_usage
     t_unknown_option_usage

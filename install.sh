@@ -82,8 +82,44 @@ parse_args() {
     done
 }
 
+repo_url="https://github.com/kbajpai/codeo"
+tag=""
+
+# remote_git <args...>: git against the network, never prompting, never reading the script from stdin.
+remote_git() {
+    if command -v timeout >/dev/null 2>&1; then
+        GIT_TERMINAL_PROMPT=0 timeout 20 git "$@" </dev/null
+    else
+        GIT_TERMINAL_PROMPT=0 git "$@" </dev/null
+    fi
+}
+
+# resolve_release: sets tag to the release to install: the given version, checked on the remote, or
+# the highest vX.Y.Z tag. Tags that are not exactly vX.Y.Z are ignored. Changes nothing on failure.
+resolve_release() {
+    local rc=0 out
+    if [[ -n $want_version ]]; then
+        tag="v${want_version#v}"
+        remote_git ls-remote --exit-code --tags "$repo_url" "refs/tags/$tag" >/dev/null 2>&1 || rc=$?
+        case $rc in
+            0) ;;
+            128 | 124) die "cannot read the releases: check the network and try again" ;;
+            *) die "release $tag not found in kbajpai/codeo" ;;
+        esac
+    else
+        out=$(remote_git ls-remote --tags --refs "$repo_url" 'v*' 2>/dev/null) \
+            || die "cannot read the latest release: check the network and try again"
+        tag=$(printf '%s\n' "$out" \
+            | sed -n 's|^[0-9a-f]*[[:space:]]refs/tags/\(v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)$|\1|p' \
+            | sort -t. -k1.2,1n -k2,2n -k3,3n | tail -n 1)
+        [[ -n $tag ]] || die "cannot read the latest release: check the network and try again"
+    fi
+    say "release $tag"
+}
+
 main() {
     parse_args "$@"
+    resolve_release
 }
 
 main "$@"
