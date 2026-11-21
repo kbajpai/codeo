@@ -1,28 +1,58 @@
 # Issue — issue
 
-| | |
-|---|---|
-| Request | "How can we make codeo plugin installable & hosted in a package manager so that I can install it one command? Also, update the README that provides full documentation from installing, updating, & using plugin from a developer point of view?" |
-| Updated | 2026-11-21 |
-
-## Where this stands
-
-Drafting. Q3 and Q4 answered; Q1 and Q2 are open, with a recommendation and trade-offs given (Q5, Q6).
-
 ## Questions
 
-**Context found.** The repository is already a public Claude Code plugin marketplace (`.claude-plugin/marketplace.json`, plugin `codeo`, source `./`), so today an install takes two commands: `claude plugin marketplace add kbajpai/codeo` (optionally `@v1.0.7`) and `claude plugin install codeo@codeo`. codeo also needs the `superpowers` plugin (`doctor.sh` fails without it), installed the same way from `obra/superpowers-marketplace`, plus bash 4.3+, jq, git and gh. The only script that does all this is `.devcontainer/scripts/plugins.sh`, which serves codeo's own dev container and reads the pin from `.codeo/config.json`. `README.md` has no install, update or getting-started section: it covers the dev container, tests, the skill table, the dossier checker and replay, requirements and status.
+None open. Q1-Q4 answered (adopters first; one issue); Q5 and Q6 accepted by the engineer (Claude plugin system plus one install script; all four options kept: superpowers, prerequisite check, version, scope).
 
-1. **Which "package manager" do you mean?** (a) Claude Code's own plugin system, by listing codeo in a public plugin directory or the official marketplace so `/plugin install codeo` works without adding a marketplace first; (b) npm, e.g. `npx <name> install`; (c) Homebrew; (d) a one-line install script (`curl … | bash`) served from the repository; or a combination.
-2. **What must the one command do?** Install codeo only, or codeo plus `superpowers`? Should it check (not install) bash, jq, git and gh? Which scope: user, project, or the engineer's choice? Install the latest release, or a version given on the command line?
-3. **The README.** Is it for a developer adopting codeo in their own project (install, `/codeo:setup`, `/codeo:doctor`, a first issue through to merge, updating, uninstalling), with the contributor material (tests, the dossier checker, replay) moved to another page, or kept below it?
-4. **One issue or two?** The package-manager route and the README can be filed together, or as two issues so the README can ship first, documenting today's two-command install.
+## Draft
 
-5. **Q1 follow-up — recommendation asked for.** Recommended: Claude Code's own plugin system as the channel (it is already a marketplace). A project adopting codeo declares the marketplace and enables the plugin in its committed `.claude/settings.json`, so its engineers are offered the install when they trust the folder. On top of that, one install script for a single machine runs the `marketplace add` and `install` steps for codeo and superpowers and checks the prerequisites. Listing codeo in a public or official Claude plugin directory is worth pursuing, but its process is outside this repository's control: it is an open question, not a criterion. npm and Homebrew are not recommended: each would only wrap `claude plugin` calls, adds a second release channel to keep in step, and Homebrew does not cover Windows or WSL users without brew. Answer: open.
-6. **Q2 follow-up — trade-offs asked for.** (a) Also install superpowers: pro, codeo does not work without it (`doctor` fails); con, codeo then installs a third-party plugin from another marketplace, whose version codeo does not pin. (b) Check prerequisites: pro, a missing `jq` or an old bash otherwise fails later inside a skill; con, little, provided it reports and never installs system packages. (c) Pick a version: pro, matches the `plugin.ref` pin projects already use and makes a rollback possible; con, one more argument, so the default should be the latest release. (d) Choose scope: pro, a project scope keeps codeo out of unrelated repositories; con, two installed copies (user and project) have already caused version confusion in this project's release checks (#61, #75), so the default should be user scope. Answer: open.
+Title: Install codeo with one command and document installing, updating and using it in the README
+Labels: enhancement, documentation. Type: none (user-owned repo).
 
-**Answered.** Q3: adopters first, with tests, the dossier checker and replay moved to a contributor page. Q4: one issue.
+### Description
 
-## Outcome
+Make codeo installable on one machine with a single command, make adopting it in a project need no commands for that project's other engineers, and rewrite `README.md` as the full developer documentation for installing, updating, using and removing the plugin. Contributor material (the test runner, the dossier checker, the replay harness) moves out of the README to its own page.
 
-## Log
+### Motivation / Context
+
+The repository is already a public Claude Code plugin marketplace (`.claude-plugin/marketplace.json`, plugin `codeo`, source `./`), so today an install takes two commands: `claude plugin marketplace add kbajpai/codeo` (optionally `@<tag>`) and `claude plugin install codeo@codeo`. codeo also needs the `superpowers` plugin (`scripts/doctor.sh` fails without it), installed the same way from `obra/superpowers-marketplace`, plus bash 4.3 or later, jq, git and gh. The only script that does these steps is `.devcontainer/scripts/plugins.sh`, which serves codeo's own dev container and reads its pin from `.codeo/config.json`; an adopter cannot use it. `README.md` has no install, update, getting-started or uninstall section: it covers the dev container, the tests, the skill table, the dossier checker and replay, the requirements and the status. A developer who wants to try codeo has to piece the steps together from `docs/` and the changelog.
+
+The channel is Claude Code's own plugin system, because codeo is already a marketplace there. npm and Homebrew are not used: each would only wrap the same `claude plugin` calls and add a second release channel to keep in step, and Homebrew leaves out Windows and WSL users who have no brew.
+
+### Key Requirements
+
+- **One command per machine.** A single command, runnable from the README, installs codeo and `superpowers` and reports what it did. It installs codeo at the latest release by default and at a given release tag when one is passed. It installs at user scope by default and at project scope when asked, because two installed copies (user and project) have already caused version confusion in this project's release checks (#61, #75). It is safe to run again: what is already installed at the requested version is left alone.
+- **Prerequisite check.** The same command checks bash 4.3 or later, jq, git and gh, names each one that is missing or too old, and never installs system packages.
+- **Zero commands per project.** The README documents the `.claude/settings.json` snippet that declares the marketplace and enables `codeo@codeo`, so a project's other engineers are offered the install when they trust the folder, and says how a project pins a version.
+- **README for a developer adopting codeo.** It covers, in order: what codeo is, the requirements, installing (the one command, the per-project snippet, a pinned version), setting a project up (`/codeo:setup`, `/codeo:doctor`), a first issue taken through to a merged pull request, the skills and the files they write, updating (and how to read the changelog's config-schema, shared-state and mid-workflow lines first), uninstalling, and troubleshooting the failures `/codeo:doctor` reports. Every command shown is one that was run.
+- **Contributor material moved.** The test runner, the dossier checker and the replay harness leave `README.md` for a contributor page it links to, with their content unchanged.
+- **Test.** The install command's behaviour (defaults, a given tag, scope, re-running, a missing prerequisite) has tests that run without network access to GitHub or a real `claude`, and the README's claims about the command are covered by a doc-consistency test, as other pages are.
+
+### Acceptance Criteria
+- [ ] One command, shown in the README, installs codeo and `superpowers` on a machine that has neither, and `claude plugin list` then shows both enabled.
+- [ ] Run again with codeo already installed at the requested version, the command changes nothing and says so.
+- [ ] Run with a release tag, it installs that tag; run without one, it installs the latest release; the installed version is printed.
+- [ ] The default scope is user; asking for project scope installs at project scope and the command says which scope it used.
+- [ ] With bash older than 4.3, or jq, git or gh missing, the command names each missing or too-old prerequisite, installs no system package, and exits non-zero.
+- [ ] A project that commits the README's `.claude/settings.json` snippet is offered the codeo install by Claude Code when its folder is trusted (shown on a clean machine, with the result recorded in the PR).
+- [ ] `README.md` has sections for requirements, installing, project setup, a first workflow, the skills, updating, uninstalling and troubleshooting, and each command in them was run and its output matches.
+- [ ] `README.md` no longer holds the test, dossier-checker or replay sections; the contributor page holds them unchanged and the README links to it.
+- [ ] Tests cover the install command's behaviour listed above and run in `bash tests/run.sh`, which ends `all cases passed`; a test fails when the README's install command and the script disagree.
+- [ ] `CHANGELOG.md` has an entry stating the config schema, whether the shared state changed, and whether it is safe to bump mid-workflow.
+
+### Out of Scope
+
+- Publishing codeo to npm, Homebrew or another package manager.
+- Changing what the skills do, the plugin's version scheme, or the release checklist.
+- Installing system packages (bash, jq, git, gh) or changing how the dev container installs plugins.
+
+### Reference
+
+- `.claude-plugin/marketplace.json`, `.claude-plugin/plugin.json`, `.claude/settings.json` (enables `codeo@codeo`), `.devcontainer/scripts/plugins.sh`, `scripts/doctor.sh` (the `superpowers` check), `README.md`, `docs/release-checklist.md`, `CHANGELOG.md`.
+- #61 and #75: releases where a user-scope and a project-scope copy of `codeo@codeo` disagreed.
+- Raised by the engineer through `/codeo:issue` on 2026-11-21.
+
+### Open questions
+
+- Whether codeo can be listed in a public or official Claude plugin directory so `/plugin install codeo` works without adding the marketplace first, and what that process requires. Nobody can answer this from the repository; it is not a criterion here.
+- Where the one command lives and how it is fetched (a script in this repository served from `raw.githubusercontent.com`, or attached to each release): `/codeo:plan` decides.
