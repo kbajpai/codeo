@@ -44,7 +44,7 @@ The `codeo` command runs the same script for you; see *Installing the `codeo` co
 |---|---|---|
 | `bash codeo-container.sh home` | `codeo home` | Opens the home container `codeo-home`, a clone of `main`. |
 | `bash codeo-container.sh issue <N> <branch>` | `codeo issue <N> [<branch>]` | Opens the issue container `codeo-<N>`, a clone of `<branch>`. `/codeo:init` prints the number and the branch. `codeo issue <N> --container` forces a container when the saved default is a sandbox. |
-| `bash codeo-container.sh shell home` or `shell <N>` | `codeo shell home` or `codeo shell <N>` | Opens a shell in an existing container, in its clone folder. |
+| `bash codeo-container.sh shell home` or `shell <N>` | `codeo shell home` or `codeo shell <N> [--container\|--sandbox]` | Opens a shell in an existing container, in its clone folder. |
 
 `home` and `issue` build the image the first time, run the container, clone the repository into it and run the start script. They print what `docker` prints, then the start script's lines: for an issue container `lock: took the lock for #<N> on <branch>`, and for both `devcontainer-start: ready`, or `devcontainer-start: TODO` lines for what is left. The first run usually lists the logins (GitHub, then Claude Code) as TODO lines: open `bash codeo-container.sh shell <home|N>` and run what each TODO says (for example `claude auth login`). Run `home` again on a running container and it creates nothing: it runs the start script again; on a stopped container it starts it first. `issue` on an existing `codeo-<N>` refuses with `codeo-<N> already exists`, and names the three ways on: `bash codeo-container.sh shell <N>` to enter it, `issue <N> <branch> --rebuild` to rebuild it, or removal (`docker rm -f codeo-<N>; docker volume rm codeo-<N>`, once `git status` in it shows nothing unpushed) to start from a fresh clone. It also refuses a clone that is on another branch than `<branch>`. To see the TODO list again, open `shell <N>` and run `bash .devcontainer/scripts/devcontainer-start.sh`.
 
@@ -80,12 +80,12 @@ Two variables change where the script reads from, and `CODEO_SBX` picks the sbx 
 | Variable | Meaning |
 |---|---|
 | `CODEO_REPO_URL` | The repository to build from and clone. Default `https://github.com/kbajpai/codeo.git`. |
-| `CODEO_CONTEXT` | The `.devcontainer` directory of a local clone, used only to build the image; the repository is still cloned from `CODEO_REPO_URL`. |
+| `CODEO_CONTEXT` | The `.devcontainer` directory of a local clone, used only to build the image; the repository is still cloned from `CODEO_REPO_URL`. With the `codeo` command a relative path is read against the directory `codeo` was started in. |
 | `CODEO_SBX` | The sbx program `codeo list`, `codeo shell`, `codeo open` and `codeo rm` ask whether a sandbox exists, and `codeo-sandbox.sh` runs; else `sbx`, else `sbx.exe`. |
 
 ## Installing the `codeo` command
 
-`codeo` is a host command that wraps `codeo-container.sh` and `codeo-sandbox.sh`, so `codeo issue 133` replaces `bash codeo-container.sh issue 133 <branch>` and finds the branch itself. It is one bash script, `.devcontainer/codeo`. The host is Linux with bash 4.3 or later, `curl` and `git`; `docker` and `sbx` are each optional, and a missing one counts as none of that kind.
+`codeo` is a host command that wraps `codeo-container.sh` and `codeo-sandbox.sh`, so `codeo issue 133` replaces `bash codeo-container.sh issue 133 <branch>` and finds the branch itself. It is one bash script, `.devcontainer/codeo`. The host is Linux with bash 4.3 or later, `curl`, `git` and `flock` (util-linux); `docker` and `sbx` are each optional, and a missing one counts as none of that kind.
 
 Install it once:
 
@@ -95,20 +95,31 @@ mkdir -p ~/.local/bin && curl -fsSL -o ~/.local/bin/codeo https://raw.githubuser
 
 When `~/.local/bin` is not on `PATH`, `codeo help` ends with the one line to add to the shell profile: `export PATH="$HOME/.local/bin:$PATH"`. `codeo` never edits a shell profile.
 
-`~/codeo` (`CODEO_HOME`) holds what `codeo` keeps: the two scripts `codeo-container.sh` and `codeo-sandbox.sh`, the sandbox clones `codeo-<N>`, the saved default kind in `default`, and a blob-less bare clone `.lookup.git` used to find branches. `codeo` makes `~/codeo` and downloads a missing script the first time a command needs it, then runs the scripts from there, so the commands need no particular working directory. `CODEO_RAW_URL` names another base URL to download from (default `https://raw.githubusercontent.com/kbajpai/codeo/main`), and `CODEO_REPO_URL` another repository (default `https://github.com/kbajpai/codeo.git`).
+`~/codeo` (`CODEO_HOME`) holds what `codeo` keeps: the two scripts `codeo-container.sh` and `codeo-sandbox.sh`, the sandbox clones `codeo-<N>`, the saved default kind in `default`, and a blob-less bare clone `.lookup.git` used to find branches. `codeo` makes `~/codeo` and downloads a missing script the first time a command needs it, then runs the scripts from there, so the commands need no particular working directory. Each download goes to a temporary file of its own in `~/codeo` and is renamed into place, and the scripts it installs are made executable. The lookup clone `.lookup.git` is made in a temporary directory and renamed into place, and every branch lookup runs under an exclusive `flock` on `~/codeo/.lookup.lock`, so two first-use commands started together are safe: the scripts and the lookup clone are complete whichever finishes first, and the clone is made once. When `CODEO_HOME` is unset and `~/codeo` is a git checkout (what `git clone` of this repository makes there), `codeo` stops with one line that asks for `CODEO_HOME` to name the directory it should keep its files in, and writes nothing; `codeo help` and a usage error still work. A relative `CODEO_CONTEXT`, `CODEO_SBX_IMAGE` or `CODEO_SBX` that holds a `/` is read against the directory `codeo` was started in, so a later `cd` inside `codeo` cannot change what it names; a `CODEO_SBX` with no `/` is a program name and stays one. `CODEO_RAW_URL` names another base URL to download from (default `https://raw.githubusercontent.com/kbajpai/codeo/main`), and `CODEO_REPO_URL` another repository (default `https://github.com/kbajpai/codeo.git`).
 
-`codeo help` lists the commands. `codeo update` downloads the newest `codeo` and both scripts into a temporary directory inside `~/codeo`, checks that each file is non-empty and starts with `#!`, and only then moves them over the installed ones, `codeo` last. A failed download or check removes the temporary directory and changes nothing installed; a failure while moving the files names which are new and which are still old, and running `codeo update` again finishes it. `codeo update` overwrites the installed `codeo` and both scripts in `~/codeo`, including any hand edits made to them.
+`codeo help` lists the commands, and the kind flag `[--container|--sandbox]` on the four that take it:
+
+```text
+  codeo issue <N> [<branch>] [--rebuild] [--container|--sandbox]  start work on issue N
+  codeo shell home|<N> [--container|--sandbox]                    open a shell in the home or issue environment
+  codeo open <N> [--container|--sandbox]                          open the issue's sandbox in VS Code
+  codeo rm <N> [--force] [--container|--sandbox]                  remove the issue's container or sandbox
+```
+
+`codeo update` downloads the newest `codeo` and both scripts into a temporary directory inside `~/codeo`, checks that each file is non-empty and starts with `#!`, and only then moves them over the installed ones, `codeo` last. A failed download or check removes the temporary directory and changes nothing installed; a failure while moving the files names which are new and which are still old, and running `codeo update` again finishes it. `codeo update` overwrites the installed `codeo` and both scripts in `~/codeo`, including any hand edits made to them.
 
 | Command | Long form | What it does |
 |---|---|---|
 | `codeo home [--rebuild]` | `bash codeo-container.sh home [--rebuild]` | Opens the home container. |
-| `codeo issue <N> [<branch>] [--rebuild]` | `bash codeo-container.sh issue <N> <branch> [--rebuild]` | Opens the issue container `codeo-<N>`. |
+| `codeo issue <N> [<branch>] [--rebuild] [--container\|--sandbox]` | `bash codeo-container.sh issue <N> <branch> [--rebuild]` | Opens the issue container `codeo-<N>`, or the issue's sandbox with `--sandbox` or when the saved default is a sandbox. |
 | `codeo shell home` or `codeo shell <N> [--container\|--sandbox]` | `bash codeo-container.sh shell home` or `shell <N>` | Opens a shell in the home container, or in the issue's container or sandbox. |
+| `codeo open <N> [--container\|--sandbox]` | `bash codeo-sandbox.sh open <N>` | Opens the issue's sandbox in VS Code; sandbox only. |
 | `codeo list` | none | Lists the issue containers and sandboxes. |
 | `codeo rm <N> [--force] [--container\|--sandbox]` | `docker rm -f codeo-<N>; docker volume rm codeo-<N>` | Removes the issue's container after a safe check (see *Removing a finished container*). |
+| `codeo default [container\|sandbox]` | none | Shows the saved default kind for `codeo issue`, or saves one. |
 | `codeo update`, `codeo help` | none | Update the command and the scripts; print the commands. |
 
-With no `<branch>`, `codeo issue <N>` looks for the branch that holds `.codeo/<N>/init.md` on origin: it fetches `.lookup.git` on every lookup and tests each origin branch. One match is the branch. With none, or with several, it prints one line naming what it found, asks for `codeo issue <N> <branch>` and starts nothing. `issue` starts a container or a sandbox: `--container` or `--sandbox` says which, else the saved default in `~/codeo/default` (`codeo default container` or `codeo default sandbox` saves it, `codeo default` shows it, and a container is the default when none is saved). `--rebuild` is a usage error when the kind is a sandbox, whether by flag or by the saved default; the usage message says why. `shell`, `open` and `rm` look at the host instead: a Docker container `codeo-<N>` and an sbx sandbox `codeo-<N>`. When only one exists it is used; with neither, `codeo` prints one line naming `codeo issue <N>` and exits 1; with both, it prints one line and `--container` or `--sandbox` picks. `.sbx/README.md` describes the sandbox side.
+With no `<branch>`, `codeo issue <N>` looks for the branch that holds `.codeo/<N>/init.md` on origin: it fetches `.lookup.git` on every lookup and tests each origin branch. One match is the branch. With none, or with several, it prints one line naming what it found, asks for `codeo issue <N> <branch>` and starts nothing. `issue` starts a container or a sandbox: the flag `[--container|--sandbox]` says which, else the saved default in `~/codeo/default` (`codeo default container` or `codeo default sandbox` saves it, `codeo default` shows it, and a container is the default when none is saved; when `codeo default <kind>` cannot create the directory it keeps the file in, it prints one line, `codeo: could not create <dir>`, and exits 1). `--rebuild` is a usage error when the kind is a sandbox, whether by flag or by the saved default; the usage message says why. `shell`, `open` and `rm` look at the host instead: a Docker container `codeo-<N>` and an sbx sandbox `codeo-<N>`. When only one exists it is used; with neither, `codeo` prints one line naming `codeo issue <N>` and exits 1; with both, it prints one line and `--container` or `--sandbox` picks. `.sbx/README.md` describes the sandbox side.
 
 `codeo list` prints one row per issue container or sandbox, containers first, each kind by number: `#<N>  <kind>  <state>  <branch>`. The state of a container is `running`, `paused`, `restarting` or `stopped`, and of a sandbox `running`, `detached` or `stopped`. The branch is read from the running container or from the sandbox's clone in `~/codeo`, and is `-` for a stopped container or a sandbox with no clone. `list` starts nothing. When an installed program fails to list, `codeo list` prints a warning on stderr, still prints what the other program shows, withholds `no issue containers or sandboxes` and exits 1. With nothing to list it prints `no issue containers or sandboxes`; with neither `docker` nor `sbx` installed it says so and exits 1.
 
@@ -157,14 +168,38 @@ After an abandon it prints none either. With the branch kept, the container hold
 
 `/codeo:cleanup` lists finished issues only, those with a `.codeo/done/<N>` entry on the base branch, so it never lists a stashed or abandoned one.
 
-`codeo rm <N>` removes a container from the host, so the commands below need not be typed. It starts a stopped container, runs `git fetch origin` in `/workspaces/codeo-<N>` through `docker exec`, then looks for work that exists only in the container and refuses when it finds any of these, listing up to 10 lines of each:
+`codeo rm <N>` removes a container from the host, so the commands below need not be typed. It starts a stopped container, runs `git fetch --prune origin` in `/workspaces/codeo-<N>` through `docker exec` (so a branch deleted on origin is not still counted as pushed), then looks for work that exists only in the container and refuses when it finds any of these, listing up to 10 lines of each:
 
-- uncommitted or untracked files (`git status --porcelain`);
+- uncommitted or untracked files (`git status --porcelain --untracked-files=normal`, so an untracked file counts whatever `status.showUntrackedFiles` says; a file the repository ignores does not);
 - stashes (`git stash list`);
-- a detached HEAD;
+- a detached HEAD that no `origin` branch contains;
 - commits on a local branch that are on no `origin` branch and under no pull-request head (`git rev-list --branches --not --remotes=origin`, after `git fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*'`). A squash-merged issue, whose branch `/codeo:close` deleted on origin, is therefore clean: its commits are under the pull-request head, and a detached HEAD under one counts as delivered too.
 
-A refusal removes nothing and names `codeo rm <N> --force`. When the check cannot run (the container will not start, either fetch fails, or an `exec` fails) it also removes nothing, and says how to remove the container by hand. `--force` skips the refusal, prints what it did not keep, and removes also when the check cannot run, saying so. A clean container is removed without it. The removal is `docker rm -f codeo-<N>`, `docker volume rm codeo-<N>` and `docker rmi codeo-dev:codeo-<N>`; a failed container or volume removal stops with an error (a volume failure says the container is already removed), and a failed image removal is only a warning. It ends with `removed codeo-<N>` and a reminder that the Claude Code login on the volume is gone with it. For a sandbox `codeo rm <N> [--force]` runs `bash codeo-sandbox.sh end <N> [--force]` (see `.sbx/README.md`); when that exits non-zero, `codeo` adds one line to stderr, `to remove it anyway: sbx rm --force codeo-<N>`.
+A container that was running is read a second time. When the first read finds nothing, `codeo` runs `docker restart` on it, which ends any shell or agent attached to the container, and reads it again without fetching; a change found then refuses the removal and the container is left running. A container that `codeo` started itself is read once. The restart narrows the window in which a write lands between the check and the removal; it does not close it, because a `docker exec` started in the second after the restart can still slip through. A restart that fails is a check that could not run.
+
+A refusal removes nothing and names `codeo rm <N> --force`. When the check cannot run (the container will not start, either fetch fails, the restart fails, or an `exec` fails) it also removes nothing, and says how to remove the container by hand. `--force` skips the refusal, prints what it did not keep, and removes also when the check cannot run, saying so. A clean container is removed without it.
+
+Before it removes anything, `codeo` asks `docker inspect` what is mounted at `/workspaces` in the container. The check above speaks for the volume only when that is the named volume `codeo-<N>`. When `/workspaces` is anything else (a bind mount, another volume, none), the container and the image are removed, the volume `codeo-<N>` stays, and one line says so and names `docker volume rm codeo-<N>`; with `--force` the volume is removed too, and a line says that what `/workspaces` mounts was not checked as the volume. When `docker inspect` fails, `codeo` removes nothing and says how to remove the container by hand; with `--force` it says it could not check what `/workspaces` mounts and removes the volume anyway.
+
+The removal is `docker rm -f codeo-<N>`, `docker volume rm codeo-<N>` and `docker rmi codeo-dev:codeo-<N>`. A failed container or volume removal stops with an error (a volume failure says the container is already removed), and a failed image removal is only a warning, `codeo: warning: could not remove image codeo-dev:codeo-<N>`, given when the container or the volume was removed. With `--force`, a container that is already gone is not an error: its volume and image are still removed. The last line reports only what was removed. When the container and the volume both went it is `removed codeo-<N> (the Claude Code login on its volume is gone with it)`; otherwise it lists what did go, for example `removed container codeo-<N>, image codeo-dev:codeo-<N>`. When none of the three existed it is the error `nothing named codeo-<N> to remove`.
+
+```mermaid
+flowchart TD
+    A[codeo rm N, container] --> B[start if stopped; fetch --prune origin; fetch pull-request heads]
+    B --> C{read: status --untracked-files=normal, stash, detached HEAD, unpushed}
+    C -- dirty --> R[refuse, or with --force say what is not kept]
+    C -- cannot run --> X[nothing removed, or removed with --force]
+    C -- clean, was running --> D[docker restart: ends attached shells and agents]
+    D --> E{read again, no fetch}
+    E -- dirty --> R
+    E -- clean --> F{docker inspect: /workspaces is volume codeo-N?}
+    C -- clean, started by codeo --> F
+    F -- yes --> G[docker rm -f, volume rm, rmi]
+    F -- no, no --force --> H[remove container and image, keep the volume, say so]
+    F -- inspect failed, no --force --> X
+```
+
+For a sandbox `codeo rm <N> [--force]` runs `bash codeo-sandbox.sh end <N> [--force]` (see `.sbx/README.md`). When that exits non-zero, `codeo` adds one line to stderr after the script's own output. Without `--force` it is `its commits are kept in ~/codeo/codeo-<N>; codeo rm <N> --force removes it anyway`. With `--force` it is `to remove it anyway, discarding whatever it holds: sbx rm --force codeo-<N>`, left out when the script's own message already names `sbx rm --force codeo-<N>`.
 
 The two `/codeo:` commands above only print. The printed `docker rm -f codeo-<N>; docker volume rm codeo-<N>` serves a container opened from the command line too; removing its volume also removes its Claude Code login. Such a container also leaves the image `codeo-dev:codeo-<N>`, removed with `docker image rm codeo-dev:codeo-<N>`. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
 

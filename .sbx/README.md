@@ -75,7 +75,7 @@ The start script turns on `remoteControlAtStartup` in the sandbox, as it does in
 
 ## Ending a sandbox
 
-`end <N>`, or `codeo rm <N>` (which runs `bash codeo-sandbox.sh end <N>` from `~/codeo`, passes `--force` on, and prints `to remove it anyway: sbx rm --force codeo-<N>` on stderr when it exits non-zero), replaces the `docker rm -f codeo-<N>; docker volume rm codeo-<N>` line that `/codeo:close` and `/codeo:cleanup` print for a dev container. `codeo rm` is the only way `codeo` ends a sandbox, and the rules below are the script's. Close any VS Code window connected to `codeo-<N>.sbx` first: the removal uses `sbx rm --force`, which cuts the window off.
+`end <N>`, or `codeo rm <N>` (which runs `bash codeo-sandbox.sh end <N>` from `~/codeo`, passes `--force` on, and adds one line on stderr when it exits non-zero: without `--force`, `its commits are kept in ~/codeo/codeo-<N>; codeo rm <N> --force removes it anyway`; with `--force`, `to remove it anyway, discarding whatever it holds: sbx rm --force codeo-<N>`, left out when the script already named that command), replaces the `docker rm -f codeo-<N>; docker volume rm codeo-<N>` line that `/codeo:close` and `/codeo:cleanup` print for a dev container. `codeo rm` is the only way `codeo` ends a sandbox, and the rules below are the script's. Close any VS Code window connected to `codeo-<N>.sbx` first: the removal uses `sbx rm --force`, which cuts the window off.
 
 ```mermaid
 flowchart TD
