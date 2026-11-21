@@ -179,7 +179,7 @@ done
 
 case_desc=docs_state_the_web_session_signal
 handoff=$(<"$plugin_root/docs/handoff.md")
-for want in 'refs/heads/codeo-live/' 'never deleted' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN'; do
+for want in 'refs/heads/codeo-live/' 'never deleted' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN' 'takes the lock' 'first assignee' 'else `unknown`'; do
     [[ $handoff == *"$want"* ]] || {
         echo "FAIL $case_desc: no [$want]"
         failures=$((failures + 1))
@@ -187,6 +187,10 @@ for want in 'refs/heads/codeo-live/' 'never deleted' 'CLAUDE_CODE_REMOTE_SESSION
 done
 [[ $handoff != *'so it publishes no signal'* ]] || {
     echo "FAIL $case_desc: still has [so it publishes no signal]"
+    failures=$((failures + 1))
+}
+[[ $handoff != *'take the lock and beat'* ]] || {
+    echo "FAIL $case_desc: still has [take the lock and beat]"
     failures=$((failures + 1))
 }
 

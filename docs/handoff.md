@@ -170,10 +170,14 @@ it.
   A hosted web session publishes `refs/heads/codeo-live/<issue>/<machine>` instead, because the
   proxy refuses a push to the first and accepts the second, and a REST write of the commit is
   refused. The proxy refuses branch deletions, so a web signal is never deleted: it only expires
-  after the TTL, and the branch stays on origin until someone deletes it. In a web session the
-  repository's own hooks (`.claude/settings.json`) take the lock and beat, when
-  `CLAUDE_CODE_REMOTE` is `true`; a project that only installs the plugin needs the environment's
-  setup script to install it, since cloud sessions do not install `enabledPlugins`. `inflight.sh` prints
+  after the TTL, and the branch stays on origin until someone deletes it. In a hosted web session the beat hook takes the lock itself, so no
+  separate lock step is needed: when `CLAUDE_CODE_REMOTE` is `true`, the project has a `.codeo/`
+  directory and there is no `.codeo/active`, the hook runs `lock.sh take web` with the session id
+  without its `cse_` prefix, at most once per `CODEO_LIVE_REFRESH_SECONDS`, and then beats; taking the lock
+  may check out the dossier branch. This repository gets the hook from its own two gated groups in
+  `.claude/settings.json` (`UserPromptSubmit` and `PostToolUse`); another project adds the same two
+  groups, or installs the plugin through the environment's setup script, since cloud sessions do not
+  install `enabledPlugins`. Either way nothing else is needed. `inflight.sh` prints
   a `live:` line (`<user> on <machine> (<host>), <age> ago`) for a workflow with a signal at most 15
   minutes old, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --live` lists them as TSV
   (issue, user, machine, host, age in seconds). It fetches both refspecs, the `refs/codeo/live/*`
@@ -187,7 +191,10 @@ it.
   no script refuses or waits because a workflow is live. On a public repository it names a user, a
   machine label and the host kind (container, web or local), and never an email address. The user
   is `CODEO_GITHUB_LOGIN`, else the login `GET /user` returns, else for a web session the issue's
-  assignee, else `git config user.name`, else `unknown`. The machine is `CODEO_MACHINE`, else the
+  first assignee (who may not be the person at the keyboard), else for any other session
+  `git config user.name`, else `unknown`; a web session never uses `git config user.name`. The
+  signal reads `CODEO_GITHUB_LOGIN` before `GET /user`, where `github.sh` assignments try
+  `GET /user` first. The machine is `CODEO_MACHINE`, else the
   container's volume, else its sandbox, else for a web session `web-` plus the first 8 characters
   of the session id without its `cse_` prefix (the lock's `session`, else
   `CLAUDE_CODE_REMOTE_SESSION_ID`), else the hostname. The
@@ -208,8 +215,9 @@ it.
       participant H as hooks/live-signal.sh
       participant O as origin (refs/codeo/live/N/machine, refs/heads/codeo-live/N/machine)
       participant R as inflight.sh in another clone
-      S->>H: UserPromptSubmit / PostToolUse (a web session: the repository's own hooks)
+      S->>H: UserPromptSubmit / PostToolUse
       H->>H: .codeo/active present? less than 5 min since last beat?
+      H-->>H: a web session with no lock: lock.sh take web in the background, then beat
       H-->>O: live.sh beat — force-push one parentless commit (REST if the push is refused; a web session pushes the codeo-live branch, no REST)
       R->>O: fetch +refs/codeo/live/*:refs/codeo/live/* and +refs/heads/codeo-live/*:refs/codeo/live/* (--prune)
       R->>R: beat within 15 min? print "live:" line
