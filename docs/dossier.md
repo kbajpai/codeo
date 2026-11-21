@@ -201,6 +201,8 @@ _Pending — written at the hand-off._
   — what each skill puts there is in its own `SKILL.md`. It is written once, at the hand-off, and
   a later round after a send-back adds a dated `### Round <n>` beneath the first rather than
   rewriting it: how many rounds a change took is worth more to that reader than a tidy result.
+  The heading is `## Outcome` exactly: `## Outcomes` and `## Outcome notes` are other sections, and
+  `dossier-check.sh`, `inflight.sh` and `qc-verdict.sh` all read them that way.
 - `## Log` gets one line per invocation, appended and never edited: the date, what the invocation
   did, then ` · cost: ` and the output of `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" <skill>`
   — elapsed minutes, then one `<model> <fresh> in + <cached> cached / <out> out` group per model,
