@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written (back to `/codeo:plan`); the plan's round 2 and `implement.md`'s round 2 followed. This is pass 2: the pass ran to step 7 and stopped at step 10 on Q3 (what a replace does to other projects' installs). No round 2 is written until Q3 is answered.
+Round 2 done: Q3 answered (say so and correct the docs), the pass ran to the end, and the verdict is back to `/codeo:plan` (F10: a replace silently drops other projects' installs; F11: the README/CHANGELOG claim they are offered again, which `claude` contradicts). Criterion 6 stays the engineer's check at `/codeo:close`.
 
 ## Questions
 
@@ -48,6 +48,7 @@ Treat it as a close-time check (engineer, in the conversation, 2026-11-21).
 - *Leave it.* Both stay as documented, the unverified sentence included; recorded as non-blocking findings, and the verdict can be clear. I advise against it: the sentence is the only place an adopter is told what happens to their other projects, and the evidence points against it.
 
 **Answer:**
+Say so and correct the docs, as recommended (engineer, in the conversation, 2026-11-21).
 
 ## Notes
 
@@ -115,8 +116,58 @@ Q1 (#138 also changes `CHANGELOG.md`) answered *proceed and coordinate*; Q2 (cri
 
 **Verdict: back to `/codeo:plan`.**
 
+
+### Round 2 — 2026-11-21
+
+Q3 (what a replace does to other projects' installs) answered *say so and correct the docs*, so this round goes back to `/codeo:plan`. `qc.md` Q1-Q3 are closed.
+
+**Commands run this pass, and their output**
+- `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: merged origin/main (1 commit(s))`, `sync-main: also changed on main: CHANGELOG.md`. The merge (`84de56a`) brought in the pull request for #149; `CHANGELOG.md` has no conflict markers and this branch's bullet is intact (re-checked against the other change).
+- `bash scripts/overlap.sh 151` and `bash scripts/overlap.sh --outside 151`: no output.
+- `bash scripts/scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: `.codeo/151/*`, `CHANGELOG.md`, `CONTRIBUTING.md`, `README.md`, `install.sh`).
+- Build: the `shell` suite's `build` is `true`; exit 0. Tests: `bash tests/run.sh` on the merged tree ended `all cases passed`, exit 0.
+- Moved text against `git show origin/main:README.md`: `same: Tests`, `same: Checking a dossier`, `same: Replaying finished dossiers`, `same: Dev container`.
+- Real `install.sh` runs (claude 2.1.325, throwaway `CLAUDE_CONFIG_DIR`): fresh `install: done - codeo v1.0.7, user scope, superpowers 7.0.2`, re-run `install: nothing changed - codeo v1.0.7, user scope, superpowers 7.0.2`; a plain run from `proj/sub` with a committed project-scope install at v1.0.6: `install: codeo v1.0.6 -> v1.0.7 (user scope)`, `install: this project's own codeo (project scope, v1.0.6) is no longer installed on this machine; its .claude/settings.json was not changed`, `git status --short` empty, the file still pinning `v1.0.6`; a `--scope project` run with a user copy at another tag: `install: codeo v1.0.7 -> v1.0.6 (project scope)`, `install: your user-scope codeo moved to v1.0.6 too: one machine holds one codeo version`; `claude plugin uninstall codeo@codeo` without `--scope` in a project with only a project-scope install: `✘ Failed to uninstall plugin "codeo@codeo": Plugin "codeo@codeo" is enabled at project scope (.claude/settings.json, shared with your team). To disable just for you: claude plugin disable codeo@codeo --scope local`.
+- Reproduced for the reviewer's Important findings: project A with its own install at v1.0.6, then a plain `install.sh` from `~` printed `install: codeo v1.0.6 -> v1.0.7 (user scope)` and `install: done - …` with no line about project A, and `claude plugin list --json` afterwards listed only the user-scope entry (`{"id":"codeo@codeo","version":"1.0.7","scope":"user","projectPath":null}`); `claude plugin marketplace add kbajpai/codeo@v1.0.6 --scope project` in project A then printed `✘ Failed to add marketplace: Cannot add marketplace "codeo": its source doesn't match its extraKnownMarketplaces entry in user or managed settings; add it from the source that entry lists, or change the entry.`
+- Independent review (opus): its report is quoted in plain text by finding below.
+
+**Round 1's findings, recapped:** F1 (blocking in round 1) — fixed by `6cbe7d1` (a user-scope run leaves the project's file alone and says when its install was dropped; reproduced above). F2 (blocking in round 1) — fixed by `ba6f9dd`. F3 (blocking in round 1) — fixed by `ba6f9dd`. F4 (non-blocking), F5, F6, F7, F8 and F9 were fixed by `1e4029b`, `ba6f9dd`, `a8b6c4f`, `6cbe7d1`, `8c0cc63` and `ba6f9dd`; F7's remaining half (the highest tag, not a GitHub release) is F15 below.
+
+**Acceptance criteria**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| 1. One command, shown in the README, installs codeo and `superpowers`; `claude plugin list` shows both enabled | met | `t_fresh_user_install`, `t_readme_install_command_runs`; real fresh run above and the reviewer's, `claude plugin list` showed both `✔ enabled` |
+| 2. Run again at the same version: nothing changes, and it says so | met | `t_rerun_changes_nothing`, `t_project_rerun_changes_nothing`; real re-run above |
+| 3. A release tag installs that tag; none installs the latest; the version is printed | met | `t_given_tag_installed`, `t_latest_is_highest_release`, `t_bare_version_gets_v`, `t_missing_tag_stops` |
+| 4. Default scope user; project scope installs there and the command says which scope it used | met | `t_default_scope_is_user`, `t_project_scope_installs_both`; real runs above name the scope on every line |
+| 5. Old bash, or `jq`, `git`, `gh` missing: each named, no system package, exit non-zero | met | `t_old_bash`, `t_missing_each`, `t_all_missing_named_together`, `t_no_system_package_installed` in the full run above (the real no-tools run from round 1 is not repeated; F17 on the head's coverage) |
+| 6. A project that commits the README's snippet is offered the install when its folder is trusted | not yet checkable — the engineer's check, recorded in the pull request at `/codeo:close` (Q2); the snippet equals a real project-scope run's `.claude/settings.json` under `jq -S` (`t_project_scope_writes_the_readme_snippet`, the reviewer's real run); it is sufficient only when the teammate has no codeo at another tag yet, which *Troubleshooting* covers | the reviewer's real run |
+| 7. README has the eight sections, and each command in them was run and its output matches | not met — F11 (the README states something `claude` contradicts); F13 is non-blocking | `t_readme_sections`, `t_readme_install_blocks_match_the_script`; the reviewer ran the README's `uninstall`, `marketplace remove`, `plugin update superpowers` and the Troubleshooting `marketplace add` for real |
+| 8. README no longer holds the test, dossier-checker or replay sections; the contributor page holds them unchanged; the README links to it | met | the four `same:` diffs above; `README.md` `## Contributing` |
+| 9. Tests cover the behaviour and run in `bash tests/run.sh`, which ends `all cases passed`; a test fails when the README's install command and the script disagree | met | the full run above; `t_readme_install_command_runs`, `t_readme_install_blocks_match_the_script` |
+| 10. CHANGELOG entry states the config schema, whether the shared state changed, and whether it is safe to bump mid-workflow | met | `CHANGELOG.md` `## Unreleased` header lines plus the bullet; its "offered again" wording is F11 |
+
+**Documentation check.** `README.md` and `CONTRIBUTING.md` are the pages the plan names; no other page describes installing the plugin. The README's *Installing* blocks match real runs. Two statements are not true: the "offered again by their own committed settings" sentences (`README.md` *Setting a project up*, *Updating*, *Uninstalling*, and the CHANGELOG bullet) and the claim that `claude` refuses a bare `uninstall` in a project (F11, F13).
+
+**Findings**
+- **F10 — blocking, `/codeo:plan`'s.** A replace silently uninstalls other projects' project-scope installs. `claude plugin marketplace remove codeo` uninstalls codeo at every scope on the machine; `install.sh` names a dropped project install only when the run starts inside that project (`proj_e` is looked up only for a user-scope run inside a git repository). Reproduced above: a plain run from `~` drops project A's install with no line; a run inside project B, or any `--scope project` run, does the same. A `--scope local` install is never looked for. The code does what the plan says (other projects' installs are not reinstalled); the plan did not weigh that this is silent. The engineer's Q3 answer is the decision: after a replace the installer prints one line per project-scope install it dropped, from `claude plugin list --json`'s `projectPath`, with the command that restores it.
+- **F11 — blocking, `/codeo:plan`'s.** The docs claim other projects' installs "are offered again by their own committed settings" when their folder is trusted (`README.md` lines 145, 280 and 290, and the CHANGELOG bullet). Nothing shows it, and it is contradicted: once the machine's marketplace is at the new tag, `claude plugin marketplace add kbajpai/codeo@v1.0.6 --scope project` in a project pinning the old tag fails (output above), and an already-trusted folder is not asked again. The plan wrote the claim; per Q3 the sentences go and the dropped-install lines of F10 replace them.
+- **F12 — non-blocking, `/codeo:plan`'s.** "Already installed" at project scope reads the machine's pin, not the project's own `.claude/settings.json`: a project file hand-edited to `ref: v1.0.6` (as the README's *Updating* says) with the machine at v1.0.7 gets `nothing changed` from `--scope project`. Parked in round 2's plan as a known limit.
+- **F13 — non-blocking, `/codeo:implement`'s.** `README.md` *Uninstalling* says `claude` refuses a bare `claude plugin uninstall codeo@codeo` run in a project; that holds only when no user-scope copy exists. With both scopes installed the bare command uninstalls the user copy and succeeds (the reviewer verified it).
+- **F14 — non-blocking, `/codeo:implement`'s.** *Your first workflow* quotes "three leftovers" and "all nine as recommended" without naming the dossier or issue it comes from, so a reader cannot check it.
+- **F15 — non-blocking, `/codeo:plan`'s.** "Latest release" is the highest `vX.Y.Z` tag, not a GitHub release (the remote has tags without a release, such as `v1.0.1`); a tag pushed before its release is published would be installed as the latest.
+- **F16 — non-blocking, `/codeo:implement`'s.** A replace re-enables a user-scope copy the engineer had disabled, and the line says only "moved to vX too".
+- **F17 — non-blocking, `/codeo:implement`'s.** The bash 3.2 head is covered only through `CODEO_TEST_BASH_VERSION`; no check reads the head for bash-4-only syntax. `CODEO_TEST_BASH_VERSION` is also honoured in production, and a non-numeric value makes the version test error out and pass.
+- **F18 — non-blocking, `/codeo:implement`'s.** A non-JSON line on stdout from `claude plugin list --json` (an update notice, say) aborts the run with jq's own error and no `install:` line.
+
+**Routing.** F10 is new installer behaviour the plan did not specify and F11 is wording the plan wrote, so this goes back to `/codeo:plan`. The plan round should carry F10 and F11 per the engineer's Q3 answer, and may fold F13, F14, F16, F17 and F18 in as tasks since F11 and F13 change the same README sections; F12 and F15 are known limits for the plan to accept or schedule. Criterion 6 stays the engineer's check at `/codeo:close`.
+
+**Verdict: back to `/codeo:plan`.**
+
 ## Log
 
 - 2026-11-21 — Q1-Q2 raised (overlap with #138 on CHANGELOG.md; criterion 6 is the engineer's) · cost: 0m · opus-5-5 290k in + 333k cached / 1k out
 - 2026-11-21 — Q1-Q2 answered; round 1: build, suite, criteria, documentation, independent review · cost: 39m · opus-5-5 413k in + 3.2M cached / 31k out · sonnet-5-5 36k in + 3.8M cached / 15k out
 - 2026-11-21 — pass 2: Q3 raised (a replace drops other projects' installs; an unverified README/CHANGELOG claim) · cost: 10m · opus-5-5 121k in + 2.8M cached / 29k out · sonnet-5-5 14k in + 5.4M cached / 11k out
+- 2026-11-21 — pass 2: Q3 answered; round 2: build, suite, criteria, documentation, independent review · cost: 14m · opus-5-5 121k in + 2.8M cached / 29k out · sonnet-5-5 22k in + 7.4M cached / 17k out
