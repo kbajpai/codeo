@@ -217,7 +217,10 @@ it.
   that has outgrown its plan still shows up that way, and an overlap already raised as a question
   in the issue's dossiers is not raised again. An overlap is a numbered question in that step's dossier,
   answered by the engineer, never a guess: proceed and coordinate, sequence after the other issue,
-  or re-scope. An `exclusive` resource — one of the config's `resources[]` — is one where two
+  or re-scope. A non-zero exit, with an `overlap: cannot diff …` or `overlap: cannot resolve …`
+  line, is a stop to report, never "no overlap". An `overlap: skipping #<M>'s changed paths`
+  warning with exit 0 is quoted to the engineer, and the step carries on with that workflow's
+  footprint alone. An `exclusive` resource — one of the config's `resources[]` — is one where two
   branches cannot both change it and merge cleanly, so for those the plan takes a lock
   (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take <resource> <N> <purpose>`), refused
   while another issue holds it.
