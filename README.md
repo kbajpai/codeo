@@ -243,6 +243,8 @@ install: done - codeo v1.0.7, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
+The marketplace is removed before the new one is added, so if the network drops in between, the installer prints `codeo is no longer installed` and the line to run again; running the same command again finishes the job.
+
 Before you run it, read [`CHANGELOG.md`](CHANGELOG.md) for every release between yours and the new one. Each entry opens with three lines: `Config schema` (a project's `.codeo/config.json` must not be newer than the plugin understands), `Shared state` (what the plugin keeps on GitHub or in `.codeo/` that changed) and `Safe to bump mid-workflow` (`yes`, or what to finish first). Other projects' project-scope installs are not reinstalled; their committed settings offer the install again when the folder is trusted.
 
 superpowers is left alone by the installer when it is already installed. Update it with:

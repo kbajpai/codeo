@@ -117,50 +117,71 @@ resolve_release() {
     say "release $tag"
 }
 
-project_top=""
+# project_root: the project's git top level; fails outside a git repository.
+project_root() { git rev-parse --show-toplevel </dev/null 2>/dev/null; }
 
-# enter_project: project scope runs inside the project's git repository; cd to its top level, before any
-# claude call.
+# enter_project: project scope needs the project's git repository.
 enter_project() {
     [[ $scope == project ]] || return 0
-    project_top=$(git rev-parse --show-toplevel </dev/null 2>/dev/null) \
-        || die "project scope must run inside the project's git repository"
-    cd "$project_top"
+    project_root >/dev/null || die "project scope must run inside the project's git repository"
 }
 
 changed=0
 
 # claude_at <scope> <args...>: claude, never reading the script from stdin. User scope runs from $HOME,
-# so no project's settings are involved; project scope runs from the project top level (main cd's there).
+# so no project's settings are involved; project scope always runs from the project's top level,
+# wherever the installer was started.
 claude_at() {
-    local s=$1
+    local s=$1 top
     shift
     if [[ $s == user ]]; then
         (cd "$HOME" && claude "$@" </dev/null)
     else
-        claude "$@" </dev/null
+        top=$(project_root) || die "project scope must run inside the project's git repository"
+        (cd "$top" && claude "$@" </dev/null)
     fi
 }
 
 # run_claude <args...>: claude_at the requested scope.
 run_claude() { claude_at "$scope" "$@"; }
 
-# installed_version <id> <scope>: prints the version installed at the scope, nothing when absent. An id
-# ending in @* matches any marketplace. A failing plugin list dies inside the subshell, so callers
-# add || exit 1. A project-scope entry counts only for this project's top level.
-installed_version() {
+# last_line <text>: the last non-blank line, "claude failed" when there is none.
+last_line() {
+    local l
+    l=$(printf '%s\n' "$1" | sed '/^[[:space:]]*$/d' | tail -n 1)
+    printf '%s' "${l:-claude failed}"
+}
+
+# claude_step <what> <scope> <args...>: claude_at; a failure dies with "<what>: <claude's last line>".
+claude_step() {
+    local what=$1 out
+    shift
+    out=$(claude_at "$@" 2>&1) || die "$what: $(last_line "$out")"
+}
+
+# installed_entry <id> <scope>: prints "<version> <enabled> <id>" of the entry installed at the scope,
+# nothing when absent. An id ending in @* matches any marketplace. A failing plugin list dies inside the
+# subshell, so callers add || exit 1. A project-scope entry counts only for this project's top level.
+installed_entry() {
     local list top=""
     list=$(run_claude plugin list --json) \
         || die "cannot read the installed plugins (claude plugin list failed)"
     if [[ $2 == project ]]; then
-        top=${project_top:-$(git rev-parse --show-toplevel </dev/null 2>/dev/null || true)}
+        top=$(project_root || true)
     fi
     printf '%s\n' "$list" | jq -r --arg id "$1" --arg s "$2" --arg top "$top" '
         [.[] | select(
             (if ($id | endswith("@*")) then (.id | startswith($id[:-1])) else .id == $id end)
             and .scope == $s
             and ($s != "project" or .projectPath == $top))]
-        | (.[0].version // empty)'
+        | (.[0] | if . == null then empty else "\(.version) \(.enabled) \(.id)" end)'
+}
+
+# installed_version <id> <scope>: prints the version installed at the scope, nothing when absent.
+installed_version() {
+    local entry
+    entry=$(installed_entry "$@") || exit 1
+    printf '%s\n' "${entry%% *}"
 }
 
 # marketplace_pin: prints "<repo> <ref>" of the codeo marketplace, nothing when it is not added. A
@@ -168,30 +189,51 @@ installed_version() {
 marketplace_pin() {
     local file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/known_marketplaces.json"
     [[ -f $file ]] || return 0
-    jq -r 'select(.codeo) | "\(.codeo.source.repo // "") \(.codeo.source.ref // "")"' "$file"
+    jq -r 'select(.codeo) | "\(.codeo.source.repo // "") \(.codeo.source.ref // "")"' "$file" 2>/dev/null \
+        || die "cannot read the marketplaces ($file is not valid JSON)"
+}
+
+# pin_label <"repo ref">: how a marketplace pin reads in the output; a pin with no repo (a git or url
+# source) is "unknown source".
+pin_label() {
+    local r=${1%% *} f=${1#* }
+    if [[ -z $r ]]; then
+        printf 'unknown source'
+    elif [[ -n $f ]]; then
+        printf '%s@%s' "$r" "$f"
+    else
+        printf '%s' "$r"
+    fi
 }
 
 ensure_superpowers() {
-    local have
-    have=$(installed_version 'superpowers@*' "$scope") || exit 1
+    local entry have on id
+    entry=$(installed_entry 'superpowers@*' "$scope") || exit 1
+    read -r have on id <<<"$entry"
     if [[ -n $have ]]; then
+        if [[ $on == false ]]; then
+            claude_step "cannot enable superpowers" "$scope" plugin enable "$id" --scope "$scope"
+            changed=1
+            say "superpowers enabled ($scope scope)"
+            return 0
+        fi
         say "superpowers already installed ($scope scope), left alone"
         return 0
     fi
     if [[ $scope == project ]]; then
-        run_claude plugin marketplace add obra/superpowers-marketplace --scope project
+        claude_step "superpowers is not installed" "$scope" plugin marketplace add obra/superpowers-marketplace --scope project
     else
-        run_claude plugin marketplace add obra/superpowers-marketplace
+        claude_step "superpowers is not installed" "$scope" plugin marketplace add obra/superpowers-marketplace
     fi
-    run_claude plugin install superpowers@superpowers-marketplace --scope "$scope"
+    claude_step "superpowers is not installed" "$scope" plugin install superpowers@superpowers-marketplace --scope "$scope"
     changed=1
     say "superpowers installed ($scope scope)"
 }
 
 # replace_codeo <old-label>: removes the codeo marketplace (which uninstalls codeo at every scope on
 # the machine), adds it again at $tag, and reinstalls codeo at every scope it was at plus the requested
-# one. Project-scope calls run in the current directory, user-scope calls from $HOME. A failure after
-# the remove leaves codeo uninstalled, and says so.
+# one. The remove and user-scope calls run from $HOME, project-scope calls from the project's top level.
+# A failure after the remove leaves codeo uninstalled, and says so.
 replace_codeo() {
     local old=$1 out s add_scope=user
     local -a scopes=()
@@ -199,7 +241,8 @@ replace_codeo() {
     [[ -z $proj_v ]] || scopes+=(project)
     case " ${scopes[*]:-} " in *" $scope "*) ;; *) scopes+=("$scope") ;; esac
     case " ${scopes[*]} " in *" project "*) add_scope=project ;; esac
-    run_claude plugin marketplace remove codeo
+    # Always from $HOME: inside a git repository, remove rewrites its tracked .claude/settings.json.
+    claude_step "cannot remove the codeo marketplace" user plugin marketplace remove codeo
     if [[ $add_scope == project ]]; then
         out=$(claude_at project plugin marketplace add "kbajpai/codeo@$tag" --scope project 2>&1) || replace_failed "$out"
     else
@@ -214,18 +257,23 @@ replace_codeo() {
 
 # replace_failed <claude output>: codeo was removed and not put back.
 replace_failed() {
-    local line
-    line=$(printf '%s\n' "$1" | sed '/^[[:space:]]*$/d' | tail -n 1)
-    die "codeo is no longer installed: ${line:-claude failed}; run this again"
+    die "codeo is no longer installed: $(last_line "$1"); run this again"
 }
 
 ensure_codeo() {
-    local pin have user_v proj_v old
-    pin=$(marketplace_pin)
-    have=$(installed_version codeo@codeo "$scope") || exit 1
+    local pin entry have have_on user_v proj_v old
+    pin=$(marketplace_pin) || exit 1
+    entry=$(installed_entry codeo@codeo "$scope") || exit 1
+    read -r have have_on _ <<<"$entry"
     user_v=$(installed_version codeo@codeo user) || exit 1
     proj_v=$(installed_version codeo@codeo project) || exit 1
     if [[ $pin == "kbajpai/codeo $tag" && $have == "${tag#v}" ]]; then
+        if [[ $have_on == false ]]; then
+            claude_step "cannot enable codeo" "$scope" plugin enable codeo@codeo --scope "$scope"
+            changed=1
+            say "codeo $tag enabled ($scope scope)"
+            return 0
+        fi
         say "codeo $tag already installed ($scope scope)"
         return 0
     fi
@@ -235,23 +283,21 @@ ensure_codeo() {
         || { [[ -n $user_v && $user_v != "${tag#v}" ]]; } \
         || { [[ -n $proj_v && $proj_v != "${tag#v}" ]]; }; then
         old=${have:-${user_v:-$proj_v}}
-        if [[ ${pin%% *} != kbajpai/codeo && -n $pin ]]; then
-            old=${pin% *}@${pin#* }
-        elif [[ -n $old ]]; then
-            old=v$old
+        if { [[ -n $pin ]] && [[ ${pin%% *} != kbajpai/codeo ]]; } || [[ -z $old ]]; then
+            old=$(pin_label "$pin")
         else
-            old=${pin% *}@${pin#* }
+            old=v$old
         fi
         replace_codeo "$old"
         return 0
     fi
     if [[ $scope == project ]]; then
         # Declares the marketplace in the project's settings; a no-op when it is already known.
-        run_claude plugin marketplace add "kbajpai/codeo@$tag" --scope project
+        claude_step "codeo is not installed" "$scope" plugin marketplace add "kbajpai/codeo@$tag" --scope project
     elif [[ -z $pin ]]; then
-        run_claude plugin marketplace add "kbajpai/codeo@$tag"
+        claude_step "codeo is not installed" "$scope" plugin marketplace add "kbajpai/codeo@$tag"
     fi
-    run_claude plugin install codeo@codeo --scope "$scope"
+    claude_step "codeo is not installed" "$scope" plugin install codeo@codeo --scope "$scope"
     changed=1
     say "codeo $tag installed ($scope scope)"
 }
