@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 not started. The plan (`docs/plans/2026-11-21-install-one-command-151.md`) is committed and pushed, the branch already contains `origin/main`, and `overlap.sh` printed one overlap, raised as Q1. No task has been dispatched; the step resumes from this file once Q1 is answered.
+Round 1 starting. Q1 answered (proceed and coordinate: Task 7 adds one new bullet under `## Unreleased`, and the branch that merges second rebases and keeps both). Tasks are dispatched through `superpowers:subagent-driven-development` on the `sonnet` subagent model.
 
 ## Questions
 
@@ -22,6 +22,7 @@ Round 1 not started. The plan (`docs/plans/2026-11-21-install-one-command-151.md
 - *Re-scope.* Drop Task 7 and write the changelog bullet in a later change. The acceptance criteria require the entry, so this would leave one open.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-21).
 
 ## Notes
 
