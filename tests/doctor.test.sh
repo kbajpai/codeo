@@ -338,6 +338,18 @@ doctor_priority_labels_say_nothing_when_the_config_is_unusable() {
     ! grep -q 'priority-labels' <<<"$out" || fail "line printed for schema 9: $out"
 }
 
+doctor_priority_create_command_works_with_a_space_in_the_plugin_path() {
+    jq '.issue.priority = true' <<<"$healthy" > .codeo/config.json
+    mkdir -p "$work/my plugin"
+    cp -R "$plugin_root/scripts" "$plugin_root/lib" "$work/my plugin/"
+    printf '#!/usr/bin/env bash\necho "ran: $*"\n' > "$work/my plugin/scripts/github.sh"
+    local o cmd
+    o=$(GH_LABELS=$'priority: blocker\npriority: high\npriority: medium' bash "$work/my plugin/scripts/doctor.sh" 2>&1) || true
+    cmd=$(grep '^fail priority-labels:' <<<"$o" | sed 's/.*create each with: //')
+    [[ -n $cmd ]] || fail "no create command: $o"
+    [[ $(bash -c "$cmd" 2>&1) == "ran: label create priority: low" ]] || fail "command broke on the space: $cmd"
+}
+
 for c in doctor_overlays_ok_with_trailing_whitespace_and_crlf doctor_overlays_fail_on_a_duplicate_section \
     doctor_overlays_hint_at_a_double_space_heading doctor_superpowers_json_without_plugins_key_is_not_a_fail \
     doctor_overlays_ok_when_none doctor_overlays_ok_counts_sections \
@@ -355,7 +367,8 @@ for c in doctor_overlays_ok_with_trailing_whitespace_and_crlf doctor_overlays_fa
     doctor_survives_an_unusable_config \
     doctor_priority_labels_ok_when_all_four_exist doctor_priority_labels_fail_names_the_missing_one \
     doctor_priority_labels_fail_when_labels_cannot_be_read doctor_priority_labels_say_nothing_when_off \
-    doctor_priority_labels_say_nothing_when_the_config_is_unusable; do
+    doctor_priority_labels_say_nothing_when_the_config_is_unusable \
+    doctor_priority_create_command_works_with_a_space_in_the_plugin_path; do
     "$c"
 done
 echo "all cases passed"
