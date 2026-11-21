@@ -445,11 +445,11 @@ container_check() {
         # Only a container listed as not running was started by us; with no listing it may have been running.
         [[ "$listed" -eq 0 ]] || started=1
     fi
-    docker exec "$name" git -C "/workspaces/$name" fetch origin >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
+    docker exec "$name" git -C "/workspaces/$name" fetch --prune origin >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
     # Commits under a pull-request head count as delivered: /codeo:close deletes the branch on origin after a
     # squash merge, so the pull-request heads are what still hold them. Failing to fetch them proves nothing.
     docker exec "$name" git -C "/workspaces/$name" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
-    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
+    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain --untracked-files=normal 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
     found[branch]=""

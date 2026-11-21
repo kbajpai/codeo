@@ -856,11 +856,23 @@ t_rm_container_clean() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local want
-    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
+    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
     [[ "$(cat "$cm_dir/calls")" == "$want" ]] || fail "calls: $(tr '\n' '|' <"$cm_dir/calls")"
     [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
     grep -qi 'login' <<<"$cm_out" || fail "no login note: $cm_out"
     expect_no_script
+}
+
+t_rm_check_prunes_and_sees_untracked() {
+    cm_setup "$current"
+    rm_stubs
+    cm_run rm 5 --container
+    local pr_line prune_line
+    prune_line=$(grep -nF 'docker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    [[ -n "$prune_line" ]] || fail "no fetch --prune"
+    pr_line=$(grep -nF 'refs/pull/*/head' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    [[ -n "$pr_line" && "$prune_line" -lt "$pr_line" ]] || fail "prune not before pull-request fetch"
+    grep -qF 'status --porcelain --untracked-files=normal' "$cm_dir/calls" || fail "no untracked-files=normal"
 }
 
 t_rm_container_untracked() {
@@ -1020,8 +1032,8 @@ t_rm_stopped_container_started_first() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local start fetch
-    start=$(grep -n '^docker start codeo-5' "$cm_dir/calls" | head -1 | cut -d: -f1)
-    fetch=$(grep -n 'fetch origin' "$cm_dir/calls" | head -1 | cut -d: -f1)
+    start=$(grep -n '^docker start codeo-5' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    fetch=$(grep -n 'fetch origin' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
     [[ -n "$start" && -n "$fetch" && "$start" -lt "$fetch" ]] || fail "start not before fetch: $(tr '\n' '|' <"$cm_dir/calls")"
     cm_setup "$current-2"
     rm_stubs
@@ -1383,6 +1395,7 @@ cases=(
     t_rm_usage
     t_rm_container_clean
     t_rm_container_untracked
+    t_rm_check_prunes_and_sees_untracked
     t_rm_container_unpushed
     t_rm_container_stash
     t_rm_container_detached
