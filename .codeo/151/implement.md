@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 done: Tasks 1-5 of the round-2 plan are built and reviewed, the final review's findings are fixed, and `## Outcome` has its round. Open: acceptance criterion 6 (the trust-prompt check) is the engineer's, recorded in the pull request at `/codeo:close`. The hand-off is `/codeo:qc`.
+Round 3 done: Tasks 1-5 of the round-3 plan are built and reviewed, the final review's findings are fixed, and `## Outcome` has its round. Open: acceptance criterion 6 (the trust-prompt check) is the engineer's, recorded in the pull request at `/codeo:close`. The hand-off is `/codeo:qc`.
 
 ## Questions
 
@@ -89,8 +89,42 @@ No environment is configured, so nothing was leased, deployed or released.
 
 **Environment note:** between Tasks 3 and 4 the real `~/.claude/plugins` of this machine was reset (codeo and `superpowers` no longer installed there, the `superpowers` skill scripts gone); no subagent command touched the real configuration and the cause is unknown. The Task 4 review package was built with `git` directly.
 
+### Round 3
+
+2026-11-21
+(after plan.md round 3)
+
+**Built, all five tasks of `docs/plans/2026-11-21-install-one-command-151-round-3.md`, each through a sonnet implementer and a task review, then a whole-round review, one fix wave and one scoped re-review.**
+- Task 1 (F10; `qc.md` Q3): after a replace, `install.sh` prints one line per project or local-scope codeo install it dropped (path, scope, version, the command that restores it), from `claude plugin list --json` read before the marketplace is removed; a project-scope run does not name its own project. A review ruling made a local line say `.claude/settings.local.json` (see Deviations). Commits `766caf8`, `1f94e21`.
+- Task 2 (F16, F17): a disabled user-scope copy that a `--scope project` replace reinstalls is reported as enabled; `CODEO_TEST_BASH_VERSION` is honoured only as `<digits>.<digits>`; a test checks the head for bash-4-only syntax. Commit `7496d9a`.
+- Task 3 (F18): one shared `plugin_list_json` helper feeds both readers of the list; a notice before or after the array, or a compact array, no longer aborts the run, and no JSON at all still dies with the `install:` line. Commit `96a9975`.
+- Task 4 (F11-F15): README *Setting a project up*, *Installing*, *Your first workflow*, *Updating*, *Uninstalling* and *Troubleshooting* rewritten from real captures against `claude` 2.1.325 (the "offered again" claims removed; the dropped-install lines and their restore commands shown; the bare `uninstall` result with and without a user-scope copy; the highest-tag sentence; the hand-edited-`ref` entry). Two new stub scenarios and two tests tie the README to the script. Commit `b990804`.
+- Task 5 (F11): this branch's CHANGELOG bullet names every dropped install and its restore command; its one clause was changed in Task 4's commit because the new README test also scans the CHANGELOG, so Task 5 needed no commit of its own.
+- Fix wave `7f7d281`: README.md's remaining "offered them again" wording, the F12 entry's `--version <tag>` note, and two vacuous test checks.
+
+**Real evidence gathered** (`claude` 2.1.325, scratch `HOME` and `CLAUDE_CONFIG_DIR`): `claude plugin list --json` run from `$HOME` lists other projects' project and local entries with `projectPath`; `install.sh --scope project` in a dropped project restores it (it installs the latest release and rewrites the pin `ref`, a git change to commit) and `claude plugin install codeo@codeo --scope local` restores a local install; the F12 sequence (hand-edited `ref`, `nothing changed`, `marketplace remove` from outside the project, `install.sh --scope project`) behaves as the README says. Commands and output are in the sdd reports for Task 4 and the fix wave.
+
+**Documentation pages changed:** `README.md` (Task 4, fix wave) and the `CHANGELOG.md` bullet. `CONTRIBUTING.md` and `docs/` are unchanged.
+
+**Build result:** the `shell` suite's `build` is `true`; exit 0. The full `bash tests/run.sh` ended `all cases passed` (exit 0) at `b990804` and again at the fix commit `7f7d281`; `qc` runs it again. `sync-main.sh` reported the branch already contains `origin/main`; `overlap.sh` printed nothing.
+
+**Deviations from the plan:**
+- A local-scope dropped line reads `its .claude/settings.local.json was not changed` where the plan's F10 text had `.claude/settings.json` for both scopes: a local install lives in `settings.local.json`. The plan's other text is unchanged.
+- Task 1's proof could not pass alone: `t_readme_install_blocks_match_the_script` stays red until Task 4 re-captures the README (the plan's order); every other case was green at each step.
+- The plan's Task 4 has Task 5's CHANGELOG clause change land in Task 4's commit (above).
+
+**Still open, the engineer's:** acceptance criterion 6 (the trust-prompt check), recorded in the pull request at `/codeo:close` (`qc.md` Q2).
+
+**Parked, not fixed (known limits for `qc` to weigh):**
+- If a reinstall fails after the marketplace removal, the dropped-project lines are not printed and a re-run finds no pin to replace, so those projects are not named.
+- A notice line that starts with `[` before the list's array makes the run die cleanly with the `install:` line.
+- The projectPath comparison is a string compare, so a symlinked checkout could be named as dropped when it is the current project.
+- The head-syntax test's banned list omits `${x^}`, `declare -n`, `;;&`, `[[ -R`, `read -i`; a missing `.version` would print `vnull`.
+- The reviewer's three SIGINT failures were an artifact of running the suite as a background job; foreground runs ended `all cases passed`.
+
 ## Log
 
 - 2026-11-21 — Q1 raised (overlap with #149 on CHANGELOG.md) · cost: 7m · sonnet-5-5 12k in + 671k cached / 2k out
 - 2026-11-21 — Q1 answered; round 1: Tasks 1-7 implemented and reviewed, final review and one fix wave · cost: 113m · sonnet-5-5 1.1M in + 29M cached / 225k out
 - 2026-11-21 — round 2 (after plan.md round 2): Tasks 1-5 implemented and reviewed, final review and one fix wave · cost: 30m · sonnet-5-5 330k in + 16.3M cached / 58k out
+- 2026-11-21 — round 3 (after plan.md round 3): Tasks 1-5 implemented and reviewed, final review, one fix wave and a scoped re-review · cost: 74m · sonnet-5-5 690k in + 22.2M cached / 121k out
