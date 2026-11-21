@@ -37,7 +37,7 @@ cm_sys() {
     local t p
     mkdir -p "$cm_dir/sys"
     for t in bash env cat grep sed sort cut head tail tr wc mkdir mv cp rm chmod mktemp readlink \
-        dirname basename ls sleep date find id; do
+        dirname basename ls sleep date find id flock; do
         p=$(PATH=/usr/bin:/bin command -v "$t" 2>/dev/null) || continue
         ln -sf "$p" "$cm_dir/sys/$t"
     done
@@ -59,6 +59,7 @@ cm_setup() {
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 cat "$d/${0##*/}_out" 2>/dev/null || true
 exit 0
 STUB
@@ -70,11 +71,12 @@ STUB
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 for a in "$@"; do
     case "$a" in
-        clone) mkdir -p "${@: -1}"; exit 0 ;;
+        clone) [[ ! -e "$d/slow" ]] || sleep 0.3; mkdir -p "${@: -1}"; exit 0 ;;
         for-each-ref) [[ ! -e "$d/foreach_fail" ]] || exit 1; cat "$d/branches" 2>/dev/null || true; exit 0 ;;
-        *:.codeo/*/init.md) grep -qxF "${a%%:*}" "$d/has" 2>/dev/null && exit 0 || exit 1 ;;
+        *:.codeo/*/init.md) b=${a%%:*}; b=${b#refs/heads/}; grep -qxF "$b" "$d/has" 2>/dev/null && exit 0 || exit 1 ;;
     esac
 done
 exit 0
@@ -84,10 +86,12 @@ STUB
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 [[ ! -e "$d/curl_fail" ]] || exit 22
 while [[ $# -gt 0 ]]; do
     if [[ "$1" == -o ]]; then
         if [[ -e "$d/curl_body" ]]; then cp "$d/curl_body" "$2"; else printf '#!/bin/bash\nexit 0\n' >"$2"; fi
+        [[ ! -e "$d/slow" ]] || sleep 0.3
     fi
     shift
 done
@@ -99,6 +103,10 @@ STUB
 #!/bin/bash
 d=${0%/home/*}
 echo "${0##*/} $* pwd=$(pwd)" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
+[[ ! -e "$d/stdout_text" ]] || cat "$d/stdout_text"
+[[ ! -e "$d/stderr_text" ]] || cat "$d/stderr_text" >&2
+[[ ! -e "$d/sigint_parent" ]] || kill -INT "$PPID"
 exit "$(cat "$d/status" 2>/dev/null || echo 0)"
 STUB
         chmod +x "$cm_home/$n"
@@ -108,7 +116,11 @@ STUB
 # cm_run <args...>: run codeo with a clean environment; set cm_status, cm_out and cm_err.
 cm_run() {
     cm_status=0
-    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} ${CODEO_SBX:+CODEO_SBX="$CODEO_SBX"} \
+    local -a home_arg=(CODEO_HOME="$cm_home")
+    [[ -z "${cm_nohome:-}" ]] || home_arg=()
+    env -i HOME="$cm_dir/h" "${home_arg[@]}" PATH="$cm_dir/bin:$cm_dir/sys" \
+        ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} ${CODEO_SBX:+CODEO_SBX="$CODEO_SBX"} \
+        ${CODEO_CONTEXT:+CODEO_CONTEXT="$CODEO_CONTEXT"} ${CODEO_SBX_IMAGE:+CODEO_SBX_IMAGE="$CODEO_SBX_IMAGE"} \
         "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
@@ -325,9 +337,13 @@ t_lookup_clone_atomic() {
     printf 'feat/a\n' >"$cm_dir/branches"
     printf 'feat/a\n' >"$cm_dir/has"
     cm_run issue 5
-    grep -q "clone --bare -q --filter=blob:none .* $cm_home/.lookup.git.part\$" "$cm_dir/calls" || fail "clone not into .lookup.git.part"
-    [[ -d "$cm_home/.lookup.git" && ! -e "$cm_home/.lookup.git.part" ]] || fail "part not renamed"
-    [[ ! -e "$cm_home/.lookup.git/stale" ]] || fail "stale part kept"
+    local target
+    target=$(grep -o "clone --bare .* $cm_home/\.lookup\.[^ ]*\$" "$cm_dir/calls" | sed 's/.* //') || true
+    [[ -n "$target" && "$target" != "$cm_home/.lookup.git" && "$target" != "$cm_home/.lookup.git.part" ]] ||
+        fail "clone not into a temporary .lookup.* directory: $(tr '\n' '|' <"$cm_dir/calls")"
+    [[ ! -e "$target" ]] || fail "temporary clone directory left behind"
+    [[ -d "$cm_home/.lookup.git" ]] || fail "no .lookup.git"
+    [[ ! -e "$cm_home/.lookup.git/stale" ]] || fail "stale part read as the clone"
 }
 
 t_lookup_checks_file_without_blob() {
@@ -335,8 +351,35 @@ t_lookup_checks_file_without_blob() {
     printf 'feat/a\n' >"$cm_dir/branches"
     printf 'feat/a\n' >"$cm_dir/has"
     cm_run issue 5
-    grep -qF -- "rev-parse -q --verify feat/a:.codeo/5/init.md" "$cm_dir/calls" || fail "no rev-parse --verify: $(tr '\n' '|' <"$cm_dir/calls")"
+    grep -qF -- "rev-parse -q --verify refs/heads/feat/a:.codeo/5/init.md" "$cm_dir/calls" || fail "no rev-parse --verify: $(tr '\n' '|' <"$cm_dir/calls")"
     ! grep -q "cat-file" "$cm_dir/calls" || fail "cat-file fetches a blob"
+}
+
+t_concurrent_first_use() {
+    cm_setup "$current"
+    rm -f "$cm_home"/*.sh
+    touch "$cm_dir/slow"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    printf 'feat/a\n' >"$cm_dir/has"
+    local pid1 pid2 s1=0 s2=0 f
+    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" \
+        "$bash_abs" "$script" issue 5 >"$cm_dir/out1" 2>"$cm_dir/err1" &
+    pid1=$!
+    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" \
+        "$bash_abs" "$script" issue 5 >"$cm_dir/out2" 2>"$cm_dir/err2" &
+    pid2=$!
+    wait "$pid1" || s1=$?
+    wait "$pid2" || s2=$?
+    [[ "$s1" -eq 0 && "$s2" -eq 0 ]] || fail "exit $s1 and $s2: $(cat "$cm_dir/err1" "$cm_dir/err2")"
+    for f in codeo-container.sh codeo-sandbox.sh; do
+        [[ -s "$cm_home/$f" && "$(head -c2 "$cm_home/$f")" == "#!" ]] || fail "$f missing or not a script"
+    done
+    [[ -d "$cm_home/.lookup.git" ]] || fail "no .lookup.git"
+    [[ -z "$(find "$cm_home" -maxdepth 1 -name ".lookup.*" ! -name .lookup.git ! -name .lookup.lock)" ]] || fail "temporary .lookup.* left behind"
+    ! compgen -G "$cm_home/.lookup.git?*" >/dev/null || fail ".lookup.git.* left behind"
+    ! compgen -G "$cm_home/*.part" >/dev/null || fail ".part left behind"
+    ! compgen -G "$cm_home/.codeo-*" >/dev/null || fail ".codeo-* left behind"
+    [[ "$(grep -c '^git clone' "$cm_dir/calls")" -eq 1 ]] || fail "clones: $(grep -c '^git clone' "$cm_dir/calls")"
 }
 
 t_lookup_repoints_clone_at_url() {
@@ -497,6 +540,7 @@ list_stubs() {
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 if [[ -e "$d/docker_fail" ]]; then cat "$d/docker_err" >&2 2>/dev/null; exit 1; fi
 case "$1" in
     ps) cat "$d/docker_out" 2>/dev/null || true ;;
@@ -753,6 +797,34 @@ t_rm_unlisted_state_not_stopped_by_us() {
     ! grep -q "^docker stop" "$cm_dir/calls" || fail "stopped a container that may have been running: $(tr '\n' '|' <"$cm_dir/calls")"
 }
 
+# t_rm_one_listing_fails_needs_a_kind: with one listing down the other cannot prove the number free, so rm asks for a kind.
+t_rm_one_listing_fails_needs_a_kind() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/ps_fail"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run rm 5
+    [[ "$cm_status" -eq 1 ]] || fail "docker down: exit $cm_status, err: $cm_err"
+    grep -qE -- '--container|--sandbox' <<<"$cm_err" || fail "docker down: no kind named: $cm_err"
+    expect_no_script
+    ! grep -q '^docker rm' "$cm_dir/calls" || fail "docker down: removed something"
+    cm_setup "$current-2"
+    rm_stubs
+    sbx_down_stub
+    cm_run rm 5
+    [[ "$cm_status" -eq 1 ]] || fail "sbx down: exit $cm_status, err: $cm_err"
+    grep -qE -- '--container|--sandbox' <<<"$cm_err" || fail "sbx down: no kind named: $cm_err"
+    expect_no_script
+    ! grep -q '^docker rm' "$cm_dir/calls" || fail "sbx down: removed something"
+}
+
+# t_comments_within_120_columns: a comment line of .devcontainer/codeo is at most 120 columns (code lines may be longer).
+t_comments_within_120_columns() {
+    local long
+    long=$(awk '/^[[:space:]]*#/ && length($0) > 120 { printf "%d(%d) ", NR, length($0) }' "$repo/.devcontainer/codeo") || true
+    [[ -z "$long" ]] || fail "comment lines over 120 columns: $long"
+}
+
 t_list_extra_args_usage() { expect_usage list now; }
 
 t_host_kinds_exact_name() {
@@ -771,7 +843,10 @@ t_host_kinds_exact_name() {
 # rm_stubs: replace the docker stub with one that answers rm. docker ps with {{.State}} prints
 # "codeo-5 $(dstate)" (running when absent), other docker ps prints "codeo-5"; docker exec ... git -C
 # <dir> <sub> prints $d/g_<sub> (g_branch defaults to main) and fails for fetch when fetch_fail
-# exists, or for the git subcommand named in exec_fail; docker ps lists nothing once docker rm ran when gone_after_rm exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist.
+# exists, or for the git subcommand named in exec_fail; docker ps lists nothing once docker rm ran when gone_after_rm exists; docker start fails too when gone exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist;
+# docker inspect prints $d/mounts (default "volume codeo-5") and fails when inspect_fail exists; docker volume inspect
+# and rm fail when vol_gone exists; docker restart fails when restart_fail exists; once docker restart is in the calls file, $d/g2_<sub> (when it
+# exists) replaces $d/g_<sub> as the output of docker exec ... git -C <dir> <sub>.
 rm_stubs() {
     cat >"$cm_dir/bin/docker" <<'STUB'
 #!/bin/bash
@@ -783,9 +858,15 @@ case "$1" in
         if [[ -e "$d/gone" ]]; then :
         elif [[ -e "$d/gone_after_rm" ]] && grep -q "^docker rm" "$d/calls"; then :
         elif [[ "$*" == *State* ]]; then echo "codeo-5 $(cat "$d/dstate" 2>/dev/null || echo running)"; else echo codeo-5; fi ;;
-    start) [[ ! -e "$d/start_fail" ]] || exit 1 ;;
+    start) [[ ! -e "$d/start_fail" && ! -e "$d/gone" ]] || exit 1 ;;
+    restart) [[ ! -e "$d/restart_fail" ]] || exit 1 ;;
     rm) [[ ! -e "$d/rm_fail" ]] || exit 1 ;;
-    volume) [[ ! -e "$d/vol_fail" ]] || exit 1 ;;
+    volume)
+        [[ "$2" != inspect && "$2" != rm || ! -e "$d/vol_gone" ]] || exit 1
+        [[ "$2" != rm || ! -e "$d/vol_fail" ]] || exit 1 ;;
+    inspect)
+        [[ ! -e "$d/inspect_fail" ]] || exit 1
+        cat "$d/mounts" 2>/dev/null || echo "volume codeo-5" ;;
     rmi) [[ ! -e "$d/rmi_fail" ]] || exit 1 ;;
     exec)
         sub=$6
@@ -798,8 +879,10 @@ case "$1" in
         if [[ "$prf" -eq 1 && "$sub" == rev-list && -e "$d/rev_pr_covered" ]]; then exit 0; fi
         if [[ "$prf" -eq 1 && "$sub" == branch && "$*" == *" -r "* && -e "$d/g_branch_r_pr" ]]; then cat "$d/g_branch_r_pr"; exit 0; fi
         [[ "$sub" != "$(cat "$d/exec_fail" 2>/dev/null)" ]] || exit 1
+        g=g
+        ! grep -q '^docker restart' "$d/calls" || [[ ! -e "$d/g2_$sub" ]] || g=g2
         if [[ "$sub" == branch && "$*" == *" -r "* ]]; then cat "$d/g_branch_r" 2>/dev/null || true
-        elif [[ "$sub" == branch && ! -e "$d/g_branch" ]]; then echo main; else cat "$d/g_$sub" 2>/dev/null || true; fi ;;
+        elif [[ "$sub" == branch && ! -e "$d/g_branch" && "$g" == g ]]; then echo main; else cat "$d/${g}_$sub" 2>/dev/null || true; fi ;;
 esac
 exit 0
 STUB
@@ -829,11 +912,92 @@ t_rm_sandbox() {
     cm_run rm 5 --sandbox
     [[ "$cm_status" -eq 3 ]] || fail "exit $cm_status, want 3"
     expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
-    grep -qxF 'codeo: to remove it anyway: sbx rm --force codeo-5' <<<"$cm_err" || fail "no by-hand hint: $cm_err"
+    grep -qxF "codeo: codeo rm 5 --force removes it anyway; its unpushed commits are kept in $cm_home/codeo-5, its uncommitted work is not" <<<"$cm_err" || fail "no --force hint: $cm_err"
+    ! grep -qF 'sbx rm --force' <<<"$cm_err" || fail "names sbx rm --force without --force: $cm_err"
     cm_setup "$current-3"
     cm_run rm 5 --sandbox
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
     ! grep -q 'to remove it anyway' <<<"$cm_err" || fail "hint on success: $cm_err"
+    ! grep -q 'removes it anyway' <<<"$cm_err" || fail "hint on success: $cm_err"
+}
+
+t_rm_sandbox_hints() {
+    local last want n
+    cm_setup "$current"
+    echo 1 >"$cm_dir/status"
+    cm_run rm 5 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    last=$(tail -n 1 "$cm_dir/err")
+    want='codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-5'
+    [[ "$last" == "$want" ]] || fail "last stderr line '$last', want '$want'"
+    cm_setup "$current-2"
+    echo 1 >"$cm_dir/status"
+    printf 'could not read it\nto remove it anyway run: sbx rm --force codeo-5\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    n=$(grep -c 'sbx rm --force codeo-5' "$cm_dir/err" || true)
+    [[ "$n" -eq 1 ]] || fail "sbx rm --force line count $n, want 1: $cm_err"
+    grep -qxF 'to remove it anyway run: sbx rm --force codeo-5' <<<"$cm_err" || fail "script's own line lost: $cm_err"
+    grep -qxF 'could not read it' <<<"$cm_err" || fail "script's stderr not replayed: $cm_err"
+    cm_setup "$current-4"
+    echo 1 >"$cm_dir/status"
+    printf 'to remove it anyway run: sbx rm --force codeo-15\n' >"$cm_dir/stderr_text"
+    cm_run rm 1 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    last=$(tail -n 1 "$cm_dir/err")
+    want='codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-1'
+    [[ "$last" == "$want" ]] || fail "codeo-15 in stderr suppressed the hint for 1: '$last'"
+    [[ -z "$(ls -A "$cm_dir/h" "$cm_home" | grep '^\.rm-err' || true)" ]] || fail "temp file left behind"
+    cm_setup "$current-3"
+    echo 1 >"$cm_dir/status"
+    printf 'could not read it\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -qxF 'could not read it' <<<"$cm_err" || fail "script's stderr not replayed: $cm_err"
+    grep -qxF "codeo: codeo rm 5 --force removes it anyway; its unpushed commits are kept in $cm_home/codeo-5, its uncommitted work is not" <<<"$cm_err" || fail "hint wrong: $cm_err"
+    cm_setup "$current-5"
+    echo 1 >"$cm_dir/status"
+    printf 'codeo-sandbox: could not start it; nothing removed, with or without --force\nto remove it anyway run: sbx rm --force codeo-5\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    ! grep -qF -- '--force removes it anyway' <<<"$cm_err" || fail "false codeo hint printed: $cm_err"
+    n=$(grep -c 'sbx rm --force codeo-5' <<<"$cm_err" || true)
+    [[ "$n" -eq 1 ]] || fail "sbx rm --force line count $n, want 1: $cm_err"
+    grep -qxF 'to remove it anyway run: sbx rm --force codeo-5' <<<"$cm_err" || fail "script's own line lost: $cm_err"
+}
+
+# A script refusal that wrote a codeo-sandbox: line is not a refusal over work: no codeo hint.
+t_rm_sandbox_no_hint_on_die() {
+    cm_setup "$current"
+    echo 1 >"$cm_dir/status"
+    printf 'codeo-sandbox: no clone codeo-5 here: nothing to check\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    ! grep -q '^codeo: ' <<<"$cm_err" || fail "codeo hint after a die: $cm_err"
+    grep -qxF 'codeo-sandbox: no clone codeo-5 here: nothing to check' <<<"$cm_err" || fail "script line lost: $cm_err"
+}
+
+# A work refusal prints on stdout; stderr may hold unprefixed git progress: the hint appears.
+t_rm_sandbox_work_refusal_hint() {
+    cm_setup "$current"
+    echo 1 >"$cm_dir/status"
+    printf 'codeo-5 has unpushed commits\n' >"$cm_dir/stdout_text"
+    printf 'From origin\n * branch main -> FETCH_HEAD\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -qxF "codeo: codeo rm 5 --force removes it anyway; its unpushed commits are kept in $cm_home/codeo-5, its uncommitted work is not" <<<"$cm_err" || fail "no hint: $cm_err"
+}
+
+# Ctrl-C while the script runs still shows what it wrote to stderr.
+t_rm_sandbox_interrupt_replays_stderr() {
+    cm_setup "$current"
+    echo 1 >"$cm_dir/status"
+    printf 'script said this\n' >"$cm_dir/stderr_text"
+    touch "$cm_dir/sigint_parent"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 130 ]] || fail "exit $cm_status, want 130"
+    grep -qxF 'script said this' <<<"$cm_err" || fail "stderr lost on interrupt: $cm_err"
+    [[ -z "$(ls -A "$cm_home" | grep '^\.rm-err' || true)" ]] || fail "temp file left behind"
 }
 
 t_rm_sandbox_force() {
@@ -856,11 +1020,76 @@ t_rm_container_clean() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local want
-    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
+    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker restart codeo-5\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker inspect -f {{range .Mounts}}{{if eq .Destination "/workspaces"}}{{.Type}} {{.Name}}{{end}}{{end}} codeo-5\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
     [[ "$(cat "$cm_dir/calls")" == "$want" ]] || fail "calls: $(tr '\n' '|' <"$cm_dir/calls")"
     [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
     grep -qi 'login' <<<"$cm_out" || fail "no login note: $cm_out"
     expect_no_script
+}
+
+t_rm_restarts_running_container_and_reads_again() {
+    cm_setup "$current"
+    rm_stubs
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local calls first_rev restart rmf k
+    calls=$(tr '\n' '|' <"$cm_dir/calls")
+    first_rev=$(grep -n ' rev-list ' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    restart=$(grep -n '^docker restart codeo-5' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    rmf=$(grep -n '^docker rm -f' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    [[ -n "$first_rev" && -n "$restart" && -n "$rmf" && "$first_rev" -lt "$restart" && "$restart" -lt "$rmf" ]] ||
+        fail "restart not between first rev-list and rm: $calls"
+    for k in ' status ' ' stash list' ' branch --show-current' ' rev-list '; do
+        [[ "$(grep -cF -- "$k" "$cm_dir/calls" || true)" -eq 2 ]] || fail "'$k' not read twice: $calls"
+    done
+    [[ "$(grep -c ' fetch ' "$cm_dir/calls" || true)" -eq 2 ]] || fail "fetch not exactly twice: $calls"
+    [[ "$(grep -c -- '--prune' "$cm_dir/calls" || true)" -eq 1 ]] || fail "want one --prune: $calls"
+    [[ "$(grep -c 'refs/pull/' "$cm_dir/calls" || true)" -eq 1 ]] || fail "want one pull-request fetch: $calls"
+}
+
+t_rm_write_after_check_refused() {
+    cm_setup "$current"
+    rm_stubs
+    printf '?? new\n' >"$cm_dir/g2_status"
+    cm_run rm 5
+    expect_refused '?? new'
+    grep -q '^docker restart codeo-5' "$cm_dir/calls" || fail "no restart: $(tr '\n' '|' <"$cm_dir/calls")"
+    ! grep -q '^docker stop' "$cm_dir/calls" || fail "stopped a running container"
+}
+
+t_rm_restart_fails() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/restart_fail"
+    cm_run rm 5
+    expect_refused 'could not check'
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/restart_fail"
+    cm_run rm 5 --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "--force: not removed"
+}
+
+t_rm_started_container_not_restarted() {
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q '^docker restart' "$cm_dir/calls" || fail "restarted a container we started"
+}
+
+t_rm_check_prunes_and_sees_untracked() {
+    cm_setup "$current"
+    rm_stubs
+    cm_run rm 5 --container
+    local pr_line prune_line
+    prune_line=$(grep -nF 'docker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    [[ -n "$prune_line" ]] || fail "no fetch --prune"
+    pr_line=$(grep -nF 'refs/pull/*/head' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    [[ -n "$pr_line" && "$prune_line" -lt "$pr_line" ]] || fail "prune not before pull-request fetch"
+    grep -qF 'status --porcelain --untracked-files=normal' "$cm_dir/calls" || fail "no untracked-files=normal"
 }
 
 t_rm_container_untracked() {
@@ -1000,7 +1229,70 @@ t_rm_force_container_gone() {
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "volume kept: $(tr '\n' '|' <"$cm_dir/calls")"
     grep -q '^docker rmi codeo-dev:codeo-5' "$cm_dir/calls" || fail "image kept"
-    [[ "$cm_out" == *"removed codeo-5"* ]] || fail "no removed line: $cm_out"
+    [[ "$cm_out" == *"removed volume codeo-5"* ]] || fail "no removed line: $cm_out"
+    ! grep -q 'removed container' <<<"$cm_out" || fail "says removed container: $cm_out"
+}
+
+# docker rm -f of a missing container exits 0: it is not reported as removed.
+t_rm_force_missing_container_rm_succeeds() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/gone"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -qF 'removed volume codeo-5' <<<"$cm_out" || fail "no removed volume: $cm_out"
+    ! grep -q 'removed container' <<<"$cm_out" || fail "says removed container: $cm_out"
+    ! grep -qF 'removed codeo-5 (' <<<"$cm_out" || fail "says removed codeo-5: $cm_out"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/gone" "$cm_dir/vol_gone" "$cm_dir/rmi_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: nothing named codeo-5 to remove" ]] || fail "stderr: $cm_err"
+}
+
+# When the check could not run, a container that was listed, or whose listing failed, counts as removed.
+t_rm_force_unchecked_container_counts_as_removed() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/fetch_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_out" == *"removed codeo-5 ("* ]] || fail "listed container not reported removed: $cm_out"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/ps_fail" "$cm_dir/start_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_out" == *"removed codeo-5 ("* ]] || fail "unknown existence not treated as removed: $cm_out"
+}
+
+# The report joins its items with ", " and no trailing separator.
+t_rm_report_joins_items() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/gone" "$cm_dir/rmi_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$(tail -n 1 "$cm_dir/out")" == "removed volume codeo-5" ]] || fail "one item: $cm_out"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/vol_gone"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$(tail -n 1 "$cm_dir/out")" == "removed container codeo-5, image codeo-dev:codeo-5" ]] || fail "two items: $cm_out"
+}
+
+# A bind-mount container with no volume of its name has nothing to report about a volume.
+t_rm_bind_mount_without_volume_says_nothing() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'bind \n' >"$cm_dir/mounts"
+    touch "$cm_dir/vol_gone"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q 'volume' <<<"$cm_out" || fail "mentions a volume: $cm_out"
+    grep -qF 'removed container codeo-5' <<<"$cm_out" || fail "container not removed: $cm_out"
 }
 
 t_rm_force_failing_rm_still_listed_dies() {
@@ -1020,8 +1312,8 @@ t_rm_stopped_container_started_first() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local start fetch
-    start=$(grep -n '^docker start codeo-5' "$cm_dir/calls" | head -1 | cut -d: -f1)
-    fetch=$(grep -n 'fetch origin' "$cm_dir/calls" | head -1 | cut -d: -f1)
+    start=$(grep -n '^docker start codeo-5' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    fetch=$(grep -n 'fetch .*origin' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
     [[ -n "$start" && -n "$fetch" && "$start" -lt "$fetch" ]] || fail "start not before fetch: $(tr '\n' '|' <"$cm_dir/calls")"
     cm_setup "$current-2"
     rm_stubs
@@ -1173,6 +1465,98 @@ t_update_partial_final_mv() { expect_update_partial 3 "both scripts are new, cod
 
 t_update_usage_extra_args() { expect_usage update now; }
 
+t_relative_overrides_made_absolute() {
+    cm_setup "$current"
+    mkdir -p "$cm_dir/w"
+    cd "$cm_dir/w"
+    CODEO_CONTEXT=./ctx CODEO_SBX_IMAGE=pin cm_run home
+    cd "$repo"
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local e
+    e=$(cat "$cm_dir/env" 2>/dev/null || true)
+    case $e in
+        "ctx=$cm_dir/w/./ctx img=$cm_dir/w/pin "* | "ctx=$cm_dir/w/ctx img=$cm_dir/w/pin "*) ;;
+        *) fail "env is '$e'" ;;
+    esac
+    cm_setup "$current-2"
+    CODEO_SBX=mysbx cm_run home
+    e=$(cat "$cm_dir/env" 2>/dev/null || true)
+    [[ "$e" == *" sbx=mysbx" ]] || fail "bare CODEO_SBX changed: '$e'"
+    mkdir -p "$cm_dir/w"
+    cd "$cm_dir/w"
+    CODEO_SBX=./mysbx cm_run home
+    cd "$repo"
+    e=$(cat "$cm_dir/env" 2>/dev/null || true)
+    case $e in
+        *" sbx=$cm_dir/w/./mysbx" | *" sbx=$cm_dir/w/mysbx") ;;
+        *) fail "relative CODEO_SBX not made absolute: '$e'" ;;
+    esac
+}
+
+# home_untouched: nothing but .git is in the ~/codeo checkout of the collision case.
+home_untouched() {
+    local extra
+    extra=$(ls -A "$cm_dir/h/codeo" | grep -vxF .git || true)
+    [[ -z "$extra" ]] || fail "$1 wrote into ~/codeo: $extra"
+}
+
+t_home_checkout_collision() {
+    cm_setup "$current"
+    mkdir -p "$cm_dir/h/codeo/.git"
+    cm_nohome=1 cm_run list
+    [[ "$cm_status" -eq 1 ]] || fail "list: exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "list: stderr is '$cm_err'"
+    home_untouched list
+    [[ ! -s "$cm_dir/calls" ]] || fail "list made calls: $(cat "$cm_dir/calls")"
+    cm_nohome=1 cm_run issue 5
+    [[ "$cm_status" -eq 1 ]] || fail "issue: exit $cm_status, want 1"
+    [[ "$cm_err" == codeo:\ \~/codeo\ is\ a\ git\ checkout* ]] || fail "issue: stderr is '$cm_err'"
+    home_untouched issue
+    expect_no_script
+    cm_nohome=1 cm_run default sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "default: exit $cm_status, want 1"
+    home_untouched default
+    cm_nohome=1 cm_run default bogus
+    [[ "$cm_status" -eq 2 ]] || fail "default bogus: exit $cm_status, want 2"
+    grep -q "^usage:" "$cm_dir/err" || fail "default bogus: no usage"
+    home_untouched "default bogus"
+    cm_nohome=1 cm_run help
+    [[ "$cm_status" -eq 0 ]] || fail "help: exit $cm_status, want 0"
+    cm_nohome=1 cm_run rm 5 --bogus
+    [[ "$cm_status" -eq 2 ]] || fail "rm --bogus: exit $cm_status, want 2"
+    grep -q '^usage:' "$cm_dir/err" || fail "rm --bogus: no usage"
+    cm_run list
+    [[ "$cm_status" -eq 0 ]] || fail "with CODEO_HOME: exit $cm_status, err: $cm_err"
+}
+
+t_home_checkout_collision_git_file() {
+    cm_setup "$current"
+    mkdir -p "$cm_dir/h/codeo"
+    echo "gitdir: elsewhere" >"$cm_dir/h/codeo/.git"
+    cm_nohome=1 cm_run list
+    [[ "$cm_status" -eq 1 ]] || fail "list: exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "list: stderr is '$cm_err'"
+    home_untouched list
+    cm_nohome=1 cm_run default sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "default: exit $cm_status, want 1"
+    home_untouched default
+    cm_nohome=1 cm_run default bogus
+    [[ "$cm_status" -eq 2 ]] || fail "default bogus: exit $cm_status, want 2"
+    grep -q '^usage:' "$cm_dir/err" || fail "default bogus: no usage"
+    home_untouched "default bogus"
+}
+
+t_default_mkdir_failure_is_one_line() {
+    cm_setup "$current"
+    : >"$cm_dir/file"
+    cm_home="$cm_dir/file/sub"
+    cm_run default sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: could not create $cm_home" ]] || fail "stderr is '$cm_err'"
+}
+
 t_relative_codeo_home() {
     cm_setup "$current"
     cd "$cm_dir"
@@ -1286,6 +1670,74 @@ t_rm_volume_failure_says_container_removed() {
     grep -qF 'removed container codeo-5 but could not remove volume codeo-5' <<<"$cm_err" || fail "stderr: $cm_err"
 }
 
+t_rm_container_not_found_force() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/gone" "$cm_dir/start_fail" "$cm_dir/rm_fail" "$cm_dir/vol_gone" "$cm_dir/rmi_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: nothing named codeo-5 to remove" ]] || fail "stderr: $cm_err"
+    ! grep -q 'removed container' <<<"$cm_out$cm_err" || fail "says removed container: $cm_out $cm_err"
+}
+
+t_rm_force_listing_fails() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/ps_fail" "$cm_dir/start_fail" "$cm_dir/inspect_fail" "$cm_dir/rm_fail" "$cm_dir/vol_gone" "$cm_dir/rmi_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: could not remove container codeo-5" ]] || fail "stderr: $cm_err"
+    ! grep -q 'nothing named' <<<"$cm_out$cm_err" || fail "says nothing named: $cm_out $cm_err"
+    ! grep -q 'removed container' <<<"$cm_out$cm_err" || fail "says removed container: $cm_out $cm_err"
+}
+
+t_rm_force_volume_only() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/gone" "$cm_dir/start_fail" "$cm_dir/rm_fail" "$cm_dir/rmi_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "volume kept"
+    grep -qF 'removed volume codeo-5' <<<"$cm_out" || fail "stdout: $cm_out"
+    ! grep -q 'removed container' <<<"$cm_out" || fail "says removed container: $cm_out"
+}
+
+t_rm_bind_mount_keeps_volume() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'bind \n' >"$cm_dir/mounts"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "container kept"
+    grep -q '^docker rmi' "$cm_dir/calls" || fail "image kept"
+    ! grep -q '^docker volume rm' "$cm_dir/calls" || fail "volume removed"
+    grep -qF 'docker volume rm codeo-5' <<<"$cm_out" || fail "stdout: $cm_out"
+}
+
+t_rm_bind_mount_force() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'bind \n' >"$cm_dir/mounts"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "volume kept"
+    grep -qF 'not checked' <<<"$cm_out" || fail "no not-checked note: $cm_out"
+}
+
+t_rm_inspect_fails() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5 --container
+    expect_refused 'could not check'
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "--force: volume kept"
+}
+
 t_codeo_sbx_honoured() {
     cm_setup "$current"
     mkdir -p "$cm_dir/alt"
@@ -1344,6 +1796,7 @@ cases=(
     t_download_not_script
     t_lookup_clone_atomic
     t_lookup_checks_file_without_blob
+    t_concurrent_first_use
     t_lookup_repoints_clone_at_url
     t_lookup_uses_lstrip
     t_issue_sandbox_flag
@@ -1376,13 +1829,24 @@ cases=(
     t_rm_refusal_stops_started_container
     t_rm_container_not_found
     t_rm_unlisted_state_not_stopped_by_us
+    t_rm_one_listing_fails_needs_a_kind
+    t_comments_within_120_columns
     t_list_extra_args_usage
     t_host_kinds_exact_name
     t_rm_sandbox
+    t_rm_sandbox_hints
+    t_rm_sandbox_no_hint_on_die
+    t_rm_sandbox_work_refusal_hint
+    t_rm_sandbox_interrupt_replays_stderr
     t_rm_sandbox_force
     t_rm_usage
     t_rm_container_clean
+    t_rm_restarts_running_container_and_reads_again
+    t_rm_write_after_check_refused
+    t_rm_restart_fails
+    t_rm_started_container_not_restarted
     t_rm_container_untracked
+    t_rm_check_prunes_and_sees_untracked
     t_rm_container_unpushed
     t_rm_container_stash
     t_rm_container_detached
@@ -1405,17 +1869,31 @@ cases=(
     t_update_partial_final_mv
     t_update_through_symlink
     t_relative_codeo_home
+    t_relative_overrides_made_absolute
+    t_home_checkout_collision
+    t_home_checkout_collision_git_file
+    t_default_mkdir_failure_is_one_line
     t_home_unset
     t_home_dir_uncreatable
     t_rebuild_saved_sandbox_usage
     t_shell_home_sandbox_usage
     t_rm_force_container_gone
+    t_rm_force_missing_container_rm_succeeds
+    t_rm_force_unchecked_container_counts_as_removed
+    t_rm_report_joins_items
+    t_rm_bind_mount_without_volume_says_nothing
     t_rm_force_failing_rm_still_listed_dies
     t_rm_pr_head_delivered
     t_rm_pr_head_detached_delivered
     t_rm_pr_fetch_fails
     t_rm_commits_under_no_ref_refuse
     t_rm_volume_failure_says_container_removed
+    t_rm_container_not_found_force
+    t_rm_force_volume_only
+    t_rm_force_listing_fails
+    t_rm_bind_mount_keeps_volume
+    t_rm_bind_mount_force
+    t_rm_inspect_fails
     t_codeo_sbx_honoured
     t_issue_lookup_invalid_branch
 )
