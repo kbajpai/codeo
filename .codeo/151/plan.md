@@ -113,6 +113,15 @@ Only the scope you asked for writes a project's file, as recommended (engineer, 
 
 `engineering:system-design` and `engineering:architecture` are not available as skills in this session; their structure is applied directly in the draft.
 
+### Footprint
+
+```
+files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-21-install-one-command-151.md` (approved by the engineer 2026-11-21; left unstaged for review). **Shape:** a scoped, executable plan of eight tasks under `$PLANS`, with a Mermaid flowchart; no standing reference doc, because `README.md` is the documentation.
@@ -131,15 +140,6 @@ Only the scope you asked for writes a project's file, as recommended (engineer, 
 **Intake questions resolved:** where the one command lives and how it is fetched (Q1: `install.sh` at the root, served from `raw.githubusercontent.com`). Whether codeo can be listed in a public Claude plugin directory stays open and is not a criterion.
 
 **Other workflows:** #149 and #138 were at `init` with no footprint; `overlap.sh` printed nothing. No exclusive resource, so no lock was taken.
-
-### Footprint
-
-```
-files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 
 ## Log
