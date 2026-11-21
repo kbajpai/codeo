@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 written (send-back from qc.md round 1): F1, F2, F4, F5, F7, F8 fixed and F3 documented; build passes. Task 9 (one run against real Docker) is still the engineer's, on their host, and has not been run. Nothing is open. Next step: `/codeo:qc`.
+Round 2 written (send-back from qc.md round 1): F1, F2, F4, F5, F7, F8 fixed and F3 documented; build passes. Task 9 was run by the engineer on their host and its output is recorded in round 2. Nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -77,6 +77,15 @@ Executed with `superpowers:subagent-driven-development`: one implementer and one
 - The task review's Minors: a failure that writes no `codeo-sandbox: ` line (`bash` unable to run the script, a signal kill) also gets the "kept" hint, which is unlikely because `ensure_home` installs the script first.
 
 **Not done:** Task 9, the run against real Docker on the engineer's host. It also settles `docker rm -f` of a missing container on their Docker version.
+
+**Task 9, run by the engineer on their host (real Docker, `codeo-branch` downloaded from the pushed branch at `52a5a11`, issue `99999`, every `rm` with `--container` because `sbx` was not signed in).** Step 0 cleared a leftover from a first attempt, in which `rm 99999` without a kind flag stopped with `could not ask docker or sbx whether codeo-99999 exists as the other kind` (the rule for a failed listing, working as designed; the plan's steps 4-6 omitted the flag).
+- Step 2: `issue 99999 main --container` built, cloned and printed the home-container and login TODO lines (expected for `main` with no lock).
+- Step 3: `list` printed `#143  container  running  …` and `#99999  container  running  main`, then `codeo: could not list sbx sandboxes` / `error: not signed in to Docker`.
+- Step 4: with `untracked.txt` created in the container, `rm 99999 --container` printed `uncommitted or untracked files:` / `?? untracked.txt` and `codeo: codeo-99999 holds work that exists only there; nothing removed (codeo rm 99999 --force removes it anyway)`, exit 1; `docker ps` still listed `codeo-99999`.
+- Step 5: with `status.showUntrackedFiles no` set in the clone, the same output and exit 1 (the setting does not hide the file).
+- Step 6: with the file removed, `docker ps` showed `codeo-99999  Up 46 seconds`; `rm 99999 --container` printed `removed codeo-99999 (the Claude Code login on its volume is gone with it)`, exit 0; neither `docker ps -a` nor `docker volume ls` listed `codeo-99999` afterwards. The restart itself was not observed (no `docker events` capture), so `docker restart` is shown only by the removal succeeding after it.
+- Step 7: `rm 99999 --container --force` printed `--force: no container codeo-99999 found; removing its volume and image anyway` and `codeo: nothing named codeo-99999 to remove`, exit 1, and no line saying `removed container` (a real `docker rm -f` of a missing container exited 0 here, the case QC round 1 F1 was about).
+The plan's Task 9 text omits `--container` on its `rm` steps; the plan is not edited here.
 
 ## Log
 - 2026-11-21 — implemented: Tasks 1-8 (10 commits + 1 fix wave), build exit 0, Task 9 left to the engineer · cost: 88m · sonnet-5-5 1.1M in + 29.3M cached / 203k out
