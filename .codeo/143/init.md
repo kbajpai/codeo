@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Draft, awaiting the review gate. Branch `fix/codeo-host-command-close-leftovers` to be cut off `origin/main` at `2e02100a256de327d5f85d51d57db98a98672da1`. Next step: `/codeo:plan` in the issue's container.
+Initialized: branch `fix/codeo-host-command-close-leftovers` cut off `origin/main` at `2e02100a256de327d5f85d51d57db98a98672da1` and pushed. Next step: `/codeo:plan` in the issue's container.
 
 ## Questions
 
