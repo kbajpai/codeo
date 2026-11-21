@@ -59,7 +59,7 @@ doc_has "skills.md's scope sentence names the board write" docs/skills.md "puts 
 # #102: the skill proposes, shows and files a priority label when issue.priority is on.
 must_contain "step 5 reads the setting" 'config.sh" get '"'"'.issue.priority == true'"'"
 must_contain "only the boolean turns it on" 'Only the boolean true turns it on; the text "true" does not, and doctor reads it the same way.'
-must_contain "the label pass proposes no priority label" 'With the priority on, propose no `priority:` label here: the priority pass above is the only source of one.'
+must_contain "the label pass proposes no priority label" 'With the priority on, propose no `priority:` label here: the priority pass below is the only source of one.'
 must_contain "a priority outside the four is asked again" 'If the engineer names a priority other than `blocker`, `high`, `medium` or `low`, say that only those four are accepted and ask again; do not file with a priority that is not one of them.'
 must_contain "step 7 files at most one priority label" 'The call carries at most one `priority:` label, the approved one.'
 doc_has "skills.md says only the boolean true" docs/skills.md '(only the boolean `true`; the text "true" is off, as for `/codeo:doctor`)'

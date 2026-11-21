@@ -126,7 +126,7 @@ is the container the message names.
    `issue-types` printed, based on content (the names are whatever the organisation defines). When
    it prints nothing — a user-owned repository has no Issue Types — propose no type at all. Propose
    only labels that already exist and fit.
-   With the priority on, propose no `priority:` label here: the priority pass above is the only source of one.
+   With the priority on, propose no `priority:` label here: the priority pass below is the only source of one.
 
    **Priority** is proposed only when the project turned it on: read
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.issue.priority == true'`. When it prints `true`,

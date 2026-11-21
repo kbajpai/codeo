@@ -54,7 +54,7 @@ must_contain "quiet resume names what waits shows" 'names what its `waits:` line
 must_contain "resume for an engineer wait" '`engineer — …` names the dossier files and question numbers to answer'
 must_contain "resume for an archived dossier says what the state is" '`review — dossier archived` means the dossier is archived and its archive is not on the base branch yet'
 must_contain "resume with a pull request names it" 'names that pull request to review'
-must_contain "resume with none names close" 'names `/codeo:close` in that issue'"'"'s checkout'
+must_contain "resume with none names close" 'with none, or one closed unmerged, it'
 if grep -qF -- 'names the pull request awaiting review' "$skill"; then
     fail "resume must not claim a pull request is always awaiting review"
 fi
