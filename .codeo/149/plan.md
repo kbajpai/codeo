@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q6 are answered (all my picks). The plan is drafted at `.codeo/149/plan-draft.md` and waits for the engineer's approval; nothing is written under `docs/plans/` yet. Footprint check against #151 and #138 (both at `init`, no footprint, nothing changed): nothing to compare until the footprint is written after approval.
+Plan approved and saved at `docs/plans/2026-11-21-close-non-blocking-findings-149.md` (unstaged). Footprint written under `## Notes`. `overlap.sh` printed one overlap, `glob:CHANGELOG.md` with #151, raised as Q7; `## Outcome` stays pending until it is answered.
 
 What I found (read against `.devcontainer/codeo` and `.sbx/codeo-sandbox.sh` at `56598d3`):
 
@@ -97,6 +97,13 @@ My pick for each:
 **Answer:**
 As picked. The F5c mutation was run while planning and passes today, so F5c is done, not dismissed; F5d is dismissed. (Engineer: "go with your picks", 2026-11-21.)
 
+### Q7 — #151 also lists `CHANGELOG.md` (`glob:CHANGELOG.md`): proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh` found that #151 (branch `docs/install-codeo-one-command-document`, assignee kbajpai, step `init`, working) lists `CHANGELOG.md` in its footprint, as does this plan (Task 9). Both would add a bullet under `## Unreleased`, so the second to merge gets a conflict in the same hunk. It is a one-line resolution, not a semantic clash; the two issues touch no other common file.
+**Options:** *proceed and coordinate* (my pick: whoever merges second rebases and keeps both bullets) · *sequence after #151* · *re-scope* (drop Task 9 and add the bullet at `/codeo:close`).
+
+**Answer:**
+
 ## Notes
 
 ### Footprint
@@ -116,3 +123,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-21 — Q1-Q6 raised · cost: 1m · fable-5-2 106k in + 684k cached / 7k out
 - 2026-11-21 — Q1-Q6 answered, plan drafted for review · cost: 8m · fable-5-2 114k in + 1.1M cached / 12k out · sonnet-5-5 166k in + 1.6M cached / 37k out
+- 2026-11-21 — plan approved and saved; footprint written; Q7 raised (overlap with #151 on CHANGELOG.md) · cost: unavailable (partial turn)
