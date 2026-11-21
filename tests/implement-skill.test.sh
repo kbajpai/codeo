@@ -112,7 +112,7 @@ must_lack 'no home-container claim in generic text' 'in the home container'
 must_lack 'no issue-container claim in generic text' 'issue container'
 
 # The overlap step stops until it is answered before it says what a non-zero exit means, as in qc.
-must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with an'
+must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with or without an'
 
 if ((failures)); then
     echo "$failures case(s) failed"

@@ -220,7 +220,7 @@ is the container the message names.
    *sequence after #M* · *re-scope*. The step stops until it is answered: append this invocation's
    `## Log` line with its cost, commit `close.md`, staged by name, with the subject
    `docs(codeo): close dossier for #<N> — Q<a>-Q<b> raised`, push, print the path and the open
-   numbers, and end the turn. A non-zero exit, with an `overlap: cannot diff …` or
+   numbers, and end the turn. A non-zero exit, with or without an `overlap: cannot diff …` or
    `overlap: cannot resolve …` line, is a stop to report, never "no overlap". An
    `overlap: skipping #<M>'s changed paths` warning with exit 0 is quoted to the engineer, and the
    step carries on with that workflow's footprint alone.

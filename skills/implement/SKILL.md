@@ -86,7 +86,7 @@ is the container the message names.
     step's dossier, `.codeo/<N>/implement.md`: quote `#M` and the printed `what` verbatim, with the
     other issue's branch, assignee and step from `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh"`,
     and the same three options — *proceed and coordinate* · *sequence after #M* · *re-scope*.
-    The step stops until it is answered, as at step 4. A non-zero exit, with an
+    The step stops until it is answered, as at step 4. A non-zero exit, with or without an
     `overlap: cannot diff …` or `overlap: cannot resolve …` line, is a stop to report, never "no
     overlap". An `overlap: skipping #<M>'s changed paths` warning with exit 0 is quoted to the
     engineer, and the step carries on with that workflow's footprint alone.

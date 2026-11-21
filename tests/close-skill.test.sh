@@ -440,7 +440,7 @@ for heading in "### Round 2 (2026-10-19) â€” stashed" "### 2026-10-19 Round 2 â€
 done
 
 # The overlap step stops until it is answered before it says what a non-zero exit means, as in qc.
-must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with an'
+must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with or without an'
 
 if ((failures)); then
     echo "$failures case(s) failed"

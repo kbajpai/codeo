@@ -97,7 +97,7 @@ is the container the message names.
    invocation's `## Log` line, ending ` · cost: ` with what
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" qc` prints, commit and push the dossier with the
    questions open, print the path and the numbers, and end the turn.
-   A non-zero exit, with an `overlap: cannot diff …` or `overlap: cannot resolve …` line, is a
+   A non-zero exit, with or without an `overlap: cannot diff …` or `overlap: cannot resolve …` line, is a
    stop to report, never "no overlap". An `overlap: skipping #<M>'s changed paths` warning with
    exit 0 is quoted to the engineer, and the step carries on with that workflow's footprint alone.
 
@@ -168,7 +168,7 @@ is the container the message names.
 
    Then `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" --outside <N>`. Every path it prints is a
    finding — *the branch changed a file outside its footprint* — classified at step 8 like any
-   other. A non-zero exit, with an `overlap: cannot diff …` or `overlap: cannot resolve …` line, is
+   other. A non-zero exit, with or without an `overlap: cannot diff …` or `overlap: cannot resolve …` line, is
    a stop to report, never "no overlap". On a first-round plan it is not blocking by rule: the
    footprint is what other workflows were told this one would touch, so the engineer should hear
    about the gap, but the change may still be right.
