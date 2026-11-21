@@ -160,6 +160,15 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 
 ## Notes
 
+### Footprint
+
+```
+files:      .claude/settings.json, hooks/live-signal.sh, scripts/live.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/triage-skill.test.sh, tests/devcontainer.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md, docs/plans/2026-11-21-live-signal-web-session-138-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 **Round 2 calls made without a question** (send-back from `qc.md` round 1; correct any in an answer above):
 - *F1:* for a web session the user chain ends at `unknown` after the assignee, with no `git config user.name` (Q2 answered (b) there); `tests/live.test.sh`'s `web_user_without_an_assignee_falls_to_git_user_name` becomes a case that expects `unknown`, and the sentence in `docs/handoff.md` follows.
 - *F4:* `docs/handoff.md` says the groups in `.claude/settings.json` are this repository's own, and what another project needs (Q10's answer decides the wording).
@@ -199,15 +208,6 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 **Documentation the plan changes:** `docs/handoff.md` → *Who is working right now* (and its diagram) and `CHANGELOG.md` (one bullet); `skills/triage/SKILL.md` gains a clause (code, not documentation). No wiki pages.
 
 **Intake question resolved:** `GET /user` is not refused in a web session (Q5: `gh api user` returned `kbajpai`); whether a web session's start script passes a session id stays unknown, which the `SessionStart` hook makes unnecessary.
-
-### Footprint
-
-```
-files:      .claude/settings.json, scripts/live.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/triage-skill.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
