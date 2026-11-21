@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 done: back to `/codeo:implement`. One blocking finding (F9: round 2's fix for the home-directory stop made `codeo issue 5 --sandbox --rebuild` print the stop and exit 1 instead of the usage error and exit 2, so `.devcontainer/README.md:98` is untrue for that input); F10 and F11 are non-blocking README gaps. Build and the full suite pass. Next step: `/codeo:implement`, then `/codeo:qc` again from step 0.
+Round 3 done: clear, forward to `/codeo:close`. No blocking finding; every criterion is met on this pass's own output (build exit 0, full suite `all cases passed`). F12-F18 and the earlier F2 and F7 are non-blocking and recorded. Next step: `/codeo:close`.
 
 ## Questions
 
@@ -119,8 +119,53 @@ Whole pass re-run from step 0 on `8f359ae`, after the send-back answered by `imp
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-21
+
+Whole pass re-run from step 0 on `1ed2617`, after the send-back answered by `implement.md` round 3.
+
+**Step 2, scope.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`. `overlap.sh 149` prints nothing; `overlap.sh --outside 149` prints nothing (exit 0). `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: the dossiers and `CHANGELOG.md`). `git diff origin/main...HEAD --stat`: 22 files, 1017 insertions, 66 deletions; `scripts/` and `.sbx/codeo-sandbox.sh` unchanged. No invariants file, shared environment, `wiki` module or overlay rules (step 9 does not apply, so there is no lease to release).
+
+**Step 3, build.** The `shell` suite's `build` is `true`: exit 0.
+
+**Step 4, suite.** `bash tests/run.sh`, whole: `all cases passed`, `suite-exit=0`, working tree clean afterwards.
+
+**Step 5, criteria**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | With `--force`, none of the three F13 outputs is followed by the `sbx rm --force` hint; a test fails if it returns | met | `t_rm_sandbox_force_gone`; replacing the `sbx_has` guard at `.devcontainer/codeo:591` with `true` fails it on all three outputs (reviewer's worktree run). See F16 for the host with no `sbx`. |
+| 2 | `CODEO_HOME=rel codeo rm <N> --sandbox` completes, with a test | met | `abs_path_env CODEO_HOME always` in `main`; `t_relative_codeo_home_rm` fails when it is removed (reviewer's worktree run) |
+| 3 | A `rm` that refuses without `--force` does not run `docker restart` first | met | `cmd_rm` and `container_check`'s `--no-restart`; `t_rm_inspect_fails_no_restart` fails when it is dropped (reviewer's worktree run) |
+| 4 | No README or help sentence about the script's own message, the home-directory stop or the failed-listing exit contradicts the code; the flowchart matches the prose or says it is partial | met | The home-directory stop (F15): every command and argument combination compared with the base code under a refused home; the stop prints once and exits 1 for every command that reads the home directory, usage errors exit 2 as before (including `issue 5 --sandbox --rebuild`), `rm` of a container and `help` go ahead, nothing is written to `~/codeo`; the README sentence says exactly this. The failed-listing exit (F16): `codeo list` warns on stderr and exits 1, as the help text and both READMEs say. The script-message sentence (F12) lists which refusals name a command and which do not, and that list matches `.sbx/codeo-sandbox.sh`. The flowchart's inspect-first order, no-restart edge, `--force` branches and removal-failure edges match `cmd_rm`; F14 is a qualification it lacks and F12/F16/F17 (below) are remedy and wording gaps in the surrounding prose, all non-blocking. |
+| 5 | The two skill sentences under #144 F4 sit after "The step stops until it is answered" | met | `skills/implement/SKILL.md:89-93`, `skills/close/SKILL.md:220-225`; `must_precede` at `tests/implement-skill.test.sh:115` and `tests/close-skill.test.sh:443` (F15: it pins the first of the two sentences only) |
+| 6 | `qc-verdict.sh:134` is pinned; each #144 F5 item done or dismissed in writing | met | `qc_verdict_replan` fails under an exact-match and a prefix-match mutation of `qc-verdict.sh:134`; `inflight_send_back` fails under both mutations of `close_send_back`'s heading (reviewer's worktree runs); F5a pinned at `tests/init-skill.test.sh:54`; F5b: `with or without an` in all seven places, pinned by `tests/overlap-stop.test.sh`; F5d dismissed in writing in `plan.md` and `implement.md` |
+| 7 | `bash tests/run.sh` ends `all cases passed` | met | this pass's run, quoted under step 4 |
+
+**Home-directory stop and usage errors, base against head** (a `HOME` holding `codeo/.git`, `CODEO_HOME` unset, `env -i`, run here for sixteen argument forms; the reviewer ran about forty-five): every usage error (`issue abc`, `issue 5 a b`, `issue 5 --bogus`, `issue 5 --container --sandbox`, `issue 5 --sandbox --rebuild`, `home --bogus`, `shell`, `rm 5 --bogus`, `rm --force`, `default bogus`, `list x`, `update x`, `open abc`) exits 2 at the base and at head with no stop line; `issue 5` and `issue 5 --rebuild` print the stop twice at the base and once at head; `issue 5 --container --rebuild` prints it once at both.
+
+**Step 6, documentation.** Pages changed since the base: `.devcontainer/README.md`, `.sbx/README.md`, the `codeo help` text, five skill pages, `docs/handoff.md` and `CHANGELOG.md`; present tense, no issue numbers. The plan names no page the diff left untouched.
+
+**Step 7, independent review** (Opus, criteria and diff only). No Critical or Important findings; it mutation-checked each new test in a separate worktree and found each fails when its fix is reverted. Its verdict: ready to merge with fixes, the fixes being README wording (its Minor 1 and 3). It reported eight Minors; they are F12-F18 below and a restatement of F7.
+
+**Findings carried from earlier rounds:** F1 (blocking in round 1) — fixed by `fc8a5ac`; F9 (blocking in round 2) — fixed by `8d2b49e`; F3-F6, F10 and F11 — fixed by `41e9c3d`, `7dd063a` and `5d1fd04`. F2 stays a recorded design choice (the plan's Q3, answered by the engineer). F7 (a stopped container that `codeo` started is left running after a refusal known up front, `.devcontainer/codeo:596-598` and `:629-632`) stays pre-existing and unrouted; the reviewer restated it.
+
+**New findings**, all non-blocking: the change merges as it stands, and each is README wording, a test pin or a recorded limit.
+
+- **F12 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md`'s sandbox paragraph says the refusals for `no sandbox codeo-<N>` and a missing clone "name no command: the remedy is to fix what failed and run it again". For `no sandbox` nothing is left to remove or fix; for a missing clone (`.sbx/codeo-sandbox.sh:381`, which dies before `--force` is read) running it again fails the same way, and the only way out is `sbx rm --force codeo-<N>`. Say so for those two refusals.
+- **F13 — non-blocking — `/codeo:plan`'s.** The one refusal `--force` passes (the no-branches refusal, `.sbx/codeo-sandbox.sh:390`) names `end <N> --force`, a command a `codeo` user cannot type as it stands, and `codeo rm <N>` adds no `codeo rm <N> --force` line after any `codeo-sandbox:` line. The README describes this accurately; the plan's Q4 (answered A) kept the script's messages, so this is a limit of that choice.
+- **F14 — non-blocking — `/codeo:implement`'s.** The flowchart edge `G -- "docker rm -f or volume rm failed" --> Y` is unconditional: the code errors on a failed `docker volume rm` only when `docker volume inspect` shows the volume still exists, and with `--force` a container already gone is no error either (`codeo rm 5 --container --force` with only the image left prints `removed image codeo-dev:codeo-5` and exits 0). Qualify the label or say the chart is partial.
+- **F15 — non-blocking — `/codeo:implement`'s.** `must_precede` in `tests/close-skill.test.sh:443` and `tests/implement-skill.test.sh:115` pins only `A non-zero exit, with or without an` after "The step stops until it is answered"; the second F4 sentence (the `overlap: skipping …` warning) could move back before it and both tests would pass. The criterion holds in the text; only the pin is incomplete.
+- **F16 — non-blocking — `/codeo:implement`'s.** Both READMEs say the `--force` hint prints when `sbx ls` "cannot list"; it also prints when no `sbx` program is installed (`! sbx=$(sbx_prog)`), after the script's `sbx is not installed` line.
+- **F17 — non-blocking — `/codeo:implement`'s.** The README's list of what never reads the home directory names `rm` of a container; `open` of a container also goes ahead and fails with "is a container". With no kind flag, `open` and `rm` also run `docker ps`/`sbx ls` before the stop, which writes nothing.
+- **F18 — non-blocking — `/codeo:implement`'s.** The `CHANGELOG.md` entry says `codeo rm` makes a relative `CODEO_HOME` absolute; `main` does it for every command.
+
+**Routing.** No blocking finding: every criterion is met on this pass's own output. F2, F7 and F12-F18 are non-blocking and are recorded for `/codeo:triage` to collect from the archived dossier. Nothing here sends the change back.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-21 — Q1-Q2 raised (overlaps with #138 on CHANGELOG.md and docs/handoff.md) · cost: 1m · opus-5-5 314k in + 693k cached / 1k out
 - 2026-11-21 — round 1: Q1-Q2 answered, pass run, back to implement (F1 blocking) · cost: 40m · opus-5-5 415k in + 3.5M cached / 25k out · sonnet-5-5 40k in + 4.8M cached / 10k out
 - 2026-11-21 — round 2: pass re-run, back to implement (F9 blocking, regression from round 2's F1 fix) · cost: 9m · opus-5-5 509k in + 3.8M cached / 22k out · sonnet-5-5 28k in + 1.7M cached / 6k out
+- 2026-11-21 — round 3: pass re-run, clear verdict, forward to close (F12-F18 non-blocking) · cost: 10m · opus-5-5 585k in + 4.2M cached / 28k out · sonnet-5-5 24k in + 1.4M cached / 6k out
