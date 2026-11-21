@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q6 answered ("go with my picks"). The plan is drafted at `.codeo/143/plan-draft.md`, but Q7 is open (`CHANGELOG.md` is also in #144's footprint), so the draft is not presented for approval until it is answered.
+Q1-Q7 answered. The plan is drafted at `.codeo/143/plan-draft.md` and waits for the engineer's approval at the review gate; nothing is open.
 
 What I found that shapes the questions (read against `.devcontainer/codeo` at `2e02100`):
 
@@ -120,7 +120,7 @@ Not in the issue's list and left alone: F2 (a stopped container's branch is `-`,
 - **B — sequence after #144.** This plan waits for #144 to merge; `sequenced:` in the footprint reads `after #144 — both edit CHANGELOG.md (Q7)`. Costs a wait for a one-bullet conflict.
 - **C — re-scope.** Move the changelog edit out of this plan and into a follow-up issue. Leaves the #143 acceptance criterion about the changelog unmet.
 
-**Answer:**
+**Answer:** A — proceed and coordinate. (Engineer: "go with my pick on Q7", 2026-11-21.)
 
 ## Notes
 
@@ -137,3 +137,4 @@ _Pending — written at the hand-off._
 ## Log
 - 2026-11-21 — Q1-Q6 raised · cost: 3m · fable-5-2 137k in + 843k cached / 19k out
 - 2026-11-21 — Q1-Q6 answered; plan drafted; Q7 raised (CHANGELOG.md overlap with #144) · cost: 10m · fable-5-2 144k in + 980k cached / 20k out · sonnet-5-5 176k in + 889k cached / 28k out
+- 2026-11-21 — Q7 answered (proceed and coordinate); draft presented for approval · cost: unavailable (not measured for this short turn)
