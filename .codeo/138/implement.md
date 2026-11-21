@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 (after `plan.md` round 2) is built: Tasks 1-5 of `docs/plans/2026-11-21-live-signal-web-session-138-round-2.md` (the web user ends at `unknown`; the beat hook takes the lock in a web session; the `SessionStart` lock group is gone; the handoff page and the changelog say so), each reviewed and the round reviewed as a whole, and the full `shell` suite is green. Task 6, the hosted-session check with no manual lock, is the engineer's and is not run here. Next: `/codeo:qc`, which re-runs the pass from the start. Round 1 (Tasks 1-6 of the first plan) stands as built; its note on `tests/devcontainer.test.sh` outside the footprint is answered by the footprint now naming it.
+Round 3 (after `plan.md` round 3) is built: Tasks 1-5 of `docs/plans/2026-11-21-live-signal-web-session-138-round-3.md` (a web session is web whatever its lock says; the beat hook takes the lock only on a prompt, in the foreground, never for a stashed or abandoned dossier, resumed stashes excepted; the handoff page and the changelog say so), each reviewed, the round reviewed as a whole and its fix wave re-reviewed, and the full `shell` suite is green. Task 6, the hosted-session check on this build, is the engineer's and is not run here. Next: `/codeo:qc`. Rounds 1 and 2 stand as built. Round 2 (after `plan.md` round 2) is built: Tasks 1-5 of `docs/plans/2026-11-21-live-signal-web-session-138-round-2.md` (the web user ends at `unknown`; the beat hook takes the lock in a web session; the `SessionStart` lock group is gone; the handoff page and the changelog say so), each reviewed and the round reviewed as a whole, and the full `shell` suite is green. Task 6, the hosted-session check with no manual lock, is the engineer's and is not run here. Next: `/codeo:qc`, which re-runs the pass from the start. Round 1 (Tasks 1-6 of the first plan) stands as built; its note on `tests/devcontainer.test.sh` outside the footprint is answered by the footprint now naming it.
 
 ## Questions
 
@@ -67,7 +67,30 @@ None.
 
 **Deviations from the plan.** (1) Task 2 defines a helper `new_world_with_dossier` that Task 3 keeps while deleting the case that built the same world inline (a ruling at the preflight scan: avoids Task 3 breaking Task 2's cases). (2) Left as they are, from the reviews: the stamp check and write in the hook are not atomic (two simultaneous hooks can both spawn a take); a no-op `wait_for_file` line and a relative-path assumption of `git rev-parse --git-path` in tests; cosmetic long lines in `docs/handoff.md`; the page says "either way nothing else is needed" without saying the branch must carry a committed dossier; the changelog bullet does not mention that a later take can check out the dossier branch mid-session. No environment is configured, so there was no deployment.
 
+### Round 3 — 2026-11-21
+
+(after plan.md round 3)
+
+**Plan:** `docs/plans/2026-11-21-live-signal-web-session-138-round-3.md` (answers `qc.md` round 2: F12, F13, F14, F15, F18, F19, F20). **Sync:** `bash scripts/sync-main.sh` merged `origin/main` at the start (1 commit; `also changed on main: CHANGELOG.md` and `also changed on main: docs/handoff.md`, both re-read before Tasks 4 and 5 and neither in conflict with this branch's sections) and found the branch already current before Tasks 4 and 5; `overlap.sh 138` and `overlap.sh --outside 138` printed nothing.
+
+**Built** (Tasks 1-5, each reviewed by a fresh reviewer: spec compliant, no Critical or Important findings; then one whole-round review and a scoped re-review of its fix wave):
+- **Task 1** (`dec8489`): `scripts/live.sh` `read_lock` sets `host` to `web` when `CLAUDE_CODE_REMOTE=true`, whatever the lock says, so the route, labels, REST guard, `clear` and the signal's `host:` line follow; tests in `tests/live.test.sh`, which now unsets `CLAUDE_CODE_REMOTE` at the top.
+- **Task 2** (`b96efdb`): `scripts/lock.sh take` takes no lock, and prints a TODO line, for a parked dossier when `CODEO_LOCK_SKIP_PARKED=1`; without the variable it behaves as before.
+- **Task 3** (`52fef27`): `hooks/live-signal.sh beat` takes the lock only for a `UserPromptSubmit` event, in the foreground bounded by `timeout 8` where it exists, through an atomic per-interval claim file (`codeo-live-lock-try.<bucket>`), with the opt-in set; then a detached beat. `tests/live-signal.test.sh` unsets the web variables at the top and gains the cases for PostToolUse, a stashed dossier, the foreground take, two simultaneous hooks and the bound.
+- **Task 4** (`870631c`): `docs/handoff.md` (*Who is working right now* and its diagram).
+- **Task 5** (`17d9c6d`): the `CHANGELOG.md` bullet and the `Shared state:` line.
+- **Final-review fix wave** (`478866d`): the parked rule is claim.sh's (parks in `close.md` outnumber the resumes in `init.md`), so a resumed stash is taken again after a lost VM; it is decided before any fetch or checkout, through one helper; the page and the changelog say the bound holds where `timeout` exists, the interval is a window, and a stash is parked until `/codeo:init` resumes it; a positive control in the stashed-dossier hook case.
+
+**Not built:** Task 6, the hosted-session check (`Runs on: the engineer's host`): a new session on this branch; the tip check first (both attempts on round 2's build landed on stale checkouts), one ordinary prompt, `cat .codeo/active`, then `inflight.sh --live` here. Whether the first prompt takes the lock in a hosted session stays unverified until it runs.
+
+**Documentation pages changed:** `docs/handoff.md` (*Who is working right now*) and `CHANGELOG.md`; no wiki pages.
+
+**Build:** the `shell` suite's `build` is `true`: rc 0. The whole `bash tests/run.sh` ran by the controller on the fixed tree to its last line: `all cases passed` (the implementers ran only the focused runs).
+
+**Deviations from the plan.** (1) Task 2 read only the last `### Round` heading of `close.md`, which is not the rule `claim.sh` reads; the whole-round review found it and the fix wave replaced it with claim.sh's counts, replacing the case `take_ignores_an_earlier_park`, which contradicted that rule. (2) The fix wave also moved the parked check before the fetch and checkout in `lock.sh take web`. (3) Left as they are, from the reviews: `hook_bounds_the_take` was never red before the change; the early return for a parked dossier skips the "lock already taken" message and the session-id refresh (opt-in only, and the hook calls `take` only when there is no lock); the web early return repeats the TODO wording of the later path; long lines in tests and in `docs/handoff.md`; `n` assigned twice in an `if`/`elif`. No environment is configured, so there was no deployment.
+
 ## Log
 
 - 2026-11-21 — round 1: Tasks 1-6 built and reviewed, one fix round and one final-review fix wave, full suite green, build rc 0 · cost: 65m · sonnet-5-5 740k in + 25.6M cached / 111k out
 - 2026-11-21 — round 2 (after plan.md round 2): Tasks 1-5 built and reviewed, full suite green, build rc 0 · cost: 23m · sonnet-5-5 413k in + 16.3M cached / 65k out
+- 2026-11-21 — round 3 (after plan.md round 3): Tasks 1-5 built and reviewed, one fix wave after the whole-round review, full suite green, build rc 0 · cost: 27m · sonnet-5-5 572k in + 26.9M cached / 93k out
