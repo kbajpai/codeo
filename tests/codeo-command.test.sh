@@ -868,6 +868,15 @@ t_rm_sandbox_hints() {
     [[ "$n" -eq 1 ]] || fail "sbx rm --force line count $n, want 1: $cm_err"
     grep -qxF 'to remove it anyway run: sbx rm --force codeo-5' <<<"$cm_err" || fail "script's own line lost: $cm_err"
     grep -qxF 'could not read it' <<<"$cm_err" || fail "script's stderr not replayed: $cm_err"
+    cm_setup "$current-4"
+    echo 1 >"$cm_dir/status"
+    printf 'to remove it anyway run: sbx rm --force codeo-15\n' >"$cm_dir/stderr_text"
+    cm_run rm 1 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    last=$(tail -n 1 "$cm_dir/err")
+    want='codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-1'
+    [[ "$last" == "$want" ]] || fail "codeo-15 in stderr suppressed the hint for 1: '$last'"
+    [[ -z "$(ls -A "$cm_dir/h" "$cm_home" | grep '^\.rm-err' || true)" ]] || fail "temp file left behind"
     cm_setup "$current-3"
     echo 1 >"$cm_dir/status"
     printf 'could not read it\n' >"$cm_dir/stderr_text"

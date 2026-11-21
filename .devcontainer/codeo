@@ -524,12 +524,15 @@ cmd_rm() {
         local errf
         cd "$(home_dir)"
         errf=$(mktemp "$(home_dir)/.rm-err.XXXXXX")
+        trap 'rm -f "$errf"' EXIT # an interrupt must not leave it in the home directory
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
         bash "$(home_dir)/codeo-sandbox.sh" end "$n" ${force:+--force} 2>"$errf" || rc=$?
         cat "$errf" >&2
         if [[ "$rc" -ne 0 ]]; then
             if [[ -z "$force" ]]; then
                 echo "codeo: its commits are kept in $(home_dir)/codeo-$n; codeo rm $n --force removes it anyway" >&2
-            elif ! grep -qF "rm --force codeo-$n" "$errf"; then
+            elif ! grep -qE "rm --force codeo-$n([^0-9]|$)" "$errf"; then
                 echo "codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-$n" >&2
             fi
         fi
