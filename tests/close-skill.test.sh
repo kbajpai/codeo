@@ -27,6 +27,15 @@ fail() {
 # $1 case, $2 fixed string the skill must contain.
 must_contain() { grep -qF -- "$2" "$skill" || fail "$1 — no [$2]"; }
 
+# $1 case, $2 and $3 fixed strings: the skill, its whitespace collapsed to single spaces, must
+# contain $2 at a lower offset than $3.
+must_precede() {
+    awk -v a="$2" -v b="$3" '
+        { gsub(/^[ \t]+|[ \t]+$/, ""); t = t (NR > 1 ? " " : "") $0 }
+        END { i = index(t, a); j = index(t, b); exit !(i && j && i < j) }' "$skill" ||
+        fail "$1 — [$2] does not come before [$3]"
+}
+
 # $1 case, $2 fixed string, $3 fixed string that must follow within three lines.
 must_follow() {
     grep -F -A3 -- "$2" "$skill" | grep -F -- "$3" >/dev/null || fail "$1 — no [$3] within three lines of [$2]"
@@ -429,6 +438,9 @@ for heading in "### Round 2 (2026-10-19) — stashed" "### 2026-10-19 Round 2 �
     [[ $status == 3 && $out == *"has no stash"* ]] ||
         fail "a dated heading [$heading] counted as a park: exit $status [$out]"
 done
+
+# The overlap step stops until it is answered before it says what a non-zero exit means, as in qc.
+must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with or without an'
 
 if ((failures)); then
     echo "$failures case(s) failed"
