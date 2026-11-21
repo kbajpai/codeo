@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q7 answered. The plan is drafted at `.codeo/143/plan-draft.md` and waits for the engineer's approval at the review gate; nothing is open.
+Q1-Q7 answered and the plan is approved (saved, unstaged, at `docs/plans/2026-11-21-codeo-host-command-leftovers-143.md`). `overlap.sh` then printed `144 glob:CHANGELOG.md` and `145 glob:CHANGELOG.md`; Q7 named the file but not the token, and #145 had no footprint then, so Q8 and Q9 raise them. `## Outcome` stays pending until both are answered.
 
 What I found that shapes the questions (read against `.devcontainer/codeo` at `2e02100`):
 
@@ -122,6 +122,28 @@ Not in the issue's list and left alone: F2 (a stopped container's branch is `-`,
 
 **Answer:** A — proceed and coordinate. (Engineer: "go with my pick on Q7", 2026-11-21.)
 
+### Q8 — `glob:CHANGELOG.md` is also in #144's footprint: proceed and coordinate, sequence after #144, or re-scope?
+
+**What overlaps:** `glob:CHANGELOG.md` — `overlap.sh` printed `144	glob:CHANGELOG.md` against this plan's footprint. #144 (`fix/close-108-leftovers-overlap-sh`, assignee kbajpai, step plan (waits on the engineer's implement.md Q1)) lists `CHANGELOG.md` in its `files:`; this plan's Task 8 rewrites the `codeo` bullet under `## Unreleased`. Nothing else of #144's files is ours.
+**Why it matters:** both branches edit the same `## Unreleased` section, so whichever merges second resolves a small textual conflict by hand. This restates Q7's overlap in the token `overlap.sh` matches on; Q7 answered it for #144 as *proceed and coordinate*.
+**Options:**
+- **A — proceed and coordinate (my pick).** Whichever merges second keeps both entries intact; this plan edits only the `codeo` bullet and leaves every other bullet and the header lines alone.
+- **B — sequence after #144.** `sequenced:` reads `after #144 — both edit CHANGELOG.md (Q8)`; this plan waits for #144 to merge.
+- **C — re-scope.** Move the changelog edit into a follow-up issue; leaves #143's changelog criterion unmet.
+
+**Answer:**
+
+### Q9 — `glob:CHANGELOG.md` is also in #145's footprint: proceed and coordinate, sequence after #145, or re-scope?
+
+**What overlaps:** `glob:CHANGELOG.md` — `overlap.sh` printed `145	glob:CHANGELOG.md` against this plan's footprint. #145 (`fix/close-102-126-122-leftovers`, assignee kbajpai, step init (its footprint is written; its `sequenced:` already reads `#144`)) lists `CHANGELOG.md` in its `files:`; this plan's Task 8 rewrites the `codeo` bullet under `## Unreleased`. Nothing else of #145's files is ours; its files are `scripts/`, `skills/`, `docs/` and their tests.
+**Why it matters:** both branches edit the same `## Unreleased` section, so whichever merges second resolves a small textual conflict by hand. This restates Q7's overlap in the token `overlap.sh` matches on; Q7 answered it for #144 as *proceed and coordinate*.
+**Options:**
+- **A — proceed and coordinate (my pick).** Whichever merges second keeps both entries intact; this plan edits only the `codeo` bullet and leaves every other bullet and the header lines alone.
+- **B — sequence after #145.** `sequenced:` reads `after #145 — both edit CHANGELOG.md (Q9)`; this plan waits for #145 to merge.
+- **C — re-scope.** Move the changelog edit into a follow-up issue; leaves #143's changelog criterion unmet.
+
+**Answer:**
+
 ## Notes
 
 Calls I made, to correct if wrong:
@@ -147,3 +169,4 @@ _Pending — written at the hand-off._
 - 2026-11-21 — Q1-Q6 raised · cost: 3m · fable-5-2 137k in + 843k cached / 19k out
 - 2026-11-21 — Q1-Q6 answered; plan drafted; Q7 raised (CHANGELOG.md overlap with #144) · cost: 10m · fable-5-2 144k in + 980k cached / 20k out · sonnet-5-5 176k in + 889k cached / 28k out
 - 2026-11-21 — Q7 answered (proceed and coordinate); draft presented for approval · cost: unavailable (not measured for this short turn)
+- 2026-11-21 — plan approved and saved; footprint written; overlap.sh printed #144 and #145 on glob:CHANGELOG.md, Q8-Q9 raised · cost: unavailable (not measured for this turn)
