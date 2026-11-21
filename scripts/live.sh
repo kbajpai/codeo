@@ -61,8 +61,11 @@
 #   CODEO_LIVE_REFRESH_SECONDS  minimum seconds between two unforced beats (default 300)
 #   CODEO_LIVE_TTL_SECONDS      how old a beat may be and still be listed (default 900)
 #   CODEO_MACHINE               the machine label, overriding the host's default
-#   CODEO_LIVE_PUSH_TIMEOUT     seconds each git push or fetch, the login lookup, and the REST
-#                               fallback may take (default 8); the fallback is `github.sh ref put`
+#   CODEO_GITHUB_LOGIN          the user named in the signal, read before any lookup (all sessions)
+#   CLAUDE_CODE_REMOTE_SESSION_ID  a web session's id, which gives its machine label `web-<first 8>`
+#                               when the lock holds none
+#   CODEO_LIVE_PUSH_TIMEOUT     seconds each git push or fetch, the login lookup, the issue-assignee
+#                               lookup, and the REST fallback may take (default 8); the fallback is `github.sh ref put`
 #                               for a `beat` and `github.sh ref delete` for a `clear`, all of its
 #                               calls together
 set -euo pipefail
