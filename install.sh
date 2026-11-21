@@ -119,15 +119,20 @@ resolve_release() {
 
 changed=0
 
-# run_claude <args...>: claude, never reading the script from stdin. User scope runs from $HOME, so no
-# project's settings are involved.
-run_claude() {
-    if [[ $scope == user ]]; then
+# claude_at <scope> <args...>: claude, never reading the script from stdin. User scope runs from $HOME,
+# so no project's settings are involved; project scope runs in the current directory.
+claude_at() {
+    local s=$1
+    shift
+    if [[ $s == user ]]; then
         (cd "$HOME" && claude "$@" </dev/null)
     else
         claude "$@" </dev/null
     fi
 }
+
+# run_claude <args...>: claude_at the requested scope.
+run_claude() { claude_at "$scope" "$@"; }
 
 # installed_version <id> <scope>: prints the version installed at the scope, nothing when absent. An id
 # ending in @* matches any marketplace. A failing plugin list dies inside the subshell, so callers
@@ -168,15 +173,63 @@ ensure_superpowers() {
     say "superpowers installed ($scope scope)"
 }
 
+# replace_codeo <old-label>: removes the codeo marketplace (which uninstalls codeo at every scope on
+# the machine), adds it again at $tag, and reinstalls codeo at every scope it was at plus the requested
+# one. Project-scope calls run in the current directory, user-scope calls from $HOME. A failure after
+# the remove leaves codeo uninstalled, and says so.
+replace_codeo() {
+    local old=$1 out s add_scope=user
+    local -a scopes=()
+    [[ -z $user_v ]] || scopes+=(user)
+    [[ -z $proj_v ]] || scopes+=(project)
+    case " ${scopes[*]:-} " in *" $scope "*) ;; *) scopes+=("$scope") ;; esac
+    case " ${scopes[*]} " in *" project "*) add_scope=project ;; esac
+    run_claude plugin marketplace remove codeo
+    if [[ $add_scope == project ]]; then
+        out=$(claude_at project plugin marketplace add "kbajpai/codeo@$tag" --scope project 2>&1) || replace_failed "$out"
+    else
+        out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out"
+    fi
+    for s in "${scopes[@]}"; do
+        out=$(claude_at "$s" plugin install codeo@codeo --scope "$s" 2>&1) || replace_failed "$out"
+    done
+    changed=1
+    say "codeo $old -> $tag ($scope scope)"
+}
+
+# replace_failed <claude output>: codeo was removed and not put back.
+replace_failed() {
+    local line
+    line=$(printf '%s\n' "$1" | sed '/^[[:space:]]*$/d' | tail -n 1)
+    die "codeo is no longer installed: ${line:-claude failed}; run this again"
+}
+
 ensure_codeo() {
-    local pin have
+    local pin have user_v proj_v old
     pin=$(marketplace_pin)
     have=$(installed_version codeo@codeo "$scope") || exit 1
+    user_v=$(installed_version codeo@codeo user) || exit 1
+    proj_v=$(installed_version codeo@codeo project) || exit 1
     if [[ $pin == "kbajpai/codeo $tag" && $have == "${tag#v}" ]]; then
         say "codeo $tag already installed ($scope scope)"
         return 0
     fi
-    # TODO(task 4): replace path, a pin at another repo or ref, or another version installed, goes here.
+    # Another repo or ref, or any recorded install at another version, is replaced.
+    if { [[ -n $pin && $pin != "kbajpai/codeo $tag" ]]; } \
+        || { [[ -n $have && $have != "${tag#v}" ]]; } \
+        || { [[ -n $user_v && $user_v != "${tag#v}" ]]; } \
+        || { [[ -n $proj_v && $proj_v != "${tag#v}" ]]; }; then
+        old=${have:-${user_v:-$proj_v}}
+        if [[ ${pin%% *} != kbajpai/codeo && -n $pin ]]; then
+            old=${pin% *}@${pin#* }
+        elif [[ -n $old ]]; then
+            old=v$old
+        else
+            old=${pin% *}@${pin#* }
+        fi
+        replace_codeo "$old"
+        return 0
+    fi
     [[ -n $pin ]] || run_claude plugin marketplace add "kbajpai/codeo@$tag"
     run_claude plugin install codeo@codeo --scope "$scope"
     changed=1

@@ -109,11 +109,17 @@ case "${1:-} ${2:-} ${3:-}" in
     "plugin marketplace add")
         spec=$4 repo=${4%@*} ref=""
         [[ $spec != *@* ]] || ref=${spec#*@}
+        if [[ $repo == kbajpai/codeo && -f $STUB_DIR/add-fail ]]; then echo "stub claude: add failed" >&2; exit 1; fi
         case $repo in
             kbajpai/codeo) name=codeo ;;
             obra/superpowers-marketplace) name=superpowers-marketplace ;;
             *) echo "stub claude: unknown marketplace $repo" >&2; exit 1 ;;
         esac
+        old=$(jq -r --arg n "$name" '.[$n].source.ref // ""' "$market")
+        if [[ -n $old && $old != "$ref" ]]; then
+            echo "its source doesn't match its extraKnownMarketplaces entry" >&2
+            exit 1
+        fi
         jq --arg n "$name" --arg r "$repo" --arg f "$ref" \
             '.[$n] = {source: ({source: "github", repo: $r} + (if $f == "" then {} else {ref: $f} end))}' \
             "$market" >"$market.new"
@@ -495,6 +501,101 @@ t_restart_hint_only_when_changed() {
     [[ $in_out != *restart* ]] || fail "restart line on a no-op: $in_out"
 }
 
+# seed_pin <repo> <ref>: the codeo marketplace declared at that repo and ref.
+seed_pin() {
+    jq --arg p "$1" --arg r "$2" '.codeo = {source: {source: "github", repo: $p, ref: $r}}' \
+        "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json" >"$STUB_DIR/m.new" \
+        && mv "$STUB_DIR/m.new" "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
+}
+
+t_replace_older() {
+    in_setup replace_older
+    printf 'a\trefs/tags/v1.0.7\nb\trefs/tags/v1.0.6\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.6
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace remove codeo' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7' \
+        'plugin install codeo@codeo --scope user'
+    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.7, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *restart* ]] || fail "no restart line: $in_out"
+}
+
+t_replace_checks_tag_first() {
+    in_setup replace_tag_first
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_codeo 1.0.6
+    in_run --version v9.9.9
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    ! grep -q 'marketplace remove' "$STUB_DIR/calls" || fail "removed before the tag check: $(cat "$STUB_DIR/calls")"
+    [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
+}
+
+t_replace_reinstalls_where_it_was() {
+    local top
+    in_setup replace_where
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    "$real_git" -C "$in_dir/work" init -q
+    top=$("$real_git" -C "$in_dir/work" rev-parse --show-toplevel)
+    seed_superpowers
+    seed_codeo 1.0.6
+    jq --arg t "$top" '. + [
+        {id: "codeo@codeo", version: "1.0.6", scope: "project", enabled: true, projectPath: $t},
+        {id: "codeo@codeo", version: "1.0.6", scope: "project", enabled: true, projectPath: "/somewhere/else"}]' \
+        "$STUB_DIR/list.json" >"$STUB_DIR/list.new" && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace remove codeo' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project' \
+        'plugin install codeo@codeo --scope user' \
+        'plugin install codeo@codeo --scope project'
+    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $(jq '[.[] | select(.id == "codeo@codeo")] | length' "$STUB_DIR/list.json") -eq 2 ]] \
+        || fail "list: $(cat "$STUB_DIR/list.json")"
+}
+
+t_replace_fork_marketplace() {
+    in_setup replace_fork
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.7
+    seed_pin someone/codeo v1.0.7
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace remove codeo' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7' \
+        'plugin install codeo@codeo --scope user'
+    [[ $(jq -r '.codeo.source.repo' "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json") == kbajpai/codeo ]] \
+        || fail "marketplace: $(cat "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json")"
+}
+
+t_replace_failure_reported() {
+    in_setup replace_failure
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.6
+    : >"$STUB_DIR/add-fail"
+    in_run
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == 'install: codeo is no longer installed: stub claude: add failed; run this again' ]] || fail "stderr: $in_err"
+    grep -qx 'plugin marketplace remove codeo' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+}
+
+t_downgrade_with_given_tag() {
+    in_setup downgrade
+    printf 'a\trefs/tags/v1.0.7\nb\trefs/tags/v1.0.6\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.7
+    in_run --version v1.0.6
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace remove codeo' \
+        'plugin marketplace add kbajpai/codeo@v1.0.6' \
+        'plugin install codeo@codeo --scope user'
+    [[ $in_out == *'install: codeo v1.0.7 -> v1.0.6 (user scope)'* ]] || fail "stdout: $in_out"
+}
+
 cases=(
     t_latest_is_highest_release
     t_given_tag_checked
@@ -523,6 +624,12 @@ cases=(
     t_plugin_list_failure_stops
     t_runs_from_a_pipe
     t_restart_hint_only_when_changed
+    t_replace_older
+    t_replace_checks_tag_first
+    t_replace_reinstalls_where_it_was
+    t_replace_fork_marketplace
+    t_replace_failure_reported
+    t_downgrade_with_given_tag
 )
 
 for current in "${cases[@]}"; do
