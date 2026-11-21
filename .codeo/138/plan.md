@@ -120,8 +120,18 @@ git push --force origin <id>:refs/heads/codeo-live/138/web-probe
 Then delete `codeo-live/138/web-probe` on GitHub (Branches page of `kbajpai/codeo`); nothing else of the probe is left behind.
 
 **Answer:**
+Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the skill): `git hash-object -t tree -w /dev/null` printed `4b825dc…`; `git commit-tree … -m probe-signal` printed `31c254941aa429bbccbb72d2ade2d71a376887f8`; `git push --force origin 31c2549…:refs/heads/codeo-live/138/web-probe` exited 0 with `+ 5f0f0ba...31c2549 … (forced update)` after a `warning: push negotiation failed; proceeding anyway with push`. A non-fast-forward update to an existing branch is accepted. The branch route is built as designed.
 
 ## Notes
+
+### Footprint
+
+```
+files:      .claude/settings.json, scripts/live.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/triage-skill.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 **Calls made without a question** (continued): `gh api user` works from a web session (Q5), so the issue's open item "whether `GET /user` is refused there" is answered: it is not, in that run. Q4's answer stays as decided; the assignee fallback then only matters where it is refused, and it costs one read.
 
