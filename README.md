@@ -228,7 +228,7 @@ in `docs/dossier.md` and `docs/handoff.md`.
 
 ## Updating
 
-Run the install command again. With no `--version` it installs the latest release; if that differs from what you have, it removes the codeo marketplace (which uninstalls codeo at every scope on the machine), adds it at the new tag and installs codeo again at the scopes it was at:
+Run the install command again. With no `--version` it installs the latest release; if that differs from what you have, it removes the codeo marketplace, which uninstalls codeo at every scope on the machine, adds the marketplace back at the new tag, and installs codeo at the scope you asked for. A plain run installs it for you; a run with `--scope project` installs it for the project:
 
 ```
 install: release v1.0.7
@@ -243,7 +243,39 @@ install: done - codeo v1.0.7, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
-The marketplace is removed before the new one is added, so if the network drops in between, the installer prints `codeo is no longer installed` and the line to run again; running the same command again finishes the job.
+One machine holds one codeo version, so the other scope's copy does not survive a replace. A plain update run inside a project that pins an older tag in its `.claude/settings.json` installs the new release for you and leaves the project's file alone, so the project's own install is gone from this machine until you move its pin (below) or run the command with `--scope project`. The installer says so, and `git status` stays clean:
+
+```
+install: release v1.0.7
+install: superpowers already installed (user scope), left alone
+✔ Successfully removed marketplace: codeo
+Also uninstalled 1 plugin from this marketplace:
+  codeo@codeo
+The removal also deletes their saved options, secrets and data where it can.
+To use a plugin again, add the marketplace back and reinstall the plugin.
+install: codeo v1.0.6 -> v1.0.7 (user scope)
+install: this project's own codeo (project scope, v1.0.6) is no longer installed on this machine; its .claude/settings.json was not changed
+install: done - codeo v1.0.7, user scope, superpowers 7.0.2
+install: restart any Claude Code sessions already open to load the plugins
+```
+
+A `--scope project` update rewrites the project's pin in `.claude/settings.json` (commit it), and when you also have a user-scope copy it reinstalls that at the same release:
+
+```
+install: release v1.0.7
+install: superpowers already installed (project scope), left alone
+✔ Successfully removed marketplace: codeo
+Also uninstalled 1 plugin from this marketplace:
+  codeo@codeo
+The removal also deletes their saved options, secrets and data where it can.
+To use a plugin again, add the marketplace back and reinstall the plugin.
+install: codeo v1.0.6 -> v1.0.7 (project scope)
+install: your user-scope codeo moved to v1.0.7 too: one machine holds one codeo version
+install: done - codeo v1.0.7, project scope, superpowers 7.0.2
+install: restart any Claude Code sessions already open to load the plugins
+```
+
+The marketplace is removed before the new one is added, so if a step fails in between (the network drops, say), codeo is left uninstalled. The installer then prints `install: codeo is no longer installed: <the last line claude printed>; run this again`; running the same command again finishes the job. When a `--scope project` update that removed a user-scope copy fails, the line ends `run this again with --scope project, then once without --scope to restore your user-scope copy`. When one scope was reinstalled and the other was not, it prints `install: codeo v1.0.7 is installed at project scope but not at user scope: <the last line claude printed>; run this again with --scope user`.
 
 Before you run it, read [`CHANGELOG.md`](CHANGELOG.md) for every release between yours and the new one. Each entry opens with three lines: `Config schema` (a project's `.codeo/config.json` must not be newer than the plugin understands), `Shared state` (what the plugin keeps on GitHub or in `.codeo/` that changed) and `Safe to bump mid-workflow` (`yes`, or what to finish first). Other projects' project-scope installs are not reinstalled; their committed settings offer the install again when the folder is trusted.
 
@@ -266,18 +298,31 @@ $ claude plugin uninstall codeo@codeo
 ✔ Successfully uninstalled plugin: codeo (scope: user)
 ```
 
-A project-scope install needs the scope named: `claude plugin uninstall codeo@codeo --scope project`, run in the project. Without it, `claude` answers `Plugin "codeo@codeo" is installed in project scope, not user. Use --scope project to uninstall.`
+A project-scope install needs the scope named. Without it, run in the project, `claude` refuses:
+
+```
+$ claude plugin uninstall codeo@codeo
+✘ Failed to uninstall plugin "codeo@codeo": Plugin "codeo@codeo" is enabled at project scope (.claude/settings.json, shared with your team). To disable just for you: claude plugin disable codeo@codeo --scope local
+```
+
+`claude plugin uninstall codeo@codeo --scope project`, run in the project, uninstalls it and removes `codeo@codeo` from `enabledPlugins` in the project's `.claude/settings.json`; the `codeo` entry under `extraKnownMarketplaces` stays, so the marketplace is still declared.
 
 To remove codeo and its marketplace together, which also uninstalls codeo at every scope on the machine:
 
 ```
 $ claude plugin marketplace remove codeo
 ✔ Successfully removed marketplace: codeo
+Also uninstalled 1 plugin from this marketplace:
+  codeo@codeo
+The removal also deletes their saved options, secrets and data where it can.
+To use a plugin again, add the marketplace back and reinstall the plugin.
 ```
+
+Run it from outside any project (`cd ~` first): then it leaves every project's `.claude/settings.json` alone. Run inside a project that declares codeo, it also removes `codeo@codeo` from that project's `enabledPlugins` and the `codeo` entry from its `extraKnownMarketplaces`, and the file shows as modified in `git status`.
 
 superpowers is separate: `claude plugin uninstall superpowers@superpowers-marketplace` (add `--scope project` for a project-scope install).
 
-Neither command touches a project. What stays in each project that used codeo:
+What stays in each project that used codeo, unless you ran one of the commands above inside it:
 
 - `.codeo/`, with the config and every dossier, committed to the project's repository
 - `docs/plans/`, the plans

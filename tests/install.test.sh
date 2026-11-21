@@ -1188,6 +1188,109 @@ t_readme_names_only_real_options() {
     done < <(grep -F 'install.sh' "$repo/README.md" || true)
 }
 
+# readme_install_blocks: each fenced block of the README that has a line starting "install: release",
+# reduced to its "install:" lines; every block is followed by a line holding only "--".
+readme_install_blocks() {
+    awk '
+        /^```/ { if (on) { if (has) { printf "%s--\n", buf } on = 0; has = 0; buf = "" } else { on = 1 } next }
+        on && /^install: / { buf = buf $0 "\n"; if ($0 ~ /^install: release/) has = 1 }
+    ' "$repo/README.md"
+}
+
+# readme_install_prose: every README line outside fenced blocks that starts "install: ", and every
+# inline code span there that starts "install: " (backticks stripped), one per line.
+readme_install_prose() {
+    awk '/^```/ { f = !f; next } !f' "$repo/README.md" | {
+        grep -E '^install: ' || true
+        grep -oE '`install: [^`]*`' | tr -d '`' || true
+    }
+}
+
+# scenario_lines <name>: the "install:" lines (stdout, then stderr) of a stubbed run.
+scenario_lines() {
+    local top n=$1
+    in_setup "scenario_$n"
+    printf 'a\trefs/tags/v1.0.7\nb\trefs/tags/v1.0.6\n' >"$STUB_DIR/tags"
+    case $n in
+        fresh-user) in_run ;;
+        rerun-user) seed_superpowers; seed_codeo 1.0.7; in_run ;;
+        user-replace-down) seed_superpowers; seed_codeo 1.0.7; in_run --version v1.0.6 ;;
+        user-replace-up) seed_superpowers; seed_codeo 1.0.6; in_run ;;
+        fresh-project) project_repo; in_run --scope project ;;
+        rerun-project)
+            project_repo
+            seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+            seed_pin kbajpai/codeo v1.0.7
+            seed_project codeo@codeo 1.0.7 "$top"
+            in_run --scope project ;;
+        user-replace-in-pinned-project)
+            project_repo
+            seed_superpowers
+            seed_codeo 1.0.6
+            seed_project codeo@codeo 1.0.6 "$top"
+            in_run ;;
+        project-replace-with-user-copy | project-replace-user-install-fails | project-replace-project-install-fails)
+            project_repo
+            seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+            seed_codeo 1.0.6
+            seed_project codeo@codeo 1.0.6 "$top"
+            [[ $n != project-replace-user-install-fails ]] || : >"$STUB_DIR/install-fail-codeo-user"
+            [[ $n != project-replace-project-install-fails ]] || : >"$STUB_DIR/install-fail-codeo-project"
+            in_run --scope project ;;
+        replace-add-fails)
+            seed_superpowers
+            seed_codeo 1.0.6
+            : >"$STUB_DIR/add-fail"
+            in_run ;;
+        *) fail "unknown scenario $n" ;;
+    esac
+    { printf '%s\n' "$in_out"; printf '%s\n' "$in_err"; } | grep -E '^install: ' || true
+}
+
+# t_readme_install_blocks_match_the_script: every README output block that has an "install: release" line
+# equals the install lines of a stubbed run, and every other install line the README quotes in prose is a
+# line some stubbed run or stubbed failure prints; a "<...>" in the README stands for any text.
+t_readme_install_blocks_match_the_script() {
+    local s all="" block="" line nblocks=0 found pat
+    local -a ok_names=(fresh-user rerun-user user-replace-down user-replace-up fresh-project rerun-project
+        user-replace-in-pinned-project project-replace-with-user-copy)
+    local -a fail_names=(replace-add-fails project-replace-user-install-fails project-replace-project-install-fails)
+    local -a got_blocks=()
+    for s in "${ok_names[@]}"; do
+        got_blocks+=("$(scenario_lines "$s")")
+        all+="${got_blocks[-1]}"$'\n'
+    done
+    for s in "${fail_names[@]}"; do
+        all+="$(scenario_lines "$s")"$'\n'
+    done
+    while IFS= read -r line; do
+        if [[ $line == -- ]]; then
+            nblocks=$((nblocks + 1))
+            block=${block%$'\n'}
+            found=0
+            for s in "${got_blocks[@]}"; do
+                [[ $s != "$block" ]] || found=1
+            done
+            ((found)) || fail "README block matches no scenario:"$'\n'"$block"
+            block=""
+        else
+            block+="$line"$'\n'
+        fi
+    done < <(readme_install_blocks)
+    ((nblocks >= 7)) || fail "README has $nblocks install output blocks, want at least 7"
+    while IFS= read -r line; do
+        [[ -n $line ]] || continue
+        pat=$(printf '%s' "$line" | sed -E 's/<[^>]*>/\x01/g')
+        pat=${pat//$'\x01'/*}
+        found=0
+        while IFS= read -r s; do
+            # shellcheck disable=SC2053
+            if [[ $s == $pat ]]; then found=1; break; fi
+        done <<<"$all"
+        ((found)) || fail "README quotes a line no scenario prints: $line"
+    done < <(readme_install_prose)
+}
+
 cases=(
     t_replace_second_scope_failure_names_both
     t_replace_first_failure_keeps_no_longer_installed
@@ -1255,6 +1358,7 @@ cases=(
     t_readme_links_resolve
     t_readme_install_command_runs
     t_readme_names_only_real_options
+    t_readme_install_blocks_match_the_script
 )
 
 for current in "${cases[@]}"; do
