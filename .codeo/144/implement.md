@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-The plan (`docs/plans/2026-11-21-close-108-leftovers-144.md`) is committed and pushed, the branch already contains `origin/main`, and `overlap.sh 144` printed three overlaps with #145. Q1 is answered (proceed and coordinate). All four plan tasks are built and committed, each task review approved, and the build (`true`, the `shell` suite's build) exits 0. The round's closing overlap check raised Q2 (#143 on `CHANGELOG.md`, #145 on `docs/skills.md`); `## Outcome` waits on it.
+Done. The plan (`docs/plans/2026-11-21-close-108-leftovers-144.md`) is committed and pushed, all four tasks are built and committed (`a83f7a6`, `463e450`, `4ede844`, `7bf2d2f`), each task review approved, and the build exits 0. Q1 and Q2 are answered (proceed and coordinate). Next: `/codeo:qc`.
 
 ## Questions
 
@@ -31,12 +31,32 @@ Proceeding means keeping the one-line `docs/skills.md` edit and hand-off to `/co
 My pick: proceed and coordinate, with the `docs/skills.md` line kept. `plan.md`'s footprint is `/codeo:plan`'s to amend; the gap is recorded under `## Notes` of the outcome, not edited here.
 
 **Answer:**
+A, proceed and coordinate, as the engineer chose in the session ("A, proceed and coordinate", 2026-11-21). (Transcribed by the skill from the engineer's chat answer.)
 
 ## Outcome
 
-_Pending — written at the hand-off._
+**Built:** all four tasks of `docs/plans/2026-11-21-close-108-leftovers-144.md`, one commit each, each task review approved.
+- **Task 1 (`a83f7a6`) — F6.** The stop sentence (a non-zero exit with an `overlap: cannot diff …` or `overlap: cannot resolve …` line is a stop to report, never "no overlap") and the warn sentence (an exit-0 `overlap: skipping #<M>'s changed paths` is quoted and the step carries on) in `skills/plan` (stop twice, warn once), `skills/implement`, `skills/qc` (stop twice, warn once), `skills/close` and `docs/handoff.md`. New `tests/overlap-stop.test.sh` counts both sentences per file.
+- **Task 2 (`463e450`) — F10.** `## Outcome` is matched exactly (`/^## Outcome[[:space:]]*$/`) by `inflight.sh` (four matches, the `:205` comment rewritten) and `dossier-check.sh` (`last_round_clear`, and `section_range` for `Outcome` only). `qc-verdict.sh` is untouched. New `tests/outcome-heading.test.sh` feeds `## Outcome`, trailing spaces and CRLF (recognised) and `## Outcomes`, `## Outcome notes`, `## Outcome:` (not) to all three readers, which must agree.
+- **Task 3 (`4ede844`) — F4.** `skills/init/SKILL.md` step 11 gains `**Closing block — lock taken, TODO printed:**` (fix what the `lock: TODO` line says, then `/codeo:plan`); the no-lock paragraph's last sentence now says a lock was not taken, so the plan is not named. `docs/handoff.md` gains the `init — lock taken, TODO` row and loses the "needs the fix alone" clause. `tests/closing-exits.test.sh` gains the case `init-lock-taken-todo`.
+- **Task 4 (`7bf2d2f`):** one `## Unreleased` bullet in `CHANGELOG.md`, ending `(#144)`.
+
+**Documentation changed:** `skills/plan`, `skills/implement`, `skills/qc`, `skills/close`, `skills/init`, `docs/handoff.md`, `docs/dossier.md` (one sentence), `CHANGELOG.md`, and `docs/skills.md:71` (outside the plan, see Notes). No wiki module.
+
+**Build result:** the `shell` suite's build (`true`) exits 0. The full suite is `/codeo:qc`'s; the implementers reported `bash tests/run.sh` printing `all cases passed` at the end of each task.
+
+**Other workflows:** Q1 and Q2 answered *proceed and coordinate*. #145 (`sequenced: #144`) edits `CHANGELOG.md`, `docs/handoff.md`, `scripts/inflight.sh` and `docs/skills.md`; #143 adds a `CHANGELOG.md` bullet. Both resolve their own conflicts.
+
+### Notes
+
+- **Outside the footprint:** `docs/skills.md:71` (the init hand-off bullet) was edited, though `plan.md`'s footprint and the plan's Global Constraints leave it out. Task 3 step 4 required every page that says a TODO withholds the hand-off to agree, and that page did. `overlap.sh --outside 144` prints it; `/codeo:qc` reports it, and `plan.md`'s footprint is `/codeo:plan`'s to amend.
+- **Deviations:** Task 2's `dossier-check.sh` signal in the plan was replaced by an equivalent one the implementer found. The sentence in `skills/init/SKILL.md` saying init does not hand off to `/codeo:plan` was reworded to fit the two paragraphs. Task 3's test marker is `fix what`, not the plan's `the fix`.
+- **Rulings:** plain backticks (no backslashes) in the pinned sentences; tasks run in order 1-4.
+- **Left to later steps:** the SDD whole-branch review and `finishing-a-development-branch` were not run; `/codeo:qc` is the independent review and `/codeo:close` finishes the branch.
+- **Parked minors (task reviews):** no regression case that `section_range` stays generous for non-Outcome headings (the plan's Review Focus mentioned one); a 150-character comment line near `dossier-check.sh:56`; no missing-row guard in the new `closing-exits` case; a few wide wrapped lines; the qc stop/warn placement is forced by another test.
 
 ## Log
 
 - 2026-11-21 — Q1 raised (overlap with #145) · cost: 1m · sonnet-5-5 12k in + 773k cached / 3k out
 - 2026-11-21 — Q2 raised after building Tasks 1-4 (overlap with #143, #145) · cost: 40m · sonnet-5-5 342k in + 9.8M cached / 60k out
+- 2026-11-21 — Q2 answered A; tasks 1-4 built, outcome written · cost: 576m · sonnet-5-5 435k in + 10.5M cached / 63k out
