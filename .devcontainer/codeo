@@ -86,42 +86,51 @@ raw_base() {
     printf '%s\n' "${CODEO_RAW_URL:-https://raw.githubusercontent.com/kbajpai/codeo/main}"
 }
 
-# ensure_home: create the home directory and download any missing script into it.
+# ensure_home: create the home directory and download any missing script into it. Each download goes to
+# a temporary file of its own and is renamed into place, so concurrent first uses never share a file.
 ensure_home() {
-    local dir base f name
+    local dir base f name tmp
     dir=$(home_dir)
     base=$(raw_base)
     mkdir -p "$dir" 2>/dev/null || die "could not create $dir"
     for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh; do
         name=${f##*/}
         [[ -s "$dir/$name" ]] && continue
-        if ! curl -fsSL -o "$dir/$name.part" "$base/$f" 2>/dev/null; then
-            rm -f "$dir/$name.part"
+        tmp=$(mktemp "$dir/.$name.XXXXXX") || die "could not create a temporary file in $dir"
+        if ! curl -fsSL -o "$tmp" "$base/$f" 2>/dev/null; then
+            rm -f "$tmp"
             die "could not download $base/$f"
         fi
-        if [[ "$(head -c2 "$dir/$name.part")" != "#!" ]]; then
-            rm -f "$dir/$name.part"
+        if [[ "$(head -c2 "$tmp")" != "#!" ]]; then
+            rm -f "$tmp"
             die "$base/$f is not a script"
         fi
-        mv "$dir/$name.part" "$dir/$name"
+        chmod +x "$tmp" 2>/dev/null || true
+        mv -f "$tmp" "$dir/$name"
     done
 }
 
 # find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was
 # found. Uses a blob-less bare clone in the home directory, pointed at the current repository URL and
-# fetched on every lookup; rev-parse needs only the trees the fetch brought, never a blob.
+# fetched on every lookup; rev-parse needs only the trees the fetch brought, never a blob. The whole
+# lookup holds a lock, and the clone is made in a temporary directory and renamed into place.
 find_branch() {
-    local n=$1 dir repo_url b refs
+    local n=$1 dir repo_url b refs tmp
     local -a found=()
     dir=$(home_dir)
     repo_url=${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}
+    exec 9>"$dir/.lookup.lock" || die "could not open the lookup lock in $dir"
+    flock 9 || die "could not take the lookup lock in $dir"
     if [[ ! -d "$dir/.lookup.git" ]]; then
-        rm -rf "$dir/.lookup.git.part"
-        git clone --bare -q --filter=blob:none "$repo_url" "$dir/.lookup.git.part" >&2 || {
-            rm -rf "$dir/.lookup.git.part"
+        tmp=$(mktemp -d "$dir/.lookup.XXXXXX") || die "could not create a temporary directory in $dir"
+        git clone --bare -q --filter=blob:none "$repo_url" "$tmp" >&2 || {
+            rm -rf "$tmp"
             die "could not clone $repo_url"
         }
-        mv "$dir/.lookup.git.part" "$dir/.lookup.git"
+        mv "$tmp" "$dir/.lookup.git" || {
+            rm -rf "$tmp"
+            die "could not create $dir/.lookup.git"
+        }
     fi
     git -C "$dir/.lookup.git" remote set-url origin "$repo_url" >&2 ||
         die "could not point the lookup clone at $repo_url"
@@ -131,7 +140,7 @@ find_branch() {
         die "could not list branches of $repo_url"
     while IFS= read -r b; do
         [[ -n "$b" ]] || continue
-        if git -C "$dir/.lookup.git" rev-parse -q --verify "$b:.codeo/$n/init.md" >/dev/null 2>&1; then
+        if git -C "$dir/.lookup.git" rev-parse -q --verify "refs/heads/$b:.codeo/$n/init.md" >/dev/null 2>&1; then
             found+=("$b")
         fi
     done <<<"$refs"

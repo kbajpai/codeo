@@ -37,7 +37,7 @@ cm_sys() {
     local t p
     mkdir -p "$cm_dir/sys"
     for t in bash env cat grep sed sort cut head tail tr wc mkdir mv cp rm chmod mktemp readlink \
-        dirname basename ls sleep date find id; do
+        dirname basename ls sleep date find id flock; do
         p=$(PATH=/usr/bin:/bin command -v "$t" 2>/dev/null) || continue
         ln -sf "$p" "$cm_dir/sys/$t"
     done
@@ -72,9 +72,9 @@ d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
 for a in "$@"; do
     case "$a" in
-        clone) mkdir -p "${@: -1}"; exit 0 ;;
+        clone) [[ ! -e "$d/slow" ]] || sleep 0.3; mkdir -p "${@: -1}"; exit 0 ;;
         for-each-ref) [[ ! -e "$d/foreach_fail" ]] || exit 1; cat "$d/branches" 2>/dev/null || true; exit 0 ;;
-        *:.codeo/*/init.md) grep -qxF "${a%%:*}" "$d/has" 2>/dev/null && exit 0 || exit 1 ;;
+        *:.codeo/*/init.md) b=${a%%:*}; b=${b#refs/heads/}; grep -qxF "$b" "$d/has" 2>/dev/null && exit 0 || exit 1 ;;
     esac
 done
 exit 0
@@ -88,6 +88,7 @@ echo "${0##*/} $*" >>"$d/calls"
 while [[ $# -gt 0 ]]; do
     if [[ "$1" == -o ]]; then
         if [[ -e "$d/curl_body" ]]; then cp "$d/curl_body" "$2"; else printf '#!/bin/bash\nexit 0\n' >"$2"; fi
+        [[ ! -e "$d/slow" ]] || sleep 0.3
     fi
     shift
 done
@@ -326,9 +327,13 @@ t_lookup_clone_atomic() {
     printf 'feat/a\n' >"$cm_dir/branches"
     printf 'feat/a\n' >"$cm_dir/has"
     cm_run issue 5
-    grep -q "clone --bare -q --filter=blob:none .* $cm_home/.lookup.git.part\$" "$cm_dir/calls" || fail "clone not into .lookup.git.part"
-    [[ -d "$cm_home/.lookup.git" && ! -e "$cm_home/.lookup.git.part" ]] || fail "part not renamed"
-    [[ ! -e "$cm_home/.lookup.git/stale" ]] || fail "stale part kept"
+    local target
+    target=$(grep -o "clone --bare .* $cm_home/\.lookup\.[^ ]*\$" "$cm_dir/calls" | sed 's/.* //') || true
+    [[ -n "$target" && "$target" != "$cm_home/.lookup.git" && "$target" != "$cm_home/.lookup.git.part" ]] ||
+        fail "clone not into a temporary .lookup.* directory: $(tr '\n' '|' <"$cm_dir/calls")"
+    [[ ! -e "$target" ]] || fail "temporary clone directory left behind"
+    [[ -d "$cm_home/.lookup.git" ]] || fail "no .lookup.git"
+    [[ ! -e "$cm_home/.lookup.git/stale" ]] || fail "stale part read as the clone"
 }
 
 t_lookup_checks_file_without_blob() {
@@ -336,8 +341,35 @@ t_lookup_checks_file_without_blob() {
     printf 'feat/a\n' >"$cm_dir/branches"
     printf 'feat/a\n' >"$cm_dir/has"
     cm_run issue 5
-    grep -qF -- "rev-parse -q --verify feat/a:.codeo/5/init.md" "$cm_dir/calls" || fail "no rev-parse --verify: $(tr '\n' '|' <"$cm_dir/calls")"
+    grep -qF -- "rev-parse -q --verify refs/heads/feat/a:.codeo/5/init.md" "$cm_dir/calls" || fail "no rev-parse --verify: $(tr '\n' '|' <"$cm_dir/calls")"
     ! grep -q "cat-file" "$cm_dir/calls" || fail "cat-file fetches a blob"
+}
+
+t_concurrent_first_use() {
+    cm_setup "$current"
+    rm -f "$cm_home"/*.sh
+    touch "$cm_dir/slow"
+    printf 'feat/a\n' >"$cm_dir/branches"
+    printf 'feat/a\n' >"$cm_dir/has"
+    local pid1 pid2 s1=0 s2=0 f
+    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" \
+        "$bash_abs" "$script" issue 5 >"$cm_dir/out1" 2>"$cm_dir/err1" &
+    pid1=$!
+    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" \
+        "$bash_abs" "$script" issue 5 >"$cm_dir/out2" 2>"$cm_dir/err2" &
+    pid2=$!
+    wait "$pid1" || s1=$?
+    wait "$pid2" || s2=$?
+    [[ "$s1" -eq 0 && "$s2" -eq 0 ]] || fail "exit $s1 and $s2: $(cat "$cm_dir/err1" "$cm_dir/err2")"
+    for f in codeo-container.sh codeo-sandbox.sh; do
+        [[ -s "$cm_home/$f" && "$(head -c2 "$cm_home/$f")" == "#!" ]] || fail "$f missing or not a script"
+    done
+    [[ -d "$cm_home/.lookup.git" ]] || fail "no .lookup.git"
+    [[ -z "$(find "$cm_home" -maxdepth 1 -name ".lookup.*" ! -name .lookup.git ! -name .lookup.lock)" ]] || fail "temporary .lookup.* left behind"
+    ! compgen -G "$cm_home/.lookup.git?*" >/dev/null || fail ".lookup.git.* left behind"
+    ! compgen -G "$cm_home/*.part" >/dev/null || fail ".part left behind"
+    ! compgen -G "$cm_home/.codeo-*" >/dev/null || fail ".codeo-* left behind"
+    [[ "$(grep -c '^git clone' "$cm_dir/calls")" -eq 1 ]] || fail "clones: $(grep -c '^git clone' "$cm_dir/calls")"
 }
 
 t_lookup_repoints_clone_at_url() {
@@ -1517,6 +1549,7 @@ cases=(
     t_download_not_script
     t_lookup_clone_atomic
     t_lookup_checks_file_without_blob
+    t_concurrent_first_use
     t_lookup_repoints_clone_at_url
     t_lookup_uses_lstrip
     t_issue_sandbox_flag
