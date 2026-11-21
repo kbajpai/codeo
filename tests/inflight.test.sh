@@ -988,6 +988,27 @@ assert_contains "line" "  touched:   2026-11-15 (init.md log), 2 days ago" "$(t_
 case_desc="touched_log_ties_updated"
 assert_contains "line" "  touched:   2026-11-15 (plan.md log), 2 days ago" "$(t_block 28)"
 
+# touched: — a branch tip whose committer date does not parse; the dossier dates are still read.
+printf '{"number":29,"labels":[],"assignees":[]}' > "$stub_dir/GET_repos_o_n_issues_29.json"
+touched_branch "$t_origin" feat/t29
+raw_dossier "$t_origin" 29 plan 2026-11-10 "# plan
+
+| Updated | 2026-11-15 |"
+git -C "$t_origin" checkout -q main
+git -C "$t_clone" fetch -q
+t_real_git=$(command -v git)
+t_wrap="$scratch_root/wrapbin"
+mkdir -p "$t_wrap"
+cat > "$t_wrap/git" <<WRAP
+#!/usr/bin/env bash
+if [[ "\$*" == *"log -1 --format=%cs"* ]]; then echo not-a-date; else exec "$t_real_git" "\$@"; fi
+WRAP
+chmod +x "$t_wrap/git"
+t_out=$(PATH="$t_wrap:$PATH" run_today "$t_clone")
+
+case_desc="touched_reads_the_dossier_when_the_tip_date_does_not_parse"
+assert_contains "line" "  touched:   2026-11-15 (plan.md Updated), 2 days ago" "$(t_block 29)"
+
 # waits: — a spent stash or abandon (resumed) is looked past to the step that is really owed.
 for n in 62 63 64 65; do
     printf '{"number":%s,"labels":[],"assignees":[]}' "$n" > "$stub_dir/GET_repos_o_n_issues_$n.json"
