@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored the repository and tried the `claude plugin` commands against an empty configuration directory (findings under `## Notes`). Q1-Q6 are raised and nothing is drafted yet. The plan is drafted once they are answered.
+Q1-Q6 answered (all recommendations accepted, 2026-11-21). The plan is drafted in `.codeo/151/plan-draft.md` and awaits the engineer's approval; the footprint is checked against other workflows and committed after approval, and `## Outcome` is written after that.
 
 ## Questions
 
@@ -21,6 +21,7 @@ Explored the repository and tried the `claude plugin` commands against an empty 
 - No preference, you pick (I would take the first).
 
 **Answer:**
+`install.sh` at the repository root, fetched from `main`, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q2 — codeo is already installed at another version: does the same command replace it?
 
@@ -32,6 +33,7 @@ Explored the repository and tried the `claude plugin` commands against an empty 
 - Never replace. Any other installed version is reported with the `claude plugin` commands to change it, and the script exits non-zero.
 
 **Answer:**
+Replace, with or without a tag, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q3 — Does project scope, and the README's `.claude/settings.json` snippet, cover `superpowers` too?
 
@@ -42,6 +44,7 @@ Explored the repository and tried the `claude plugin` commands against an empty 
 - codeo only, as the issue words it. `superpowers` stays a per-machine install at user scope, and a teammate who only trusted the folder gets a failing `superpowers` check from `/codeo:doctor` until they run the one command.
 
 **Answer:**
+Both plugins, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q4 — What backs the README's *first workflow* section?
 
@@ -51,6 +54,7 @@ Explored the repository and tried the `claude plugin` commands against an empty 
 - A scratch repository taken through a whole workflow. You create a throwaway GitHub repository, and one small issue goes from `/codeo:setup` to a merged pull request there; the README quotes that run. It is the most faithful evidence and proves setup on a project that is not codeo, but it is an hour or more of your time on a real repository with a board and rulesets.
 
 **Answer:**
+A finished issue from this repository, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q5 — Where do you run the two checks that need a clean machine, and in which shell?
 
@@ -61,6 +65,7 @@ Explored the repository and tried the `claude plugin` commands against an empty 
 - On your own machine or another one. Say which shell you type in there (bash or zsh, PowerShell, cmd), and whether it already has codeo installed (the check then still needs an empty `CLAUDE_CONFIG_DIR`).
 
 **Answer:**
+In this issue's container, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q6 — The contributor page: `CONTRIBUTING.md` at the root, and does *Dev container* move too?
 
@@ -71,6 +76,7 @@ Explored the repository and tried the `claude plugin` commands against an empty 
 - `docs/contributing.md`, with either choice for *Dev container* (say which).
 
 **Answer:**
+`CONTRIBUTING.md` at the root, and *Dev container* moves with the three, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ## Notes
 
@@ -102,3 +108,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-21 — Q1-Q6 raised · cost: 3m · fable-5-2 89k in + 764k cached / 13k out
+- 2026-11-21 — Q1-Q6 answered, plan drafted for review · cost: 9m · fable-5-2 + sonnet-5-5
