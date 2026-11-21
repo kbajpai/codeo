@@ -490,11 +490,20 @@ container_check() {
     return "$rc"
 }
 
+# workspace_mount <name>: prints "volume" when the container's mount at /workspaces is the named volume <name>, "other"
+# when it is anything else (a bind mount, another volume, none); returns 1 when docker inspect fails.
+workspace_mount() {
+    local out
+    out=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/workspaces"}}{{.Type}} {{.Name}}{{end}}{{end}}' "$1" 2>/dev/null </dev/null) || return 1
+    if [[ "$out" == "volume $1" ]]; then echo volume; else echo other; fi
+}
+
 # cmd_rm <N> [--force] [--container|--sandbox]: remove the issue's container or sandbox. A container
 # is checked for unsaved work first; --force skips the refusal and removes even when the check cannot
 # run.
 cmd_rm() {
-    local n="" force="" a kind name rc=0 report
+    local n="" force="" a kind name rc=0 report keep_volume mount removed_container="" removed_volume="" removed_image=""
+    local -a went=()
     for a in "$@"; do
         case "$a" in
             --force) force=1 ;;
@@ -540,16 +549,56 @@ cmd_rm() {
             echo "--force: could not check $name for unsaved work; removing anyway"
             ;;
     esac
-    if ! docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
-        # With --force a container that is already gone is fine: its volume and image still go.
-        if [[ -z "$force" ]] || docker ps -a --format '{{.Names}}' 2>/dev/null </dev/null | grep -qxF "$name"; then
-            die "could not remove container $name"
-        fi
+    keep_volume=""
+    if [[ "$rc" -ne 3 ]]; then
+        mount=$(workspace_mount "$name") || mount=""
+        case "$mount" in
+            volume) ;;
+            other)
+                if [[ -n "$force" ]]; then
+                    echo "--force: what /workspaces of $name mounts was not checked as the volume; removing the volume anyway"
+                else
+                    keep_volume=1
+                fi
+                ;;
+            *)
+                [[ -n "$force" ]] ||
+                    die "could not check what /workspaces of $name mounts; nothing removed (to remove it anyway: docker rm -f $name; docker volume rm $name)"
+                echo "--force: could not check what /workspaces of $name mounts; removing the volume anyway"
+                ;;
+        esac
     fi
-    docker volume rm "$name" >/dev/null 2>&1 </dev/null || die "removed container $name but could not remove volume $name"
-    docker rmi "codeo-dev:$name" >/dev/null 2>&1 </dev/null ||
+    if docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
+        removed_container=1
+    # With --force a container that is already gone is fine: its volume and image still go.
+    elif [[ -z "$force" ]] || docker ps -a --format '{{.Names}}' 2>/dev/null </dev/null | grep -qxF "$name"; then
+        die "could not remove container $name"
+    fi
+    if [[ -n "$keep_volume" ]]; then
+        echo "kept volume $name: /workspaces is not mounted from it; to remove it: docker volume rm $name"
+    elif docker volume rm "$name" >/dev/null 2>&1 </dev/null; then
+        removed_volume=1
+    elif docker volume inspect "$name" >/dev/null 2>&1 </dev/null; then
+        # The volume exists and would not go.
+        if [[ -n "$removed_container" ]]; then
+            die "removed container $name but could not remove volume $name"
+        fi
+        die "could not remove volume $name"
+    fi
+    if docker rmi "codeo-dev:$name" >/dev/null 2>&1 </dev/null; then
+        removed_image=1
+    elif [[ -n "$removed_container$removed_volume" ]]; then
         echo "codeo: warning: could not remove image codeo-dev:$name" >&2
-    echo "removed $name (the Claude Code login on its volume is gone with it)"
+    fi
+    if [[ -n "$removed_container" && -n "$removed_volume" ]]; then
+        echo "removed $name (the Claude Code login on its volume is gone with it)"
+        return 0
+    fi
+    [[ -n "$removed_container$removed_volume$removed_image" ]] || die "nothing named $name to remove"
+    [[ -z "$removed_container" ]] || went+=("container $name")
+    [[ -z "$removed_volume" ]] || went+=("volume $name")
+    [[ -z "$removed_image" ]] || went+=("image codeo-dev:$name")
+    echo "removed ${went[0]}$(printf ', %s' "${went[@]:1}")"
 }
 
 # upd_tmp and upd_new: what cmd_update's cleanup removes.

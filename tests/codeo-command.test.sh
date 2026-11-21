@@ -772,7 +772,8 @@ t_host_kinds_exact_name() {
 # "codeo-5 $(dstate)" (running when absent), other docker ps prints "codeo-5"; docker exec ... git -C
 # <dir> <sub> prints $d/g_<sub> (g_branch defaults to main) and fails for fetch when fetch_fail
 # exists, or for the git subcommand named in exec_fail; docker ps lists nothing once docker rm ran when gone_after_rm exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist;
-# docker restart fails when restart_fail exists; once docker restart is in the calls file, $d/g2_<sub> (when it
+# docker inspect prints $d/mounts (default "volume codeo-5") and fails when inspect_fail exists; docker volume inspect
+# and rm fail when vol_gone exists; docker restart fails when restart_fail exists; once docker restart is in the calls file, $d/g2_<sub> (when it
 # exists) replaces $d/g_<sub> as the output of docker exec ... git -C <dir> <sub>.
 rm_stubs() {
     cat >"$cm_dir/bin/docker" <<'STUB'
@@ -788,7 +789,12 @@ case "$1" in
     start) [[ ! -e "$d/start_fail" ]] || exit 1 ;;
     restart) [[ ! -e "$d/restart_fail" ]] || exit 1 ;;
     rm) [[ ! -e "$d/rm_fail" ]] || exit 1 ;;
-    volume) [[ ! -e "$d/vol_fail" ]] || exit 1 ;;
+    volume)
+        [[ "$2" != inspect && "$2" != rm || ! -e "$d/vol_gone" ]] || exit 1
+        [[ "$2" != rm || ! -e "$d/vol_fail" ]] || exit 1 ;;
+    inspect)
+        [[ ! -e "$d/inspect_fail" ]] || exit 1
+        cat "$d/mounts" 2>/dev/null || echo "volume codeo-5" ;;
     rmi) [[ ! -e "$d/rmi_fail" ]] || exit 1 ;;
     exec)
         sub=$6
@@ -861,7 +867,7 @@ t_rm_container_clean() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local want
-    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker restart codeo-5\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
+    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker restart codeo-5\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker inspect -f {{range .Mounts}}{{if eq .Destination "/workspaces"}}{{.Type}} {{.Name}}{{end}}{{end}} codeo-5\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
     [[ "$(cat "$cm_dir/calls")" == "$want" ]] || fail "calls: $(tr '\n' '|' <"$cm_dir/calls")"
     [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
     grep -qi 'login' <<<"$cm_out" || fail "no login note: $cm_out"
@@ -1070,7 +1076,8 @@ t_rm_force_container_gone() {
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "volume kept: $(tr '\n' '|' <"$cm_dir/calls")"
     grep -q '^docker rmi codeo-dev:codeo-5' "$cm_dir/calls" || fail "image kept"
-    [[ "$cm_out" == *"removed codeo-5"* ]] || fail "no removed line: $cm_out"
+    [[ "$cm_out" == *"removed volume codeo-5"* ]] || fail "no removed line: $cm_out"
+    ! grep -q 'removed container' <<<"$cm_out" || fail "says removed container: $cm_out"
 }
 
 t_rm_force_failing_rm_still_listed_dies() {
@@ -1356,6 +1363,63 @@ t_rm_volume_failure_says_container_removed() {
     grep -qF 'removed container codeo-5 but could not remove volume codeo-5' <<<"$cm_err" || fail "stderr: $cm_err"
 }
 
+t_rm_container_not_found_force() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/gone" "$cm_dir/start_fail" "$cm_dir/rm_fail" "$cm_dir/vol_gone" "$cm_dir/rmi_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: nothing named codeo-5 to remove" ]] || fail "stderr: $cm_err"
+    ! grep -q 'removed container' <<<"$cm_out$cm_err" || fail "says removed container: $cm_out $cm_err"
+}
+
+t_rm_force_volume_only() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/gone" "$cm_dir/start_fail" "$cm_dir/rm_fail" "$cm_dir/rmi_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "volume kept"
+    grep -qF 'removed volume codeo-5' <<<"$cm_out" || fail "stdout: $cm_out"
+    ! grep -q 'removed container' <<<"$cm_out" || fail "says removed container: $cm_out"
+}
+
+t_rm_bind_mount_keeps_volume() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'bind \n' >"$cm_dir/mounts"
+    cm_run rm 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "container kept"
+    grep -q '^docker rmi' "$cm_dir/calls" || fail "image kept"
+    ! grep -q '^docker volume rm' "$cm_dir/calls" || fail "volume removed"
+    grep -qF 'docker volume rm codeo-5' <<<"$cm_out" || fail "stdout: $cm_out"
+}
+
+t_rm_bind_mount_force() {
+    cm_setup "$current"
+    rm_stubs
+    printf 'bind \n' >"$cm_dir/mounts"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "volume kept"
+    grep -qF 'not checked' <<<"$cm_out" || fail "no not-checked note: $cm_out"
+}
+
+t_rm_inspect_fails() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5 --container
+    expect_refused 'could not check'
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "--force: volume kept"
+}
+
 t_codeo_sbx_honoured() {
     cm_setup "$current"
     mkdir -p "$cm_dir/alt"
@@ -1491,6 +1555,11 @@ cases=(
     t_rm_pr_fetch_fails
     t_rm_commits_under_no_ref_refuse
     t_rm_volume_failure_says_container_removed
+    t_rm_container_not_found_force
+    t_rm_force_volume_only
+    t_rm_bind_mount_keeps_volume
+    t_rm_bind_mount_force
+    t_rm_inspect_fails
     t_codeo_sbx_honoured
     t_issue_lookup_invalid_branch
 )
