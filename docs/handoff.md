@@ -174,11 +174,12 @@ it.
   whatever its lock's `host` says. In a hosted web session the beat hook takes the lock itself, so no
   separate lock step is needed: on a `UserPromptSubmit` event, when the project has a `.codeo/`
   directory and there is no `.codeo/active`, the hook runs `lock.sh take web` with the session id
-  without its `cse_` prefix and `CODEO_LOCK_SKIP_PARKED=1`, in the foreground, bounded by `timeout 8`,
-  at most once per `CODEO_LIVE_REFRESH_SECONDS` (an atomic claim file settles which prompt takes it),
-  and then beats, detached. The take is never for a dossier whose `close.md` ends in a stash or an
-  abandon, so a parked workflow stays lockless; a stashed workflow resumed through `/codeo:init`
-  takes its lock the usual way. A tool call (`PostToolUse`) never takes the lock: with a lock it
+  without its `cse_` prefix and `CODEO_LOCK_SKIP_PARKED=1`, in the foreground, bounded by `timeout 8` where `timeout` exists (without it the take is unbounded and the
+  harness's 10-second limit ends it), at most once per `CODEO_LIVE_REFRESH_SECONDS` window (an atomic
+  claim file settles which prompt takes it), and then beats, detached. A prompt in a session that
+  already has a lock skips the take and beats. The take is never for a parked dossier: a stash
+  counts as parked until `/codeo:init` has resumed it, and an abandon likewise, so a parked workflow
+  stays lockless and a resumed one is taken again, with no checkout of its branch while it is parked. A tool call (`PostToolUse`) never takes the lock: with a lock it
   beats, detached, and with none it does nothing. Taking the lock may check out the dossier branch
   between turns. This repository's `.claude/settings.json` carries two gated groups
   (`UserPromptSubmit` and `PostToolUse`) that run this repository's own `hooks/live-signal.sh`, so
@@ -226,6 +227,7 @@ it.
       S->>H: UserPromptSubmit
       H->>H: web, .codeo/ present, no lock, interval claimed atomically?
       H->>H: foreground, bounded: CODEO_LOCK_SKIP_PARKED=1 lock.sh take web (a stashed or abandoned dossier takes nothing)
+      H->>H: a lock already: no take, straight to the beat
       S->>H: PostToolUse
       H->>H: a lock: less than 5 min since last beat? no lock: nothing
       H-->>O: detached live.sh beat — force-push one parentless commit (REST if the push is refused; a web session pushes the codeo-live branch, no REST)

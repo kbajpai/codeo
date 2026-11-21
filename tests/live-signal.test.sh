@@ -428,6 +428,16 @@ assert_eq "no lock" yes "$ok"
 [[ -z $(git -C "$origin" for-each-ref 'refs/heads/codeo-live/') ]] && ok=yes || ok=no
 assert_eq "no codeo-live branch" yes "$ok"
 
+case_desc=hook_positive_control_takes_the_lock_for_a_non_stashed_dossier
+new_world_with_dossier
+(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789 CODEO_LIVE_REFRESH_SECONDS=1
+    hook beat "$(ups "$clone")"
+    sleep 2
+    hook beat "$(ups "$clone")")
+assert_eq "exit" 0 "$rc"
+[[ -e $clone/.codeo/active ]] && ok=yes || ok=no
+assert_eq "lock taken without a stash" yes "$ok"
+
 case_desc=hook_takes_the_lock_in_the_foreground
 new_world_with_dossier
 (export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
