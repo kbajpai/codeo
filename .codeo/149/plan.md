@@ -99,7 +99,14 @@ As picked. The F5c mutation was run while planning and passes today, so F5c is d
 
 ## Notes
 
-None yet.
+### Footprint
+
+```
+files:      .devcontainer/codeo, .devcontainer/README.md, .sbx/README.md, skills/init/SKILL.md, skills/plan/SKILL.md, skills/implement/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, docs/handoff.md, tests/codeo-command.test.sh, tests/outcome-heading.test.sh, tests/overlap-stop.test.sh, tests/implement-skill.test.sh, tests/close-skill.test.sh, tests/init-skill.test.sh, CHANGELOG.md, docs/plans/2026-11-21-close-non-blocking-findings-149.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
