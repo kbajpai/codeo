@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing drafted yet. The two questions intake left open are raised as Q1 (which `## Outcome` heading rule every reader follows) and Q2 (the shape of `/codeo:init`'s closing block once a lock was taken and a TODO printed). F6 (the `overlap: cannot diff` stop sentence) needs no answer and is settled in `## Notes`. The plan is drafted once Q1 and Q2 are answered.
+Q1 and Q2 are answered (A and A). The plan is drafted at `.codeo/144/plan-draft.md` (four tasks) and waits for the engineer's approval at the review gate. After approval: the plan is written to `docs/plans/2026-11-21-close-108-leftovers-144.md` (unstaged), the footprint is recorded and checked with `overlap.sh`, and `## Outcome` is written.
 
 ## Questions
 
@@ -31,6 +31,7 @@ Explored and brainstormed; nothing drafted yet. The two questions intake left op
 - **C — prefix everywhere.** `qc-verdict.sh` and `section_range` are loosened so `## Outcomes` is Outcome everywhere; the two cases at `tests/qc-verdict.test.sh:760,827` are reversed and the `## Unreleased` CHANGELOG clause "`qc-verdict` no longer reads `## Outcomes` as `## Outcome`" is withdrawn. It undoes what #108 shipped.
 
 **Answer:**
+A, my pick, as the engineer chose in the session ("A for both, accept your recommendations", 2026-11-21). (Transcribed by the skill from the engineer's chat answer.)
 
 ### Q2 — How should `/codeo:init`'s closing block name the next command once a lock was taken and a TODO printed?
 
@@ -41,10 +42,11 @@ Explored and brainstormed; nothing drafted yet. The two questions intake left op
 - **B — one paragraph, extended.** The `no lock` paragraph gains a third step ("when the lock was taken, `/codeo:plan`"), its heading and goal are reworded to cover both cases, the handoff row gains the same clause, and the three `lacks '/codeo:plan'` assertions are replaced by an ordering check (`/codeo:plan` only after "when the lock was taken"). Fewer lines, and one paragraph then carries two goals.
 
 **Answer:**
+A, my pick, as the engineer chose in the session ("A for both, accept your recommendations", 2026-11-21). (Transcribed.)
 
 ## Notes
 
-- **F6 needs no question.** Every place a skill runs `overlap.sh` gets the same sentence: a non-zero exit with an `overlap: cannot diff …` (or `overlap: cannot resolve …`) line is a stop to report, not "no overlap". That is `skills/plan/SKILL.md` step 10 (both the `--outside` run and the pair run), `skills/implement/SKILL.md:84`, `skills/qc/SKILL.md:92` and `:166`, `skills/close/SKILL.md:216`, and `docs/handoff.md:214`, each pinned by a `must_contain` case in that skill's test. My call, stated here so it can be corrected: the sentence also says that a `overlap: cannot diff #<M> (<branch>)` warning with exit 0 (another workflow's diff could not be made, #108 Q1 option A) is quoted to the engineer and the step carries on with that workflow's footprint alone.
+- **F6 needs no question.** Every place a skill runs `overlap.sh` gets the same sentence: a non-zero exit with an `overlap: cannot diff …` (or `overlap: cannot resolve …`) line is a stop to report, not "no overlap". That is `skills/plan/SKILL.md` step 10 (both the `--outside` run and the pair run), `skills/implement/SKILL.md:84`, `skills/qc/SKILL.md:92` and `:166`, `skills/close/SKILL.md:216`, and `docs/handoff.md:214`, each pinned by a `must_contain` case in that skill's test. My call, stated here so it can be corrected: the sentence also says that a `overlap: skipping #<M>'s changed paths` warning with exit 0 (another workflow's diff could not be made, #108 Q1 option A) is quoted to the engineer and the step carries on with that workflow's footprint alone.
 - **Shape (step 5).** A scoped, executable plan under `docs/plans/2026-11-21-close-108-leftovers-144.md`; no standing reference doc, since `docs/handoff.md` and `docs/dossier.md` already are the references and the plan gives them documentation tasks. No technology or architecture choice is being made, so `engineering:system-design` and `engineering:architecture` do not apply.
 - **Other workflows in flight (2026-11-21).** #143 (`fix/codeo-host-command-close-leftovers`, at `plan`, waiting on its Q1-Q6) and #145 (`fix/close-102-126-122-leftovers`, at `init`) have no footprint and no changed files yet, so there is nothing to compare; intake noted that #145 will edit `docs/handoff.md` and `skills/triage/SKILL.md`. The footprint is checked again with `overlap.sh` before the outcome is written.
 
@@ -55,3 +57,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-21 — Q1-Q2 raised · cost: 1m · fable-5-2 77k in + 618k cached / 6k out
+- 2026-11-21 — Q1-Q2 answered A/A; plan drafted to .codeo/144/plan-draft.md, awaiting approval · cost: unavailable until the hand-off
