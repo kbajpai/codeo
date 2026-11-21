@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written: back to `/codeo:implement` for F1 and F2 (blocking). F3-F11 are non-blocking. Nothing is open.
+Round 2 is written: clear, forward to `/codeo:close`. No blocking finding; F12-F16 are non-blocking. Nothing is open.
 
 ## Questions
 
@@ -82,5 +82,61 @@ The reviewer's verdict, quoted: "Ready to merge? With fixes."
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-21
+
+Under review: `implement.md` round 2, `2e02100..5cb1e5d` (merge base `2e02100a256de327d5f85d51d57db98a98672da1`). Round 1's findings F1 and F2 were the send-back; this pass re-ran everything from step 0.
+
+**Commands run this pass**
+
+```
+bash .devcontainer/scripts/role.sh --check qc: exit 0
+sync-main.sh --abort-on-conflict: "sync-main: the branch already contains origin/main" (exit 0, nothing merged)
+overlap.sh 143: no output; overlap.sh --outside 143: no output
+scope.sh origin/main HEAD:
+  scope: suite shell needed for unclassified paths:
+    .codeo/143/implement.md, init.md, issue.md, plan.md, qc.md, CHANGELOG.md
+  suite.shell=true
+build (suite shell, `true`): exit 0
+bash tests/run.sh (suite shell, whole): "all cases passed", exit=0, no FAIL line
+git diff origin/main...HEAD --stat -- .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh: empty (both unchanged)
+```
+
+No shared environment, invariants file, `wiki` module or `qc` overlay text (exit 3 each): step 9 does not apply. The engineer's real-Docker run of plan Task 9 (recorded in `implement.md` round 2) is quoted below where it settles a criterion; it is the engineer's evidence, not a command this pass ran.
+
+The independent review (opus; acceptance criteria and diff only) answered "Ready to merge? With fixes", with no Critical issue and three Important ones. Each is checked against the code below; one was reproduced here with a probe.
+
+**Criteria**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Sandbox hint names `sbx rm --force` only when the refusal was not over work (F29) | met | `codeo:559-566`: a work refusal (stdout, no `codeo-sandbox: ` line) never gets `sbx rm --force`; `t_rm_sandbox`, `t_rm_sandbox_hints`, `t_rm_sandbox_work_refusal_hint`, `t_rm_sandbox_no_hint_on_die`. Hint accuracy in rare `--force` paths: F4 |
+| 2 | `rm <N> --container --force` with no container never says a container was removed (F30) | met | `existed`/`removed_container`, `codeo:594-603`, `:623-625`; `t_rm_force_missing_container_rm_succeeds` (stub `rm` exits 0, container gone); the engineer's real-Docker step 7: `--force: no container codeo-99999 found …`, `codeo: nothing named codeo-99999 to remove`, exit 1, no "removed container" line |
+| 3 | One listing fails, the other lists `codeo-<N>`: `rm` does not run until a kind is named (F19) | met | `detect_kind` `codeo:266`; `t_rm_one_listing_fails_needs_a_kind`; seen on the engineer's host when `sbx` was not signed in: `codeo: could not ask docker or sbx whether codeo-99999 exists as the other kind; pick one with --container or --sandbox` |
+| 4 | The check is not clean on a stale remote-tracking ref alone, and sees new files under `showUntrackedFiles=no` | met | `fetch --prune origin` (`codeo:503`), `--untracked-files=normal` (`codeo:456`); `t_rm_check_prunes_and_sees_untracked`; real Docker steps 4 and 5: `?? untracked.txt` named, exit 1, with `status.showUntrackedFiles no` set. The stale-ref case itself is covered with arguments only, not against real git |
+| 5 | A write between the check and removal is not lost without `--force`, or the plan records why not | met | restart and second read, `codeo:507-513`; `t_rm_restarts_running_container_and_reads_again`, `t_rm_write_after_check_refused`, `t_rm_restart_fails`; `plan.md` Q1 records that the window is narrowed, not closed. The restart itself was not observed on the host (no `docker events` capture); the removal after it succeeded (real step 6) |
+| 6 | Two first-use commands started together both succeed with complete script and lookup clone | met | `ensure_home` per-process `mktemp` plus rename, `find_branch` under `flock`; `t_concurrent_first_use`, `t_lookup_clone_atomic` |
+| 7 | F3, F4, F7, F8, F11, F12, F13, F20, F27, F28 and threads …636234, …636301, …636455, …636698 fixed or ruled out in the plan dossier | met | `plan.md` Q5 table rows (lines 68-97). The …636698 fix does not cover a relative `CODEO_HOME` (F14 below), which that thread did not name |
+| 8 | F26 and threads …636595, …636654 confirmed fixed and dropped | met | `plan.md` Q5 lines 77-79; `t_lookup_checks_file_without_blob` |
+| 9 | Help and both READMEs show the kind flags; a failed listing warns on stderr and exits 1; no "all or nothing"; changelog describes the command; F17, F22, F23 corrected; F21 documented or avoided | met, with a gap | flags in help (`codeo:76-81`) and both READMEs; failed listing stated for `list` and for `shell`/`open`/`rm` in `.devcontainer/README.md:122-124`; no "all or nothing"; CHANGELOG bullet rewritten; `t_comments_within_120_columns`; F21 avoided (`t_home_checkout_collision*`). Gap: `.sbx/README.md` and the help text do not say it (F5) |
+| 10 | Tests cover each changed behaviour | met | the round 1 gap is closed (`t_rm_force_missing_container_rm_succeeds`, `t_rm_report_joins_items` with exact-line matches, `t_rm_bind_mount_without_volume_says_nothing`, `t_rm_sandbox_*`, `t_rm_sandbox_interrupt_replays_stderr`). No test covers a relative `CODEO_HOME` or the `--force` hint after a partial failure (F3, F4) |
+
+**Round 1 findings, recapped**
+- F1 (blocking in round 1) — fixed by `db9bcea`: a container is counted as removed only when it was known to exist; confirmed on real Docker.
+- F2 (blocking in round 1) — fixed by `db9bcea`, `b545c0f`: the "kept" hint appears only for a refusal over unpushed or uncommitted work; READMEs and changelog agree.
+- F4, F5, F7, F8 (non-blocking in round 1) — fixed by `db9bcea`/`b545c0f`; F3 (non-blocking in round 1) — documented in `.devcontainer/README.md:122`. F6, F9, F10, F11 stay as recorded in round 1; F10 is now answered by the engineer's host run (restart not observed).
+
+**New findings this round**
+- **F12 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md:202` says that when the script could not read or reach the sandbox, "the script's own `codeo-sandbox: ` message says what to do then". It does for `die_unreadable` and the no-refs refusal (`.sbx/codeo-sandbox.sh:366`, `:390`); it does not for `no clone … nothing removed` (`:381`), `could not fetch origin` / `pull-request heads` (`:386`, `:387`), `could not list the commits` and `could not check … uncommitted work` (`:392`, `:395`), which name no command. In those cases `codeo` prints no hint without `--force`. The comment at `codeo:561-562` ("--force would not get past it") is also wrong for the no-refs refusal, which `--force` passes. Criterion 1 says "only when", so printing nothing meets it; the sentence in the README is what is untrue. Nothing is lost by it.
+- **F13 — non-blocking — `/codeo:implement`'s.** `codeo:564-566`: with `--force`, the hint `to remove it anyway, discarding whatever it holds: sbx rm --force codeo-<N>` is also printed after `codeo-sandbox: removed codeo-<N>, but could not set aside its refs …` (`.sbx/codeo-sandbox.sh:412`, `:416`), when the sandbox is already gone, and after `codeo-sandbox: no sandbox codeo-<N>`. Reproduced by the reviewer with a stub. It is advice to remove something already removed, on a rare partial-failure path; the form of the hint predates this change.
+- **F14 — non-blocking — `/codeo:implement`'s.** A relative `CODEO_HOME` breaks `codeo rm <N>` of a sandbox: `cd "$(home_dir)"` is followed by calls to `home_dir`, which reads a relative value against the new directory. Reproduced here: `CODEO_HOME=rel codeo rm 5 --sandbox` → `mktemp: failed to create file via template '…/work/rel/rel/.rm-err.XXXXXX'` / `codeo: could not create a temporary file in …/rel/rel`, exit 1. The doubled path on the script line predates this change (`bash "$(home_dir)/codeo-sandbox.sh"` after the `cd`); the new `mktemp` line meets it first. Thread …636698 and the README name `CODEO_CONTEXT`, `CODEO_SBX_IMAGE` and `CODEO_SBX`, not `CODEO_HOME`. It fails loudly and removes nothing.
+- **F15 — non-blocking — `/codeo:plan`'s.** `.devcontainer/README.md` says `codeo` "stops with one line" when `~/codeo` is a git checkout and `CODEO_HOME` is unset; `codeo rm <N>` of a container never reads the home directory, so it goes ahead (it writes nothing there). The stop is documented for every command but is not applied to that one. Criterion 9 only asks that the collision be documented or avoided.
+- **F16 — non-blocking — `/codeo:plan`'s.** `.sbx/README.md` and the help text do not say that a failed listing warns on stderr and exits 1; the plan's Q5 scoped that criterion clause (F14) to `.devcontainer/README.md`. Criterion 9's wording lists help text and both READMEs; the engineer may judge that the plan's scoping was too narrow.
+- **Parked from round 1 and re-seen by the reviewer, unchanged:** the restart runs before the mount check (F6), temp files left by an interrupted download or clone, a failed `docker volume inspect` read as "no volume" (it prints nothing false).
+
+**Routing.** Nothing blocks. Every criterion is met on the tests and on the engineer's real-Docker run; the findings above print or say something inexact in rare paths (a sandbox refusal that names no remedy, a `--force` hint after the sandbox is already gone, one README sentence) or fail loudly on an uncommon setup (a relative `CODEO_HOME`), and none loses unsaved work. F12-F16 are recorded here and reach `/codeo:triage` through this dossier once it is archived; the engineer may instead send the change back for F12-F14, which are small and local to `cmd_rm` and one README sentence.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 - 2026-11-21 — qc round 1: back to implement (F1 blocking: `rm --force` reports a container removed when `docker rm -f` of a missing one exits 0; F2 blocking: sandbox hint without `--force` claims kept commits and a working `--force` where neither holds; F3-F11 non-blocking) · cost: 6m · opus-5-5 253k in + 4.2M cached / 30k out
+- 2026-11-21 — qc round 2: clear (F1, F2 fixed and confirmed on real Docker; F12-F16 non-blocking) · cost: 6m · opus-5-5 86k in + 1.2M cached / 21k out · sonnet-5-5 24k in + 1.8M cached / 11k out
