@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). Both are answered *proceed and coordinate*. The engineer approved the draft and the plan is written to `docs/plans/2026-11-21-live-signal-web-session-138.md` (unstaged, for review); the outcome is written and nothing is open. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: review and commit the plan, then `/codeo:implement`, then re-invoke `/codeo:plan`.
+**Round 2, after a send-back from `/codeo:qc` round 1** (F1, F4, F11 and `tests/devcontainer.test.sh` missing from the footprint): Q10 is open, one design question about where a hosted session's lock is taken, and nothing is drafted for the round. Next: answer Q10 here, then re-invoke `/codeo:plan`. The state after round 1, kept for the record: Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). Both are answered *proceed and coordinate*. The engineer approved the draft and the plan is written to `docs/plans/2026-11-21-live-signal-web-session-138.md` (unstaged, for review); the outcome is written and nothing is open. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: review and commit the plan, then `/codeo:implement`, then re-invoke `/codeo:plan`.
 
 ## Questions
 
@@ -146,7 +146,28 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 **Answer:**
 (a) Proceed and coordinate (engineer, in the conversation, 2026-11-21: "Q9 (a)"; recorded here by the skill).
 
+### Q10 — Round 2: where should a hosted session's lock be taken?
+
+**Why it matters:** `/codeo:qc` round 1 sent the plan back (`qc.md`, `### Round 1`: F1, F4, F11, and `tests/devcontainer.test.sh` missing from the footprint). F11 is the design question: in the engineer's hosted run (Task 7) `.codeo/active` did not exist at the start of the session, although `CLAUDE_CODE_REMOTE=true`, the checkout was on this branch and the repository's `SessionStart` hook was in the file; the same hook's command ran later in the session (probably on `resume`) and refreshed the lock's session id. So a session that starts on this branch publishes nothing until a lock is taken. Why `startup` did not run it is not known, and finding out costs another hosted run. The beat hooks do fire (`UserPromptSubmit`, `PostToolUse`), and the plugin's own `hooks/live-signal.sh` is what they run. Having that script take the lock when none exists makes the first prompt enough, in this repository and, since `hooks/hooks.json` runs the same script, in any project that installs the plugin: that also settles F4's substance (today installing the plugin alone publishes nothing).
+
+**Options:**
+- **(a) `hooks/live-signal.sh beat` takes the lock when none exists (recommended).** Only when `CLAUDE_CODE_REMOTE=true` and `.codeo/active` is missing, in the background with the beat, it runs `lock.sh take web <CLAUDE_CODE_REMOTE_SESSION_ID without cse_>` (idempotent; it may check out the dossier branch, as it already does at a start script) and then `live.sh beat`. The repository's own `SessionStart` group is dropped: the beat hooks cover it, and F9's stdout noise goes with it. The repository's `.claude/settings.json` keeps the gated beat groups, since cloud sessions do not install `enabledPlugins`; `docs/handoff.md` says a project needs either those groups or the plugin installed by the environment's setup script, and that either then takes the lock itself. One cost: a lock taken from a prompt hook can switch the checkout to the dossier branch mid-session when the session began elsewhere.
+- **(b) The same, and keep the `SessionStart` group.** It still takes the lock early when `SessionStart` does run (on `resume` it did), at the price of F9's `lock:` lines reaching the session.
+- **(c) Find out why `startup` did not run it first.** A diagnostic round in a hosted session (for example a hook that logs its environment and `cwd` to a file you read back) before the plan changes anything; no design change now, and F11 stays open until it is answered.
+
+**Answer:**
+
 ## Notes
+
+**Round 2 calls made without a question** (send-back from `qc.md` round 1; correct any in an answer above):
+- *F1:* for a web session the user chain ends at `unknown` after the assignee, with no `git config user.name` (Q2 answered (b) there); `tests/live.test.sh`'s `web_user_without_an_assignee_falls_to_git_user_name` becomes a case that expects `unknown`, and the sentence in `docs/handoff.md` follows.
+- *F4:* `docs/handoff.md` says the groups in `.claude/settings.json` are this repository's own, and what another project needs (Q10's answer decides the wording).
+- *F5:* a case runs the registered start-up command with `CLAUDE_CODE_REMOTE=true` and no session id (the lock then says `session: unknown`); under Q10 (a) the same case is written against `live-signal.sh`.
+- *F7, F8:* one sentence each in `docs/handoff.md`: the assignee fallback names the issue's first assignee, and `CODEO_GITHUB_LOGIN` is read before `GET /user` for the signal.
+- *F10:* `tests/devcontainer.test.sh` joins the footprint; with Q10 (a) so do `hooks/live-signal.sh` and `tests/live-signal.test.sh` (already in).
+- *Not in this round (Q3 a in `qc.md`):* the fetch collision (F3), the leftover `codeo-live/*` branches (F2) and the fork case (F6) stay later work.
+- *Shape:* a second plan file, `docs/plans/2026-11-21-live-signal-web-session-138-round-2.md`, with the tasks of this round only; the first plan stays as the record of what was built. Documentation moved: `docs/handoff.md` and `CHANGELOG.md` (the bullet gains the fixes); no wiki.
+- *In flight:* #149 and #151 are at `qc` and still list `docs/handoff.md` and `CHANGELOG.md`; both overlaps were answered *proceed and coordinate* (Q8, Q9) and `overlap.sh` does not raise them again.
 
 **Later work, not in this plan:** the `codeo-live/<issue>/web-<id>` branches a web session leaves on origin (the proxy refuses to delete them) need removing, by hand or by a later change; to file with `/codeo:issue` in the home checkout, which refuses here.
 
@@ -196,3 +217,4 @@ sequenced:  none
 - 2026-11-21 — Q7 recorded (force-push accepted); footprint written; overlap.sh found #149 and #151, Q8-Q9 raised; nothing drafted · cost: counted in the planned line below
 - 2026-11-21 — Q8, Q9 recorded (proceed and coordinate); draft written to plan-draft.md and presented for review; engineering:system-design and engineering:architecture not installed, their structure applied directly · cost: counted in the planned line below
 - 2026-11-21 — planned: docs/plans/2026-11-21-live-signal-web-session-138.md · cost: 82m · fable-5-2 86k in + 802k cached / 6k out · sonnet-5-5 230k in + 4.7M cached / 56k out · no /codeo:issue filed; engineering:system-design and engineering:architecture unavailable
+- 2026-11-21 — round 2 (send-back from qc.md round 1): Q10 raised (where a hosted session's lock is taken); nothing drafted · cost: 1m · sonnet-5-5 6k in + 1.5M cached / 6k out
