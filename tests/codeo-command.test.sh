@@ -1382,6 +1382,10 @@ t_home_checkout_collision() {
     cm_nohome=1 cm_run default sandbox
     [[ "$cm_status" -eq 1 ]] || fail "default: exit $cm_status, want 1"
     home_untouched default
+    cm_nohome=1 cm_run default bogus
+    [[ "$cm_status" -eq 2 ]] || fail "default bogus: exit $cm_status, want 2"
+    grep -q "^usage:" "$cm_dir/err" || fail "default bogus: no usage"
+    home_untouched "default bogus"
     cm_nohome=1 cm_run help
     [[ "$cm_status" -eq 0 ]] || fail "help: exit $cm_status, want 0"
     cm_nohome=1 cm_run rm 5 --bogus
@@ -1389,6 +1393,24 @@ t_home_checkout_collision() {
     grep -q '^usage:' "$cm_dir/err" || fail "rm --bogus: no usage"
     cm_run list
     [[ "$cm_status" -eq 0 ]] || fail "with CODEO_HOME: exit $cm_status, err: $cm_err"
+}
+
+t_home_checkout_collision_git_file() {
+    cm_setup "$current"
+    mkdir -p "$cm_dir/h/codeo"
+    echo "gitdir: elsewhere" >"$cm_dir/h/codeo/.git"
+    cm_nohome=1 cm_run list
+    [[ "$cm_status" -eq 1 ]] || fail "list: exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "list: stderr is '$cm_err'"
+    home_untouched list
+    cm_nohome=1 cm_run default sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "default: exit $cm_status, want 1"
+    home_untouched default
+    cm_nohome=1 cm_run default bogus
+    [[ "$cm_status" -eq 2 ]] || fail "default bogus: exit $cm_status, want 2"
+    grep -q '^usage:' "$cm_dir/err" || fail "default bogus: no usage"
+    home_untouched "default bogus"
 }
 
 t_default_mkdir_failure_is_one_line() {
@@ -1698,6 +1720,7 @@ cases=(
     t_relative_codeo_home
     t_relative_overrides_made_absolute
     t_home_checkout_collision
+    t_home_checkout_collision_git_file
     t_default_mkdir_failure_is_one_line
     t_home_unset
     t_home_dir_uncreatable

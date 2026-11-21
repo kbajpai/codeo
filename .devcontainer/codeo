@@ -50,8 +50,8 @@ home_dir() {
     if [[ -z "$d" ]]; then
         [[ -n "${HOME:-}" ]] || die "set CODEO_HOME or HOME"
         d=$HOME/codeo
-        # Inside $(home_dir) this die ends only the subshell; every caller assigns the result, so set -e stops it.
-        [[ ! -d "$d/.git" ]] ||
+        # In $(home_dir) this die ends only the subshell: callers must assign the result, or run ensure_home first.
+        [[ ! -e "$d/.git" ]] ||
             die "~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in"
     fi
     case $d in /*) ;; *) d=$PWD/$d ;; esac
