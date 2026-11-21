@@ -477,12 +477,14 @@ container_read() {
     return "$dirty"
 }
 
-# container_check <N>: check the issue container's repository for work that exists only there. Starts a stopped
-# container first, fetches, reads it (container_read), and when the container was already running restarts it and
-# reads again, so a write that landed between the first read and the removal is caught. Prints one heading per kind
-# found (up to 10 lines each) and returns 0 when clean, 1 when something would be lost, 2 when the check could not
-# run (cannot start, fetch, restart or exec failed), 3 when there is no such container. When it returns non-zero it
-# stops again a container it knows it started (not after a failed restart: the state is then unknown).
+# container_check <N> [--no-restart]: check the issue container's repository for work that exists only
+# there. Starts a stopped container first, fetches, reads it (container_read), and when the container was
+# already running restarts it and reads again, so a write that landed between the first read and the removal is
+# caught. Prints one heading per kind found (up to 10 lines each) and returns 0 when clean, 1 when something
+# would be lost, 2 when the check could not run (cannot start, fetch, restart or exec failed), 3 when there is no
+# such container. When it returns non-zero it stops again a container it knows it started (not after a failed
+# restart: the state is then unknown).
+# With --no-restart the container is read once and never restarted.
 container_check() {
     local name="codeo-$1" listing state="" row rest started=0 listed=0 rc=0
     if listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
@@ -505,7 +507,7 @@ container_check() {
     # squash merge, so the pull-request heads are what still hold them. Failing to fetch them proves nothing.
     docker exec "$name" git -C "/workspaces/$name" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
     container_read "$name" || rc=$?
-    if [[ "$rc" -eq 0 && "$started" -eq 0 ]]; then
+    if [[ "$rc" -eq 0 && "$started" -eq 0 && "${2:-}" != --no-restart ]]; then
         # A running container may have had a writer between the read and the removal; restarting it ends any such
         # process, and the second read sees what it left.
         docker restart "$name" >/dev/null 2>&1 </dev/null || return 2
@@ -527,7 +529,7 @@ workspace_mount() {
 # is checked for unsaved work first; --force skips the refusal and removes even when the check cannot
 # run.
 cmd_rm() {
-    local n="" force="" a kind name rc=0 report listing keep_volume mount existed removed_container="" removed_volume="" removed_image=""
+    local n="" force="" a kind name rc=0 report no_restart listing keep_volume mount existed removed_container="" removed_volume="" removed_image=""
     local -a went=()
     for a in "$@"; do
         case "$a" in
@@ -570,7 +572,12 @@ cmd_rm() {
         exit "$rc"
     fi
     name="codeo-$n"
-    report=$(container_check "$n") || rc=$?
+    # Ask what /workspaces mounts before the check restarts anything: a refusal over a failed inspect must not
+    # have ended a shell or agent first. The case below uses the result.
+    mount=$(workspace_mount "$name") || mount=""
+    no_restart=""
+    [[ -n "$mount" || -n "$force" ]] || no_restart=--no-restart
+    report=$(container_check "$n" "$no_restart") || rc=$?
     case "$rc" in
         0) ;;
         1)
@@ -603,7 +610,6 @@ cmd_rm() {
     fi
     keep_volume=""
     if [[ "$rc" -ne 3 ]]; then
-        mount=$(workspace_mount "$name") || mount=""
         case "$mount" in
             volume) ;;
             other)

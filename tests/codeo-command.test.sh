@@ -1020,7 +1020,7 @@ t_rm_container_clean() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local want
-    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker restart codeo-5\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker inspect -f {{range .Mounts}}{{if eq .Destination "/workspaces"}}{{.Type}} {{.Name}}{{end}}{{end}} codeo-5\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
+    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker inspect -f {{range .Mounts}}{{if eq .Destination "/workspaces"}}{{.Type}} {{.Name}}{{end}}{{end}} codeo-5\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker restart codeo-5\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
     [[ "$(cat "$cm_dir/calls")" == "$want" ]] || fail "calls: $(tr '\n' '|' <"$cm_dir/calls")"
     [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
     grep -qi 'login' <<<"$cm_out" || fail "no login note: $cm_out"
@@ -1752,6 +1752,24 @@ t_rm_inspect_fails() {
     grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "--force: volume kept"
 }
 
+t_rm_inspect_fails_no_restart() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5
+    expect_refused 'could not check what /workspaces of codeo-5 mounts'
+    ! grep -q '^docker restart' "$cm_dir/calls" || fail "restarted: $(tr '\n' '|' <"$cm_dir/calls")"
+    ! grep -q '^docker stop' "$cm_dir/calls" || fail "stopped: $(tr '\n' '|' <"$cm_dir/calls")"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5 --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    grep -q '^docker restart codeo-5' "$cm_dir/calls" || fail "--force: no restart"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "--force: not removed"
+    grep -qF -- '--force: could not check what /workspaces of codeo-5 mounts; removing the volume anyway' <<<"$cm_out" || fail "--force: stdout: $cm_out"
+}
+
 t_codeo_sbx_honoured() {
     cm_setup "$current"
     mkdir -p "$cm_dir/alt"
@@ -1909,6 +1927,7 @@ cases=(
     t_rm_bind_mount_keeps_volume
     t_rm_bind_mount_force
     t_rm_inspect_fails
+    t_rm_inspect_fails_no_restart
     t_codeo_sbx_honoured
     t_issue_lookup_invalid_branch
 )
