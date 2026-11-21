@@ -771,7 +771,9 @@ t_host_kinds_exact_name() {
 # rm_stubs: replace the docker stub with one that answers rm. docker ps with {{.State}} prints
 # "codeo-5 $(dstate)" (running when absent), other docker ps prints "codeo-5"; docker exec ... git -C
 # <dir> <sub> prints $d/g_<sub> (g_branch defaults to main) and fails for fetch when fetch_fail
-# exists, or for the git subcommand named in exec_fail; docker ps lists nothing once docker rm ran when gone_after_rm exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist.
+# exists, or for the git subcommand named in exec_fail; docker ps lists nothing once docker rm ran when gone_after_rm exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist;
+# docker restart fails when restart_fail exists; once docker restart is in the calls file, $d/g2_<sub> (when it
+# exists) replaces $d/g_<sub> as the output of docker exec ... git -C <dir> <sub>.
 rm_stubs() {
     cat >"$cm_dir/bin/docker" <<'STUB'
 #!/bin/bash
@@ -784,6 +786,7 @@ case "$1" in
         elif [[ -e "$d/gone_after_rm" ]] && grep -q "^docker rm" "$d/calls"; then :
         elif [[ "$*" == *State* ]]; then echo "codeo-5 $(cat "$d/dstate" 2>/dev/null || echo running)"; else echo codeo-5; fi ;;
     start) [[ ! -e "$d/start_fail" ]] || exit 1 ;;
+    restart) [[ ! -e "$d/restart_fail" ]] || exit 1 ;;
     rm) [[ ! -e "$d/rm_fail" ]] || exit 1 ;;
     volume) [[ ! -e "$d/vol_fail" ]] || exit 1 ;;
     rmi) [[ ! -e "$d/rmi_fail" ]] || exit 1 ;;
@@ -798,8 +801,10 @@ case "$1" in
         if [[ "$prf" -eq 1 && "$sub" == rev-list && -e "$d/rev_pr_covered" ]]; then exit 0; fi
         if [[ "$prf" -eq 1 && "$sub" == branch && "$*" == *" -r "* && -e "$d/g_branch_r_pr" ]]; then cat "$d/g_branch_r_pr"; exit 0; fi
         [[ "$sub" != "$(cat "$d/exec_fail" 2>/dev/null)" ]] || exit 1
+        g=g
+        ! grep -q '^docker restart' "$d/calls" || [[ ! -e "$d/g2_$sub" ]] || g=g2
         if [[ "$sub" == branch && "$*" == *" -r "* ]]; then cat "$d/g_branch_r" 2>/dev/null || true
-        elif [[ "$sub" == branch && ! -e "$d/g_branch" ]]; then echo main; else cat "$d/g_$sub" 2>/dev/null || true; fi ;;
+        elif [[ "$sub" == branch && ! -e "$d/g_branch" && "$g" == g ]]; then echo main; else cat "$d/${g}_$sub" 2>/dev/null || true; fi ;;
 esac
 exit 0
 STUB
@@ -856,11 +861,64 @@ t_rm_container_clean() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local want
-    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
+    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker restart codeo-5\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
     [[ "$(cat "$cm_dir/calls")" == "$want" ]] || fail "calls: $(tr '\n' '|' <"$cm_dir/calls")"
     [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
     grep -qi 'login' <<<"$cm_out" || fail "no login note: $cm_out"
     expect_no_script
+}
+
+t_rm_restarts_running_container_and_reads_again() {
+    cm_setup "$current"
+    rm_stubs
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local calls first_rev restart rmf k
+    calls=$(tr '\n' '|' <"$cm_dir/calls")
+    first_rev=$(grep -n ' rev-list ' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    restart=$(grep -n '^docker restart codeo-5' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    rmf=$(grep -n '^docker rm -f' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    [[ -n "$first_rev" && -n "$restart" && -n "$rmf" && "$first_rev" -lt "$restart" && "$restart" -lt "$rmf" ]] ||
+        fail "restart not between first rev-list and rm: $calls"
+    for k in ' status ' ' stash list' ' branch --show-current' ' rev-list '; do
+        [[ "$(grep -cF -- "$k" "$cm_dir/calls" || true)" -eq 2 ]] || fail "'$k' not read twice: $calls"
+    done
+    [[ "$(grep -c ' fetch ' "$cm_dir/calls" || true)" -eq 2 ]] || fail "fetch not exactly twice: $calls"
+    [[ "$(grep -c -- '--prune' "$cm_dir/calls" || true)" -eq 1 ]] || fail "want one --prune: $calls"
+    [[ "$(grep -c 'refs/pull/' "$cm_dir/calls" || true)" -eq 1 ]] || fail "want one pull-request fetch: $calls"
+}
+
+t_rm_write_after_check_refused() {
+    cm_setup "$current"
+    rm_stubs
+    printf '?? new\n' >"$cm_dir/g2_status"
+    cm_run rm 5
+    expect_refused '?? new'
+    grep -q '^docker restart codeo-5' "$cm_dir/calls" || fail "no restart: $(tr '\n' '|' <"$cm_dir/calls")"
+    ! grep -q '^docker stop' "$cm_dir/calls" || fail "stopped a running container"
+}
+
+t_rm_restart_fails() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/restart_fail"
+    cm_run rm 5
+    expect_refused 'could not check'
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/restart_fail"
+    cm_run rm 5 --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "--force: not removed"
+}
+
+t_rm_started_container_not_restarted() {
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q '^docker restart' "$cm_dir/calls" || fail "restarted a container we started"
 }
 
 t_rm_check_prunes_and_sees_untracked() {
@@ -1033,7 +1091,7 @@ t_rm_stopped_container_started_first() {
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local start fetch
     start=$(grep -n '^docker start codeo-5' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
-    fetch=$(grep -n 'fetch origin' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
+    fetch=$(grep -n 'fetch .*origin' "$cm_dir/calls" | head -1 | cut -d: -f1 || true)
     [[ -n "$start" && -n "$fetch" && "$start" -lt "$fetch" ]] || fail "start not before fetch: $(tr '\n' '|' <"$cm_dir/calls")"
     cm_setup "$current-2"
     rm_stubs
@@ -1394,6 +1452,10 @@ cases=(
     t_rm_sandbox_force
     t_rm_usage
     t_rm_container_clean
+    t_rm_restarts_running_container_and_reads_again
+    t_rm_write_after_check_refused
+    t_rm_restart_fails
+    t_rm_started_container_not_restarted
     t_rm_container_untracked
     t_rm_check_prunes_and_sees_untracked
     t_rm_container_unpushed

@@ -421,15 +421,45 @@ stop_started() {
     return 0
 }
 
-# container_check <N>: check the issue container's repository for work that exists only there. Starts
-# a stopped container first. Prints one heading per kind found (up to 10 lines each) and returns 0
-# when clean, 1 when something would be lost, 2 when the check could not run (cannot start, fetch or
-# exec failed), 3 when there is no such container. When it returns non-zero it stops again a container
-# it knows it started.
-container_check() {
-    local name="codeo-$1" listing state="" row rest dirty=0 out kind started=0 listed=0
+# container_read <name>: read the container's repository once for work that exists only there. Prints one heading
+# per kind found (up to 10 lines each) and returns 0 when clean, 1 when something would be lost, 2 when a docker exec
+# failed. Does not fetch, start or stop anything.
+container_read() {
+    local name="$1" dirty=0 out kind
     local -A found=()
     local -a kinds=(status stash branch revs)
+    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain --untracked-files=normal 2>/dev/null </dev/null) || return 2
+    found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || return 2
+    out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || return 2
+    found[branch]=""
+    if [[ -z "$out" ]]; then
+        # A detached HEAD is unsaved work only when no origin branch contains it.
+        out=$(docker exec "$name" git -C "/workspaces/$name" branch -r --contains HEAD 2>/dev/null </dev/null) || return 2
+        [[ -n "$out" ]] || found[branch]="HEAD is detached"
+    fi
+    found[revs]=$(docker exec "$name" git -C "/workspaces/$name" rev-list --branches --not --remotes=origin 2>/dev/null </dev/null) || return 2
+    for kind in "${kinds[@]}"; do
+        [[ -n "${found[$kind]}" ]] || continue
+        dirty=1
+        case "$kind" in
+            status) echo "uncommitted or untracked files:" ;;
+            stash) echo "stashes:" ;;
+            branch) echo "detached HEAD:" ;;
+            revs) echo "commits not pushed to origin:" ;;
+        esac
+        head -n 10 <<<"${found[$kind]}" | sed 's/^/  /'
+    done
+    return "$dirty"
+}
+
+# container_check <N>: check the issue container's repository for work that exists only there. Starts a stopped
+# container first, fetches, reads it (container_read), and when the container was already running restarts it and
+# reads again, so a write that landed between the first read and the removal is caught. Prints one heading per kind
+# found (up to 10 lines each) and returns 0 when clean, 1 when something would be lost, 2 when the check could not
+# run (cannot start, fetch, restart or exec failed), 3 when there is no such container. When it returns non-zero it
+# stops again a container it knows it started (not after a failed restart: the state is then unknown).
+container_check() {
+    local name="codeo-$1" listing state="" row rest started=0 listed=0 rc=0
     if listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
         listed=1
         while read -r row rest _; do
@@ -449,29 +479,15 @@ container_check() {
     # Commits under a pull-request head count as delivered: /codeo:close deletes the branch on origin after a
     # squash merge, so the pull-request heads are what still hold them. Failing to fetch them proves nothing.
     docker exec "$name" git -C "/workspaces/$name" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
-    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain --untracked-files=normal 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    found[branch]=""
-    if [[ -z "$out" ]]; then
-        # A detached HEAD is unsaved work only when no origin branch contains it.
-        out=$(docker exec "$name" git -C "/workspaces/$name" branch -r --contains HEAD 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-        [[ -n "$out" ]] || found[branch]="HEAD is detached"
+    container_read "$name" || rc=$?
+    if [[ "$rc" -eq 0 && "$started" -eq 0 ]]; then
+        # A running container may have had a writer between the read and the removal; restarting it ends any such
+        # process, and the second read sees what it left.
+        docker restart "$name" >/dev/null 2>&1 </dev/null || return 2
+        container_read "$name" || rc=$?
     fi
-    found[revs]=$(docker exec "$name" git -C "/workspaces/$name" rev-list --branches --not --remotes=origin 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    for kind in "${kinds[@]}"; do
-        [[ -n "${found[$kind]}" ]] || continue
-        dirty=1
-        case "$kind" in
-            status) echo "uncommitted or untracked files:" ;;
-            stash) echo "stashes:" ;;
-            branch) echo "detached HEAD:" ;;
-            revs) echo "commits not pushed to origin:" ;;
-        esac
-        head -n 10 <<<"${found[$kind]}" | sed 's/^/  /'
-    done
-    ((dirty == 0)) || stop_started "$name" $started
-    return "$dirty"
+    ((rc == 0)) || stop_started "$name" $started
+    return "$rc"
 }
 
 # cmd_rm <N> [--force] [--container|--sandbox]: remove the issue's container or sandbox. A container
