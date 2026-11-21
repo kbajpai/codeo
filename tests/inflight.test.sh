@@ -607,6 +607,14 @@ assert_contains "line" "  waits:     resume — #35 was abandoned on" "$(w_block
 case_desc="waits_on_review"
 assert_contains "line" "  waits:     review — dossier archived" "$(w_block 36)"
 
+case_desc="waits_comments_say_what_they_do"
+assert_eq "script header says the archive is not on the base branch" 1 "$(grep -cF 'the archive is not on the base branch yet' "$plugin_src/scripts/inflight.sh" || true)"
+assert_eq "script comment says whose archive is not on the base branch" 1 "$(grep -cF 'whose archive is not on the base branch yet' "$plugin_src/scripts/inflight.sh" || true)"
+assert_eq "script names the close outcome step-past" 1 "$(grep -cF 'steps past any `close` outcome no earlier rule took' "$plugin_src/scripts/inflight.sh" || true)"
+assert_eq "script lost the old header claim" 0 "$(grep -cF '`review — dossier archived` once close has opened its PR' "$plugin_src/scripts/inflight.sh" || true)"
+assert_eq "page says the archive is not on the base branch" 1 "$(grep -cF 'the archive is not on the base branch yet' "$plugin_src/docs/handoff.md" || true)"
+assert_eq "page lost the old claim" 0 "$(grep -cF 'once `close` has opened its pull request' "$plugin_src/docs/handoff.md" || true)"
+
 case_desc="waits_after_a_send_back"
 assert_contains "waits" "  waits:     /codeo:implement" "$(w_block 37)"
 assert_contains "verdict" "  verdict:   round 1 — back to /codeo:implement." "$(w_block 37)"
@@ -979,6 +987,27 @@ assert_contains "line" "  touched:   2026-11-15 (init.md log), 2 days ago" "$(t_
 
 case_desc="touched_log_ties_updated"
 assert_contains "line" "  touched:   2026-11-15 (plan.md log), 2 days ago" "$(t_block 28)"
+
+# touched: — a branch tip whose committer date does not parse; the dossier dates are still read.
+printf '{"number":29,"labels":[],"assignees":[]}' > "$stub_dir/GET_repos_o_n_issues_29.json"
+touched_branch "$t_origin" feat/t29
+raw_dossier "$t_origin" 29 plan 2026-11-10 "# plan
+
+| Updated | 2026-11-15 |"
+git -C "$t_origin" checkout -q main
+git -C "$t_clone" fetch -q
+t_real_git=$(command -v git)
+t_wrap="$scratch_root/wrapbin"
+mkdir -p "$t_wrap"
+cat > "$t_wrap/git" <<WRAP
+#!/usr/bin/env bash
+if [[ "\$*" == *"log -1 --format=%cs"* ]]; then echo not-a-date; else exec "$t_real_git" "\$@"; fi
+WRAP
+chmod +x "$t_wrap/git"
+t_out=$(PATH="$t_wrap:$PATH" run_today "$t_clone")
+
+case_desc="touched_reads_the_dossier_when_the_tip_date_does_not_parse"
+assert_contains "line" "  touched:   2026-11-15 (plan.md Updated), 2 days ago" "$(t_block 29)"
 
 # waits: — a spent stash or abandon (resumed) is looked past to the step that is really owed.
 for n in 62 63 64 65; do

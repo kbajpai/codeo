@@ -118,6 +118,8 @@ is the container the message names.
         fingerprint is `parked:<N>:<touched date>`, so a dismissal holds until the workflow is
         touched again and goes quiet again. No assignee's fingerprint
         is `unassigned:<N>`, which carries no date, so a dismissal of it holds across pushes.
+        Answering *resume* names the step and stops nothing: the question comes back every run
+        until the workflow has an assignee, and *dismiss* is what stops it.
         A workflow that is both carries both fingerprints in its one question.
         One within the threshold and assigned is
         listed in the run's `## Outcome` with its `touched:` and `waits:` lines and not asked about.
@@ -312,7 +314,10 @@ is the container the message names.
      and makes no card move: a step (`/codeo:plan`, `/codeo:implement`, `/codeo:qc` or
      `/codeo:close`) is named as the command to run;
      `engineer — …` names the dossier files and question numbers to answer;
-     `review — dossier archived` names the pull request awaiting review;
+     `review — dossier archived` means the dossier is archived and its archive is not on the base branch yet:
+     with an open pull request (the state step 2 read with `pr list-for-branch`) it
+     names that pull request to review; with none, or one closed unmerged, it
+     names `/codeo:close` in that issue's checkout;
      `nothing known` names the checkout and quotes the `step:` line, and says no step can be named.
      A script failure is reported and the resume still named.
 
