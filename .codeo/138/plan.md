@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-**Round 3, after a send-back from `/codeo:qc` round 2** (F12: the hook's lock take undoes a stash or an abandon; F13: the handoff advice for other projects is untrue): Q11 and Q12 are answered (a, a). The round is drafted to `.codeo/138/plan-draft.md` (not committed) and waits for the engineer's approval at the review gate; the round's plan file is written only after it. Earlier state, kept for the record: **Round 2, after a send-back from `/codeo:qc` round 1** (F1, F4, F11 and `tests/devcontainer.test.sh` missing from the footprint): Q10 is answered (a: the beat hook takes the lock, and the `SessionStart` group goes). The engineer approved the draft and the round 2 plan is written to `docs/plans/2026-11-21-live-signal-web-session-138-round-2.md` (unstaged, for review); the outcome is written and nothing is open. Next: review and commit it, then `/codeo:implement`. The state after round 1, kept for the record: Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). Both are answered *proceed and coordinate*. The engineer approved the draft and the plan is written to `docs/plans/2026-11-21-live-signal-web-session-138.md` (unstaged, for review); the outcome is written and nothing is open. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: review and commit the plan, then `/codeo:implement`, then re-invoke `/codeo:plan`.
+**Round 3, after a send-back from `/codeo:qc` round 2** (F12: the hook's lock take undoes a stash or an abandon; F13: the handoff advice for other projects is untrue): Q11 and Q12 are answered (a, a). The engineer approved the draft and the round 3 plan is written to `docs/plans/2026-11-21-live-signal-web-session-138-round-3.md` (unstaged, for review); the outcome is written and nothing is open. Next: review and commit it, then `/codeo:implement`. Earlier state, kept for the record: **Round 2, after a send-back from `/codeo:qc` round 1** (F1, F4, F11 and `tests/devcontainer.test.sh` missing from the footprint): Q10 is answered (a: the beat hook takes the lock, and the `SessionStart` group goes). The engineer approved the draft and the round 2 plan is written to `docs/plans/2026-11-21-live-signal-web-session-138-round-2.md` (unstaged, for review); the outcome is written and nothing is open. Next: review and commit it, then `/codeo:implement`. The state after round 1, kept for the record: Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). Both are answered *proceed and coordinate*. The engineer approved the draft and the plan is written to `docs/plans/2026-11-21-live-signal-web-session-138.md` (unstaged, for review); the outcome is written and nothing is open. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: review and commit the plan, then `/codeo:implement`, then re-invoke `/codeo:plan`.
 
 ## Questions
 
@@ -184,15 +184,6 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 
 ## Notes
 
-### Footprint
-
-```
-files:      .claude/settings.json, hooks/live-signal.sh, scripts/live.sh, scripts/lock.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/lock.test.sh, tests/triage-skill.test.sh, tests/devcontainer.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md, docs/plans/2026-11-21-live-signal-web-session-138-round-2.md, docs/plans/2026-11-21-live-signal-web-session-138-round-3.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 
 **Round 3 calls made without a question** (send-back from `qc.md` round 2; correct any in an answer above):
 - *F13:* `docs/handoff.md` says the two gated groups in `.claude/settings.json` work only in this repository, because they run this repository's own `hooks/live-signal.sh`; another project gets the hook by installing the plugin through its environment's setup script, and nothing else works there. "Either way nothing else is needed" goes.
@@ -260,6 +251,32 @@ sequenced:  none
 
 **Intake question resolved:** none new; round 1's resolutions stand.
 
+### Round 3 — 2026-11-21
+
+(send-back from qc.md round 2)
+
+**Plan:** `docs/plans/2026-11-21-live-signal-web-session-138-round-3.md` — 6 tasks, unstaged for review; rounds 1 and 2's plans stay as the record of what was built. **Shape:** a third plan under `docs/plans/` with this round's tasks only, a decision record and a sequence diagram folded in. `engineering:system-design` and `engineering:architecture` are not installed; their structure is applied directly.
+
+**What was decided** (Q11, Q12 and the calls under `## Notes`):
+- **When the hook may take a lock (Q11 a, F12, F15, F20).** `lock.sh take` gains an opt-in, `CODEO_LOCK_SKIP_PARKED=1`: it takes no lock for a dossier whose `close.md` ends in a `— stashed` or `— abandoned` round (the rule `claim.sh` reads), and without the variable behaves as before, so `/codeo:init` resuming a stash is unchanged. The hook sets it, takes the lock only on `UserPromptSubmit` (never after a tool call), in the foreground bounded by `timeout 8`, at most once per interval through an atomic claim file, and starts only the beat detached. Rejected: the parked rule with the take still detached on both events (b), and once per session (c).
+- **A `local` lock in a web session (Q12 a, F14).** `live.sh` reads `CLAUDE_CODE_REMOTE=true` as host `web` whatever the lock's `host` says, so the route, labels and signal follow and the two refused writes are not made. Rejected: documenting it only (b), later work (c).
+- **Taken along:** F13 (`docs/handoff.md` says the two groups work only in this repository, and another project installs the plugin through its environment's setup script and needs `.codeo/` and a committed dossier), F18 (the changelog's `Shared state:` line names the `codeo-live/` namespace), F19 (the test file unsets the web variables).
+- **Not in this round (`qc.md` Q3 a):** leftover `codeo-live/*` branches (and CI on every pushed branch), the fetch collision on equal machine labels, the forked-session label.
+- **Tasks.** Tasks 1-5 are proved by focused `bash tests/run.sh` runs, with the controller running the whole suite before the hand-off; Task 6, the hosted-session check, is `Runs on: the engineer's host`, last, and starts with a tip check because both attempts on round 2's build landed on stale checkouts. No task needs a lease: no shared environment is configured. Overlaps with #151 (`CHANGELOG.md`) and #149 (`docs/handoff.md`, `CHANGELOG.md`) were answered *proceed and coordinate* in round 1 and are not raised again; `overlap.sh 138` printed nothing.
+
+**Documentation the plan changes:** `docs/handoff.md` → *Who is working right now* (and its diagram) and `CHANGELOG.md` (the bullet and the `Shared state:` line). No wiki pages.
+
+**Intake question resolved:** none new.
+
+### Footprint
+
+```
+files:      .claude/settings.json, hooks/live-signal.sh, scripts/live.sh, scripts/lock.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/lock.test.sh, tests/triage-skill.test.sh, tests/devcontainer.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md, docs/plans/2026-11-21-live-signal-web-session-138-round-2.md, docs/plans/2026-11-21-live-signal-web-session-138-round-3.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-21 — Q1-Q4 raised; nothing drafted · cost: counted in the planned line later
@@ -273,3 +290,4 @@ sequenced:  none
 - 2026-11-21 — round 2 (send-back from qc.md round 1): Q10 raised (where a hosted session's lock is taken); nothing drafted · cost: 1m · sonnet-5-5 6k in + 1.5M cached / 6k out
 - 2026-11-21 — planned (round 2): docs/plans/2026-11-21-live-signal-web-session-138-round-2.md · cost: 4m · sonnet-5-5 30k in + 6.5M cached / 29k out · no /codeo:issue filed; engineering:system-design and engineering:architecture unavailable
 - 2026-11-21 — round 3 (send-back from qc.md round 2): Q11-Q12 raised; nothing drafted · cost: 0m · fable-5-2 461k in + 505k cached / 4k out
+- 2026-11-21 — planned (round 3): docs/plans/2026-11-21-live-signal-web-session-138-round-3.md · cost: 12m · fable-5-2 464k in + 989k cached / 5k out · sonnet-5-5 33k in + 4.7M cached / 17k out · no /codeo:issue filed; engineering:system-design and engineering:architecture unavailable
