@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored, Q1-Q6 raised, nothing drafted yet. The issue leaves an "or" in six places, and each one decides whether a task is code or prose; those are the questions. Every question carries my pick, so "go with your picks" is a full answer.
+Q1-Q6 are answered (all my picks). The plan is drafted at `.codeo/149/plan-draft.md` and waits for the engineer's approval; nothing is written under `docs/plans/` yet. Footprint check against #151 and #138 (both at `init`, no footprint, nothing changed): nothing to compare until the footprint is written after approval.
 
 What I found (read against `.devcontainer/codeo` and `.sbx/codeo-sandbox.sh` at `56598d3`):
 
@@ -40,6 +40,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — refuse.** `home_dir` dies with `codeo: CODEO_HOME must be an absolute path` for every command. Simpler to reason about, but it breaks a relative value that works today for every command except `rm` of a sandbox (`tests/codeo-command.test.sh:1564` runs one).
 
 **Answer:**
+A — make it work: `main` makes `CODEO_HOME` absolute once. (Engineer: "go with your picks", 2026-11-21.)
 
 ### Q2 — F6, `docker restart` before the mount check: reorder, or document?
 
@@ -49,6 +50,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — document.** One README sentence: the restart comes first, so a failed mount check refuses after the sessions were ended. No code.
 
 **Answer:**
+A — reorder: `docker inspect` before the restart. (Engineer: "go with your picks", 2026-11-21.)
 
 ### Q3 — F13, how `codeo rm --force` knows the sandbox is already gone
 
@@ -58,6 +60,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — match the script's lines.** No hint when the script's stderr holds `codeo-sandbox: no sandbox codeo-<N>` or `codeo-sandbox: removed codeo-<N>`. No extra call, but it ties `codeo` to two more of the script's phrases; a test in `tests/sandbox.test.sh` would pin them so a reword fails the suite.
 
 **Answer:**
+A — ask `sbx` again after the failure. (Engineer: "go with your picks", 2026-11-21.)
 
 ### Q4 — F12, refusals that name no remedy: change the script, or the README?
 
@@ -67,6 +70,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — the script names a remedy in each of the five.** For example `could not fetch origin: … nothing removed; check the network and run it again`. The README claim then holds as written. Five messages reworded, and `tests/sandbox.test.sh` pins some of them.
 
 **Answer:**
+A — correct the README and the comment; the script's messages stay. (Engineer: "go with your picks", 2026-11-21.)
 
 ### Q5 — F9, the *Removing a finished container* flowchart: complete it, or label it partial?
 
@@ -76,6 +80,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — label it.** One sentence above the chart: it shows the path without `--force`; the prose covers `--force`, a failed restart and a missing container. With Q2 A the existing nodes are still reordered.
 
 **Answer:**
+A — complete the flowchart. (Engineer: "go with your picks", 2026-11-21.)
 
 ### Q6 — The #144 leftovers: which are done, which are dismissed in writing?
 
@@ -90,6 +95,7 @@ My pick for each:
 **Options:** as picked · name the items to change.
 
 **Answer:**
+As picked. The F5c mutation was run while planning and passes today, so F5c is done, not dismissed; F5d is dismissed. (Engineer: "go with your picks", 2026-11-21.)
 
 ## Notes
 
@@ -102,3 +108,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-21 — Q1-Q6 raised · cost: 1m · fable-5-2 106k in + 684k cached / 7k out
+- 2026-11-21 — Q1-Q6 answered, plan drafted for review · cost: 9m · fable-5-2 + sonnet-5-5
