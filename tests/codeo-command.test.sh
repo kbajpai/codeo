@@ -795,6 +795,34 @@ t_rm_unlisted_state_not_stopped_by_us() {
     ! grep -q "^docker stop" "$cm_dir/calls" || fail "stopped a container that may have been running: $(tr '\n' '|' <"$cm_dir/calls")"
 }
 
+# t_rm_one_listing_fails_needs_a_kind: with one listing down the other cannot prove the number free, so rm asks for a kind.
+t_rm_one_listing_fails_needs_a_kind() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/ps_fail"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run rm 5
+    [[ "$cm_status" -eq 1 ]] || fail "docker down: exit $cm_status, err: $cm_err"
+    grep -qE -- '--container|--sandbox' <<<"$cm_err" || fail "docker down: no kind named: $cm_err"
+    expect_no_script
+    ! grep -q '^docker rm' "$cm_dir/calls" || fail "docker down: removed something"
+    cm_setup "$current-2"
+    rm_stubs
+    sbx_down_stub
+    cm_run rm 5
+    [[ "$cm_status" -eq 1 ]] || fail "sbx down: exit $cm_status, err: $cm_err"
+    grep -qE -- '--container|--sandbox' <<<"$cm_err" || fail "sbx down: no kind named: $cm_err"
+    expect_no_script
+    ! grep -q '^docker rm' "$cm_dir/calls" || fail "sbx down: removed something"
+}
+
+# t_comments_within_120_columns: a comment line of .devcontainer/codeo is at most 120 columns (code lines may be longer).
+t_comments_within_120_columns() {
+    local long
+    long=$(awk '/^[[:space:]]*#/ && length($0) > 120 { printf "%d(%d) ", NR, length($0) }' "$repo/.devcontainer/codeo") || true
+    [[ -z "$long" ]] || fail "comment lines over 120 columns: $long"
+}
+
 t_list_extra_args_usage() { expect_usage list now; }
 
 t_host_kinds_exact_name() {
@@ -1683,6 +1711,8 @@ cases=(
     t_rm_refusal_stops_started_container
     t_rm_container_not_found
     t_rm_unlisted_state_not_stopped_by_us
+    t_rm_one_listing_fails_needs_a_kind
+    t_comments_within_120_columns
     t_list_extra_args_usage
     t_host_kinds_exact_name
     t_rm_sandbox
