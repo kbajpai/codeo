@@ -194,7 +194,7 @@ flowchart TD
     C -- "cannot run" --> X["no --force: refuse; --force: say it could not check"]
     C -- "clean, started by codeo" --> F
     C -- "clean, was running, inspect failed, no --force: no restart" --> Q
-    C -- "clean, was running" --> D["docker restart: ends attached shells and agents"]
+    C -- "clean, was running, inspect ok or --force" --> D["docker restart: ends attached shells and agents"]
     D -- "restart failed" --> X
     D --> E{"read again, no fetch"}
     E -- "dirty" --> R
@@ -205,14 +205,14 @@ flowchart TD
     X -- "no --force" --> Q
     F -- "volume codeo-N" --> G["docker rm -f, volume rm, docker rmi"]
     F -- "anything else, --force" --> G
-    F -- "anything else, no --force" --> H["remove container and image, keep the volume, say so"]
+    F -- "anything else, no --force" --> H["remove container and image, keep the volume (and say so when it exists)"]
     F -- "inspect failed, --force" --> G
     F -- "inspect failed, no --force" --> Q
     G --> Z["last line: what was removed; or nothing named codeo-N to remove"]
     H --> Z
 ```
 
-For a sandbox `codeo rm <N> [--force]` runs `bash codeo-sandbox.sh end <N> [--force]` (see `.sbx/README.md`). When that exits non-zero, `codeo` adds one line to stderr after the script's own output. Without `--force` it is `codeo rm <N> --force removes it anyway; its unpushed commits are kept in <CODEO_HOME>/codeo-<N>, its uncommitted work is not`, and only when the script refused over unpushed or uncommitted work, not when it could not read or reach the sandbox (the script's own `codeo-sandbox: ` line says what went wrong and, where a command applies, names it: `sbx rm --force codeo-<N>` when nothing in the sandbox could be read, `end <N> --force` when the fetch left no branches). The refusals for a missing clone, a failed `git fetch origin`, the pull-request heads, listing the commits or checking for uncommitted work name no command: the remedy is to fix what failed and run it again. With `--force` it is `to remove it anyway, discarding whatever it holds: sbx rm --force codeo-<N>`, added only when `sbx ls` still lists `codeo-<N>` (or cannot list) and the script's own message does not already name `sbx rm --force codeo-<N>`; after `no sandbox codeo-<N>` or `removed codeo-<N>, but could not … its refs` it adds nothing.
+For a sandbox `codeo rm <N> [--force]` runs `bash codeo-sandbox.sh end <N> [--force]` (see `.sbx/README.md`). When that exits non-zero, `codeo` adds one line to stderr after the script's own output. Without `--force` it is `codeo rm <N> --force removes it anyway; its unpushed commits are kept in <CODEO_HOME>/codeo-<N>, its uncommitted work is not`, and only when the script refused over unpushed or uncommitted work, not when it could not read or reach the sandbox (the script's own `codeo-sandbox: ` line says what went wrong and, where a command applies, names it: `sbx rm --force codeo-<N>` when nothing in the sandbox could be read, `end <N> --force` when the fetch left no branches). The refusals for a missing clone, a failed `git fetch origin`, the pull-request heads, reading the refs of the clone (`could not read the refs of <dir>, nothing removed`), listing the commits, checking for uncommitted work or the final `sbx rm` (`could not remove codeo-<N>`) name no command: the remedy is to fix what failed and run it again. With `--force` it is `to remove it anyway, discarding whatever it holds: sbx rm --force codeo-<N>`, added only when `sbx ls` still lists `codeo-<N>` (or cannot list) and the script's own message does not already name `sbx rm --force codeo-<N>`; after `no sandbox codeo-<N>` or `removed codeo-<N>, but could not … its refs` it adds nothing.
 
 The two `/codeo:` commands above only print. The printed `docker rm -f codeo-<N>; docker volume rm codeo-<N>` serves a container opened from the command line too; removing its volume also removes its Claude Code login. Such a container also leaves the image `codeo-dev:codeo-<N>`, removed with `docker image rm codeo-dev:codeo-<N>`. Run the commands in a shell on the host, and run `git status` in that clone first: unpushed work is lost with the volume. The home container has no container engine on purpose and no Docker socket is mounted into it, so it cannot run the commands for you.
 
