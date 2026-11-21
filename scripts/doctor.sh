@@ -132,7 +132,7 @@ if [[ $config_ok -eq 1 && $(cfg '.issue.priority == true') == true ]]; then
             report ok priority-labels "all four exist"
         else
             joined=$(printf '%s, ' "${missing[@]}")
-            cmds=""; for l in "${missing[@]}"; do cmds+="bash $CODEO_PLUGIN_ROOT/scripts/github.sh label create '$l'; "; done
+            cmds=""; for l in "${missing[@]}"; do cmds+="bash \"$CODEO_PLUGIN_ROOT/scripts/github.sh\" label create '$l'; "; done
             report fail priority-labels "missing: ${joined%, }; create each with: ${cmds%; }"
         fi
     fi

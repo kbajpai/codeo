@@ -14,12 +14,15 @@
 #       `waits:` follows `touched:` — what the workflow waits on, the first that applies: `resume — …` when its
 #       stash is live or it was abandoned unresumed (claim.sh --stash-live, reading the fetched branch; working
 #       dossiers only); `engineer — plan.md Q2; qc.md Q1` for open questions in its dossiers (after `resume — …;`
-#       when both apply); `review — dossier archived` once close has opened its PR; the step a close send-back
+#       when both apply); `review — dossier archived` once close has archived the dossier and
+#       the archive is not on the base branch yet (a pull request is usually open, but this line does not
+#       look for one); the step a close send-back
 #       (review feedback, a conflict with the base) leaves owing (`/codeo:implement`, then `/codeo:qc` until qc
 #       grades a later round); the step qc's last verdict leaves owing, read from the `(send-back from …)` and
 #       `(after plan.md round <j>…)` markers (`/codeo:close` when clear, else `/codeo:plan`, `/codeo:implement`
 #       or `/codeo:qc`); with no verdict, the step after the last finished one (init: `/codeo:plan`, plan:
-#       `/codeo:implement`, implement: `/codeo:qc`), looking past a spent stash or abandon; else `nothing known`.
+#       `/codeo:implement`, implement: `/codeo:qc`), stepping past any `close` outcome no earlier rule took
+#       (a spent stash or abandon, or a live one whose `claim.sh --stash-live` check failed); else `nothing known`.
 #       `verdict:` follows it, only when
 #       qc.md's last round has a bold Verdict/Routing span: `round <k> — <span>`. Human blocks only; no network.
 #       --branches prints one `N<TAB>branch<TAB>dir` line per workflow (dir is <state>/N or
@@ -230,11 +233,13 @@ last_qc_round() {
 
 # What a workflow waits on, first that applies (rules 1 and 2 share one line): a live stash or abandon
 # (`resume — …`, claim.sh --stash-live on the already-fetched branch, working dossiers only); an open
-# question (`engineer — plan.md Q2; qc.md Q1`); an archived dossier (`review — dossier archived`); the round
+# question (`engineer — plan.md Q2; qc.md Q1`); an archived dossier
+# whose archive is not on the base branch yet (`review — dossier archived`; no pull-request lookup); the round
 # close sent back (`/codeo:implement`, then `/codeo:qc` until qc re-grades); qc's last verdict (clear:
 # `/codeo:close`; back to plan or implement: that step until its round answers the verdict's round, then
-# `/codeo:qc`); else the step after the last one finished, looking past a spent stash or abandon (a `close`
-# outcome that no rule above took); else `nothing known`. Any failure falls to the next.
+# `/codeo:qc`); else the step after the last one finished, which
+# steps past any `close` outcome no earlier rule took (a spent stash or abandon, or a live one whose
+# `claim.sh --stash-live` check failed); else `nothing known`. Any failure falls to the next.
 waits_of() {
     local sha=$1 dir=$2 state_token=$3 branch=$4 n=$5 verdict=$6 step=$7
     local s q parts= out rc=0 lead= sb m k j qcr

@@ -57,7 +57,12 @@ must_contain 'the Backlog fix is named' 'board.statuses.backlog'
 doc_has "skills.md's scope sentence names the board write" docs/skills.md "puts it in the board's Backlog when the project has a board, and does nothing else"
 
 # #102: the skill proposes, shows and files a priority label when issue.priority is on.
-must_contain "step 5 reads the setting" 'config.sh" get .issue.priority'
+must_contain "step 5 reads the setting" 'config.sh" get '"'"'.issue.priority == true'"'"
+must_contain "only the boolean turns it on" 'Only the boolean true turns it on; the text "true" does not, and doctor reads it the same way.'
+must_contain "the label pass proposes no priority label" 'With the priority on, propose no `priority:` label here: the priority pass below is the only source of one.'
+must_contain "a priority outside the four is asked again" 'If the engineer names a priority other than `blocker`, `high`, `medium` or `low`, say that only those four are accepted and ask again; do not file with a priority that is not one of them.'
+must_contain "step 7 files at most one priority label" 'The call carries at most one `priority:` label, the approved one.'
+doc_has "skills.md says only the boolean true" docs/skills.md '(only the boolean `true`; the text "true" is off, as for `/codeo:doctor`)'
 must_contain "step 5 says what on is" 'prints `true`'
 for name in blocker high medium low; do
     must_contain "step 5 names the $name label" "priority: $name"
