@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 done: Tasks 1-7 are built and reviewed, the final review's findings are fixed, and `## Outcome` is written. Open: acceptance criterion 6 (the trust-prompt check) is the engineer's, see `## Notes`. The hand-off is `/codeo:qc`.
+Round 2 done: Tasks 1-5 of the round-2 plan are built and reviewed, the final review's findings are fixed, and `## Outcome` has its round. Open: acceptance criterion 6 (the trust-prompt check) is the engineer's, recorded in the pull request at `/codeo:close`. The hand-off is `/codeo:qc`.
 
 ## Questions
 
@@ -63,7 +63,34 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-21).
 
 No environment is configured, so nothing was leased, deployed or released.
 
+
+### Round 2
+
+2026-11-21
+(after plan.md round 2)
+
+**Built, all five tasks of `docs/plans/2026-11-21-install-one-command-151-round-2.md`, each through an implementer and a task review, then a whole-change review, one fix wave and its scoped re-review. This round answers `qc.md` round 1 (F1-F9) through the re-plan.**
+- Task 1 (F4): the test stub `claude` models settings files: `marketplace add --scope project` writes `extraKnownMarketplaces` into the project's `.claude/settings.json`, a user-scope one into the user's; `install` sets `enabledPlugins`; `marketplace remove` strips codeo from the user's file and from `$PWD/.claude/settings.json` when run there. New cases: `t_project_scope_writes_the_readme_snippet`, `t_user_scope_declares_in_user_settings`, `t_remove_from_home_leaves_project_settings`.
+- Task 2 (F1, F7; the engineer's Q7 answer): a replace writes only the asked scope. A user-scope run never passes `--scope project`, leaves the project's `.claude/settings.json` untouched and prints `install: this project's own codeo (project scope, vX) is no longer installed on this machine; its .claude/settings.json was not changed` when this project had its own install; a `--scope project` replace rewrites the project's pin and, when a user copy existed, reinstalls it and prints `install: your user-scope codeo moved to vX too: one machine holds one codeo version`. The marketplace is declared at the asked scope before every install. "Already installed" goes by the marketplace pin plus an entry at the asked scope; the entry's version string is not compared, and the only replace trigger is a pin at another ref or repo. The two round-1 cases that asserted the old behaviour (`t_replace_reinstalls_where_it_was`, `t_replace_from_subdirectory_restores_the_project`) were replaced by seven new ones.
+- Task 3 (F6): failure lines say what is true: `codeo is no longer installed: <line>; run this again` (with `; run this again with --scope project, then once without --scope to restore your user-scope copy` when a `--scope project` run had wiped a user copy), and `codeo <tag> is installed at <done> scope but not at <s> scope: <line>; run this again with --scope <s>`; for a given tag only `git ls-remote` exit 2 is `release … not found`, any other failure is `cannot read the releases`.
+- Task 4 (F2, F3, F5, F9): README *Updating* and *Uninstalling* rewritten from real captures against `claude` 2.1.325 (the real refusal text for `uninstall` without `--scope project`; the complete `marketplace remove` output; that `marketplace remove` run inside a project strips codeo from that project's `.claude/settings.json` and from outside it leaves the file alone; that `uninstall --scope project` removes `codeo@codeo` from the project's `enabledPlugins`); `t_readme_install_blocks_match_the_script` ties every README block's `install:` lines to the script's own output in stubbed scenarios.
+- Task 5 (F8): this branch's one CHANGELOG bullet says what a replace removes and reinstalls; the final review's two wording corrections were applied in a fix commit (`8c0cc63`).
+
+**Documentation pages changed:** `README.md` (Task 4) and the `CHANGELOG.md` bullet (Task 5), as the plan names. `CONTRIBUTING.md` and `docs/` are unchanged.
+
+**Build result:** the `shell` suite's `build` is `true`; exit 0. The full `bash tests/run.sh` ended `all cases passed` (exit 0) at the fix commit; `qc` runs it again.
+
+**Deviations from the plan:**
+- Task 1's `marketplace remove` test hook: because the script runs the remove from `$HOME`, the stub cannot see the project file from its `$PWD`, so the test names the file in `$STUB_DIR/watch-settings` and the stub copies it to `$STUB_DIR/settings-at-remove` once the remove's own edits are done; a mutation check (running the remove inside the project) makes the test fail.
+- Task 3 carries a Task 2 review finding the plan did not foresee: with a `--scope project` replace that wiped a user copy, a failing project step used to leave the user copy silently unrestored on retry; the failure lines now name every wiped scope and the command that restores it.
+- The first Task 4 implementer died of an API authentication error part-way through; a second implementer kept its partial test edits and completed the task.
+
+**Still open, the engineer's:** acceptance criterion 6 (the trust-prompt check), recorded in the pull request at `/codeo:close` (`qc.md` Q2). Parked, not fixed: "already installed" at project scope reads the machine's pin, not the project's own `.claude/settings.json`, so a project file pinning an older ref is reported `already installed`; the silent gap during a first install; `claude_step`'s temporary files on Ctrl-C; README samples naming `v1.0.7`; the README's *Updating* failure quotes come from the script and stubbed runs, not from real `claude` failures; only the `install:` lines of README blocks are tied to the script; `declare_marketplace` in the stub always rewrites through `jq`.
+
+**Environment note:** between Tasks 3 and 4 the real `~/.claude/plugins` of this machine was reset (codeo and `superpowers` no longer installed there, the `superpowers` skill scripts gone); no subagent command touched the real configuration and the cause is unknown. The Task 4 review package was built with `git` directly.
+
 ## Log
 
 - 2026-11-21 — Q1 raised (overlap with #149 on CHANGELOG.md) · cost: 7m · sonnet-5-5 12k in + 671k cached / 2k out
 - 2026-11-21 — Q1 answered; round 1: Tasks 1-7 implemented and reviewed, final review and one fix wave · cost: 113m · sonnet-5-5 1.1M in + 29M cached / 225k out
+- 2026-11-21 — round 2 (after plan.md round 2): Tasks 1-5 implemented and reviewed, final review and one fix wave · cost: 30m · sonnet-5-5 330k in + 16.3M cached / 58k out
