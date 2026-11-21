@@ -3,6 +3,8 @@
 # codeo counts as installed when the marketplace is pinned at the release and codeo has an entry at the
 # asked scope; a pin at another ref or repo is replaced, writing only the asked scope (a user-scope run
 # never touches a project's .claude/settings.json; a project-scope run also moves a user-scope copy).
+# A replace drops every codeo install the machine holds, so it names each project or local install it
+# dropped and does not reinstall, with the command that restores it.
 #
 #   install.sh [--version vX.Y.Z] [--scope user|project]
 #
@@ -242,16 +244,39 @@ ensure_superpowers() {
     say "superpowers installed ($scope scope)"
 }
 
-# replace_codeo <old-label> <user-entry> <project-entry>: removes the codeo marketplace (which uninstalls
-# codeo at every scope on the machine) and adds it again at $tag, writing only the scope that was asked
-# for. A user-scope run adds and installs at user scope; it never runs a project-scope call, so no
-# project's .claude/settings.json changes, and it says so when this project's own install is gone. A
-# project-scope run adds and installs at project scope, and moves a user-scope copy to $tag too, because
-# one machine holds one codeo version. The entries are "<version> <enabled> <id>" lines, empty when the
-# scope had no codeo. The remove and user-scope calls run from $HOME, project-scope calls from the
-# project's top level. A failure after the remove leaves codeo uninstalled, and says so.
+# dropped_installs: prints one line per codeo@codeo entry installed at project or local scope, read from
+# the installed list (so call it before the remove, which empties the list), minus this project's own
+# entry when a project-scope run, which reinstalls it. A failing plugin list dies inside the subshell, so
+# callers add || exit 1. An entry whose projectPath no longer exists on disk is named like any other.
+dropped_installs() {
+    local list top=""
+    list=$(claude_at user plugin list --json) \
+        || die "cannot read the installed plugins (claude plugin list failed)"
+    if [[ $scope == project ]]; then
+        top=$(project_root || true)
+    fi
+    printf '%s\n' "$list" | jq -r --arg top "$top" '
+        .[] | select(.id == "codeo@codeo" and (.scope == "project" or .scope == "local")
+            and (.scope != "project" or $top == "" or .projectPath != $top))
+        | "codeo is no longer installed for \(.projectPath) (\(.scope) scope, v\(.version)); its .claude/settings.json was not changed; "
+          + (if .scope == "local" then "run claude plugin install codeo@codeo --scope local there to restore it"
+             else "run install.sh --scope project there to restore it" end)'
+}
+
+# replace_codeo <old-label> <user-entry>: removes the codeo marketplace (which uninstalls codeo at every
+# scope on the machine) and adds it again at $tag, writing only the scope that was asked for. A user-scope
+# run adds and installs at user scope; it never runs a project-scope call, so no project's
+# .claude/settings.json changes. A project-scope run adds and installs at project scope, and moves a
+# user-scope copy to $tag too, because one machine holds one codeo version. The list of installs is read
+# before the remove (it empties the list), and every project or local install the remove dropped and this
+# run did not reinstall is named afterwards, with the command that restores it. The user entry is a
+# "<version> <enabled> <id>" line, empty when user scope had no codeo. The remove and user-scope calls run
+# from $HOME, project-scope calls from the project's top level. A failure after the remove leaves codeo
+# uninstalled, and says so.
 replace_codeo() {
-    local old=$1 user_e=$2 proj_e=$3 out proj_v restored=
+    local old=$1 user_e=$2 out restored= dropped line
+    # The list is read first: the remove empties it.
+    dropped=$(dropped_installs) || exit 1
     # Always from $HOME: inside a git repository, remove rewrites its tracked .claude/settings.json.
     claude_step "cannot remove the codeo marketplace" user plugin marketplace remove codeo
     if [[ $scope == project ]]; then
@@ -272,10 +297,10 @@ replace_codeo() {
     say "codeo $old -> $tag ($scope scope)"
     if [[ $scope == project ]]; then
         [[ -z $user_e ]] || say "your user-scope codeo moved to $tag too: one machine holds one codeo version"
-    elif [[ -n $proj_e ]]; then
-        proj_v=${proj_e%% *}
-        say "this project's own codeo (project scope, v$proj_v) is no longer installed on this machine; its .claude/settings.json was not changed"
     fi
+    while IFS= read -r line; do
+        [[ -z $line ]] || say "$line"
+    done <<<"$dropped"
 }
 
 # replace_failed <claude output> <user entry> <restored scopes> <failing scope>: a reinstall failed after
@@ -294,7 +319,7 @@ replace_failed() {
 }
 
 ensure_codeo() {
-    local pin entry have_on user_e proj_e="" old
+    local pin entry have_on user_e old
     pin=$(marketplace_pin) || exit 1
     entry=$(installed_entry codeo@codeo "$scope") || exit 1
     read -r _ have_on _ <<<"$entry"
@@ -313,15 +338,12 @@ ensure_codeo() {
     # A pin at another ref or another repo is the only reason to replace.
     if [[ -n $pin && $pin != "kbajpai/codeo $tag" ]]; then
         user_e=$(installed_entry codeo@codeo user) || exit 1
-        if [[ $scope == user ]] && project_root >/dev/null; then
-            proj_e=$(installed_entry codeo@codeo project) || exit 1
-        fi
         if [[ ${pin%% *} == kbajpai/codeo && -n ${pin#* } ]]; then
             old=${pin#* }
         else
             old=$(pin_label "$pin")
         fi
-        replace_codeo "$old" "$user_e" "$proj_e"
+        replace_codeo "$old" "$user_e"
         return 0
     fi
     # Declares the marketplace at the asked scope, even when it is already known (a no-op then).

@@ -608,14 +608,13 @@ t_user_replace_leaves_the_project_file() {
         'plugin install codeo@codeo --scope user'
     ! grep -q -- '--scope project' "$STUB_DIR/calls" || fail "a project-scope call ran: $(cat "$STUB_DIR/calls")"
     cmp -s "$in_dir/before" "$top/.claude/settings.json" || fail "the project file changed: $(cat "$top/.claude/settings.json")"
-    [[ $in_out == *"install: this project's own codeo (project scope, v1.0.6) is no longer installed on this machine; its .claude/settings.json was not changed"* ]] \
-        || fail "stdout: $in_out"
+    [[ $in_out == *"$(dropped_line "$top" project 1.0.6)"* ]] || fail "stdout: $in_out"
     [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'* ]] || fail "stdout: $in_out"
     [[ $(jq -r '[.[] | select(.id == "codeo@codeo" and .scope == "user")] | .[0].version' "$STUB_DIR/list.json") == 1.0.7 ]] \
         || fail "list: $(cat "$STUB_DIR/list.json")"
 }
 
-t_user_replace_without_project_install_says_nothing_more() {
+t_user_replace_names_another_project_only() {
     local top
     in_setup user_replace_alone
     printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
@@ -626,8 +625,114 @@ t_user_replace_without_project_install_says_nothing_more() {
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out != *"own codeo"* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo is no longer installed for /somewhere/else (project scope, v1.0.6)'* ]] || fail "stdout: $in_out"
+    [[ $in_out != *"for $top "* ]] || fail "stdout: $in_out"
     [[ $in_out != *"moved to"* ]] || fail "stdout: $in_out"
+}
+
+# dropped_line <path> <scope> <version>: the line a replace prints for a project or local install it dropped.
+dropped_line() {
+    local tail="run install.sh --scope project there to restore it"
+    [[ $2 != local ]] || tail="run claude plugin install codeo@codeo --scope local there to restore it"
+    printf 'install: codeo is no longer installed for %s (%s scope, v%s); its .claude/settings.json was not changed; %s' "$1" "$2" "$3" "$tail"
+}
+
+# seed_local <version> <projectPath>: a local-scope codeo entry.
+seed_local() {
+    jq --arg v "$1" --arg p "$2" '. + [{id: "codeo@codeo", version: $v, scope: "local", enabled: true, projectPath: $p}]' \
+        "$STUB_DIR/list.json" >"$STUB_DIR/list.new" && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
+}
+
+# two_projects: a user copy plus project installs A and B at v1.0.6, each with a committed settings file.
+# Sets the caller's locals pa and pb (pa is kept when the caller preset it).
+two_projects() {
+    pa=${pa:-$in_dir/pa}
+    pb="$in_dir/pb"
+    mkdir -p "$pa/.claude" "$pb/.claude"
+    seed_superpowers
+    seed_codeo 1.0.6
+    seed_project codeo@codeo 1.0.6 "$pa"
+    seed_project codeo@codeo 1.0.6 "$pb"
+    project_json v1.0.6 >"$pa/.claude/settings.json"
+    project_json v1.0.6 >"$pb/.claude/settings.json"
+    cp "$pa/.claude/settings.json" "$in_dir/before-a"
+    cp "$pb/.claude/settings.json" "$in_dir/before-b"
+}
+
+t_user_replace_names_every_dropped_project() {
+    local pa="" pb want
+    in_setup dropped_every
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    two_projects
+    in_cwd="$in_dir/home" in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    want=$(printf '%s\n%s' "$(dropped_line "$pa" project 1.0.6)" "$(dropped_line "$pb" project 1.0.6)")
+    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'$'\n'"$want"* ]] || fail "stdout: $in_out"
+    [[ $in_out != *"for /x "* && $in_out != *"for $in_dir/home "* ]] || fail "user entry named: $in_out"
+    ! grep -q -- '--scope project' "$STUB_DIR/calls" || fail "a project-scope call ran: $(cat "$STUB_DIR/calls")"
+    cmp -s "$in_dir/before-a" "$pa/.claude/settings.json" || fail "A's file changed"
+    cmp -s "$in_dir/before-b" "$pb/.claude/settings.json" || fail "B's file changed"
+}
+
+t_user_replace_names_the_current_project_too() {
+    local pa="" pb
+    in_setup dropped_current
+    pa="$in_dir/pa"
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    mkdir -p "$pa"
+    "$real_git" -C "$pa" init -q
+    pa=$("$real_git" -C "$pa" rev-parse --show-toplevel)
+    two_projects
+    in_cwd="$pa" in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *"$(dropped_line "$pa" project 1.0.6)"* ]] || fail "A not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pb" project 1.0.6)"* ]] || fail "B not named: $in_out"
+}
+
+t_project_replace_names_the_other_projects() {
+    local pa pb top
+    in_setup dropped_project_run
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    pa=$top
+    two_projects
+    seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'your user-scope codeo moved to v1.0.7 too: one machine holds one codeo version'$'\n'"$(dropped_line "$pb" project 1.0.6)"* ]] \
+        || fail "stdout: $in_out"
+    [[ $in_out != *"for $pa "* ]] || fail "own project named: $in_out"
+}
+
+t_dropped_local_entry_is_named_with_its_command() {
+    in_setup dropped_local
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.6
+    seed_local 1.0.6 /some/local
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *"$(dropped_line /some/local local 1.0.6)"* ]] || fail "stdout: $in_out"
+}
+
+t_dropped_project_that_no_longer_exists_is_named() {
+    in_setup dropped_gone
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.6
+    seed_project codeo@codeo 1.0.6 /no/such/dir
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *"$(dropped_line /no/such/dir project 1.0.6)"* ]] || fail "stdout: $in_out"
+}
+
+t_no_replace_no_dropped_lines() {
+    in_setup dropped_none
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run
+    [[ $in_out != *"no longer installed for"* ]] || fail "fresh install: $in_out"
+    in_run
+    [[ $in_out != *"no longer installed for"* ]] || fail "re-run: $in_out"
 }
 
 t_project_replace_moves_the_user_copy() {
@@ -1328,7 +1433,13 @@ cases=(
     t_replace_fork_marketplace
     t_replace_failure_reported
     t_user_replace_leaves_the_project_file
-    t_user_replace_without_project_install_says_nothing_more
+    t_user_replace_names_another_project_only
+    t_user_replace_names_every_dropped_project
+    t_user_replace_names_the_current_project_too
+    t_project_replace_names_the_other_projects
+    t_dropped_local_entry_is_named_with_its_command
+    t_dropped_project_that_no_longer_exists_is_named
+    t_no_replace_no_dropped_lines
     t_project_replace_moves_the_user_copy
     t_project_replace_without_user_copy
     t_project_replace_from_subdirectory
