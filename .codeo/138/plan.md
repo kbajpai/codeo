@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q5 and Q6 are answered: a branch push from a web session works, a deletion is refused, and `gh api user` returns the login. That makes the branch route viable, with one unprobed step left, the force-push of a new commit over an existing branch (Q7, open). The plan is not drafted until Q7 is answered, since a refusal changes the design. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: answer Q7 here, then re-invoke `/codeo:plan`.
+Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). The plan is not drafted until they are answered. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: answer Q8-Q9 here, then re-invoke `/codeo:plan`.
 
 ## Questions
 
@@ -122,6 +122,28 @@ Then delete `codeo-live/138/web-probe` on GitHub (Branches page of `kbajpai/code
 **Answer:**
 Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the skill): `git hash-object -t tree -w /dev/null` printed `4b825dc…`; `git commit-tree … -m probe-signal` printed `31c254941aa429bbccbb72d2ade2d71a376887f8`; `git push --force origin 31c2549…:refs/heads/codeo-live/138/web-probe` exited 0 with `+ 5f0f0ba...31c2549 … (forced update)` after a `warning: push negotiation failed; proceeding anyway with push`. A non-fast-forward update to an existing branch is accepted. The branch route is built as designed.
 
+### Q8 — #149 also edits `docs/handoff.md` and `CHANGELOG.md`: proceed and coordinate, sequence after #149, or re-scope?
+
+**Why it matters:** `overlap.sh` printed `149	glob:docs/handoff.md` and `149	glob:CHANGELOG.md`. #149 is branch `fix/close-non-blocking-findings-143`, assigned to kbajpai, at step `plan (working)`; its footprint lists both files, and neither has changed on its branch yet. This plan rewrites the *Who is working right now* bullet in `docs/handoff.md` and adds one `CHANGELOG.md` bullet. Two branches adding to the same file usually merge with a textual conflict that `scripts/sync-main.sh` stops on, and the later branch resolves it by keeping both. No `exclusive` resource is shared.
+
+**Options:**
+- **(a) Proceed and coordinate (recommended).** The two documentation tasks come last, run `bash scripts/sync-main.sh` first, and keep both sides on a conflict; the same call #112, #118 and #116 made.
+- **(b) Sequence after #149.** Nothing starts until #149 merges.
+- **(c) Re-scope.** Leave the `docs/handoff.md` and `CHANGELOG.md` edits out of this change and make them in a later one.
+
+**Answer:**
+
+### Q9 — #151 also edits `CHANGELOG.md`: proceed and coordinate, sequence after #151, or re-scope?
+
+**Why it matters:** `overlap.sh` printed `151	glob:CHANGELOG.md`. #151 is branch `docs/install-codeo-one-command-document`, assigned to kbajpai, at step `plan (working)`; its footprint lists `CHANGELOG.md`, which has not changed on its branch yet. This plan adds one bullet to it. The merge outcome is the one described in Q8.
+
+**Options:**
+- **(a) Proceed and coordinate (recommended).** As in Q8 (a).
+- **(b) Sequence after #151.** Nothing starts until #151 merges.
+- **(c) Re-scope.** Leave the `CHANGELOG.md` bullet out of this change.
+
+**Answer:**
+
 ## Notes
 
 ### Footprint
@@ -154,3 +176,4 @@ _Pending — written at the hand-off._
 - 2026-11-21 — Q1, Q2, Q4 recorded from the conversation; Q3 unclear, restated as Q6; Q5-Q6 raised; nothing drafted
 - 2026-11-21 — Q6 recorded (d); the probe output named for Q5 was not in the message, Q5 stays open; nothing drafted
 - 2026-11-21 — Q5 recorded from the pasted probe (push ok, delete 403, login kbajpai); Q7 raised (force-push over an existing branch); nothing drafted
+- 2026-11-21 — Q7 recorded (force-push accepted); footprint written; overlap.sh found #149 and #151, Q8-Q9 raised; nothing drafted
