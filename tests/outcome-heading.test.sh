@@ -110,18 +110,20 @@ inflight_clone() {
     echo "$clone"
 }
 
-# inflight_with <qc heading> <close heading>: inflight.sh's human block for #7, whose dossier holds init,
-# plan, an implement with a pending Outcome that records the send-back from close.md round 2, a qc.md
-# with rounds 1 and 2 (round 2 clear) and a close.md whose round 2 is a send-back made at qc round 1.
+# inflight_with <qc heading> <close heading> [unanswered]: inflight.sh's human block for #7, whose dossier holds
+# init, plan, an implement with a pending Outcome that records the send-back from close.md round 2 (not
+# recorded when a third argument is given), a qc.md with rounds 1 and 2 (round 2 clear) and a close.md whose
+# round 2 is a send-back made at qc round 1.
 inflight_with() {
-    local origin clone step
+    local origin clone step marker='(send-back from close.md round 2)'
+    [[ -z ${3:-} ]] || marker='(nothing recorded)'
     origin=$(new_repo)
     git -C "$origin" checkout -q -b feat/x
     mkdir -p "$origin/.codeo/7"
     for step in init plan; do
         printf '# %s\n\n## Outcome\n\nDone.\n' "$step" > "$origin/.codeo/7/$step.md"
     done
-    printf '# implement\n\n## Outcome\n\n_Pending._\n\n## Log\n\n(send-back from close.md round 2)\n' \
+    printf '# implement\n\n## Outcome\n\n_Pending._\n\n## Log\n\n%s\n' "$marker" \
         > "$origin/.codeo/7/implement.md"
     printf '# qc\n\n%s\n\n### Round 1\n\n**Verdict: back to /codeo:implement**\n\n### Round 2\n\n**Verdict: clear**\n' \
         "$1" > "$origin/.codeo/7/qc.md"
@@ -164,10 +166,17 @@ waits_is() {
     esac
 }
 
-# close_send_back: both headings varied. Read, the send-back is answered by qc's round 2 and the
-# verdict sends the workflow to /codeo:close; unread, the pending implement leaves /codeo:implement.
+# close_send_back: close.md's heading varies, qc.md's is exact (recognised_by_inflight_qc_round varies qc.md
+# alone), so each of inflight.sh's readers can fail on its own. The send-back is left unanswered by implement.md:
+# read, the workflow waits on /codeo:implement; unread, qc's clear verdict sends it to /codeo:close.
 recognised_by_inflight_send_back() {
-    waits_is "$(inflight_with "$1" "$1")" /codeo:implement
+    local waits
+    waits=$(inflight_with "## Outcome" "$1" unanswered | grep '^  waits:' || true)
+    case $waits in
+        "  waits:     /codeo:implement") return 0 ;;
+        "  waits:     /codeo:close") return 1 ;;
+        *) return 2 ;;
+    esac
 }
 
 # last_qc_round: close.md's heading is exact, qc.md's varies. The send-back is answered only when
@@ -176,7 +185,33 @@ recognised_by_inflight_qc_round() {
     waits_is "$(inflight_with "$1" "## Outcome")" /codeo:qc
 }
 
-readers=(qc_verdict dossier_check_sections dossier_check_clear inflight_step inflight_verdict inflight_send_back inflight_qc_round)
+# qc-verdict.sh's plan-round reader: an archived plan.md whose `## Outcome` holds a `### Round 2` is
+# re-planned, and its footprint (b.txt) is checked against what the branch changes (a.txt too). Read, the
+# omission is reported; unread, the plan counts as one round and nothing is checked. The carriage return
+# goes on the heading line alone, so the footprint block still parses; qc.md stays the exact fixture.
+recognised_by_qc_verdict_replan() {
+    local dir base out heading=$1 want_cr=$crlf
+    local crlf=
+    [[ -z $want_cr ]] || heading+=$'\r'
+    dir=$(new_repo)
+    mkdir -p "$dir/.codeo"
+    printf '{"schema":1,"repo":{"owner":"o","name":"n"},"baseBranch":"main"}\n' > "$dir/.codeo/config.json"
+    git -C "$dir" add .codeo
+    git -C "$dir" commit -q -m base
+    base=$(git -C "$dir" rev-parse HEAD)
+    mkdir -p "$dir/.codeo/done/7"
+    echo a > "$dir/a.txt"
+    echo b > "$dir/b.txt"
+    qc_with '## Outcome' "$dir/.codeo/done/7/qc.md"
+    printf '# Plan\n\n%s\n\nFirst planning round.\n\n### Round 2 — 2026-09-02\n\nRe-planned.\n\n### Footprint\n\n```\nfiles:      b.txt\nwiki:       none\nexclusive:  none\nsequenced:  none\n```\n\n## Log\n\n- x\n' \
+        "$heading" > "$dir/.codeo/done/7/plan.md"
+    git -C "$dir" add -A
+    git -C "$dir" commit -q -m head
+    out=$(cd "$dir" && PATH="$stub_bin:$PATH" bash "$plugin/scripts/qc-verdict.sh" "$base" HEAD 2>&1) || true
+    [[ $out == *"round 2 footprint omits: a.txt"* ]]
+}
+
+readers=(qc_verdict qc_verdict_replan dossier_check_sections dossier_check_clear inflight_step inflight_verdict inflight_send_back inflight_qc_round)
 
 # variant name, heading line, CRLF?, expected
 check_variant() {
