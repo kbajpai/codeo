@@ -164,12 +164,13 @@
 | `issue:138` | Live-session signal in hosted web sessions; filed, never started, board Status `Backlog` | backlog | 2026-11-20 |
 | `qc:132:F1` | `paragraph_contains_flat` whitespace-only line hardening | dismissed — nothing in today's skill triggers it | 2026-11-20 |
 | `qc:112:F7-F12` | #112's approximate refusal texts and one changelog verb | dismissed — #138 carries the substance | 2026-11-20 |
-| `qc:102:F1-F2-F5` | #102 priority setting: `"true"` string vs doctor, second priority label, unquoted path | deferred | 2026-11-20 |
-| `qc:102:F3-F4` | #102 wording findings | deferred | 2026-11-20 |
-| `qc:126:F1-F4` | #126 stale `claim.sh` text and old-style-branch transition gap | deferred | 2026-11-20 |
-| `qc:126:F5` | #126 hard-coded `.codeo/<N>` in step 6 | deferred | 2026-11-20 |
-| `qc:122:F1-F5` | #122 triage/inflight wording, `unassigned:<N>` re-asked each run | deferred | 2026-11-20 |
-| `qc:131:F1-F4` | #131 sandbox-lock leftovers | deferred | 2026-11-20 |
+| `qc:102:F1-F2-F5` | #102 priority setting: `"true"` string vs doctor, second priority label, unquoted path | filed #145 | 2026-11-21 |
+| `qc:102:F3-F4` | #102 wording findings | filed #145 (F3-F4 listed out of scope) | 2026-11-21 |
+| `qc:126:F1-F4` | #126 stale `claim.sh` text; F1-F3 filed, F4 transition gap dismissed | filed #145 | 2026-11-21 |
+| `qc:126:F5` | #126 hard-coded `.codeo/<N>` in step 6 | dismissed — cosmetic | 2026-11-21 |
+| `qc:122:F1-F5` | #122 triage/inflight wording, `unassigned:<N>` re-asked each run | filed #145 | 2026-11-21 |
+| `qc:131:F1-F4` | #131 sandbox-lock leftovers | dismissed — engineer's call, run 11 | 2026-11-21 |
 | `unclosed:132` | `fix/fix-test-suite-gaps-left` no longer on origin; close finished | dismissed — branch deleted from origin | 2026-11-21 |
 | `issue:143` | `codeo` host command leftovers from #133; filed 2026-11-20 | ready | 2026-11-20 |
 | `issue:144` | #108 leftovers (overlap.sh failures, heading rule, init closing block); filed 2026-11-20 | ready | 2026-11-20 |
+| `issue:145` | #102, #126 and #122 leftovers; filed 2026-11-21 | ready | 2026-11-21 |
