@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `CHANGELOG.md`, the three archived `qc.md` files and the tests that pin each (`tests/doctor.test.sh`, `tests/issue-skill.test.sh`, `tests/claim.test.sh`, `tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Five choices change what gets built and are raised as Q1-Q5. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q5 answered as recommended; the draft is at `.codeo/145/plan-draft.md` for the review gate.
+Q6-Q8 raised after the footprint was committed: `overlap.sh` found #144 now has a footprint overlapping this one. The plan is approved and written (unstaged) at `docs/plans/2026-11-21-close-102-126-122-leftovers-145.md`; `## Outcome` waits for Q6-Q8. Earlier: explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `CHANGELOG.md`, the three archived `qc.md` files and the tests that pin each (`tests/doctor.test.sh`, `tests/issue-skill.test.sh`, `tests/claim.test.sh`, `tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Five choices change what gets built and are raised as Q1-Q5. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q5 answered as recommended; the draft is at `.codeo/145/plan-draft.md` for the review gate.
 
 ## Questions
 
@@ -64,6 +64,30 @@ Ask again, naming the four, as recommended (engineer, in the conversation, 2026-
 **Answer:**
 Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
+### Q6 — `glob:CHANGELOG.md` overlaps #144's plan. How do the two changes share it?
+
+**Why it matters:** #144 (`fix/close-108-leftovers-overlap-sh`, assigned to kbajpai, at `plan`, owes `/codeo:implement`, a live session on it) now lists `CHANGELOG.md` in its footprint, as this plan's Task 7 (one edit to the #122 bullet, one new bullet) does. Q5 chose to sequence after #144 in general; this records it for the exact overlap `overlap.sh` printed, so the footprint's `sequenced: #144` and the gate agree.
+**Options:** proceed and coordinate · sequence after #144 · re-scope.
+**Recommendation:** sequence after #144, as Q5 answered. Two bullets in one section merge; Task 7 is last and runs `bash scripts/sync-main.sh` first.
+
+**Answer:**
+
+### Q7 — `glob:docs/handoff.md` overlaps #144's plan. How do the two changes share it?
+
+**Why it matters:** #144 (`fix/close-108-leftovers-overlap-sh`, assigned to kbajpai, at `plan`, owes `/codeo:implement`, a live session on it) now lists `docs/handoff.md` in its footprint, as this plan's Task 4 (the "Who else is in flight" paragraph) does. Q5 chose to sequence after #144 in general; this records it for the exact overlap `overlap.sh` printed, so the footprint's `sequenced: #144` and the gate agree.
+**Options:** proceed and coordinate · sequence after #144 · re-scope.
+**Recommendation:** sequence after #144, as Q5 answered. The paragraph this plan edits is one sentence; rebasing onto #144 is cheap.
+
+**Answer:**
+
+### Q8 — `glob:scripts/inflight.sh` overlaps #144's plan. How do the two changes share it?
+
+**Why it matters:** #144 (`fix/close-108-leftovers-overlap-sh`, assigned to kbajpai, at `plan`, owes `/codeo:implement`, a live session on it) now lists `scripts/inflight.sh` in its footprint, as this plan's Task 4 (comments only) and Task 6 (a mutation reverted at once) does. Q5 chose to sequence after #144 in general; this records it for the exact overlap `overlap.sh` printed, so the footprint's `sequenced: #144` and the gate agree.
+**Options:** proceed and coordinate · sequence after #144 · re-scope.
+**Recommendation:** sequence after #144, as Q5 answered. This plan changes only comments in the file; #144 changes its code.
+
+**Answer:**
+
 ## Notes
 
 Calls the draft will make, none of which needs an answer (say so in any answer above if one is wrong):
@@ -97,3 +121,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-21 — Q1-Q5 raised · cost: 1m · fable-5-2 84k in + 542k cached / 8k out
+- 2026-11-21 — plan approved, written to docs/plans/2026-11-21-close-102-126-122-leftovers-145.md; Q6-Q8 raised (overlap with #144) · cost: unavailable until the hand-off
