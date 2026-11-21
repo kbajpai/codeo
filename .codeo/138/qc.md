@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 ran to the point of a verdict and stopped on three questions (Q1-Q3). The build and the full `shell` suite pass, the independent review is in, and every finding is classified under `## Notes`. No verdict is written while a question is open. Next: answer Q1-Q3 here, then re-invoke `/codeo:qc`, which re-runs the pass from the start.
+Round 1 ran to the point of a verdict. Q1-Q3 are answered (run Task 7 first; drop the `git config user.name` fallback for a web session; the fetch collision and leftover branches are later work). The build and the full `shell` suite pass, the independent review is in, and every finding is classified under `## Notes`. Q4 is open: the hosted-session evidence for criteria 1 and 4. No verdict is written while a question is open. Next: run Task 7 and answer Q4, then re-invoke `/codeo:qc`, which re-runs the pass from the start; it is expected to route back to `/codeo:plan` (F4 blocking, and Q2 (b) changes the plan's user chain).
 
 ## Questions
 
@@ -21,6 +21,7 @@ Round 1 ran to the point of a verdict and stopped on three questions (Q1-Q3). Th
 - **(b) Clear without it.** Both criteria read *not yet checkable* in the round, the verdict is decided on the other findings, and Task 7 is run after the pull request opens.
 
 **Answer:**
+(a) Run Task 7 first (engineer, in the conversation, 2026-11-21: "Q1 (a) … per your recommendations"; recorded here by the skill). The evidence is asked for in Q4.
 
 ### Q2 — A web signal can still name `Claude`. Accept that, or change the fallback?
 
@@ -31,6 +32,7 @@ Round 1 ran to the point of a verdict and stopped on three questions (Q1-Q3). Th
 - **(b) Drop `git config user.name` for a web session (recommended).** The user falls to `unknown`; a send-back changes the plan's Q4 chain, the test and the handoff sentence. Criterion 5 then holds in every case.
 
 **Answer:**
+(b) Drop `git config user.name` for a web session (engineer, in the conversation, 2026-11-21: "Q2 (b)"; recorded here by the skill). F1 is therefore blocking, and the plan's Q4 chain changes.
 
 ### Q3 — Fix the fetch collision and the branch pile-up in this change, or file them as later work?
 
@@ -40,6 +42,23 @@ Round 1 ran to the point of a verdict and stopped on three questions (Q1-Q3). Th
 - **(a) Later work for both (recommended).** Neither is reachable on the normal path; each is filed from the home checkout.
 - **(b) Fix the collision here, file the pile-up.** Web branches fetch into their own namespace (for example `refs/codeo/live-web/*`) and `list` reads both.
 - **(c) Fix both here.** (b) plus a cleanup step that removes finished issues' `codeo-live/<N>/*` branches.
+
+**Answer:**
+(a) Later work for both (engineer, in the conversation, 2026-11-21: "Q3 (a)"; recorded here by the skill). F2 and F3 stay non-blocking.
+
+### Q4 — Task 7's hosted-session evidence
+
+**Why it matters:** Q1 chose to run Task 7 before a verdict, so criteria 1 and 4 are settled on a real run. The verdict itself is already determined: F4 is blocking and Q2 (b) changes the plan's user chain, so the route is back to `/codeo:plan`. The run decides how criteria 1 and 4 read in the round, and whether the plan round must also fix the hooks (if they do not fire, or `SessionStart` takes no lock, in a hosted session). Nothing is written to the round until it is answered.
+
+Steps (the branch tip on origin is `659e071` or later):
+1. Start a new hosted session on `kbajpai/codeo`, on the branch `fix/live-session-signal-does-not`.
+2. Send it one prompt: `Run "cat .codeo/active" and show me the raw output.` Do not run any `beat`.
+3. Paste that output under this answer (it shows whether `SessionStart` took the lock, and with which session id), and say when you sent the prompt.
+4. Reply here that it is done. I then run `bash scripts/inflight.sh --live` and `git ls-remote origin 'refs/heads/codeo-live/*'` in this container and record the rows.
+5. After at least 5 minutes, send one more prompt in the same session (anything), and say so. I run the same two commands again to see the signal refreshed in place.
+6. Afterwards, delete the `codeo-live/138/*` branches on GitHub (Branches page of `kbajpai/codeo`); the earlier probe branch `codeo-live/138/web-probe` too, if it is still there.
+
+If the hosted session cannot run the prompt, or the file is missing, say so and paste what it printed; that is itself the evidence.
 
 **Answer:**
 
@@ -88,3 +107,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-21 — round 1 stopped at step 10: build and the full suite pass, review in, Q1-Q3 raised · cost: 6m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 31k in + 624k cached / 3k out
+- 2026-11-21 — Q1-Q3 recorded from the conversation (a, b, a); Q4 raised for Task 7's hosted-session evidence; no verdict · cost: 20m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 85k in + 2.3M cached / 13k out
