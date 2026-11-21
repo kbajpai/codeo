@@ -217,8 +217,11 @@ is the container the message names.
    already raised in this issue's dossiers, and becomes a numbered question in `close.md`: quote
    `#M` and the printed `what` verbatim, with the other issue's branch, assignee and step from
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh"`, and the options *proceed and coordinate* ·
-   *sequence after #M* · *re-scope*. The step stops until it is answered: append this invocation's
-   `## Log` line with its cost, commit `close.md`, staged by name, with the subject
+   *sequence after #M* · *re-scope*. A non-zero exit, with an `overlap: cannot diff …` or
+   `overlap: cannot resolve …` line, is a stop to report, never "no overlap". An
+   `overlap: skipping #<M>'s changed paths` warning with exit 0 is quoted to the engineer, and the
+   step carries on with that workflow's footprint alone. The step stops until it is answered:
+   append this invocation's `## Log` line with its cost, commit `close.md`, staged by name, with the subject
    `docs(codeo): close dossier for #<N> — Q<a>-Q<b> raised`, push, print the path and the open
    numbers, and end the turn.
 

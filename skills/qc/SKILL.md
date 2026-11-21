@@ -97,6 +97,9 @@ is the container the message names.
    invocation's `## Log` line, ending ` · cost: ` with what
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" qc` prints, commit and push the dossier with the
    questions open, print the path and the numbers, and end the turn.
+   A non-zero exit, with an `overlap: cannot diff …` or `overlap: cannot resolve …` line, is a
+   stop to report, never "no overlap". An `overlap: skipping #<M>'s changed paths` warning with
+   exit 0 is quoted to the engineer, and the step carries on with that workflow's footprint alone.
 
    Then `git diff origin/<base>...HEAD --stat`, then the diff itself. Every finding must point at a
    line this change touched. Checking is cheap; re-litigating the whole repository is not, and a
@@ -165,9 +168,10 @@ is the container the message names.
 
    Then `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" --outside <N>`. Every path it prints is a
    finding — *the branch changed a file outside its footprint* — classified at step 8 like any
-   other. On a first-round plan it is not blocking by rule: the footprint is what other workflows
-   were told this one would touch, so the engineer should hear about the gap, but the change may
-   still be right.
+   other. A non-zero exit, with an `overlap: cannot diff …` or `overlap: cannot resolve …` line, is
+   a stop to report, never "no overlap". On a first-round plan it is not blocking by rule: the
+   footprint is what other workflows were told this one would touch, so the engineer should hear
+   about the gap, but the change may still be right.
    Once `plan.md`'s `## Outcome` has a `### Round 2` or later it is blocking: the `qc-verdict`
    check fails the pull request that archives the dossier on the same paths.
    Whose it is follows step 8: `/codeo:implement`'s when the code strayed into a file the plan

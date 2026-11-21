@@ -81,7 +81,7 @@ last_step() {
     for step in "${steps[@]}"; do
         [[ $step == "$skip" ]] && continue
         git show "$ref:$dir/$step.md" 2>/dev/null | awk '
-            /^## Outcome/ { o = 1; next }
+            /^## Outcome[[:space:]]*$/ { o = 1; next }
             /^## / { o = 0 }
             o && NF && !/_Pending/ { found = 1 }
             END { exit !found }' && done=$step
@@ -177,7 +177,7 @@ open_questions_in() {
 verdict_of() {
     local outcome round k span
     outcome=$({ git show "$1:$2/qc.md" 2>/dev/null || true; } | tr -d "\r" | awk '
-        /^## Outcome/ { o = 1; next }
+        /^## Outcome[[:space:]]*$/ { o = 1; next }
         /^## / { o = 0 }
         o')
     k=$(printf '%s\n' "$outcome" | sed -nE 's/^### Round ([0-9]+).*/\1/p' | tail -n1)
@@ -202,11 +202,11 @@ marker_round() {
 
 # `<m> <k>` when close.md's last `### Round <m>` is a send-back (`— review feedback`, `— conflicts with …`);
 # <k> is the `qc round at review: <k>` that round records, empty when it records none. Else nothing.
-# Rounds are read only inside `## Outcome`, and `/^## Outcome/` is a prefix match (as in `last_qc_round`), so
-# a heading such as `## Outcome notes` opens the section too.
+# Rounds are read only inside `## Outcome`, matched exactly as `qc-verdict.sh` matches it, so `## Outcomes`
+# and `## Outcome notes` are other sections.
 close_send_back() {
     { git show "$1:$2/close.md" 2>/dev/null || true; } | tr -d '\r' | awk "$fence_awk"'
-        !f && t ~ /^## Outcome/ { o = 1; next }
+        !f && t ~ /^## Outcome[[:space:]]*$/ { o = 1; next }
         !f && t ~ /^## / { o = 0 }
         o && !f && t ~ /^### Round [0-9]+/ {
             m = t; sub(/^### Round /, "", m); sub(/[^0-9].*/, "", m)
@@ -221,7 +221,7 @@ close_send_back() {
 # The number of the last `### Round` in qc.md's `## Outcome`, else 1 when it has an outcome, else nothing.
 last_qc_round() {
     { git show "$1:$2/qc.md" 2>/dev/null || true; } | tr -d '\r' | awk "$fence_awk"'
-        !f && t ~ /^## Outcome/ { o = 1; next }
+        !f && t ~ /^## Outcome[[:space:]]*$/ { o = 1; next }
         !f && t ~ /^## / { o = 0 }
         o && !f && t ~ /^### Round [0-9]+/ { r = t; sub(/^### Round /, "", r); sub(/[^0-9].*/, "", r) }
         o && !f && t ~ /[^ \t]/ { has = 1 }
