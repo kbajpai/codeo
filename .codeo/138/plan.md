@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing drafted. Q1-Q4 are open and each changes what the plan builds. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: answer the questions here, then re-invoke `/codeo:plan`.
+Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q5-Q6 are open. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: answer Q5-Q6 here, then re-invoke `/codeo:plan`.
 
 ## Questions
 
@@ -30,6 +30,7 @@ Explored and brainstormed; nothing drafted. Q1-Q4 are open and each changes what
   (Run each as its own command. The first creates one throwaway branch on origin; the second should be refused if the docs are right, and then please delete the branch from GitHub by hand.)
 
 **Answer:**
+(c) Probe first (engineer, in the conversation, 2026-11-21: "Q1 (c) … per your recommendations"; recorded here by the skill). The probe output is asked for in Q5.
 
 ### Q2 — Where does the trigger live in a web session?
 
@@ -41,6 +42,7 @@ Explored and brainstormed; nothing drafted. Q1-Q4 are open and each changes what
 - **(c) Both (a) and the documentation of (b).** Same code as (a); the handoff page also says what other projects do.
 
 **Answer:**
+(a) A hook block in this repository's `.claude/settings.json` (engineer, in the conversation, 2026-11-21; recorded here by the skill).
 
 ### Q3 — Does your web environment's setup script run `lock.sh take web`, and does it pass a session id?
 
@@ -49,6 +51,7 @@ Explored and brainstormed; nothing drafted. Q1-Q4 are open and each changes what
 **Options:** none to pick from; please say what the script runs, or paste it with secrets removed.
 
 **Answer:**
+The reply was "Q3 (b)", but Q3 had no lettered options, so it is not recorded as an answer to anything. Q6 restates the question with options.
 
 ### Q4 — What user should a web session's signal name, given `GET /user` is refused?
 
@@ -58,6 +61,36 @@ Explored and brainstormed; nothing drafted. Q1-Q4 are open and each changes what
 - **(a) `CODEO_GITHUB_LOGIN` and the issue's assignee (recommended).** `github.sh user login` already honours `CODEO_GITHUB_LOGIN`; the plan adds, for a web session only, a fallback to the bound issue's assignee (`issue view`, a repository-scoped read that works through the proxy; `init` assigns the engineer). The variable wins, so a different engineer on the issue sets it. The assignee can be someone other than the person at the keyboard, and the documentation says so. Falls to `git config user.name` last, as now.
 - **(b) `CODEO_GITHUB_LOGIN` only.** You set it once in the environment's variables; no repository change beyond documentation. A web session without it names `Claude`, which fails the criterion silently.
 - **(c) The assignee only.** No setting to remember, but a wrong name for anyone who did not claim the issue.
+
+**Answer:**
+(a) `CODEO_GITHUB_LOGIN`, then the issue's assignee, then `git config user.name` (engineer, in the conversation, 2026-11-21; recorded here by the skill).
+
+### Q5 — Probe output from a hosted web session
+
+**Why it matters:** Q1 chose to probe before drafting. The plan follows the branch route if the first push succeeds and the "no signal" route if it is refused, and Q4's answer depends on whether `gh api user` works there. Nothing is drafted until this is answered.
+
+In a hosted session on this branch, run each of these as its own command and paste the output, with any token removed:
+
+```
+git push origin HEAD:refs/heads/codeo-live/138/web-probe
+git push origin --delete refs/heads/codeo-live/138/web-probe
+gh api user -q .login
+git config user.name
+```
+
+The first creates one throwaway branch on origin; if the second is refused, delete that branch from GitHub by hand. If the session cannot run them, say so and the plan takes the "no signal" route with the docs as its only evidence.
+
+**Answer:**
+
+### Q6 — Does your web environment's setup script run `lock.sh take web`, and does it pass a session id?
+
+**Why it matters:** this is Q3 with options. Without a lock the hook does nothing; with `session: unknown` the machine label falls back to the hostname. It decides whether the plan adds a `SessionStart` hook to this repository's settings that runs `lock.sh take web <session id>`.
+
+**Options:**
+- **(a) It takes the lock and passes the session id.** The plan only reads the id when the lock lacks one.
+- **(b) It takes the lock and passes no id.** The plan adds a `SessionStart` hook that runs `lock.sh take web <id>`, which refreshes `session: unknown`.
+- **(c) It does not take the lock.** Same hook, and it takes the lock itself.
+- **(d) Not sure.** The plan adds the hook; it is idempotent in every case above.
 
 **Answer:**
 
@@ -79,3 +112,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-21 — Q1-Q4 raised; nothing drafted · cost: counted in the planned line later
+- 2026-11-21 — Q1, Q2, Q4 recorded from the conversation; Q3 unclear, restated as Q6; Q5-Q6 raised; nothing drafted
