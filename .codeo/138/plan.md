@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). The plan is not drafted until they are answered. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: answer Q8-Q9 here, then re-invoke `/codeo:plan`.
+Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). Both are answered *proceed and coordinate*. The plan is drafted to `.codeo/138/plan-draft.md` (not committed) and waits for the engineer's approval at the review gate; the real plan file is written only after it. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: review the draft and approve it or ask for changes, then re-invoke `/codeo:plan`.
 
 ## Questions
 
@@ -132,6 +132,7 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 - **(c) Re-scope.** Leave the `docs/handoff.md` and `CHANGELOG.md` edits out of this change and make them in a later one.
 
 **Answer:**
+(a) Proceed and coordinate (engineer, in the conversation, 2026-11-21: "Q8 (a)"; recorded here by the skill).
 
 ### Q9 — #151 also edits `CHANGELOG.md`: proceed and coordinate, sequence after #151, or re-scope?
 
@@ -143,6 +144,7 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 - **(c) Re-scope.** Leave the `CHANGELOG.md` bullet out of this change.
 
 **Answer:**
+(a) Proceed and coordinate (engineer, in the conversation, 2026-11-21: "Q9 (a)"; recorded here by the skill).
 
 ## Notes
 
@@ -177,3 +179,4 @@ _Pending — written at the hand-off._
 - 2026-11-21 — Q6 recorded (d); the probe output named for Q5 was not in the message, Q5 stays open; nothing drafted
 - 2026-11-21 — Q5 recorded from the pasted probe (push ok, delete 403, login kbajpai); Q7 raised (force-push over an existing branch); nothing drafted
 - 2026-11-21 — Q7 recorded (force-push accepted); footprint written; overlap.sh found #149 and #151, Q8-Q9 raised; nothing drafted
+- 2026-11-21 — Q8, Q9 recorded (proceed and coordinate); draft written to plan-draft.md and presented for review; engineering:system-design and engineering:architecture not installed, their structure applied directly
