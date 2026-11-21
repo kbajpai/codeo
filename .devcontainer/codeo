@@ -306,6 +306,7 @@ cmd_issue() {
                 ;;
         esac
     done
+    home_dir >/dev/null # a refused home directory ends the command before the saved default is read
     kind=${kind_flag:-$(saved_default)}
     [[ "$kind" == container || -z "$rebuild" ]] || usage "--rebuild applies only to a container, and the kind here is a sandbox"
     ensure_home

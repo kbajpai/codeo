@@ -1554,8 +1554,14 @@ t_home_checkout_collision() {
     [[ ! -s "$cm_dir/calls" ]] || fail "list made calls: $(cat "$cm_dir/calls")"
     cm_nohome=1 cm_run issue 5
     [[ "$cm_status" -eq 1 ]] || fail "issue: exit $cm_status, want 1"
-    [[ "$cm_err" == codeo:\ \~/codeo\ is\ a\ git\ checkout* ]] || fail "issue: stderr is '$cm_err'"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "issue: stderr is '$cm_err'"
     home_untouched issue
+    expect_no_script
+    cm_nohome=1 cm_run issue 5 --container
+    [[ "$cm_status" -eq 1 ]] || fail "issue --container: exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "issue --container: stderr is '$cm_err'"
     expect_no_script
     cm_nohome=1 cm_run default sandbox
     [[ "$cm_status" -eq 1 ]] || fail "default: exit $cm_status, want 1"
