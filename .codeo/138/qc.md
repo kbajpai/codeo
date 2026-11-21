@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 ran to the point of a verdict. Q1-Q3 are answered (run Task 7 first; drop the `git config user.name` fallback for a web session; the fetch collision and leftover branches are later work). The build and the full `shell` suite pass, the independent review is in, and every finding is classified under `## Notes`. Q4 is open: the hosted-session evidence for criteria 1 and 4. No verdict is written while a question is open. Next: run Task 7 and answer Q4, then re-invoke `/codeo:qc`, which re-runs the pass from the start; it is expected to route back to `/codeo:plan` (F4 blocking, and Q2 (b) changes the plan's user chain).
+Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
 
 ## Questions
 
@@ -61,6 +61,7 @@ Steps (the branch tip on origin is `659e071` or later):
 If the hosted session cannot run the prompt, or the file is missing, say so and paste what it printed; that is itself the evidence.
 
 **Answer:**
+Given by the engineer from hosted sessions on 2026-11-21, over several messages (recorded here by the skill; the outputs and what was read from origin are under `## Notes`, *Task 7 evidence*): the checkout and `cat .codeo/active` (no lock), the environment variables and the hook command, the manual `lock.sh take web`, two prompts about 8 minutes apart, and a later `lock.sh` line, `refreshed the lock's session id to 01Sa1Zqb…`.
 
 ## Notes
 
@@ -70,7 +71,7 @@ If the hosted session cannot run the prompt, or the file is missing, say so and 
 
 What that settles: criterion 1 (the workflow shows live in `inflight.sh --live` on another clone), criterion 3 (tip unchanged) and criterion 5 for the web session (the login `kbajpai`, machine `web-` plus 8 characters; here from `CLAUDE_CODE_REMOTE_SESSION_ID`, since the manual lock said `session: unknown`) are met by this run; the `UserPromptSubmit` and `PostToolUse` hooks from `.claude/settings.json` fire in a cloud session and publish without a manual `beat` once a lock exists. What it does not: **the `SessionStart` hook left no lock** — in a correctly checked-out session with `CLAUDE_CODE_REMOTE=true` and the hook present in the file, `.codeo/active` did not exist until `lock.sh take web` was run by hand. So criterion 4 ("publishes without a manual `beat`, and the trigger is present in a web session") holds for the beats but not for taking the lock: a session that starts on this branch publishes nothing until something takes the lock. Why `SessionStart` did not do it is not known from this run (not run in a cloud session, run before the checkout was on this branch, or failed silently under `|| true`). F11 below.
 
-Still to see: the refresh in place after 5 minutes (the hook's force-push over the existing branch).
+**The refresh, and a later lock line.** After the second prompt, checked at 19:40:53Z: the signal branch's tip had moved from `947d492…` to `bf54d6f…` (a force-update; `git rev-list --count` still 1, parentless), its `beat:` read 19:40:27 against 19:32:09 for the first, and `inflight.sh --live` showed `138	kbajpai	web-01Sa1Zqb	web	26`. So the hook refreshes the signal in place through the proxy, as the earlier probe showed a force-push does. The engineer also reported, mid-turn, two `lock:` lines from the hosted session: `lock: refreshed the lock's session id to 01Sa1ZqbHfLZ7sWYJPffBknM` and `lock: lock already taken: issue: 138 branch: fix/live-session-signal-does-not started: 2026-11-21 host: web session: 01Sa1ZqbHfLZ7sWYJPffBknM`. That is `lock.sh take web <session id>` running with the real id on an existing `session: unknown` lock, which is what the `SessionStart` hook's command does and a hand-typed `lock.sh take web` does not. So `SessionStart` ran at some later point in the session, probably on a `resume` event (its matcher is `startup|resume|fork`), and not at the start, when the lock was missing; it is also F9's stdout reaching the session. Why it did not run, or did not take the lock, at `startup` is still unknown; a startup on a checkout that was not yet on this branch (as the first session's stale checkout was) fits but is not shown. F11 stands.
 
 **Commands run this pass, with their output**
 - `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0. `bash scripts/overlap.sh 138`: nothing, exit 0.
@@ -112,9 +113,51 @@ Still to see: the refresh in place after 5 minutes (the hook's force-push over t
 
 ## Outcome
 
-_Pending — written at the hand-off._
+### Round 1 — 2026-11-21
+
+**Sync.** `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0; `overlap.sh 138` printed nothing.
+
+**Scope.** `bash scripts/scope.sh origin/main HEAD`: `suite.shell=true` (paths `.claude/settings.json`, `.codeo/138/…`, `CHANGELOG.md` and others the suite's paths do not classify); no environment is configured, so no `deploy=` line and no environment step.
+
+**Build and tests.** The `shell` suite's `build` is `true`: rc 0. `bash tests/run.sh` (whole): rc 0, last line `all cases passed`. The code under review did not change after that run; only dossiers did.
+
+**Documentation check.** `docs/handoff.md` (*Who is working right now*) and `CHANGELOG.md` describe the web path as the code does, in the present tense with no issue numbers in the handoff page; two defects: the plugin-only advice and the "repository's own hooks" wording leave a project with no signal (F4), and `CODEO_GITHUB_LOGIN`'s different precedence in `github.sh` is not reconciled (F8). No wiki module; no QC overlays (`invariants-extra`, `wiki-rules` exit 3); no invariants file.
+
+**Independent review** (opus, `QC review:`, criteria as its requirements; plain text, not this round's verdict): no Critical, four Important, five Minor, "Ready to merge? With fixes". Its four Important are F1-F4 below.
+
+**Hosted-session evidence** (engineer's run of plan Task 7; commands and output in `## Notes`): the web signal `138	kbajpai	web-01Sa1Zqb	web` was listed by `inflight.sh --live` on this clone; its commit names `user: kbajpai`, `machine: web-01Sa1Zqb`; the feature branch's tip was unmoved by it; a second prompt refreshed it in place; the `SessionStart` hook left no lock at the start of the session.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Shows live in `inflight.sh --live` on another clone, or documented as not | met | hosted run: `inflight.sh --live` row, `git ls-remote` branch; `fetch_maps_web_branches_to_signals` |
+| 2 | No write that returned 403 in #112's run | met | `web_beat_publishes_a_branch_not_a_live_ref`; `scripts/live.sh:153,181-185`; the hosted publish succeeded |
+| 3 | Feature branch tip unchanged | met | the same case; the hosted run (tip moved only by the dossier pushes) |
+| 4 | Publishes without a manual `beat`; the trigger is present in a web session | not met — the prompt and tool-call hooks publish, but the `SessionStart` hook did not take the lock at the start of the session (F11) | hosted run, `.codeo/active` absent until `lock.sh take web` was run by hand |
+| 5 | Names the engineer's login and `web-<8>` | not met — `kbajpai` and `web-01Sa1Zqb` in the hosted run, but the fallback can still name `Claude` (F1, Q2 answered b) | hosted run; `scripts/live.sh:136-142`; `tests/live.test.sh:650` |
+| 6 | `docs/handoff.md` matches what a web session does | not met — F4 | `docs/handoff.md:173-176`; `hooks/hooks.json` has no `SessionStart` |
+| 7 | Tests cover the web behaviour, including the lock with and without a session id | met | `web_machine_*` and `lock_session_wins_over_the_environment` cover the label with and without an id; `tests/lock.test.sh` covers `lock.sh take web` with and without one; the hook command without an id is F5, non-blocking |
+
+**Findings** (each points at a line this change touched):
+- **F1 — blocking; the plan's.** A web signal can name the harness identity: `scripts/live.sh:136-142` ends at `git config user.name`, which a web session holds as `Claude`; pinned by `tests/live.test.sh:650` and `docs/handoff.md:188-191`. Q2 was answered *drop the fallback for a web session*; the plan's Q4 chain changes.
+- **F4 — blocking; the plan's.** `docs/handoff.md:173-176`: "a project that only installs the plugin needs the environment's setup script to install it" leaves no signal, since `hooks/hooks.json` has no `SessionStart` lock take and `live-signal.sh` exits without `.codeo/active`; "the repository's own hooks" reads as if every project had them, when only this repository's `.claude/settings.json` does.
+- **F11 — blocking; the plan's.** The repository's `SessionStart` hook left no lock at the start of a hosted session (Task 7); the lock was only taken by hand, and the hook's command ran later (probably on `resume`). A session that starts on this branch publishes nothing until the lock is taken. The fix is a design choice (take the lock from the beat hook when `CLAUDE_CODE_REMOTE=true` and none exists, or find why `startup` does not run it).
+- **F2 — non-blocking; later work (Q3 a).** Web signal branches accumulate on origin; nothing removes them (`scripts/live.sh:197`, `skills/triage/SKILL.md:177`).
+- **F3 — non-blocking; later work (Q3 a).** `scripts/live.sh:205`: when a container or local signal and a web signal share `<issue>/<machine>`, `fetch` aborts for every reader.
+- **F5 — non-blocking; the plan's.** No test runs the registered `SessionStart` command with `CLAUDE_CODE_REMOTE=true` and no session id (`tests/live-signal.test.sh:256-277`).
+- **F6 — non-blocking; later work.** A forked or resumed session keeps the first session's id in the lock, so two sessions can share one web branch.
+- **F7 — non-blocking.** `assignees[0]` may name a co-assignee (`scripts/live.sh:131`); worth a sentence in `docs/handoff.md`.
+- **F8 — non-blocking.** `CODEO_GITHUB_LOGIN` is read before `GET /user` in `live.sh:135-136` and after it in `github.sh user_login` (`github.sh:35-41`).
+- **F9 — non-blocking.** `lock.sh take web` prints `lock: …` lines on `SessionStart` stdout (`.claude/settings.json:22`), which reach the session's context; seen in the hosted session.
+- **F10 — non-blocking on a first-round plan; the plan's.** The branch changed `tests/devcontainer.test.sh`, outside the footprint (`overlap.sh --outside 138`); only a new plan round can add the path, and from `### Round 2` on it blocks the pull request, so the plan round adds it.
+
+**Later work, to file with `/codeo:issue` in the home checkout** (it refuses here): F3 and F2 (already in `implement.md`); F6. No issue number was filed by this pass.
+
+**What the plan round owes:** F1 (the user chain and its test and handoff sentence), F4 (the handoff wording and the plugin-only advice), F11 (the lock at the start of a hosted session), and `tests/devcontainer.test.sh` in the footprint (F10); F5 and F7 are cheap to take along.
+
+**Verdict: back to `/codeo:plan`.**
 
 ## Log
 
 - 2026-11-21 — round 1 stopped at step 10: build and the full suite pass, review in, Q1-Q3 raised · cost: 6m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 31k in + 624k cached / 3k out
 - 2026-11-21 — Q1-Q3 recorded from the conversation (a, b, a); Q4 raised for Task 7's hosted-session evidence; no verdict · cost: 20m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 85k in + 2.3M cached / 13k out
+- 2026-11-21 — round 1 written: back to /codeo:plan (F1, F4, F11 blocking); Task 7 evidence recorded, Q4 answered · cost: 75m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 102k in + 9.2M cached / 33k out
