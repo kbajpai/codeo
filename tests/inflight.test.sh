@@ -607,6 +607,14 @@ assert_contains "line" "  waits:     resume — #35 was abandoned on" "$(w_block
 case_desc="waits_on_review"
 assert_contains "line" "  waits:     review — dossier archived" "$(w_block 36)"
 
+case_desc="waits_comments_say_what_they_do"
+assert_eq "script header says the archive is not on the base branch" 1 "$(grep -cF 'the archive is not on the base branch yet' "$plugin_src/scripts/inflight.sh" || true)"
+assert_eq "script comment says whose archive is not on the base branch" 1 "$(grep -cF 'whose archive is not on the base branch yet' "$plugin_src/scripts/inflight.sh" || true)"
+assert_eq "script names the close outcome step-past" 1 "$(grep -cF 'steps past any `close` outcome no earlier rule took' "$plugin_src/scripts/inflight.sh" || true)"
+assert_eq "script lost the old header claim" 0 "$(grep -cF '`review — dossier archived` once close has opened its PR' "$plugin_src/scripts/inflight.sh" || true)"
+assert_eq "page says the archive is not on the base branch" 1 "$(grep -cF 'the archive is not on the base branch yet' "$plugin_src/docs/handoff.md" || true)"
+assert_eq "page lost the old claim" 0 "$(grep -cF 'once `close` has opened its pull request' "$plugin_src/docs/handoff.md" || true)"
+
 case_desc="waits_after_a_send_back"
 assert_contains "waits" "  waits:     /codeo:implement" "$(w_block 37)"
 assert_contains "verdict" "  verdict:   round 1 — back to /codeo:implement." "$(w_block 37)"
