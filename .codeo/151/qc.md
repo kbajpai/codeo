@@ -22,6 +22,7 @@ Round 1 stopped at step 2. The branch already contains `origin/main` (`sync-main
 - *Re-scope.* Drop the changelog bullet; acceptance criterion 10 would then not be met.
 
 **Answer:**
+Proceed and coordinate (engineer, in the conversation, 2026-11-21).
 
 ### Q2 — Criterion 6 (Claude Code offers the install when the folder is trusted): run it now, or let `/codeo:close` record it in the pull request?
 
@@ -33,6 +34,7 @@ Round 1 stopped at step 2. The branch already contains `origin/main` (`sync-main
 - *Not met.* If you already know it offers nothing, say so: that is a blocking finding, and its owner is decided from why.
 
 **Answer:**
+Treat it as a close-time check (engineer, in the conversation, 2026-11-21).
 
 ## Notes
 
