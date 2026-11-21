@@ -184,6 +184,16 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 
 ## Notes
 
+### Footprint
+
+```
+files:      .claude/settings.json, hooks/live-signal.sh, scripts/live.sh, scripts/lock.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/lock.test.sh, tests/triage-skill.test.sh, tests/devcontainer.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md, docs/plans/2026-11-21-live-signal-web-session-138-round-2.md, docs/plans/2026-11-21-live-signal-web-session-138-round-3.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
+
 **Round 3 calls made without a question** (send-back from `qc.md` round 2; correct any in an answer above):
 - *F13:* `docs/handoff.md` says the two gated groups in `.claude/settings.json` work only in this repository, because they run this repository's own `hooks/live-signal.sh`; another project gets the hook by installing the plugin through its environment's setup script, and nothing else works there. "Either way nothing else is needed" goes.
 - *F18:* the `CHANGELOG.md` bullet and its `Shared state:` line say origin gains a `codeo-live/` branch namespace, which an older plugin's triage lists as parked work and an older `inflight.sh` does not read.
@@ -249,15 +259,6 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 **Documentation the plan changes:** `docs/handoff.md` → *Who is working right now* (and its diagram) and `CHANGELOG.md` (the existing bullet). No wiki pages.
 
 **Intake question resolved:** none new; round 1's resolutions stand.
-
-### Footprint
-
-```
-files:      .claude/settings.json, hooks/live-signal.sh, scripts/live.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/triage-skill.test.sh, tests/devcontainer.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md, docs/plans/2026-11-21-live-signal-web-session-138-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
