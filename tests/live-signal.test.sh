@@ -18,6 +18,7 @@ printf '#!/bin/sh\nexit 1\n' > "$scratch_root/bin/gh"
 chmod +x "$scratch_root/bin/gh"
 export PATH="$scratch_root/bin:$PATH"
 export CODEO_GITHUB_LOGIN=alice CODEO_MACHINE=testbox GIT_TERMINAL_PROMPT=0
+unset CLAUDE_CODE_REMOTE CLAUDE_CODE_REMOTE_SESSION_ID
 unset CODEO_LIVE_REFRESH_SECONDS CODEO_LIVE_TTL_SECONDS CODEO_LIVE_PUSH_TIMEOUT
 export CODEO_LIVE_PUSH_TIMEOUT=3
 
@@ -279,7 +280,7 @@ wait_for_file() {
 case_desc=settings_beat_hook_takes_the_lock_and_publishes
 new_world_with_dossier
 (export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
-    run_settings UserPromptSubmit "{\"cwd\": \"$clone\"}" "$clone")
+    run_settings UserPromptSubmit "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}" "$clone")
 assert_eq "exit" 0 "$rc"
 wait_for_file "$clone/.codeo/active" && ok=yes || ok=no
 assert_eq "lock appears" yes "$ok"
@@ -293,7 +294,7 @@ assert_eq "branch published" yes "$found"
 case_desc=hook_takes_the_lock_in_a_web_session_when_none_exists
 new_world_with_dossier
 (export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
-    hook beat "{\"cwd\": \"$clone\"}")
+    hook beat "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}")
 assert_eq "exit" 0 "$rc"
 assert_eq "stdout" "" "$out"
 assert_eq "stderr" "" "$err"
@@ -311,7 +312,7 @@ assert_eq "branch published" yes "$found"
 case_desc=hook_without_a_session_id_takes_a_lock_with_session_unknown
 new_world_with_dossier
 (export CLAUDE_CODE_REMOTE=true; unset CLAUDE_CODE_REMOTE_SESSION_ID
-    hook beat "{\"cwd\": \"$clone\"}")
+    hook beat "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}")
 assert_eq "exit" 0 "$rc"
 wait_for_file "$clone/.codeo/active" && ok=yes || ok=no
 assert_eq "lock appears" yes "$ok"
@@ -325,7 +326,7 @@ assert_eq "branch published" yes "$found"
 case_desc=hook_takes_no_lock_outside_a_web_session
 new_world_with_dossier
 (unset CLAUDE_CODE_REMOTE; export CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
-    hook beat "{\"cwd\": \"$clone\"}")
+    hook beat "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}")
 assert_eq "exit" 0 "$rc"
 sleep 2
 [[ ! -e $clone/.codeo/active ]] && ok=yes || ok=no
@@ -335,7 +336,7 @@ case_desc=hook_takes_no_lock_without_a_codeo_directory
 new_world_with_dossier
 rm -rf "$clone/.codeo"
 (export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
-    hook beat "{\"cwd\": \"$clone\"}")
+    hook beat "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}")
 assert_eq "exit" 0 "$rc"
 sleep 2
 [[ ! -e $clone/.codeo ]] && ok=yes || ok=no
@@ -355,7 +356,7 @@ stub_plugin
 printf 'issue:   104\nbranch:  feat/x\nstarted: 2026-11-15\nhost:    local\n' > "$clone/.codeo/active"
 (export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
     hook=$stub/hooks/live-signal.sh
-    hook beat "{\"cwd\": \"$clone\"}")
+    hook beat "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}")
 assert_eq "exit" 0 "$rc"
 sleep 2
 [[ ! -s $stub/log ]] && ok=yes || ok=no
@@ -366,20 +367,97 @@ new_world_with_dossier
 stub_plugin
 (export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
     hook=$stub/hooks/live-signal.sh
-    hook beat "{\"cwd\": \"$clone\"}"
+    hook beat "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}"
     wait_for_file "$stub/log" || true
-    hook beat "{\"cwd\": \"$clone\"}")
+    hook beat "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}")
 assert_eq "exit" 0 "$rc"
 sleep 2
 assert_eq "one call" 1 "$(wc -l < "$stub/log" | tr -d ' ')"
 assert_eq "arguments" "take web abcdef0123456789" "$(head -1 "$stub/log")"
-[[ -e $clone/$(git -C "$clone" rev-parse --git-path codeo-live-lock-try) ]] && ok=yes || ok=no
-assert_eq "stamp exists" yes "$ok"
-(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789 CODEO_LIVE_REFRESH_SECONDS=0
+claims=$({ compgen -G "$clone/$(git -C "$clone" rev-parse --git-path codeo-live-lock-try).*" || true; } | wc -l | tr -d ' ')
+assert_eq "one claim file" 1 "$claims"
+rm -f "$clone/$(git -C "$clone" rev-parse --git-path codeo-live-lock-try)".*
+(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
     hook=$stub/hooks/live-signal.sh
+    hook beat "{\"hook_event_name\":\"UserPromptSubmit\",\"cwd\": \"$clone\"}")
+assert_eq "second call in a new interval" 2 "$(wc -l < "$stub/log" | tr -d ' ')"
+
+ups() { printf '{"hook_event_name":"UserPromptSubmit","cwd":"%s"}' "$1"; }
+claim_glob() { echo "$clone/$(git -C "$clone" rev-parse --git-path codeo-live-lock-try)"; }
+
+case_desc=hook_posttooluse_never_takes_the_lock
+new_world_with_dossier
+stub_plugin
+(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
+    hook=$stub/hooks/live-signal.sh
+    hook beat "{\"hook_event_name\":\"PostToolUse\",\"cwd\": \"$clone\"}"
     hook beat "{\"cwd\": \"$clone\"}")
-sleep 2
-assert_eq "second call after interval" 2 "$(wc -l < "$stub/log" | tr -d ' ')"
+assert_eq "exit" 0 "$rc"
+sleep 1
+[[ ! -s $stub/log ]] && ok=yes || ok=no
+assert_eq "lock.sh never called" yes "$ok"
+[[ -z $(git -C "$origin" for-each-ref 'refs/heads/codeo-live/') ]] && ok=yes || ok=no
+assert_eq "nothing published" yes "$ok"
+
+case_desc=hook_does_not_take_a_lock_for_a_stashed_dossier
+new_world_with_dossier
+printf '# Close\n\n### Round 1 — stashed\n' > "$clone/.codeo/104/close.md"
+git -C "$clone" add .codeo
+git -C "$clone" -c user.name=t -c user.email=t@t commit -q -m stash
+git -C "$clone" push -q origin feat/x
+(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789 CODEO_LIVE_REFRESH_SECONDS=1
+    hook beat "$(ups "$clone")"
+    sleep 2
+    hook beat "$(ups "$clone")")
+assert_eq "exit" 0 "$rc"
+sleep 1
+[[ ! -e $clone/.codeo/active ]] && ok=yes || ok=no
+assert_eq "no lock" yes "$ok"
+[[ -z $(git -C "$origin" for-each-ref 'refs/heads/codeo-live/') ]] && ok=yes || ok=no
+assert_eq "no codeo-live branch" yes "$ok"
+
+case_desc=hook_takes_the_lock_in_the_foreground
+new_world_with_dossier
+(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
+    hook beat "$(ups "$clone")")
+assert_eq "exit" 0 "$rc"
+[[ -e $clone/.codeo/active ]] && ok=yes || ok=no
+assert_eq "lock present on return" yes "$ok"
+found=no
+for ((i = 0; i < 50; i++)); do web_ref && { found=yes; break; }; sleep 0.2; done
+assert_eq "branch published" yes "$found"
+
+case_desc=hook_two_simultaneous_hooks_take_once
+new_world_with_dossier
+stub_plugin
+for n in 1 2 3 4 5; do
+    rm -f "$(claim_glob)".*
+    : > "$stub/log"
+    (export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
+        cd "$clone"
+        ups "$clone" | bash "$stub/hooks/live-signal.sh" beat > /dev/null 2>&1 &
+        ups "$clone" | bash "$stub/hooks/live-signal.sh" beat > /dev/null 2>&1 &
+        wait)
+    assert_eq "pair $n lock.sh calls" 1 "$(wc -l < "$stub/log" | tr -d ' ')"
+done
+
+case_desc=hook_bounds_the_take
+if ! command -v timeout > /dev/null 2>&1; then
+    echo "SKIP: $case_desc — no timeout binary installed"
+else
+    new_world_with_dossier
+    stub_plugin
+    printf '#!/usr/bin/env bash\nsleep 30\n' > "$stub/scripts/lock.sh"
+    start=$SECONDS
+    (export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
+        hook=$stub/hooks/live-signal.sh
+        hook beat "$(ups "$clone")")
+    assert_eq "exit" 0 "$rc"
+    ((SECONDS - start < 12)) && ok=yes || ok=no
+    assert_eq "returned within 12 s" yes "$ok"
+    [[ ! -e $clone/.codeo/active ]] && ok=yes || ok=no
+    assert_eq "no lock" yes "$ok"
+fi
 
 if ((failures > 0)); then
     echo "$failures failure(s)"
