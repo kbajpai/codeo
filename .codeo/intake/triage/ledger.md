@@ -174,3 +174,8 @@
 | `issue:143` | `codeo` host command leftovers from #133; filed 2026-11-20 | ready | 2026-11-20 |
 | `issue:144` | #108 leftovers (overlap.sh failures, heading rule, init closing block); filed 2026-11-20 | ready | 2026-11-20 |
 | `issue:145` | #102, #126 and #122 leftovers; filed 2026-11-21 | ready | 2026-11-21 |
+| `qc:143:F12-F16` | #143 non-blocking QC findings: sandbox hint after removal, relative `CODEO_HOME`, README and help wording | filed #149 | 2026-11-21 |
+| `qc:143:F6-F9-parked` | #143 round 1 parked: restart before mount check, flowchart gaps | filed #149 | 2026-11-21 |
+| `qc:144:F3-F5` | #144 non-blocking QC findings: pronoun in implement/close skills, test pin claim, nits | filed #149 | 2026-11-21 |
+| `issue:146` | Release v1.0.8; filed 2026-11-21, board Status `Backlog`, gated on #145 | ready | 2026-11-21 |
+| `issue:149` | #143 and #144 leftovers; filed 2026-11-21 | ready | 2026-11-21 |
