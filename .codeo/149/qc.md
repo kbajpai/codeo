@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 done: back to `/codeo:implement`. One blocking finding (F1: the home-directory stop prints twice for `codeo issue <N>`, so `.devcontainer/README.md:98` contradicts the code); the other findings are non-blocking. Build and the full suite pass. Next step: `/codeo:implement`, then `/codeo:qc` again from step 0.
+Round 2 done: back to `/codeo:implement`. One blocking finding (F9: round 2's fix for the home-directory stop made `codeo issue 5 --sandbox --rebuild` print the stop and exit 1 instead of the usage error and exit 2, so `.devcontainer/README.md:98` is untrue for that input); F10 and F11 are non-blocking README gaps. Build and the full suite pass. Next step: `/codeo:implement`, then `/codeo:qc` again from step 0.
 
 ## Questions
 
@@ -77,7 +77,50 @@ Q1-Q2 (overlaps with #138 on `CHANGELOG.md` and `docs/handoff.md`) were answered
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-21
+
+Whole pass re-run from step 0 on `8f359ae`, after the send-back answered by `implement.md` round 2.
+
+**Step 2, scope.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`. `overlap.sh 149` prints nothing; `overlap.sh --outside 149` prints nothing (exit 0). `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: the dossiers and `CHANGELOG.md`). `git diff origin/main...HEAD --stat`: 22 files, 934 insertions, 65 deletions; `scripts/` and `.sbx/codeo-sandbox.sh` unchanged. No invariants file, shared environment, `wiki` module or overlay rules (step 9 does not apply).
+
+**Step 3, build.** The `shell` suite's `build` is `true`: exit 0.
+
+**Step 4, suite.** `bash tests/run.sh`, whole: `all cases passed`, `suite-exit=0`, working tree clean afterwards. The reviewer worked in a separate worktree this time.
+
+**Step 5, criteria**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | With `--force`, none of the three F13 outputs is followed by the `sbx rm --force` hint; a test fails if it returns | met | `t_rm_sandbox_force_gone` (`tests/codeo-command.test.sh`); the reviewer made the hint unconditional in a worktree and the test failed for all three outputs and the second-column case |
+| 2 | `CODEO_HOME=rel codeo rm <N> --sandbox` completes, with a test | met | `abs_path_env CODEO_HOME always` in `main`; `t_relative_codeo_home_rm`, which fails when that line is removed (reviewer's worktree run) |
+| 3 | A `rm` that refuses without `--force` does not run `docker restart` first | met | `.devcontainer/codeo` `cmd_rm`/`container_check`; `t_rm_inspect_fails_no_restart` fails when `--no-restart` is never chosen (reviewer's worktree run) |
+| 4 | No README or help sentence about the script's own message, the home-directory stop or the failed-listing exit contradicts the code; the flowchart matches the prose or says it is partial | not met | F9: `.devcontainer/README.md:98` says "a usage error … never read it, so they go ahead", and `codeo issue 5 --sandbox --rebuild` with a refused home now prints the stop and exits 1 instead of the usage error and exit 2 (reproduced below). The stop itself prints once for every command that reads the home directory (checked below), the failed-listing and script-message sentences match the code, and F10 and F11 are flowchart and prose gaps. |
+| 5 | The two skill sentences under #144 F4 sit after "The step stops until it is answered" | met | `skills/implement/SKILL.md:89-93`, `skills/close/SKILL.md:220-225`; `must_precede` at `tests/implement-skill.test.sh:115` and `tests/close-skill.test.sh:443` |
+| 6 | `qc-verdict.sh:134` is pinned; each #144 F5 item done or dismissed in writing | met | `qc_verdict_replan` fails under a prefix-match mutation of `qc-verdict.sh:134`; the `inflight_send_back` reader fails under an exact-match mutation of `close_send_back`'s heading (both reviewer worktree runs); F5a pinned at `tests/init-skill.test.sh:54`; F5b: `with or without an` in all seven places, pinned by `tests/overlap-stop.test.sh`; F5d dismissed in writing in `plan.md` and `implement.md` |
+| 7 | `bash tests/run.sh` ends `all cases passed` | met | this pass's run, quoted under step 4 |
+
+**Home-directory stop, every command** (a `HOME` holding `codeo/.git`, `CODEO_HOME` unset, `env -i`): `home`, `issue 5`, `issue 5 --sandbox`, `issue 5 --container`, `issue 5 feat/x`, `shell home`, `shell 5`, `shell 5 --container`, `open 5 --sandbox`, `list`, `rm 5 --sandbox`, `default`, `default sandbox` and `update` each print the stop exactly once and exit 1; `help` exits 0; `rm 5`, `open 5` and `rm 5 --container` do not reach the home directory. `~/codeo` holds only `.git` afterwards.
+
+**F9 reproduction:** `env -i HOME=<home with codeo/.git> PATH=/usr/bin:/bin bash .devcontainer/codeo issue 5 --sandbox --rebuild`: at `956a86f` and at `55021e3` it prints `codeo: --rebuild applies only to a container, and the kind here is a sandbox`, exit 2; at `8f359ae` it prints `codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in`, exit 1. With an ordinary home, `8f359ae` still prints the usage error, exit 2.
+
+**Step 6, documentation.** Pages changed since the base: `.devcontainer/README.md`, `.sbx/README.md`, the `codeo help` text, five skill pages, `docs/handoff.md` and `CHANGELOG.md`; present tense, no issue numbers. Findings F9-F11 are documentation or contract findings.
+
+**Step 7, independent review** (Opus, criteria and diff only). It confirmed each new test fails under its mutation, found F9 as its one Critical, and F10, F11 and a restatement of round 1's F7 as Minor. Its verdict: ready to merge with fixes.
+
+**Findings carried from round 1:** F1 (blocking in round 1) — fixed by `fc8a5ac`; F3, F4, F5 and F6 — fixed by `41e9c3d`; F2 stays a recorded design choice (the plan's Q3, answered by the engineer) and F7 (a stopped container started and left running before a refusal known up front) stays pre-existing and unrouted.
+
+**New findings**
+
+- **F9 — blocking — `/codeo:implement`'s.** `.devcontainer/codeo:309` — round 2's fix for F1 — runs `home_dir >/dev/null` before the check `[[ "$kind" == container || -z "$rebuild" ]] || usage …` at `:311`, so with a refused home directory the stop replaces a usage error. That breaks the file header's rule (`:8-9`: every command checks its arguments first and exits 2) and makes `.devcontainer/README.md:98`'s "a usage error … go ahead" untrue for this input, which criterion 4 forbids; the code is what changed, and the base code and the round 1 code both exit 2 here. Root cause: the home check was placed before the one usage test that needs the kind, and that test does not need the home when a kind flag was given (only the saved default needs it). The fix is the implementer's and inside the plan's footprint: when `--container` or `--sandbox` was given, run the `--rebuild` usage test before `home_dir`; when none was given the kind comes from the saved default, so that one usage error may follow the stop, and the README sentence says so. A test covers `issue 5 --sandbox --rebuild` with a refused home (exit 2, the usage message), beside the existing `t_home_checkout_collision` cases.
+- **F10 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md:182` lists what can refuse after the restart as "the second read, a failed restart or a failed `docker rm`"; `docker volume rm` can also fail there (`could not remove volume codeo-<N>`, `.devcontainer/codeo:654-657`), and the flowchart's error edge label from `G` covers it while the sentence does not. Add it to the sentence.
+- **F11 — non-blocking — `/codeo:implement`'s.** The flowchart's error edge leaves only `G`; node `H` ("remove container and image, keep the volume") also runs `docker rm -f` and can stop with `could not remove container`, and the chart neither shows it nor says it is partial. Parked in `implement.md` round 2 as a Minor; add the edge from `H`.
+
+**Routing.** F9 is blocking and the implementer's; F10 and F11 ride the same round. Nothing here is the plan's to redo.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-21 — Q1-Q2 raised (overlaps with #138 on CHANGELOG.md and docs/handoff.md) · cost: 1m · opus-5-5 314k in + 693k cached / 1k out
 - 2026-11-21 — round 1: Q1-Q2 answered, pass run, back to implement (F1 blocking) · cost: 40m · opus-5-5 415k in + 3.5M cached / 25k out · sonnet-5-5 40k in + 4.8M cached / 10k out
+- 2026-11-21 — round 2: pass re-run, back to implement (F9 blocking, regression from round 2's F1 fix) · cost: 9m · opus-5-5 509k in + 3.8M cached / 22k out · sonnet-5-5 28k in + 1.7M cached / 6k out
