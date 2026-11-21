@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `CHANGELOG.md`, the three archived `qc.md` files and the tests that pin each (`tests/doctor.test.sh`, `tests/issue-skill.test.sh`, `tests/claim.test.sh`, `tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Five choices change what gets built and are raised as Q1-Q5. Everything else is settled and listed under `## Notes` as the calls the draft will make. No draft is written until Q1-Q5 are answered.
+Explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `CHANGELOG.md`, the three archived `qc.md` files and the tests that pin each (`tests/doctor.test.sh`, `tests/issue-skill.test.sh`, `tests/claim.test.sh`, `tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Five choices change what gets built and are raised as Q1-Q5. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q5 answered as recommended; the draft is at `.codeo/145/plan-draft.md` for the review gate.
 
 ## Questions
 
@@ -21,6 +21,7 @@ Explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills
 - Change the script. `waits_of` asks GitHub for the branch's pull request and prints `review — dossier archived` only when one is open, and something else (`/codeo:close`) otherwise. This makes the human block of `inflight.sh` depend on `gh` and the network, and needs a rule for when the call fails.
 
 **Answer:**
+Correct the pages, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q2 — A *resume* answer on an unassigned workflow: keep asking each run, or stop (#122 F5)?
 
@@ -31,6 +32,7 @@ Explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills
 - Stop on *resume*. Triage records `unassigned:<N>` → `resume` and does not ask again. The cost: a workflow nobody owns stops being reported after one answer, even if nobody ever takes it up.
 
 **Answer:**
+State it as intended, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q3 — What counts as "a test covers `touched_of`" (#122 F3)?
 
@@ -40,6 +42,7 @@ Explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills
 - Record it as already covered. The plan names the nine existing cases against the criterion and adds no test. The unparsable-tip branch stays unpinned.
 
 **Answer:**
+Add a case with a fake `git`, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q4 — The engineer names a priority outside the four at the gate: what does `/codeo:issue` do (#102 F5)?
 
@@ -49,6 +52,7 @@ Explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills
 - Accept any existing `priority:` label. If the repository has, say, `priority: urgent`, file with it; otherwise ask again. `doctor.sh` would still check only the four.
 
 **Answer:**
+Ask again, naming the four, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ### Q5 — `docs/handoff.md` and `scripts/inflight.sh` are also in #144's scope. How do the two changes share them?
 
@@ -58,6 +62,7 @@ Explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills
 **Not yet knowable:** #143 (`fix/codeo-host-command-close-leftovers`, at `init`, waiting on its Q1-Q6) has no footprint either. Both it and #144 will very likely add a `CHANGELOG.md` bullet, as this plan does. `overlap.sh` will print that once they have footprints, and it is raised then as its own question.
 
 **Answer:**
+Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
 ## Notes
 
