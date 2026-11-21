@@ -50,9 +50,22 @@ home_dir() {
     if [[ -z "$d" ]]; then
         [[ -n "${HOME:-}" ]] || die "set CODEO_HOME or HOME"
         d=$HOME/codeo
+        # In $(home_dir) this die ends only the subshell: callers must assign the result, or run ensure_home first.
+        [[ ! -e "$d/.git" ]] ||
+            die "~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in"
     fi
     case $d in /*) ;; *) d=$PWD/$d ;; esac
     printf '%s\n' "$d"
+}
+
+# abs_path_env <VAR> <always|slash>: make VAR, when set and non-empty, an absolute path against $PWD, so a later
+# cd cannot change what it names. always: whenever it is not absolute; slash: only when it holds a "/", so a
+# bare program name stays a name.
+abs_path_env() {
+    local v=${!1:-}
+    [[ -n "$v" && "$v" != /* ]] || return 0
+    [[ "$2" == always || "$v" == */* ]] || return 0
+    export "$1=$PWD/$v"
 }
 
 # cmd_help: print the commands on stdout, and the PATH line when ~/.local/bin is not on PATH.
@@ -86,42 +99,51 @@ raw_base() {
     printf '%s\n' "${CODEO_RAW_URL:-https://raw.githubusercontent.com/kbajpai/codeo/main}"
 }
 
-# ensure_home: create the home directory and download any missing script into it.
+# ensure_home: create the home directory and download any missing script into it. Each download goes to
+# a temporary file of its own and is renamed into place, so concurrent first uses never share a file.
 ensure_home() {
-    local dir base f name
+    local dir base f name tmp
     dir=$(home_dir)
     base=$(raw_base)
     mkdir -p "$dir" 2>/dev/null || die "could not create $dir"
     for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh; do
         name=${f##*/}
         [[ -s "$dir/$name" ]] && continue
-        if ! curl -fsSL -o "$dir/$name.part" "$base/$f" 2>/dev/null; then
-            rm -f "$dir/$name.part"
+        tmp=$(mktemp "$dir/.$name.XXXXXX") || die "could not create a temporary file in $dir"
+        if ! curl -fsSL -o "$tmp" "$base/$f" 2>/dev/null; then
+            rm -f "$tmp"
             die "could not download $base/$f"
         fi
-        if [[ "$(head -c2 "$dir/$name.part")" != "#!" ]]; then
-            rm -f "$dir/$name.part"
+        if [[ "$(head -c2 "$tmp")" != "#!" ]]; then
+            rm -f "$tmp"
             die "$base/$f is not a script"
         fi
-        mv "$dir/$name.part" "$dir/$name"
+        chmod +x "$tmp" 2>/dev/null || true
+        mv -f "$tmp" "$dir/$name"
     done
 }
 
 # find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was
 # found. Uses a blob-less bare clone in the home directory, pointed at the current repository URL and
-# fetched on every lookup; rev-parse needs only the trees the fetch brought, never a blob.
+# fetched on every lookup; rev-parse needs only the trees the fetch brought, never a blob. The whole
+# lookup holds a lock, and the clone is made in a temporary directory and renamed into place.
 find_branch() {
-    local n=$1 dir repo_url b refs
+    local n=$1 dir repo_url b refs tmp
     local -a found=()
     dir=$(home_dir)
     repo_url=${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}
+    exec 9>"$dir/.lookup.lock" || die "could not open the lookup lock in $dir"
+    flock 9 || die "could not take the lookup lock in $dir"
     if [[ ! -d "$dir/.lookup.git" ]]; then
-        rm -rf "$dir/.lookup.git.part"
-        git clone --bare -q --filter=blob:none "$repo_url" "$dir/.lookup.git.part" >&2 || {
-            rm -rf "$dir/.lookup.git.part"
+        tmp=$(mktemp -d "$dir/.lookup.XXXXXX") || die "could not create a temporary directory in $dir"
+        git clone --bare -q --filter=blob:none "$repo_url" "$tmp" >&2 || {
+            rm -rf "$tmp"
             die "could not clone $repo_url"
         }
-        mv "$dir/.lookup.git.part" "$dir/.lookup.git"
+        mv "$tmp" "$dir/.lookup.git" || {
+            rm -rf "$tmp"
+            die "could not create $dir/.lookup.git"
+        }
     fi
     git -C "$dir/.lookup.git" remote set-url origin "$repo_url" >&2 ||
         die "could not point the lookup clone at $repo_url"
@@ -131,7 +153,7 @@ find_branch() {
         die "could not list branches of $repo_url"
     while IFS= read -r b; do
         [[ -n "$b" ]] || continue
-        if git -C "$dir/.lookup.git" rev-parse -q --verify "$b:.codeo/$n/init.md" >/dev/null 2>&1; then
+        if git -C "$dir/.lookup.git" rev-parse -q --verify "refs/heads/$b:.codeo/$n/init.md" >/dev/null 2>&1; then
             found+=("$b")
         fi
     done <<<"$refs"
@@ -347,6 +369,7 @@ print_sorted() {
 # its state is paused or restarting when docker says so, else stopped.
 cmd_list() {
     [[ $# -eq 0 ]] || usage
+    home_dir >/dev/null # a refused home directory ends the command before anything is listed
     local listing name state branch dir agent status n rows shown=0 failed=0 sbx
     command -v docker >/dev/null 2>&1 || sbx_prog >/dev/null ||
         die "neither docker nor sbx is installed: nothing to list"
@@ -403,12 +426,14 @@ cmd_list() {
 
 # cmd_default [container|sandbox]: show the saved default kind, or save one.
 cmd_default() {
+    local d
     case $# in
         0) saved_default ;;
         1)
             [[ "$1" == container || "$1" == sandbox ]] || usage
-            mkdir -p "$(home_dir)" || die "could not create $(home_dir)"
-            printf '%s\n' "$1" >"$(home_dir)/default"
+            d=$(home_dir)
+            mkdir -p "$d" 2>/dev/null || die "could not create $d"
+            printf '%s\n' "$1" >"$d/default"
             ;;
         *) usage ;;
     esac
@@ -421,15 +446,45 @@ stop_started() {
     return 0
 }
 
-# container_check <N>: check the issue container's repository for work that exists only there. Starts
-# a stopped container first. Prints one heading per kind found (up to 10 lines each) and returns 0
-# when clean, 1 when something would be lost, 2 when the check could not run (cannot start, fetch or
-# exec failed), 3 when there is no such container. When it returns non-zero it stops again a container
-# it knows it started.
-container_check() {
-    local name="codeo-$1" listing state="" row rest dirty=0 out kind started=0 listed=0
+# container_read <name>: read the container's repository once for work that exists only there. Prints one heading
+# per kind found (up to 10 lines each) and returns 0 when clean, 1 when something would be lost, 2 when a docker exec
+# failed. Does not fetch, start or stop anything.
+container_read() {
+    local name="$1" dirty=0 out kind
     local -A found=()
     local -a kinds=(status stash branch revs)
+    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain --untracked-files=normal 2>/dev/null </dev/null) || return 2
+    found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || return 2
+    out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || return 2
+    found[branch]=""
+    if [[ -z "$out" ]]; then
+        # A detached HEAD is unsaved work only when no origin branch contains it.
+        out=$(docker exec "$name" git -C "/workspaces/$name" branch -r --contains HEAD 2>/dev/null </dev/null) || return 2
+        [[ -n "$out" ]] || found[branch]="HEAD is detached"
+    fi
+    found[revs]=$(docker exec "$name" git -C "/workspaces/$name" rev-list --branches --not --remotes=origin 2>/dev/null </dev/null) || return 2
+    for kind in "${kinds[@]}"; do
+        [[ -n "${found[$kind]}" ]] || continue
+        dirty=1
+        case "$kind" in
+            status) echo "uncommitted or untracked files:" ;;
+            stash) echo "stashes:" ;;
+            branch) echo "detached HEAD:" ;;
+            revs) echo "commits not pushed to origin:" ;;
+        esac
+        head -n 10 <<<"${found[$kind]}" | sed 's/^/  /'
+    done
+    return "$dirty"
+}
+
+# container_check <N>: check the issue container's repository for work that exists only there. Starts a stopped
+# container first, fetches, reads it (container_read), and when the container was already running restarts it and
+# reads again, so a write that landed between the first read and the removal is caught. Prints one heading per kind
+# found (up to 10 lines each) and returns 0 when clean, 1 when something would be lost, 2 when the check could not
+# run (cannot start, fetch, restart or exec failed), 3 when there is no such container. When it returns non-zero it
+# stops again a container it knows it started (not after a failed restart: the state is then unknown).
+container_check() {
+    local name="codeo-$1" listing state="" row rest started=0 listed=0 rc=0
     if listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
         listed=1
         while read -r row rest _; do
@@ -445,40 +500,35 @@ container_check() {
         # Only a container listed as not running was started by us; with no listing it may have been running.
         [[ "$listed" -eq 0 ]] || started=1
     fi
-    docker exec "$name" git -C "/workspaces/$name" fetch origin >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
+    docker exec "$name" git -C "/workspaces/$name" fetch --prune origin >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
     # Commits under a pull-request head count as delivered: /codeo:close deletes the branch on origin after a
     # squash merge, so the pull-request heads are what still hold them. Failing to fetch them proves nothing.
     docker exec "$name" git -C "/workspaces/$name" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
-    found[status]=$(docker exec "$name" git -C "/workspaces/$name" status --porcelain 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    found[stash]=$(docker exec "$name" git -C "/workspaces/$name" stash list 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    out=$(docker exec "$name" git -C "/workspaces/$name" branch --show-current 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    found[branch]=""
-    if [[ -z "$out" ]]; then
-        # A detached HEAD is unsaved work only when no origin branch contains it.
-        out=$(docker exec "$name" git -C "/workspaces/$name" branch -r --contains HEAD 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-        [[ -n "$out" ]] || found[branch]="HEAD is detached"
+    container_read "$name" || rc=$?
+    if [[ "$rc" -eq 0 && "$started" -eq 0 ]]; then
+        # A running container may have had a writer between the read and the removal; restarting it ends any such
+        # process, and the second read sees what it left.
+        docker restart "$name" >/dev/null 2>&1 </dev/null || return 2
+        container_read "$name" || rc=$?
     fi
-    found[revs]=$(docker exec "$name" git -C "/workspaces/$name" rev-list --branches --not --remotes=origin 2>/dev/null </dev/null) || { stop_started "$name" $started; return 2; }
-    for kind in "${kinds[@]}"; do
-        [[ -n "${found[$kind]}" ]] || continue
-        dirty=1
-        case "$kind" in
-            status) echo "uncommitted or untracked files:" ;;
-            stash) echo "stashes:" ;;
-            branch) echo "detached HEAD:" ;;
-            revs) echo "commits not pushed to origin:" ;;
-        esac
-        head -n 10 <<<"${found[$kind]}" | sed 's/^/  /'
-    done
-    ((dirty == 0)) || stop_started "$name" $started
-    return "$dirty"
+    ((rc == 0)) || stop_started "$name" $started
+    return "$rc"
+}
+
+# workspace_mount <name>: prints "volume" when the container's mount at /workspaces is the named volume <name>, "other"
+# when it is anything else (a bind mount, another volume, none); returns 1 when docker inspect fails.
+workspace_mount() {
+    local out
+    out=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/workspaces"}}{{.Type}} {{.Name}}{{end}}{{end}}' "$1" 2>/dev/null </dev/null) || return 1
+    if [[ "$out" == "volume $1" ]]; then echo volume; else echo other; fi
 }
 
 # cmd_rm <N> [--force] [--container|--sandbox]: remove the issue's container or sandbox. A container
 # is checked for unsaved work first; --force skips the refusal and removes even when the check cannot
 # run.
 cmd_rm() {
-    local n="" force="" a kind name rc=0 report
+    local n="" force="" a kind name rc=0 report listing keep_volume mount existed removed_container="" removed_volume="" removed_image=""
+    local -a went=()
     for a in "$@"; do
         case "$a" in
             --force) force=1 ;;
@@ -494,12 +544,29 @@ cmd_rm() {
     kind=$(detect_kind "$n" "$kind_flag")
     if [[ "$kind" == sandbox ]]; then
         ensure_home
-        # Not run_script: it execs, and a failure needs the by-hand hint after the script's own output.
+        # Not run_script: it execs, and a failure needs a hint after the script's own output. The script's
+        # stderr is kept in a file and shown after it exits, not live, so the hint can tell whether it
+        # already named sbx rm --force.
+        local errf
         cd "$(home_dir)"
-        bash "$(home_dir)/codeo-sandbox.sh" end "$n" ${force:+--force} || rc=$?
+        errf=$(mktemp "$(home_dir)/.rm-err.XXXXXX") || die "could not create a temporary file in $(home_dir)"
+        trap 'rm -f "$errf"' EXIT # an interrupt must not leave it in the home directory
+        # An interrupt still shows what the script wrote before it.
+        trap 'cat "$errf" >&2; exit 130' INT
+        trap 'cat "$errf" >&2; exit 143' TERM
+        bash "$(home_dir)/codeo-sandbox.sh" end "$n" ${force:+--force} 2>"$errf" || rc=$?
+        cat "$errf" >&2
         if [[ "$rc" -ne 0 ]]; then
-            echo "codeo: to remove it anyway: sbx rm --force codeo-$n" >&2
+            if [[ -z "$force" ]]; then
+                # The script refuses over unpushed or uncommitted work on stdout, with no codeo-sandbox: line; every
+                # other refusal is a codeo-sandbox: line on stderr, and --force would not get past it.
+                grep -q '^codeo-sandbox: ' "$errf" ||
+                    echo "codeo: codeo rm $n --force removes it anyway; its unpushed commits are kept in $(home_dir)/codeo-$n, its uncommitted work is not" >&2
+            elif ! grep -qE "rm --force codeo-$n([^0-9]|$)" "$errf"; then
+                echo "codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-$n" >&2
+            fi
         fi
+        rm -f "$errf"
         exit "$rc"
     fi
     name="codeo-$n"
@@ -524,16 +591,75 @@ cmd_rm() {
             echo "--force: could not check $name for unsaved work; removing anyway"
             ;;
     esac
-    if ! docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
-        # With --force a container that is already gone is fine: its volume and image still go.
-        if [[ -z "$force" ]] || docker ps -a --format '{{.Names}}' 2>/dev/null </dev/null | grep -qxF "$name"; then
-            die "could not remove container $name"
+    # Whether the container existed: read by the check (0, 1), not listed (3), or the check could not run (2).
+    existed=1
+    if [[ "$rc" -eq 3 ]]; then
+        existed=0
+    elif [[ "$rc" -eq 2 ]]; then
+        # A listing that fails leaves it unknown, treated as existing.
+        if listing=$(docker ps -a --format '{{.Names}}' 2>/dev/null </dev/null); then
+            grep -qxF "$name" <<<"$listing" || existed=0
         fi
     fi
-    docker volume rm "$name" >/dev/null 2>&1 </dev/null || die "removed container $name but could not remove volume $name"
-    docker rmi "codeo-dev:$name" >/dev/null 2>&1 </dev/null ||
+    keep_volume=""
+    if [[ "$rc" -ne 3 ]]; then
+        mount=$(workspace_mount "$name") || mount=""
+        case "$mount" in
+            volume) ;;
+            other)
+                if [[ -n "$force" ]]; then
+                    echo "--force: what /workspaces of $name mounts was not checked as the volume; removing the volume anyway"
+                else
+                    keep_volume=1
+                fi
+                ;;
+            *)
+                [[ -n "$force" ]] ||
+                    die "could not check what /workspaces of $name mounts; nothing removed (to remove it anyway: docker rm -f $name; docker volume rm $name)"
+                echo "--force: could not check what /workspaces of $name mounts; removing the volume anyway"
+                ;;
+        esac
+    fi
+    if docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
+        # docker rm -f of a missing container exits 0: count it only when it was known to exist.
+        [[ "$existed" -eq 0 ]] || removed_container=1
+    # With --force a container that is already gone is fine: its volume and image still go.
+    elif [[ -z "$force" ]]; then
+        die "could not remove container $name"
+    else
+        # A listing that fails proves nothing; only one that succeeds without the name means it is gone.
+        listing=$(docker ps -a --format '{{.Names}}' 2>/dev/null </dev/null) || die "could not remove container $name"
+        ! grep -qxF "$name" <<<"$listing" || die "could not remove container $name"
+    fi
+    if [[ -n "$keep_volume" ]]; then
+        # A bind-mounted container usually has no volume of its name: say nothing then.
+        if docker volume inspect "$name" >/dev/null 2>&1 </dev/null; then
+            echo "kept volume $name: /workspaces is not mounted from it; to remove it: docker volume rm $name"
+        fi
+    elif docker volume rm "$name" >/dev/null 2>&1 </dev/null; then
+        removed_volume=1
+    elif docker volume inspect "$name" >/dev/null 2>&1 </dev/null; then
+        # The volume exists and would not go.
+        if [[ -n "$removed_container" ]]; then
+            die "removed container $name but could not remove volume $name"
+        fi
+        die "could not remove volume $name"
+    fi
+    if docker rmi "codeo-dev:$name" >/dev/null 2>&1 </dev/null; then
+        removed_image=1
+    elif [[ -n "$removed_container$removed_volume" ]]; then
         echo "codeo: warning: could not remove image codeo-dev:$name" >&2
-    echo "removed $name (the Claude Code login on its volume is gone with it)"
+    fi
+    if [[ -n "$removed_container" && -n "$removed_volume" ]]; then
+        echo "removed $name (the Claude Code login on its volume is gone with it)"
+        return 0
+    fi
+    [[ -n "$removed_container$removed_volume$removed_image" ]] || die "nothing named $name to remove"
+    [[ -z "$removed_container" ]] || went+=("container $name")
+    [[ -z "$removed_volume" ]] || went+=("volume $name")
+    [[ -z "$removed_image" ]] || went+=("image codeo-dev:$name")
+    printf -v report '%s, ' "${went[@]}"
+    echo "removed ${report%, }"
 }
 
 # upd_tmp and upd_new: what cmd_update's cleanup removes.
@@ -582,6 +708,9 @@ cmd_update() {
 }
 
 main() {
+    abs_path_env CODEO_CONTEXT always
+    abs_path_env CODEO_SBX_IMAGE always
+    abs_path_env CODEO_SBX slash
     [[ $# -gt 0 ]] || usage
     local cmd=$1
     shift
