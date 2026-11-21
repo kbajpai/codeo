@@ -1,4 +1,4 @@
-# Issue (new) — issue
+# Issue #154 — issue
 
 Called from `/codeo:triage` (run 15, 2026-11-21, Q1 and Q2): the engineer answered *file it* for both and asked to consolidate them into one issue. Problem as understood: #149 (PR #153) and #145 (PR #150) merged with non-blocking QC findings recorded for triage in their archived dossiers (`.codeo/done/149/qc.md`, `.codeo/done/145/qc.md`); none has an issue. No open issue covers them (`issue search` found only #146, the release).
 
@@ -6,7 +6,7 @@ Re-checked against `origin/main` (aa135d5) before drafting: F12, F13, F14, F15, 
 
 ## Questions
 
-1. **Is F7 (a refused `rm` leaves a stopped container started) in this issue or its own?** It is the only behaviour defect here: with `docker inspect` failing and no `--force`, the refusal is known before the check, yet a stopped container is started, fetched and read, then left running (`qc.md` F7, "pre-existing", never reproduced). Everything else is wording or a test pin. I drafted it in, as one acceptance criterion that starts with reproducing it. Options: *keep it in* · *its own issue* · *drop it*.
+1. **Answered: keep it in.** Is F7 (a refused `rm` leaves a stopped container started) in this issue or its own?** It is the only behaviour defect here: with `docker inspect` failing and no `--force`, the refusal is known before the check, yet a stopped container is started, fetched and read, then left running (`qc.md` F7, "pre-existing", never reproduced). Everything else is wording or a test pin. I drafted it in, as one acceptance criterion that starts with reproducing it. Options: *keep it in* · *its own issue* · *drop it*.
 
 ## Draft
 
@@ -62,6 +62,8 @@ Re-checked against `origin/main` (aa135d5) before drafting: F12, F13, F14, F15, 
 
 ## Outcome
 
+Filed as #154 (https://github.com/kbajpai/codeo/issues/154), label `bug`.
+
 ## Log
 
-2026-11-21 — draft written, Q1 open
+2026-11-21 — Q1 answered (keep F7 in), approved, filed as #154
