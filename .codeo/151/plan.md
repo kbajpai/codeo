@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q6 answered (all recommendations accepted, 2026-11-21). The plan is drafted in `.codeo/151/plan-draft.md` and awaits the engineer's approval; the footprint is checked against other workflows and committed after approval, and `## Outcome` is written after that.
+Q1-Q6 answered. The plan is approved and written to `docs/plans/2026-11-21-install-one-command-151.md` (unstaged). `## Outcome` is written; the hand-off is `/codeo:implement`.
 
 ## Questions
 
@@ -101,6 +101,25 @@ In this issue's container, as recommended (engineer, in the conversation, 2026-1
 
 `engineering:system-design` and `engineering:architecture` are not available as skills in this session; their structure is applied directly in the draft.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-21-install-one-command-151.md` (approved by the engineer 2026-11-21; left unstaged for review). **Shape:** a scoped, executable plan of eight tasks under `$PLANS`, with a Mermaid flowchart; no standing reference doc, because `README.md` is the documentation.
+
+**Decisions (Q1-Q6, all recommendations accepted):**
+- `install.sh` at the repository root, fetched from `main` with `curl | bash`; rejected: attaching it to each release (a new release-checklist step, out of scope).
+- The same command replaces another installed version (checks the tag exists, removes and re-adds the marketplace, reinstalls where codeo was); rejected: replace only with a tag, and never replace.
+- `--scope project` declares and enables both codeo (pinned to the tag) and `superpowers` in the project's `.claude/settings.json`; rejected: codeo only.
+- The README's first-workflow section comes from a finished issue's archived dossier, with real captured output for shell commands; rejected: a scratch GitHub repository taken through a whole workflow.
+- Clean-machine checks run in this issue's container under an empty `CLAUDE_CONFIG_DIR`; the trust-prompt check is the engineer's, typed in the container's terminal. No `Runs on:` task, no shell question.
+- `CONTRIBUTING.md` at the root; the three named sections and *Dev container* move to it word for word.
+- Calls made without a question: the latest release is the highest `vX.Y.Z` from `git ls-remote --tags`; no uninstall option; `scripts/doctor.sh` and `.codeo/config.json` are not changed (`scope.sh` runs every suite for a path no suite lists).
+
+**Documentation the plan changes:** `README.md` (rewritten) and `CONTRIBUTING.md` (new), both Task 6; `CHANGELOG.md`, Task 7. `.devcontainer/README.md`, `.sbx/README.md`, `docs/` and the skills are unchanged. No wiki module.
+
+**Intake questions resolved:** where the one command lives and how it is fetched (Q1: `install.sh` at the root, served from `raw.githubusercontent.com`). Whether codeo can be listed in a public Claude plugin directory stays open and is not a criterion.
+
+**Other workflows:** #149 and #138 were at `init` with no footprint; `overlap.sh` printed nothing. No exclusive resource, so no lock was taken.
+
 ### Footprint
 
 ```
@@ -110,11 +129,9 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 
 - 2026-11-21 — Q1-Q6 raised · cost: 3m · fable-5-2 89k in + 764k cached / 13k out
 - 2026-11-21 — Q1-Q6 answered, plan drafted for review · cost: 9m · fable-5-2 + sonnet-5-5
+- 2026-11-21 — planned: docs/plans/2026-11-21-install-one-command-151.md · cost: 49m · fable-5-2 98k in + 1.1M cached / 19k out · sonnet-5-5 133k in + 860k cached / 30k out
