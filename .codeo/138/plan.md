@@ -190,9 +190,9 @@ sequenced:  none
 ## Log
 
 - 2026-11-21 — Q1-Q4 raised; nothing drafted · cost: counted in the planned line later
-- 2026-11-21 — Q1, Q2, Q4 recorded from the conversation; Q3 unclear, restated as Q6; Q5-Q6 raised; nothing drafted
-- 2026-11-21 — Q6 recorded (d); the probe output named for Q5 was not in the message, Q5 stays open; nothing drafted
-- 2026-11-21 — Q5 recorded from the pasted probe (push ok, delete 403, login kbajpai); Q7 raised (force-push over an existing branch); nothing drafted
-- 2026-11-21 — Q7 recorded (force-push accepted); footprint written; overlap.sh found #149 and #151, Q8-Q9 raised; nothing drafted
-- 2026-11-21 — Q8, Q9 recorded (proceed and coordinate); draft written to plan-draft.md and presented for review; engineering:system-design and engineering:architecture not installed, their structure applied directly
+- 2026-11-21 — Q1, Q2, Q4 recorded from the conversation; Q3 unclear, restated as Q6; Q5-Q6 raised; nothing drafted · cost: counted in the planned line below
+- 2026-11-21 — Q6 recorded (d); the probe output named for Q5 was not in the message, Q5 stays open; nothing drafted · cost: counted in the planned line below
+- 2026-11-21 — Q5 recorded from the pasted probe (push ok, delete 403, login kbajpai); Q7 raised (force-push over an existing branch); nothing drafted · cost: counted in the planned line below
+- 2026-11-21 — Q7 recorded (force-push accepted); footprint written; overlap.sh found #149 and #151, Q8-Q9 raised; nothing drafted · cost: counted in the planned line below
+- 2026-11-21 — Q8, Q9 recorded (proceed and coordinate); draft written to plan-draft.md and presented for review; engineering:system-design and engineering:architecture not installed, their structure applied directly · cost: counted in the planned line below
 - 2026-11-21 — planned: docs/plans/2026-11-21-live-signal-web-session-138.md · cost: 82m · fable-5-2 86k in + 802k cached / 6k out · sonnet-5-5 230k in + 4.7M cached / 56k out · no /codeo:issue filed; engineering:system-design and engineering:architecture unavailable
