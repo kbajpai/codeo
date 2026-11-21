@@ -52,7 +52,15 @@ must_contain "a live abandon expects Backlog or Ready" '| dossier at `.codeo/<N>
 must_contain "ready is not a mismatch for a live abandon" 'Ready is not a mismatch for a live abandon'
 must_contain "quiet resume names what waits shows" 'names what its `waits:` line shows'
 must_contain "resume for an engineer wait" '`engineer — …` names the dossier files and question numbers to answer'
-must_contain "resume for a review wait" '`review — dossier archived` names the pull request awaiting review'
+must_contain "resume for an archived dossier says what the state is" '`review — dossier archived` means the dossier is archived and its archive is not on the base branch yet'
+must_contain "resume with a pull request names it" 'names that pull request to review'
+must_contain "resume with none names close" 'names `/codeo:close` in that issue'"'"'s checkout'
+if grep -qF -- 'names the pull request awaiting review' "$skill"; then
+    fail "resume must not claim a pull request is always awaiting review"
+fi
+must_contain "resume on an unassigned workflow stops nothing" 'Answering *resume* names the step and stops nothing'
+grep -qF -- 'Answering *resume* names the step and stops nothing' "$plugin_root/docs/skills.md" ||
+    fail "docs/skills.md does not say resume on an unassigned workflow stops nothing"
 must_contain "resume for nothing known" '`nothing known` names the checkout and quotes the `step:` line'
 must_contain "each fingerprint records the answer" 'recorded against every fingerprint the question carries'
 must_contain "a failed board read is not a mismatch" 'a failed `board.sh status` read is never a mismatch'
