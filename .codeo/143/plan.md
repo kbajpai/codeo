@@ -131,7 +131,7 @@ Not in the issue's list and left alone: F2 (a stopped container's branch is `-`,
 - **B — sequence after #144.** `sequenced:` reads `after #144 — both edit CHANGELOG.md (Q8)`; this plan waits for #144 to merge.
 - **C — re-scope.** Move the changelog edit into a follow-up issue; leaves #143's changelog criterion unmet.
 
-**Answer:**
+**Answer:** A — proceed and coordinate. (Engineer: "go with my picks on Q8 and Q9", 2026-11-21.)
 
 ### Q9 — `glob:CHANGELOG.md` is also in #145's footprint: proceed and coordinate, sequence after #145, or re-scope?
 
@@ -142,7 +142,7 @@ Not in the issue's list and left alone: F2 (a stopped container's branch is `-`,
 - **B — sequence after #145.** `sequenced:` reads `after #145 — both edit CHANGELOG.md (Q9)`; this plan waits for #145 to merge.
 - **C — re-scope.** Move the changelog edit into a follow-up issue; leaves #143's changelog criterion unmet.
 
-**Answer:**
+**Answer:** A — proceed and coordinate. (Engineer: "go with my picks on Q8 and Q9", 2026-11-21.)
 
 ## Notes
 
