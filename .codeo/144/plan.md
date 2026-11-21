@@ -50,6 +50,15 @@ A, my pick, as the engineer chose in the session ("A for both, accept your recom
 - **Shape (step 5).** A scoped, executable plan under `docs/plans/2026-11-21-close-108-leftovers-144.md`; no standing reference doc, since `docs/handoff.md` and `docs/dossier.md` already are the references and the plan gives them documentation tasks. No technology or architecture choice is being made, so `engineering:system-design` and `engineering:architecture` do not apply.
 - **Other workflows in flight (2026-11-21).** #143 (`fix/codeo-host-command-close-leftovers`, at `plan`, waiting on its Q1-Q6) and #145 (`fix/close-102-126-122-leftovers`, at `init`) have no footprint and no changed files yet, so there is nothing to compare; intake noted that #145 will edit `docs/handoff.md` and `skills/triage/SKILL.md`. The footprint is checked again with `overlap.sh` before the outcome is written.
 
+### Footprint
+
+```
+files:      scripts/inflight.sh, scripts/dossier-check.sh, skills/plan/SKILL.md, skills/implement/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, skills/init/SKILL.md, docs/handoff.md, docs/dossier.md, CHANGELOG.md, tests/overlap-stop.test.sh, tests/outcome-heading.test.sh, tests/closing-exits.test.sh, docs/plans/2026-11-21-close-108-leftovers-144.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
