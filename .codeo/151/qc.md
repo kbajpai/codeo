@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 done: Q1-Q2 answered, the pass ran to the end, and the verdict is back to `/codeo:plan` (F1: a run at one scope silently rewrites the other, a design choice the plan did not make; F2-F3: the README's *Uninstalling* section states things `claude` contradicts). Criterion 6 stays the engineer's check at `/codeo:close`.
+Round 1 is written (back to `/codeo:plan`); the plan's round 2 and `implement.md`'s round 2 followed. This is pass 2: the pass ran to step 7 and stopped at step 10 on Q3 (what a replace does to other projects' installs). No round 2 is written until Q3 is answered.
 
 ## Questions
 
@@ -36,6 +36,19 @@ Proceed and coordinate (engineer, in the conversation, 2026-11-21).
 **Answer:**
 Treat it as a close-time check (engineer, in the conversation, 2026-11-21).
 
+### Q3 — A replace drops other projects' installs: say so, or leave it as documented (pass 2, reviewer findings 1 and 2)
+
+**Why it matters:** it decides whether this round can be clear and which way it routes. Both points were reproduced with real `claude` 2.1.325 on a throwaway configuration, and neither is a bug in what round 2's plan asked for; the plan's own constraint says other projects' installs are not reinstalled. They are a surprise the plan did not weigh, in the same class as the one Q7 settled for the current project.
+**What is there now:**
+- *Silent for every project but the current one.* `claude plugin marketplace remove codeo` uninstalls codeo at every scope on the machine. The installer names the dropped install only when the run starts inside the project that owns it. Reproduced: codeo installed at project scope in project A, then a plain `install.sh` run from `~` printed `install: codeo v1.0.6 -> v1.0.7 (user scope)` and no line about project A, and `claude plugin list --json` afterwards shows project A's install gone. Running inside project B, or any `--scope project` run, drops project A's the same way.
+- *An unverified claim in the docs.* `README.md` (*Setting a project up*, *Updating*, *Uninstalling*) and the CHANGELOG bullet say other projects' installs "are offered again by their own committed settings" when their folder is trusted. Nothing in this pass shows that. Reproduced: once the machine's codeo marketplace is at v1.0.7, `claude plugin marketplace add kbajpai/codeo@v1.0.6 --scope project` run in project A fails with `its source doesn't match its extraKnownMarketplaces entry in user or managed settings`; and a folder that was already trusted is not asked again.
+**Options:**
+- *Say so and correct the docs* (recommended). After a replace the installer prints one line per project-scope install it dropped, from `claude plugin list --json`'s `projectPath` (for example `install: codeo is no longer installed for /path/to/projectA (project scope, v1.0.6); run install.sh --scope project there to restore it`); the README and the CHANGELOG drop the "offered again" claim and say this instead. This is new installer behaviour the plan did not specify, so the round goes back to `/codeo:plan`.
+- *Correct the docs only.* The installer is unchanged. The README and the CHANGELOG drop the "offered again" claim and say plainly that a replace drops every project's install on this machine, and that each is restored by running `install.sh --scope project` in it. The round goes back to `/codeo:implement`.
+- *Leave it.* Both stay as documented, the unverified sentence included; recorded as non-blocking findings, and the verdict can be clear. I advise against it: the sentence is the only place an adopter is told what happens to their other projects, and the evidence points against it.
+
+**Answer:**
+
 ## Notes
 
 - `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main` (exit 0).
@@ -43,6 +56,12 @@ Treat it as a close-time check (engineer, in the conversation, 2026-11-21).
 - `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: `.codeo/151/*`, `CHANGELOG.md`, `CONTRIBUTING.md`, `README.md`, `install.sh`).
 - No shared environment, no invariants file, no wiki module; the `invariants-extra` and `wiki-rules` overlays do not exist (exit 3).
 
+
+**Pass 2 (after the round-2 implementation), evidence so far** — the pass stopped at step 10 on Q3, so no round is written yet:
+- `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: merged origin/main (1 commit(s))`, `sync-main: also changed on main: CHANGELOG.md` (the merge, `84de56a`, brought in #149's pull request; `CHANGELOG.md` has no conflict markers and this branch's bullet is intact). `overlap.sh 151` and `overlap.sh --outside 151`: no output. `scope.sh origin/main HEAD`: `suite.shell=true`. Build (`true`): exit 0. `bash tests/run.sh` on the merged tree: `all cases passed`, exit 0.
+- Real runs by this pass (throwaway `CLAUDE_CONFIG_DIR`): fresh `install.sh` printed `install: done - codeo v1.0.7, user scope, superpowers 7.0.2` and a re-run `install: nothing changed - …`; a plain run from `proj/sub` with a committed project-scope install at v1.0.6 printed `install: codeo v1.0.6 -> v1.0.7 (user scope)` and `install: this project's own codeo (project scope, v1.0.6) is no longer installed on this machine; its .claude/settings.json was not changed`, with `git status --short` empty and the file still pinning v1.0.6 (F1 fixed); a `--scope project` run with a user copy at another tag printed the moved line; `claude plugin uninstall codeo@codeo` without `--scope` printed the refusal the README quotes.
+- Moved README sections: `Tests`, `Checking a dossier`, `Replaying finished dossiers` and `Dev container` are byte-identical in `CONTRIBUTING.md` (four `same:` lines against `origin/main:README.md`).
+- Independent review (opus): criteria 1-5 and 8-10 met, 6 correct only when the teammate has no codeo at another tag yet (the README's *Troubleshooting* already covers the source-mismatch error), 7 met with exceptions; its Important findings 1 and 2 are Q3. Findings it rated Minor, to classify when the round is written: the installed check ignores the project's own pin; `README.md` says `claude` refuses a bare `uninstall` in a project, which holds only without a user-scope copy (with both, the user copy is uninstalled); *Your first workflow* does not name the dossier it quotes; "latest release" is the highest tag, not a GitHub release; a replace re-enables a user copy that was disabled; `CODEO_TEST_BASH_VERSION` is honoured in production; no check of the bash 3.2 head beyond the version number; a non-JSON line from `claude plugin list --json` aborts without an `install:` line.
 
 ## Outcome
 
@@ -100,3 +119,4 @@ Q1 (#138 also changes `CHANGELOG.md`) answered *proceed and coordinate*; Q2 (cri
 
 - 2026-11-21 — Q1-Q2 raised (overlap with #138 on CHANGELOG.md; criterion 6 is the engineer's) · cost: 0m · opus-5-5 290k in + 333k cached / 1k out
 - 2026-11-21 — Q1-Q2 answered; round 1: build, suite, criteria, documentation, independent review · cost: 39m · opus-5-5 413k in + 3.2M cached / 31k out · sonnet-5-5 36k in + 3.8M cached / 15k out
+- 2026-11-21 — pass 2: Q3 raised (a replace drops other projects' installs; an unverified README/CHANGELOG claim) · cost: 10m · opus-5-5 121k in + 2.8M cached / 29k out · sonnet-5-5 14k in + 5.4M cached / 11k out
