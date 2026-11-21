@@ -632,9 +632,9 @@ t_user_replace_names_another_project_only() {
 
 # dropped_line <path> <scope> <version>: the line a replace prints for a project or local install it dropped.
 dropped_line() {
-    local tail="run install.sh --scope project there to restore it"
-    [[ $2 != local ]] || tail="run claude plugin install codeo@codeo --scope local there to restore it"
-    printf 'install: codeo is no longer installed for %s (%s scope, v%s); its .claude/settings.json was not changed; %s' "$1" "$2" "$3" "$tail"
+    local sfx="" tail="run install.sh --scope project there to restore it"
+    [[ $2 != local ]] || { sfx=.local; tail="run claude plugin install codeo@codeo --scope local there to restore it"; }
+    printf 'install: codeo is no longer installed for %s (%s scope, v%s); its .claude/settings%s.json was not changed; %s' "$1" "$2" "$3" "$sfx" "$tail"
 }
 
 # seed_local <version> <projectPath>: a local-scope codeo entry.

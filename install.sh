@@ -255,10 +255,12 @@ dropped_installs() {
     if [[ $scope == project ]]; then
         top=$(project_root || true)
     fi
+    # kept: codeo entries at project or local scope, except (on a project-scope run) the current project, which
+    # the run reinstalls; user-scope entries are not dropped installs.
     printf '%s\n' "$list" | jq -r --arg top "$top" '
         .[] | select(.id == "codeo@codeo" and (.scope == "project" or .scope == "local")
             and (.scope != "project" or $top == "" or .projectPath != $top))
-        | "codeo is no longer installed for \(.projectPath) (\(.scope) scope, v\(.version)); its .claude/settings.json was not changed; "
+        | "codeo is no longer installed for \(.projectPath) (\(.scope) scope, v\(.version)); its .claude/settings\(if .scope == "local" then ".local" else "" end).json was not changed; "
           + (if .scope == "local" then "run claude plugin install codeo@codeo --scope local there to restore it"
              else "run install.sh --scope project there to restore it" end)'
 }
