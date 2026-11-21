@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 stopped at step 2: `overlap.sh 149` printed four overlaps with #138, raised as Q1 and Q2. No build, suite, criterion or review has run yet; the pass resumes from step 2 once they are answered.
+Round 1 done: back to `/codeo:implement`. One blocking finding (F1: the home-directory stop prints twice for `codeo issue <N>`, so `.devcontainer/README.md:98` contradicts the code); the other findings are non-blocking. Build and the full suite pass. Next step: `/codeo:implement`, then `/codeo:qc` again from step 0.
 
 ## Questions
 
@@ -30,25 +30,54 @@ Proceed and coordinate. (Engineer: "go with your picks", 2026-11-21.)
 
 ## Notes
 
-Step 2 output so far:
-
-```
-sync-main: the branch already contains origin/main
-scope: suite shell needed for unclassified paths:
-  .codeo/149/implement.md
-  .codeo/149/init.md
-  .codeo/149/issue.md
-  .codeo/149/plan.md
-  CHANGELOG.md
-suite.shell=true
-```
-
-`overlap.sh --outside 149` printed nothing (exit 0). `overlay.sh qc invariants-extra` and `qc wiki-rules`: exit 3, none. No invariants file, no shared environment, no `wiki` module.
+None beyond the round.
 
 ## Outcome
 
-_Pending — written at the hand-off._
+### Round 1 — 2026-11-21
+
+Q1-Q2 (overlaps with #138 on `CHANGELOG.md` and `docs/handoff.md`) were answered *proceed and coordinate*; `git merge-tree --write-tree origin/fix/live-session-signal-does-not HEAD` exits 0, so the branches merge without a conflict today.
+
+**Step 2, scope.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`. `overlap.sh 149` prints nothing now. `overlap.sh --outside 149` prints nothing (exit 0): every changed path is inside the footprint. `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: the dossiers and `CHANGELOG.md`). Diff `956a86f..e7e88b9`: 22 files, 863 insertions, 63 deletions; `scripts/` unchanged, `.sbx/codeo-sandbox.sh` unchanged. No invariants file, no shared environment, no `wiki` module, no overlay rules (`qc invariants-extra` and `qc wiki-rules` exit 3), so step 9 does not apply.
+
+**Step 3, build.** The `shell` suite's `build` is `true`: exit 0.
+
+**Step 4, suite.** `bash tests/run.sh` (the `shell` suite's `test`, whole): `all cases passed`, `suite-exit=0`. The Opus reviewer briefly mutated `scripts/inflight.sh` and `scripts/qc-verdict.sh` while this run was going and restored both; to rule out a read of a mutated copy, `bash tests/run.sh outcome-heading`, `inflight` and `qc-verdict` were re-run on the clean tree afterwards: each `all cases passed`, and `git status --short` is empty.
+
+**Step 5, criteria** (the test or line that settles each):
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | With `--force`, none of the three F13 outputs is followed by the `sbx rm --force` hint; a test fails if it returns | met | `t_rm_sandbox_force_gone` (`tests/codeo-command.test.sh:974`) covers `no sandbox`, both `removed …, but could not … refs` lines and a second-column row; `.devcontainer/codeo:576-580` prints the hint only when `sbx ls` lists the sandbox or cannot list. The reviewer ran the new test file against the base `.devcontainer/codeo` and it failed there. See F2 for the listing-failure case. |
+| 2 | `CODEO_HOME=rel codeo rm <N> --sandbox` completes, with a test | met | `.devcontainer/codeo:728` `abs_path_env CODEO_HOME always`; `t_relative_codeo_home_rm` (`:1615`), which failed on the base code with `mktemp … home/home/.rm-err.*` |
+| 3 | A `rm` that refuses without `--force` does not run `docker restart` first | met | `.devcontainer/codeo:589-591` and `:516`; `t_rm_inspect_fails_no_restart` (`:1798`) and `t_rm_container_clean`'s call order. The README says the restart can still precede a later refusal (second read, restart failure, `docker rm`). |
+| 4 | No README or help sentence about the script's own message, the home-directory stop or the failed-listing exit contradicts the code; the flowchart matches the prose or says it is partial | not met | F1: `.devcontainer/README.md:98` says the stop is "one line", and `codeo issue <N>` with no kind flag prints it twice (reproduced below). F3 and F4 also leave README text out of step with the flowchart and the restart paragraph. The script-message (F12) and failed-listing (F16) sentences are true against the code. |
+| 5 | The two skill sentences under #144 F4 sit after "The step stops until it is answered" | met | `skills/implement/SKILL.md:89-93`, `skills/close/SKILL.md:220-225`; `must_precede` at `tests/implement-skill.test.sh:115` and `tests/close-skill.test.sh:443` |
+| 6 | `qc-verdict.sh:134` is pinned; each #144 F5 item done or dismissed in writing | met | `qc_verdict_replan` (`tests/outcome-heading.test.sh:192`); F5a `skills/init/SKILL.md:352` pinned at `tests/init-skill.test.sh:54`; F5b seven places, `grep -c 'with or without an'`: plan 2, implement 1, qc 2, close 1, handoff 1, pinned by `tests/overlap-stop.test.sh`; F5c `inflight_send_back` varies `close.md` alone; F5d dismissed in writing in `plan.md` and `implement.md` |
+| 7 | `bash tests/run.sh` ends `all cases passed` | met | this pass's run, quoted under step 4 |
+
+**Reproduction of F1** (a `HOME` holding `codeo/.git`, `CODEO_HOME` unset, stubs-free): `codeo issue 5` prints `codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in` twice, exit 1; `codeo issue 5 --container`, `list`, `rm 5 --sandbox`, `shell 5` and `default` print it once. The base code (`956a86f`) prints it twice for `issue 5` too.
+
+**Step 6, documentation.** Pages the diff changes: `.devcontainer/README.md`, `.sbx/README.md`, the `codeo help` text, the five skill pages and `docs/handoff.md`, `CHANGELOG.md`. They are present tense and carry no issue numbers (`grep` for `#14` and `#149` in both READMEs finds nothing). The plan names no page the diff left untouched. Findings F1, F3, F4, F6 and F7 are documentation findings.
+
+**Step 7, independent review** (Opus, given the criteria and the diff only). It ran the new tests against the base code and each new test failed there; it mutated `qc-verdict.sh:134` and `inflight.sh` `close_send_back` and the new pins failed. Its verdict: ready to merge with fixes; its one Critical is F1.
+
+**Findings**
+
+- **F1 — blocking — `/codeo:implement`'s.** `.devcontainer/README.md:98` says `codeo` "stops with one line" when `~/codeo` is a git checkout and `CODEO_HOME` is unset, and criterion 4 requires no sentence about this stop to contradict the code. `codeo issue <N>` without a kind flag prints the line twice: `cmd_issue` (`.devcontainer/codeo`, `kind=${kind_flag:-$(saved_default)}`) runs `saved_default`, whose `home_dir` is inside a command substitution; its `die` ends only the subshell (the comment at `home_dir`, `:53`, says so), and `ensure_home` then dies with the same line. Root cause: callers that assign `$(home_dir)` or `$(saved_default)` do not stop on a refused home directory. It predates this change (the base code prints it twice), but this change rewrote the sentence and the criterion forbids the contradiction. `t_home_checkout_collision` (`tests/codeo-command.test.sh:1557`) matches `issue 5`'s stderr with a prefix glob, so it cannot see a second line. The fix is the implementer's and inside the plan's footprint: stop before `saved_default` (`home_dir >/dev/null` or `ensure_home` first, as `cmd_list` does), and make the test compare the whole stderr; the alternative is to correct the sentence, and the criterion accepts either.
+- **F2 — non-blocking — `/codeo:plan`'s.** `.devcontainer/codeo:576-580`: after `no sandbox codeo-<N>` or `removed …, but could not … refs`, the `--force` hint still prints when `sbx ls` cannot be run or fails just after, so criterion 1's "none of the three" holds only while `sbx ls` works. The plan's Q3 (answered A, by the engineer) chose that an unknown state keeps the hint, and the README says "(or cannot list)". Recorded, not a defect of the code against the plan.
+- **F3 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md` flowchart (*Removing a finished container*) has no failure edges out of the `docker rm -f` / `volume rm` node, while the prose says a failed container or volume removal stops with an error. Plan Q5 chose "complete it", so the chart should show them or the README should say it omits them. Parked since `implement.md`.
+- **F4 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md:178`: "A container that was running is read a second time" is unqualified, and since this change a running container is read once when `docker inspect` fails without `--force` (the next paragraph says so). Qualify the sentence.
+- **F5 — non-blocking — `/codeo:implement`'s.** `.sbx/README.md:78` says the `--force` hint is left out when `sbx ls` no longer lists the sandbox, and does not say it prints when `sbx ls` cannot list, which `.devcontainer/README.md` does.
+- **F6 — non-blocking — `/codeo:implement`'s.** `.devcontainer/README.md:215`'s list of refusals that name no command still omits `could not list sandboxes with <sbx>` (`.sbx/codeo-sandbox.sh:59`) and `no sandbox codeo-<N>` (`:380`); the sentence does not claim to be exhaustive, but commit `b2c2d7d`'s subject says it lists every one.
+- **F7 — non-blocking — neither's: pre-existing.** With `docker inspect` failing and no `--force`, the refusal is known before the check, yet a stopped container is still started, fetched and read, then left running because `rc` is 0 and `stop_started` does not run. Predates this change; recorded once, not routed.
+- **F8 — non-blocking — `/codeo:implement`'s.** Minors already parked in `implement.md`'s `## Outcome`: the flowchart's `H` and edge wording (now fixed by `b2c2d7d`), the new test not asserting the first read ran, `recognised_by_qc_verdict_replan` reading `$crlf` before declaring `local crlf=`, `recognised_by_inflight_send_back` inlining its own `case`.
+
+**Routing.** F1 is blocking and the implementer's; F3-F6 and F8 can ride the same round; F2 is a recorded design choice and F7 is not this change's. Nothing here is the plan's to redo.
+
+**Verdict: back to `/codeo:implement`.**
 
 ## Log
 
 - 2026-11-21 — Q1-Q2 raised (overlaps with #138 on CHANGELOG.md and docs/handoff.md) · cost: 1m · opus-5-5 314k in + 693k cached / 1k out
+- 2026-11-21 — round 1: Q1-Q2 answered, pass run, back to implement (F1 blocking) · cost: 40m · opus-5-5 415k in + 3.5M cached / 25k out · sonnet-5-5 40k in + 4.8M cached / 10k out
