@@ -359,7 +359,7 @@ What stays in each project that used codeo, unless you ran one of the commands a
 
 - `.codeo/`, with the config and every dossier, committed to the project's repository
 - `docs/plans/`, the plans
-- `.claude/settings.json`, which still declares both marketplaces and plugins, so a teammate who trusts the folder is offered them again
+- `.claude/settings.json`, which still declares both marketplaces and plugins
 
 To take codeo out of a project, delete `.codeo/` and `docs/plans/` (or keep the plans), and remove the `codeo` entries from `extraKnownMarketplaces` and `enabledPlugins` in `.claude/settings.json`, then commit.
 
@@ -434,7 +434,7 @@ Adding marketplace…✘ Failed to add marketplace: Cannot add marketplace "code
 
 Run the install command instead, which removes the marketplace and adds it at the tag you ask for (the latest, or the one after `--version`).
 
-**A hand-edited `ref` does not take effect.** After you edit `ref` under `extraKnownMarketplaces.codeo.source` in a project's `.claude/settings.json`, `install.sh --scope project` still installs what the machine's codeo marketplace holds: the installer reads the machine's pin, not the project's file. Run `claude plugin marketplace remove codeo` first (from outside any project, to leave every project's settings file alone; it drops codeo from every project on the machine, so restore each as shown in *Updating*), then `install.sh --scope project` in the project.
+**A hand-edited `ref` does not take effect.** After you edit `ref` under `extraKnownMarketplaces.codeo.source` in a project's `.claude/settings.json`, `install.sh --scope project` still installs what the machine's codeo marketplace holds: the installer reads the machine's pin, not the project's file. Run `claude plugin marketplace remove codeo` first (from outside any project, to leave every project's settings file alone; it drops codeo from every project on the machine, so restore each as shown in *Updating*), then `install.sh --scope project` in the project. The install rewrites `ref` to the latest release; to keep an older one, run `install.sh --scope project --version <tag>` instead.
 
 ## Contributing
 

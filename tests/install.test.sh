@@ -733,7 +733,7 @@ t_user_replace_names_every_dropped_project() {
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     want=$(printf '%s\n%s' "$(dropped_line "$pa" project 1.0.6)" "$(dropped_line "$pb" project 1.0.6)")
     [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'$'\n'"$want"* ]] || fail "stdout: $in_out"
-    [[ $in_out != *"for /x "* && $in_out != *"for $in_dir/home "* ]] || fail "user entry named: $in_out"
+    [[ $(grep -c 'no longer installed for' <<<"$in_out") -eq 2 ]] || fail "want exactly 2 dropped lines, the two projects (the user entry is not named): $in_out"
     ! grep -q -- '--scope project' "$STUB_DIR/calls" || fail "a project-scope call ran: $(cat "$STUB_DIR/calls")"
     cmp -s "$in_dir/before-a" "$pa/.claude/settings.json" || fail "A's file changed"
     cmp -s "$in_dir/before-b" "$pb/.claude/settings.json" || fail "B's file changed"
@@ -828,7 +828,7 @@ t_project_replace_says_the_disabled_user_copy_is_enabled() {
 
 t_nonnumeric_test_bash_version_is_ignored() {
     local v
-    for v in abc 4.x 4 x.3 ""; do
+    for v in abc 4.x x.3 4.3.1 .3 4. " 4.3" " 4.2" ""; do
         in_setup nonnumeric_bash
         printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
         CODEO_TEST_BASH_VERSION=$v in_run
@@ -1531,7 +1531,7 @@ t_readme_install_blocks_match_the_script() {
 t_readme_has_no_offered_again_claim() {
     local f
     for f in README.md CHANGELOG.md; do
-        ! grep -qE 'offered again|are offered' "$repo/$f" || fail "$f still says an install is offered again"
+        ! grep -qE 'offered again|offered them again|are offered' "$repo/$f" || fail "$f still says an install is offered again"
     done
 }
 
