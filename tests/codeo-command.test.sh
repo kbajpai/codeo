@@ -99,6 +99,7 @@ STUB
 #!/bin/bash
 d=${0%/home/*}
 echo "${0##*/} $* pwd=$(pwd)" >>"$d/calls"
+[[ ! -e "$d/stderr_text" ]] || cat "$d/stderr_text" >&2
 exit "$(cat "$d/status" 2>/dev/null || echo 0)"
 STUB
         chmod +x "$cm_home/$n"
@@ -840,11 +841,40 @@ t_rm_sandbox() {
     cm_run rm 5 --sandbox
     [[ "$cm_status" -eq 3 ]] || fail "exit $cm_status, want 3"
     expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
-    grep -qxF 'codeo: to remove it anyway: sbx rm --force codeo-5' <<<"$cm_err" || fail "no by-hand hint: $cm_err"
+    grep -qF 'codeo rm 5 --force removes it anyway' <<<"$cm_err" || fail "no --force hint: $cm_err"
+    ! grep -qF 'sbx rm --force' <<<"$cm_err" || fail "names sbx rm --force without --force: $cm_err"
     cm_setup "$current-3"
     cm_run rm 5 --sandbox
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
     ! grep -q 'to remove it anyway' <<<"$cm_err" || fail "hint on success: $cm_err"
+    ! grep -q 'removes it anyway' <<<"$cm_err" || fail "hint on success: $cm_err"
+}
+
+t_rm_sandbox_hints() {
+    local last want n
+    cm_setup "$current"
+    echo 1 >"$cm_dir/status"
+    cm_run rm 5 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    last=$(tail -n 1 "$cm_dir/err")
+    want='codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-5'
+    [[ "$last" == "$want" ]] || fail "last stderr line '$last', want '$want'"
+    cm_setup "$current-2"
+    echo 1 >"$cm_dir/status"
+    printf 'could not read it\nto remove it anyway run: sbx rm --force codeo-5\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    n=$(grep -c 'sbx rm --force codeo-5' "$cm_dir/err" || true)
+    [[ "$n" -eq 1 ]] || fail "sbx rm --force line count $n, want 1: $cm_err"
+    grep -qxF 'to remove it anyway run: sbx rm --force codeo-5' <<<"$cm_err" || fail "script's own line lost: $cm_err"
+    grep -qxF 'could not read it' <<<"$cm_err" || fail "script's stderr not replayed: $cm_err"
+    cm_setup "$current-3"
+    echo 1 >"$cm_dir/status"
+    printf 'could not read it\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -qxF 'could not read it' <<<"$cm_err" || fail "script's stderr not replayed: $cm_err"
+    grep -qF "$cm_home/codeo-5" <<<"$cm_err" || fail "hint lacks the clone directory: $cm_err"
 }
 
 t_rm_sandbox_force() {
@@ -1513,6 +1543,7 @@ cases=(
     t_list_extra_args_usage
     t_host_kinds_exact_name
     t_rm_sandbox
+    t_rm_sandbox_hints
     t_rm_sandbox_force
     t_rm_usage
     t_rm_container_clean

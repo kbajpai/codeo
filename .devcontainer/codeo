@@ -519,12 +519,21 @@ cmd_rm() {
     kind=$(detect_kind "$n" "$kind_flag")
     if [[ "$kind" == sandbox ]]; then
         ensure_home
-        # Not run_script: it execs, and a failure needs the by-hand hint after the script's own output.
+        # Not run_script: it execs, and a failure needs a hint after the script's own output. The script's
+        # stderr is kept in a file and replayed, so the hint can tell whether it already named sbx rm --force.
+        local errf
         cd "$(home_dir)"
-        bash "$(home_dir)/codeo-sandbox.sh" end "$n" ${force:+--force} || rc=$?
+        errf=$(mktemp "$(home_dir)/.rm-err.XXXXXX")
+        bash "$(home_dir)/codeo-sandbox.sh" end "$n" ${force:+--force} 2>"$errf" || rc=$?
+        cat "$errf" >&2
         if [[ "$rc" -ne 0 ]]; then
-            echo "codeo: to remove it anyway: sbx rm --force codeo-$n" >&2
+            if [[ -z "$force" ]]; then
+                echo "codeo: its commits are kept in $(home_dir)/codeo-$n; codeo rm $n --force removes it anyway" >&2
+            elif ! grep -qF "rm --force codeo-$n" "$errf"; then
+                echo "codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-$n" >&2
+            fi
         fi
+        rm -f "$errf"
         exit "$rc"
     fi
     name="codeo-$n"
