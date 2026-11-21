@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). Both are answered *proceed and coordinate*. The plan is drafted to `.codeo/138/plan-draft.md` (not committed) and waits for the engineer's approval at the review gate; the real plan file is written only after it. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: review the draft and approve it or ask for changes, then re-invoke `/codeo:plan`.
+Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q1-Q7 are answered. The probe showed that a web session can create a branch and force-push a new parentless commit over it, that deleting is refused, and that `gh api user` returns the login, so the design is a signal branch `codeo-live/<issue>/<machine>` that expires rather than being cleared. The footprint is recorded under `## Notes`, and `overlap.sh` found two overlaps, with #149 and #151 (Q8, Q9, open). Both are answered *proceed and coordinate*. The engineer approved the draft and the plan is written to `docs/plans/2026-11-21-live-signal-web-session-138.md` (unstaged, for review); the outcome is written and nothing is open. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: review and commit the plan, then `/codeo:implement`, then re-invoke `/codeo:plan`.
 
 ## Questions
 
@@ -148,14 +148,7 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 
 ## Notes
 
-### Footprint
-
-```
-files:      .claude/settings.json, scripts/live.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/triage-skill.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
+**Later work, not in this plan:** the `codeo-live/<issue>/web-<id>` branches a web session leaves on origin (the proxy refuses to delete them) need removing, by hand or by a later change; to file with `/codeo:issue` in the home checkout, which refuses here.
 
 **Calls made without a question** (continued): `gh api user` works from a web session (Q5), so the issue's open item "whether `GET /user` is refused there" is answered: it is not, in that run. Q4's answer stays as decided; the assignee fallback then only matters where it is refused, and it costs one read.
 
@@ -170,7 +163,29 @@ sequenced:  none
 
 ## Outcome
 
-_Pending — written at the hand-off._
+**Plan:** `docs/plans/2026-11-21-live-signal-web-session-138.md` — 7 tasks, unstaged for review. **Shape:** a plan under `docs/plans/` only (the `REQUIRED SUB-SKILL` banner, Goal / Architecture / Tech Stack / Spec / Global Constraints / Review Focus, checkbox tasks), with a decision record and a sequence diagram folded in. No separate reference doc: `docs/handoff.md` carries what outlives the work. `engineering:system-design` and `engineering:architecture` were not installed; their structure (Context / Decision / Options / Trade-offs / Action items) is applied directly in the plan's decision record.
+
+**What was decided** (Q1-Q9, from the probe in a hosted session):
+- **Route (Q1 c, Q5, Q7).** A web session publishes to `refs/heads/codeo-live/<issue>/<machine>`: the probe showed a branch push and a force-push of a new parentless commit are accepted and a delete is refused (HTTP 403). Rejected: no signal from a web session; a chain of fast-forward signal commits (needed only had the force-push been refused).
+- **Clearing.** A web signal is never deleted; it expires after the TTL, and `clear` is a no-op for it. The stale branches are later work (see `## Notes`).
+- **Trigger (Q2 a).** Hooks in this repository's `.claude/settings.json`, active only when `CLAUDE_CODE_REMOTE=true`. Rejected: relying on `enabledPlugins` (cloud sessions do not install it) and documentation only. Beyond the question: no `SessionEnd` entry, since there is nothing to delete.
+- **Lock and session id (Q3, Q6 d).** A `SessionStart` hook runs `lock.sh take web` with `CLAUDE_CODE_REMOTE_SESSION_ID` minus its `cse_` prefix; `live.sh` also reads that variable when the lock says `session: unknown`.
+- **User (Q4 a).** `CODEO_GITHUB_LOGIN`, else `GET /user` (which worked in the probe), else for web the issue's assignee, else `git config user.name`.
+- **Overlaps (Q8, Q9).** #149 on `docs/handoff.md` and `CHANGELOG.md`, #151 on `CHANGELOG.md`: proceed and coordinate for both; Tasks 5 and 6 run `sync-main.sh` first.
+- **Tasks.** Tasks 1-6 are proved by `bash tests/run.sh`; Task 7, the hosted-session check, is `Runs on: the engineer's host` and last. No task needs a lease: no shared environment is configured.
+
+**Documentation the plan changes:** `docs/handoff.md` → *Who is working right now* (and its diagram) and `CHANGELOG.md` (one bullet); `skills/triage/SKILL.md` gains a clause (code, not documentation). No wiki pages.
+
+**Intake question resolved:** `GET /user` is not refused in a web session (Q5: `gh api user` returned `kbajpai`); whether a web session's start script passes a session id stays unknown, which the `SessionStart` hook makes unnecessary.
+
+### Footprint
+
+```
+files:      .claude/settings.json, scripts/live.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/triage-skill.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Log
 
@@ -180,3 +195,4 @@ _Pending — written at the hand-off._
 - 2026-11-21 — Q5 recorded from the pasted probe (push ok, delete 403, login kbajpai); Q7 raised (force-push over an existing branch); nothing drafted
 - 2026-11-21 — Q7 recorded (force-push accepted); footprint written; overlap.sh found #149 and #151, Q8-Q9 raised; nothing drafted
 - 2026-11-21 — Q8, Q9 recorded (proceed and coordinate); draft written to plan-draft.md and presented for review; engineering:system-design and engineering:architecture not installed, their structure applied directly
+- 2026-11-21 — planned: docs/plans/2026-11-21-live-signal-web-session-138.md · cost: 82m · fable-5-2 86k in + 802k cached / 6k out · sonnet-5-5 230k in + 4.7M cached / 56k out · no /codeo:issue filed; engineering:system-design and engineering:architecture unavailable
