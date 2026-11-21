@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1 and Q2 are answered (A and A). The plan is drafted at `.codeo/144/plan-draft.md` (four tasks) and waits for the engineer's approval at the review gate. After approval: the plan is written to `docs/plans/2026-11-21-close-108-leftovers-144.md` (unstaged), the footprint is recorded and checked with `overlap.sh`, and `## Outcome` is written.
+Done. Q1 and Q2 are answered, the plan is approved and written to `docs/plans/2026-11-21-close-108-leftovers-144.md` (unstaged, four tasks), the footprint is recorded and `overlap.sh` found nothing. Next: review and commit the plan, then `/codeo:implement`.
 
 ## Questions
 
@@ -50,6 +50,21 @@ A, my pick, as the engineer chose in the session ("A for both, accept your recom
 - **Shape (step 5).** A scoped, executable plan under `docs/plans/2026-11-21-close-108-leftovers-144.md`; no standing reference doc, since `docs/handoff.md` and `docs/dossier.md` already are the references and the plan gives them documentation tasks. No technology or architecture choice is being made, so `engineering:system-design` and `engineering:architecture` do not apply.
 - **Other workflows in flight (2026-11-21).** #143 (`fix/codeo-host-command-close-leftovers`, at `plan`, waiting on its Q1-Q6) and #145 (`fix/close-102-126-122-leftovers`, at `init`) have no footprint and no changed files yet, so there is nothing to compare; intake noted that #145 will edit `docs/handoff.md` and `skills/triage/SKILL.md`. The footprint is checked again with `overlap.sh` before the outcome is written.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-21-close-108-leftovers-144.md` — a scoped, executable plan (four tasks), approved by the engineer on 2026-11-21 and left unstaged for review. No standing reference doc: `docs/handoff.md` and `docs/dossier.md` are the references and get documentation tasks. No technology or architecture choice was made, so `engineering:system-design` and `engineering:architecture` were not used.
+
+**Decisions.**
+- **Q1 (A): `## Outcome` is matched exactly everywhere** (`/^## Outcome[[:space:]]*$/`). `inflight.sh` and `dossier-check.sh` are anchored (in `section_range` for `Outcome` only); `qc-verdict.sh` is untouched. Rejected: the name-or-name-then-space rule everywhere (B, loosens `qc-verdict.sh`, which the issue puts out of scope) and the prefix everywhere (C, undoes #108). `inflight.sh:205`'s comment is rewritten to say the match is exact.
+- **Q2 (A): `/codeo:init` gets a second closing-block paragraph and a second `docs/handoff.md` row** for a lock taken then a TODO printed: the fix, then `/codeo:plan`. The no-lock paragraph is unchanged and keeps its `lacks '/codeo:plan'` assertions. Rejected: one extended paragraph (B).
+- **F6 (no question):** two fixed sentences in `skills/plan` (twice for the stop sentence), `skills/implement`, `skills/qc` (twice), `skills/close` and `docs/handoff.md`, pinned by a counting test: a non-zero exit with an `overlap: cannot diff …` or `overlap: cannot resolve …` line is a stop to report, and the exit-0 `overlap: skipping #<M>'s changed paths` warning is quoted while the step carries on.
+
+**Documentation the plan changes:** `skills/plan`, `skills/implement`, `skills/qc`, `skills/close`, `skills/init`, `docs/handoff.md`, `docs/dossier.md`, `CHANGELOG.md`. No wiki module. `docs/skills.md`, `docs/skills-inventory.md` and the pinned inventory hash are not edited.
+
+**Intake questions resolved here:** both *Open at intake* items in `init.md` (the heading direction, the command the lock-taken-then-TODO block names).
+
+**Other workflows:** #143 and #145 have no footprint and no changed files; `overlap.sh 144` and `overlap.sh --outside 144` printed nothing. #145 edits `docs/handoff.md` and `skills/triage/SKILL.md`, so it starts after this one.
+
 ### Footprint
 
 ```
@@ -59,11 +74,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-21 — Q1-Q2 raised · cost: 1m · fable-5-2 77k in + 618k cached / 6k out
-- 2026-11-21 — Q1-Q2 answered A/A; plan drafted to .codeo/144/plan-draft.md, awaiting approval · cost: unavailable until the hand-off
+- 2026-11-21 — Q1-Q2 answered A/A; plan drafted to .codeo/144/plan-draft.md, awaiting approval · cost: 5m · fable-5-2 83k in + 1M cached / 11k out · sonnet-5-5 117k in + 1.4M cached / 19k out
+- 2026-11-21 — planned: docs/plans/2026-11-21-close-108-leftovers-144.md · cost: 5m · fable-5-2 83k in + 1M cached / 11k out · sonnet-5-5 117k in + 1.4M cached / 19k out
