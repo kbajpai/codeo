@@ -72,9 +72,10 @@
 #                            starts its line in exactly the documented form ("Deployed revision:
 #                            <x>", …); none is ever required
 #
-# "Written" means the ## Outcome (its heading matched exactly, the other sections' also by a following space) is neither empty nor the "_Pending …_" placeholder. Headings
-# inside a fenced block are not headings, except that "### Footprint" is found wherever it is,
-# as inflight.sh and overlap.sh find it. One known divergence follows: claim.sh --stash-live counts
+# "Written" means the ## Outcome is neither empty nor the "_Pending …_" placeholder. The
+# ## Outcome heading matches exactly; the other headings match by name, or by name then a space.
+# Headings inside a fenced block are not headings, except that "### Footprint" is found wherever it
+# is, as inflight.sh and overlap.sh find it. One known divergence follows: claim.sh --stash-live counts
 # a park heading inside a fenced block too, and park-heading does not judge one there. CRLF files
 # read as LF ones, and a last line with no newline is still a line. Every reader runs to the end
 # of its input (none stops early), so no writer upstream of it dies of SIGPIPE under pipefail.

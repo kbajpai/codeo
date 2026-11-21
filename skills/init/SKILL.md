@@ -338,21 +338,22 @@ is the container the message names.
     checked-out branch that names it and writes `.codeo/active`
     (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → The lock`). It prints
     `lock: took the lock for #<N> on <branch>`; quote that line. It never fails its caller: what
-    it could not do it prints on stderr as a `lock: TODO — …` line; quote each such line. Whether a lock exists is told by the script's
-    own `lock: took the lock for #<N> on <branch>` or `lock already taken: …` line, because some TODOs
-    (a volume or sandbox name it could not read) are printed after the lock was written; the
-    closing block below names the recovery for each case. With the lock taken and no TODO,
-    `/codeo:plan` runs next in this same session, and the closing block
+    it could not do it prints on stderr as a `lock: TODO — …` line; quote each such line. Whether a
+    lock exists is told by the script's own `lock: took the lock for #<N> on <branch>` or
+    `lock already taken: …` line, because some TODOs (a volume or sandbox name it could not read) are
+    printed after the lock was written; the closing block below names the recovery for each case.
+    With the lock taken and no TODO, `/codeo:plan` runs next in this same session, and the closing block
     (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`) has a reviewed plan as its goal and
     `/codeo:plan` as its first step (with a host workflow, the step that opens the checkout it
     names).
 
     After a `lock: TODO — …` line the closing block names the recovery, and which one depends on
     whether the lock was taken, told apart by `lock.sh`'s own `took the lock` or
-    `lock already taken` line. With no lock, in this paragraph:
+    `lock already taken` line. With no lock, end the turn with this paragraph's block and do not
+    hand off to `/codeo:plan`:
 
     **Closing block — no lock:** goal, the lock taken. First step, fix what the `lock: TODO` line
-    says; second step, when no lock was taken, run
+    says; second step, run
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" take local` again (with a
     host workflow, the recovery its text names, such as re-running the devcontainer start script).
     A lock was not taken here, so the plan is not named.
