@@ -1,4 +1,4 @@
-# Issue (new) — issue
+# Issue #145 — issue
 
 Called by `/codeo:triage` run 11 (2026-11-21). The engineer chose *file it* for #102 (F1, F2, F5), #126 (F1-F3) and #122 (F1-F5) and asked for one consolidated issue. Label `bug`. No Issue Type (`issue-types` prints nothing). `issue.priority` is not set in the config, so no priority label.
 
@@ -31,3 +31,4 @@ Questions 1 and 2 are content. Draft recorded below; awaiting approval at the re
 ## Log
 
 2026-11-21 — draft written for review gate
+2026-11-21 — approved and filed as #145
