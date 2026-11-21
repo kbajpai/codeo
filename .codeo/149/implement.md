@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 done, answering `qc.md` round 1: F1 (blocking) and F3-F6 are fixed in `fc8a5ac` and `41e9c3d`, reviewed once by a second subagent (approved, no Critical or Important findings). Next step: `/codeo:qc`, from step 0.
+Round 3 done, answering `qc.md` round 2: F9 (blocking), F10 and F11 are fixed in `8d2b49e`, `7dd063a` and `5d1fd04`, reviewed by a second subagent (one duplicated README sentence found and removed). Next step: `/codeo:qc`, from step 0.
 
 ## Questions
 
@@ -85,7 +85,32 @@ No environment is configured, so no lease was taken, no deploy ran and there is 
 
 No environment is configured: no lease, no deploy, no `Deployed revision:`. No issue was filed.
 
+### Round 3
+
+2026-11-21
+(send-back from qc.md round 2)
+
+`sync-main.sh` found the branch already containing `origin/main`; `overlap.sh` printed nothing. Each QC finding was checked against the code before any work, and all held; F9 was the regression round 2's own F1 fix introduced (`codeo issue 5 --sandbox --rebuild` with `~/codeo` a git checkout and `CODEO_HOME` unset printed the home stop and exited 1, where the base code printed the `--rebuild` usage error and exited 2).
+
+| Finding | Fix | Commit |
+|---|---|---|
+| F9 (blocking) | `cmd_issue` takes the kind from the flag and reads the home directory (a plain statement, so its stop ends the command once) only when no `--container`/`--sandbox` was given, before `saved_default`; the `--rebuild` usage test therefore runs first whenever a flag fixes the kind. `t_home_checkout_collision` gains `issue 5 --sandbox --rebuild` (exit 2, the usage message; it failed with exit 1 on the round 2 code) and `issue 5 --rebuild` (exit 1, the whole stderr is the one stop line). `.devcontainer/README.md` says the one usage error that needs the kind reads the home directory only for the saved default | `8d2b49e` |
+| F10 | the README sentence on what can refuse after the restart names a failed `docker volume rm` | `7dd063a` |
+| F11 | the flowchart gains `H -- "docker rm -f failed" --> Y` | `7dd063a` |
+| (review) | the new README sentence was in the paragraph twice; one copy deleted | `5d1fd04` |
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. The implementer reported the full `bash tests/run.sh` as `all cases passed`; this step did not run it again, and `/codeo:qc` grades it. The F9 matrix with a refused home, run here: `issue 5 --sandbox --rebuild` exits 2 with the usage message; `issue 5`, `issue 5 --sandbox`, `issue 5 --container`, `issue 5 --rebuild` and `issue 5 --container --rebuild` each print the stop once and exit 1.
+
+**Documentation pages changed:** `.devcontainer/README.md` only.
+
+**Deviation:** the scoped re-review of the one-sentence deletion (`5d1fd04`) was a check of the diff and of `grep -o 'The one usage error that needs the kind' .devcontainer/README.md | wc -l` (1), not a second subagent.
+
+**Not done, in writing:** F2 (the plan's Q3 choice) and F7 (a stopped container started and left running before a refusal known up front, which predates this change) stay recorded and unrouted. Parked from earlier rounds and still open: the new `rm` test does not assert the first read ran, `recognised_by_qc_verdict_replan` reads `$crlf` before declaring `local crlf=`, `recognised_by_inflight_send_back` inlines its own `case`, and the README's list of nameless sandbox refusals omits `sbx is not installed: …` (an install action, not a command; the sentence does not claim to be exhaustive).
+
+No environment is configured: no lease, no deploy, no `Deployed revision:`. No issue was filed.
+
 ## Log
 
 - 2026-11-21 — implemented: plan committed, Tasks 1-9 done and reviewed, whole-branch review ready, one fix wave · cost: 103m · sonnet-5-5 823k in + 27.3M cached / 125k out
 - 2026-11-21 — round 2 (send-back from qc.md round 1): F1 and F3-F6 fixed, reviewed · cost: 10m · sonnet-5-5 125k in + 4.3M cached / 17k out
+- 2026-11-21 — round 3 (send-back from qc.md round 2): F9, F10, F11 fixed, reviewed · cost: 12m · sonnet-5-5 92k in + 5.7M cached / 20k out
