@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 is in progress: no blocking finding so far, Q5 open (the hosted check on this build, criteria 1 and 4); no verdict yet. Round 2 is written: **back to `/codeo:plan`** (F12 the lock take undoes a stash or abandon, F13 the docs for other projects). Round 1 (below) was also back to `/codeo:plan`; its state follows. Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
+Round 3 is in progress: no blocking finding so far; Q5 answered (a), waiting for the hosted-session outputs (criteria 1 and 4); no verdict yet. Round 2 is written: **back to `/codeo:plan`** (F12 the lock take undoes a stash or abandon, F13 the docs for other projects). Round 1 (below) was also back to `/codeo:plan`; its state follows. Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
 
 ## Questions
 
@@ -77,7 +77,7 @@ Given by the engineer from hosted sessions on 2026-11-21, over several messages 
 - **(b) Clear without it.** Criteria 1 and 4 read *not yet checkable* in the round, the verdict is clear on the other findings, and the check is run after the pull request opens.
 
 **Answer:**
-_Pending._
+(a) Run the check (engineer, in the conversation, 2026-11-21: "Q5 (a), per your recommendation"; recorded here by the skill). The hosted outputs are still to come: paste them here, or send them in the conversation, and this pass re-runs and writes the verdict.
 
 ## Notes
 
@@ -239,3 +239,4 @@ What that settles: criterion 1 (the workflow shows live in `inflight.sh --live` 
 - 2026-11-21 — round 1 written: back to /codeo:plan (F1, F4, F11 blocking); Task 7 evidence recorded, Q4 answered · cost: 75m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 102k in + 9.2M cached / 33k out
 - 2026-11-21 — round 2 written: back to /codeo:plan (F12, F13 blocking); hosted check not run (stale checkouts) · cost: 7m · opus-5-5 554k in + 2.8M cached / 21k out · sonnet-5-5 31k in + 4.4M cached / 11k out
 - 2026-11-21 — round 3 stopped at step 10: build and whole suite pass (one clock-boundary flake in an untouched test, rerun clean), review in, Q5 raised for the hosted check; no verdict · cost: 12m · opus-5-5 180k in + 2M cached / 16k out · sonnet-5-5 110k in + 823k cached / 3k out
+- 2026-11-21 — Q5 recorded from the conversation (a); waiting for the hosted-session outputs; no verdict · cost: 1m
