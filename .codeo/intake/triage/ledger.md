@@ -170,6 +170,6 @@
 | `qc:126:F5` | #126 hard-coded `.codeo/<N>` in step 6 | deferred | 2026-11-20 |
 | `qc:122:F1-F5` | #122 triage/inflight wording, `unassigned:<N>` re-asked each run | deferred | 2026-11-20 |
 | `qc:131:F1-F4` | #131 sandbox-lock leftovers | deferred | 2026-11-20 |
-| `unclosed:132` | `fix/fix-test-suite-gaps-left` still on origin after PR #140 merged | deferred | 2026-11-20 |
+| `unclosed:132` | `fix/fix-test-suite-gaps-left` no longer on origin; close finished | dismissed — branch deleted from origin | 2026-11-21 |
 | `issue:143` | `codeo` host command leftovers from #133; filed 2026-11-20 | ready | 2026-11-20 |
 | `issue:144` | #108 leftovers (overlap.sh failures, heading rule, init closing block); filed 2026-11-20 | ready | 2026-11-20 |
