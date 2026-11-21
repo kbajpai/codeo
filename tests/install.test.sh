@@ -170,6 +170,7 @@ case "${1:-} ${2:-} ${3:-}" in
     "plugin install "*)
         id=$3
         if [[ -f $STUB_DIR/install-fail-${id%@*} ]]; then echo "stub claude: install failed" >&2; exit 1; fi
+        if [[ -f $STUB_DIR/install-fail-${id%@*}-$scope ]]; then echo "stub claude: install failed" >&2; exit 1; fi
         if [[ $(jq --arg id "$id" --arg s "$scope" '[.[] | select(.id == $id and .scope == $s and ($s != "project" or .projectPath == $p))] | length' "$list" --arg p "$PWD") -gt 0 ]]; then
             echo "$id is already installed"
             exit 0
@@ -792,6 +793,64 @@ t_replace_install_failure_after_add() {
     grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.7' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
 }
 
+t_replace_second_scope_failure_names_both() {
+    local top
+    in_setup replace_second_scope
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_superpowers
+    seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+    seed_codeo 1.0.6
+    seed_project codeo@codeo 1.0.6 "$top"
+    : >"$STUB_DIR/install-fail-codeo-user"
+    in_run --scope project
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == 'install: codeo v1.0.7 is installed at project scope but not at user scope: stub claude: install failed; run this again with --scope user' ]] || fail "stderr: $in_err"
+    [[ $in_err != *'no longer installed'* ]] || fail "stderr: $in_err"
+}
+
+t_replace_first_failure_keeps_no_longer_installed() {
+    in_setup replace_first_failure
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.6
+    : >"$STUB_DIR/install-fail-codeo"
+    in_run
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == 'install: codeo is no longer installed: stub claude: install failed; run this again' ]] || fail "stderr: $in_err"
+    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.7' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+}
+
+t_replace_project_failure_names_the_wiped_user_copy() {
+    local top sw
+    for sw in add-fail install-fail-codeo-project; do
+        in_setup "replace_project_failure_$sw"
+        printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+        project_repo
+        seed_superpowers
+        seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+        seed_codeo 1.0.6
+        seed_project codeo@codeo 1.0.6 "$top"
+        : >"$STUB_DIR/$sw"
+        in_run --scope project
+        [[ $in_rc -eq 1 ]] || fail "$sw: exit $in_rc, want 1"
+        [[ $in_err == 'install: codeo is no longer installed: stub claude: '*'; run this again with --scope project, then once without --scope to restore your user-scope copy' ]] || fail "$sw: stderr: $in_err"
+    done
+}
+
+t_given_tag_other_git_failure_is_cannot_read() {
+    in_setup given_tag_git_failure
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    echo 1 >"$STUB_DIR/ls-fail"
+    in_run --version v1.0.7
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == 'install: cannot read the releases: check the network and try again' ]] || fail "stderr: $in_err"
+    echo 2 >"$STUB_DIR/ls-fail"
+    in_run --version v1.0.7
+    [[ $in_rc -eq 1 ]] || fail "exit 2: exit $in_rc, want 1"
+    [[ $in_err == 'install: release v1.0.7 not found in kbajpai/codeo' ]] || fail "exit 2: stderr: $in_err"
+}
+
 t_remove_failure_reported() {
     in_setup remove_failure
     printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
@@ -1130,6 +1189,10 @@ t_readme_names_only_real_options() {
 }
 
 cases=(
+    t_replace_second_scope_failure_names_both
+    t_replace_first_failure_keeps_no_longer_installed
+    t_replace_project_failure_names_the_wiped_user_copy
+    t_given_tag_other_git_failure_is_cannot_read
     t_latest_is_highest_release
     t_given_tag_checked
     t_bare_version_gets_v

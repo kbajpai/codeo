@@ -106,8 +106,8 @@ resolve_release() {
         remote_git ls-remote --exit-code --tags "$repo_url" "refs/tags/$tag" >/dev/null 2>&1 || rc=$?
         case $rc in
             0) ;;
-            128 | 124) die "cannot read the releases: check the network and try again" ;;
-            *) die "release $tag not found in kbajpai/codeo" ;;
+            2) die "release $tag not found in kbajpai/codeo" ;;
+            *) die "cannot read the releases: check the network and try again" ;;
         esac
     else
         out=$(remote_git ls-remote --tags --refs "$repo_url" 'v*' 2>/dev/null) \
@@ -251,21 +251,22 @@ ensure_superpowers() {
 # scope had no codeo. The remove and user-scope calls run from $HOME, project-scope calls from the
 # project's top level. A failure after the remove leaves codeo uninstalled, and says so.
 replace_codeo() {
-    local old=$1 user_e=$2 proj_e=$3 out proj_v
+    local old=$1 user_e=$2 proj_e=$3 out proj_v restored=
     # Always from $HOME: inside a git repository, remove rewrites its tracked .claude/settings.json.
     claude_step "cannot remove the codeo marketplace" user plugin marketplace remove codeo
     if [[ $scope == project ]]; then
         if [[ -n $user_e ]]; then
-            out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out"
+            out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out" "$user_e" "$restored" user
         fi
-        out=$(claude_at project plugin marketplace add "kbajpai/codeo@$tag" --scope project 2>&1) || replace_failed "$out"
-        out=$(claude_at project plugin install codeo@codeo --scope project 2>&1) || replace_failed "$out"
+        out=$(claude_at project plugin marketplace add "kbajpai/codeo@$tag" --scope project 2>&1) || replace_failed "$out" "$user_e" "$restored" project
+        out=$(claude_at project plugin install codeo@codeo --scope project 2>&1) || replace_failed "$out" "$user_e" "$restored" project
+        restored=project
         if [[ -n $user_e ]]; then
-            out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out"
+            out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out" "$user_e" "$restored" user
         fi
     else
-        out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out"
-        out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out"
+        out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out" "$user_e" "$restored" user
+        out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out" "$user_e" "$restored" user
     fi
     changed=1
     say "codeo $old -> $tag ($scope scope)"
@@ -277,9 +278,19 @@ replace_codeo() {
     fi
 }
 
-# replace_failed <claude output>: codeo was removed and not put back.
+# replace_failed <claude output> <user entry> <restored scopes> <failing scope>: a reinstall failed after
+# the remove. With nothing reinstalled yet codeo is gone everywhere, and a project-scope run that wiped a
+# user-scope copy says how to bring it back; with a scope already reinstalled, says which has it and which
+# does not.
 replace_failed() {
-    die "codeo is no longer installed: $(last_line "$1"); run this again"
+    local line
+    line=$(last_line "$1")
+    if [[ -n $3 ]]; then
+        die "codeo $tag is installed at $3 scope but not at $4 scope: $line; run this again with --scope $4"
+    elif [[ $scope == project && -n $2 ]]; then
+        die "codeo is no longer installed: $line; run this again with --scope project, then once without --scope to restore your user-scope copy"
+    fi
+    die "codeo is no longer installed: $line; run this again"
 }
 
 ensure_codeo() {
