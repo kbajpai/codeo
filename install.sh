@@ -152,11 +152,23 @@ last_line() {
     printf '%s' "${l:-claude failed}"
 }
 
-# claude_step <what> <scope> <args...>: claude_at; a failure dies with "<what>: <claude's last line>".
+# claude_step <what> <scope> <args...>: claude_at, its own output passed through when it succeeds; a
+# failure dies with "<what>: <claude's last line>" (stderr's when it printed any, else stdout's).
 claude_step() {
-    local what=$1 out
+    local what=$1 so se rc=0 line
     shift
-    out=$(claude_at "$@" 2>&1) || die "$what: $(last_line "$out")"
+    so=$(mktemp) se=$(mktemp)
+    claude_at "$@" >"$so" 2>"$se" || rc=$?
+    if [[ $rc -eq 0 ]]; then
+        cat "$so"
+        cat "$se" >&2
+        rm -f "$so" "$se"
+        return 0
+    fi
+    line=$(last_line "$(cat "$se")")
+    [[ -s $se ]] || line=$(last_line "$(cat "$so")")
+    rm -f "$so" "$se"
+    die "$what: $line"
 }
 
 # installed_entry <id> <scope>: prints "<version> <enabled> <id>" of the entry installed at the scope,

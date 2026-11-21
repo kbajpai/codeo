@@ -852,6 +852,7 @@ t_project_after_user_install() {
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls "${project_calls[@]}"
+    [[ $in_out == *"codeo already on disk"* ]] || fail "claude output was hidden: $in_out"
     [[ $in_out == *'install: done - codeo v1.0.7, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
     [[ $(jq '[.[] | select(.scope == "user")] | length' "$STUB_DIR/list.json") -eq 2 ]] || fail "user entries changed: $(cat "$STUB_DIR/list.json")"
     [[ $(jq --arg t "$top" '[.[] | select(.scope == "project" and .projectPath == $t)] | length' "$STUB_DIR/list.json") -eq 2 ]] \
