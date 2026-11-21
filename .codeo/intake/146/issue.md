@@ -1,4 +1,4 @@
-# Issue (new) — issue
+# Issue #146 — issue
 
 Requested by the engineer: "Create an issue to release a new version for codeo".
 
@@ -36,3 +36,4 @@ Body: `body.md` in this directory.
 ## Log
 
 - 2026-11-21 — answers 1-3 received; draft written for the review gate
+- 2026-11-21 — approved and filed as #146
