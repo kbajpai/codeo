@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Done. The plan (`docs/plans/2026-11-21-close-108-leftovers-144.md`) is committed and pushed, all four tasks are built and committed (`a83f7a6`, `463e450`, `4ede844`, `7bf2d2f`), each task review approved, and the build exits 0. Q1 and Q2 are answered (proceed and coordinate). Next: `/codeo:qc`.
+Done. Round 2 (send-back from `qc.md` round 1) is built and committed (`00334e5`): F1 (the outcome-heading test now pins every reader), F3 and F4 are fixed, and the build exits 0. Nothing is open. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -55,8 +55,24 @@ A, proceed and coordinate, as the engineer chose in the session ("A, proceed and
 - **Left to later steps:** the SDD whole-branch review and `finishing-a-development-branch` were not run; `/codeo:qc` is the independent review and `/codeo:close` finishes the branch.
 - **Parked minors (task reviews):** no regression case that `section_range` stays generous for non-Outcome headings (the plan's Review Focus mentioned one); a 150-character comment line near `dossier-check.sh:56`; no missing-row guard in the new `closing-exits` case; a few wide wrapped lines; the qc stop/warn placement is forced by another test.
 
+### Round 2 — 2026-11-21
+(send-back from qc.md round 1)
+
+**Built** (commit `00334e5`, one fix commit; the base branch was already merged in and `overlap.sh 144` printed nothing new):
+- **F1 (blocking) — fixed.** I confirmed it first by reverting `scripts/inflight.sh` lines 180, 209 and 224 one at a time: `outcome-heading` and `inflight` still passed. `tests/outcome-heading.test.sh` now checks seven readers that must all agree for every heading variant: `qc_verdict`, `dossier_check_sections`, `dossier_check_clear`, `inflight_step`, `inflight_verdict`, `inflight_send_back` and `inflight_qc_round`. The `dossier-check` check is split in two so `section_range` and `last_round_clear` are each pinned alone, and the inflight readers read `inflight.sh`s human output because `--tsv` carries only the step column. The implementer reported that reverting each of the seven anchors alone to the prefix match fails `bash tests/run.sh outcome-heading` (9, 9, 6, 6, 6, 6 and 6 failed cases) and that the unmodified tree passes.
+- **F3 (non-blocking) — fixed.** `skills/init/SKILL.md` step 11 says that with no lock the turn ends with the no-lock block and does not hand off to `/codeo:plan`; the lock-taken case still hands off after the fix. The long line at the start of the step is re-flowed.
+- **F4 (non-blocking) — fixed.** The `scripts/dossier-check.sh` comment is re-wrapped, and the redundant "when no lock was taken" is removed from the no-lock paragraph (no test pins it).
+- **F2** is `/codeo:plan`s to amend (the footprint omits `docs/skills.md`); nothing changed here, and it stays answered by Q2.
+
+**Documentation changed:** `skills/init/SKILL.md` (wording); no other page.
+
+**Build result:** the `shell` suite build (`true`) exits 0. The implementer reported the full `bash tests/run.sh` ending `all cases passed`; I re-ran `outcome-heading`, `closing-exits` and `overlap-stop`, each printing `all cases passed`. Grading is `/codeo:qc`s.
+
+**Deviations:** none from the plan; this round answers the QC findings. The fix round was a single implementer dispatch on sonnet with no separate task review, since `/codeo:qc` is the independent review.
+
 ## Log
 
 - 2026-11-21 — Q1 raised (overlap with #145) · cost: 1m · sonnet-5-5 12k in + 773k cached / 3k out
 - 2026-11-21 — Q2 raised after building Tasks 1-4 (overlap with #143, #145) · cost: 40m · sonnet-5-5 342k in + 9.8M cached / 60k out
 - 2026-11-21 — Q2 answered A; tasks 1-4 built, outcome written · cost: 576m · sonnet-5-5 435k in + 10.5M cached / 63k out
+- 2026-11-21 — round 2 (send-back from qc.md round 1): F1, F3, F4 fixed in 00334e5 · cost: 15m · sonnet-5-5 107k in + 3.3M cached / 26k out
