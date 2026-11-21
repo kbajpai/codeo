@@ -59,6 +59,7 @@ cm_setup() {
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 cat "$d/${0##*/}_out" 2>/dev/null || true
 exit 0
 STUB
@@ -70,6 +71,7 @@ STUB
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 for a in "$@"; do
     case "$a" in
         clone) [[ ! -e "$d/slow" ]] || sleep 0.3; mkdir -p "${@: -1}"; exit 0 ;;
@@ -84,6 +86,7 @@ STUB
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 [[ ! -e "$d/curl_fail" ]] || exit 22
 while [[ $# -gt 0 ]]; do
     if [[ "$1" == -o ]]; then
@@ -100,6 +103,7 @@ STUB
 #!/bin/bash
 d=${0%/home/*}
 echo "${0##*/} $* pwd=$(pwd)" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 [[ ! -e "$d/stderr_text" ]] || cat "$d/stderr_text" >&2
 exit "$(cat "$d/status" 2>/dev/null || echo 0)"
 STUB
@@ -110,7 +114,11 @@ STUB
 # cm_run <args...>: run codeo with a clean environment; set cm_status, cm_out and cm_err.
 cm_run() {
     cm_status=0
-    env -i HOME="$cm_dir/h" CODEO_HOME="$cm_home" PATH="$cm_dir/bin:$cm_dir/sys" ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} ${CODEO_SBX:+CODEO_SBX="$CODEO_SBX"} \
+    local -a home_arg=(CODEO_HOME="$cm_home")
+    [[ -z "${cm_nohome:-}" ]] || home_arg=()
+    env -i HOME="$cm_dir/h" "${home_arg[@]}" PATH="$cm_dir/bin:$cm_dir/sys" \
+        ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} ${CODEO_SBX:+CODEO_SBX="$CODEO_SBX"} \
+        ${CODEO_CONTEXT:+CODEO_CONTEXT="$CODEO_CONTEXT"} ${CODEO_SBX_IMAGE:+CODEO_SBX_IMAGE="$CODEO_SBX_IMAGE"} \
         "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
@@ -530,6 +538,7 @@ list_stubs() {
 #!/bin/bash
 d=${0%/bin/*}
 echo "${0##*/} $*" >>"$d/calls"
+echo "ctx=${CODEO_CONTEXT-} img=${CODEO_SBX_IMAGE-} sbx=${CODEO_SBX-}" >"$d/env"
 if [[ -e "$d/docker_fail" ]]; then cat "$d/docker_err" >&2 2>/dev/null; exit 1; fi
 case "$1" in
     ps) cat "$d/docker_out" 2>/dev/null || true ;;
@@ -1321,6 +1330,76 @@ t_update_partial_final_mv() { expect_update_partial 3 "both scripts are new, cod
 
 t_update_usage_extra_args() { expect_usage update now; }
 
+t_relative_overrides_made_absolute() {
+    cm_setup "$current"
+    mkdir -p "$cm_dir/w"
+    cd "$cm_dir/w"
+    CODEO_CONTEXT=./ctx CODEO_SBX_IMAGE=pin cm_run home
+    cd "$repo"
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local e
+    e=$(cat "$cm_dir/env" 2>/dev/null || true)
+    case $e in
+        "ctx=$cm_dir/w/./ctx img=$cm_dir/w/pin "* | "ctx=$cm_dir/w/ctx img=$cm_dir/w/pin "*) ;;
+        *) fail "env is '$e'" ;;
+    esac
+    cm_setup "$current-2"
+    CODEO_SBX=mysbx cm_run home
+    e=$(cat "$cm_dir/env" 2>/dev/null || true)
+    [[ "$e" == *" sbx=mysbx" ]] || fail "bare CODEO_SBX changed: '$e'"
+    mkdir -p "$cm_dir/w"
+    cd "$cm_dir/w"
+    CODEO_SBX=./mysbx cm_run home
+    cd "$repo"
+    e=$(cat "$cm_dir/env" 2>/dev/null || true)
+    case $e in
+        *" sbx=$cm_dir/w/./mysbx" | *" sbx=$cm_dir/w/mysbx") ;;
+        *) fail "relative CODEO_SBX not made absolute: '$e'" ;;
+    esac
+}
+
+# home_untouched: nothing but .git is in the ~/codeo checkout of the collision case.
+home_untouched() {
+    local extra
+    extra=$(ls -A "$cm_dir/h/codeo" | grep -vxF .git || true)
+    [[ -z "$extra" ]] || fail "$1 wrote into ~/codeo: $extra"
+}
+
+t_home_checkout_collision() {
+    cm_setup "$current"
+    mkdir -p "$cm_dir/h/codeo/.git"
+    cm_nohome=1 cm_run list
+    [[ "$cm_status" -eq 1 ]] || fail "list: exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "list: stderr is '$cm_err'"
+    home_untouched list
+    [[ ! -s "$cm_dir/calls" ]] || fail "list made calls: $(cat "$cm_dir/calls")"
+    cm_nohome=1 cm_run issue 5
+    [[ "$cm_status" -eq 1 ]] || fail "issue: exit $cm_status, want 1"
+    [[ "$cm_err" == codeo:\ \~/codeo\ is\ a\ git\ checkout* ]] || fail "issue: stderr is '$cm_err'"
+    home_untouched issue
+    expect_no_script
+    cm_nohome=1 cm_run default sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "default: exit $cm_status, want 1"
+    home_untouched default
+    cm_nohome=1 cm_run help
+    [[ "$cm_status" -eq 0 ]] || fail "help: exit $cm_status, want 0"
+    cm_nohome=1 cm_run rm 5 --bogus
+    [[ "$cm_status" -eq 2 ]] || fail "rm --bogus: exit $cm_status, want 2"
+    grep -q '^usage:' "$cm_dir/err" || fail "rm --bogus: no usage"
+    cm_run list
+    [[ "$cm_status" -eq 0 ]] || fail "with CODEO_HOME: exit $cm_status, err: $cm_err"
+}
+
+t_default_mkdir_failure_is_one_line() {
+    cm_setup "$current"
+    : >"$cm_dir/file"
+    cm_home="$cm_dir/file/sub"
+    cm_run default sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: could not create $cm_home" ]] || fail "stderr is '$cm_err'"
+}
+
 t_relative_codeo_home() {
     cm_setup "$current"
     cd "$cm_dir"
@@ -1617,6 +1696,9 @@ cases=(
     t_update_partial_final_mv
     t_update_through_symlink
     t_relative_codeo_home
+    t_relative_overrides_made_absolute
+    t_home_checkout_collision
+    t_default_mkdir_failure_is_one_line
     t_home_unset
     t_home_dir_uncreatable
     t_rebuild_saved_sandbox_usage

@@ -50,9 +50,22 @@ home_dir() {
     if [[ -z "$d" ]]; then
         [[ -n "${HOME:-}" ]] || die "set CODEO_HOME or HOME"
         d=$HOME/codeo
+        # Inside $(home_dir) this die ends only the subshell; every caller assigns the result, so set -e stops it.
+        [[ ! -d "$d/.git" ]] ||
+            die "~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in"
     fi
     case $d in /*) ;; *) d=$PWD/$d ;; esac
     printf '%s\n' "$d"
+}
+
+# abs_path_env <VAR> <always|slash>: make VAR, when set and non-empty, an absolute path against $PWD, so a later
+# cd cannot change what it names. always: whenever it is not absolute; slash: only when it holds a "/", so a
+# bare program name stays a name.
+abs_path_env() {
+    local v=${!1:-}
+    [[ -n "$v" && "$v" != /* ]] || return 0
+    [[ "$2" == always || "$v" == */* ]] || return 0
+    export "$1=$PWD/$v"
 }
 
 # cmd_help: print the commands on stdout, and the PATH line when ~/.local/bin is not on PATH.
@@ -356,6 +369,7 @@ print_sorted() {
 # its state is paused or restarting when docker says so, else stopped.
 cmd_list() {
     [[ $# -eq 0 ]] || usage
+    home_dir >/dev/null # a refused home directory ends the command before anything is listed
     local listing name state branch dir agent status n rows shown=0 failed=0 sbx
     command -v docker >/dev/null 2>&1 || sbx_prog >/dev/null ||
         die "neither docker nor sbx is installed: nothing to list"
@@ -412,12 +426,14 @@ cmd_list() {
 
 # cmd_default [container|sandbox]: show the saved default kind, or save one.
 cmd_default() {
+    local d
     case $# in
         0) saved_default ;;
         1)
             [[ "$1" == container || "$1" == sandbox ]] || usage
-            mkdir -p "$(home_dir)" || die "could not create $(home_dir)"
-            printf '%s\n' "$1" >"$(home_dir)/default"
+            d=$(home_dir)
+            mkdir -p "$d" 2>/dev/null || die "could not create $d"
+            printf '%s\n' "$1" >"$d/default"
             ;;
         *) usage ;;
     esac
@@ -668,6 +684,9 @@ cmd_update() {
 }
 
 main() {
+    abs_path_env CODEO_CONTEXT always
+    abs_path_env CODEO_SBX_IMAGE always
+    abs_path_env CODEO_SBX slash
     [[ $# -gt 0 ]] || usage
     local cmd=$1
     shift
