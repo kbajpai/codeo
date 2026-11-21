@@ -584,51 +584,141 @@ t_replace_checks_tag_first() {
     [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
 }
 
-t_replace_reinstalls_where_it_was() {
-    local top
-    in_setup replace_where
-    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
-    "$real_git" -C "$in_dir/work" init -q
-    top=$("$real_git" -C "$in_dir/work" rev-parse --show-toplevel)
-    seed_superpowers
-    seed_codeo 1.0.6
-    jq --arg t "$top" '. + [
-        {id: "codeo@codeo", version: "1.0.6", scope: "project", enabled: true, projectPath: $t},
-        {id: "codeo@codeo", version: "1.0.6", scope: "project", enabled: true, projectPath: "/somewhere/else"}]' \
-        "$STUB_DIR/list.json" >"$STUB_DIR/list.new" && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
-    in_run
-    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project' \
-        'plugin install codeo@codeo --scope user' \
-        'plugin install codeo@codeo --scope project'
-    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $(jq '[.[] | select(.id == "codeo@codeo")] | length' "$STUB_DIR/list.json") -eq 2 ]] \
-        || fail "list: $(cat "$STUB_DIR/list.json")"
-    [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
+# project_json <ref>: a project's committed .claude/settings.json pinning codeo at that ref.
+project_json() {
+    printf '{"enabledPlugins":{"codeo@codeo":true},"extraKnownMarketplaces":{"codeo":{"source":{"source":"github","repo":"kbajpai/codeo","ref":"%s"}}}}\n' "$1"
 }
 
-t_replace_from_subdirectory_restores_the_project() {
-    local top p
-    in_setup replace_subdir
+t_user_replace_leaves_the_project_file() {
+    local top
+    in_setup user_replace_project
     printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
     project_repo
-    mkdir -p "$in_dir/work/a/b"
+    mkdir -p "$in_dir/work/a/b" "$top/.claude"
     seed_superpowers
-    seed_pin kbajpai/codeo v1.0.6
+    seed_codeo 1.0.6
     seed_project codeo@codeo 1.0.6 "$top"
+    project_json v1.0.6 >"$top/.claude/settings.json"
+    cp "$top/.claude/settings.json" "$in_dir/before"
     in_cwd="$in_dir/work/a/b" in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7' \
+        'plugin install codeo@codeo --scope user'
+    ! grep -q -- '--scope project' "$STUB_DIR/calls" || fail "a project-scope call ran: $(cat "$STUB_DIR/calls")"
+    cmp -s "$in_dir/before" "$top/.claude/settings.json" || fail "the project file changed: $(cat "$top/.claude/settings.json")"
+    [[ $in_out == *"install: this project's own codeo (project scope, v1.0.6) is no longer installed on this machine; its .claude/settings.json was not changed"* ]] \
+        || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $(jq -r '[.[] | select(.id == "codeo@codeo" and .scope == "user")] | .[0].version' "$STUB_DIR/list.json") == 1.0.7 ]] \
+        || fail "list: $(cat "$STUB_DIR/list.json")"
+}
+
+t_user_replace_without_project_install_says_nothing_more() {
+    local top
+    in_setup user_replace_alone
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_superpowers
+    seed_codeo 1.0.6
+    seed_project codeo@codeo 1.0.6 /somewhere/else
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out != *"own codeo"* ]] || fail "stdout: $in_out"
+    [[ $in_out != *"moved to"* ]] || fail "stdout: $in_out"
+}
+
+t_project_replace_moves_the_user_copy() {
+    local top
+    in_setup project_replace_user
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+    seed_codeo 1.0.6
+    seed_project codeo@codeo 1.0.6 "$top"
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace remove codeo' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7' \
         'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project' \
         'plugin install codeo@codeo --scope project' \
         'plugin install codeo@codeo --scope user'
+    [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
+    [[ $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.7') == "$in_dir/home" ]] || fail "user add ran in: $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.7')"
+    [[ $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project') == "$top" ]] || fail "project add ran in: $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project')"
+    [[ $(call_pwds 'plugin install codeo@codeo --scope project') == "$top" ]] || fail "project install ran in: $(call_pwds 'plugin install codeo@codeo --scope project')"
+    [[ $(call_pwds 'plugin install codeo@codeo --scope user') == "$in_dir/home" ]] || fail "user install ran in: $(call_pwds 'plugin install codeo@codeo --scope user')"
+    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (project scope)'$'\n'*'install: your user-scope codeo moved to v1.0.7 too: one machine holds one codeo version'* ]] \
+        || fail "stdout: $in_out"
+    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.7 ]] \
+        || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json" 2>&1)"
+}
+
+t_project_replace_without_user_copy() {
+    local top
+    in_setup project_replace_alone
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+    seed_pin kbajpai/codeo v1.0.6
+    seed_project codeo@codeo 1.0.6 "$top"
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace remove codeo' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project' \
+        'plugin install codeo@codeo --scope project'
+    [[ $in_out != *"moved to"* ]] || fail "stdout: $in_out"
+    [[ ! -f $CLAUDE_CONFIG_DIR/settings.json ]] || fail "user settings were written: $(cat "$CLAUDE_CONFIG_DIR/settings.json")"
+}
+
+t_project_replace_from_subdirectory() {
+    local top p
+    in_setup project_replace_subdir
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    mkdir -p "$in_dir/work/a/b"
+    seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+    seed_pin kbajpai/codeo v1.0.6
+    seed_project codeo@codeo 1.0.6 "$top"
+    in_cwd="$in_dir/work/a/b" in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace remove codeo' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project' \
+        'plugin install codeo@codeo --scope project'
     for p in 'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project' 'plugin install codeo@codeo --scope project'; do
         [[ $(call_pwds "$p") == "$top" ]] || fail "'$p' ran in: $(call_pwds "$p"), want $top"
     done
-    [[ $(call_pwds 'plugin install codeo@codeo --scope user') == "$in_dir/home" ]] || fail "user install ran in: $(call_pwds 'plugin install codeo@codeo --scope user')"
-    [[ $(jq --arg t "$top" '[.[] | select(.id == "codeo@codeo" and .scope == "project" and .projectPath == $t)] | length' "$STUB_DIR/list.json") -eq 1 ]] \
-        || fail "list: $(cat "$STUB_DIR/list.json")"
+    [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
+}
+
+t_installed_check_goes_by_the_pin() {
+    in_setup pin_check
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.0
+    seed_pin kbajpai/codeo v1.0.7
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ -s $STUB_DIR/calls ]] || fail "claude was never asked"
+    [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
+    [[ $in_out == *'install: codeo v1.0.7 already installed (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: nothing changed'* ]] || fail "stdout: $in_out"
+}
+
+t_user_install_declares_the_marketplace_when_only_a_project_declared_it() {
+    local top
+    in_setup user_declares
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_superpowers
+    seed_pin kbajpai/codeo v1.0.7
+    seed_project codeo@codeo 1.0.7 "$top"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace add kbajpai/codeo@v1.0.7' 'plugin install codeo@codeo --scope user'
+    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.7 ]] \
+        || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json" 2>&1)"
 }
 
 t_replace_project_scope() {
@@ -1069,10 +1159,15 @@ cases=(
     t_restart_hint_only_when_changed
     t_replace_older
     t_replace_checks_tag_first
-    t_replace_reinstalls_where_it_was
     t_replace_fork_marketplace
     t_replace_failure_reported
-    t_replace_from_subdirectory_restores_the_project
+    t_user_replace_leaves_the_project_file
+    t_user_replace_without_project_install_says_nothing_more
+    t_project_replace_moves_the_user_copy
+    t_project_replace_without_user_copy
+    t_project_replace_from_subdirectory
+    t_installed_check_goes_by_the_pin
+    t_user_install_declares_the_marketplace_when_only_a_project_declared_it
     t_replace_project_scope
     t_replace_source_without_repo
     t_replace_install_failure_after_add
