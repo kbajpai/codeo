@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q6-Q8 raised after the footprint was committed: `overlap.sh` found #144 now has a footprint overlapping this one. The plan is approved and written (unstaged) at `docs/plans/2026-11-21-close-102-126-122-leftovers-145.md`; `## Outcome` waits for Q6-Q8. Earlier: explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `CHANGELOG.md`, the three archived `qc.md` files and the tests that pin each (`tests/doctor.test.sh`, `tests/issue-skill.test.sh`, `tests/claim.test.sh`, `tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Five choices change what gets built and are raised as Q1-Q5. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q5 answered as recommended; the draft is at `.codeo/145/plan-draft.md` for the review gate.
+Q6-Q8 answered (sequence after #144); Q9 raised for a new overlap with #143 (`CHANGELOG.md`). Earlier, Q6-Q8 were raised after the footprint was committed: `overlap.sh` found #144 now has a footprint overlapping this one. The plan is approved and written (unstaged) at `docs/plans/2026-11-21-close-102-126-122-leftovers-145.md`; `## Outcome` waits for Q6-Q8. Earlier: explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `CHANGELOG.md`, the three archived `qc.md` files and the tests that pin each (`tests/doctor.test.sh`, `tests/issue-skill.test.sh`, `tests/claim.test.sh`, `tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Five choices change what gets built and are raised as Q1-Q5. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q5 answered as recommended; the draft is at `.codeo/145/plan-draft.md` for the review gate.
 
 ## Questions
 
@@ -91,6 +91,14 @@ Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: 
 **Answer:**
 Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: "sequence after #144 for Q6-Q8").
 
+### Q9 — `glob:CHANGELOG.md` overlaps #143's plan. How do the two changes share it?
+
+**Why it matters:** #143 (`fix/codeo-host-command-close-leftovers`, assigned to kbajpai, at `init` with its plan written and `/codeo:plan` still owed, a live session on it) lists `CHANGELOG.md` in its footprint, as this plan's Task 7 does (one edit to the #122 bullet, one new `## Unreleased` bullet). #143's other files (`.devcontainer/`, `.sbx/README.md`, `tests/codeo-command.test.sh`) do not overlap. Two bullets in one section merge; the `Shared state:` line is the only one both could edit, and this plan does not touch it. Q6 already sequences this file after #144.
+**Options:** proceed and coordinate · sequence after #143 · re-scope.
+**Recommendation:** proceed and coordinate. Task 7 is last and runs `bash scripts/sync-main.sh` first, keeping both sides on a conflict; sequencing behind #143 as well as #144 would hold this issue for a one-line collision.
+
+**Answer:**
+
 ## Notes
 
 Calls the draft will make, none of which needs an answer (say so in any answer above if one is wrong):
@@ -125,3 +133,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-21 — Q1-Q5 raised · cost: 1m · fable-5-2 84k in + 542k cached / 8k out
 - 2026-11-21 — plan approved, written to docs/plans/2026-11-21-close-102-126-122-leftovers-145.md; Q6-Q8 raised (overlap with #144) · cost: unavailable until the hand-off
+- 2026-11-21 — Q6-Q8 answered; Q9 raised (overlap with #143) · cost: unavailable until the hand-off
