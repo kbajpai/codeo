@@ -81,6 +81,15 @@ Calls the draft will make, none of which needs an answer (say so in any answer a
 - **No environment, no lease, no host tasks, no invariants, no wiki module.** The lock's host is `container`; every task is proved by `bash tests/run.sh` or one test file.
 - `engineering:system-design` and `engineering:architecture` are not installed here and not needed: no new component or architectural choice.
 
+### Footprint
+
+```
+files: scripts/doctor.sh, scripts/claim.sh, scripts/inflight.sh, skills/issue/SKILL.md, skills/triage/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, tests/doctor.test.sh, tests/claim.test.sh, tests/inflight.test.sh, tests/issue-skill.test.sh, tests/triage-skill.test.sh, docs/plans/2026-11-21-close-102-126-122-leftovers-145.md
+wiki: none
+exclusive: none
+sequenced: #144
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
