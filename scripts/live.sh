@@ -10,12 +10,16 @@
 #       the previous one, so a signal never accumulates history. Does nothing without a
 #       $CODEO_STATE_DIR/active lock or on the base branch, and — without --force — while the last
 #       beat is younger than CODEO_LIVE_REFRESH_SECONDS. A refused or failed push is retried once
-#       through `github.sh ref put`. Exits 0 whatever happens; a failure is one `live:` stderr line.
+#       through `github.sh ref put`, except for a web session: it cannot write refs/codeo/live/*, so
+#       it force-pushes refs/heads/codeo-live/<issue>/<machine> instead and has no fallback. Exits 0
+#       whatever happens; a failure is one `live:` stderr line.
 #   live.sh clear
 #       Deletes this checkout's signal (`git push --delete`, else `github.sh ref delete`) and its
-#       throttle stamp. Exits 0 whatever happens.
+#       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp and its
+#       branch ages out after the TTL. Exits 0 whatever happens.
 #   live.sh fetch
-#       Brings origin's signals into refs/codeo/live/, pruning the ones cleared there. Exit 0, or
+#       Brings origin's signals into refs/codeo/live/ (a web session's codeo-live branches map onto
+#       the same refs), pruning the ones cleared there. Exit 0, or
 #       exit 1 with one `live:` stderr line.
 #   live.sh list [--tsv]
 #       Prints the signals last fetched (it never fetches) that are within the TTL. --tsv:
@@ -46,6 +50,8 @@
 #   - Two beats started together from one checkout can both push the same ref, and one can
 #     lose the origin's ref lock; the other has then just published, so the signal is fresh
 #     either way.
+#   - A web session's signal is a branch that is never deleted: it expires from `list` after the TTL
+#     but the branch stays on origin until someone removes it.
 #   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
 #   - `clear` can take two bounds (the push `--delete`, then the REST delete), so the `SessionEnd`
 #     hook allows 20 seconds. That is two bounds at the default of 8; at 10 or more the hook can
@@ -118,7 +124,7 @@ user_label() {
     printf '%s' "${name:-unknown}"
 }
 
-# Sets issue, host and signal_ref from the lock; non-zero when there is none to speak for.
+# Sets issue, host, signal_ref and push_ref from the lock; non-zero when there is none to speak for.
 read_lock() {
     [[ -f $CODEO_STATE_DIR/active ]] || return 1
     issue=$(lock_field issue)
@@ -127,6 +133,8 @@ read_lock() {
     case $host in container | web | local) ;; *) return 1 ;; esac
     machine=$(machine_label "$host")
     signal_ref=refs/codeo/live/$issue/$machine
+    # A hosted web session cannot write refs/codeo/live/*, but it can force-push a branch.
+    if [[ $host == web ]]; then push_ref=refs/heads/codeo-live/$issue/$machine; else push_ref=$signal_ref; fi
 }
 
 stamp() { git rev-parse --git-path codeo-live-beat; }
@@ -154,11 +162,11 @@ beat() {
         GIT_COMMITTER_NAME=codeo-live GIT_COMMITTER_EMAIL=codeo-live@invalid \
         git commit-tree "$tree" -F "$message_file") || { rm -f "$message_file"; warn "could not publish — commit-tree failed"; return 0; }
 
-    if reason=$(bounded git push -q --no-verify --force origin "$sha:$signal_ref" 2>&1); then
+    if reason=$(bounded git push -q --no-verify --force origin "$sha:$push_ref" 2>&1); then
         rm -f "$message_file"
         return 0
     fi
-    if reason=$(bounded bash "$github" ref put "$signal_ref" "$message_file" 2>&1 > /dev/null); then
+    if [[ $host != web ]] && reason=$(bounded bash "$github" ref put "$signal_ref" "$message_file" 2>&1 > /dev/null); then
         rm -f "$message_file"
         return 0
     fi
@@ -170,6 +178,7 @@ clear() {
     local reason
     read_lock || return 0
     rm -f "$(stamp)"
+    [[ $host != web ]] || return 0
     bounded git push -q --no-verify origin --delete "$signal_ref" > /dev/null 2>&1 && return 0
     if reason=$(bounded bash "$github" ref delete "$signal_ref" 2>&1 > /dev/null); then return 0; fi
     warn "could not clear — $(last_line "$reason")"
@@ -177,7 +186,7 @@ clear() {
 
 fetch() {
     local reason
-    if reason=$(bounded git fetch -q --prune origin '+refs/codeo/live/*:refs/codeo/live/*' 2>&1); then return 0; fi
+    if reason=$(bounded git fetch -q --prune origin '+refs/codeo/live/*:refs/codeo/live/*' '+refs/heads/codeo-live/*:refs/codeo/live/*' 2>&1); then return 0; fi
     warn "could not fetch — $(last_line "$reason")"
     return 1
 }

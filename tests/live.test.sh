@@ -252,7 +252,7 @@ CODEO_MACHINE=laptop run beat --force
 assert_eq "CODEO_MACHINE wins" refs/codeo/live/104/laptop "$(refs)"
 new_world; clone_with_lock 104 web abcdef0123456789
 run beat --force
-assert_eq "web" refs/codeo/live/104/web-abcdef01 "$(refs)"
+assert_eq "web" refs/heads/codeo-live/104/web-abcdef01 "$(git -C "$origin" for-each-ref --format='%(refname)' refs/heads/codeo-live/)"
 host_label=$(hostname | sed 's/[^A-Za-z0-9._-]/-/g')
 new_world; clone_with_lock 104 local
 run beat --force
@@ -538,6 +538,58 @@ assert_contains "visible before" "104" "$(live "$other" list --tsv)"
 run clear
 live "$other" fetch
 assert_eq "empty after" "" "$(live "$other" list --tsv)"
+
+# --- web session -------------------------------------------------------------------------------
+
+heads() { git -C "$origin" for-each-ref --format='%(refname)' refs/heads/codeo-live/; }
+
+case_desc=web_beat_publishes_a_branch_not_a_live_ref
+new_world; clone_with_lock 104 web abcdef0123456789
+feat_before=$(git -C "$origin" rev-parse refs/heads/feat/x)
+run beat --force
+assert_eq "exit" 0 "$rc"
+assert_eq "no live ref" "" "$(refs)"
+assert_eq "branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
+assert_eq "feature branch untouched" "$feat_before" "$(git -C "$origin" rev-parse refs/heads/feat/x)"
+assert_not_contains "no ref put" "ref put" "$(cat "$STUB_LOG")"
+
+case_desc=web_beat_replaces_its_branch_by_force
+new_world; clone_with_lock 104 web abcdef0123456789
+run beat --force
+run beat --force
+assert_eq "history length" 1 "$(git -C "$origin" rev-list --count refs/heads/codeo-live/104/web-abcdef01 2>/dev/null || true)"
+
+case_desc=web_clear_deletes_nothing
+new_world; clone_with_lock 104 web abcdef0123456789
+run beat --force
+run clear
+assert_eq "exit" 0 "$rc"
+assert_eq "branch stays" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
+assert_eq "stamp" no "$([[ -e $(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-beat) ]] && echo yes || echo no)"
+assert_not_contains "no ref delete" "ref delete" "$(cat "$STUB_LOG")"
+
+case_desc=fetch_maps_web_branches_to_signals
+new_world; clone_with_lock 105 container codeo-105
+run beat --force
+clone_with_lock 104 web abcdef0123456789
+run beat --force
+other=$(clone_of "$origin")
+live "$other" fetch
+assert_eq "both listed" "$(printf '104\talice\tweb-abcdef01\tweb\n105\talice\tcodeo-105\tcontainer')" "$(live "$other" list --tsv | cut -f1-4)"
+git -C "$origin" update-ref -d refs/codeo/live/105/codeo-105
+live "$other" fetch
+assert_eq "only web remains" "$(printf '104\talice\tweb-abcdef01\tweb')" "$(live "$other" list --tsv | cut -f1-4)"
+
+case_desc=web_push_refused_warns_once_and_does_not_fall_back
+new_world; clone_with_lock 104 web abcdef0123456789
+mkdir -p "$origin/hooks"
+printf '#!/bin/sh\nwhile read old new ref; do case $ref in refs/heads/codeo-live/*) echo refused >&2; exit 1;; esac; done\n' > "$origin/hooks/pre-receive"
+chmod +x "$origin/hooks/pre-receive"
+run beat --force
+assert_eq "exit" 0 "$rc"
+assert_eq "one line" 1 "$(grep -c . <<< "$err")"
+assert_contains "warning" "live: could not publish" "$err"
+assert_not_contains "no ref put" "ref put" "$(cat "$STUB_LOG")"
 
 if ((failures)); then
     echo "$failures assertion(s) failed"
