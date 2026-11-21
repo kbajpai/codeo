@@ -34,7 +34,7 @@
 #       issue: <N>
 #       user: <GitHub login, else git user.name, else unknown; a web session never uses git config user.name>
 #       machine: <label>
-#       host: <container|web|local>
+#       host: <container|web|local>   (always web when CLAUDE_CODE_REMOTE is true, whatever the lock's host says)
 #       beat: <epoch seconds>
 #   The machine is $CODEO_MACHINE, else the container's volume or sandbox, else `web-<first 8 of the session>`,
 #   else `hostname`, cut to 64 characters of [A-Za-z0-9._-] and made a valid ref component. The
@@ -147,6 +147,9 @@ read_lock() {
     host=$(lock_field host)
     [[ $issue =~ ^[1-9][0-9]{0,8}$ ]] || return 1
     case $host in container | web | local) ;; *) return 1 ;; esac
+    # A hosted web session is web whatever its lock says (init may have written local): the label,
+    # the route and the REST-fallback guard all follow. The lock file is left as it is.
+    [[ ${CLAUDE_CODE_REMOTE:-} != true ]] || host=web
     machine=$(machine_label "$host")
     signal_ref=refs/codeo/live/$issue/$machine
     # A hosted web session cannot write refs/codeo/live/*, but it can force-push a branch.

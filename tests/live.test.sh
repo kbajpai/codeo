@@ -33,7 +33,7 @@ plugin="$scratch_root/plugin"
 mkdir -p "$plugin"
 cp -R "$plugin_src/scripts" "$plugin/scripts"
 cp -R "$plugin_src/lib" "$plugin/lib"
-unset CLAUDE_CODE_REMOTE_SESSION_ID CODEO_GITHUB_LOGIN
+unset CLAUDE_CODE_REMOTE CLAUDE_CODE_REMOTE_SESSION_ID CODEO_GITHUB_LOGIN
 export STUB_LOG="$scratch_root/gh.log"
 : > "$STUB_LOG"
 cat > "$plugin/scripts/github.sh" <<'GHSTUB'
@@ -652,6 +652,26 @@ new_world; clone_with_lock 104 web abcdef0123456789
 git -C "$clone" config user.name "Claude"
 STUB_USER_FAIL=1 run beat --force
 assert_contains "unknown, never git user" "user: unknown" "$(web_msg refs/heads/codeo-live/104/web-abcdef01)"
+
+case_desc=local_lock_in_a_web_session_publishes_as_web
+new_world; clone_with_lock 104 local
+CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789 run beat --force
+assert_contains "web signal" "host: web" "$(web_msg refs/heads/codeo-live/104/web-abcdef01)"
+assert_eq "nothing under refs/codeo/live" "" "$(refs)"
+assert_not_contains "no REST put" "ref put" "$(cat "$STUB_LOG")"
+
+case_desc=container_lock_in_a_web_session_publishes_as_web
+new_world; clone_with_lock 104 container codeo-104
+CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789 run beat --force
+assert_contains "web signal" "host: web" "$(web_msg refs/heads/codeo-live/104/web-abcdef01)"
+assert_eq "nothing under refs/codeo/live" "" "$(refs)"
+assert_not_contains "no REST put" "ref put" "$(cat "$STUB_LOG")"
+
+case_desc=local_lock_outside_a_web_session_stays_local
+new_world; clone_with_lock 104 local
+run beat --force
+assert_contains "local signal" "host: local" "$(web_msg "$(git -C "$origin" for-each-ref --format='%(refname)' refs/codeo/live/ | head -n 1)")"
+assert_eq "no web branch" "" "$(git -C "$origin" for-each-ref refs/heads/codeo-live/)"
 
 if ((failures)); then
     echo "$failures assertion(s) failed"
