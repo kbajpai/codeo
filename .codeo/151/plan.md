@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q6 answered. The plan is approved and written to `docs/plans/2026-11-21-install-one-command-151.md` (unstaged). `## Outcome` is written; the hand-off is `/codeo:implement`.
+Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). F1 needs a decision, raised as Q7; nothing is drafted until it is answered. The round-2 plan will also carry `qc.md`'s F2-F6, F8 and F9 as tasks (README *Uninstalling* and *Updating* corrected from real runs, a stub that models a project's `.claude/settings.json`, clearer failure lines, the changelog wording, a test tying the README's output blocks to the script) and settles F7 itself: the already-installed check goes by the marketplace's pinned tag, and "latest" stays the highest `vX.Y.Z` tag.
 
 ## Questions
 
@@ -78,6 +78,17 @@ In this issue's container, as recommended (engineer, in the conversation, 2026-1
 **Answer:**
 `CONTRIBUTING.md` at the root, and *Dev container* moves with the three, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
+### Q7 — A replace touches a scope you did not ask for: what should `install.sh` do (qc.md round 1, F1)?
+
+**Why it matters:** it decides what `replace_codeo` reinstalls and prints, which tests change, and what the README's *Updating* section promises. It is the reason the round came back to the plan.
+**What is there now:** Claude Code keeps one `codeo` marketplace per machine, pinned to one tag, so changing the version removes codeo at every scope on the machine; that cannot be avoided. Round 1 (Q2) then reinstalls it "where it was", this project included. The result, reproduced by `/codeo:qc`: a plain `install.sh` (user scope) run inside a repository whose committed `.claude/settings.json` pins v1.0.6 rewrites that tracked file to v1.0.7 and prints only `codeo v1.0.6 -> v1.0.7 (user scope)`; a `--scope project` run when your own copy is at another version moves your copy too and prints only `(project scope)`. After a project-path replace, your user settings no longer declare the marketplace at all.
+**Options:**
+- Only the scope you asked for writes a project's file (recommended). A user-scope run never touches the project's `.claude/settings.json`: the project's install is dropped on this machine like any other project's, and the run says so in one line naming the project's pin (`install: this project pins codeo v1.0.6 in .claude/settings.json; it was not changed, and one machine holds one codeo version`). A `--scope project` run rewrites the project's pin (that is what was asked) and, when your own copy was installed, reinstalls it at the new tag and says so (`install: your user-scope codeo moved v1.0.6 -> v1.0.7 too`). The marketplace is declared at user scope whenever a user-scope install exists. Cost: after a user-scope update inside an older-pinned project, that project's codeo is not installed on this machine until the pin is moved or the old version is installed again.
+- Keep reinstalling everywhere, but say it. Behaviour as now, plus one line per scope touched (`install: this project's .claude/settings.json now pins v1.0.7 (was v1.0.6): commit or revert it`). Smallest change; a personal update inside a team repository still edits a tracked file.
+- Refuse. When the replace would affect another scope, print what would change and exit 1 unless `--force` is given. Safest, but adds an option and makes the update command fail in the common case of a pinned project.
+
+**Answer:**
+
 ## Notes
 
 **What the trial showed** (`claude` 2.1.325, an empty `CLAUDE_CONFIG_DIR`, real GitHub):
@@ -135,3 +146,4 @@ sequenced:  none
 - 2026-11-21 — Q1-Q6 raised · cost: 3m · fable-5-2 89k in + 764k cached / 13k out
 - 2026-11-21 — Q1-Q6 answered, plan drafted for review · cost: 9m · fable-5-2 + sonnet-5-5
 - 2026-11-21 — planned: docs/plans/2026-11-21-install-one-command-151.md · cost: 49m · fable-5-2 98k in + 1.1M cached / 19k out · sonnet-5-5 133k in + 860k cached / 30k out
+- 2026-11-21 — round 2 (send-back from qc.md round 1): Q7 raised · cost: 0m · fable-5-2 340k in + 23k cached / 2k out
