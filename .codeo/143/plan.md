@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q7 answered and the plan is approved (saved, unstaged, at `docs/plans/2026-11-21-codeo-host-command-leftovers-143.md`). `overlap.sh` then printed `144 glob:CHANGELOG.md` and `145 glob:CHANGELOG.md`; Q7 named the file but not the token, and #145 had no footprint then, so Q8 and Q9 raise them. `## Outcome` stays pending until both are answered.
+Planned: the plan is approved and saved at `docs/plans/2026-11-21-codeo-host-command-leftovers-143.md` (unstaged). Q1-Q9 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: commit the plan, then `/codeo:implement`.
 
 What I found that shapes the questions (read against `.devcontainer/codeo` at `2e02100`):
 
@@ -152,6 +152,28 @@ Calls I made, to correct if wrong:
 - `codeo-sandbox.sh` and `codeo-container.sh` do not change, as the issue says.
 - No invariants document, no shared environment and no `wiki` module are configured, so there is no invariants check, no lease task and `wiki: none`.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-21-codeo-host-command-leftovers-143.md` (unstaged for the engineer's review; nine tasks). **Shape:** an executable plan under `plansDir`, no separate reference doc: the two READMEs are the standing reference. Every task is proved by the whole `bash tests/run.sh` (the `shell` suite has no single-test filter); the last task runs on the engineer's host against real Docker.
+
+**Decisions (Q1-Q9, all "go with my picks")**
+
+| Q | Decision | Rejected |
+|---|---|---|
+| Q1 write between check and removal | A: check, `docker restart` a running container, read again (no second fetch), remove. The window shrinks to a `docker exec` in the second after the restart; the plan states that it is not closed completely. | B: stop the container and check the volume from a helper container (rewrites `container_check` and every stub); C: document only |
+| Q2 `~/codeo` collision | A: with `CODEO_HOME` unset and `~/codeo/.git` present, one line and exit 1 before anything is written | B: document only; C: a new default directory with a migration rule |
+| Q3 F29 hint | A: by `--force` alone; `codeo rm <N> --force` named on a refusal, `sbx rm --force` only after `--force` failed and not when the script's own stderr carries it | B: read the script's wording |
+| Q4 bind mount behind a same-named volume | A: fix with `docker inspect` before removal; unchecked volume kept without `--force` | B: rule out |
+| Q5 ruling table | as proposed: fix F30, F8 (`default`), the prune, the untracked setting, concurrency, relative overrides, the `refs/heads/` qualification, F5/F16 README rows, F6/F31, F17; rule out as already fixed on `main` F3, F4, F7, F11-F15, F19 (tests added), F20, F22, F23, F27, F28; confirm and drop F26 and threads …636595, …636654 (remainder qualified) | none |
+| Q6 real Docker | A: Task 9, marked `Runs on: the engineer's host`, single neutral commands on throwaway issue 99999 | B: stubs only |
+| Q7-Q9 `CHANGELOG.md` against #144 and #145 | proceed and coordinate: the second to merge keeps both entries; this plan edits only the `codeo` bullet | sequence after; re-scope |
+
+**Intake questions resolved here:** the write after the check can be narrowed but not prevented without stopping the container (Q1); the `~/codeo` collision is avoided by detection, not by moving the default (Q2).
+
+**Documentation the plan will change (Task 8):** `.devcontainer/README.md` (the two command tables, *Installing the `codeo` command*, *Removing a finished container*), `.sbx/README.md` (*Ending a sandbox*) and `CHANGELOG.md` (the `codeo` bullet under `## Unreleased`).
+
+No `/codeo:issue` was filed. The `engineering:*` skills were not used: nothing here is a new component or technology choice.
+
 ### Footprint
 
 ```
@@ -161,12 +183,9 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 - 2026-11-21 — Q1-Q6 raised · cost: 3m · fable-5-2 137k in + 843k cached / 19k out
 - 2026-11-21 — Q1-Q6 answered; plan drafted; Q7 raised (CHANGELOG.md overlap with #144) · cost: 10m · fable-5-2 144k in + 980k cached / 20k out · sonnet-5-5 176k in + 889k cached / 28k out
 - 2026-11-21 — Q7 answered (proceed and coordinate); draft presented for approval · cost: unavailable (not measured for this short turn)
 - 2026-11-21 — plan approved and saved; footprint written; overlap.sh printed #144 and #145 on glob:CHANGELOG.md, Q8-Q9 raised · cost: unavailable (not measured for this turn)
+- 2026-11-21 — planned: docs/plans/2026-11-21-codeo-host-command-leftovers-143.md · cost: 13m · fable-5-2 144k in + 980k cached / 20k out · sonnet-5-5 185k in + 2.5M cached / 36k out
