@@ -179,3 +179,4 @@
 | `qc:144:F3-F5` | #144 non-blocking QC findings: pronoun in implement/close skills, test pin claim, nits | filed #149 | 2026-11-21 |
 | `issue:146` | Release v1.0.8; filed 2026-11-21, board Status `Backlog`, gated on #145 | ready | 2026-11-21 |
 | `issue:149` | #143 and #144 leftovers; filed 2026-11-21 | ready | 2026-11-21 |
+| `issue:151` | One-command install and developer README; filed 2026-11-21, board Status `Backlog` | ready | 2026-11-21 |
