@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored, nothing drafted. Q1-Q6 are open; the plan is drafted once they are answered.
+Q1-Q6 answered ("go with my picks"). The plan is drafted at `.codeo/143/plan-draft.md`, but Q7 is open (`CHANGELOG.md` is also in #144's footprint), so the draft is not presented for approval until it is answered.
 
 What I found that shapes the questions (read against `.devcontainer/codeo` at `2e02100`):
 
@@ -29,7 +29,7 @@ What I found that shapes the questions (read against `.devcontainer/codeo` at `2
 - **B — stop the container and check its volume from a helper container.** The reviewer's suggestion: `docker stop`, then run the git checks in a throwaway `docker run` of the issue's image with the same three volumes. Closes the window completely. It rewrites `container_check` and every test stub around it, a refusal leaves the container stopped (or needs it started again), and it interrupts a running session even when the answer is "refused".
 - **C — do not prevent it; document it.** The README and the refusal text say to run `codeo rm` only when nothing is working in the container, and the plan records that the window stays. No code.
 
-**Answer:**
+**Answer:** A — check, restart, check again, remove. (Engineer: "go with my picks", 2026-11-21.)
 
 ### Q2 — `~/codeo` is also what `git clone` of this repository makes in `~`: move, detect, or document?
 
@@ -39,7 +39,7 @@ What I found that shapes the questions (read against `.devcontainer/codeo` at `2
 - **B — document only.** One README sentence naming `CODEO_HOME`; no code.
 - **C — a new default** (for example `~/.local/share/codeo`), still using `~/codeo` when it already holds `codeo-container.sh`. Avoids the collision for new installs, at the cost of two possible locations, a migration rule and a rewrite of every `~/codeo` in both READMEs.
 
-**Answer:**
+**Answer:** A — detect and stop: with `CODEO_HOME` unset and `~/codeo/.git` present, one line and exit 1 before anything is written. (Engineer: "go with my picks", 2026-11-21.)
 
 ### Q3 — After `codeo-sandbox.sh end` fails, how does `codeo rm` decide which hint to print (F29)?
 
@@ -48,7 +48,7 @@ What I found that shapes the questions (read against `.devcontainer/codeo` at `2
 - **A — by `--force` alone (my pick).** Without `--force`, `codeo` never names `sbx rm --force`; it prints `codeo: codeo rm <N> --force removes it anyway and keeps its commits in ~/codeo/codeo-<N> when it can read them`, which is the route that sets the sandbox's refs aside. With `--force` and a failure, the script has refused for a reason other than unpushed work (no clone, cannot start, cannot fetch), and only then `codeo` prints the `sbx rm --force codeo-<N>` line, worded as discarding whatever the sandbox holds, and not when the script's own message already carries it. Meets the criterion with no dependence on the script's wording. Its flaw: after `no sandbox codeo-<N>` or `no clone codeo-<N> here` without `--force`, the first hint leads to a second failure before the right one shows.
 - **B — by the script's text.** `codeo` captures the script's output while still showing it and picks the hint from its phrases (`nothing removed: … or run: codeo-sandbox.sh end`, `no sandbox`, `no clone`, `could not remove`). Exact in every case, but it ties `codeo` to another file's wording; a test would pin each phrase against `.sbx/codeo-sandbox.sh` so a reword fails the suite.
 
-**Answer:**
+**Answer:** A — by `--force` alone: no `sbx rm --force` hint without `--force`; with it, the hint only when the script's own stderr lacks it. (Engineer: "go with my picks", 2026-11-21.)
 
 ### Q4 — A `codeo-<N>` container whose `/workspaces` is not the volume `codeo-<N>` (thread …636455): fix or rule out?
 
@@ -57,7 +57,7 @@ What I found that shapes the questions (read against `.devcontainer/codeo` at `2
 - **A — fix (my pick).** Before removing, `codeo` reads the container's mounts with `docker inspect`. When `/workspaces` is the volume `codeo-<N>`, nothing changes. When it is not, `rm` without `--force` removes the container and its image, leaves the volume and says so in one line naming `docker volume rm codeo-<N>`; `--force` removes the volume too, saying it was not checked. A failed `docker inspect` counts as "could not check".
 - **B — rule out.** Reason recorded: both documented routes (`codeo-container.sh` and the VS Code clone-in-volume route) mount the volume `codeo-<N>` on `/workspaces`, so the case needs a container made by hand.
 
-**Answer:**
+**Answer:** A — fix: read the mounts with `docker inspect` before removal. (Engineer: "go with my picks", 2026-11-21.)
 
 ### Q5 — Is this the ruling you want on each remaining item?
 
@@ -100,7 +100,7 @@ Not in the issue's list and left alone: F2 (a stopped container's branch is `-`,
 
 **Options:** as in the table · changes, named by row.
 
-**Answer:**
+**Answer:** As in the table. (Engineer: "go with my picks", 2026-11-21.)
 
 ### Q6 — One run against real Docker on your host before QC, or stubs only?
 
@@ -108,6 +108,17 @@ Not in the issue's list and left alone: F2 (a stopped container's branch is `-`,
 **Options:**
 - **A — one last task marked `Runs on: the engineer's host` (my pick):** a short list of single `codeo` commands on a throwaway issue container (create, leave an untracked file, `codeo rm` refuses, clean it, `codeo rm` removes), with the output each must give.
 - **B — stubs only.** The plan says under Global Constraints that real Docker was not exercised.
+
+**Answer:** A — one last task marked `Runs on: the engineer's host`. (Engineer: "go with my picks", 2026-11-21.)
+
+### Q7 — `CHANGELOG.md` is also in #144's footprint: proceed and coordinate, sequence after #144, or re-scope?
+
+**What overlaps:** `CHANGELOG.md`. #144 (`fix/close-108-leftovers-overlap-sh`, assignee kbajpai, at `plan`) lists it in its `files:`; this plan's Task 8 rewrites the `codeo` bullet under `## Unreleased`. Nothing else overlaps: #144 touches `scripts/`, `skills/`, `docs/` and its own tests, none of `.devcontainer/`, `.sbx/` or `tests/codeo-command.test.sh`. #145 (`fix/close-102-126-122-leftovers`, at `plan`, waiting on its own questions) has no footprint yet; it is compared when it has one.
+**Why it matters:** both branches edit the same `## Unreleased` section. Different bullets, so the conflict at merge is textual and small, but whichever merges second has to resolve it by hand.
+**Options:**
+- **A — proceed and coordinate (my pick).** Same agreement as #133's Q6: whichever merges second keeps both entries intact. This plan edits only the `codeo` bullet and leaves every other bullet and the header lines alone, so the second merge is a one-hunk resolution.
+- **B — sequence after #144.** This plan waits for #144 to merge; `sequenced:` in the footprint reads `after #144 — both edit CHANGELOG.md (Q7)`. Costs a wait for a one-bullet conflict.
+- **C — re-scope.** Move the changelog edit out of this plan and into a follow-up issue. Leaves the #143 acceptance criterion about the changelog unmet.
 
 **Answer:**
 
@@ -125,3 +136,4 @@ _Pending — written at the hand-off._
 
 ## Log
 - 2026-11-21 — Q1-Q6 raised · cost: 3m · fable-5-2 137k in + 843k cached / 19k out
+- 2026-11-21 — Q1-Q6 answered; plan drafted; Q7 raised (CHANGELOG.md overlap with #144) · cost: 10m · fable-5-2 144k in + 980k cached / 20k out · sonnet-5-5 176k in + 889k cached / 28k out
