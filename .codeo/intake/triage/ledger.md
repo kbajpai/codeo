@@ -161,7 +161,7 @@
 | `qc:133:wording-leftovers` | #133's README, help-text, comment and changelog wording findings; folded into #143 at the engineer's request | filed #143 | 2026-11-20 |
 | `qc:108:F4-F6-F10` | #108: overlap.sh failure read as "no overlap", unanchored `## Outcome` heading, init closing block with no next command | filed #144 | 2026-11-20 |
 | `qc:108:nits-F2-F3-F5-F8-F9` | #108's test-name, comment and wording nits | dismissed — nits, only F4/F6/F10 were worth an issue (engineer) | 2026-11-20 |
-| `issue:138` | Live-session signal in hosted web sessions; filed, never started, board Status `Backlog` | backlog | 2026-11-20 |
+| `issue:138` | Live-session signal in hosted web sessions; filed 2026-11-20, previously left in the backlog; engineer asked about it again | ready | 2026-11-21 |
 | `qc:132:F1` | `paragraph_contains_flat` whitespace-only line hardening | dismissed — nothing in today's skill triggers it | 2026-11-20 |
 | `qc:112:F7-F12` | #112's approximate refusal texts and one changelog verb | dismissed — #138 carries the substance | 2026-11-20 |
 | `qc:102:F1-F2-F5` | #102 priority setting: `"true"` string vs doctor, second priority label, unquoted path | filed #145 | 2026-11-21 |
