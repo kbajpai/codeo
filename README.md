@@ -2,17 +2,208 @@
 
 codeo is an agent-workflow plugin for Claude Code: it carries a piece of work from issue to merged pull request through six steps: issue, init, plan, implement, QC and close. It is unrelated to SYSGO's CODEO IDE and to GoCodeo.
 
-## Dev container
+## Requirements
 
-The home container and the per-issue containers, how to open each and the folder names Docker accepts: [`.devcontainer/README.md`](.devcontainer/README.md).
+- bash 4.3 or later
+- `jq`
+- `git`
+- `gh`, the GitHub CLI; board use also needs `gh project`, which reads GraphQL, so the token must be allowed to use it
+- `claude`, Claude Code
 
-## Tests
+The installer checks for all five in one run and names every one that is missing or too old. It installs none of them: use your system's package manager, then run it again.
+
+## Installing
+
+One command installs the latest release of codeo and of the superpowers plugin it builds on, for you, in every project:
 
 ```bash
-bash tests/run.sh [pattern]   # runs tests/*.test.sh whose name contains the pattern
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash
 ```
 
-## Skills
+It prints one `install:` line per step, between the lines `claude` prints itself. Claude Code sessions that are already open need a restart to load the plugins.
+
+```
+install: release v1.0.7
+Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/obra/superpowers-marketplace.git
+Refreshing marketplace cache (timeout: 120s)…
+Cloning repository (timeout: 120s): https://github.com/obra/superpowers-marketplace.git
+Clone complete, validating marketplace…
+Cleaning up old marketplace cache…
+✔ Successfully added marketplace: superpowers-marketplace (declared in user settings)
+Installing plugin "superpowers@superpowers-marketplace"...✔ Successfully installed plugin: superpowers@superpowers-marketplace (scope: user)
+install: superpowers installed (user scope)
+Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/kbajpai/codeo.git
+Refreshing marketplace cache (timeout: 120s)…
+Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.7)
+Clone complete, validating marketplace…
+Cleaning up old marketplace cache…
+✔ Successfully added marketplace: codeo (declared in user settings)
+Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: user)
+install: codeo v1.0.7 installed (user scope)
+install: done - codeo v1.0.7, user scope, superpowers 7.0.2
+install: restart any Claude Code sessions already open to load the plugins
+```
+
+Run it again and nothing changes:
+
+```
+install: release v1.0.7
+install: superpowers already installed (user scope), left alone
+install: codeo v1.0.7 already installed (user scope)
+install: nothing changed - codeo v1.0.7, user scope, superpowers 7.0.2
+```
+
+`claude plugin list` shows what is installed:
+
+```
+Installed plugins:
+
+  ❯ codeo@codeo
+    Version: 1.0.7
+    Scope: user
+    Status: ✔ enabled
+
+  ❯ superpowers@superpowers-marketplace
+    Version: 7.0.2
+    Scope: user
+    Status: ✔ enabled
+```
+
+Two options follow `bash -s --`. `--version` picks a release other than the latest (`v1.0.6`, or `1.0.6`); the installer checks the tag exists before it changes anything, and a run that asks for a different version than the one installed replaces it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.6
+```
+
+```
+install: release v1.0.6
+install: superpowers already installed (user scope), left alone
+✔ Successfully removed marketplace: codeo
+Also uninstalled 1 plugin from this marketplace:
+  codeo@codeo
+The removal also deletes their saved options, secrets and data where it can.
+To use a plugin again, add the marketplace back and reinstall the plugin.
+install: codeo v1.0.7 -> v1.0.6 (user scope)
+install: done - codeo v1.0.6, user scope, superpowers 7.0.2
+install: restart any Claude Code sessions already open to load the plugins
+```
+
+`--scope project` installs both plugins for one project instead of for you. Run it inside the project's git repository (any folder in it works); it writes the project's `.claude/settings.json`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --scope project
+```
+
+```
+install: release v1.0.7
+Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/obra/superpowers-marketplace.git
+Refreshing marketplace cache (timeout: 120s)…
+Cloning repository (timeout: 120s): https://github.com/obra/superpowers-marketplace.git
+Clone complete, validating marketplace…
+Cleaning up old marketplace cache…
+✔ Successfully added marketplace: superpowers-marketplace (declared in project settings)
+Installing plugin "superpowers@superpowers-marketplace"...✔ Successfully installed plugin: superpowers@superpowers-marketplace (scope: project)
+install: superpowers installed (project scope)
+Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/kbajpai/codeo.git
+Refreshing marketplace cache (timeout: 120s)…
+Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.7)
+Clone complete, validating marketplace…
+Cleaning up old marketplace cache…
+✔ Successfully added marketplace: codeo (declared in project settings)
+Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: project)
+install: codeo v1.0.7 installed (project scope)
+install: done - codeo v1.0.7, project scope, superpowers 7.0.2
+install: restart any Claude Code sessions already open to load the plugins
+```
+
+Commit the file it wrote. This is its content (`jq -S . .claude/settings.json`), and you can write it by hand instead:
+
+```json
+{
+  "enabledPlugins": {
+    "codeo@codeo": true,
+    "superpowers@superpowers-marketplace": true
+  },
+  "extraKnownMarketplaces": {
+    "codeo": {
+      "source": {
+        "ref": "v1.0.7",
+        "repo": "kbajpai/codeo",
+        "source": "github"
+      }
+    },
+    "superpowers-marketplace": {
+      "source": {
+        "repo": "obra/superpowers-marketplace",
+        "source": "github"
+      }
+    }
+  }
+}
+```
+
+`ref` pins the codeo release the project uses; write the newest release tag, which `git ls-remote --tags --refs https://github.com/kbajpai/codeo 'v*'` lists. A teammate who opens the folder in Claude Code and trusts it is offered both plugins. To move the project to another release, change `ref` (see *Updating*).
+
+## Setting a project up
+
+Two slash commands, run once in the project's repository, in Claude Code:
+
+1. `/codeo:setup` creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name.
+2. `/codeo:doctor` checks that everything the workflow needs is in place and reports every failure, not only the first. Fix what it reports (see *Troubleshooting*) and run it again until it ends clean.
+
+Both skills run a script, and the script's own output is what the skill reports. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
+
+```
+codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doctor next
+```
+
+That file reads:
+
+```json
+{
+  "schema": 1,
+  "repo": {
+    "owner": "kbajpai",
+    "name": "codeo"
+  },
+  "baseBranch": "main",
+  "suites": [],
+  "resources": []
+}
+```
+
+and `doctor` with a logged-in `gh` and superpowers installed prints:
+
+```
+ok config: config.json is valid
+ok schema: supported (plugin understands up to 1)
+ok codename: not set
+ok gh-auth: gh api user succeeded
+ok gh-scopes: no board configured; the project scope is not needed
+ok board: no board configured
+ok ruleset: main requires: tests qc-verdict
+ok suites: 0 suite(s), every build and test command resolves
+ok deps: jq, git, bash 5.3.9(1)-release
+ok overlays: none
+ok superpowers: installed
+```
+
+Commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works on the project. The `suites` array holds the build and test commands `/codeo:implement` and `/codeo:qc` run; `/codeo:doctor` fails a suite whose command does not resolve.
+
+## Your first workflow
+
+A piece of work goes through six slash commands in order. Each one owns one file under `.codeo/<N>/`, where `<N>` is the GitHub issue number, and the file records what the step decided, so the next step (and you, later) can read it. The example is a finished workflow, whose files are archived under `.codeo/done/<N>/` once the pull request merges: an issue that fixed three leftovers from earlier changes.
+
+1. **`/codeo:issue`** turns a raw idea, bug or finding into a GitHub issue. It asks you questions until the problem, the requirements and the acceptance criteria are clear, shows you a draft, and files it only when you approve. The draft is kept in `.codeo/intake/<N>/issue.md` on the project's intake branch. It stands alone and hands off to nobody.
+2. **`/codeo:init`** starts work on an issue that is ready (on the project board's Ready column, when the project has a board). Name the issue number. It claims the number, cuts and pushes a branch off the base branch, moves the card to In progress, takes the workflow lock, and writes `.codeo/<N>/init.md`: the issue, the branch, the state and the acceptance criteria copied word for word. It asks you nothing beyond the number; its question list reads `None`.
+3. **`/codeo:plan`** explores the code and writes down how to make the change. It puts its questions to you in `.codeo/<N>/plan.md`, each with why it matters, what exists now and the options, and a recommendation; you answer them (in the example, all nine as recommended), then review the plan. The plan itself is saved under `docs/plans/` only once you approve it, and `plan.md` records the decisions. Nothing is written to the application's code.
+4. **`/codeo:implement`** builds the approved plan task by task, through the superpowers skills, committing each task, and confirms the change builds. It asks you only when the plan looks wrong or stale. It writes `.codeo/<N>/implement.md`: what was built, with the commit for each task.
+5. **`/codeo:qc`** checks the result without fixing anything: the build, the configured test suites, each acceptance criterion, an independent code review, and what the project's shared environment runs, if it has one. It writes `.codeo/<N>/qc.md` with a verdict and sends you forward to a pull request or back to `/codeo:implement` or `/codeo:plan`.
+6. **`/codeo:close`** opens the pull request and waits. You review and merge it; `close` never merges. Review feedback or a conflict with the base branch goes back through `/codeo:implement` and `/codeo:qc`. After the merge it proves the merge, asks before deleting the remote branch, releases every lease and the lock, and moves the dossier to `.codeo/done/<N>/`. It writes `.codeo/<N>/close.md`.
+
+Run the next command when a step hands off; each says which one. `/codeo:close` is also how you stash a workflow to come back to, or abandon one whose pull request was closed unmerged. A step that is interrupted can be run again: it works out where the workflow stands from the dossier and GitHub.
+
+## The skills
 
 The six pipeline skills run in order inside one workflow, each owning one dossier file under `.codeo/<issue>/`; `triage` and `cleanup` run outside the workflow lock, between workflows, and a project's role guard (see [`.devcontainer/README.md`](.devcontainer/README.md#roles-and-the-guard)) keeps each skill in the checkout it belongs in; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
 
@@ -35,62 +226,134 @@ Each skill's extension points are listed in `docs/skills.md` and documented in
 `docs/extension-points.md`, which also gives the file format. The dossier and hand-off protocols are
 in `docs/dossier.md` and `docs/handoff.md`.
 
-## Checking a dossier
+## Updating
 
-```bash
-bash scripts/dossier-check.sh <dossier-dir>
-```
-
-The checker reads one finished or live dossier directory (`.codeo/<issue>/`, an archived copy, or any
-other directory holding some of `issue.md`, `init.md`, `plan.md`, `implement.md`, `qc.md` and `close.md`)
-and checks its structure against the forms `docs/dossier.md` (see *What a finished dossier looks like*)
-and `docs/handoff.md` state, except the date line, which is not checked. It judges shape only, never whether a finding, plan or answer is right. It
-prints one line per finding, in file order and then check order, and no summary:
+Run the install command again. With no `--version` it installs the latest release; if that differs from what you have, it removes the codeo marketplace (which uninstalls codeo at every scope on the machine), adds it at the new tag and installs codeo again at the scopes it was at:
 
 ```
-<FAIL|drift> <file> [<check-id>] <text>
+install: release v1.0.7
+install: superpowers already installed (user scope), left alone
+✔ Successfully removed marketplace: codeo
+Also uninstalled 1 plugin from this marketplace:
+  codeo@codeo
+The removal also deletes their saved options, secrets and data where it can.
+To use a plugin again, add the marketplace back and reinstall the plugin.
+install: codeo v1.0.6 -> v1.0.7 (user scope)
+install: done - codeo v1.0.7, user scope, superpowers 7.0.2
+install: restart any Claude Code sessions already open to load the plugins
 ```
 
-`FAIL` is a promise the protocol documents make about every dossier the skills write; `drift` is a
-deviation that is reported but not failed on. A check's severity never depends on its input. Exit codes:
-0 when no `FAIL` printed, 1 when any did, 2 on a usage error (no directory, or a directory holding none of
-the six files). The header of `scripts/dossier-check.sh` lists every check id and is its documentation.
+Before you run it, read [`CHANGELOG.md`](CHANGELOG.md) for every release between yours and the new one. Each entry opens with three lines: `Config schema` (a project's `.codeo/config.json` must not be newer than the plugin understands), `Shared state` (what the plugin keeps on GitHub or in `.codeo/` that changed) and `Safe to bump mid-workflow` (`yes`, or what to finish first). Other projects' project-scope installs are not reinstalled; their committed settings offer the install again when the folder is trusted.
+
+superpowers is left alone by the installer when it is already installed. Update it with:
 
 ```
-drift init.md [header-table] no "| | |" header table after the title
-FAIL plan.md [log-cost] line 42: no " · cost: "
+$ claude plugin update superpowers@superpowers-marketplace
+Checking for updates for plugin "superpowers@superpowers-marketplace"…
+✔ superpowers is already at the latest version (7.0.2).
 ```
 
-## Replaying finished dossiers
+Restart every open Claude Code session afterwards. A project's pin lives in its `.claude/settings.json`: edit `ref` under `extraKnownMarketplaces.codeo.source` to the new tag, commit it, and teammates are offered the new release when they trust the folder. To move your own copy to the same release, run the install command with `--version` and that tag.
 
-`tests/replay.test.sh` runs the checker over a project's finished dossiers and compares what it prints
-with the findings the project recorded as expected, so a change to the checker or to the skills' forms
-shows up against real dossiers. Point `CODEO_GOLDEN_DIR` at a directory of dossier directories plus an
-`expected.tsv`:
+## Uninstalling
 
-```bash
-CODEO_GOLDEN_DIR=<the project's golden directory> bash tests/replay.test.sh
+Uninstall codeo for you:
+
+```
+$ claude plugin uninstall codeo@codeo
+✔ Successfully uninstalled plugin: codeo (scope: user)
 ```
 
-`expected.tsv` has one finding per row with the tab-separated columns `dossier`, `severity` (`FAIL` or
-`drift`), `file` and `check-id`; blank lines and lines starting with `#` are ignored. Free text is never
-compared, so rewording a finding breaks nothing, while a new finding, a moved or re-graded one, or a
-recorded one that no longer occurs does. The success line counts every `expected.tsv` row, `FAIL` rows
-included.
+A project-scope install needs the scope named: `claude plugin uninstall codeo@codeo --scope project`, run in the project. Without it, `claude` answers `Plugin "codeo@codeo" is installed in project scope, not user. Use --scope project to uninstall.`
 
-With `CODEO_GOLDEN_DIR` unset (how `tests/run.sh` runs it) the replay prints a skip line for the real data
-and still exercises the harness on the synthetic directory `tests/fixtures/golden/`. Exit codes: 0 when all
-findings are as expected, 1 on a mismatch, 2 when the replay cannot be judged (the variable set but empty, a
-nonexistent or empty directory, the checker exiting 2, or a malformed `expected.tsv` row). The golden data
-stays in the project's own repository; codeo carries none.
+To remove codeo and its marketplace together, which also uninstalls codeo at every scope on the machine:
 
-## Requirements
+```
+$ claude plugin marketplace remove codeo
+✔ Successfully removed marketplace: codeo
+```
 
-bash 4.3 or later, jq, git and gh. Board access uses `gh project`, which needs GraphQL access to GitHub.
+superpowers is separate: `claude plugin uninstall superpowers@superpowers-marketplace` (add `--scope project` for a project-scope install).
 
-## Status
+Neither command touches a project. What stays in each project that used codeo:
 
-codeo is released and ready for projects to adopt. The current version is in `.claude-plugin/plugin.json`,
-and `CHANGELOG.md` lists what changed in each release. Every entry states the config schema (currently 1),
-whether the shared state changed, and whether it is safe to bump mid-workflow, so read the entries between
-your version and the new one before upgrading.
+- `.codeo/`, with the config and every dossier, committed to the project's repository
+- `docs/plans/`, the plans
+- `.claude/settings.json`, which still declares both marketplaces and plugins, so a teammate who trusts the folder is offered them again
+
+To take codeo out of a project, delete `.codeo/` and `docs/plans/` (or keep the plans), and remove the `codeo` entries from `extraKnownMarketplaces` and `enabledPlugins` in `.claude/settings.json`, then commit.
+
+## Troubleshooting
+
+`/codeo:doctor` prints one `ok` or `fail` line per check and reports every failure. Each entry below is one check and the fix its own message gives. Paths in the messages below are your project's own.
+
+**config.** `config.json not found at …/.codeo/config.json` means the project has no codeo state: run `/codeo:setup`. An `invalid JSON` message means the file does not parse; fix the file with `jq . .codeo/config.json`, which points at the error. A `schema … is newer than this plugin supports (1); update the plugin` message means the project was set up by a newer codeo: run the install command to get the latest release.
+
+```
+fail config: config.json not found at /home/you/app/.codeo/config.json
+fail schema: no usable schema value
+```
+
+**schema.** `no usable schema value` follows an unreadable config; fix the config. `N is newer than this plugin supports` means the plugin is older than the project's config; run the install command.
+
+```
+fail config: config.json: schema 2 is newer than this plugin supports (1); update the plugin
+fail schema: 2 is newer than this plugin supports (1)
+```
+
+**codename.** The optional `codename` must be lower-case letters, digits and single hyphens between them, starting with a letter, 2 to 30 characters. Change it in `.codeo/config.json`, or remove it.
+
+```
+fail codename: "Bad Name" is not valid: lower-case letters, digits and single hyphens between them, starting with a letter, 2-30 characters
+```
+
+**gh-auth.** `gh api user failed` means `gh` is not logged in or its token was rejected: run `gh auth login`. `gh is not installed` means install `gh`.
+
+```
+fail gh-auth: gh api user failed: HTTP/2.0 401 Unauthorized
+```
+
+**gh-scopes.** Checked only when the config has a board. `the token lacks the project scope; run 'gh auth refresh -s project'`: run that command.
+
+**board.** `not readable: <numbers>` lists the board projects in `.codeo/config.json` (`board.projects`) that `gh project view` cannot open. Correct the number or the `board.owner`, and check `gh auth status` shows the `project` scope.
+
+```
+fail board: not readable: 9999
+```
+
+**priority-labels.** Checked only when `issue.priority` is `true`. `missing: …; create each with: …` prints the command that creates each missing label; run them. `cannot read the repository's labels` means `gh` could not read them: check `repo` in the config and your access.
+
+**ruleset.** `<branch> does not require: <checks>` means the base branch's ruleset or branch protection lacks a required status check codeo relies on (`tests` and `qc-verdict`, or the names in `ci.requiredChecks`): add it to the ruleset in the repository's settings. `could not read rules for <owner>/<name>@<branch>` means the repository or branch in the config is wrong or `gh` cannot read it.
+
+```
+fail ruleset: main does not require: lint
+```
+
+**suites.** `not installed or unset: <suite>:<command>` means a suite's `build` or `test` command does not resolve on this machine: install the tool, or correct the command in `.codeo/config.json`.
+
+```
+fail suites: not installed or unset: api:make api:pytest
+```
+
+**deps.** `missing: …` names a tool `codeo` needs that is not installed (`jq`, `git`, or `bash>=4.3` with the version found): install it with your package manager.
+
+**overlays.** Each `## <name>` heading in `.codeo/overlays/<skill>.md` must be an extension point of that skill, spelled `## <point>` with one space after the hashes, and used once. The message names the file, the heading and the points the skill has; rename or delete the section. `docs/extension-points.md` lists them.
+
+**superpowers.** `not installed; install it with: claude plugin install superpowers@superpowers-marketplace`: run that command (or the install command, which installs it). A `cannot verify` result is `ok`: the file `claude` keeps of installed plugins was not readable.
+
+```
+fail superpowers: not installed; install it with: claude plugin install superpowers@superpowers-marketplace
+```
+
+**`its source doesn't match its extraKnownMarketplaces entry`.** Adding the codeo marketplace at a second tag by hand fails, because the marketplace is already added at the first:
+
+```
+$ claude plugin marketplace add kbajpai/codeo@v1.0.7
+Adding marketplace…✘ Failed to add marketplace: Cannot add marketplace "codeo": its source doesn't match its extraKnownMarketplaces entry in user or managed settings; add it from the source that entry lists, or change the entry.
+```
+
+Run the install command instead, which removes the marketplace and adds it at the tag you ask for (the latest, or the one after `--version`).
+
+## Contributing
+
+Working on codeo itself (the dev container, the tests, the dossier checker): see [`CONTRIBUTING.md`](CONTRIBUTING.md).

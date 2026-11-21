@@ -709,6 +709,92 @@ t_other_projects_install_not_counted() {
     [[ $(jq --arg t "$top" '[.[] | select(.projectPath == $t)] | length' "$STUB_DIR/list.json") -eq 2 ]] || fail "list: $(cat "$STUB_DIR/list.json")"
 }
 
+# readme_headings <file> <level-prefix>: the headings of that level, outside code fences.
+readme_headings() {
+    awk -v p="$2 " '/^```/{f=!f} !f && index($0, p) == 1 {print}' "$1"
+}
+
+t_readme_sections() {
+    local want got h
+    want=$'## Requirements\n## Installing\n## Setting a project up\n## Your first workflow\n## The skills\n## Updating\n## Uninstalling\n## Troubleshooting\n## Contributing'
+    got=$(readme_headings "$repo/README.md" '##')
+    [[ $got == "$want" ]] || fail "README ## headings are not the nine in order: $got"
+    for h in 'Tests' 'Checking a dossier' 'Replaying finished dossiers' 'Dev container'; do
+        ! grep -qxF "## $h" "$repo/README.md" || fail "README still has ## $h"
+    done
+}
+
+t_contributing_sections() {
+    local h
+    [[ -f $repo/CONTRIBUTING.md ]] || { fail "CONTRIBUTING.md does not exist"; return 0; }
+    grep -qxF '# Contributing' "$repo/CONTRIBUTING.md" || fail "no # Contributing heading"
+    for h in 'Dev container' 'Tests' 'Checking a dossier' 'Replaying finished dossiers'; do
+        grep -qxF "## $h" "$repo/CONTRIBUTING.md" || fail "CONTRIBUTING.md lacks ## $h"
+    done
+}
+
+t_readme_links_resolve() {
+    local f target
+    for f in README.md CONTRIBUTING.md; do
+        [[ -f $repo/$f ]] || { fail "$f does not exist"; continue; }
+        while IFS= read -r target; do
+            target=${target%%#*}
+            [[ -n $target ]] || continue
+            [[ -e $repo/$target ]] || fail "$f links to $target, which does not exist"
+        done < <(grep -o ']([^)]*)' "$repo/$f" | sed 's/^](//; s/)$//' | grep -v -E '^[a-z]+:' || true)
+    done
+}
+
+# readme_install_lines: every README line that runs the installer through curl.
+readme_install_lines() {
+    grep -E '^curl -fsSL .*install\.sh' "$repo/README.md" || true
+}
+
+t_readme_install_command_runs() {
+    local line n=0 plain=0 ver=0 proj=0
+    while IFS= read -r line; do
+        n=$((n + 1))
+        in_setup "readme_$n"
+        printf 'a\trefs/tags/v1.0.6\nb\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+        cat >"$in_dir/bin/curl" <<STUB
+#!/usr/bin/env bash
+for a in "\$@"; do
+    if [[ \$a == https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh ]]; then
+        cat "$script"
+        exit 0
+    fi
+done
+echo "stub curl: unexpected URL: \$*" >&2
+exit 22
+STUB
+        chmod +x "$in_dir/bin/curl"
+        [[ $line != *'--scope project'* ]] || "$real_git" -C "$in_dir/work" init -q
+        in_rc=0
+        (cd "$in_dir/work" && env -i PATH="$in_dir/bin" HOME="$in_dir/home" STUB_DIR="$STUB_DIR" \
+            CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" "$bash_abs" -c "$line") >"$in_dir/out" 2>"$in_dir/err" || in_rc=$?
+        in_out=$(cat "$in_dir/out")
+        in_err=$(cat "$in_dir/err")
+        [[ $in_rc -eq 0 ]] || fail "'$line' exit $in_rc (stderr: $in_err)"
+        [[ $in_out == *'install: done - '* || $in_out == *'install: nothing changed - '* ]] || fail "'$line' stdout: $in_out"
+        if [[ $line == *--version* ]]; then ver=1
+        elif [[ $line == *'--scope project'* ]]; then proj=1
+        else plain=1; fi
+    done < <(readme_install_lines)
+    ((n >= 3)) || fail "README has $n curl install lines, want at least 3"
+    ((plain && ver && proj)) || fail "README lacks a plain, a --version and a --scope project install line"
+}
+
+t_readme_names_only_real_options() {
+    local help line opt
+    help=$(bash "$script" --help)
+    while IFS= read -r line; do
+        for opt in $(printf '%s\n' "${line#*install.sh}" | grep -oE -- '--[A-Za-z][A-Za-z-]*' || true); do
+            case $opt in --help) continue ;; esac
+            [[ $help == *"$opt"* ]] || fail "README shows $opt after install.sh; --help does not list it"
+        done
+    done < <(grep -F 'install.sh' "$repo/README.md" || true)
+}
+
 cases=(
     t_latest_is_highest_release
     t_given_tag_checked
@@ -749,6 +835,11 @@ cases=(
     t_project_rerun_changes_nothing
     t_project_after_user_install
     t_other_projects_install_not_counted
+    t_readme_sections
+    t_contributing_sections
+    t_readme_links_resolve
+    t_readme_install_command_runs
+    t_readme_names_only_real_options
 )
 
 for current in "${cases[@]}"; do
