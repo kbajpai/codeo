@@ -1454,6 +1454,22 @@ scenario_lines() {
             [[ $n != project-replace-user-install-fails ]] || : >"$STUB_DIR/install-fail-codeo-user"
             [[ $n != project-replace-project-install-fails ]] || : >"$STUB_DIR/install-fail-codeo-project"
             in_run --scope project ;;
+        user-replace-two-projects | user-replace-local)
+            local pa pb
+            two_projects
+            [[ $n != user-replace-local ]] || seed_local 1.0.6 "$in_dir/pc"
+            in_cwd="$in_dir/home" in_run ;;
+        restore-project)
+            project_repo
+            seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+            in_run --scope project ;;
+        project-replace-other-project)
+            local pa pb
+            project_repo
+            pa=$top
+            two_projects
+            seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+            in_run --scope project ;;
         replace-add-fails)
             seed_superpowers
             seed_codeo 1.0.6
@@ -1470,7 +1486,8 @@ scenario_lines() {
 t_readme_install_blocks_match_the_script() {
     local s all="" block="" line nblocks=0 found pat
     local -a ok_names=(fresh-user rerun-user user-replace-down user-replace-up fresh-project rerun-project
-        user-replace-in-pinned-project project-replace-with-user-copy)
+        user-replace-in-pinned-project project-replace-with-user-copy user-replace-two-projects
+        project-replace-other-project user-replace-local restore-project)
     local -a fail_names=(replace-add-fails project-replace-user-install-fails project-replace-project-install-fails)
     local -a got_blocks=()
     for s in "${ok_names[@]}"; do
@@ -1485,8 +1502,9 @@ t_readme_install_blocks_match_the_script() {
             nblocks=$((nblocks + 1))
             block=${block%$'\n'}
             found=0
+            block=$(printf '%s' "$block" | sed -E 's/ for [^ ]+ \(/ for <path> (/')
             for s in "${got_blocks[@]}"; do
-                [[ $s != "$block" ]] || found=1
+                [[ $(printf '%s' "$s" | sed -E 's/ for [^ ]+ \(/ for <path> (/') != "$block" ]] || found=1
             done
             ((found)) || fail "README block matches no scenario:"$'\n'"$block"
             block=""
@@ -1494,7 +1512,7 @@ t_readme_install_blocks_match_the_script() {
             block+="$line"$'\n'
         fi
     done < <(readme_install_blocks)
-    ((nblocks >= 7)) || fail "README has $nblocks install output blocks, want at least 7"
+    ((nblocks >= 8)) || fail "README has $nblocks install output blocks, want at least 8"
     while IFS= read -r line; do
         [[ -n $line ]] || continue
         pat=$(printf '%s' "$line" | sed -E 's/<[^>]*>/\x01/g')
@@ -1506,6 +1524,29 @@ t_readme_install_blocks_match_the_script() {
         done <<<"$all"
         ((found)) || fail "README quotes a line no scenario prints: $line"
     done < <(readme_install_prose)
+}
+
+# t_readme_has_no_offered_again_claim: neither the README nor the CHANGELOG says another project's install
+# is offered again.
+t_readme_has_no_offered_again_claim() {
+    local f
+    for f in README.md CHANGELOG.md; do
+        ! grep -qE 'offered again|are offered' "$repo/$f" || fail "$f still says an install is offered again"
+    done
+}
+
+# t_readme_names_the_restore_command: the README quotes the restore line the script prints for a dropped
+# project install and for a dropped local one (the path and version in each stand for the project's own).
+t_readme_names_the_restore_command() {
+    local s line norm
+    for s in user-replace-two-projects user-replace-local; do
+        line=$(scenario_lines "$s" | grep -F 'restore it' | tail -n 1)
+        [[ -n $line ]] || fail "scenario $s prints no restore line"
+        norm=$(printf '%s' "$line" | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/, v[0-9.]+\)/, vX)/')
+        grep -E '^install: codeo is no longer installed for ' "$repo/README.md" \
+            | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/, v[0-9.]+\)/, vX)/' | grep -qxF "$norm" \
+            || fail "README does not quote: $line"
+    done
 }
 
 cases=(
@@ -1590,6 +1631,8 @@ cases=(
     t_readme_install_command_runs
     t_readme_names_only_real_options
     t_readme_install_blocks_match_the_script
+    t_readme_has_no_offered_again_claim
+    t_readme_names_the_restore_command
 )
 
 for current in "${cases[@]}"; do
