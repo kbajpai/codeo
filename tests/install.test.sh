@@ -48,7 +48,7 @@ closing='install: nothing was installed. Install the tools above with your syste
 # `plugin install` of an installed id prints "already installed" and changes nothing; a file
 # $STUB_DIR/list-fail makes `plugin list` exit 1; a file $STUB_DIR/drain makes every call read stdin
 # to the end. `plugin marketplace add ... --scope project` of a marketplace already known is a no-op
-# ("already on disk"); every call's $PWD is logged to $STUB_DIR/pwds. `plugin marketplace remove codeo` drops the marketplace and every codeo@codeo entry.
+# ("already on disk"); every call's $PWD is logged to $STUB_DIR/pwds. `plugin marketplace remove codeo` drops the marketplace and every codeo@codeo entry. The stub also models settings files: marketplace add writes extraKnownMarketplaces and install writes enabledPlugins into $PWD/.claude/settings.json (--scope project) or $CLAUDE_CONFIG_DIR/settings.json; remove strips codeo from the user file and from $PWD/.claude/settings.json when present; a path in $STUB_DIR/watch-settings is copied to $STUB_DIR/settings-at-remove after each remove.
 in_setup() {
     in_dir="$scratch/$1"
     rm -rf "$in_dir"
@@ -105,6 +105,24 @@ args=("$@")
 for ((i = 0; i < ${#args[@]}; i++)); do
     [[ ${args[i]} != --scope ]] || scope=${args[i + 1]:-user}
 done
+# settings_file: the settings file the asked scope writes (project: $PWD/.claude, user: the config dir).
+settings_file() {
+    if [[ $scope == project ]]; then echo "$PWD/.claude/settings.json"; else echo "$CLAUDE_CONFIG_DIR/settings.json"; fi
+}
+# edit_settings <file> <jq args...>: apply a jq filter to a settings file, creating it when missing.
+edit_settings() {
+    local file=$1
+    shift
+    mkdir -p "$(dirname "$file")"
+    [[ -f $file ]] || echo '{}' >"$file"
+    jq "$@" "$file" >"$file.new"
+    mv "$file.new" "$file"
+}
+# declare_marketplace <name> <repo> <ref>: extraKnownMarketplaces.<name>, replacing any entry (no ref key without a ref).
+declare_marketplace() {
+    edit_settings "$(settings_file)" --arg n "$1" --arg r "$2" --arg f "$3" \
+        '.extraKnownMarketplaces[$n] = {source: ({source: "github", repo: $r} + (if $f == "" then {} else {ref: $f} end))}'
+}
 case "${1:-} ${2:-} ${3:-}" in
     "plugin list "*)
         if [[ -f $STUB_DIR/list-fail ]]; then echo "stub claude: plugin list failed" >&2; exit 1; fi
@@ -121,6 +139,7 @@ case "${1:-} ${2:-} ${3:-}" in
         esac
         old=$(jq -r --arg n "$name" '.[$n].source.ref // ""' "$market")
         if [[ $scope == project && $(jq --arg n "$name" 'has($n)' "$market") == true ]]; then
+            declare_marketplace "$name" "$repo" "$ref"
             echo "$name already on disk - declared in project settings"
             exit 0
         fi
@@ -131,9 +150,17 @@ case "${1:-} ${2:-} ${3:-}" in
         jq --arg n "$name" --arg r "$repo" --arg f "$ref" \
             '.[$n] = {source: ({source: "github", repo: $r} + (if $f == "" then {} else {ref: $f} end))}' \
             "$market" >"$market.new"
-        mv "$market.new" "$market" ;;
+        mv "$market.new" "$market"
+        declare_marketplace "$name" "$repo" "$ref" ;;
     "plugin marketplace remove")
         if [[ -f $STUB_DIR/remove-fail ]]; then echo "stub claude: remove failed" >&2; exit 1; fi
+        for file in "$CLAUDE_CONFIG_DIR/settings.json" "$PWD/.claude/settings.json"; do
+            [[ ! -f $file ]] || edit_settings "$file" --arg n "$4" 'del(.extraKnownMarketplaces[$n]) | (if $n == "codeo" then del(.enabledPlugins["codeo@codeo"]) else . end)'
+        done
+        # the real CLI also strips a project file in the directory it runs in. A test names the project file
+        # it watches in $STUB_DIR/watch-settings; the stub keeps what that file holds once the remove is done.
+        [[ ! -f $STUB_DIR/watch-settings || ! -f $(cat "$STUB_DIR/watch-settings") ]] \
+            || cp "$(cat "$STUB_DIR/watch-settings")" "$STUB_DIR/settings-at-remove"
         jq --arg n "$4" 'del(.[$n])' "$market" >"$market.new"
         mv "$market.new" "$market"
         if [[ $4 == codeo ]]; then
@@ -157,7 +184,8 @@ case "${1:-} ${2:-} ${3:-}" in
         jq --arg id "$id" --arg v "$version" --arg s "$scope" --arg p "$PWD" \
             '. + [{id: $id, version: $v, scope: $s, enabled: true, projectPath: $p}]' \
             "$list" >"$list.new"
-        mv "$list.new" "$list" ;;
+        mv "$list.new" "$list"
+        edit_settings "$(settings_file)" --arg id "$id" '.enabledPlugins[$id] = true' ;;
     "plugin enable "*)
         jq --arg id "$3" --arg s "$scope" 'map(if .id == $id and .scope == $s then .enabled = true else . end)' "$list" >"$list.new"
         mv "$list.new" "$list" ;;
@@ -878,6 +906,58 @@ readme_headings() {
     awk -v p="$2 " '/^```/{f=!f} !f && index($0, p) == 1 {print}' "$1"
 }
 
+# readme_snippet: the README's project snippet, its first ```json fenced block.
+readme_snippet() {
+    awk '/^```json$/ { on = 1; next } /^```$/ && on { exit } on' "$repo/README.md"
+}
+
+t_project_scope_writes_the_readme_snippet() {
+    local top
+    in_setup project_snippet
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ -n $(readme_snippet) ]] || fail "the README has no json snippet"
+    [[ $(jq -S . "$top/.claude/settings.json") == "$(readme_snippet | jq -S .)" ]] \
+        || fail "project settings differ from the README snippet: $(cat "$top/.claude/settings.json" 2>&1)"
+}
+
+t_user_scope_declares_in_user_settings() {
+    in_setup user_settings
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.7 ]] \
+        || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json" 2>&1)"
+    [[ $(jq -r '.enabledPlugins["codeo@codeo"]' "$CLAUDE_CONFIG_DIR/settings.json") == true ]] \
+        || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json")"
+    [[ $(jq -r '.enabledPlugins["superpowers@superpowers-marketplace"]' "$CLAUDE_CONFIG_DIR/settings.json") == true ]] \
+        || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json")"
+}
+
+t_remove_from_home_leaves_project_settings() {
+    local top
+    in_setup remove_home
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+    seed_pin kbajpai/codeo v1.0.6
+    seed_project codeo@codeo 1.0.6 "$top"
+    mkdir -p "$top/.claude"
+    printf '%s\n' '{"enabledPlugins":{"codeo@codeo":true},"extraKnownMarketplaces":{"codeo":{"source":{"source":"github","repo":"kbajpai/codeo","ref":"v1.0.6"}}}}' \
+        >"$top/.claude/settings.json"
+    cp "$top/.claude/settings.json" "$in_dir/before"
+    printf '%s' "$top/.claude/settings.json" >"$STUB_DIR/watch-settings"
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ -f $STUB_DIR/settings-at-remove ]] || fail "the stub saw no remove call with a project file"
+    cmp -s "$in_dir/before" "$STUB_DIR/settings-at-remove" || fail "the remove changed the project file: $(cat "$STUB_DIR/settings-at-remove")"
+    [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
+    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$top/.claude/settings.json") == v1.0.7 ]] \
+        || fail "project settings: $(cat "$top/.claude/settings.json")"
+}
+
 t_readme_sections() {
     local want got h
     want=$'## Requirements\n## Installing\n## Setting a project up\n## Your first workflow\n## The skills\n## Updating\n## Uninstalling\n## Troubleshooting\n## Contributing'
@@ -1009,6 +1089,9 @@ cases=(
     t_project_rerun_changes_nothing
     t_project_after_user_install
     t_other_projects_install_not_counted
+    t_project_scope_writes_the_readme_snippet
+    t_user_scope_declares_in_user_settings
+    t_remove_from_home_leaves_project_settings
     t_readme_sections
     t_contributing_sections
     t_readme_links_resolve
