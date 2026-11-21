@@ -47,7 +47,8 @@ closing='install: nothing was installed. Install the tools above with your syste
 # codeo@codeo or the tag the marketplace was added at without its v, 7.0.2 for superpowers);
 # `plugin install` of an installed id prints "already installed" and changes nothing; a file
 # $STUB_DIR/list-fail makes `plugin list` exit 1; a file $STUB_DIR/drain makes every call read stdin
-# to the end. # `plugin marketplace remove codeo` drops the marketplace and every codeo@codeo entry.
+# to the end. `plugin marketplace add ... --scope project` of a marketplace already known is a no-op
+# ("already on disk"); every call's $PWD is logged to $STUB_DIR/pwds. # `plugin marketplace remove codeo` drops the marketplace and every codeo@codeo entry.
 in_setup() {
     in_dir="$scratch/$1"
     rm -rf "$in_dir"
@@ -93,6 +94,7 @@ STUB
 #!/usr/bin/env bash
 set -euo pipefail
 echo "$*" >>"$STUB_DIR/calls"
+echo "$PWD" >>"$STUB_DIR/pwds"
 [[ ! -f $STUB_DIR/drain ]] || cat >/dev/null
 list="$STUB_DIR/list.json"
 market="$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
@@ -116,6 +118,10 @@ case "${1:-} ${2:-} ${3:-}" in
             *) echo "stub claude: unknown marketplace $repo" >&2; exit 1 ;;
         esac
         old=$(jq -r --arg n "$name" '.[$n].source.ref // ""' "$market")
+        if [[ $scope == project && $(jq --arg n "$name" 'has($n)' "$market") == true ]]; then
+            echo "$name already on disk - declared in project settings"
+            exit 0
+        fi
         if [[ -n $old && $old != "$ref" ]]; then
             echo "its source doesn't match its extraKnownMarketplaces entry" >&2
             exit 1
@@ -133,7 +139,7 @@ case "${1:-} ${2:-} ${3:-}" in
         fi ;;
     "plugin install "*)
         id=$3
-        if [[ $(jq --arg id "$id" --arg s "$scope" '[.[] | select(.id == $id and .scope == $s)] | length' "$list") -gt 0 ]]; then
+        if [[ $(jq --arg id "$id" --arg s "$scope" '[.[] | select(.id == $id and .scope == $s and ($s != "project" or .projectPath == $p))] | length' "$list" --arg p "$PWD") -gt 0 ]]; then
             echo "$id is already installed"
             exit 0
         fi
@@ -248,6 +254,7 @@ t_no_args_ok_up_to_prereqs() {
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc, want 0 (stderr: $in_err)"
     [[ $in_out == 'install: release v1.0.7'* && -z $in_err ]] || fail "out=$in_out err=$in_err"
+    "$real_git" -C "$in_dir/work" init -q
     in_run --version v1.0.7 --scope project
     [[ $in_rc -eq 0 ]] || fail "valid args: exit $in_rc, want 0 (stderr: $in_err)"
     in_run --version 1.0.7
@@ -596,6 +603,112 @@ t_downgrade_with_given_tag() {
     [[ $in_out == *'install: codeo v1.0.7 -> v1.0.6 (user scope)'* ]] || fail "stdout: $in_out"
 }
 
+# project_repo: the work directory becomes a git repository; sets top (the caller's local) to its top level.
+project_repo() {
+    "$real_git" -C "$in_dir/work" init -q
+    top=$("$real_git" -C "$in_dir/work" rev-parse --show-toplevel)
+}
+
+# seed_project <id> <version> <projectPath>: a project-scope entry.
+seed_project() {
+    jq --arg id "$1" --arg v "$2" --arg p "$3" '. + [{id: $id, version: $v, scope: "project", enabled: true, projectPath: $p}]' \
+        "$STUB_DIR/list.json" >"$STUB_DIR/list.new" && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
+}
+
+project_calls=(
+    'plugin marketplace add obra/superpowers-marketplace --scope project'
+    'plugin install superpowers@superpowers-marketplace --scope project'
+    'plugin marketplace add kbajpai/codeo@v1.0.7 --scope project'
+    'plugin install codeo@codeo --scope project'
+)
+
+t_project_scope_installs_both() {
+    local top
+    in_setup project_both
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls "${project_calls[@]}"
+    [[ $in_out == *'install: superpowers installed (project scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.7 installed (project scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.7, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $(jq -r '.[].projectPath' "$STUB_DIR/list.json" | sort -u) == "$top" ]] || fail "list: $(cat "$STUB_DIR/list.json")"
+}
+
+t_project_scope_outside_repo() {
+    in_setup project_outside
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run --scope project
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == "install: project scope must run inside the project's git repository" ]] || fail "stderr: $in_err"
+    [[ ! -s $STUB_DIR/calls ]] || fail "claude was called: $(cat "$STUB_DIR/calls")"
+}
+
+t_project_scope_from_subdirectory() {
+    local top
+    in_setup project_subdir
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    mkdir -p "$in_dir/work/a/b"
+    in_rc=0
+    (cd "$in_dir/work/a/b" && env -i PATH="$in_dir/bin" HOME="$in_dir/home" STUB_DIR="$STUB_DIR" \
+        CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" "$bash_abs" "$script" --scope project) >"$in_dir/out" 2>"$in_dir/err" || in_rc=$?
+    in_out=$(cat "$in_dir/out")
+    in_err=$(cat "$in_dir/err")
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'install: done - codeo v1.0.7, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $(sort -u "$STUB_DIR/pwds") == "$top" ]] || fail "claude ran in: $(sort -u "$STUB_DIR/pwds")"
+    [[ $(jq -r '.[].projectPath' "$STUB_DIR/list.json" | sort -u) == "$top" ]] || fail "list: $(cat "$STUB_DIR/list.json")"
+}
+
+t_project_rerun_changes_nothing() {
+    local top
+    in_setup project_rerun
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "first run: exit $in_rc (stderr: $in_err)"
+    : >"$STUB_DIR/calls"
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ -s $STUB_DIR/calls ]] || fail "claude was never asked"
+    [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
+    [[ $in_out == *'install: superpowers already installed (project scope), left alone'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.7 already installed (project scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.7, project scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+}
+
+t_project_after_user_install() {
+    local top
+    in_setup project_after_user
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_superpowers
+    seed_codeo 1.0.7
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls "${project_calls[@]}"
+    [[ $in_out == *'install: done - codeo v1.0.7, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $(jq '[.[] | select(.scope == "user")] | length' "$STUB_DIR/list.json") -eq 2 ]] || fail "user entries changed: $(cat "$STUB_DIR/list.json")"
+    [[ $(jq --arg t "$top" '[.[] | select(.scope == "project" and .projectPath == $t)] | length' "$STUB_DIR/list.json") -eq 2 ]] \
+        || fail "list: $(cat "$STUB_DIR/list.json")"
+}
+
+t_other_projects_install_not_counted() {
+    local top
+    in_setup project_other
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_project superpowers@superpowers-marketplace 7.0.2 /somewhere/else
+    seed_project codeo@codeo 1.0.7 /somewhere/else
+    seed_pin kbajpai/codeo v1.0.7
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls "${project_calls[@]}"
+    [[ $(jq --arg t "$top" '[.[] | select(.projectPath == $t)] | length' "$STUB_DIR/list.json") -eq 2 ]] || fail "list: $(cat "$STUB_DIR/list.json")"
+}
+
 cases=(
     t_latest_is_highest_release
     t_given_tag_checked
@@ -630,6 +743,12 @@ cases=(
     t_replace_fork_marketplace
     t_replace_failure_reported
     t_downgrade_with_given_tag
+    t_project_scope_installs_both
+    t_project_scope_outside_repo
+    t_project_scope_from_subdirectory
+    t_project_rerun_changes_nothing
+    t_project_after_user_install
+    t_other_projects_install_not_counted
 )
 
 for current in "${cases[@]}"; do

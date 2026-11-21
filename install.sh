@@ -117,10 +117,21 @@ resolve_release() {
     say "release $tag"
 }
 
+project_top=""
+
+# enter_project: project scope runs inside the project's git repository; cd to its top level, before any
+# claude call.
+enter_project() {
+    [[ $scope == project ]] || return 0
+    project_top=$(git rev-parse --show-toplevel </dev/null 2>/dev/null) \
+        || die "project scope must run inside the project's git repository"
+    cd "$project_top"
+}
+
 changed=0
 
 # claude_at <scope> <args...>: claude, never reading the script from stdin. User scope runs from $HOME,
-# so no project's settings are involved; project scope runs in the current directory.
+# so no project's settings are involved; project scope runs from the project top level (main cd's there).
 claude_at() {
     local s=$1
     shift
@@ -142,7 +153,7 @@ installed_version() {
     list=$(run_claude plugin list --json) \
         || die "cannot read the installed plugins (claude plugin list failed)"
     if [[ $2 == project ]]; then
-        top=$(git rev-parse --show-toplevel 2>/dev/null || true)
+        top=${project_top:-$(git rev-parse --show-toplevel </dev/null 2>/dev/null || true)}
     fi
     printf '%s\n' "$list" | jq -r --arg id "$1" --arg s "$2" --arg top "$top" '
         [.[] | select(
@@ -167,7 +178,11 @@ ensure_superpowers() {
         say "superpowers already installed ($scope scope), left alone"
         return 0
     fi
-    run_claude plugin marketplace add obra/superpowers-marketplace
+    if [[ $scope == project ]]; then
+        run_claude plugin marketplace add obra/superpowers-marketplace --scope project
+    else
+        run_claude plugin marketplace add obra/superpowers-marketplace
+    fi
     run_claude plugin install superpowers@superpowers-marketplace --scope "$scope"
     changed=1
     say "superpowers installed ($scope scope)"
@@ -230,7 +245,12 @@ ensure_codeo() {
         replace_codeo "$old"
         return 0
     fi
-    [[ -n $pin ]] || run_claude plugin marketplace add "kbajpai/codeo@$tag"
+    if [[ $scope == project ]]; then
+        # Declares the marketplace in the project's settings; a no-op when it is already known.
+        run_claude plugin marketplace add "kbajpai/codeo@$tag" --scope project
+    elif [[ -z $pin ]]; then
+        run_claude plugin marketplace add "kbajpai/codeo@$tag"
+    fi
     run_claude plugin install codeo@codeo --scope "$scope"
     changed=1
     say "codeo $tag installed ($scope scope)"
@@ -250,6 +270,7 @@ summary() {
 
 main() {
     parse_args "$@"
+    enter_project
     resolve_release
     ensure_superpowers
     ensure_codeo
