@@ -40,9 +40,9 @@
 #            (or once <base> itself): the first line ends "; it is bare — cut from <base> with nothing
 #            of its own, and <base> holds #N's archive", the second is the same. Known limit: a
 #            fast-forwarded branch reads bare too (the remedy is the same). A merged-and-left branch of
-#            *another* issue M whose title derives N's name still reads `no dossier` — it adds
-#            nothing beyond <base>, so nothing names M; deleting it or retitling is the right remedy
-#            there too.
+#            another issue M that init did not cut (one pushed under #N's name by hand) still reads
+#            `no dossier` — it adds nothing beyond <base>, so nothing names M; renaming or deleting it
+#            is the remedy.
 #         1  the branch or ref is missing
 #
 #   claim.sh --stash-live <issue> <branch> <repo>
@@ -208,7 +208,7 @@ if [[ $mode == carries ]]; then
         echo "claim: $branch carries only #$n's own archived dossier — #$n has already been through close; finish or verify it with close in its container, and retitle #$n only for an issue reopened after its merge"
     elif [[ -n $other ]]; then
         echo "claim: $branch already exists on origin — pushed by $pusher; it carries $what${other_line:+ ($other_line)}"
-        echo "claim: $branch carries #$other's dossier, not #$n's — rename or delete it on origin (init cuts <type>/<N>-<slug>, so a branch with another issue's dossier under that name was pushed by hand)"
+        echo "claim: $branch carries #$other's dossier, not #$n's — rename or delete it on origin"
     elif merged_and_left "$repo" "$ref"; then
         if bare_branch "$repo" "$ref"; then
             echo "claim: $branch already exists on origin — pushed by $pusher; it is bare — cut from $base with nothing of its own, and $base holds #$n's archive"
@@ -218,7 +218,7 @@ if [[ $mode == carries ]]; then
         echo "claim: #$n has already been through close — delete $branch on origin (close normally does), and retitle #$n only for an issue reopened after its merge"
     else
         echo "claim: $branch already exists on origin — pushed by $pusher; it carries no dossier"
-        echo "claim: $branch is not a pipeline branch — rename or delete it on origin, or retitle #$n"
+        echo "claim: $branch is not a pipeline branch — rename or delete it on origin"
     fi
     exit 2
 fi
