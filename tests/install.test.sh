@@ -126,7 +126,10 @@ declare_marketplace() {
 case "${1:-} ${2:-} ${3:-}" in
     "plugin list "*)
         if [[ -f $STUB_DIR/list-fail ]]; then echo "stub claude: plugin list failed" >&2; exit 1; fi
-        cat "$list" ;;
+        [[ ! -f $STUB_DIR/list-pre ]] || cat "$STUB_DIR/list-pre"
+        if [[ -f $STUB_DIR/list-nojson ]]; then exit 0; fi
+        if [[ -f $STUB_DIR/list-compact ]]; then jq -c . "$list"; else cat "$list"; fi
+        [[ ! -f $STUB_DIR/list-post ]] || cat "$STUB_DIR/list-post" ;;
     "plugin marketplace add")
         spec=$4 repo=${4%@*} ref=""
         [[ $spec != *@* ]] || ref=${spec#*@}
@@ -521,6 +524,68 @@ t_plugin_list_failure_stops() {
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == *'install: cannot read the installed plugins (claude plugin list failed)'* ]] || fail "stderr: $in_err"
     [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
+}
+
+# The stub prints $STUB_DIR/list-pre and list-post (notice lines) around the list; list-compact prints the
+# array on one line; list-nojson prints no JSON at all.
+t_list_with_a_notice_before_the_json() {
+    in_setup list_notice_before
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.7
+    echo 'Notice: a new claude version is available' >"$STUB_DIR/list-pre"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.7, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+}
+
+t_list_with_a_notice_after_the_json() {
+    in_setup list_notice_after
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.7
+    echo 'Notice: update available [x]' >"$STUB_DIR/list-post"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.7, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+}
+
+t_list_compact_json_with_a_notice() {
+    in_setup list_notice_compact
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.7
+    echo 'Notice: before' >"$STUB_DIR/list-pre"
+    echo 'Notice: after' >"$STUB_DIR/list-post"
+    : >"$STUB_DIR/list-compact"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.7, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+}
+
+t_list_notice_does_not_hide_dropped_installs() {
+    in_setup list_notice_dropped
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.6
+    seed_local 1.0.6 /some/local
+    echo 'Notice: before' >"$STUB_DIR/list-pre"
+    echo 'Notice: after' >"$STUB_DIR/list-post"
+    : >"$STUB_DIR/list-compact"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *"$(dropped_line /some/local local 1.0.6)"* ]] || fail "stdout: $in_out"
+}
+
+t_list_with_no_json_dies_cleanly() {
+    in_setup list_no_json
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    echo 'Notice: nothing to see' >"$STUB_DIR/list-pre"
+    : >"$STUB_DIR/list-nojson"
+    in_run
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == *'install: cannot read the installed plugins (claude plugin list failed)'* ]] || fail "stderr: $in_err"
+    [[ $in_err != *jq* && $in_err != *parse* ]] || fail "jq text leaked: $in_err"
 }
 
 t_runs_from_a_pipe() {
@@ -1444,6 +1509,11 @@ t_readme_install_blocks_match_the_script() {
 }
 
 cases=(
+    t_list_with_a_notice_before_the_json
+    t_list_with_a_notice_after_the_json
+    t_list_compact_json_with_a_notice
+    t_list_notice_does_not_hide_dropped_installs
+    t_list_with_no_json_dies_cleanly
     t_replace_second_scope_failure_names_both
     t_replace_first_failure_keeps_no_longer_installed
     t_replace_project_failure_names_the_wiped_user_copy

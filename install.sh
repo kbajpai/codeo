@@ -178,13 +178,25 @@ claude_step() {
     die "$what: $line"
 }
 
+# plugin_list_json <scope>: prints the JSON array from `claude plugin list --json` at the scope. Notice
+# lines on stdout around the array are skipped: the text starts at the first line beginning with "[", and
+# the first array jq reads from it is printed (compact), so a trailing notice is never parsed. Dies when
+# the call fails or no array is found, with no jq message. Callers add || exit 1.
+plugin_list_json() {
+    local raw arr
+    raw=$(claude_at "$1" plugin list --json) \
+        || die "cannot read the installed plugins (claude plugin list failed)"
+    arr=$(printf '%s\n' "$raw" | sed -n '/^\[/,$p' | jq -c 'select(type == "array")' 2>/dev/null | head -n 1 || true)
+    [[ -n $arr ]] || die "cannot read the installed plugins (claude plugin list failed)"
+    printf '%s\n' "$arr"
+}
+
 # installed_entry <id> <scope>: prints "<version> <enabled> <id>" of the entry installed at the scope,
 # nothing when absent. An id ending in @* matches any marketplace. A failing plugin list dies inside the
 # subshell, so callers add || exit 1. A project-scope entry counts only for this project's top level.
 installed_entry() {
     local list top=""
-    list=$(claude_at "$2" plugin list --json) \
-        || die "cannot read the installed plugins (claude plugin list failed)"
+    list=$(plugin_list_json "$2") || exit 1
     if [[ $2 == project ]]; then
         top=$(project_root || true)
     fi
@@ -255,8 +267,7 @@ ensure_superpowers() {
 # callers add || exit 1. An entry whose projectPath no longer exists on disk is named like any other.
 dropped_installs() {
     local list top=""
-    list=$(claude_at user plugin list --json) \
-        || die "cannot read the installed plugins (claude plugin list failed)"
+    list=$(plugin_list_json user) || exit 1
     if [[ $scope == project ]]; then
         top=$(project_root || true)
     fi
