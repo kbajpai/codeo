@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 (send-back from qc.md round 2; F10 and F11 are settled by qc.md Q3): Q8-Q9 raised and open. The plan is not drafted until they are answered.
+Round 3: Q8-Q9 answered, the plan is approved and written to `docs/plans/2026-11-21-install-one-command-151-round-3.md` (unstaged), `## Outcome` has its round, and the hand-off is `/codeo:implement`.
 
 ## Questions
 
@@ -144,15 +144,6 @@ Accept both and document them, as recommended (engineer, in the conversation, 20
 
 `engineering:system-design` and `engineering:architecture` are not available as skills in this session; their structure is applied directly in the draft.
 
-### Footprint
-
-```
-files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md, docs/plans/2026-11-21-install-one-command-151-round-3.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-21-install-one-command-151.md` (approved by the engineer 2026-11-21; left unstaged for review). **Shape:** a scoped, executable plan of eight tasks under `$PLANS`, with a Mermaid flowchart; no standing reference doc, because `README.md` is the documentation.
@@ -172,7 +163,6 @@ sequenced:  none
 
 **Other workflows:** #149 and #138 were at `init` with no footprint; `overlap.sh` printed nothing. No exclusive resource, so no lock was taken.
 
-
 ### Round 2
 
 2026-11-21
@@ -189,6 +179,34 @@ sequenced:  none
 **Documentation pages the plan changes:** `README.md` (Task 4) and the `CHANGELOG.md` bullet (Task 5); `CONTRIBUTING.md` and `docs/` unchanged. No wiki module.
 
 **Other workflows:** #149 and #138 share only `CHANGELOG.md` (answered *proceed and coordinate*); `overlap.sh` printed nothing for this footprint. No exclusive resource, so no lock.
+
+### Round 3
+
+2026-11-21
+(send-back from qc.md round 2)
+
+**Plan:** `docs/plans/2026-11-21-install-one-command-151-round-3.md` (approved by the engineer 2026-11-21; left unstaged for review). **Shape:** a scoped, executable plan of five tasks under `$PLANS` with a Mermaid flowchart; no reference doc. The round-1 and round-2 plans bind wherever it is silent.
+
+**Decisions:**
+- qc.md Q3 (say so, correct the docs): after a replace the installer prints one line per project or local-scope codeo install it dropped (path, scope, version, restore command), read from `claude plugin list --json` before the marketplace is removed; the README and CHANGELOG drop the "offered again" claim. A project-scope run does not name its own project. Rejected: correcting the docs only, and leaving it.
+- Q8 (recommended): F13, F14, F16, F17 and F18 are fixed in this round. Rejected: only F13 and F14, and none.
+- Q9 (recommended): F12 and F15 are accepted limits, documented in *Troubleshooting* and *Installing*, with no installer change. Rejected: filing them as issues, and fixing F12.
+
+**Calls made without a question:** a local-scope install is named with `claude plugin install codeo@codeo --scope local` as its restore command, since the installer does not manage local scope; a project whose directory no longer exists is still named; the restore commands are run for real before the README quotes them.
+
+**Tasks:** 1 dropped-install lines (F10); 2 disabled user copy and numeric test hook (F16, F17); 3 a notice around `plugin list` (F18); 4 README (F11-F15); 5 CHANGELOG bullet (F11).
+
+**Documentation pages the plan changes:** `README.md` (Task 4) and the `CHANGELOG.md` bullet (Task 5); `CONTRIBUTING.md` and `docs/` unchanged. No wiki module.
+
+**Other workflows:** #138 shares only `CHANGELOG.md` (answered *proceed and coordinate*); `overlap.sh` printed nothing new, so no question was raised and no lock was taken.
+
+### Footprint
+
+```
+files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md, docs/plans/2026-11-21-install-one-command-151-round-3.md
+wiki:       none
+exclusive:  none
+sequenced:  none
 ```
 
 ## Log
@@ -199,3 +217,5 @@ sequenced:  none
 - 2026-11-21 — round 2 (send-back from qc.md round 1): Q7 raised · cost: 0m · fable-5-2 340k in + 23k cached / 2k out
 - 2026-11-21 — round 2: Q7 answered, plan drafted for review · cost: 3m · fable-5-2 356k in + 1.9M cached / 16k out
 - 2026-11-21 — planned (round 2): docs/plans/2026-11-21-install-one-command-151-round-2.md · cost: 8m · fable-5-2 364k in + 2.3M cached / 17k out · sonnet-5-5 348k in + 399k cached / 1k out
+- 2026-11-21 — round 3 (send-back from qc.md round 2): Q8-Q9 raised, answered, plan drafted and approved · cost: 3m · sonnet-5-5 67k in + 1.8M cached / 16k out
+- 2026-11-21 — planned (round 3): docs/plans/2026-11-21-install-one-command-151-round-3.md; engineering:system-design and engineering:architecture unavailable, structure applied directly · cost: see line above
