@@ -1569,6 +1569,20 @@ t_relative_codeo_home() {
     expect_call "codeo-container.sh home pwd=$cm_home"
 }
 
+t_relative_codeo_home_rm() {
+    cm_setup "$current"
+    cd "$cm_dir"
+    cm_status=0
+    env -i HOME="$cm_dir/h" CODEO_HOME=home PATH="$cm_dir/bin:$cm_dir/sys" \
+        "$bash_abs" "$script" rm 5 --sandbox >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
+    cd "$repo"
+    cm_err=$(cat "$cm_dir/err")
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
+    [[ "$cm_err" != *mktemp* ]] || fail "stderr names mktemp: $cm_err"
+    [[ "$cm_err" != *home/home* ]] || fail "stderr names home/home: $cm_err"
+}
+
 t_home_unset() {
     cm_setup "$current"
     cm_status=0
@@ -1869,6 +1883,7 @@ cases=(
     t_update_partial_final_mv
     t_update_through_symlink
     t_relative_codeo_home
+    t_relative_codeo_home_rm
     t_relative_overrides_made_absolute
     t_home_checkout_collision
     t_home_checkout_collision_git_file

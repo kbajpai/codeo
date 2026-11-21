@@ -708,6 +708,7 @@ cmd_update() {
 }
 
 main() {
+    abs_path_env CODEO_HOME always
     abs_path_env CODEO_CONTEXT always
     abs_path_env CODEO_SBX_IMAGE always
     abs_path_env CODEO_SBX slash
