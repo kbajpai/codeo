@@ -20,6 +20,15 @@ fail() {
 # $1 case, $2 fixed string the skill must contain.
 must_contain() { grep -qF -- "$2" "$skill" || fail "$1 — no [$2]"; }
 
+# $1 case, $2 and $3 fixed strings: the skill, its whitespace collapsed to single spaces, must
+# contain $2 at a lower offset than $3.
+must_precede() {
+    awk -v a="$2" -v b="$3" '
+        { gsub(/^[ \t]+|[ \t]+$/, ""); t = t (NR > 1 ? " " : "") $0 }
+        END { i = index(t, a); j = index(t, b); exit !(i && j && i < j) }' "$skill" ||
+        fail "$1 — [$2] does not come before [$3]"
+}
+
 # $1 case, $2 fixed string the skill must lack.
 must_lack() { ! grep -qF -- "$2" "$skill" || fail "$1 — still has [$2]"; }
 
@@ -101,6 +110,9 @@ must_contain 'the Notes line carries no issue number' 'carries no issue number'
 must_contain 'a refused call is filed where the role check allows' 'in the checkout the project'\''s role check allows'
 must_lack 'no home-container claim in generic text' 'in the home container'
 must_lack 'no issue-container claim in generic text' 'issue container'
+
+# The overlap step stops until it is answered before it says what a non-zero exit means, as in qc.
+must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with an'
 
 if ((failures)); then
     echo "$failures case(s) failed"
