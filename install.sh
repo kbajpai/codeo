@@ -13,8 +13,13 @@
 
 # The prerequisite check comes first and uses only syntax bash 3.2 can parse (no [[ -v, associative
 # arrays, ${var,,}, mapfile, &>>), so an old bash reaches the message below instead of a syntax error.
-# CODEO_TEST_BASH_VERSION (<major>.<minor>) replaces BASH_VERSINFO, for the tests only.
-if [ -n "${CODEO_TEST_BASH_VERSION:-}" ]; then
+# CODEO_TEST_BASH_VERSION (<digits>.<digits>) replaces BASH_VERSINFO, for the tests only; any other value is ignored.
+test_bash=
+case "${CODEO_TEST_BASH_VERSION:-}" in
+    "" | *[!0-9.]* | .* | *. | *.*.*) ;;
+    *.*) test_bash=1 ;;
+esac
+if [ -n "$test_bash" ]; then
     bash_major=${CODEO_TEST_BASH_VERSION%%.*}
     bash_minor=${CODEO_TEST_BASH_VERSION#*.}
 else
@@ -276,7 +281,7 @@ dropped_installs() {
 # from $HOME, project-scope calls from the project's top level. A failure after the remove leaves codeo
 # uninstalled, and says so.
 replace_codeo() {
-    local old=$1 user_e=$2 out restored= dropped line
+    local old=$1 user_e=$2 out restored= dropped line user_on
     # The list is read first: the remove empties it.
     dropped=$(dropped_installs) || exit 1
     # Always from $HOME: inside a git repository, remove rewrites its tracked .claude/settings.json.
@@ -298,7 +303,14 @@ replace_codeo() {
     changed=1
     say "codeo $old -> $tag ($scope scope)"
     if [[ $scope == project ]]; then
-        [[ -z $user_e ]] || say "your user-scope codeo moved to $tag too: one machine holds one codeo version"
+        if [[ -n $user_e ]]; then
+            read -r _ user_on _ <<<"$user_e"
+            if [[ $user_on == false ]]; then
+                say "your user-scope codeo moved to $tag too: one machine holds one codeo version (it was disabled; it is enabled now)"
+            else
+                say "your user-scope codeo moved to $tag too: one machine holds one codeo version"
+            fi
+        fi
     fi
     while IFS= read -r line; do
         [[ -z $line ]] || say "$line"

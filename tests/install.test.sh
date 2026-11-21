@@ -735,6 +735,53 @@ t_no_replace_no_dropped_lines() {
     [[ $in_out != *"no longer installed for"* ]] || fail "re-run: $in_out"
 }
 
+t_project_replace_says_the_disabled_user_copy_is_enabled() {
+    local top
+    in_setup project_replace_user_on
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_superpowers
+    seed_codeo 1.0.6
+    seed_project codeo@codeo 1.0.6 "$top"
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'one machine holds one codeo version'* ]] || fail "stdout: $in_out"
+    [[ $in_out != *'it was disabled'* ]] || fail "enabled copy called disabled: $in_out"
+    in_setup project_replace_user_off
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    seed_superpowers
+    seed_codeo 1.0.6
+    jq 'map(if .id == "codeo@codeo" then .enabled = false else . end)' "$STUB_DIR/list.json" >"$STUB_DIR/list.new" \
+        && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
+    seed_project codeo@codeo 1.0.6 "$top"
+    in_run --scope project
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *"install: your user-scope codeo moved to v1.0.7 too: one machine holds one codeo version (it was disabled; it is enabled now)"* ]] \
+        || fail "stdout: $in_out"
+}
+
+t_nonnumeric_test_bash_version_is_ignored() {
+    local v
+    for v in abc 4.x 4 x.3 ""; do
+        in_setup nonnumeric_bash
+        printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+        CODEO_TEST_BASH_VERSION=$v in_run
+        [[ $in_rc -eq 0 ]] || fail "'$v': exit $in_rc (stderr: $in_err)"
+        [[ -z $in_err ]] || fail "'$v': stderr: $in_err"
+    done
+}
+
+# The head of install.sh (code before `set -euo pipefail`, comments dropped) must parse in bash 3.2.
+t_head_uses_no_bash4_syntax() {
+    local head p
+    head=$(sed '/^set -euo pipefail$/,$d' "$script" | grep -v '^[[:space:]]*#')
+    [[ -n $head ]] || fail "no head found"
+    for p in '\[\[ -v' 'declare -A' 'local -A' ',,}' '\^\^}' 'mapfile' 'readarray' '&>>' '|&' 'coproc' '\[\[.*=~'; do
+        ! grep -q -e "$p" <<<"$head" || fail "head of install.sh uses bash-4 syntax: $p"
+    done
+}
+
 t_project_replace_moves_the_user_copy() {
     local top
     in_setup project_replace_user
@@ -1440,6 +1487,9 @@ cases=(
     t_dropped_local_entry_is_named_with_its_command
     t_dropped_project_that_no_longer_exists_is_named
     t_no_replace_no_dropped_lines
+    t_project_replace_says_the_disabled_user_copy_is_enabled
+    t_nonnumeric_test_bash_version_is_ignored
+    t_head_uses_no_bash4_syntax
     t_project_replace_moves_the_user_copy
     t_project_replace_without_user_copy
     t_project_replace_from_subdirectory
