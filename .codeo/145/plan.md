@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q6-Q8 answered (sequence after #144); Q9 raised for a new overlap with #143 (`CHANGELOG.md`). Earlier, Q6-Q8 were raised after the footprint was committed: `overlap.sh` found #144 now has a footprint overlapping this one. The plan is approved and written (unstaged) at `docs/plans/2026-11-21-close-102-126-122-leftovers-145.md`; `## Outcome` waits for Q6-Q8. Earlier: explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `CHANGELOG.md`, the three archived `qc.md` files and the tests that pin each (`tests/doctor.test.sh`, `tests/issue-skill.test.sh`, `tests/claim.test.sh`, `tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Five choices change what gets built and are raised as Q1-Q5. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q5 answered as recommended; the draft is at `.codeo/145/plan-draft.md` for the review gate.
+Q1-Q9 answered; no overlap left and no lock to take. `## Outcome` is written and the hand-off is `/codeo:implement` once #144 has merged. Earlier, Q6-Q8 were raised after the footprint was committed: `overlap.sh` found #144 now has a footprint overlapping this one. The plan is approved and written (unstaged) at `docs/plans/2026-11-21-close-102-126-122-leftovers-145.md`; `## Outcome` waits for Q6-Q8. Earlier: explored `scripts/doctor.sh`, `scripts/claim.sh`, `scripts/inflight.sh`, `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `CHANGELOG.md`, the three archived `qc.md` files and the tests that pin each (`tests/doctor.test.sh`, `tests/issue-skill.test.sh`, `tests/claim.test.sh`, `tests/inflight.test.sh`, `tests/triage-skill.test.sh`). Five choices change what gets built and are raised as Q1-Q5. Everything else is settled and listed under `## Notes` as the calls the draft will make. Q1-Q5 answered as recommended; the draft is at `.codeo/145/plan-draft.md` for the review gate.
 
 ## Questions
 
@@ -117,6 +117,25 @@ Calls the draft will make, none of which needs an answer (say so in any answer a
 - **No environment, no lease, no host tasks, no invariants, no wiki module.** The lock's host is `container`; every task is proved by `bash tests/run.sh` or one test file.
 - `engineering:system-design` and `engineering:architecture` are not installed here and not needed: no new component or architectural choice.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-21-close-102-126-122-leftovers-145.md` (unstaged, approved 2026-11-21) |
+| Shape | an executable plan under `docs/plans/`; no reference doc, nothing here is a standing decision |
+
+**Decisions** (Q1-Q9, all answered as recommended):
+- Q1: the pages change, `inflight.sh` still prints `review — dossier archived` for an archived dossier not yet on the base branch, with no pull-request lookup; triage's *resume* names the open PR or `/codeo:close`. Rejected: making `waits_of` ask GitHub.
+- Q2: *resume* on an `unassigned:<N>` item is stated to stop nothing; *dismiss* stops it. Rejected: stopping on *resume*.
+- Q3: a fake-`git` case for `touched_of`'s unparsable-tip branch, with a mutation proof. Rejected: calling it covered by the nine existing cases.
+- Q4: a priority outside the four is asked about again, naming the four. Rejected: accepting any existing `priority:` label.
+- Q5-Q8: sequence after #144 (shared `CHANGELOG.md`, `docs/handoff.md`, `scripts/inflight.sh`). Q9: proceed and coordinate with #143 on `CHANGELOG.md`.
+- Settled in Notes: a string `"true"` is off in both places (the skill changes, `doctor.sh` does not); #122 F4's comment is the one above `waits_of`; the three "retitle … reopened" clauses in `claim.sh` stay.
+
+**Documentation pages the plan changes:** `skills/issue/SKILL.md`, `skills/triage/SKILL.md`, `docs/handoff.md`, `docs/skills.md`, `CHANGELOG.md`, and the comments in `scripts/inflight.sh` and `scripts/claim.sh`. No wiki module.
+
+**Intake questions resolved here:** #122 F4 (located: the comment above `waits_of`) and #122 F5 (documented as intended).
+
 ### Footprint
 
 ```
@@ -126,12 +145,7 @@ exclusive: none
 sequenced: #144
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-21 — Q1-Q5 raised · cost: 1m · fable-5-2 84k in + 542k cached / 8k out
-- 2026-11-21 — plan approved, written to docs/plans/2026-11-21-close-102-126-122-leftovers-145.md; Q6-Q8 raised (overlap with #144) · cost: unavailable until the hand-off
-- 2026-11-21 — Q6-Q8 answered; Q9 raised (overlap with #143) · cost: unavailable until the hand-off
+- 2026-11-21 — planned: docs/plans/2026-11-21-close-102-126-122-leftovers-145.md · cost: 7m · fable-5-2 90k in + 866k cached / 13k out · sonnet-5-5 120k in + 2.3M cached / 21k out · engineering:system-design and engineering:architecture not used (not installed, not needed)
