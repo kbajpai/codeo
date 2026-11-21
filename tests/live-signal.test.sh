@@ -194,6 +194,75 @@ over=$(awk 'length > 100 {print FNR ": " length}' "$hook")
 assert_eq "lines over 100 columns" "" "$over"
 sleep 1
 
+case_desc=settings_json_registers_the_web_session_hooks
+s="$plugin_root/.claude/settings.json"
+scmd() { jq -r --arg e "$1" '[.hooks[$e][]?.hooks[]?.command] | join("\n")' "$s"; }
+[[ $(scmd SessionStart) == *'lock.sh" take web'* ]] && ok=yes || ok=no
+assert_eq "SessionStart take" yes "$ok"
+for e in UserPromptSubmit PostToolUse; do
+    [[ $(scmd $e) == *'live-signal.sh" beat'* ]] && ok=yes || ok=no
+    assert_eq "$e beat" yes "$ok"
+done
+for e in SessionStart UserPromptSubmit; do
+    [[ $(scmd $e) == *'session-title.sh'* ]] && ok=yes || ok=no
+    assert_eq "$e session-title kept" yes "$ok"
+done
+assert_eq "gated commands" 3 "$(jq -r '[.hooks[][].hooks[].command
+    | select(contains("live-signal.sh") or contains("lock.sh"))
+    | select(contains("CLAUDE_CODE_REMOTE"))] | length' "$s")"
+assert_eq "no SessionEnd" null "$(jq -c '.hooks.SessionEnd' "$s")"
+
+# run_settings <event> <stdin> [dir]: runs an event's lock/beat command from dir (default scratch
+# root) the way a session would; sets rc.
+run_settings() {
+    local c
+    c=$(jq -r --arg e "$1" '[.hooks[$e][].hooks[].command
+        | select(contains("live-signal.sh") or contains("lock.sh"))][0]' "$s")
+    (cd "${3:-$scratch_root}" && printf '%s' "$2" | CLAUDE_PROJECT_DIR=$plugin_root timeout 30 sh -c "$c") \
+        > "$scratch_root/out" 2> "$scratch_root/err" && rc=0 || rc=$?
+}
+web_ref() { git -C "$origin" rev-parse -q --verify refs/heads/codeo-live/104/testbox > /dev/null 2>&1; }
+
+case_desc=settings_hooks_do_nothing_outside_a_web_session
+new_world
+sed -i 's/^host:.*/host:    web/' "$clone/.codeo/active"
+(unset CLAUDE_CODE_REMOTE; run_settings PostToolUse "{\"cwd\": \"$clone\"}")
+assert_eq "exit" 0 "$rc"
+sleep 2
+assert_eq "no branch" "" "$(git -C "$origin" for-each-ref 'refs/heads/codeo-live/')"
+
+case_desc=settings_beat_hook_publishes_in_a_web_session
+new_world
+sed -i 's/^host:.*/host:    web/' "$clone/.codeo/active"
+(export CLAUDE_CODE_REMOTE=true; run_settings PostToolUse "{\"cwd\": \"$clone\"}")
+assert_eq "exit" 0 "$rc"
+found=no
+for ((i = 0; i < 50; i++)); do web_ref && { found=yes; break; }; sleep 0.2; done
+assert_eq "branch published" yes "$found"
+
+case_desc=settings_session_start_takes_the_lock_with_the_session_id
+new_world
+rm "$clone/.codeo/active"
+mkdir -p "$clone/.codeo/104"
+printf '# Init\n\n| Field | Value |\n|---|---|\n| Branch | `feat/x` |\n' > "$clone/.codeo/104/init.md"
+git -C "$clone" add .codeo
+git -C "$clone" -c user.name=t -c user.email=t@t commit -q -m dossier
+git -C "$clone" push -q origin feat/x
+cp -R "$clone" "$scratch_root/clone2"
+(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
+    run_settings SessionStart '{}' "$clone")
+assert_eq "exit" 0 "$rc"
+active=$(cat "$clone/.codeo/active" 2> /dev/null || true)
+[[ $active == *'host:    web'* ]] && ok=yes || ok=no
+assert_eq "host web" yes "$ok"
+[[ $active == *'session: abcdef0123456789'* ]] && ok=yes || ok=no
+assert_eq "session id without cse_" yes "$ok"
+(unset CLAUDE_CODE_REMOTE; export CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
+    run_settings SessionStart '{}' "$scratch_root/clone2")
+assert_eq "exit outside web" 0 "$rc"
+[[ ! -e $scratch_root/clone2/.codeo/active ]] && ok=yes || ok=no
+assert_eq "no lock outside web" yes "$ok"
+
 if ((failures > 0)); then
     echo "$failures failure(s)"
     exit 1
