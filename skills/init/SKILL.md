@@ -338,24 +338,29 @@ is the container the message names.
     checked-out branch that names it and writes `.codeo/active`
     (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → The lock`). It prints
     `lock: took the lock for #<N> on <branch>`; quote that line. It never fails its caller: what
-    it could not do it prints on stderr as a `lock: TODO — …` line; quote each such line and do
-    not hand off to `/codeo:plan`. Whether a lock exists is told by the script's own
-    `lock: took the lock for #<N> on <branch>` or `lock already taken: …` line, because some TODOs
+    it could not do it prints on stderr as a `lock: TODO — …` line; quote each such line. Whether a lock exists is told by the script's
+    own `lock: took the lock for #<N> on <branch>` or `lock already taken: …` line, because some TODOs
     (a volume or sandbox name it could not read) are printed after the lock was written; the
-    closing block below names the recovery. With the lock taken, `/codeo:plan` runs next in
-    this same session, and the closing block
+    closing block below names the recovery for each case. With the lock taken and no TODO,
+    `/codeo:plan` runs next in this same session, and the closing block
     (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`) has a reviewed plan as its goal and
     `/codeo:plan` as its first step (with a host workflow, the step that opens the checkout it
     names).
 
-    After a `lock: TODO — …` line the hand-off to `/codeo:plan` waits for the fix, so the block
-    names the recovery instead, in this paragraph:
+    After a `lock: TODO — …` line the closing block names the recovery, and which one depends on
+    whether the lock was taken, told apart by `lock.sh`'s own `took the lock` or
+    `lock already taken` line. With no lock, in this paragraph:
 
     **Closing block — no lock:** goal, the lock taken. First step, fix what the `lock: TODO` line
     says; second step, when no lock was taken, run
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" take local` again (with a
     host workflow, the recovery its text names, such as re-running the devcontainer start script).
-    The plan is named only once the lock was taken.
+    A lock was not taken here, so the plan is not named.
+
+    **Closing block — lock taken, TODO printed:** goal, a reviewed plan. First step, fix what the
+    `lock: TODO` line says (for example, fill in the lock's `volume:` line by hand); second step,
+    `/codeo:plan`, in this same session (with a host workflow, the step that opens the checkout it
+    names).
 
 
 ## The outcome

@@ -68,7 +68,7 @@ The skill turns a filed issue into a place to work: a pushed branch carrying a d
 ### Hand-offs and non-goals
 
 - Hands off to `/codeo:plan`, naming `.codeo/<N>/init.md` as the thing to read first, and only once nothing in that file is still open. It tells `plan` to read the dossier rather than re-fetch the issue or re-ask the engineer what it already answers.
-- After a `lock: TODO` its closing block names the recovery, not `/codeo:plan` (see `docs/handoff.md` → Closing block).
+- After a `lock: TODO` its closing block names the fix first: with no lock, the recovery and not `/codeo:plan`; with the lock taken, `/codeo:plan` after the fix (see `docs/handoff.md` → Closing block).
 - Never touches the issue's text, the project's docs or wiki, any code, or another skill's dossier file.
 - Does not draft, refine, or re-scope the issue's content; that is `/codeo:issue`'s purview.
 - Does not design anything or write a plan doc; that is `/codeo:plan`'s purview.
