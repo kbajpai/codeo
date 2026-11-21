@@ -925,6 +925,7 @@ t_rm_sandbox_hints() {
     local last want n
     cm_setup "$current"
     echo 1 >"$cm_dir/status"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
     cm_run rm 5 --sandbox --force
     [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
     last=$(tail -n 1 "$cm_dir/err")
@@ -941,6 +942,7 @@ t_rm_sandbox_hints() {
     grep -qxF 'could not read it' <<<"$cm_err" || fail "script's stderr not replayed: $cm_err"
     cm_setup "$current-4"
     echo 1 >"$cm_dir/status"
+    printf 'NAME AGENT STATUS\ncodeo-1 claude running\n' >"$cm_dir/sbx_out"
     printf 'to remove it anyway run: sbx rm --force codeo-15\n' >"$cm_dir/stderr_text"
     cm_run rm 1 --sandbox --force
     [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
@@ -964,6 +966,45 @@ t_rm_sandbox_hints() {
     n=$(grep -c 'sbx rm --force codeo-5' <<<"$cm_err" || true)
     [[ "$n" -eq 1 ]] || fail "sbx rm --force line count $n, want 1: $cm_err"
     grep -qxF 'to remove it anyway run: sbx rm --force codeo-5' <<<"$cm_err" || fail "script's own line lost: $cm_err"
+}
+
+# After a failed end --force, a sandbox that sbx ls no longer lists has nothing left to remove: no hint.
+t_rm_sandbox_force_gone() {
+    local text want
+    want='codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-5'
+    for text in \
+        'codeo-sandbox: no sandbox codeo-5' \
+        'codeo-sandbox: removed codeo-5, but could not set aside its refs under refs/sandboxes/codeo-5/ in ./codeo-5' \
+        'codeo-sandbox: removed codeo-5, but could not delete its refs under refs/sandboxes/codeo-5/ in ./codeo-5'; do
+        cm_setup "$current"
+        echo 1 >"$cm_dir/status"
+        printf 'NAME AGENT STATUS\n' >"$cm_dir/sbx_out"
+        printf '%s\n' "$text" >"$cm_dir/stderr_text"
+        cm_run rm 5 --sandbox --force
+        [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+        grep -qxF "$text" <<<"$cm_err" || fail "script's line lost: $cm_err"
+        ! grep -q '^codeo: to remove it anyway' <<<"$cm_err" || fail "hint for a gone sandbox: $cm_err"
+    done
+    cm_setup "$current-2"
+    echo 1 >"$cm_dir/status"
+    printf 'NAME AGENT STATUS\nx codeo-5 running\n' >"$cm_dir/sbx_out"
+    printf 'codeo-sandbox: no sandbox codeo-5\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    ! grep -q '^codeo: to remove it anyway' <<<"$cm_err" || fail "second column counted: $cm_err"
+    cm_setup "$current-3"
+    echo 1 >"$cm_dir/status"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    printf 'could not read it\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox --force
+    grep -qxF "$want" <<<"$cm_err" || fail "no hint for a listed sandbox: $cm_err"
+    cm_setup "$current-4"
+    echo 1 >"$cm_dir/status"
+    printf 'could not read it\n' >"$cm_dir/stderr_text"
+    sbx_down_stub
+    cm_run rm 5 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -qxF "$want" <<<"$cm_err" || fail "no hint when sbx ls fails: $cm_err"
 }
 
 # A script refusal that wrote a codeo-sandbox: line is not a refusal over work: no codeo hint.
@@ -1867,6 +1908,7 @@ cases=(
     t_host_kinds_exact_name
     t_rm_sandbox
     t_rm_sandbox_hints
+    t_rm_sandbox_force_gone
     t_rm_sandbox_no_hint_on_die
     t_rm_sandbox_work_refusal_hint
     t_rm_sandbox_interrupt_replays_stderr

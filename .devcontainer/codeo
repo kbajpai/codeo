@@ -220,12 +220,21 @@ sbx_prog() {
     fi
 }
 
+# sbx_has <name> <listing>: succeed when a row of an sbx ls listing has <name> as its first column.
+sbx_has() {
+    local row
+    while read -r row _; do
+        if [[ "$row" == "$1" ]]; then return 0; fi
+    done <<<"$2"
+    return 1
+}
+
 # host_kinds <N>: print container and/or sandbox, one per line, for each that holds codeo-<N> on this
 # host, and return 3 when an installed program could not list (it says so on stderr; the other kind
 # still counts). A missing docker or sbx program is skipped silently. A sandbox counts only when the
 # first column of a row of sbx ls is exactly codeo-<N>.
 host_kinds() {
-    local name="codeo-$1" listing row failed=0 sbx
+    local name="codeo-$1" listing failed=0 sbx
     if command -v docker >/dev/null 2>&1; then
         if listing=$(docker ps -a --format '{{.Names}}' 2>&1); then
             if grep -qxF "$name" <<<"$listing"; then echo container; fi
@@ -236,12 +245,7 @@ host_kinds() {
     fi
     if sbx=$(sbx_prog); then
         if listing=$("$sbx" ls 2>&1); then
-            while read -r row _; do
-                if [[ "$row" == "$name" ]]; then
-                    echo sandbox
-                    break
-                fi
-            done <<<"$listing"
+            if sbx_has "$name" "$listing"; then echo sandbox; fi
         else
             warn_listing "sbx sandboxes" "$listing"
             failed=1
@@ -565,7 +569,11 @@ cmd_rm() {
                 grep -q '^codeo-sandbox: ' "$errf" ||
                     echo "codeo: codeo rm $n --force removes it anyway; its unpushed commits are kept in $(home_dir)/codeo-$n, its uncommitted work is not" >&2
             elif ! grep -qE "rm --force codeo-$n([^0-9]|$)" "$errf"; then
-                echo "codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-$n" >&2
+                # After a failed end --force, a sandbox that sbx ls no longer lists has nothing left to remove.
+                local sbx listing
+                if ! sbx=$(sbx_prog) || ! listing=$("$sbx" ls 2>&1) || sbx_has "codeo-$n" "$listing"; then
+                    echo "codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-$n" >&2
+                fi
             fi
         fi
         rm -f "$errf"
