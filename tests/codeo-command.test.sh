@@ -953,6 +953,15 @@ t_rm_sandbox_hints() {
     [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
     grep -qxF 'could not read it' <<<"$cm_err" || fail "script's stderr not replayed: $cm_err"
     grep -qF "$cm_home/codeo-5" <<<"$cm_err" || fail "hint lacks the clone directory: $cm_err"
+    cm_setup "$current-5"
+    echo 1 >"$cm_dir/status"
+    printf 'could not start it; nothing removed, with or without --force\nto remove it anyway run: sbx rm --force codeo-5\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    ! grep -qF -- '--force removes it anyway' <<<"$cm_err" || fail "false codeo hint printed: $cm_err"
+    n=$(grep -c 'sbx rm --force codeo-5' <<<"$cm_err" || true)
+    [[ "$n" -eq 1 ]] || fail "sbx rm --force line count $n, want 1: $cm_err"
+    grep -qxF 'to remove it anyway run: sbx rm --force codeo-5' <<<"$cm_err" || fail "script's own line lost: $cm_err"
 }
 
 t_rm_sandbox_force() {
@@ -1573,6 +1582,17 @@ t_rm_container_not_found_force() {
     ! grep -q 'removed container' <<<"$cm_out$cm_err" || fail "says removed container: $cm_out $cm_err"
 }
 
+t_rm_force_listing_fails() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/ps_fail" "$cm_dir/start_fail" "$cm_dir/inspect_fail" "$cm_dir/rm_fail" "$cm_dir/vol_gone" "$cm_dir/rmi_fail"
+    cm_run rm 5 --container --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: could not remove container codeo-5" ]] || fail "stderr: $cm_err"
+    ! grep -q 'nothing named' <<<"$cm_out$cm_err" || fail "says nothing named: $cm_out $cm_err"
+    ! grep -q 'removed container' <<<"$cm_out$cm_err" || fail "says removed container: $cm_out $cm_err"
+}
+
 t_rm_force_volume_only() {
     cm_setup "$current"
     rm_stubs
@@ -1765,6 +1785,7 @@ cases=(
     t_rm_volume_failure_says_container_removed
     t_rm_container_not_found_force
     t_rm_force_volume_only
+    t_rm_force_listing_fails
     t_rm_bind_mount_keeps_volume
     t_rm_bind_mount_force
     t_rm_inspect_fails

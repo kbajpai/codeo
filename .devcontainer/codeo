@@ -527,7 +527,7 @@ workspace_mount() {
 # is checked for unsaved work first; --force skips the refusal and removes even when the check cannot
 # run.
 cmd_rm() {
-    local n="" force="" a kind name rc=0 report keep_volume mount removed_container="" removed_volume="" removed_image=""
+    local n="" force="" a kind name rc=0 report listing keep_volume mount removed_container="" removed_volume="" removed_image=""
     local -a went=()
     for a in "$@"; do
         case "$a" in
@@ -545,7 +545,8 @@ cmd_rm() {
     if [[ "$kind" == sandbox ]]; then
         ensure_home
         # Not run_script: it execs, and a failure needs a hint after the script's own output. The script's
-        # stderr is kept in a file and replayed, so the hint can tell whether it already named sbx rm --force.
+        # stderr is kept in a file and shown after it exits, not live, so the hint can tell whether it
+        # already named sbx rm --force.
         local errf
         cd "$(home_dir)"
         errf=$(mktemp "$(home_dir)/.rm-err.XXXXXX")
@@ -556,7 +557,10 @@ cmd_rm() {
         cat "$errf" >&2
         if [[ "$rc" -ne 0 ]]; then
             if [[ -z "$force" ]]; then
-                echo "codeo: its commits are kept in $(home_dir)/codeo-$n; codeo rm $n --force removes it anyway" >&2
+                # When the script already named sbx rm --force (it could not start or fetch the sandbox), the
+                # commits are not known to be kept and --force would not remove it: say nothing more.
+                grep -qE "rm --force codeo-$n([^0-9]|$)" "$errf" ||
+                    echo "codeo: its commits are kept in $(home_dir)/codeo-$n; codeo rm $n --force removes it anyway" >&2
             elif ! grep -qE "rm --force codeo-$n([^0-9]|$)" "$errf"; then
                 echo "codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-$n" >&2
             fi
@@ -608,8 +612,12 @@ cmd_rm() {
     if docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
         removed_container=1
     # With --force a container that is already gone is fine: its volume and image still go.
-    elif [[ -z "$force" ]] || docker ps -a --format '{{.Names}}' 2>/dev/null </dev/null | grep -qxF "$name"; then
+    elif [[ -z "$force" ]]; then
         die "could not remove container $name"
+    else
+        # A listing that fails proves nothing; only one that succeeds without the name means it is gone.
+        listing=$(docker ps -a --format '{{.Names}}' 2>/dev/null </dev/null) || die "could not remove container $name"
+        ! grep -qxF "$name" <<<"$listing" || die "could not remove container $name"
     fi
     if [[ -n "$keep_volume" ]]; then
         echo "kept volume $name: /workspaces is not mounted from it; to remove it: docker volume rm $name"
