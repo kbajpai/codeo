@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2: Q7 answered, the plan is approved and written to `docs/plans/2026-11-21-install-one-command-151-round-2.md` (unstaged), `## Outcome` has its round, and the hand-off is `/codeo:implement`.
+Round 3 (send-back from qc.md round 2; F10 and F11 are settled by qc.md Q3): Q8-Q9 raised and open. The plan is not drafted until they are answered.
 
 ## Questions
 
@@ -89,6 +89,35 @@ In this issue's container, as recommended (engineer, in the conversation, 2026-1
 
 **Answer:**
 Only the scope you asked for writes a project's file, as recommended (engineer, in the conversation, 2026-11-21).
+
+### Q8 — Which of qc.md round 2's non-blocking findings does this round fix (F13, F14, F16, F17, F18)?
+
+**Why it matters:** F10 and F11 (settled by qc.md Q3: say so, correct the docs) are the round. The others are small; folding them in costs a few tasks and keeps them out of a third send-back, but each widens the diff after two rounds already.
+**What each is:**
+- F13: README *Uninstalling* says `claude` refuses a bare `claude plugin uninstall codeo@codeo` in a project; true only with no user-scope copy. Same section F11 rewrites.
+- F14: *Your first workflow* quotes "three leftovers" and "all nine as recommended" without naming the dossier it comes from.
+- F16: a replace re-enables a user-scope copy you had disabled, and the line says only "moved to vX too".
+- F17: no check reads the script's bash 3.2 head for bash-4-only syntax, and a non-numeric `CODEO_TEST_BASH_VERSION` makes the version test pass.
+- F18: a non-JSON line on stdout from `claude plugin list --json` (an update notice, say) aborts the run with jq's own error and no `install:` line.
+**Options:**
+- Fold in all five (recommended). F13 and F14 are README text next to F11's rewrite; F16 is a few words in an existing line plus a test; F17 is a test that checks the head for bash-4-only syntax plus a numeric guard on the variable; F18 is a filter before jq plus a test.
+- Fold in F13 and F14 only (README text this round already rewrites); leave F16-F18 as known limits, or file them with `/codeo:issue`.
+- None: F10 and F11 only.
+
+**Answer:**
+
+### Q9 — F12 and F15 are known limits: accept them, document them, or fix them?
+
+**Why it matters:** both are design choices rather than defects the code contradicts, and fixing either changes what "installed" or "latest" means.
+**What each is:**
+- F12: "already installed" at project scope reads the machine's pin, not the project's own `.claude/settings.json`. A project file hand-edited to an older `ref` while the machine is newer gets `nothing changed` from `--scope project`.
+- F15: "latest release" is the highest `vX.Y.Z` tag, not a GitHub Release. A tag pushed before its release is published would be installed as the latest.
+**Options:**
+- Accept both and document them (recommended): one sentence each in *Troubleshooting* (F12) and *Installing* (F15). No installer change; the tag ruleset already lets only the owner push `v*` tags.
+- Accept both, undocumented, and file them with `/codeo:issue`.
+- Fix F12 now (compare the project's own file's `ref` too); accept F15. Adds a branch to the installer and a test.
+
+**Answer:**
 
 ## Notes
 
