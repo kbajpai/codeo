@@ -110,16 +110,29 @@ machine_label() {
     else
         case $host in
             container) name=$(lock_field volume); [[ -n $name ]] || name=$(lock_field sandbox) ;;
-            web) name=$(lock_field session) ; [[ -z $name || $name == unknown ]] || name=web-${name:0:8} ;;
+            web)
+                name=$(lock_field session)
+                [[ -n $name && $name != unknown ]] || name=${CLAUDE_CODE_REMOTE_SESSION_ID:-}
+                name=${name#cse_}
+                name=${name#session_}
+                [[ -z $name || $name == unknown ]] || name=web-${name:0:8}
+                ;;
         esac
         [[ -n $name && $name != unknown ]] || name=$(hostname 2> /dev/null || echo unknown)
     fi
     ref_label "$name"
 }
 
+# The first assignee of the issue, or nothing on any failure.
+assignee_label() {
+    bounded bash "$github" issue view "$issue" 2> /dev/null | jq -r '.assignees[0] // empty' 2> /dev/null || true
+}
+
 user_label() {
-    local name
-    name=$(bounded bash "$github" user login 2> /dev/null) || name=$(git config user.name 2> /dev/null) || name=
+    local name=${CODEO_GITHUB_LOGIN:-}
+    [[ -n $name ]] || name=$(bounded bash "$github" user login 2> /dev/null) || name=
+    [[ -n $name || $host != web ]] || name=$(assignee_label)
+    [[ -n $name ]] || name=$(git config user.name 2> /dev/null) || name=
     name=$(clean "$name" 64)
     printf '%s' "${name:-unknown}"
 }

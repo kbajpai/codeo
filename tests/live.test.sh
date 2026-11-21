@@ -33,6 +33,7 @@ plugin="$scratch_root/plugin"
 mkdir -p "$plugin"
 cp -R "$plugin_src/scripts" "$plugin/scripts"
 cp -R "$plugin_src/lib" "$plugin/lib"
+unset CLAUDE_CODE_REMOTE_SESSION_ID CODEO_GITHUB_LOGIN
 export STUB_LOG="$scratch_root/gh.log"
 : > "$STUB_LOG"
 cat > "$plugin/scripts/github.sh" <<'GHSTUB'
@@ -42,6 +43,8 @@ case "$1 $2" in
         [[ -z ${STUB_USER_FAIL:-} ]] || exit 1
         [[ -z ${STUB_USER_HANG:-} ]] || exec sleep 5
         echo alice ;;
+    "issue view")
+        if [[ -n ${STUB_ASSIGNEE:-} ]]; then echo "{\"assignees\":[\"$STUB_ASSIGNEE\"]}"; else echo '{"assignees":[]}'; fi ;;
     "ref put")
         echo "ref put $3" >> "$STUB_LOG"
         [[ -n ${STUB_PUT_OK:-} ]] || { echo "github: ref put refused" >&2; exit 1; }
@@ -590,6 +593,65 @@ assert_eq "exit" 0 "$rc"
 assert_eq "one line" 1 "$(grep -c . <<< "$err")"
 assert_contains "warning" "live: could not publish" "$err"
 assert_not_contains "no ref put" "ref put" "$(cat "$STUB_LOG")"
+
+# --- web machine label and user ----------------------------------------------------------------
+
+web_msg() { git -C "$origin" log -1 --format=%B "$1" 2>/dev/null || true; }
+
+case_desc=web_machine_from_the_lock_session_strips_a_cse_prefix
+new_world; clone_with_lock 104 web cse_abcdef0123456789
+run beat --force
+assert_eq "branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
+assert_contains "machine" "machine: web-abcdef01" "$(web_msg refs/heads/codeo-live/104/web-abcdef01)"
+new_world; clone_with_lock 104 web session_abcdef0123456789
+run beat --force
+assert_eq "session_ prefix" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
+
+case_desc=web_machine_from_the_environment_when_the_lock_has_none
+new_world; clone_with_lock 104 web unknown
+CLAUDE_CODE_REMOTE_SESSION_ID=cse_0123456789abcdef run beat --force
+assert_eq "branch" refs/heads/codeo-live/104/web-01234567 "$(heads)"
+
+case_desc=lock_session_wins_over_the_environment
+new_world; clone_with_lock 104 web abcdef0123456789
+CLAUDE_CODE_REMOTE_SESSION_ID=cse_ffffffffffff run beat --force
+assert_eq "branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
+
+case_desc=web_machine_short_id_and_none
+new_world; clone_with_lock 104 web unknown
+CLAUDE_CODE_REMOTE_SESSION_ID=cse_ab run beat --force
+assert_eq "short" refs/heads/codeo-live/104/web-ab "$(heads)"
+new_world; clone_with_lock 104 web unknown
+run beat --force
+assert_eq "hostname" "refs/heads/codeo-live/104/$host_label" "$(heads)"
+
+case_desc=two_web_sessions_on_one_issue_publish_two_branches
+new_world; clone_with_lock 104 web abcdef0123456789
+run beat --force
+clone_with_lock 104 web 1234567890abcdef
+run beat --force
+assert_eq "two branches" 2 "$(heads | grep -c .)"
+
+case_desc=user_env_login_wins
+new_world; clone_with_lock 104 container codeo-104
+CODEO_GITHUB_LOGIN=bob run beat --force
+assert_contains "user" "user: bob" "$(web_msg refs/codeo/live/104/codeo-104)"
+
+case_desc=web_user_falls_back_to_the_assignee
+new_world; clone_with_lock 104 web abcdef0123456789
+git -C "$clone" config user.name "Bob Builder"
+STUB_USER_FAIL=1 STUB_ASSIGNEE=carol run beat --force
+assert_contains "assignee" "user: carol" "$(web_msg refs/heads/codeo-live/104/web-abcdef01)"
+new_world; clone_with_lock 104 container codeo-104
+git -C "$clone" config user.name "Bob Builder"
+STUB_USER_FAIL=1 STUB_ASSIGNEE=carol run beat --force
+assert_contains "container ignores assignee" "user: Bob Builder" "$(web_msg refs/codeo/live/104/codeo-104)"
+
+case_desc=web_user_without_an_assignee_falls_to_git_user_name
+new_world; clone_with_lock 104 web abcdef0123456789
+git -C "$clone" config user.name "Bob Builder"
+STUB_USER_FAIL=1 run beat --force
+assert_contains "git user" "user: Bob Builder" "$(web_msg refs/heads/codeo-live/104/web-abcdef01)"
 
 if ((failures)); then
     echo "$failures assertion(s) failed"
