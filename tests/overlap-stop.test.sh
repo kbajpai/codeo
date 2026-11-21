@@ -14,7 +14,7 @@ fail() {
     failures=$((failures + 1))
 }
 
-STOP='A non-zero exit, with an `overlap: cannot diff …` or `overlap: cannot resolve …` line, is a stop to report, never "no overlap".'
+STOP='A non-zero exit, with or without an `overlap: cannot diff …` or `overlap: cannot resolve …` line, is a stop to report, never "no overlap".'
 WARN='An `overlap: skipping #<M>'\''s changed paths` warning with exit 0 is quoted to the engineer, and the step carries on with that workflow'\''s footprint alone.'
 
 # Joins a file's lines with single spaces, so a sentence wrapped across lines still matches.

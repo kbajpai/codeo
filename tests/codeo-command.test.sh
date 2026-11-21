@@ -285,6 +285,8 @@ t_help_lists_commands() {
         grep -qw "$c" <<<"$cm_out" || fail "help does not name $c"
     done
     grep -q 'export PATH="$HOME/.local/bin:$PATH"' <<<"$cm_out" || fail "help lacks the PATH line"
+    grep -qF 'exits 1' <<<"$cm_out" && grep -qF 'warns on stderr' <<<"$cm_out" ||
+        fail "help does not say a failed listing warns and exits 1"
     [[ ! -s "$cm_dir/calls" ]] || fail "help made calls"
 }
 
@@ -925,6 +927,7 @@ t_rm_sandbox_hints() {
     local last want n
     cm_setup "$current"
     echo 1 >"$cm_dir/status"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
     cm_run rm 5 --sandbox --force
     [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
     last=$(tail -n 1 "$cm_dir/err")
@@ -941,6 +944,7 @@ t_rm_sandbox_hints() {
     grep -qxF 'could not read it' <<<"$cm_err" || fail "script's stderr not replayed: $cm_err"
     cm_setup "$current-4"
     echo 1 >"$cm_dir/status"
+    printf 'NAME AGENT STATUS\ncodeo-1 claude running\n' >"$cm_dir/sbx_out"
     printf 'to remove it anyway run: sbx rm --force codeo-15\n' >"$cm_dir/stderr_text"
     cm_run rm 1 --sandbox --force
     [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
@@ -964,6 +968,45 @@ t_rm_sandbox_hints() {
     n=$(grep -c 'sbx rm --force codeo-5' <<<"$cm_err" || true)
     [[ "$n" -eq 1 ]] || fail "sbx rm --force line count $n, want 1: $cm_err"
     grep -qxF 'to remove it anyway run: sbx rm --force codeo-5' <<<"$cm_err" || fail "script's own line lost: $cm_err"
+}
+
+# After a failed end --force, a sandbox that sbx ls no longer lists has nothing left to remove: no hint.
+t_rm_sandbox_force_gone() {
+    local text want
+    want='codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-5'
+    for text in \
+        'codeo-sandbox: no sandbox codeo-5' \
+        'codeo-sandbox: removed codeo-5, but could not set aside its refs under refs/sandboxes/codeo-5/ in ./codeo-5' \
+        'codeo-sandbox: removed codeo-5, but could not delete its refs under refs/sandboxes/codeo-5/ in ./codeo-5'; do
+        cm_setup "$current"
+        echo 1 >"$cm_dir/status"
+        printf 'NAME AGENT STATUS\n' >"$cm_dir/sbx_out"
+        printf '%s\n' "$text" >"$cm_dir/stderr_text"
+        cm_run rm 5 --sandbox --force
+        [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+        grep -qxF "$text" <<<"$cm_err" || fail "script's line lost: $cm_err"
+        ! grep -q '^codeo: to remove it anyway' <<<"$cm_err" || fail "hint for a gone sandbox: $cm_err"
+    done
+    cm_setup "$current-2"
+    echo 1 >"$cm_dir/status"
+    printf 'NAME AGENT STATUS\nx codeo-5 running\n' >"$cm_dir/sbx_out"
+    printf 'codeo-sandbox: no sandbox codeo-5\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    ! grep -q '^codeo: to remove it anyway' <<<"$cm_err" || fail "second column counted: $cm_err"
+    cm_setup "$current-3"
+    echo 1 >"$cm_dir/status"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    printf 'could not read it\n' >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox --force
+    grep -qxF "$want" <<<"$cm_err" || fail "no hint for a listed sandbox: $cm_err"
+    cm_setup "$current-4"
+    echo 1 >"$cm_dir/status"
+    printf 'could not read it\n' >"$cm_dir/stderr_text"
+    sbx_down_stub
+    cm_run rm 5 --sandbox --force
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -qxF "$want" <<<"$cm_err" || fail "no hint when sbx ls fails: $cm_err"
 }
 
 # A script refusal that wrote a codeo-sandbox: line is not a refusal over work: no codeo hint.
@@ -1020,7 +1063,7 @@ t_rm_container_clean() {
     cm_run rm 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     local want
-    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker restart codeo-5\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker inspect -f {{range .Mounts}}{{if eq .Destination "/workspaces"}}{{.Type}} {{.Name}}{{end}}{{end}} codeo-5\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
+    want=$'docker ps -a --format {{.Names}}\nsbx ls\ndocker inspect -f {{range .Mounts}}{{if eq .Destination "/workspaces"}}{{.Type}} {{.Name}}{{end}}{{end}} codeo-5\ndocker ps -a --format {{.Names}} {{.State}}\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch --prune origin\ndocker exec codeo-5 git -C /workspaces/codeo-5 fetch origin +refs/pull/*/head:refs/remotes/origin/pr/*\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker restart codeo-5\ndocker exec codeo-5 git -C /workspaces/codeo-5 status --porcelain --untracked-files=normal\ndocker exec codeo-5 git -C /workspaces/codeo-5 stash list\ndocker exec codeo-5 git -C /workspaces/codeo-5 branch --show-current\ndocker exec codeo-5 git -C /workspaces/codeo-5 rev-list --branches --not --remotes=origin\ndocker rm -f codeo-5\ndocker volume rm codeo-5\ndocker rmi codeo-dev:codeo-5'
     [[ "$(cat "$cm_dir/calls")" == "$want" ]] || fail "calls: $(tr '\n' '|' <"$cm_dir/calls")"
     [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
     grep -qi 'login' <<<"$cm_out" || fail "no login note: $cm_out"
@@ -1511,8 +1554,24 @@ t_home_checkout_collision() {
     [[ ! -s "$cm_dir/calls" ]] || fail "list made calls: $(cat "$cm_dir/calls")"
     cm_nohome=1 cm_run issue 5
     [[ "$cm_status" -eq 1 ]] || fail "issue: exit $cm_status, want 1"
-    [[ "$cm_err" == codeo:\ \~/codeo\ is\ a\ git\ checkout* ]] || fail "issue: stderr is '$cm_err'"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "issue: stderr is '$cm_err'"
     home_untouched issue
+    expect_no_script
+    cm_nohome=1 cm_run issue 5 --container
+    [[ "$cm_status" -eq 1 ]] || fail "issue --container: exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "issue --container: stderr is '$cm_err'"
+    expect_no_script
+    cm_nohome=1 cm_run issue 5 --sandbox --rebuild
+    [[ "$cm_status" -eq 2 ]] || fail "issue --sandbox --rebuild: exit $cm_status, want 2"
+    grep -q '^usage:' "$cm_dir/err" || fail "issue --sandbox --rebuild: no usage"
+    [[ "$(tail -n 1 "$cm_dir/err")" == "codeo: --rebuild applies only to a container, and the kind here is a sandbox" ]] ||
+        fail "issue --sandbox --rebuild: last line is '$(tail -n 1 "$cm_dir/err")'"
+    cm_nohome=1 cm_run issue 5 --rebuild
+    [[ "$cm_status" -eq 1 ]] || fail "issue --rebuild: exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "issue --rebuild: stderr is '$cm_err'"
     expect_no_script
     cm_nohome=1 cm_run default sandbox
     [[ "$cm_status" -eq 1 ]] || fail "default: exit $cm_status, want 1"
@@ -1567,6 +1626,20 @@ t_relative_codeo_home() {
     cm_err=$(cat "$cm_dir/err")
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     expect_call "codeo-container.sh home pwd=$cm_home"
+}
+
+t_relative_codeo_home_rm() {
+    cm_setup "$current"
+    cd "$cm_dir"
+    cm_status=0
+    env -i HOME="$cm_dir/h" CODEO_HOME=home PATH="$cm_dir/bin:$cm_dir/sys" \
+        "$bash_abs" "$script" rm 5 --sandbox >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
+    cd "$repo"
+    cm_err=$(cat "$cm_dir/err")
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
+    [[ "$cm_err" != *mktemp* ]] || fail "stderr names mktemp: $cm_err"
+    [[ "$cm_err" != *home/home* ]] || fail "stderr names home/home: $cm_err"
 }
 
 t_home_unset() {
@@ -1738,6 +1811,24 @@ t_rm_inspect_fails() {
     grep -q '^docker volume rm codeo-5' "$cm_dir/calls" || fail "--force: volume kept"
 }
 
+t_rm_inspect_fails_no_restart() {
+    cm_setup "$current"
+    rm_stubs
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5
+    expect_refused 'could not check what /workspaces of codeo-5 mounts'
+    ! grep -q '^docker restart' "$cm_dir/calls" || fail "restarted: $(tr '\n' '|' <"$cm_dir/calls")"
+    ! grep -q '^docker stop' "$cm_dir/calls" || fail "stopped: $(tr '\n' '|' <"$cm_dir/calls")"
+    cm_setup "$current-2"
+    rm_stubs
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5 --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    grep -q '^docker restart codeo-5' "$cm_dir/calls" || fail "--force: no restart"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "--force: not removed"
+    grep -qF -- '--force: could not check what /workspaces of codeo-5 mounts; removing the volume anyway' <<<"$cm_out" || fail "--force: stdout: $cm_out"
+}
+
 t_codeo_sbx_honoured() {
     cm_setup "$current"
     mkdir -p "$cm_dir/alt"
@@ -1835,6 +1926,7 @@ cases=(
     t_host_kinds_exact_name
     t_rm_sandbox
     t_rm_sandbox_hints
+    t_rm_sandbox_force_gone
     t_rm_sandbox_no_hint_on_die
     t_rm_sandbox_work_refusal_hint
     t_rm_sandbox_interrupt_replays_stderr
@@ -1869,6 +1961,7 @@ cases=(
     t_update_partial_final_mv
     t_update_through_symlink
     t_relative_codeo_home
+    t_relative_codeo_home_rm
     t_relative_overrides_made_absolute
     t_home_checkout_collision
     t_home_checkout_collision_git_file
@@ -1894,6 +1987,7 @@ cases=(
     t_rm_bind_mount_keeps_volume
     t_rm_bind_mount_force
     t_rm_inspect_fails
+    t_rm_inspect_fails_no_restart
     t_codeo_sbx_honoured
     t_issue_lookup_invalid_branch
 )

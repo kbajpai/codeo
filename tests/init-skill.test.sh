@@ -51,6 +51,7 @@ step_contains "step 6 finds the branch by its dossier" 6 'scripts/inflight.sh" -
 step_contains "step 6 names the new shape" 6 '<type>/<N>-<slug>'
 step_contains "step 6 stops on two branches for one issue" 6 'more than one row'
 step_lacks "step 6 no longer says the number is absent" 6 'There is no issue number in it.'
+step_contains "either TODO case ends the turn" 11 'Either way, end the turn with the block for the case and do not invoke `/codeo:plan` in this turn; with the lock taken, the block names `/codeo:plan` as the step after the fix:'
 # Whole file, not step 3: step() stops at step 3's first rule comment (init-02), so it would pass vacuously.
 ! grep -qF -- 'restore the title' "$skill" || fail "step 3 no longer says restore the title — the skill still has [restore the title]"
 
