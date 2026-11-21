@@ -72,9 +72,10 @@
 #                            starts its line in exactly the documented form ("Deployed revision:
 #                            <x>", …); none is ever required
 #
-# "Written" means the ## Outcome is neither empty nor the "_Pending …_" placeholder. Headings
-# inside a fenced block are not headings, except that "### Footprint" is found wherever it is,
-# as inflight.sh and overlap.sh find it. One known divergence follows: claim.sh --stash-live counts
+# "Written" means the ## Outcome is neither empty nor the "_Pending …_" placeholder. The
+# ## Outcome heading matches exactly; the other headings match by name, or by name then a space.
+# Headings inside a fenced block are not headings, except that "### Footprint" is found wherever it
+# is, as inflight.sh and overlap.sh find it. One known divergence follows: claim.sh --stash-live counts
 # a park heading inside a fenced block too, and park-heading does not judge one there. CRLF files
 # read as LF ones, and a last line with no newline is still a line. Every reader runs to the end
 # of its input (none stops early), so no writer upstream of it dies of SIGPIPE under pipefail.
@@ -120,15 +121,16 @@ headings_of() {
 }
 
 # section_range <file> <name>: "<heading-line> <last-line>" of the first "## <name>" section
-# (heading text equal to <name>, or <name> then a space: "## Draft (approved)"); it runs to the
-# next level-1 or level-2 heading. Prints nothing when the section is absent.
+# (heading text equal to <name>, or for every name but Outcome also <name> then a space: "## Draft
+# (approved)"; Outcome is matched exactly, as qc-verdict.sh matches it); it runs to the next level-1
+# or level-2 heading. Prints nothing when the section is absent.
 section_range() {
     local file=$1 name=$2 total
     total=$(wc -l <"$file")
     headings_of "$file" | awk -F'\t' -v name="$name" -v total="$total" '
         found { next }
         start && $2 <= 2 { print start " " ($1 - 1); found = 1; next }
-        !start && $2 == 2 && ($3 == name || index($3, name " ") == 1) { start = $1 }
+        !start && $2 == 2 && ($3 == name || (name != "Outcome" && index($3, name " ") == 1)) { start = $1 }
         END { if (start && !found) print start " " total }'
 }
 
@@ -476,7 +478,7 @@ decision_of() {
 last_round_clear() {
     local outcome headings last_line round decision
     outcome=$(awk '
-        /^## Outcome/ { in_outcome = 1; next }
+        /^## Outcome[[:space:]]*$/ { in_outcome = 1; next }
         in_outcome && /^## / { exit }
         in_outcome { print }
     ' "$1")

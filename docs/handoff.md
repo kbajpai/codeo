@@ -217,7 +217,10 @@ it.
   that has outgrown its plan still shows up that way, and an overlap already raised as a question
   in the issue's dossiers is not raised again. An overlap is a numbered question in that step's dossier,
   answered by the engineer, never a guess: proceed and coordinate, sequence after the other issue,
-  or re-scope. An `exclusive` resource — one of the config's `resources[]` — is one where two
+  or re-scope. A non-zero exit, with an `overlap: cannot diff …` or `overlap: cannot resolve …`
+  line, is a stop to report, never "no overlap". An `overlap: skipping #<M>'s changed paths`
+  warning with exit 0 is quoted to the engineer, and the step carries on with that workflow's
+  footprint alone. An `exclusive` resource — one of the config's `resources[]` — is one where two
   branches cannot both change it and merge cleanly, so for those the plan takes a lock
   (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take <resource> <N> <purpose>`), refused
   while another issue holds it.
@@ -451,7 +454,8 @@ Exits whose next command is not the default:
 | `close — lock kept` | `/codeo:close` |
 | `stash — interrupted` | `/codeo:close --stash` |
 | `stash — completed` | `/codeo:init #<N>`, after the manual Ready repair when the board move failed, in the checkout the project's host workflow names, when it names one |
-| `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again; a `lock: TODO` printed after the lock was taken (neither a volume name nor a sandbox name readable on `host: container`) needs the fix alone |
+| `init — no lock` | the fix the `lock: TODO` line names, then, with a host workflow, the recovery its text names, otherwise `lock.sh take local` again |
+| `init — lock taken, TODO` | the fix the `lock: TODO` line names, then `/codeo:plan`, in the checkout the project's host workflow names, when it names one |
 | `issue — not Ready` | `/codeo:triage`, then `/codeo:init #<N>` |
 | `issue — Status unreadable` | the fix its line names (for example `gh auth refresh -s project`), then `/codeo:triage`, then `/codeo:init #<N>` |
 | `abandon — finished` | `/codeo:triage`, then the host's checkout clean-up, in the checkout the project's host workflow names, when it names one, unless the engineer had the unmerged branch deleted: the checkout is then the last copy, theirs to keep or remove knowingly |

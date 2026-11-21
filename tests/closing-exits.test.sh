@@ -5,7 +5,7 @@
 #
 #   closing-exits.test.sh [case]
 #       Cases: rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-#       init-lock-wording issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
+#       init-lock-wording init-lock-taken-todo issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
 #       abandon-summaries
 #       close-step17-lead stash-prose bites. CLOSING_EXITS_ROOT points the checks at another tree.
 #       No argument runs them all; an unknown case exits 2. Prints "all cases passed" and exits 0, or
@@ -154,6 +154,24 @@ case_init_lock_wording() {
     has "$s" 'lock.sh" take local'
     para "$init" '**Closing block — no lock:**' || return 0
     lacks "$(flat "$p")" '/codeo:plan'
+}
+
+# A lock taken and then a lock: TODO printed still ends in /codeo:plan, after the fix.
+case_init_lock_taken_todo() {
+    para "$init" '**Closing block — lock taken, TODO printed:**' || return 0
+    has "$p" '/codeo:plan'
+    has "$p" 'lock: TODO'
+    before "$(flat "$p")" 'fix what' '/codeo:plan'
+    has "$p" 'host workflow'
+    local block r
+    block=$(sed -n '/^## Closing block$/,/^## Spinning out subagents$/p' "$doc")
+    r=$(grep -F '| `init — lock taken, TODO` |' <<<"$block" || true)
+    [[ -n $r ]] || { fail "docs/handoff.md has no row for [init — lock taken, TODO]"; return 0; }
+    has "$r" 'lock: TODO'
+    has "$r" '/codeo:plan'
+    has "$r" 'host workflow'
+    r=$(grep -F '| `init — no lock` |' <<<"$block" || true)
+    lacks "$r" 'needs the fix alone'
 }
 
 # Reads step 8 of the issue skill; both Ready cases also need it to read the board.
@@ -348,7 +366,7 @@ case_bites() {
 }
 
 all=(rule close-lock-kept close-finished stash-interrupted stash-completed init-no-lock
-    init-lock-wording issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
+    init-lock-wording init-lock-taken-todo issue-ready issue-not-ready issue-unreadable issue-backlog abandon-finished abandon-interrupted
     abandon-summaries close-step17-lead stash-prose host-workflow-fetch bites)
 
 if (($# > 0)); then
