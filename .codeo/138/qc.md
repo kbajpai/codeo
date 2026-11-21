@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
+Round 2 is written: **back to `/codeo:plan`** (F12 the lock take undoes a stash or abandon, F13 the docs for other projects). Round 1 (below) was also back to `/codeo:plan`; its state follows. Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
 
 ## Questions
 
@@ -156,8 +156,57 @@ What that settles: criterion 1 (the workflow shows live in `inflight.sh --live` 
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 2 — 2026-11-21
+
+(re-run after `implement.md` round 2, which followed `plan.md` round 2)
+
+**Sync.** `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0; `bash scripts/overlap.sh 138`: nothing.
+
+**Scope.** `git diff origin/main...HEAD --stat`: 17 files, 1393 insertions, 44 deletions. `bash scripts/scope.sh origin/main HEAD`: `suite.shell=true` (paths the suite does not classify: `.claude/settings.json`, `.codeo/138/…`, `CHANGELOG.md`). No environment is configured, so no `deploy=` line and no environment step.
+
+**Build and tests.** The `shell` suite's `build` is `true`: rc 0. `bash tests/run.sh` (whole, since the diff changes its code and tests): `suite rc=0`, last line `all cases passed`.
+
+**Footprint.** `bash scripts/overlap.sh --outside 138`: nothing (round 1's F10 is answered: the plan's footprint now names `tests/devcontainer.test.sh`). `bash scripts/overlay.sh qc invariants-extra` and `qc wiki-rules`: exit 3 (none); no invariants file is configured.
+
+**Documentation check.** `docs/handoff.md` (*Who is working right now*, its diagram) and `CHANGELOG.md` describe the lock take, the user chain and the web branch as the code does, with one untruth: F13. `CHANGELOG.md`'s `Shared state:` line says nothing about the new branch namespace (F18). No wiki module.
+
+**Hosted-session check (plan Task 6): not run.** Two hosted sessions were tried on 2026-11-21; both were on a stale checkout, so neither says anything about this build. The first printed `4b55d8e` (the #112 branch's tip, gone from origin) earlier; the second, after this implement round, printed `5f0f0ba docs(codeo): plan dossier for #138 — Q6 answered, Q5 open` (committed 15:57 UTC, before any of the implementation), `Hello!` for the prompt, and `cat: .codeo/active: No such file or directory`; at 20:35 UTC origin held no `codeo-live/*` branch. Round 1's hosted run (in `## Notes`) is evidence for the earlier hook, not this one.
+
+**Independent review** (opus, `QC review:`, the seven criteria as its requirements; quoted in plain text, not this round's verdict): one Critical, four Important, four Minor, "Ready to merge? No". I checked the claims behind F12, F13 and F14 against the files (`skills/close/SKILL.md:640-670`, `skills/init/SKILL.md:337`, `docs/handoff.md:174-180`, `.claude/settings.json:33,43`, `scripts/lock.sh`), and they hold.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Shows live in `inflight.sh --live` on another clone, or documented as not | not yet checkable — needs a hosted session on this build; the publish path is unchanged since round 1's hosted run, which listed the signal | `fetch_maps_web_branches_to_signals` covers the local-origin path |
+| 2 | No write that returned 403 in #112's run | met — for a web lock; see F14 for a web session whose lock says `local` | `web_beat_publishes_a_branch_not_a_live_ref`; `scripts/live.sh:152-153,185` |
+| 3 | Feature branch tip unchanged | met | the same case compares `refs/heads/feat/x` before and after |
+| 4 | Publishes without a manual `beat`; the trigger is present in a web session | not yet checkable — the first-prompt lock take is tested locally (`hook_takes_the_lock_in_a_web_session_when_none_exists`, `settings_beat_hook_takes_the_lock_and_publishes`) but not in a hosted session; and F12 says the take also undoes a stash | tests named; hosted check not run |
+| 5 | Names the engineer's login and `web-<8>` | met | `web_machine_*`, `user_env_login_wins`, `web_user_falls_back_to_the_assignee`, `web_user_without_a_login_or_assignee_is_unknown`; `scripts/live.sh:134-141` |
+| 6 | `docs/handoff.md` matches what a web session does | not met — F13 | `docs/handoff.md:174-180` against `.claude/settings.json:33,43` |
+| 7 | Tests cover the web behaviour, including the lock with and without a session id | met | `hook_takes_the_lock_in_a_web_session_when_none_exists`, `hook_without_a_session_id_takes_a_lock_with_session_unknown`, `web_machine_*` |
+
+**Findings** (each points at a line this change touched):
+- **F1 (blocking in round 1) — fixed by `6b250bf`.** A web signal no longer ends at `git config user.name`; test `web_user_without_a_login_or_assignee_is_unknown`.
+- **F11 (blocking in round 1) — addressed by `dd9961b` and `acb5839`, not yet seen in a hosted session.** The beat hook takes the lock; the `SessionStart` group is gone. Verified by tests only (criterion 4).
+- **F4 (blocking in round 1) — not fully fixed; restated as F13.**
+- **F12 — blocking; the plan's.** After `/codeo:close --stash` or an abandon in a web session, the lock is back within a tool call: both delete `.codeo/active` and move the dossier back to `.codeo/<N>/` (`skills/close/SKILL.md:640-670`), the next `PostToolUse` beat finds `CLAUDE_CODE_REMOTE=true`, a `.codeo/` directory and no lock (`hooks/live-signal.sh:28-42`), and `lock.sh take web` finds the one `init.md` that names the branch (`scripts/lock.sh:139-166`; it never reads `close.md`'s `— stashed` or `— abandoned` round), so the parked workflow is locked and signalled live again. A finished close escapes only because the base branch then holds the archive. The code does what the plan says; the plan's rule (take whenever there is no lock) was wrong.
+- **F13 — blocking; the plan's.** `docs/handoff.md:174-180` says another project "adds the same two groups" and that "either way nothing else is needed", but those groups run `${CLAUDE_PROJECT_DIR}/hooks/live-signal.sh` (`.claude/settings.json:33,43`), which exists only in this repository; in another project the command fails behind `|| true` and publishes nothing. Only installing the plugin works there.
+- **F14 — non-blocking; the plan's, for the plan round to decide.** In a web session whose workflow was bound by the default `/codeo:init` (`lock.sh take local`, `skills/init/SKILL.md:337`), the lock says `host: local`, the beat hook never takes a web lock (it acts only when none exists), and `live.sh` pushes to `refs/codeo/live/*` and then the REST `git/commits` fallback, the two writes #112 saw refused. This repository's init takes no lock, so it does not meet it; the page's "no separate lock step is needed" is untrue for such a project (folded into F13's wording).
+- **F15 — non-blocking; the plan's, taken with F12.** The lock take runs detached on `PostToolUse` as well as `UserPromptSubmit` and can `git fetch` and `git checkout -B` while the model works (`hooks/live-signal.sh:37-40`, `scripts/lock.sh`): a mid-turn branch switch, or a contended `index.lock`. Q10's accepted trade-off, sharper than it was drafted.
+- **F16 — non-blocking; later work, with round 1's F2.** The never-deleted web branches: a project whose CI runs `on: push` for all branches runs it on every first push of each; no cleanup path exists (`scripts/live.sh:153,197`).
+- **F17 — non-blocking; later work, round 1's F3 and F6.** The fetch collision on equal labels (`scripts/live.sh:205`) and the forked-session label.
+- **F18 — non-blocking.** `CHANGELOG.md:9` leaves `Shared state:` as unchanged although origin gains a `codeo-live/` branch namespace that an older plugin's `/codeo:triage` reports as parked work and an older `inflight.sh` does not read.
+- **F19 — non-blocking.** `tests/live-signal.test.sh` does not unset `CLAUDE_CODE_REMOTE` and `CLAUDE_CODE_REMOTE_SESSION_ID` at the top (as `tests/live.test.sh:36` does), so run inside a web session its older cases pass through the new auto-lock branch.
+- **F20 — non-blocking.** The stamp check and write in `hooks/live-signal.sh:31-36` are not atomic: two copies of the hook (this repository's groups and the plugin) can both spawn a take.
+
+**Later work, to file with `/codeo:issue` in the home checkout** (it refuses here): F16 and F17 (the fetch collision, the leftover branches with their CI note, the forked-session label), already in `implement.md`'s notes. No issue number was filed by this pass.
+
+**What the plan round owes:** F12 and F15 together (a rule for when the hook may take a lock: not for a dossier whose `close.md` ends in a stashed or abandoned round, or once per session keyed by the session id; and where it runs: foreground on `UserPromptSubmit` only), F13 (what each project needs, and what a `local` lock does in a web session, F14), F18 and F19 as cheap extras, and the hosted-session check (Task 6) on the build that results.
+
+**Verdict: back to `/codeo:plan`.**
+
 ## Log
 
 - 2026-11-21 — round 1 stopped at step 10: build and the full suite pass, review in, Q1-Q3 raised · cost: 6m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 31k in + 624k cached / 3k out
 - 2026-11-21 — Q1-Q3 recorded from the conversation (a, b, a); Q4 raised for Task 7's hosted-session evidence; no verdict · cost: 20m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 85k in + 2.3M cached / 13k out
 - 2026-11-21 — round 1 written: back to /codeo:plan (F1, F4, F11 blocking); Task 7 evidence recorded, Q4 answered · cost: 75m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 102k in + 9.2M cached / 33k out
+- 2026-11-21 — round 2 written: back to /codeo:plan (F12, F13 blocking); hosted check not run (stale checkouts) · cost: 7m · opus-5-5 554k in + 2.8M cached / 21k out · sonnet-5-5 31k in + 4.4M cached / 11k out
