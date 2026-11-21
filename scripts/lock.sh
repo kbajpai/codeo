@@ -9,6 +9,10 @@
 #   lock.sh take <container|web|local> [--sandbox <name>] [session-id]
 #       Writes $CODEO_STATE_DIR/active from the working tree's dossier and prints what it did, or
 #       a TODO line when it could not. Never fails the caller.
+#       With CODEO_LOCK_SKIP_PARKED=1 in the environment it takes no lock, and says so in a TODO
+#       line, when the dossier it found is parked: the last "### Round <n>" heading of
+#       <state>/<N>/close.md is a stash or an abandon (the park_re of claim.sh). Unset,
+#       or anything else, it behaves as above.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
@@ -141,6 +145,13 @@ take() {
         find_issue "$branch"
         if ((${#found[@]} != 1)); then
             todo+=("no single init.md names branch $branch (found ${#found[@]}): run init for the issue, and bind this host to the branch it pushes")
+        elif n=$(basename "$(dirname "${found[0]}")") &&
+            [[ ${CODEO_LOCK_SKIP_PARKED:-} == 1 && -f "$(dirname "${found[0]}")/close.md" ]] &&
+            last_round=$(sed 's/[[:space:]]*$//' "$(dirname "${found[0]}")/close.md" | grep -E '^### Round [0-9]+' | tail -n 1) &&
+            [[ $last_round =~ ^'### Round '[0-9]+' — '(.+' — ')?(stashed|abandoned)([^[:alnum:]].*)?$ ]]; then
+            # Opt-in, for a session whose hook retakes the lock: close --stash and an abandon leave
+            # the dossier at <state>/<N>/ with no lock, and a retake would undo them.
+            todo+=("#$n is stashed or abandoned: no lock taken")
         else
             n=$(basename "$(dirname "${found[0]}")")
             {

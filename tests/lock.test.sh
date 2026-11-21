@@ -523,6 +523,39 @@ assert_contains "todo names the refresh" "TODO — could not refresh" "$out"
 assert_contains "still reports the lock" "lock already taken" "$out"
 assert_eq "no temp file left" no "$([[ -e $repo/.codeo/active.tmp ]] && echo yes || echo no)"
 
+# --- CODEO_LOCK_SKIP_PARKED: a stashed or abandoned dossier takes no lock -------------------------
+parked_repo() {
+    local dir
+    dir=$(fresh_repo)
+    git -C "$dir" checkout -q -b feat/x
+    write_init "$dir/.codeo/38/init.md" feat/x
+    printf '%b' "$1" > "$dir/.codeo/38/close.md"
+    printf '%s' "$dir"
+}
+run_lock_skip() { CODEO_LOCK_SKIP_PARKED=1 run_lock "$@"; }
+
+case_desc="take_skips_a_stashed_dossier_when_asked"
+repo=$(parked_repo '# Close\n\n### Round 1 — stashed\n')
+out=$(run_lock_skip "$repo" "$(fresh_marker)" web)
+assert_eq "no lock" no "$(active_exists "$repo")"
+assert_contains "todo" "lock: TODO — #38 is stashed or abandoned: no lock taken" "$out"
+
+case_desc="take_skips_an_abandoned_dossier_when_asked"
+repo=$(parked_repo '# Close\n\n### Round 2 — abandoned\n')
+out=$(run_lock_skip "$repo" "$(fresh_marker)" web)
+assert_eq "no lock" no "$(active_exists "$repo")"
+assert_contains "todo" "lock: TODO — #38 is stashed or abandoned: no lock taken" "$out"
+
+case_desc="take_ignores_an_earlier_park"
+repo=$(parked_repo '### Round 1 — stashed\n\n### Round 2 — 2026-11-21\n')
+out=$(run_lock_skip "$repo" "$(fresh_marker)" web)
+assert_eq "lock taken" yes "$(active_exists "$repo")"
+
+case_desc="take_without_skip_parked_still_takes_a_stashed_dossier"
+repo=$(parked_repo '### Round 1 — stashed\n')
+out=$(run_lock "$repo" "$(fresh_marker)" web)
+assert_eq "lock taken" yes "$(active_exists "$repo")"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
