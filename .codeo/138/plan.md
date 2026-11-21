@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q6 is answered (d); Q5 is open: the message that was to carry the probe output arrived without it. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: paste the Q5 output here, then re-invoke `/codeo:plan`.
+Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q5 and Q6 are answered: a branch push from a web session works, a deletion is refused, and `gh api user` returns the login. That makes the branch route viable, with one unprobed step left, the force-push of a new commit over an existing branch (Q7, open). The plan is not drafted until Q7 is answered, since a refusal changes the design. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: answer Q7 here, then re-invoke `/codeo:plan`.
 
 ## Questions
 
@@ -81,6 +81,11 @@ git config user.name
 The first creates one throwaway branch on origin; if the second is refused, delete that branch from GitHub by hand. If the session cannot run them, say so and the plan takes the "no signal" route with the docs as its only evidence.
 
 **Answer:**
+Pasted by the engineer from a hosted session, 2026-11-21 (output reproduced in short; recorded here by the skill), on `fix/live-session-signal-does-not`:
+- `git push origin HEAD:refs/heads/codeo-live/138/web-probe` — exit 0, `* [new branch] HEAD -> codeo-live/138/web-probe`.
+- `git push origin --delete refs/heads/codeo-live/138/web-probe` — exit 1, `RPC failed; HTTP 403 curl 22 The requested URL returned error: 403`.
+- `gh api user -q .login` — exit 0, `kbajpai`.
+- `git config user.name` — exit 0, `Claude`.
 
 ### Q6 — Does your web environment's setup script run `lock.sh take web`, and does it pass a session id?
 
@@ -95,7 +100,30 @@ The first creates one throwaway branch on origin; if the second is refused, dele
 **Answer:**
 (d) Not sure (engineer, in the conversation, 2026-11-21; recorded here by the skill).
 
+### Q7 — Does the proxy accept a force-push of a new parentless commit over an existing branch?
+
+**Why it matters:** Q5 showed that creating a branch works and deleting one is refused. A beat does neither: it replaces the previous signal with a new parentless commit by force-push, so a signal never accumulates history. That non-fast-forward update to an existing branch is the one step not yet seen working from a web session. If it is accepted, the plan builds the branch route as designed. If it is refused, a web session could publish once and never refresh, so the signal would expire after 15 minutes, and the plan has two choices to ask you about: no signal from a web session, or a signal branch whose beats each add one empty commit on top of the last (about 12 an hour, never deleted).
+
+The probe branch from Q5 is still on origin, because the delete was refused. In a hosted session on this branch, run each as its own command and paste the output:
+
+```
+git hash-object -t tree -w /dev/null
+git commit-tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904 -m probe-signal
+```
+
+The second prints a commit id. Put it in place of `<id>` here:
+
+```
+git push --force origin <id>:refs/heads/codeo-live/138/web-probe
+```
+
+Then delete `codeo-live/138/web-probe` on GitHub (Branches page of `kbajpai/codeo`); nothing else of the probe is left behind.
+
+**Answer:**
+
 ## Notes
+
+**Calls made without a question** (continued): `gh api user` works from a web session (Q5), so the issue's open item "whether `GET /user` is refused there" is answered: it is not, in that run. Q4's answer stays as decided; the assignee fallback then only matters where it is refused, and it costs one read.
 
 **Calls made without a question** (correct any in an answer above):
 
@@ -115,3 +143,4 @@ _Pending — written at the hand-off._
 - 2026-11-21 — Q1-Q4 raised; nothing drafted · cost: counted in the planned line later
 - 2026-11-21 — Q1, Q2, Q4 recorded from the conversation; Q3 unclear, restated as Q6; Q5-Q6 raised; nothing drafted
 - 2026-11-21 — Q6 recorded (d); the probe output named for Q5 was not in the message, Q5 stays open; nothing drafted
+- 2026-11-21 — Q5 recorded from the pasted probe (push ok, delete 403, login kbajpai); Q7 raised (force-push over an existing branch); nothing drafted
