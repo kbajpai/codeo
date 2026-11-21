@@ -83,6 +83,8 @@ codeo: work a GitHub issue in a dev container or an sbx sandbox.
   codeo default [container|sandbox]                               show or set the default kind for issue
   codeo update                                                    update codeo and its scripts
   codeo help                                                      show this help
+
+codeo list prints what it can; when docker or sbx fails to list it warns on stderr and exits 1.
 HELP
     case ":$PATH:" in
         *":${HOME:-}/.local/bin:"*) ;;
@@ -220,12 +222,21 @@ sbx_prog() {
     fi
 }
 
+# sbx_has <name> <listing>: succeed when a row of an sbx ls listing has <name> as its first column.
+sbx_has() {
+    local row
+    while read -r row _; do
+        if [[ "$row" == "$1" ]]; then return 0; fi
+    done <<<"$2"
+    return 1
+}
+
 # host_kinds <N>: print container and/or sandbox, one per line, for each that holds codeo-<N> on this
 # host, and return 3 when an installed program could not list (it says so on stderr; the other kind
 # still counts). A missing docker or sbx program is skipped silently. A sandbox counts only when the
 # first column of a row of sbx ls is exactly codeo-<N>.
 host_kinds() {
-    local name="codeo-$1" listing row failed=0 sbx
+    local name="codeo-$1" listing failed=0 sbx
     if command -v docker >/dev/null 2>&1; then
         if listing=$(docker ps -a --format '{{.Names}}' 2>&1); then
             if grep -qxF "$name" <<<"$listing"; then echo container; fi
@@ -236,12 +247,7 @@ host_kinds() {
     fi
     if sbx=$(sbx_prog); then
         if listing=$("$sbx" ls 2>&1); then
-            while read -r row _; do
-                if [[ "$row" == "$name" ]]; then
-                    echo sandbox
-                    break
-                fi
-            done <<<"$listing"
+            if sbx_has "$name" "$listing"; then echo sandbox; fi
         else
             warn_listing "sbx sandboxes" "$listing"
             failed=1
@@ -300,7 +306,11 @@ cmd_issue() {
                 ;;
         esac
     done
-    kind=${kind_flag:-$(saved_default)}
+    kind=$kind_flag
+    if [[ -z "$kind" ]]; then
+        home_dir >/dev/null # saved_default reads the home directory: a refused one ends the command here, once
+        kind=$(saved_default)
+    fi
     [[ "$kind" == container || -z "$rebuild" ]] || usage "--rebuild applies only to a container, and the kind here is a sandbox"
     ensure_home
     if [[ -z "$branch" ]]; then
@@ -477,12 +487,14 @@ container_read() {
     return "$dirty"
 }
 
-# container_check <N>: check the issue container's repository for work that exists only there. Starts a stopped
-# container first, fetches, reads it (container_read), and when the container was already running restarts it and
-# reads again, so a write that landed between the first read and the removal is caught. Prints one heading per kind
-# found (up to 10 lines each) and returns 0 when clean, 1 when something would be lost, 2 when the check could not
-# run (cannot start, fetch, restart or exec failed), 3 when there is no such container. When it returns non-zero it
-# stops again a container it knows it started (not after a failed restart: the state is then unknown).
+# container_check <N> [--no-restart]: check the issue container's repository for work that exists only
+# there. Starts a stopped container first, fetches, reads it (container_read), and when the container was
+# already running restarts it and reads again, so a write that landed between the first read and the removal is
+# caught. Prints one heading per kind found (up to 10 lines each) and returns 0 when clean, 1 when something
+# would be lost, 2 when the check could not run (cannot start, fetch, restart or exec failed), 3 when there is no
+# such container. When it returns non-zero it stops again a container it knows it started (not after a failed
+# restart: the state is then unknown).
+# With --no-restart the container is read once and never restarted.
 container_check() {
     local name="codeo-$1" listing state="" row rest started=0 listed=0 rc=0
     if listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
@@ -505,7 +517,7 @@ container_check() {
     # squash merge, so the pull-request heads are what still hold them. Failing to fetch them proves nothing.
     docker exec "$name" git -C "/workspaces/$name" fetch origin '+refs/pull/*/head:refs/remotes/origin/pr/*' >/dev/null 2>&1 </dev/null || { stop_started "$name" $started; return 2; }
     container_read "$name" || rc=$?
-    if [[ "$rc" -eq 0 && "$started" -eq 0 ]]; then
+    if [[ "$rc" -eq 0 && "$started" -eq 0 && "${2:-}" != --no-restart ]]; then
         # A running container may have had a writer between the read and the removal; restarting it ends any such
         # process, and the second read sees what it left.
         docker restart "$name" >/dev/null 2>&1 </dev/null || return 2
@@ -527,7 +539,7 @@ workspace_mount() {
 # is checked for unsaved work first; --force skips the refusal and removes even when the check cannot
 # run.
 cmd_rm() {
-    local n="" force="" a kind name rc=0 report listing keep_volume mount existed removed_container="" removed_volume="" removed_image=""
+    local n="" force="" a kind name rc=0 report no_restart listing keep_volume mount existed removed_container="" removed_volume="" removed_image=""
     local -a went=()
     for a in "$@"; do
         case "$a" in
@@ -559,18 +571,28 @@ cmd_rm() {
         if [[ "$rc" -ne 0 ]]; then
             if [[ -z "$force" ]]; then
                 # The script refuses over unpushed or uncommitted work on stdout, with no codeo-sandbox: line; every
-                # other refusal is a codeo-sandbox: line on stderr, and --force would not get past it.
+                # other refusal is a codeo-sandbox: line on stderr and gets no hint here, because most of them name
+                # their own remedy or one that does not need --force; --force passes only the no-branches refusal.
                 grep -q '^codeo-sandbox: ' "$errf" ||
                     echo "codeo: codeo rm $n --force removes it anyway; its unpushed commits are kept in $(home_dir)/codeo-$n, its uncommitted work is not" >&2
             elif ! grep -qE "rm --force codeo-$n([^0-9]|$)" "$errf"; then
-                echo "codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-$n" >&2
+                # After a failed end --force, a sandbox that sbx ls no longer lists has nothing left to remove.
+                local sbx listing
+                if ! sbx=$(sbx_prog) || ! listing=$("$sbx" ls 2>&1) || sbx_has "codeo-$n" "$listing"; then
+                    echo "codeo: to remove it anyway, discarding whatever it holds: sbx rm --force codeo-$n" >&2
+                fi
             fi
         fi
         rm -f "$errf"
         exit "$rc"
     fi
     name="codeo-$n"
-    report=$(container_check "$n") || rc=$?
+    # Ask what /workspaces mounts before the check restarts anything: a refusal over a failed inspect must not
+    # have ended a shell or agent first. The case below uses the result.
+    mount=$(workspace_mount "$name") || mount=""
+    no_restart=""
+    [[ -n "$mount" || -n "$force" ]] || no_restart=--no-restart
+    report=$(container_check "$n" "$no_restart") || rc=$?
     case "$rc" in
         0) ;;
         1)
@@ -603,7 +625,6 @@ cmd_rm() {
     fi
     keep_volume=""
     if [[ "$rc" -ne 3 ]]; then
-        mount=$(workspace_mount "$name") || mount=""
         case "$mount" in
             volume) ;;
             other)
@@ -708,6 +729,7 @@ cmd_update() {
 }
 
 main() {
+    abs_path_env CODEO_HOME always
     abs_path_env CODEO_CONTEXT always
     abs_path_env CODEO_SBX_IMAGE always
     abs_path_env CODEO_SBX slash

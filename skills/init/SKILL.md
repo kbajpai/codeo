@@ -349,8 +349,9 @@ is the container the message names.
 
     After a `lock: TODO — …` line the closing block names the recovery, and which one depends on
     whether the lock was taken, told apart by `lock.sh`'s own `took the lock` or
-    `lock already taken` line. With no lock, end the turn with this paragraph's block and do not
-    hand off to `/codeo:plan`:
+    `lock already taken` line. Either way, end the turn with the block for the case and do not invoke
+    `/codeo:plan` in this turn; with the lock taken, the block names `/codeo:plan` as the step after
+    the fix:
 
     **Closing block — no lock:** goal, the lock taken. First step, fix what the `lock: TODO` line
     says; second step, run

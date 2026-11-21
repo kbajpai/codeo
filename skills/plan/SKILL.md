@@ -302,7 +302,7 @@ is the container the message names.
        (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → What a finished dossier looks like`).
        A block written after a send-back covers the branch, not only this round, so
        run `overlap.sh --outside <N>` and add every path it prints to `files:` before committing it;
-       `qc-verdict` fails the pull request if one is still missing. A non-zero exit, with an
+       `qc-verdict` fails the pull request if one is still missing. A non-zero exit, with or without an
        `overlap: cannot diff …` or `overlap: cannot resolve …` line, is a stop to report, never "no
        overlap".
 
@@ -314,7 +314,7 @@ is the container the message names.
        `plan.md`, wherever in the file it sits, and every other workflow's pushed branch. It prints
        one `M<TAB>what` line per overlap not already raised in this issue's dossiers, where `what`
        is a path, `glob:<glob>`, `wiki:<Page>` or `exclusive:<name>`, and nothing when there is
-       none. A non-zero exit, with an `overlap: cannot diff …` or `overlap: cannot resolve …` line,
+       none. A non-zero exit, with or without an `overlap: cannot diff …` or `overlap: cannot resolve …` line,
        is a stop to report, never "no overlap". An `overlap: skipping #<M>'s changed paths` warning
        with exit 0 is quoted to the engineer, and the step carries on with that workflow's
        footprint alone.
