@@ -177,6 +177,19 @@ for gone in 'S->>H: /codeo:close deletes the lock' 'H->>O: clear in the same com
     }
 done
 
+case_desc=docs_state_the_web_session_signal
+handoff=$(<"$plugin_root/docs/handoff.md")
+for want in 'refs/heads/codeo-live/' 'never deleted' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN'; do
+    [[ $handoff == *"$want"* ]] || {
+        echo "FAIL $case_desc: no [$want]"
+        failures=$((failures + 1))
+    }
+done
+[[ $handoff != *'so it publishes no signal'* ]] || {
+    echo "FAIL $case_desc: still has [so it publishes no signal]"
+    failures=$((failures + 1))
+}
+
 case_desc=live_sh_comment_names_both_bounded_calls
 entry=$(awk '/^#   CODEO_LIVE_PUSH_TIMEOUT/{f=1;print;next} f&&/^# {10,}/{print;next} {f=0}' \
     "$plugin_root/scripts/live.sh")
