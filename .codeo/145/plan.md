@@ -148,4 +148,6 @@ sequenced: #144
 ## Log
 
 - 2026-11-21 — Q1-Q5 raised · cost: 1m · fable-5-2 84k in + 542k cached / 8k out
+- 2026-11-21 — plan approved, written to docs/plans/2026-11-21-close-102-126-122-leftovers-145.md; Q6-Q8 raised (overlap with #144) · cost: unavailable, folded into the planned line below
+- 2026-11-21 — Q6-Q8 answered; Q9 raised (overlap with #143) · cost: unavailable, folded into the planned line below
 - 2026-11-21 — planned: docs/plans/2026-11-21-close-102-126-122-leftovers-145.md · cost: 7m · fable-5-2 90k in + 866k cached / 13k out · sonnet-5-5 120k in + 2.3M cached / 21k out · engineering:system-design and engineering:architecture not used (not installed, not needed)
