@@ -144,6 +144,15 @@ Accept both and document them, as recommended (engineer, in the conversation, 20
 
 `engineering:system-design` and `engineering:architecture` are not available as skills in this session; their structure is applied directly in the draft.
 
+### Footprint
+
+```
+files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md, docs/plans/2026-11-21-install-one-command-151-round-3.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-21-install-one-command-151.md` (approved by the engineer 2026-11-21; left unstaged for review). **Shape:** a scoped, executable plan of eight tasks under `$PLANS`, with a Mermaid flowchart; no standing reference doc, because `README.md` is the documentation.
@@ -180,14 +189,6 @@ Accept both and document them, as recommended (engineer, in the conversation, 20
 **Documentation pages the plan changes:** `README.md` (Task 4) and the `CHANGELOG.md` bullet (Task 5); `CONTRIBUTING.md` and `docs/` unchanged. No wiki module.
 
 **Other workflows:** #149 and #138 share only `CHANGELOG.md` (answered *proceed and coordinate*); `overlap.sh` printed nothing for this footprint. No exclusive resource, so no lock.
-
-### Footprint
-
-```
-files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  none
 ```
 
 ## Log
