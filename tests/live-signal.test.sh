@@ -194,6 +194,18 @@ done
     echo "FAIL $case_desc: still has [take the lock and beat]"
     failures=$((failures + 1))
 }
+for want in 'never for a' 'whatever its lock' 'only here' 'committed dossier'; do
+    [[ $handoff == *"$want"* ]] || {
+        echo "FAIL $case_desc: no [$want]"
+        failures=$((failures + 1))
+    }
+done
+for gone in 'nothing else is needed' 'same two groups'; do
+    [[ $handoff != *"$gone"* ]] || {
+        echo "FAIL $case_desc: still has [$gone]"
+        failures=$((failures + 1))
+    }
+done
 
 case_desc=live_sh_comment_names_both_bounded_calls
 entry=$(awk '/^#   CODEO_LIVE_PUSH_TIMEOUT/{f=1;print;next} f&&/^# {10,}/{print;next} {f=0}' \

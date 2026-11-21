@@ -170,14 +170,22 @@ it.
   A hosted web session publishes `refs/heads/codeo-live/<issue>/<machine>` instead, because the
   proxy refuses a push to the first and accepts the second, and a REST write of the commit is
   refused. The proxy refuses branch deletions, so a web signal is never deleted: it only expires
-  after the TTL, and the branch stays on origin until someone deletes it. In a hosted web session the beat hook takes the lock itself, so no
-  separate lock step is needed: when `CLAUDE_CODE_REMOTE` is `true`, the project has a `.codeo/`
+  after the TTL, and the branch stays on origin until someone deletes it. A session with `CLAUDE_CODE_REMOTE` set to `true` publishes as a web session
+  whatever its lock's `host` says. In a hosted web session the beat hook takes the lock itself, so no
+  separate lock step is needed: on a `UserPromptSubmit` event, when the project has a `.codeo/`
   directory and there is no `.codeo/active`, the hook runs `lock.sh take web` with the session id
-  without its `cse_` prefix, at most once per `CODEO_LIVE_REFRESH_SECONDS`, and then beats; taking the lock
-  may check out the dossier branch. This repository gets the hook from its own two gated groups in
-  `.claude/settings.json` (`UserPromptSubmit` and `PostToolUse`); another project adds the same two
-  groups, or installs the plugin through the environment's setup script, since cloud sessions do not
-  install `enabledPlugins`. Either way nothing else is needed. `inflight.sh` prints
+  without its `cse_` prefix and `CODEO_LOCK_SKIP_PARKED=1`, in the foreground, bounded by `timeout 8`,
+  at most once per `CODEO_LIVE_REFRESH_SECONDS` (an atomic claim file settles which prompt takes it),
+  and then beats, detached. The take is never for a dossier whose `close.md` ends in a stash or an
+  abandon, so a parked workflow stays lockless; a stashed workflow resumed through `/codeo:init`
+  takes its lock the usual way. A tool call (`PostToolUse`) never takes the lock: with a lock it
+  beats, detached, and with none it does nothing. Taking the lock may check out the dossier branch
+  between turns. This repository's `.claude/settings.json` carries two gated groups
+  (`UserPromptSubmit` and `PostToolUse`) that run this repository's own `hooks/live-signal.sh`, so
+  they work only here. Another project gets the hook by installing the plugin, whose
+  `hooks/hooks.json` runs the same script, through its environment's setup script, since cloud
+  sessions do not install `enabledPlugins`; there the hook needs only a `.codeo/` directory and a
+  committed dossier naming the branch. `inflight.sh` prints
   a `live:` line (`<user> on <machine> (<host>), <age> ago`) for a workflow with a signal at most 15
   minutes old, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --live` lists them as TSV
   (issue, user, machine, host, age in seconds). It fetches both refspecs, the `refs/codeo/live/*`
@@ -215,10 +223,12 @@ it.
       participant H as hooks/live-signal.sh
       participant O as origin (refs/codeo/live/N/machine, refs/heads/codeo-live/N/machine)
       participant R as inflight.sh in another clone
-      S->>H: UserPromptSubmit / PostToolUse
-      H->>H: .codeo/active present? less than 5 min since last beat?
-      H-->>H: a web session with no lock: lock.sh take web in the background, then beat
-      H-->>O: live.sh beat — force-push one parentless commit (REST if the push is refused; a web session pushes the codeo-live branch, no REST)
+      S->>H: UserPromptSubmit
+      H->>H: web, .codeo/ present, no lock, interval claimed atomically?
+      H->>H: foreground, bounded: CODEO_LOCK_SKIP_PARKED=1 lock.sh take web (a stashed or abandoned dossier takes nothing)
+      S->>H: PostToolUse
+      H->>H: a lock: less than 5 min since last beat? no lock: nothing
+      H-->>O: detached live.sh beat — force-push one parentless commit (REST if the push is refused; a web session pushes the codeo-live branch, no REST)
       R->>O: fetch +refs/codeo/live/*:refs/codeo/live/* and +refs/heads/codeo-live/*:refs/codeo/live/* (--prune)
       R->>R: beat within 15 min? print "live:" line
       S->>O: /codeo:close runs live.sh clear and deletes the lock in one command
