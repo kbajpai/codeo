@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). F1 needs a decision, raised as Q7; nothing is drafted until it is answered. The round-2 plan will also carry `qc.md`'s F2-F6, F8 and F9 as tasks (README *Uninstalling* and *Updating* corrected from real runs, a stub that models a project's `.claude/settings.json`, clearer failure lines, the changelog wording, a test tying the README's output blocks to the script) and settles F7 itself: the already-installed check goes by the marketplace's pinned tag, and "latest" stays the highest `vX.Y.Z` tag.
+Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). Q7 answered (only the asked scope writes a project's file). The round-2 plan is drafted in `.codeo/151/plan-draft.md` and awaits the engineer's approval; the footprint is committed and checked after approval.
 
 ## Questions
 
@@ -88,6 +88,7 @@ In this issue's container, as recommended (engineer, in the conversation, 2026-1
 - Refuse. When the replace would affect another scope, print what would change and exit 1 unless `--force` is given. Safest, but adds an option and makes the update command fail in the common case of a pinned project.
 
 **Answer:**
+Only the scope you asked for writes a project's file, as recommended (engineer, in the conversation, 2026-11-21).
 
 ## Notes
 
@@ -147,3 +148,4 @@ sequenced:  none
 - 2026-11-21 — Q1-Q6 answered, plan drafted for review · cost: 9m · fable-5-2 + sonnet-5-5
 - 2026-11-21 — planned: docs/plans/2026-11-21-install-one-command-151.md · cost: 49m · fable-5-2 98k in + 1.1M cached / 19k out · sonnet-5-5 133k in + 860k cached / 30k out
 - 2026-11-21 — round 2 (send-back from qc.md round 1): Q7 raised · cost: 0m · fable-5-2 340k in + 23k cached / 2k out
+- 2026-11-21 — round 2: Q7 answered, plan drafted for review · cost: 3m · fable-5-2 356k in + 1.9M cached / 16k out
