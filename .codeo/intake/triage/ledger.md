@@ -180,3 +180,8 @@
 | `issue:146` | Release v1.0.8; filed 2026-11-21, board Status `Backlog`, gated on #145 | ready | 2026-11-21 |
 | `issue:149` | #143 and #144 leftovers; filed 2026-11-21 | ready | 2026-11-21 |
 | `issue:151` | One-command install and developer README; filed 2026-11-21, board Status `Backlog` | ready | 2026-11-21 |
+| `qc:149:F7-F12-F18` | #149 non-blocking QC findings: `codeo rm` remedies, F7 refused `rm` leaves a stopped container running, README/CHANGELOG wording, test pin | filed #154 | 2026-11-21 |
+| `qc:145:F1-F3` | #145 non-blocking QC findings: triage step reference, inflight test date, inflight comments | filed #154 | 2026-11-21 |
+| `qc:118:F1-F6` | #118 non-blocking QC findings (test label, concurrent-beats case, handoff/live.sh wording) | already #138 | 2026-11-21 |
+| `issue:154` | #149 and #145 leftovers; filed 2026-11-21, board Status `Backlog` | leave in the backlog | 2026-11-21 |
+| `issue:152` | Evaluate running the home role on the host; filed 2026-11-21, board Status `Backlog` | leave in the backlog | 2026-11-21 |
