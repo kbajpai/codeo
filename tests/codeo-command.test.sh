@@ -1563,6 +1563,16 @@ t_home_checkout_collision() {
     [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
         fail "issue --container: stderr is '$cm_err'"
     expect_no_script
+    cm_nohome=1 cm_run issue 5 --sandbox --rebuild
+    [[ "$cm_status" -eq 2 ]] || fail "issue --sandbox --rebuild: exit $cm_status, want 2"
+    grep -q '^usage:' "$cm_dir/err" || fail "issue --sandbox --rebuild: no usage"
+    [[ "$(tail -n 1 "$cm_dir/err")" == "codeo: --rebuild applies only to a container, and the kind here is a sandbox" ]] ||
+        fail "issue --sandbox --rebuild: last line is '$(tail -n 1 "$cm_dir/err")'"
+    cm_nohome=1 cm_run issue 5 --rebuild
+    [[ "$cm_status" -eq 1 ]] || fail "issue --rebuild: exit $cm_status, want 1"
+    [[ "$cm_err" == "codeo: ~/codeo is a git checkout; set CODEO_HOME to the directory codeo should keep its files in" ]] ||
+        fail "issue --rebuild: stderr is '$cm_err'"
+    expect_no_script
     cm_nohome=1 cm_run default sandbox
     [[ "$cm_status" -eq 1 ]] || fail "default: exit $cm_status, want 1"
     home_untouched default
