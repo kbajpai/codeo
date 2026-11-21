@@ -26,4 +26,4 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-21 — Q1 raised (overlap with #145) · cost: pending
+- 2026-11-21 — Q1 raised (overlap with #145) · cost: 1m · sonnet-5-5 12k in + 773k cached / 3k out
