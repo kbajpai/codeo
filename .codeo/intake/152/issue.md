@@ -1,10 +1,10 @@
-# Issue — host-side home evaluation (draft)
+# Issue #152 — issue
 
 Requested by the engineer: "Is it a good idea that \"codeo home container\" runs actually on physical machine & only the issues run on a container? I am just trying to brainstorm ideas."
 
 ## Where this stands
 
-Draft approved at the review gate; filing. Role check passed (home container). No duplicate: #55 introduced the home container, #133 the host `codeo` command, #73 is the precedent for an evaluation issue. The repository has no Issue Types.
+Filed as #152 (https://github.com/kbajpai/codeo/issues/152). Role check passed (home container). No duplicate: #55 introduced the home container, #133 the host `codeo` command, #73 is the precedent for an evaluation issue. The repository has no Issue Types.
 
 ## Questions
 
@@ -37,3 +37,4 @@ Body: `body.md` in this directory.
 ## Log
 
 - 2026-11-21 — questions 1-6 asked and answered in the conversation; draft approved at the review gate · cost: 6m · opus-5-5 60k in + 826k cached / 7k out
+- 2026-11-21 — approved and filed as #152
