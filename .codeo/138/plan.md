@@ -160,15 +160,6 @@ Pasted by the engineer from a hosted session, 2026-11-21 (recorded here by the s
 
 ## Notes
 
-### Footprint
-
-```
-files:      .claude/settings.json, hooks/live-signal.sh, scripts/live.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/triage-skill.test.sh, tests/devcontainer.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md, docs/plans/2026-11-21-live-signal-web-session-138-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 **Round 2 calls made without a question** (send-back from `qc.md` round 1; correct any in an answer above):
 - *F1:* for a web session the user chain ends at `unknown` after the assignee, with no `git config user.name` (Q2 answered (b) there); `tests/live.test.sh`'s `web_user_without_an_assignee_falls_to_git_user_name` becomes a case that expects `unknown`, and the sentence in `docs/handoff.md` follows.
 - *F4:* `docs/handoff.md` says the groups in `.claude/settings.json` are this repository's own, and what another project needs (Q10's answer decides the wording).
@@ -209,6 +200,32 @@ sequenced:  none
 
 **Intake question resolved:** `GET /user` is not refused in a web session (Q5: `gh api user` returned `kbajpai`); whether a web session's start script passes a session id stays unknown, which the `SessionStart` hook makes unnecessary.
 
+### Round 2 — 2026-11-21
+
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-21-live-signal-web-session-138-round-2.md` — 6 tasks, unstaged for review; round 1's plan stays as the record of what was built. **Shape:** a second plan under `docs/plans/` with the tasks of this round only, a decision record and a sequence diagram folded in. `engineering:system-design` and `engineering:architecture` are not installed; their structure is applied directly.
+
+**What was decided** (Q10, and the calls under `## Notes`):
+- **The lock (Q10 a).** `hooks/live-signal.sh beat` takes the lock itself in a web session: `CLAUDE_CODE_REMOTE=true`, a `.codeo/` directory and no `.codeo/active`, at most once per refresh interval, in the background (`lock.sh take web <session id without cse_>` and then `live.sh beat`). The repository's `SessionStart` group is dropped. Rejected: keeping that group beside it (`lock:` lines in the session's context), and diagnosing why `startup` did not run it first (another hosted run, no change in design). Because `hooks/hooks.json` runs the same script, a project that installs the plugin gets the lock too, which is what `docs/handoff.md` now says (F4).
+- **The user (F1, `qc.md` Q2 b).** For a web session the chain is `CODEO_GITHUB_LOGIN`, `GET /user`, the issue's first assignee, `unknown`: never `git config user.name`.
+- **Taken along:** F5 (a hook test with no session id), F7 and F8 (one sentence each in `docs/handoff.md`), F10 (`tests/devcontainer.test.sh` joins the footprint, with no edit needed).
+- **Not in this round (`qc.md` Q3 a):** the fetch collision on equal machine labels, the leftover `codeo-live/*` branches and the forked-session label stay later work.
+- **Tasks.** Tasks 1-5 are proved by `bash tests/run.sh`; Task 6, the hosted-session check, is `Runs on: the engineer's host` and last. No task needs a lease: no shared environment is configured. Overlaps with #149 and #151 were answered *proceed and coordinate* in round 1 (Q8, Q9) and are not raised again; Tasks 4 and 5 run `sync-main.sh` first.
+
+**Documentation the plan changes:** `docs/handoff.md` → *Who is working right now* (and its diagram) and `CHANGELOG.md` (the existing bullet). No wiki pages.
+
+**Intake question resolved:** none new; round 1's resolutions stand.
+
+### Footprint
+
+```
+files:      .claude/settings.json, hooks/live-signal.sh, scripts/live.sh, skills/triage/SKILL.md, tests/live.test.sh, tests/live-signal.test.sh, tests/triage-skill.test.sh, tests/devcontainer.test.sh, docs/handoff.md, CHANGELOG.md, docs/plans/2026-11-21-live-signal-web-session-138.md, docs/plans/2026-11-21-live-signal-web-session-138-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-21 — Q1-Q4 raised; nothing drafted · cost: counted in the planned line later
@@ -220,3 +237,4 @@ sequenced:  none
 - 2026-11-21 — planned: docs/plans/2026-11-21-live-signal-web-session-138.md · cost: 82m · fable-5-2 86k in + 802k cached / 6k out · sonnet-5-5 230k in + 4.7M cached / 56k out · no /codeo:issue filed; engineering:system-design and engineering:architecture unavailable
 - 2026-11-21 — round 2: Q10 recorded (a); draft written to plan-draft.md and presented for review · cost: counted in the planned line later
 - 2026-11-21 — round 2 (send-back from qc.md round 1): Q10 raised (where a hosted session's lock is taken); nothing drafted · cost: 1m · sonnet-5-5 6k in + 1.5M cached / 6k out
+- 2026-11-21 — planned (round 2): docs/plans/2026-11-21-live-signal-web-session-138-round-2.md · cost: 4m · sonnet-5-5 30k in + 6.5M cached / 29k out · no /codeo:issue filed; engineering:system-design and engineering:architecture unavailable
