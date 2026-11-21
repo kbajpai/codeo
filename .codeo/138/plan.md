@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q5-Q6 are open. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: answer Q5-Q6 here, then re-invoke `/codeo:plan`.
+Explored and brainstormed; nothing drafted. Q2 and Q4 are answered; Q1 chose a probe, whose output is Q5, and Q3 is restated as Q6. Q6 is answered (d); Q5 is open: the message that was to carry the probe output arrived without it. The Claude Code docs (read today) settle part of the intake's open list, so the questions below are narrower than the issue's: a push to a plain branch name is allowed, a push to a non-branch ref or a branch deletion is rejected, `enabledPlugins` plugins are not installed in a cloud session, and hooks in the repository's `.claude/settings.json` do run there. Next: paste the Q5 output here, then re-invoke `/codeo:plan`.
 
 ## Questions
 
@@ -93,6 +93,7 @@ The first creates one throwaway branch on origin; if the second is refused, dele
 - **(d) Not sure.** The plan adds the hook; it is idempotent in every case above.
 
 **Answer:**
+(d) Not sure (engineer, in the conversation, 2026-11-21; recorded here by the skill).
 
 ## Notes
 
@@ -113,3 +114,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-21 — Q1-Q4 raised; nothing drafted · cost: counted in the planned line later
 - 2026-11-21 — Q1, Q2, Q4 recorded from the conversation; Q3 unclear, restated as Q6; Q5-Q6 raised; nothing drafted
+- 2026-11-21 — Q6 recorded (d); the probe output named for Q5 was not in the message, Q5 stays open; nothing drafted
