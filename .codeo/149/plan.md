@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Plan approved and saved at `docs/plans/2026-11-21-close-non-blocking-findings-149.md` (unstaged). Footprint written under `## Notes`. `overlap.sh` printed one overlap, `glob:CHANGELOG.md` with #151, raised as Q7; `## Outcome` stays pending until it is answered.
+Planned: the plan is approved and saved at `docs/plans/2026-11-21-close-non-blocking-findings-149.md` (unstaged). Q1-Q7 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: commit the plan, then `/codeo:implement`.
 
 What I found (read against `.devcontainer/codeo` and `.sbx/codeo-sandbox.sh` at `56598d3`):
 
@@ -103,8 +103,21 @@ As picked. The F5c mutation was run while planning and passes today, so F5c is d
 **Options:** *proceed and coordinate* (my pick: whoever merges second rebases and keeps both bullets) · *sequence after #151* · *re-scope* (drop Task 9 and add the bullet at `/codeo:close`).
 
 **Answer:**
+Proceed and coordinate: whoever merges second rebases and keeps both bullets. (Engineer: "go with your pick", 2026-11-21.)
 
 ## Notes
+
+None.
+
+## Outcome
+
+Plan: `docs/plans/2026-11-21-close-non-blocking-findings-149.md` (unstaged, awaiting commit). Shape: one executable plan with checkbox tasks, no reference doc; nothing here is a standing decision, and the `engineering` plugin was not needed (no new component or technology choice).
+
+**Decisions (Q1-Q7, all the recommended option, engineer: "go with your picks"):** a relative `CODEO_HOME` is made absolute once in `main` (rejected: refuse it); `docker inspect` runs before the restart, and a failed inspect without `--force` skips the restart (rejected: document the order); the `--force` hint follows `sbx ls`, not the script's wording (rejected: match its phrases); the README and one comment change, the script's messages stay (rejected: reword five refusals); the flowchart is completed (rejected: label it partial); #151's `CHANGELOG.md` overlap is proceed and coordinate (rejected: sequence, re-scope). #144 leftovers: F3, F5a, F5b and F5c done, with F5c confirmed by a mutation run while planning (`inflight.sh:209` tightened to an exact match still passed `outcome-heading`); F5d dismissed (it rewords a past changelog entry the issue does not list).
+
+**Documentation moved:** `.devcontainer/README.md`, `.sbx/README.md`, the `codeo help` text, `skills/implement`, `skills/close`, `skills/init`, the stop sentence in `skills/plan`, `skills/qc` and `docs/handoff.md`, and `CHANGELOG.md`. No wiki module.
+
+No intake question was resolved here and no issue was filed. The `engineering` skills were not invoked.
 
 ### Footprint
 
@@ -115,12 +128,9 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-21 — Q1-Q6 raised · cost: 1m · fable-5-2 106k in + 684k cached / 7k out
 - 2026-11-21 — Q1-Q6 answered, plan drafted for review · cost: 8m · fable-5-2 114k in + 1.1M cached / 12k out · sonnet-5-5 166k in + 1.6M cached / 37k out
 - 2026-11-21 — plan approved and saved; footprint written; Q7 raised (overlap with #151 on CHANGELOG.md) · cost: unavailable (partial turn)
+- 2026-11-21 — planned: docs/plans/2026-11-21-close-non-blocking-findings-149.md · cost: 50m · fable-5-2 114k in + 1.1M cached / 12k out · sonnet-5-5 171k in + 3.1M cached / 41k out
