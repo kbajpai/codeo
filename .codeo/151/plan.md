@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). Q7 answered (only the asked scope writes a project's file). The round-2 plan is drafted in `.codeo/151/plan-draft.md` and awaits the engineer's approval; the footprint is committed and checked after approval.
+Round 2: Q7 answered, the plan is approved and written to `docs/plans/2026-11-21-install-one-command-151-round-2.md` (unstaged), `## Outcome` has its round, and the hand-off is `/codeo:implement`.
 
 ## Questions
 
@@ -113,15 +113,6 @@ Only the scope you asked for writes a project's file, as recommended (engineer, 
 
 `engineering:system-design` and `engineering:architecture` are not available as skills in this session; their structure is applied directly in the draft.
 
-### Footprint
-
-```
-files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-21-install-one-command-151.md` (approved by the engineer 2026-11-21; left unstaged for review). **Shape:** a scoped, executable plan of eight tasks under `$PLANS`, with a Mermaid flowchart; no standing reference doc, because `README.md` is the documentation.
@@ -142,6 +133,32 @@ sequenced:  none
 **Other workflows:** #149 and #138 were at `init` with no footprint; `overlap.sh` printed nothing. No exclusive resource, so no lock was taken.
 
 
+### Round 2
+
+2026-11-21
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-21-install-one-command-151-round-2.md` (approved by the engineer 2026-11-21; left unstaged for review). **Shape:** a scoped, executable plan of five tasks under `$PLANS` with a Mermaid flowchart; no reference doc. The round-1 plan binds wherever it is silent.
+
+**Decision (Q7, recommended option taken):** only the scope asked for writes a project's `.claude/settings.json`. A user-scope run never passes `--scope project`, leaves the file untouched and says this project's own install is no longer installed on this machine; a `--scope project` replace rewrites the pin and, when a user copy existed, reinstalls it and says so. Rejected: reinstalling everywhere but saying so, and refusing without `--force`.
+
+**Calls made without a question:** the marketplace is declared wherever codeo is installed; "already installed" goes by the marketplace's pinned tag (F7), "latest" stays the highest `vX.Y.Z` tag; failure lines name the scope not restored and, for a given tag, only git's exit 2 is `not found` (F6); the silent gap during a first install, `claude_step`'s temporary files on Ctrl-C, `CODEO_TEST_BASH_VERSION` and README samples naming `v1.0.7` are left as they are. Criterion 6 stays the engineer's check at `/codeo:close`.
+
+**Tasks:** 1 the stub `claude` models settings files (F4); 2 replace by the asked scope and the pin-based installed check (F1, F7); 3 failure lines (F6); 4 README *Installing*, *Updating* and *Uninstalling* from fresh real captures, with a test tying README output blocks to the script (F2, F3, F5, F9); 5 changelog bullet (F8).
+
+**Documentation pages the plan changes:** `README.md` (Task 4) and the `CHANGELOG.md` bullet (Task 5); `CONTRIBUTING.md` and `docs/` unchanged. No wiki module.
+
+**Other workflows:** #149 and #138 share only `CHANGELOG.md` (answered *proceed and coordinate*); `overlap.sh` printed nothing for this footprint. No exclusive resource, so no lock.
+
+### Footprint
+
+```
+files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-21 — Q1-Q6 raised · cost: 3m · fable-5-2 89k in + 764k cached / 13k out
@@ -149,3 +166,4 @@ sequenced:  none
 - 2026-11-21 — planned: docs/plans/2026-11-21-install-one-command-151.md · cost: 49m · fable-5-2 98k in + 1.1M cached / 19k out · sonnet-5-5 133k in + 860k cached / 30k out
 - 2026-11-21 — round 2 (send-back from qc.md round 1): Q7 raised · cost: 0m · fable-5-2 340k in + 23k cached / 2k out
 - 2026-11-21 — round 2: Q7 answered, plan drafted for review · cost: 3m · fable-5-2 356k in + 1.9M cached / 16k out
+- 2026-11-21 — planned (round 2): docs/plans/2026-11-21-install-one-command-151-round-2.md · cost: 8m · fable-5-2 364k in + 2.3M cached / 17k out · sonnet-5-5 348k in + 399k cached / 1k out
