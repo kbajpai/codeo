@@ -22,3 +22,17 @@ Questions open; no draft yet. The latest release is v1.0.7 (2026-11-18); `.claud
 ## Log
 
 - 2026-11-21 — questions 1-3 raised
+
+## Answers (engineer, 2026-11-21)
+
+1. v1.0.8. 2. (c) wait for #143, #144 and #145. 3. yes, a second pin PR.
+
+## Draft
+
+**Title:** Release v1.0.8 once #143, #144 and #145 are closed, and pin codeo to it
+**Labels:** `enhancement` (a release, like #100, is not a defect; `issue-types` prints nothing, so no type). No priority (setting off).
+Body: `body.md` in this directory.
+
+## Log
+
+- 2026-11-21 — answers 1-3 received; draft written for the review gate
