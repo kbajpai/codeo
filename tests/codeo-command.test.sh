@@ -285,6 +285,8 @@ t_help_lists_commands() {
         grep -qw "$c" <<<"$cm_out" || fail "help does not name $c"
     done
     grep -q 'export PATH="$HOME/.local/bin:$PATH"' <<<"$cm_out" || fail "help lacks the PATH line"
+    grep -qF 'exits 1' <<<"$cm_out" && grep -qF 'warns on stderr' <<<"$cm_out" ||
+        fail "help does not say a failed listing warns and exits 1"
     [[ ! -s "$cm_dir/calls" ]] || fail "help made calls"
 }
 

@@ -83,6 +83,8 @@ codeo: work a GitHub issue in a dev container or an sbx sandbox.
   codeo default [container|sandbox]                               show or set the default kind for issue
   codeo update                                                    update codeo and its scripts
   codeo help                                                      show this help
+
+codeo list prints what it can; when docker or sbx fails to list it warns on stderr and exits 1.
 HELP
     case ":$PATH:" in
         *":${HOME:-}/.local/bin:"*) ;;
@@ -565,7 +567,8 @@ cmd_rm() {
         if [[ "$rc" -ne 0 ]]; then
             if [[ -z "$force" ]]; then
                 # The script refuses over unpushed or uncommitted work on stdout, with no codeo-sandbox: line; every
-                # other refusal is a codeo-sandbox: line on stderr, and --force would not get past it.
+                # other refusal is a codeo-sandbox: line on stderr and gets no hint here, because most of them name
+                # their own remedy or one that does not need --force; --force passes only the no-branches refusal.
                 grep -q '^codeo-sandbox: ' "$errf" ||
                     echo "codeo: codeo rm $n --force removes it anyway; its unpushed commits are kept in $(home_dir)/codeo-$n, its uncommitted work is not" >&2
             elif ! grep -qE "rm --force codeo-$n([^0-9]|$)" "$errf"; then
