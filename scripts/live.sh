@@ -32,7 +32,7 @@
 #       codeo live signal
 #
 #       issue: <N>
-#       user: <GitHub login, else git user.name, else unknown>
+#       user: <GitHub login, else git user.name, else unknown; a web session never uses git config user.name>
 #       machine: <label>
 #       host: <container|web|local>
 #       beat: <epoch seconds>
@@ -135,7 +135,7 @@ user_label() {
     local name=${CODEO_GITHUB_LOGIN:-}
     [[ -n $name ]] || name=$(bounded bash "$github" user login 2> /dev/null) || name=
     [[ -n $name || $host != web ]] || name=$(assignee_label)
-    [[ -n $name ]] || name=$(git config user.name 2> /dev/null) || name=
+    [[ -n $name || $host == web ]] || name=$(git config user.name 2> /dev/null) || name=
     name=$(clean "$name" 64)
     printf '%s' "${name:-unknown}"
 }

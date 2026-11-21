@@ -647,11 +647,11 @@ git -C "$clone" config user.name "Bob Builder"
 STUB_USER_FAIL=1 STUB_ASSIGNEE=carol run beat --force
 assert_contains "container ignores assignee" "user: Bob Builder" "$(web_msg refs/codeo/live/104/codeo-104)"
 
-case_desc=web_user_without_an_assignee_falls_to_git_user_name
+case_desc=web_user_without_a_login_or_assignee_is_unknown
 new_world; clone_with_lock 104 web abcdef0123456789
-git -C "$clone" config user.name "Bob Builder"
+git -C "$clone" config user.name "Claude"
 STUB_USER_FAIL=1 run beat --force
-assert_contains "git user" "user: Bob Builder" "$(web_msg refs/heads/codeo-live/104/web-abcdef01)"
+assert_contains "unknown, never git user" "user: unknown" "$(web_msg refs/heads/codeo-live/104/web-abcdef01)"
 
 if ((failures)); then
     echo "$failures assertion(s) failed"
