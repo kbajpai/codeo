@@ -18,6 +18,7 @@ Round 1 stopped at step 2: `overlap.sh 149` printed four overlaps with #138, rai
 **Options:** *proceed and coordinate* (my pick: no conflict today, and the second to merge keeps both bullets) · *sequence after #138* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate. (Engineer: "go with your picks", 2026-11-21.)
 
 ### Q2 — #138 also changes `docs/handoff.md` (`docs/handoff.md`, `glob:docs/handoff.md`): proceed, sequence, or re-scope?
 
@@ -25,6 +26,7 @@ Round 1 stopped at step 2: `overlap.sh 149` printed four overlaps with #138, rai
 **Options:** *proceed and coordinate* (my pick: separate hunks, no conflict) · *sequence after #138* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate. (Engineer: "go with your picks", 2026-11-21.)
 
 ## Notes
 
