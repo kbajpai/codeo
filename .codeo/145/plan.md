@@ -71,6 +71,7 @@ Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: 
 **Recommendation:** sequence after #144, as Q5 answered. Two bullets in one section merge; Task 7 is last and runs `bash scripts/sync-main.sh` first.
 
 **Answer:**
+Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: "sequence after #144 for Q6-Q8").
 
 ### Q7 — `glob:docs/handoff.md` overlaps #144's plan. How do the two changes share it?
 
@@ -79,6 +80,7 @@ Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: 
 **Recommendation:** sequence after #144, as Q5 answered. The paragraph this plan edits is one sentence; rebasing onto #144 is cheap.
 
 **Answer:**
+Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: "sequence after #144 for Q6-Q8").
 
 ### Q8 — `glob:scripts/inflight.sh` overlaps #144's plan. How do the two changes share it?
 
@@ -87,6 +89,7 @@ Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: 
 **Recommendation:** sequence after #144, as Q5 answered. This plan changes only comments in the file; #144 changes its code.
 
 **Answer:**
+Sequence after #144, as recommended (engineer, in the conversation, 2026-11-21: "sequence after #144 for Q6-Q8").
 
 ## Notes
 
