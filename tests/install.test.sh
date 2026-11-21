@@ -45,13 +45,15 @@ closing='install: nothing was installed. Install the tools above with your syste
 # <repo>[@<ref>] [--scope s]` records the marketplace (codeo for kbajpai/codeo, superpowers-marketplace
 # for obra/superpowers-marketplace); `plugin install <id> --scope s` appends an entry (version 1.0.7 for
 # codeo@codeo or the tag the marketplace was added at without its v, 7.0.2 for superpowers);
-# `plugin marketplace remove codeo` drops the marketplace and every codeo@codeo entry.
+# `plugin install` of an installed id prints "already installed" and changes nothing; a file
+# $STUB_DIR/list-fail makes `plugin list` exit 1; a file $STUB_DIR/drain makes every call read stdin
+# to the end. # `plugin marketplace remove codeo` drops the marketplace and every codeo@codeo entry.
 in_setup() {
     in_dir="$scratch/$1"
     rm -rf "$in_dir"
     STUB_DIR="$in_dir/stub"
     CLAUDE_CONFIG_DIR="$in_dir/claude"
-    mkdir -p "$in_dir/bin" "$in_dir/work" "$STUB_DIR" "$CLAUDE_CONFIG_DIR/plugins"
+    mkdir -p "$in_dir/bin" "$in_dir/work" "$in_dir/home" "$STUB_DIR" "$CLAUDE_CONFIG_DIR/plugins"
     local n p
     for n in bash env cat grep sed awk sort mkdir rm cp mv date tr head tail cut dirname basename \
         mktemp jq ls wc printf uname timeout; do
@@ -91,6 +93,7 @@ STUB
 #!/usr/bin/env bash
 set -euo pipefail
 echo "$*" >>"$STUB_DIR/calls"
+[[ ! -f $STUB_DIR/drain ]] || cat >/dev/null
 list="$STUB_DIR/list.json"
 market="$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
 [[ -f $market ]] || echo '{}' >"$market"
@@ -100,7 +103,9 @@ for ((i = 0; i < ${#args[@]}; i++)); do
     [[ ${args[i]} != --scope ]] || scope=${args[i + 1]:-user}
 done
 case "${1:-} ${2:-} ${3:-}" in
-    "plugin list "*) cat "$list" ;;
+    "plugin list "*)
+        if [[ -f $STUB_DIR/list-fail ]]; then echo "stub claude: plugin list failed" >&2; exit 1; fi
+        cat "$list" ;;
     "plugin marketplace add")
         spec=$4 repo=${4%@*} ref=""
         [[ $spec != *@* ]] || ref=${spec#*@}
@@ -122,6 +127,10 @@ case "${1:-} ${2:-} ${3:-}" in
         fi ;;
     "plugin install "*)
         id=$3
+        if [[ $(jq --arg id "$id" --arg s "$scope" '[.[] | select(.id == $id and .scope == $s)] | length' "$list") -gt 0 ]]; then
+            echo "$id is already installed"
+            exit 0
+        fi
         case $id in
             codeo@codeo)
                 ref=$(jq -r '.codeo.source.ref // ""' "$market")
@@ -176,10 +185,9 @@ t_latest_is_highest_release() {
     printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.10\nc\trefs/tags/v1.0.7\nd\trefs/tags/v2.0.0-rc1\ne\trefs/tags/nightly\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == 'install: release v1.0.10' ]] || fail "stdout: $in_out"
+    [[ $in_out == 'install: release v1.0.10'* ]] || fail "stdout: $in_out"
     grep -q 'ls-remote --tags --refs https://github.com/kbajpai/codeo v\*' "$STUB_DIR/git-calls" \
         || fail "ls-remote call: $(cat "$STUB_DIR/git-calls")"
-    [[ ! -s $STUB_DIR/calls ]] || fail "claude was called"
 }
 
 t_given_tag_checked() {
@@ -195,7 +203,7 @@ t_bare_version_gets_v() {
     in_setup bare
     printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
     in_run --version 1.0.7
-    [[ $in_out == 'install: release v1.0.7' ]] || fail "stdout: $in_out"
+    [[ $in_out == 'install: release v1.0.7'* ]] || fail "stdout: $in_out"
     grep -q 'refs/tags/v1.0.7$' "$STUB_DIR/git-calls" || fail "call: $(cat "$STUB_DIR/git-calls")"
 }
 
@@ -233,7 +241,7 @@ t_no_args_ok_up_to_prereqs() {
     printf 'a1\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc, want 0 (stderr: $in_err)"
-    [[ $in_out == 'install: release v1.0.7' && -z $in_err ]] || fail "out=$in_out err=$in_err"
+    [[ $in_out == 'install: release v1.0.7'* && -z $in_err ]] || fail "out=$in_out err=$in_err"
     in_run --version v1.0.7 --scope project
     [[ $in_rc -eq 0 ]] || fail "valid args: exit $in_rc, want 0 (stderr: $in_err)"
     in_run --version 1.0.7
@@ -353,6 +361,140 @@ t_script_is_executable_with_bash_shebang() {
     [[ $(head -1 "$script") == '#!/usr/bin/env bash' ]] || fail "shebang is: $(head -1 "$script")"
 }
 
+# seed_codeo <version> [<scope>]: codeo@codeo installed at the scope (user) and the marketplace pinned
+# at v<version>; seed_superpowers [<id>]: superpowers installed at user scope.
+seed_codeo() {
+    local v=$1 s=${2:-user}
+    jq --arg v "$v" --arg s "$s" '. + [{id: "codeo@codeo", version: $v, scope: $s, enabled: true, projectPath: "/x"}]' \
+        "$STUB_DIR/list.json" >"$STUB_DIR/list.new" && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
+    jq --arg r "v$v" '.codeo = {source: {source: "github", repo: "kbajpai/codeo", ref: $r}}' \
+        "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json" >"$STUB_DIR/m.new" \
+        && mv "$STUB_DIR/m.new" "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
+}
+seed_superpowers() {
+    local id=${1:-superpowers@superpowers-marketplace}
+    jq --arg id "$id" '. + [{id: $id, version: "7.0.2", scope: "user", enabled: true, projectPath: "/x"}]' \
+        "$STUB_DIR/list.json" >"$STUB_DIR/list.new" && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
+}
+
+# expect_calls <line>...: the claude calls that are not `plugin list` are exactly these lines, in order.
+expect_calls() {
+    local got want
+    got=$(grep -v '^plugin list' "$STUB_DIR/calls" || true)
+    want=$(printf '%s\n' "$@")
+    [[ $got == "$want" ]] || fail "claude calls were: $got"
+}
+
+t_fresh_user_install() {
+    in_setup fresh
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace add obra/superpowers-marketplace' \
+        'plugin install superpowers@superpowers-marketplace --scope user' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7' \
+        'plugin install codeo@codeo --scope user'
+    [[ $in_out == *'install: superpowers installed (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.7 installed (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.7, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+}
+
+t_rerun_changes_nothing() {
+    in_setup rerun
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.7
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ -s $STUB_DIR/calls ]] || fail "claude was never asked"
+    [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
+    [[ $in_out == *'install: superpowers already installed (user scope), left alone'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.7 already installed (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.7, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+}
+
+t_default_scope_is_user() {
+    in_setup default_scope
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run
+    [[ $in_out == *'user scope'* ]] || fail "stdout: $in_out"
+    [[ $(jq -r '.[].scope' "$STUB_DIR/list.json" | sort -u) == user ]] || fail "list: $(cat "$STUB_DIR/list.json")"
+}
+
+t_given_tag_installed() {
+    in_setup given_installed
+    printf 'a\trefs/tags/v1.0.7\nb\trefs/tags/v1.0.6\n' >"$STUB_DIR/tags"
+    in_run --version v1.0.6
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.6' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+    [[ $in_out == *'install: done - codeo v1.0.6, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+}
+
+t_latest_installed_without_version() {
+    in_setup latest_installed
+    printf 'a\trefs/tags/v1.0.7\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    in_run
+    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.9' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+    [[ $in_out == *'install: done - codeo v1.0.9, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+}
+
+t_superpowers_from_other_marketplace_left_alone() {
+    in_setup sp_other
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    seed_superpowers superpowers@elsewhere
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace add kbajpai/codeo@v1.0.7' 'plugin install codeo@codeo --scope user'
+    [[ $in_out == *'install: superpowers already installed (user scope), left alone'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.7, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+}
+
+t_missing_known_marketplaces_file_is_fresh() {
+    in_setup no_market_file
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    rm -f "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.7' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+}
+
+t_plugin_list_failure_stops() {
+    in_setup list_fail
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    : >"$STUB_DIR/list-fail"
+    in_run
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_err == *'install: cannot read the installed plugins (claude plugin list failed)'* ]] || fail "stderr: $in_err"
+    [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
+}
+
+t_runs_from_a_pipe() {
+    in_setup pipe
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    : >"$STUB_DIR/drain"
+    in_rc=0
+    (cd "$in_dir/work" && cat "$script" | env -i PATH="$in_dir/bin" HOME="$in_dir/home" STUB_DIR="$STUB_DIR" \
+        CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" "$bash_abs" -s --) >"$in_dir/out" 2>"$in_dir/err" || in_rc=$?
+    in_out=$(cat "$in_dir/out")
+    in_err=$(cat "$in_dir/err")
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    expect_calls 'plugin marketplace add obra/superpowers-marketplace' \
+        'plugin install superpowers@superpowers-marketplace --scope user' \
+        'plugin marketplace add kbajpai/codeo@v1.0.7' \
+        'plugin install codeo@codeo --scope user'
+    [[ $in_out == *'install: done - codeo v1.0.7, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+}
+
+t_restart_hint_only_when_changed() {
+    in_setup restart
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    in_run
+    [[ $in_out == *'install: done'*$'\n'*'restart'* ]] || fail "no restart line after a change: $in_out"
+    in_run
+    [[ $in_out == *'install: nothing changed'* ]] || fail "second run: $in_out"
+    [[ $in_out != *restart* ]] || fail "restart line on a no-op: $in_out"
+}
+
 cases=(
     t_latest_is_highest_release
     t_given_tag_checked
@@ -371,6 +513,16 @@ cases=(
     t_all_missing_named_together
     t_no_system_package_installed
     t_script_is_executable_with_bash_shebang
+    t_fresh_user_install
+    t_rerun_changes_nothing
+    t_default_scope_is_user
+    t_given_tag_installed
+    t_latest_installed_without_version
+    t_superpowers_from_other_marketplace_left_alone
+    t_missing_known_marketplaces_file_is_fresh
+    t_plugin_list_failure_stops
+    t_runs_from_a_pipe
+    t_restart_hint_only_when_changed
 )
 
 for current in "${cases[@]}"; do

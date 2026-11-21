@@ -117,9 +117,90 @@ resolve_release() {
     say "release $tag"
 }
 
+changed=0
+
+# run_claude <args...>: claude, never reading the script from stdin. User scope runs from $HOME, so no
+# project's settings are involved.
+run_claude() {
+    if [[ $scope == user ]]; then
+        (cd "$HOME" && claude "$@" </dev/null)
+    else
+        claude "$@" </dev/null
+    fi
+}
+
+# installed_version <id> <scope>: prints the version installed at the scope, nothing when absent. An id
+# ending in @* matches any marketplace. A failing plugin list dies inside the subshell, so callers
+# add || exit 1. A project-scope entry counts only for this project's top level.
+installed_version() {
+    local list top=""
+    list=$(run_claude plugin list --json) \
+        || die "cannot read the installed plugins (claude plugin list failed)"
+    if [[ $2 == project ]]; then
+        top=$(git rev-parse --show-toplevel 2>/dev/null || true)
+    fi
+    printf '%s\n' "$list" | jq -r --arg id "$1" --arg s "$2" --arg top "$top" '
+        [.[] | select(
+            (if ($id | endswith("@*")) then (.id | startswith($id[:-1])) else .id == $id end)
+            and .scope == $s
+            and ($s != "project" or .projectPath == $top))]
+        | (.[0].version // empty)'
+}
+
+# marketplace_pin: prints "<repo> <ref>" of the codeo marketplace, nothing when it is not added. A
+# missing known_marketplaces.json is a fresh machine.
+marketplace_pin() {
+    local file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/known_marketplaces.json"
+    [[ -f $file ]] || return 0
+    jq -r 'select(.codeo) | "\(.codeo.source.repo // "") \(.codeo.source.ref // "")"' "$file"
+}
+
+ensure_superpowers() {
+    local have
+    have=$(installed_version 'superpowers@*' "$scope") || exit 1
+    if [[ -n $have ]]; then
+        say "superpowers already installed ($scope scope), left alone"
+        return 0
+    fi
+    run_claude plugin marketplace add obra/superpowers-marketplace
+    run_claude plugin install superpowers@superpowers-marketplace --scope "$scope"
+    changed=1
+    say "superpowers installed ($scope scope)"
+}
+
+ensure_codeo() {
+    local pin have
+    pin=$(marketplace_pin)
+    have=$(installed_version codeo@codeo "$scope") || exit 1
+    if [[ $pin == "kbajpai/codeo $tag" && $have == "${tag#v}" ]]; then
+        say "codeo $tag already installed ($scope scope)"
+        return 0
+    fi
+    # TODO(task 4): replace path, a pin at another repo or ref, or another version installed, goes here.
+    [[ -n $pin ]] || run_claude plugin marketplace add "kbajpai/codeo@$tag"
+    run_claude plugin install codeo@codeo --scope "$scope"
+    changed=1
+    say "codeo $tag installed ($scope scope)"
+}
+
+summary() {
+    local codeo_v sp_v
+    codeo_v=$(installed_version codeo@codeo "$scope") || exit 1
+    sp_v=$(installed_version 'superpowers@*' "$scope") || exit 1
+    if [[ $changed -eq 1 ]]; then
+        say "done - codeo v$codeo_v, $scope scope, superpowers $sp_v"
+        say "restart any Claude Code sessions already open to load the plugins"
+    else
+        say "nothing changed - codeo v$codeo_v, $scope scope, superpowers $sp_v"
+    fi
+}
+
 main() {
     parse_args "$@"
     resolve_release
+    ensure_superpowers
+    ensure_codeo
+    summary
 }
 
 main "$@"
