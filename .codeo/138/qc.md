@@ -64,6 +64,8 @@ If the hosted session cannot run the prompt, or the file is missing, say so and 
 
 ## Notes
 
+**Task 7 evidence so far** (pasted by the engineer from hosted sessions, 2026-11-21; recorded by the skill; Q4 stays open). First session: on a stale checkout (`4b55d8e`, #112's old branch, gone from origin), `.codeo/active` absent — no evidence about this branch's hooks. Second session, 19:3x UTC, branch selected correctly: `git branch --show-current` printed `fix/live-session-signal-does-not`, `git log --oneline -1` printed `7777c6f docs(codeo): qc dossier for #138 — Q1-Q3 answered, Q4 raised`, and `cat .codeo/active` printed `cat: .codeo/active: No such file or directory`. So on the right checkout the repository's `SessionStart` hook did not leave a lock. Cause not yet known (the hook not running in a cloud session, `CLAUDE_CODE_REMOTE` not `true` where the hook runs, or `lock.sh take web` failing); diagnosed with the commands under Q4's follow-up. Origin shows no `codeo-live/138/web-*` branch.
+
 **Commands run this pass, with their output**
 - `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0. `bash scripts/overlap.sh 138`: nothing, exit 0.
 - `git diff origin/main...HEAD --stat`: 14 files, 862 insertions, 39 deletions (code and tests: `.claude/settings.json`, `scripts/live.sh`, `skills/triage/SKILL.md`, `tests/devcontainer.test.sh`, `tests/live-signal.test.sh`, `tests/live.test.sh`, `tests/triage-skill.test.sh`; docs: `docs/handoff.md`, `CHANGELOG.md`; the rest `.codeo/` and `docs/plans/`).
