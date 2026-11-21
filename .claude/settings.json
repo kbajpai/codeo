@@ -13,16 +13,6 @@
             "timeout": 10
           }
         ]
-      },
-      {
-        "matcher": "startup|resume|fork",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] && bash \"${CLAUDE_PROJECT_DIR}/scripts/lock.sh\" take web \"${CLAUDE_CODE_REMOTE_SESSION_ID#cse_}\" || true",
-            "timeout": 60
-          }
-        ]
       }
     ],
     "UserPromptSubmit": [

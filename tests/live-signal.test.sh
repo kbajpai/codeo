@@ -210,17 +210,18 @@ sleep 1
 case_desc=settings_json_registers_the_web_session_hooks
 s="$plugin_root/.claude/settings.json"
 scmd() { jq -r --arg e "$1" '[.hooks[$e][]?.hooks[]?.command] | join("\n")' "$s"; }
-[[ $(scmd SessionStart) == *'lock.sh" take web'* ]] && ok=yes || ok=no
-assert_eq "SessionStart take" yes "$ok"
+[[ $(scmd SessionStart) != *'lock.sh'* ]] && ok=yes || ok=no
+assert_eq "SessionStart takes no lock" yes "$ok"
 for e in UserPromptSubmit PostToolUse; do
     [[ $(scmd $e) == *'live-signal.sh" beat'* ]] && ok=yes || ok=no
     assert_eq "$e beat" yes "$ok"
 done
+assert_eq "SessionStart groups" 1 "$(jq -r '.hooks.SessionStart | length' "$s")"
 for e in SessionStart UserPromptSubmit; do
     [[ $(scmd $e) == *'session-title.sh'* ]] && ok=yes || ok=no
     assert_eq "$e session-title kept" yes "$ok"
 done
-assert_eq "gated commands" 3 "$(jq -r '[.hooks[][].hooks[].command
+assert_eq "gated commands" 2 "$(jq -r '[.hooks[][].hooks[].command
     | select(contains("live-signal.sh") or contains("lock.sh"))
     | select(contains("CLAUDE_CODE_REMOTE"))] | length' "$s")"
 assert_eq "no SessionEnd" null "$(jq -c '.hooks.SessionEnd' "$s")"
@@ -253,29 +254,6 @@ found=no
 for ((i = 0; i < 50; i++)); do web_ref && { found=yes; break; }; sleep 0.2; done
 assert_eq "branch published" yes "$found"
 
-case_desc=settings_session_start_takes_the_lock_with_the_session_id
-new_world
-rm "$clone/.codeo/active"
-mkdir -p "$clone/.codeo/104"
-printf '# Init\n\n| Field | Value |\n|---|---|\n| Branch | `feat/x` |\n' > "$clone/.codeo/104/init.md"
-git -C "$clone" add .codeo
-git -C "$clone" -c user.name=t -c user.email=t@t commit -q -m dossier
-git -C "$clone" push -q origin feat/x
-cp -R "$clone" "$scratch_root/clone2"
-(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
-    run_settings SessionStart '{}' "$clone")
-assert_eq "exit" 0 "$rc"
-active=$(cat "$clone/.codeo/active" 2> /dev/null || true)
-[[ $active == *'host:    web'* ]] && ok=yes || ok=no
-assert_eq "host web" yes "$ok"
-[[ $active == *'session: abcdef0123456789'* ]] && ok=yes || ok=no
-assert_eq "session id without cse_" yes "$ok"
-(unset CLAUDE_CODE_REMOTE; export CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
-    run_settings SessionStart '{}' "$scratch_root/clone2")
-assert_eq "exit outside web" 0 "$rc"
-[[ ! -e $scratch_root/clone2/.codeo/active ]] && ok=yes || ok=no
-assert_eq "no lock outside web" yes "$ok"
-
 # new_world_with_dossier: new_world plus a live dossier for #104 naming feat/x and no lock,
 # committed and pushed.
 new_world_with_dossier() {
@@ -293,6 +271,20 @@ wait_for_file() {
     for ((i = 0; i < 50; i++)); do [[ -e $1 ]] && return 0; sleep 0.2; done
     return 1
 }
+
+case_desc=settings_beat_hook_takes_the_lock_and_publishes
+new_world_with_dossier
+(export CLAUDE_CODE_REMOTE=true CLAUDE_CODE_REMOTE_SESSION_ID=cse_abcdef0123456789
+    run_settings UserPromptSubmit "{\"cwd\": \"$clone\"}" "$clone")
+assert_eq "exit" 0 "$rc"
+wait_for_file "$clone/.codeo/active" && ok=yes || ok=no
+assert_eq "lock appears" yes "$ok"
+active=$(cat "$clone/.codeo/active" 2> /dev/null || true)
+[[ $active == *'host:    web'* ]] && ok=yes || ok=no
+assert_eq "host web" yes "$ok"
+found=no
+for ((i = 0; i < 50; i++)); do web_ref && { found=yes; break; }; sleep 0.2; done
+assert_eq "branch published" yes "$found"
 
 case_desc=hook_takes_the_lock_in_a_web_session_when_none_exists
 new_world_with_dossier
