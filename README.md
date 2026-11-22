@@ -277,7 +277,7 @@ $ claude plugin install codeo@codeo --scope local
 Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: local)
 ```
 
-`claude plugin list` then shows the install again, with its scope and the machine's version. Moving a project's pin to the new release is a separate, deliberate run of the installer in that project, `install.sh --scope project` (see *Troubleshooting* for a hand-edited `ref`). That run rewrites the project's pin in `.claude/settings.json` (commit it), reinstalls a user-scope copy that existed at the same release, and names every other project it dropped:
+`claude plugin list` then shows the install again, with its scope and the machine's version. The restore does not move the project's pin. To move it, edit `ref` in the project's `.claude/settings.json` and commit it, as the end of this section describes; `install.sh --scope project` run in a restored project changes nothing, because its install is already at the machine's version. A `--scope project` run rewrites the project's `ref` only when it installs or replaces codeo at project scope (the project has no install, or the machine's codeo is at another release). That run also reinstalls a user-scope copy that existed at the same release and names every other project it dropped:
 
 ```
 install: release v1.0.7
