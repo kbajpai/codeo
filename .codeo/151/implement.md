@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 done: Tasks 1-5 of the round-3 plan are built and reviewed, the final review's findings are fixed, and `## Outcome` has its round. Open: acceptance criterion 6 (the trust-prompt check) is the engineer's, recorded in the pull request at `/codeo:close`. The hand-off is `/codeo:qc`.
+Round 4 done: Tasks 1-5 of the round-4 plan are built and reviewed, the final review's one finding is fixed, and `## Outcome` has its round. Open: acceptance criterion 6 (the trust-prompt check) is the engineer's, recorded in the pull request at `/codeo:close`. The hand-off is `/codeo:qc`.
 
 ## Questions
 
@@ -122,9 +122,41 @@ No environment is configured, so nothing was leased, deployed or released.
 - The head-syntax test's banned list omits `${x^}`, `declare -n`, `;;&`, `[[ -R`, `read -i`; a missing `.version` would print `vnull`.
 - The reviewer's three SIGINT failures were an artifact of running the suite as a background job; foreground runs ended `all cases passed`.
 
+### Round 4
+
+2026-11-22
+(send-back from qc.md round 3)
+
+**Built, all five tasks of `docs/plans/2026-11-22-install-one-command-151-round-4.md`, each through a sonnet implementer and a task review, then a whole-round review, one fix wave and one scoped re-review.** The plan file was uncommitted when this step started; it was committed (`df6bb40`) on your invocation of this step after you approved it.
+- Task 1 (F19, F22): the restore line for a dropped project install is `claude plugin install codeo@codeo --scope project` (no `install.sh`; the local line is unchanged). Commit `869b2c5`.
+- Task 2 (F21): a user-scope replace of a disabled user copy ends `(it was disabled; it is enabled now)`. Commit `4e31dd3`.
+- Task 3 (F20): a failed replace prints the dropped-install lines (stdout) before the `install: codeo is no longer installed: …; run this again` error (stderr); on a project-scope run whose project was not yet reinstalled the current project is named too. `dropped_installs` takes `skip_own`; `replace_failed` takes the list as a fifth argument. Commit `06a1924`.
+- Task 4 (F23): argument parsing (`usage_text`, `usage`, `parse_args`) moved into the bash-3.2-safe head, before the prerequisite check, so a usage error exits 2 and `--help` exits 0 when `jq` or `gh` is missing. See Deviations for the version check. Commit `76f9aab`.
+- Task 5 (F19-F22 docs): README *Updating*, *Uninstalling* and the sample blocks rewritten from real captures; two new stub scenarios (`user-replace-disabled`, `replace-add-fails-with-drops`), `t_readme_restore_blocks_do_not_replace`, and a stricter `t_readme_names_the_restore_command`; the CHANGELOG bullet reworded. Commit `6f8b572`; a task-review fix (a fused scenario name in `fail_names` had silently dropped one scenario from the README comparison; a `norm_block` helper) in `82d6801`.
+- Final-review fix wave `64a4d4f`: the README (and the CHANGELOG bullet) said a separate `install.sh --scope project` run moves a project's pin; after the printed restore it prints `nothing changed` and leaves the `ref` alone (reproduced). They now say a `--scope project` run rewrites the `ref` only when it installs or replaces codeo at project scope, and that a restored project's pin moves by editing `ref` and committing, as the end of *Updating* says. The scoped re-review marked it ADDRESSED.
+
+**Real evidence gathered** (`claude` 2.1.325, scratch `HOME` and `CLAUDE_CONFIG_DIR`, scratch repositories deleted afterwards): (a) a project pinned at v1.0.7 with the machine downgraded to v1.0.6 by `install.sh --version v1.0.6` from `$HOME`, which printed `install: codeo is no longer installed for <app> (project scope, v1.0.7); … run claude plugin install codeo@codeo --scope project there to restore it`; the printed command in the project gave `✔ Successfully installed plugin: codeo@codeo (scope: project)`, `claude plugin list --json` listed user 1.0.6 and project 1.0.6, `git status --short` was empty and the `ref` stayed v1.0.7. (b) the same with a project pinned at v1.0.6 and the machine updated to v1.0.7: user 1.0.7, project 1.0.7, `git status --short` empty, `ref` still v1.0.6. (c) a `claude` wrapper failing only `plugin marketplace add kbajpai/codeo@*`, two projects and one local install dropped: stdout held the three dropped lines, stderr `install: codeo is no longer installed: Error: network unreachable; run this again`, exit 1; the re-run finished with exit 0 and the project restore command then worked with `git status` empty. The reviewers' own runs reproduced F19-F23's fixes with real `claude` (downgrade and update cases, a disabled copy in both directions, the failed replace at user and project scope, `--help` and `--bogus` with only a `bash` symlink on `PATH`). Commands and output are in the sdd reports for Task 5, the review fix and the final review.
+
+**Documentation pages changed:** `README.md` (Task 5, the fix wave) and the `CHANGELOG.md` bullet. `CONTRIBUTING.md` and `docs/` are unchanged.
+
+**Build result:** the `shell` suite's `build` is `true`; exit 0. The full `bash tests/run.sh`, run in the foreground by this session at `82d6801`, ended `all cases passed` (5m53s); the implementer's full run at `64a4d4f` ended `all cases passed` too. `qc` runs it again. `sync-main.sh` at the start of the round reported the branch already contains `origin/main`; `origin/main` has moved since (#138's pull request), so `qc` will merge it. `overlap.sh` printed nothing.
+
+**Deviations from the plan:**
+- Task 4: the plan said to keep the version regex in a variable and test it with `[[ $2 =~ $re ]]`; `t_head_uses_no_bash4_syntax` bans `=~` in the head (it greps for `\[\[.*=~`), so the implementer used `printf '%s\n' "$2" | grep -Eq "$version_re"`. One edge differs: a `--version` value with an embedded newline whose first line is a valid version is now accepted, then fails at the tag lookup with exit 1 and a two-line message instead of exit 2.
+- Task 5 added a comparison helper (`norm_block`) and a comment in the test, which the review asked for; it also normalises the failure message in the README block comparison (the stub prints its own error text where a real `claude` prints another), a narrow mask anchored on `is no longer installed: ` and `; run this again`.
+- Tasks 1-4's proofs ran only the install cases, per the plan's red and green steps; the full suite ran twice afterwards (above).
+
+**Still open, the engineer's:** acceptance criterion 6 (the trust-prompt check), recorded in the pull request at `/codeo:close` (`qc.md` Q2).
+
+**Parked, not fixed (known limits for `qc` to weigh):**
+- The deferred Minors from the task reviews, each triaged "leave" by the final review: no test for a user-scope replace with no existing user copy; `t_failure_before_the_remove_names_nothing` may stop at an earlier `plugin list` call and not exercise the new ordering; the project-scope failure test does not assert stderr or that the error is last; the dropped-lines print loop is duplicated in `replace_failed`; no test for a usage error under `CODEO_TEST_BASH_VERSION=3.2` (the reviewer checked it by hand: exit 2); a missing `grep` prints `grep: command not found` before the usage error (exit 2 still).
+- The dropped-install lines of a failed replace give a command that fails until the re-run succeeds, because the marketplace is gone; the README says so, the lines do not.
+- Round 3's parked limits stand unchanged: a notice line that starts with `[` before the plugin list's array; the projectPath string compare for a symlinked checkout; gaps in the head-syntax test's banned list; a missing `.version` printing `vnull`.
+
 ## Log
 
 - 2026-11-21 — Q1 raised (overlap with #149 on CHANGELOG.md) · cost: 7m · sonnet-5-5 12k in + 671k cached / 2k out
 - 2026-11-21 — Q1 answered; round 1: Tasks 1-7 implemented and reviewed, final review and one fix wave · cost: 113m · sonnet-5-5 1.1M in + 29M cached / 225k out
 - 2026-11-21 — round 2 (after plan.md round 2): Tasks 1-5 implemented and reviewed, final review and one fix wave · cost: 30m · sonnet-5-5 330k in + 16.3M cached / 58k out
 - 2026-11-21 — round 3 (after plan.md round 3): Tasks 1-5 implemented and reviewed, final review, one fix wave and a scoped re-review · cost: 74m · sonnet-5-5 690k in + 22.2M cached / 121k out
+- 2026-11-22 — round 4 (send-back from qc.md round 3): Tasks 1-5 implemented and reviewed, final review, one fix wave and a scoped re-review · cost: 47m · opus-5-5 224k in + 275k cached / 844 out · sonnet-5-5 681k in + 22.2M cached / 99k out
