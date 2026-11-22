@@ -64,7 +64,14 @@ Proceed and coordinate: whoever merges second rebases over the other. (Engineer:
 
 ## Notes
 
-None.
+### Footprint
+
+```
+files:      .devcontainer/codeo, .devcontainer/README.md, .sbx/README.md, CHANGELOG.md, skills/triage/SKILL.md, scripts/inflight.sh, tests/codeo-command.test.sh, tests/close-skill.test.sh, tests/implement-skill.test.sh, tests/triage-skill.test.sh, tests/inflight.test.sh, docs/plans/2026-11-22-close-149-145-leftovers-154.md, .codeo/154/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
