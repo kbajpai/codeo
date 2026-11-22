@@ -20,6 +20,9 @@ fail() {
 # $1 case, $2 fixed string the skill must contain.
 must_contain() { grep -qF -- "$2" "$skill" || fail "$1 — no [$2]"; }
 
+# $1 case, $2 fixed string the skill must lack.
+must_lack() { ! grep -qF -- "$2" "$skill" || fail "$1 — still has [$2]"; }
+
 must_contain "says who writes Backlog" 'a new issue is already in the Backlog when it reaches this skill'
 must_contain "Backlog is not a decision" 'Being in the Backlog is not a decision'
 must_contain "a no after filing is a backlog decision" 'a no is a *leave in the backlog*'
@@ -28,6 +31,8 @@ must_contain "the read decides" 'when it prints the Backlog status'
 must_contain "the hand-off bounds the write" 'only when the card is not already in the Backlog'
 must_contain "no board, no call" 'no card move, no `board.sh` call'
 must_contain "one fingerprint whichever source finds it" 'has one fingerprint, `issue:<N>`, whichever source finds it'
+must_contain "the pull-request state is read by step 1's branch bullet" 'the state step 1'\''s branch bullet read with `pr list-for-branch`'
+must_lack "no step 2 pull-request lookup" 'the state step 2 read'
 must_contain "intake fingerprints are for drafts" 'is only for a `new-<slug>/` draft'
 must_contain "the intake dossier is not a second item" 'the same item the next bullet finds'
 must_contain "a backlog decision is dropped at step 2" 'left-in-the-backlog items are not shown again'
