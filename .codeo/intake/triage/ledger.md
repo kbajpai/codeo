@@ -189,5 +189,5 @@
 | `issue:157` | Live-session signal leftovers from #138; filed 2026-11-22, board Status `Backlog` | leave in the backlog | 2026-11-22 |
 | `qc:151:installer-F12-F20-F22-F26-F27` | #151 installer failure-path findings: recovery line names no tag, unusable restore command, undetected dropped installs | dismissed — engineer's call, run 17 | 2026-11-22 |
 | `qc:151:nits-F4-F5-F6-F8-F9-F13-F14-F17-F25` | #151 README/CHANGELOG wording and test-strength nits | dismissed — engineer's call, run 17 | 2026-11-22 |
-| `qc:151:F7-F15` | "Latest release" is the highest `vX.Y.Z` tag; idempotence compares `plugin.json` with the tag | deferred | 2026-11-22 |
+| `qc:151:F7-F15` | "Latest release" is the highest `vX.Y.Z` tag; idempotence compares `plugin.json` with the tag | dismissed — already documented as accepted limits in README Updating/Installing (engineer accepted recommendation) | 2026-11-22 |
 | `parked:146:2026-11-22` | #146 In progress, live session on codeo-146; v1.0.8 shipped via release/v1.0.8 (#158), feat/release-v1-0-8-once has no PR | deferred | 2026-11-22 |
