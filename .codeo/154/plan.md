@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1: explored, Q1-Q3 raised, nothing drafted yet. The plan is drafted once they are answered.
+Round 1: Q1-Q3 are answered (all picks). The plan is drafted at `.codeo/154/plan-draft.md` and awaits the engineer's approval; the footprint is written after it.
 
 What I found (read against `.devcontainer/codeo`, `.sbx/codeo-sandbox.sh`, `scripts/inflight.sh` and the tests at `de57829`):
 
@@ -42,6 +42,7 @@ My calls, stated so they can be corrected (not questions):
 - **C — document only.** `.devcontainer/README.md` says the refusal names `end <N> --force` and that the `codeo` form is `codeo rm <N> --force`. No code, and the message stays untypable as printed.
 
 **Answer:**
+A — `codeo` adds its own `codeo rm <N> --force removes it anyway` line after the script's no-branches refusal; the script is not edited. (Engineer: "go with your picks", 2026-11-22; given in the conversation, recorded here.)
 
 ### Q2 — F7, a refused `rm` that leaves a started container running: stop it again, or do not start it?
 
@@ -51,6 +52,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — do not start it.** With the inspect failed and no `--force`, `cmd_rm` refuses before `container_check`: nothing is started, fetched or read, for a stopped or a running container. Simpler and faster, but every such refusal then prints `could not check what /workspaces of codeo-<N> mounts`, also for a container holding unpushed work, which today is told about that work. The README paragraph at `:178-182`, the flowchart's `inspect failed, no --force` edges and `t_rm_inspect_fails_no_restart` all change.
 
 **Answer:**
+A — stop it again: `container_check --no-restart` stops a container it started, whatever the read found. (Engineer: "go with your picks", 2026-11-22; given in the conversation, recorded here.)
 
 ### Q3 — #152 lists most of the files this plan edits: proceed, sequence, or re-scope?
 
@@ -58,6 +60,7 @@ My calls, stated so they can be corrected (not questions):
 **Options:** *proceed and coordinate* (my pick: this change is small and mostly single sentences; whoever merges second rebases and keeps both sides) · *sequence after #152* (this plan waits for #152 to merge, then is drafted against its code) · *re-scope* (say which files to leave out).
 
 **Answer:**
+Proceed and coordinate: whoever merges second rebases over the other. (Engineer: "go with your picks", 2026-11-22; given in the conversation, recorded here.)
 
 ## Notes
 
