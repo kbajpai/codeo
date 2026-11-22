@@ -14,7 +14,9 @@ Task 1 is done: release PR https://github.com/kbajpai/codeo/pull/158 (`release/v
 
 Task 2 done: you merged PR #158 as `ee0c02069817ffffde4a884c420ded16b76ee4f2` (`release: v1.0.8 (#158)`, the tip of `main`); the release worktree is removed. Task 3 done: in a clean clone checked out at that commit, `git rev-parse HEAD` is `ee0c02069817ffffde4a884c420ded16b76ee4f2`, `.claude-plugin/plugin.json` says `1.0.8` and `bash tests/run.sh` ends `all cases passed`.
 
-**Waiting at Task 4 (yours):** tag and push `v1.0.8` at `ee0c020`: `git fetch origin`, `git tag v1.0.8 ee0c02069817ffffde4a884c420ded16b76ee4f2`, `git push origin v1.0.8`, one at a time. Then say it is pushed; I prove criterion 5, publish the Release (Task 5) and make the pin change on this branch (Task 6).
+Task 4 done: you pushed the lightweight tag; `git ls-remote --tags origin v1.0.8` prints `ee0c02069817ffffde4a884c420ded16b76ee4f2	refs/tags/v1.0.8` and no `^{}` line. Task 5 done: Release https://github.com/kbajpai/codeo/releases/tag/v1.0.8, title `v1.0.8`, `Latest`, not a draft or prerelease, notes the changelog section only (first line `Config schema: 1 (adds …`, 13 bullets, no generated notes). Task 6 done: `.codeo/config.json` `plugin.ref` is `v1.0.8` on this branch; `bash tests/run.sh` ends `all cases passed`.
+
+**Waiting at Task 7 (yours):** rebuild or restart this dev container, start a new Claude Code session, and run `claude plugin list`; `codeo@codeo` should show `Version: 1.0.8`. Then run `/codeo:implement` again (or tell me) and I record it and hand off to `/codeo:qc`.
 ## Questions
 
 None.
@@ -31,3 +33,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-22 — Task 1 done, release PR #158 opened; waiting at Task 2 for the engineer's merge · cost: unavailable until the hand-off
 - 2026-11-22 — Tasks 2-3 done (merged as ee0c020, clean-clone suite passed); waiting at Task 4 for the engineer's tag · cost: unavailable until the hand-off
+- 2026-11-22 — Tasks 4-6 done (tag v1.0.8 at ee0c020, Release v1.0.8 published, pin set); waiting at Task 7 for the engineer's rebuild · cost: unavailable until the hand-off
