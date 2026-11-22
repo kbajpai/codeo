@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 done: no question was open, the pass ran to the end, and the verdict is back to `/codeo:plan` (F19: after a `--version` run, the restore command the installer prints undoes that choice and drops the other installs again). F10 and F11 are fixed; F20-F23 are non-blocking. Criterion 6 stays the engineer's check at `/codeo:close`.
+Round 4 stopped at step 2: `origin/main` (#138's merge, `ae7b8d6`) conflicts with this branch in `CHANGELOG.md`, so the verdict is back to `/codeo:implement` to merge it (F24). Round 4's implementation (F19-F23) is not yet checked. Criterion 6 stays the engineer's check at `/codeo:close`.
 
 ## Questions
 
@@ -213,6 +213,43 @@ No question was open; the pass ran to the end on the tree after round 3's implem
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 4 — 2026-11-22
+
+The pass stopped at step 2: the base branch does not merge cleanly into this branch.
+
+**Commands run this pass, and their output**
+- `bash .devcontainer/scripts/role.sh --check qc`: exit 0. The lock names #151 on `docs/install-codeo-one-command-document`, the branch checked out; the tree was clean at `a02362b`.
+- `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: conflict: CHANGELOG.md`, exit 2. The merge was aborted: `git status --short` prints nothing and `HEAD` is still `a02362b`.
+- What `origin/main` brought: one commit since this branch's merge base `aa135d5`, `ae7b8d6 fix: publish the live-session signal from a hosted web session as a branch, with the lock taken on the first prompt (#138) (#155)`. In `CHANGELOG.md` it rewrites the `Shared state:` line under `## Unreleased` and adds its own bullet at the top of that section, the same place this branch adds its `install.sh` bullet. This is the overlap `qc.md` Q1 answered *proceed and coordinate*: the branch that merges second keeps both bullets.
+- `bash scripts/overlap.sh 151` and `bash scripts/overlap.sh --outside 151`: no output. `bash scripts/scope.sh origin/main HEAD`: `suite.shell=true`.
+- Not run, because the pass stops at the conflict: the build, the suites, the criterion checks, the documentation check and the independent review.
+
+**Acceptance criteria**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| 1. One command, shown in the README, installs codeo and `superpowers`; `claude plugin list` shows both enabled | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+| 2. Run again at the same version: nothing changes, and it says so | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+| 3. A release tag installs that tag; none installs the latest; the version is printed | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+| 4. Default scope user; project scope installs there and the command says which scope it used | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+| 5. Old bash, or `jq`, `git`, `gh` missing: each named, no system package, exit non-zero | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+| 6. A project that commits the README's snippet is offered the install when its folder is trusted | not yet checkable — pass stopped at step 2; it stays the engineer's check at `/codeo:close` (Q2) | the `CHANGELOG.md` conflict |
+| 7. README has the eight sections, and each command in them was run and its output matches | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+| 8. README no longer holds the test, dossier-checker or replay sections; the contributor page holds them unchanged; the README links to it | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+| 9. Tests cover the behaviour and run in `bash tests/run.sh`, which ends `all cases passed`; a test fails when the README's install command and the script disagree | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+| 10. CHANGELOG entry states the config schema, whether the shared state changed, and whether it is safe to bump mid-workflow | not yet checkable — pass stopped at step 2 | the `CHANGELOG.md` conflict |
+
+**Documentation check.** Not reached.
+
+**Round 3's findings, recapped:** F19 (blocking in round 3), F20, F21, F22 and F23 are claimed fixed by `869b2c5`, `4e31dd3`, `06a1924`, `76f9aab`, `6f8b572`, `82d6801` and `64a4d4f` (`implement.md` round 4). This pass did not check them; the next pass does.
+
+**Findings**
+- **F24 — blocking, `/codeo:implement`'s.** `origin/main` does not merge cleanly: `sync-main: conflict: CHANGELOG.md`. #138's merge (`ae7b8d6`) rewrote the `## Unreleased` header's `Shared state:` line and added a bullet at the top of the section where this branch adds its own. Per Q1, the merge keeps both bullets, and the `Shared state:` line takes `main`'s text plus whatever this branch's bullet says about shared state (its bullet already says the shared state under `.codeo/` and the intake branch does not change).
+
+**Routing.** A conflict with the base branch goes to `/codeo:implement`. Its step 2a runs `sync-main.sh`, resolves `CHANGELOG.md` as above, commits the merge, and records in a new round of `implement.md` how it was resolved. Then `/codeo:qc` runs the whole pass again from step 0, as a new round.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-21 — Q1-Q2 raised (overlap with #138 on CHANGELOG.md; criterion 6 is the engineer's) · cost: 0m · opus-5-5 290k in + 333k cached / 1k out
@@ -220,3 +257,4 @@ No question was open; the pass ran to the end on the tree after round 3's implem
 - 2026-11-21 — pass 2: Q3 raised (a replace drops other projects' installs; an unverified README/CHANGELOG claim) · cost: 10m · opus-5-5 121k in + 2.8M cached / 29k out · sonnet-5-5 14k in + 5.4M cached / 11k out
 - 2026-11-21 — pass 2: Q3 answered; round 2: build, suite, criteria, documentation, independent review · cost: 14m · opus-5-5 121k in + 2.8M cached / 29k out · sonnet-5-5 22k in + 7.4M cached / 17k out
 - 2026-11-22 — round 3: build, suite, criteria, documentation, independent review; verdict back to /codeo:plan (F19) · cost: 14m · opus-5-5 211k in + 4.3M cached / 27k out · sonnet-5-5 123k in + 166k cached / 2k out
+- 2026-11-22 — round 4: stopped at step 2 (sync-main: conflict: CHANGELOG.md); verdict back to /codeo:implement (F24) · cost: 0m · opus-5-5 308k in + 681k cached / 3k out
