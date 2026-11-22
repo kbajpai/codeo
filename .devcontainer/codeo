@@ -494,7 +494,8 @@ container_read() {
 # would be lost, 2 when the check could not run (cannot start, fetch, restart or exec failed), 3 when there is no
 # such container. When it returns non-zero it stops again a container it knows it started (not after a failed
 # restart: the state is then unknown).
-# With --no-restart the container is read once and never restarted.
+# With --no-restart the container is read once and never restarted. With --no-restart the caller is about to
+# refuse whatever the read finds, so a container it started is stopped again on a clean read too.
 container_check() {
     local name="codeo-$1" listing state="" row rest started=0 listed=0 rc=0
     if listing=$(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null); then
@@ -523,7 +524,7 @@ container_check() {
         docker restart "$name" >/dev/null 2>&1 </dev/null || return 2
         container_read "$name" || rc=$?
     fi
-    ((rc == 0)) || stop_started "$name" $started
+    if ((rc != 0)) || [[ "${2:-}" == --no-restart ]]; then stop_started "$name" $started; fi
     return "$rc"
 }
 

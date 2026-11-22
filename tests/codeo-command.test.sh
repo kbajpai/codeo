@@ -1829,6 +1829,33 @@ t_rm_inspect_fails_no_restart() {
     grep -qF -- '--force: could not check what /workspaces of codeo-5 mounts; removing the volume anyway' <<<"$cm_out" || fail "--force: stdout: $cm_out"
 }
 
+t_rm_inspect_fails_stops_started_container() {
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5
+    expect_refused 'could not check what /workspaces of codeo-5 mounts'
+    grep -q '^docker start codeo-5' "$cm_dir/calls" || fail "not started: $(tr '\n' '|' <"$cm_dir/calls")"
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "no docker stop: $(tr '\n' '|' <"$cm_dir/calls")"
+    ! grep -q '^docker restart' "$cm_dir/calls" || fail "restarted: $(tr '\n' '|' <"$cm_dir/calls")"
+    cm_setup "$current-2"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/inspect_fail"
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5
+    expect_refused 'holds work that exists only there'
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "dirty: no docker stop: $(tr '\n' '|' <"$cm_dir/calls")"
+    cm_setup "$current-4"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/inspect_fail"
+    cm_run rm 5 --force
+    [[ "$cm_status" -eq 0 ]] || fail "--force: exit $cm_status, err: $cm_err"
+    ! grep -q '^docker stop' "$cm_dir/calls" || fail "--force: stopped: $(tr '\n' '|' <"$cm_dir/calls")"
+}
+
 t_codeo_sbx_honoured() {
     cm_setup "$current"
     mkdir -p "$cm_dir/alt"
@@ -1988,6 +2015,7 @@ cases=(
     t_rm_bind_mount_force
     t_rm_inspect_fails
     t_rm_inspect_fails_no_restart
+    t_rm_inspect_fails_stops_started_container
     t_codeo_sbx_honoured
     t_issue_lookup_invalid_branch
 )
