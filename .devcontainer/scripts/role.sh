@@ -1,29 +1,30 @@
 #!/usr/bin/env bash
-# What role this dev container plays, and whether a codeo skill may run in it. The role comes from the
+# What role this checkout plays, and whether a codeo skill may run in it. The role comes from the
 # clone folder (the container's Docker name, see folder-check.sh), the workflow lock and the branch,
 # with the codename and the lock's issue number taken from container-name.sh. No container-engine
-# command is run.
+# command is run. A container is told from the host by the marker files /.dockerenv and /run/.containerenv.
 #
 #   role.sh [dir]
-#       Prints one line: unguarded | home | issue:<N> | stale:<N> | stale:? | mismatch:<N>:<folder>.
-#         unguarded  not a guarded container: CLAUDE_CODE_REMOTE=true, neither CODEO_DOCKERENV
-#                    (default /.dockerenv) nor CODEO_CONTAINERENV (default /run/.containerenv,
-#                    which Podman creates) exists, or a folder that is neither '<codename>-home' nor
-#                    '<codename>-<digits>'.
-#         issue:<N>  locked for N, in the folder '<codename>-<N>'.
-#         mismatch   locked for N, in any other folder.
+#       Prints one line: unguarded | home | issue:<N> | stale:<N> | stale:? | mismatch:<N>:<folder> | stray.
+#         unguarded  not guarded: CLAUDE_CODE_REMOTE=true, or a container (a marker file exists:
+#                    CODEO_DOCKERENV, default /.dockerenv, or CODEO_CONTAINERENV, default
+#                    /run/.containerenv, which Podman creates) in a folder that is neither
+#                    '<codename>-home' nor '<codename>-<digits>'.
+#         issue:<N>  locked for N. In a container: in the folder '<codename>-<N>'. On the host: in any folder.
+#         mismatch   in a container, locked for N, in any other folder.
 #         home       no lock, on the base branch (baseBranch in .codeo/config.json, else main), in
-#                    the folder '<codename>-home'.
-#         stale      no lock otherwise: stale:<N> in the folder '<codename>-<N>', else stale:?.
+#                    the folder '<codename>-home' (the host clone, or the home container).
+#         stale      no lock otherwise: stale:<N> in a container's folder '<codename>-<N>', else stale:?
+#                    (a container off the base branch, or the host '<codename>-home' off it).
 #                    --check reads the clone's own dossier (.codeo) to say why, as lock.sh and claim.sh read it:
 #                    finished (the base branch carries .codeo/done/<N>), stashed or abandoned (more parks than
 #                    resumes), a lost lock (the workflow is live, an archive the base lacks included), or unknown;
-#                    stale:? is the home container off the base branch.
+#                    stale:? is a home checkout off the base branch.
+#         stray      a host checkout that is neither home nor an issue's (no lock, not '<codename>-home').
 #   role.sh --check <skill> [dir]
 #       Exits 0 printing nothing when the skill may run here, 1 printing one refusal line when it
 #       may not. The home-only skills (issue init triage cleanup) run on unguarded and home; the lock
-#       skills (plan implement qc close) run on unguarded, issue:<N> and home (their own step 0
-#       refuses with no lock); every other role refuses.
+#       skills (plan implement qc close) run on unguarded and issue:<N>; every other role refuses.
 #   dir is anywhere inside the clone (default: the current directory). Exits 2 with one "role: ..."
 #   line on stderr for an unknown skill (doctor and setup are not guarded) or a non-repository.
 set -euo pipefail
@@ -53,18 +54,26 @@ base=$(jq -r '.baseBranch // empty' "$root/.codeo/config.json" 2>/dev/null || tr
 [[ -n $base ]] || base=main
 suffix=${folder#"$codename-"}
 
-if [[ ${CLAUDE_CODE_REMOTE:-} == true \
-        || ( ! -e ${CODEO_DOCKERENV:-/.dockerenv} && ! -e ${CODEO_CONTAINERENV:-/run/.containerenv} ) ]] \
-    || [[ $suffix == "$folder" || ( $suffix != home && ! $suffix =~ ^[0-9]+$ ) ]]; then
+in_container=0
+if [[ -e ${CODEO_DOCKERENV:-/.dockerenv} || -e ${CODEO_CONTAINERENV:-/run/.containerenv} ]]; then
+    in_container=1
+fi
+branch_now=$(git -C "$dir" branch --show-current 2>/dev/null || true)
+
+if [[ ${CLAUDE_CODE_REMOTE:-} == true ]]; then
+    role=unguarded
+elif ((in_container)) && [[ $suffix == "$folder" || ( $suffix != home && ! $suffix =~ ^[0-9]+$ ) ]]; then
     role=unguarded
 elif [[ -n $lock ]]; then
-    if [[ $folder == "$codename-$lock" ]]; then role=issue:$lock; else role=mismatch:$lock:$folder; fi
-elif [[ $suffix == home && $(git -C "$dir" branch --show-current 2>/dev/null || true) == "$base" ]]; then
+    if ((! in_container)) || [[ $folder == "$codename-$lock" ]]; then role=issue:$lock; else role=mismatch:$lock:$folder; fi
+elif [[ $suffix == home && $branch_now == "$base" ]]; then
     role=home
-elif [[ $suffix =~ ^[0-9]+$ ]]; then
+elif [[ $suffix =~ ^[0-9]+$ ]] && ((in_container)); then
     role=stale:$suffix
-else
+elif ((in_container)) || [[ $suffix == home ]]; then
     role='stale:?'
+else
+    role=stray
 fi
 
 if [[ -z $skill ]]; then
@@ -77,7 +86,8 @@ case $skill in
     *) kind=lock ;;
 esac
 case $role in
-    unguarded|home) exit 0 ;;
+    unguarded) exit 0 ;;
+    home) [[ $kind == home ]] && exit 0 ;;
     issue:*) [[ $kind == lock ]] && exit 0 ;;
 esac
 
@@ -129,45 +139,49 @@ case $role in
         case $state in
             finished)
                 if [[ $kind == home ]]; then
-                    echo "$head issue #$number is finished and this container is done (role $role); run it in the home container."
+                    echo "$head issue #$number is finished and this container is done (role $role); run it in a home checkout."
                 else
-                    echo "$head issue #$number is finished and this container is done (role $role); nothing more runs here, and /codeo:cleanup in the home container prints how to remove it."
+                    echo "$head issue #$number is finished and this container is done (role $role); nothing more runs here, and /codeo:cleanup in a home checkout prints how to remove it."
                 fi ;;
             parked)
                 if [[ $kind == home ]]; then
-                    echo "$head issue #$number's workflow was $word and this container holds no lock (role $role); run it in the home container."
+                    echo "$head issue #$number's workflow was $word and this container holds no lock (role $role); run it in a home checkout."
                 elif [[ $word == stashed ]]; then
-                    echo "$head issue #$number's workflow was stashed and this container holds no lock (role $role); /codeo:init #$number in the home container is the way back, never the start script, and it opens a new container with this one's name, so remove this one on the host first, once git status here shows nothing unpushed (.devcontainer/README.md says how)."
+                    echo "$head issue #$number's workflow was stashed and this container holds no lock (role $role); /codeo:init #$number in a home checkout is the way back, never the start script, and it opens a new container with this one's name, so remove this one on the host first, once git status here shows nothing unpushed (.devcontainer/README.md says how)."
                 else
                     echo "$head issue #$number's workflow was abandoned and this container holds no lock (role $role); nothing more runs here, and it may hold the only copy of the work, so check that the branch is still on origin before removing it."
                 fi ;;
             lost)
                 if [[ $kind == home ]]; then
-                    echo "$head this is issue #$number's container and it holds no lock (role $role); run it in the home container."
+                    echo "$head this is issue #$number's container and it holds no lock (role $role); run it in a home checkout."
                 else
                     echo "$head this is issue #$number's container, its workflow is live and it holds no lock (role $role); re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock."
                 fi ;;
             offbase)
                 if [[ $kind == home ]]; then
-                    echo "$head this is the home container, but it is not on the base branch $base (role $role); switch back to $base and run it again."
+                    echo "$head this is a home checkout, but it is not on the base branch $base (role $role); switch back to $base and run it again."
                 else
-                    echo "$head this is the home container, off the base branch $base (role $role); the skill runs in the container of the issue it is for."
+                    echo "$head this is a home checkout, off the base branch $base (role $role); the skill runs in the container of the issue it is for."
                 fi ;;
             *)
                 if [[ $kind == home ]]; then
-                    echo "$head this clone holds no lock and no dossier says why (role $role); run it in the home container."
+                    echo "$head this clone holds no lock and no dossier says why (role $role); run it in a home checkout."
                 else
                     echo "$head this clone holds no lock and no dossier says why (role $role); the skill runs in the container of the issue it is for."
                 fi ;;
         esac
         exit 1 ;;
 esac
+if [[ $role == stray ]]; then
+    echo "/codeo:$skill can't run here: this host checkout is neither the home clone (a folder named $codename-home on $base, holding no lock) nor an issue's (it holds no lock) (role stray); $([[ $kind == home ]] && echo "run it in a home checkout (the host clone named $codename-home, or the home container)" || echo "it runs in an issue's checkout")."
+    exit 1
+fi
 if [[ $kind == home ]]; then
-    where="the home container"
+    where="a home checkout (the host clone named $codename-home, or the home container)"
 elif [[ -n $number ]]; then
     where="issue #$number's container"
 else
-    where="an issue's container"
+    where="an issue's checkout"
 fi
 about=
 [[ -z $number ]] || about=" (issue #$number)"

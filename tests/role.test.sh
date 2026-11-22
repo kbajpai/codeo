@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guards .devcontainer/scripts/role.sh, which says what role this dev container plays (unguarded, home,
-# issue:<N>, stale:<N>, stale:?, mismatch:<N>:<folder>) and whether a codeo skill may run in it. Each
+# issue:<N>, stale:<N>, stale:?, mismatch:<N>:<folder>, stray) and whether a codeo skill may run in it. Each
 # case runs the real script (and the real container-name.sh) copied into a scratch git clone whose
 # folder is named per case and whose .codeo/config.json names the codename "codeo" and baseBranch
 # "main"; CODEO_DOCKERENV points at a stub file (or a missing one) and CLAUDE_CODE_REMOTE is set or
@@ -91,8 +91,8 @@ stale_needles() {
     esac
     if is_home_skill "$skill"; then
         case $state in
-            offbase) want+=("not on the base branch main" "switch back to main"); bad=("run it in the home container" "no dossier says why") ;;
-            *) want+=("run it in the home container"); bad=(devcontainer-start.sh "/codeo:init #") ;;
+            offbase) want+=("not on the base branch main" "switch back to main"); bad=("run it in a home checkout" "no dossier says why") ;;
+            *) want+=("run it in a home checkout"); bad=(devcontainer-start.sh "/codeo:init #") ;;
         esac
     else
         case $state in
@@ -117,7 +117,7 @@ check_matrix() {
         allowed=0
         case $role in
             unguarded) allowed=1 ;;
-            home) allowed=1 ;;
+            home) is_home_skill "$skill" && allowed=1 ;;
             issue:*) is_home_skill "$skill" || allowed=1 ;;
         esac
         run --check "$skill" "$dir"
@@ -134,9 +134,16 @@ check_matrix() {
                     stale_needles "$skill" "$out" ;;
             esac
             if is_home_skill "$skill"; then
-                [[ $out == *"home container"* ]] || fail "$role: $skill refusal does not say it runs in the home container: '$out'"
+                [[ $out == *"a home checkout"* ]] || fail "$role: $skill refusal does not say it runs in a home checkout: '$out'"
             elif [[ $role != stale:* ]]; then
-                [[ $out == *"'s container"* ]] || fail "$role: $skill refusal does not say it runs in the issue's container: '$out'"
+                if [[ -n $number ]]; then
+                    [[ $out == *"'s container"* ]] || fail "$role: $skill refusal does not say it runs in the issue's container: '$out'"
+                else
+                    [[ $out == *"an issue's checkout"* ]] || fail "$role: $skill refusal does not say it runs in an issue's checkout: '$out'"
+                fi
+            fi
+            if [[ $role == stray ]]; then
+                [[ $out == *"codeo-home"* ]] || fail "$role: $skill refusal does not name codeo-home: '$out'"
             fi
         fi
     done
@@ -203,9 +210,68 @@ lock_without_an_issue_line_is_no_lock() {
     role_is stale:67
 }
 
-no_dockerenv_is_unguarded() {
+no_dockerenv_with_lock_is_issue() {
     mk nodockerenv codeo-70 feat/x 'issue: 70' || return 0
     dockerenv="$root/missing"
+    role_is issue:70
+    check_matrix issue:70 70
+}
+
+# A host run (no container marker) with a PATH that holds no docker.
+host_home() {
+    mk hosthome codeo-home main || return 0
+    dockerenv="$root/missing"
+    local bin="$root/bin" t errf
+    mkdir -p "$bin"
+    for t in bash git jq sed grep basename dirname cat tail head env mktemp rm; do
+        ln -sf "$(command -v "$t")" "$bin/$t"
+    done
+    errf=$(mktemp -p "$root")
+    rc=0
+    out=$(env -u CLAUDE_CODE_REMOTE PATH="$bin" CODEO_DOCKERENV="$dockerenv" CODEO_CONTAINERENV="$containerenv" \
+        "$bin/bash" "$dir/.devcontainer/scripts/role.sh" "$dir" 2>"$errf") || rc=$?
+    err=$(cat "$errf")
+    { ((rc == 0)) && [[ $out == home ]]; } || fail "wanted home without docker, got rc=$rc '$out' / '$err'"
+    check_matrix home ""
+}
+
+host_home_off_base() {
+    state=offbase
+    mk hostoff codeo-home feat/x || return 0
+    dockerenv="$root/missing"
+    role_is 'stale:?'
+    check_matrix 'stale:?' ""
+    run --check init "$dir"
+    ((rc == 1)) || fail "init: wanted exit 1, got $rc"
+    [[ $out == *"switch back to main"* ]] || fail "init: wanted 'switch back to main', got '$out'"
+}
+
+host_lock_any_folder() {
+    mk hostwork work-70 feat/x 'issue: 70' || return 0
+    dockerenv="$root/missing"
+    role_is issue:70
+    check_matrix issue:70 70
+    mk hosthomelock codeo-home feat/x 'issue: 70' || return 0
+    dockerenv="$root/missing"
+    role_is issue:70
+    check_matrix issue:70 70
+}
+
+host_stray() {
+    mk hostscratch scratch main || return 0
+    dockerenv="$root/missing"
+    role_is stray
+    check_matrix stray ""
+    mk hostnum codeo-70 main || return 0
+    dockerenv="$root/missing"
+    role_is stray
+    check_matrix stray ""
+}
+
+remote_home_folder() {
+    mk remotehome codeo-home main || return 0
+    dockerenv="$root/missing"
+    remote=true
     role_is unguarded
     check_matrix unguarded ""
 }
@@ -232,7 +298,7 @@ remote_is_unguarded() {
     role_is unguarded
 }
 
-other_folders_are_unguarded() {
+container_unshaped_stays_unguarded() {
     mk plain codeo main || return 0
     role_is unguarded
     mk othernum other-70 feat/x 'issue: 70' || return 0
@@ -360,11 +426,16 @@ cases=(
     mismatch_in_the_home_folder
     mismatch_in_another_issue_folder
     lock_without_an_issue_line_is_no_lock
-    no_dockerenv_is_unguarded
+    no_dockerenv_with_lock_is_issue
+    host_home
+    host_home_off_base
+    host_lock_any_folder
+    host_stray
+    remote_home_folder
     containerenv_alone_is_guarded
     both_markers_present_is_guarded
     remote_is_unguarded
-    other_folders_are_unguarded
+    container_unshaped_stays_unguarded
     not_a_clone_fails
 )
 
