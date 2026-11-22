@@ -588,7 +588,7 @@ template it supplies expanding with `{N}`.
 **Expected back.** Exactly three lines. `name:` is the name of what the issue left behind, with
 `{N}` for the issue number. `pattern:` is an extended regular expression the expanded name must
 match, so a name that is not an issue's own is refused. `command:` is the command that removes it,
-with `{name}` for the expanded name. The script expands and prints the command and never runs it;
+with `{name}` for the expanded name and `{N}` for the issue number. The script expands and prints the command and never runs it;
 a missing line or a name that does not match the pattern makes the issue not proven.
 
 **Default when absent.** None; the proven issues are listed and no command is printed.

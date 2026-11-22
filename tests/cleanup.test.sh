@@ -199,6 +199,12 @@ fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 set_overlay $'name: a&b-{N}\npattern: ^a&b-[0-9]+$\ncommand: rm {name} {name}'
 assert_eq "line" "12${tab}proven${tab}rm a&b-12 a&b-12" "$(run_cleanup)"
 
+case_desc="{N} is expanded in the command as well as {name}"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: remove {N} {name}'
+assert_eq "line" "12${tab}proven${tab}remove 12 codeo-12" "$(run_cleanup)"
+
 case_desc="dossier still on another branch"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12

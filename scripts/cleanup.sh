@@ -92,6 +92,7 @@ name_proof() {
     [[ -n $tpl && -n $pattern && -n $cmd ]] || { echo name; return; }
     name=${tpl//\{N\}/$n}
     [[ -n $name && $name =~ $pattern ]] || { echo name; return; }
+    cmd=${cmd//\{N\}/$n}
     cmd=${cmd//\{name\}/"$name"}
     echo "cmd:$cmd"
 }

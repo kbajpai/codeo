@@ -8,4 +8,4 @@ Run `bash .devcontainer/scripts/role.sh --check cleanup` from the project root. 
 
 name: codeo-{N}
 pattern: ^codeo-[0-9]+$
-command: docker rm -f {name}; docker volume rm {name}
+command: codeo rm {N}
