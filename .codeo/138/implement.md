@@ -4,11 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/138 |
 | Branch | `fix/live-session-signal-does-not` |
-| Updated | 2026-11-21 |
+| Updated | 2026-11-22 |
 
 ## Where this stands
 
-Round 3 (after `plan.md` round 3) is built: Tasks 1-5 of `docs/plans/2026-11-21-live-signal-web-session-138-round-3.md` (a web session is web whatever its lock says; the beat hook takes the lock only on a prompt, in the foreground, never for a stashed or abandoned dossier, resumed stashes excepted; the handoff page and the changelog say so), each reviewed, the round reviewed as a whole and its fix wave re-reviewed, and the full `shell` suite is green. Task 6, the hosted-session check on this build, is the engineer's and is not run here. Next: `/codeo:qc`. Rounds 1 and 2 stand as built. Round 2 (after `plan.md` round 2) is built: Tasks 1-5 of `docs/plans/2026-11-21-live-signal-web-session-138-round-2.md` (the web user ends at `unknown`; the beat hook takes the lock in a web session; the `SessionStart` lock group is gone; the handoff page and the changelog say so), each reviewed and the round reviewed as a whole, and the full `shell` suite is green. Task 6, the hosted-session check with no manual lock, is the engineer's and is not run here. Next: `/codeo:qc`, which re-runs the pass from the start. Round 1 (Tasks 1-6 of the first plan) stands as built; its note on `tests/devcontainer.test.sh` outside the footprint is answered by the footprint now naming it.
+Round 4 (send-back from `close.md` round 2) is done: F21, the changelog sentence that said shared state is unchanged, now reads "The config schema is unchanged." The build is `true`. Next: `/codeo:qc` runs a whole new round (it must be newer than round 3), then `/codeo:close`. Rounds 1-3 follow in `## Outcome`.
 
 ## Questions
 
@@ -89,8 +89,23 @@ None.
 
 **Deviations from the plan.** (1) Task 2 read only the last `### Round` heading of `close.md`, which is not the rule `claim.sh` reads; the whole-round review found it and the fix wave replaced it with claim.sh's counts, replacing the case `take_ignores_an_earlier_park`, which contradicted that rule. (2) The fix wave also moved the parked check before the fetch and checkout in `lock.sh take web`. (3) Left as they are, from the reviews: `hook_bounds_the_take` was never red before the change; the early return for a parked dossier skips the "lock already taken" message and the session-id refresh (opt-in only, and the hook calls `take` only when there is no lock); the web early return repeats the TODO wording of the later path; long lines in tests and in `docs/handoff.md`; `n` assigned twice in an `if`/`elif`. No environment is configured, so there was no deployment.
 
+### Round 4 — 2026-11-22
+
+(send-back from close.md round 2)
+
+**Answers** `close.md` round 2, which carried `qc.md` round 3's F21 at the engineer's request (no review on #155 yet). I checked it against the file before touching it: `CHANGELOG.md:6` says origin gains a `codeo-live/<issue>/<machine>` branch namespace, `CHANGELOG.md:9` ended "Config schema and shared state are unchanged. (#138)", so the two lines contradicted; no test or script pins the sentence.
+
+**Built:** one phrase in `CHANGELOG.md` (commit `119444a`): the sentence now reads "The config schema is unchanged. (#138)". CHANGELOG.md is in the plan's footprint, so `overlap.sh --outside 138` printed nothing. The sync with `origin/main` found nothing new, and `overlap.sh 138` printed nothing.
+
+**Build:** the `shell` suite's `build` is `true`: rc 0. The suites were not run: the change is one documentation sentence that no test reads, and the whole suite is `/codeo:qc`'s to run.
+
+**Documentation:** `CHANGELOG.md` only; no page moves.
+
+**Deviations from the plan.** The edit was made directly rather than through a dispatched implementer and reviewer: it is one phrase with no behaviour, and a fresh subagent would have cost more than the edit. No plan task covers it; it is a send-back finding, not planned work.
+
 ## Log
 
 - 2026-11-21 — round 1: Tasks 1-6 built and reviewed, one fix round and one final-review fix wave, full suite green, build rc 0 · cost: 65m · sonnet-5-5 740k in + 25.6M cached / 111k out
 - 2026-11-21 — round 2 (after plan.md round 2): Tasks 1-5 built and reviewed, full suite green, build rc 0 · cost: 23m · sonnet-5-5 413k in + 16.3M cached / 65k out
 - 2026-11-21 — round 3 (after plan.md round 3): Tasks 1-5 built and reviewed, one fix wave after the whole-round review, full suite green, build rc 0 · cost: 27m · sonnet-5-5 572k in + 26.9M cached / 93k out
+- 2026-11-22 — round 4 (send-back from close.md round 2): F21 fixed in CHANGELOG.md, build rc 0 · cost: 0m · sonnet-5-5 12k in + 780k cached / 2k out
