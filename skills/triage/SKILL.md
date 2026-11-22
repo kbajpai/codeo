@@ -174,7 +174,8 @@ is the container the message names.
         branch, or whose branch is still on origin, never finished `/codeo:close` — and its
         checkout is probably still open on someone's machine. Fingerprint `unclosed:<N>`; options
         *finish it* (`/codeo:close` in that checkout, named) · *dismiss (why)*.
-      - Branches on origin other than the base branch and `codeo/intake`, each looked up with
+      - Branches on origin other than the base branch, `codeo/intake` and the `codeo-live/` signal
+        branches (a web session's live signal, which expires and is never a parked workflow), each looked up with
         `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr list-for-branch <branch>`: no PR
         (`number` is null), or a PR closed unmerged (`state` is `closed` with `merged_at` empty),
         is parked. A `.codeo/<N>/close.md` on it recording a stash or an abandon says why. `pr

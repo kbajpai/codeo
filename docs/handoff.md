@@ -164,29 +164,53 @@ it.
   lease change is. Any such report is a view of what is pushed: a row that looks wrong is fixed by
   pushing, never by editing the report.
 - **Who is working right now.** While a Claude session runs in a checkout holding `.codeo/active`,
-  a plugin hook publishes `refs/codeo/live/<issue>/<machine>` — one parentless commit, force-pushed
-  over itself — at most every 5 minutes, deletes it when the session ends, and `/codeo:close` clears it in the command that deletes the lock, at a finished close, a stash and an abandon. `inflight.sh` prints
+  a hook publishes a signal — one parentless commit, force-pushed over itself — at most every 5
+  minutes. A container or local session publishes `refs/codeo/live/<issue>/<machine>`, deletes it
+  when the session ends, and `/codeo:close` clears it in the command that deletes the lock, at a finished close, a stash and an abandon.
+  A hosted web session publishes `refs/heads/codeo-live/<issue>/<machine>` instead, because the
+  proxy refuses a push to the first and accepts the second, and a REST write of the commit is
+  refused. The proxy refuses branch deletions, so a web signal is never deleted: it only expires
+  after the TTL, and the branch stays on origin until someone deletes it. A session with `CLAUDE_CODE_REMOTE` set to `true` publishes as a web session
+  whatever its lock's `host` says. In a hosted web session the beat hook takes the lock itself, so no
+  separate lock step is needed: on a `UserPromptSubmit` event, when the project has a `.codeo/`
+  directory and there is no `.codeo/active`, the hook runs `lock.sh take web` with the session id
+  without its `cse_` prefix and `CODEO_LOCK_SKIP_PARKED=1`, in the foreground, bounded by `timeout 8` where `timeout` exists (without it the take is unbounded and the
+  harness's 10-second limit ends it), at most once per `CODEO_LIVE_REFRESH_SECONDS` window (an atomic
+  claim file settles which prompt takes it), and then beats, detached. A prompt in a session that
+  already has a lock skips the take and beats. The take is never for a parked dossier: a stash
+  counts as parked until `/codeo:init` has resumed it, and an abandon likewise, so a parked workflow
+  stays lockless and a resumed one is taken again, with no checkout of its branch while it is parked. A tool call (`PostToolUse`) never takes the lock: with a lock it
+  beats, detached, and with none it does nothing. Taking the lock may check out the dossier branch
+  between turns. This repository's `.claude/settings.json` carries two gated groups
+  (`UserPromptSubmit` and `PostToolUse`) that run this repository's own `hooks/live-signal.sh`, so
+  they work only here. Another project gets the hook by installing the plugin, whose
+  `hooks/hooks.json` runs the same script, through its environment's setup script, since cloud
+  sessions do not install `enabledPlugins`; there the hook needs only a `.codeo/` directory and a
+  committed dossier naming the branch. `inflight.sh` prints
   a `live:` line (`<user> on <machine> (<host>), <age> ago`) for a workflow with a signal at most 15
   minutes old, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --live` lists them as TSV
-  (issue, user, machine, host, age in seconds). When the signals cannot be fetched the block says
+  (issue, user, machine, host, age in seconds). It fetches both refspecs, the `refs/codeo/live/*`
+  signals and the `codeo-live` branches, into `refs/codeo/live/`. When the signals cannot be fetched the block says
   `live: unknown (could not fetch the signals)`. A crash needs no cleanup: the line stops after the
   expiry, and a session with no prompt or tool call for 10 to 15 minutes stops reading as
   live until its next one. Set `CODEO_MACHINE` in one of two containers with the same volume name working one
   issue: they share a ref, so one signal replaces the other. A `beat` up to the expiry ahead of
   the reader's clock counts as age 0, and one further ahead is not listed. The `SessionEnd` hook
   gets 20 seconds, the two bounds of a `clear` at the default `CODEO_LIVE_PUSH_TIMEOUT` of 8; set it to 10 or more and the hook can end `clear` during the REST delete, so the signal then only expires. The signal adds nothing to the feature branch or its PR, and it is information only:
-  no script refuses or waits because a workflow is live. On a public repository it names the GitHub
-  login (else `git config user.name`, else `unknown`), a machine label and the host kind
-  (container, web or local), and never an email address. The machine is `CODEO_MACHINE`, else the
-  container's volume, else its sandbox, else `web-` plus the web session's first 8 characters, else the hostname. The
+  no script refuses or waits because a workflow is live. On a public repository it names a user, a
+  machine label and the host kind (container, web or local), and never an email address. The user
+  is `CODEO_GITHUB_LOGIN`, else the login `GET /user` returns, else for a web session the issue's
+  first assignee (who may not be the person at the keyboard), else for any other session
+  `git config user.name`, else `unknown`; a web session never uses `git config user.name`. The
+  signal reads `CODEO_GITHUB_LOGIN` before `GET /user`, where `github.sh` assignments try
+  `GET /user` first. The machine is `CODEO_MACHINE`, else the
+  container's volume, else its sandbox, else for a web session `web-` plus the first 8 characters
+  of the session id without its `cse_` prefix (the lock's `session`, else
+  `CLAUDE_CODE_REMOTE_SESSION_ID`), else the hostname. The
   reader's own clock judges the age. `CODEO_LIVE_REFRESH_SECONDS` (300), `CODEO_LIVE_TTL_SECONDS`
-  (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings; the last bounds each git push or fetch, the login lookup and the REST fallback as a whole. Where a push to that
-  ref is refused it is written through the REST API, and where neither works nothing is published.
-  A hosted web session has been seen to be such a place: a push to the signal ref and the REST
-  write of its commit (`git/commits`) both returned HTTP 403, so it publishes no signal and `inflight.sh` shows no `live:` line
-  for it. The hook runs there only when the plugin is installed in the session, and a lock taken
-  without a session id (`session: unknown`) gives the machine label the hostname instead of
-  `web-` plus the first 8 characters of the session id. Where nothing is published
+  (900), `CODEO_MACHINE` and `CODEO_LIVE_PUSH_TIMEOUT` (8) are its settings; the last bounds each git push or fetch, the login lookup and the REST fallback as a whole. Where a push to a
+  container or local signal's ref is refused it is written through the REST API, and where neither works nothing is published;
+  a web session has no REST fallback. Where nothing is published
   the hook discards the output of `beat` and says nothing, and `bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh"
   beat --force` run by hand prints the one `live:` line that says why. A failed publish is not
   retried until the next refresh interval. Two beats started together from one checkout can both
@@ -198,17 +222,21 @@ it.
   sequenceDiagram
       participant S as Claude session (checkout bound to #N)
       participant H as hooks/live-signal.sh
-      participant O as origin (refs/codeo/live/N/machine)
+      participant O as origin (refs/codeo/live/N/machine, refs/heads/codeo-live/N/machine)
       participant R as inflight.sh in another clone
-      S->>H: UserPromptSubmit / PostToolUse
-      H->>H: .codeo/active present? less than 5 min since last beat?
-      H-->>O: live.sh beat — force-push one parentless commit (REST if the push is refused)
-      R->>O: fetch +refs/codeo/live/*:refs/codeo/live/* (--prune)
+      S->>H: UserPromptSubmit
+      H->>H: web, .codeo/ present, no lock, interval claimed atomically?
+      H->>H: foreground, bounded: CODEO_LOCK_SKIP_PARKED=1 lock.sh take web (a stashed or abandoned dossier takes nothing)
+      H->>H: a lock already: no take, straight to the beat
+      S->>H: PostToolUse
+      H->>H: a lock: less than 5 min since last beat? no lock: nothing
+      H-->>O: detached live.sh beat — force-push one parentless commit (REST if the push is refused; a web session pushes the codeo-live branch, no REST)
+      R->>O: fetch +refs/codeo/live/*:refs/codeo/live/* and +refs/heads/codeo-live/*:refs/codeo/live/* (--prune)
       R->>R: beat within 15 min? print "live:" line
       S->>O: /codeo:close runs live.sh clear and deletes the lock in one command
       S->>H: SessionEnd
-      H->>O: delete the ref
-      Note over O,R: a crash deletes nothing; the line stops printing 15 min after the last beat
+      H->>O: delete the ref (a web session deletes nothing: the branch is never deleted)
+      Note over O,R: a crash or a web session deletes nothing; the line stops printing 15 min after the last beat
   ```
 - **The footprint.** `/codeo:plan` records what the change will touch — `dossier.md` → *The
   footprint* has the block — and compares it with every other workflow's before its review gate.

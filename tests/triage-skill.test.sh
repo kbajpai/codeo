@@ -66,6 +66,7 @@ must_contain "each fingerprint records the answer" 'recorded against every finge
 must_contain "a failed board read is not a mismatch" 'a failed `board.sh status` read is never a mismatch'
 must_contain "mismatch names, never runs" 'a board mismatch: *fix it* (the `board.sh set <N> <status>` command, named, never run'
 must_contain "unavailable is not a mismatch" '`unavailable` is never a mismatch'
+must_contain "signal branches are not parked work" 'codeo-live/'
 
 if ((failures)); then
     echo "$failures case(s) failed"
