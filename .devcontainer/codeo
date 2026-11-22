@@ -573,9 +573,14 @@ cmd_rm() {
             if [[ -z "$force" ]]; then
                 # The script refuses over unpushed or uncommitted work on stdout, with no codeo-sandbox: line; every
                 # other refusal is a codeo-sandbox: line on stderr and gets no hint here, because most of them name
-                # their own remedy or one that does not need --force; --force passes only the no-branches refusal.
-                grep -q '^codeo-sandbox: ' "$errf" ||
+                # their own remedy or one that does not need --force; --force passes only the no-branches refusal,
+                # and codeo words that one itself because the script's "end <N> --force" is not a command a codeo
+                # user can type. The space after the number keeps codeo-15's line from matching 1.
+                if ! grep -q '^codeo-sandbox: ' "$errf"; then
                     echo "codeo: codeo rm $n --force removes it anyway; its unpushed commits are kept in $(home_dir)/codeo-$n, its uncommitted work is not" >&2
+                elif grep -qE "end $n --force removes it anyway" "$errf"; then
+                    echo "codeo: codeo rm $n --force removes it anyway" >&2
+                fi
             elif ! grep -qE "rm --force codeo-$n([^0-9]|$)" "$errf"; then
                 # After a failed end --force, a sandbox that sbx ls no longer lists has nothing left to remove.
                 local sbx listing

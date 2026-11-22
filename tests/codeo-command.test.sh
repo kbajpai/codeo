@@ -1020,6 +1020,34 @@ t_rm_sandbox_no_hint_on_die() {
     grep -qxF 'codeo-sandbox: no clone codeo-5 here: nothing to check' <<<"$cm_err" || fail "script line lost: $cm_err"
 }
 
+# The script's no-branches refusal words its remedy as "end <N> --force", which a codeo user cannot type: codeo
+# rewords that one line, only for the number it was run for.
+t_rm_sandbox_no_branches_hint() {
+    local want='codeo: codeo rm 5 --force removes it anyway' last
+    local line5='codeo-sandbox: no branches of codeo-5 were found under refs/sandboxes/codeo-5/ after the fetch, so nothing can be proved and nothing is removed: end 5 --force removes it anyway'
+    cm_setup "$current"
+    echo 1 >"$cm_dir/status"
+    printf '%s\n' "$line5" >"$cm_dir/stderr_text"
+    cm_run rm 5 --sandbox
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    grep -qxF "$line5" <<<"$cm_err" || fail "script line lost: $cm_err"
+    last=$(tail -n 1 <<<"$cm_err")
+    [[ "$last" == "$want" ]] || fail "last stderr line '$last', want '$want'"
+
+    cm_setup "$current-2"
+    echo 1 >"$cm_dir/status"
+    printf '%s\n' "$line5" >"$cm_dir/stderr_text"
+    sbx_down_stub
+    cm_run rm 5 --sandbox --force
+    ! grep -qxF "$want" <<<"$cm_err" || fail "reworded line printed with --force: $cm_err"
+
+    cm_setup "$current-3"
+    echo 1 >"$cm_dir/status"
+    printf '%s\n' "${line5//5/15}" >"$cm_dir/stderr_text"
+    cm_run rm 1 --sandbox
+    ! grep -qxF 'codeo: codeo rm 1 --force removes it anyway' <<<"$cm_err" || fail "codeo-15 line matched for 1: $cm_err"
+}
+
 # A work refusal prints on stdout; stderr may hold unprefixed git progress: the hint appears.
 t_rm_sandbox_work_refusal_hint() {
     cm_setup "$current"
@@ -1955,6 +1983,7 @@ cases=(
     t_rm_sandbox_hints
     t_rm_sandbox_force_gone
     t_rm_sandbox_no_hint_on_die
+    t_rm_sandbox_no_branches_hint
     t_rm_sandbox_work_refusal_hint
     t_rm_sandbox_interrupt_replays_stderr
     t_rm_sandbox_force
