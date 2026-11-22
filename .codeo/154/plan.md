@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1: Q1-Q3 are answered (all picks). The plan is approved and saved at `docs/plans/2026-11-22-close-149-145-leftovers-154.md` (unstaged). `overlap.sh` printed five overlaps with #152, raised as Q4; `## Outcome` stays pending until it is answered.
+Planned: the plan is approved and saved at `docs/plans/2026-11-22-close-149-145-leftovers-154.md` (unstaged). Q1-Q4 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: commit the plan, then `/codeo:implement`.
 
 What I found (read against `.devcontainer/codeo`, `.sbx/codeo-sandbox.sh`, `scripts/inflight.sh` and the tests at `de57829`):
 
@@ -68,8 +68,28 @@ Proceed and coordinate: whoever merges second rebases over the other. (Engineer:
 **Options:** *proceed and coordinate* (my pick, as Q3: whoever merges second rebases and keeps both sides) · *sequence after #152* (this plan waits for #152 to merge, and `sequenced:` then names it) · *re-scope* (say which of the five paths to leave out).
 
 **Answer:**
+Proceed and coordinate. (Engineer, 2026-11-22; given in the conversation, recorded here.)
 
 ## Notes
+
+None.
+
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-22-close-149-145-leftovers-154.md` (unstaged, approved) |
+| Shape | an executable plan under `docs/plans/`, ten tasks; no reference doc, nothing here is a standing decision |
+
+**Decisions.**
+- **Q1 (A):** `codeo rm <N>` adds `codeo: codeo rm <N> --force removes it anyway` after the sandbox script's no-branches refusal; `.sbx/codeo-sandbox.sh` is not edited. Rejected: changing the script's message (edits an out-of-scope script and a pinned line), documenting only.
+- **Q2 (A):** `container_check --no-restart` stops a container it started on every return, because the refusal is then certain. F7 is reproduced (a stub `docker` with a failing `inspect` and a stopped container: exit 1, `docker start`, no `docker stop`). Rejected: not starting the container at all (it would hide the unsaved-work message).
+- **Q3 and Q4:** proceed and coordinate with #152 on `.devcontainer/README.md`, `.devcontainer/codeo`, `.sbx/README.md`, `CHANGELOG.md` and `tests/codeo-command.test.sh`; whoever merges second rebases and keeps both sides. Rejected: sequencing after #152, re-scoping.
+- **F12** is README only; **F14** qualifies the flowchart edges rather than labelling the chart partial; **F18** corrects the released v1.0.8 CHANGELOG sentence in place and adds one `## Unreleased` bullet; **F15** and **#145 F2** each end in a mutation that must fail the test.
+
+**Documentation pages the plan changes:** `.devcontainer/README.md` (Task 3), `.sbx/README.md` (Task 4), `CHANGELOG.md` (Task 5), `skills/triage/SKILL.md` (Task 7). No wiki module; `docs/skills.md` is not edited.
+
+**Intake questions resolved:** none; init's Open at intake was empty.
 
 ### Footprint
 
@@ -80,11 +100,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-22 — Q1-Q3 raised; `engineering` skills unavailable (plugin not installed) · cost: 2m · fable-5-2 113k in + 1.2M cached / 12k out
-- 2026-11-22 — plan approved, footprint committed, Q4 raised (five overlaps with #152) · cost: unavailable until the hand-off
+- 2026-11-22 — planned: docs/plans/2026-11-22-close-149-145-leftovers-154.md · cost: 79m · fable-5-2 117k in + 1.3M cached / 13k out · sonnet-5-5 141k in + 1.8M cached / 21k out; `engineering` skills unavailable
