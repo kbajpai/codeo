@@ -1090,6 +1090,61 @@ t_replace_project_failure_names_the_wiped_user_copy() {
     done
 }
 
+t_replace_failure_names_the_dropped_installs() {
+    local pa="" pb
+    in_setup failure_dropped
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    two_projects
+    : >"$STUB_DIR/add-fail"
+    in_cwd="$in_dir/home" in_run
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_out == *"$(dropped_line "$pa" project 1.0.6)"* ]] || fail "A not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pb" project 1.0.6)"* ]] || fail "B not named: $in_out"
+    [[ $in_err == 'install: codeo is no longer installed: stub claude: add failed; run this again' ]] || fail "stderr: $in_err"
+}
+
+t_project_replace_failure_names_the_current_project_too() {
+    local pa pb top
+    in_setup failure_project_current
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    pa=$top
+    two_projects
+    seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+    : >"$STUB_DIR/add-fail"
+    in_run --scope project
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_out == *"$(dropped_line "$pa" project 1.0.6)"* ]] || fail "A not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pb" project 1.0.6)"* ]] || fail "B not named: $in_out"
+}
+
+t_project_replace_failure_after_the_project_names_only_the_others() {
+    local pa pb top
+    in_setup failure_after_project
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    project_repo
+    pa=$top
+    two_projects
+    seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
+    : >"$STUB_DIR/install-fail-codeo-user"
+    in_run --scope project
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_out == *"$(dropped_line "$pb" project 1.0.6)"* ]] || fail "B not named: $in_out"
+    [[ $in_out != *"for $pa "* ]] || fail "own project named: $in_out"
+    [[ $in_err == *'installed at project scope but not at user scope'* ]] || fail "stderr: $in_err"
+}
+
+t_failure_before_the_remove_names_nothing() {
+    local pa="" pb
+    in_setup failure_before_remove
+    printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    two_projects
+    : >"$STUB_DIR/list-fail"
+    in_cwd="$in_dir/home" in_run
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
+    [[ $in_out != *"no longer installed for"* ]] || fail "stdout: $in_out"
+}
+
 t_given_tag_other_git_failure_is_cannot_read() {
     in_setup given_tag_git_failure
     printf 'a\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
@@ -1593,6 +1648,10 @@ cases=(
     t_replace_second_scope_failure_names_both
     t_replace_first_failure_keeps_no_longer_installed
     t_replace_project_failure_names_the_wiped_user_copy
+    t_replace_failure_names_the_dropped_installs
+    t_project_replace_failure_names_the_current_project_too
+    t_project_replace_failure_after_the_project_names_only_the_others
+    t_failure_before_the_remove_names_nothing
     t_given_tag_other_git_failure_is_cannot_read
     t_latest_is_highest_release
     t_given_tag_checked

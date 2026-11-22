@@ -263,12 +263,14 @@ ensure_superpowers() {
 
 # dropped_installs: prints one line per codeo@codeo entry installed at project or local scope, read from
 # the installed list (so call it before the remove, which empties the list), minus this project's own
-# entry when a project-scope run, which reinstalls it. A failing plugin list dies inside the subshell, so
+# entry when a project-scope run, which reinstalls it, unless skip_own is 0 (the failure path, where the
+# project was not reinstalled yet). A failing plugin list dies inside the subshell, so
 # callers add || exit 1. An entry whose projectPath no longer exists on disk is named like any other.
 dropped_installs() {
+    local skip_own=${1:-1}
     local list top=""
     list=$(plugin_list_json user) || exit 1
-    if [[ $scope == project ]]; then
+    if [[ $scope == project && $skip_own == 1 ]]; then
         top=$(project_root || true)
     fi
     # kept: codeo entries at project or local scope, except (on a project-scope run) the current project, which
@@ -292,24 +294,26 @@ dropped_installs() {
 # from $HOME, project-scope calls from the project's top level. A failure after the remove leaves codeo
 # uninstalled, and says so.
 replace_codeo() {
-    local old=$1 user_e=$2 out restored= dropped line user_on=
+    local old=$1 user_e=$2 out restored= dropped lost line user_on=
     # The list is read first: the remove empties it.
-    dropped=$(dropped_installs) || exit 1
+    dropped=$(dropped_installs 1) || exit 1
+    lost=$(dropped_installs 0) || exit 1
     # Always from $HOME: inside a git repository, remove rewrites its tracked .claude/settings.json.
     claude_step "cannot remove the codeo marketplace" user plugin marketplace remove codeo
     if [[ $scope == project ]]; then
         if [[ -n $user_e ]]; then
-            out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out" "$user_e" "$restored" user
+            out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out" "$user_e" "$restored" user "$lost"
         fi
-        out=$(claude_at project plugin marketplace add "kbajpai/codeo@$tag" --scope project 2>&1) || replace_failed "$out" "$user_e" "$restored" project
-        out=$(claude_at project plugin install codeo@codeo --scope project 2>&1) || replace_failed "$out" "$user_e" "$restored" project
+        out=$(claude_at project plugin marketplace add "kbajpai/codeo@$tag" --scope project 2>&1) || replace_failed "$out" "$user_e" "$restored" project "$lost"
+        out=$(claude_at project plugin install codeo@codeo --scope project 2>&1) || replace_failed "$out" "$user_e" "$restored" project "$lost"
         restored=project
+        lost=$dropped # the project is back; only the others are still gone
         if [[ -n $user_e ]]; then
-            out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out" "$user_e" "$restored" user
+            out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out" "$user_e" "$restored" user "$lost"
         fi
     else
-        out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out" "$user_e" "$restored" user
-        out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out" "$user_e" "$restored" user
+        out=$(claude_at user plugin marketplace add "kbajpai/codeo@$tag" 2>&1) || replace_failed "$out" "$user_e" "$restored" user "$lost"
+        out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out" "$user_e" "$restored" user "$lost"
     fi
     changed=1
     [[ -z $user_e ]] || read -r _ user_on _ <<<"$user_e"
@@ -332,13 +336,16 @@ replace_codeo() {
     done <<<"$dropped"
 }
 
-# replace_failed <claude output> <user entry> <restored scopes> <failing scope>: a reinstall failed after
+# replace_failed <claude output> <user entry> <restored scopes> <failing scope> <dropped lines>: a reinstall failed after
 # the remove. With nothing reinstalled yet codeo is gone everywhere, and a project-scope run that wiped a
 # user-scope copy says how to bring it back; with a scope already reinstalled, says which has it and which
-# does not.
+# does not. The installs still gone are named first (stdout), so the error stays the last line.
 replace_failed() {
-    local line
+    local line dropped_line
     line=$(last_line "$1")
+    while IFS= read -r dropped_line; do
+        [[ -z $dropped_line ]] || say "$dropped_line"
+    done <<<"$5"
     if [[ -n $3 ]]; then
         die "codeo $tag is installed at $3 scope but not at $4 scope: $line; run this again with --scope $4"
     elif [[ $scope == project && -n $2 ]]; then
