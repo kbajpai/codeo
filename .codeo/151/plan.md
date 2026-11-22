@@ -174,6 +174,15 @@ Fold in F20, F21 and F23, with F22 following Q10, as recommended (engineer, in t
 
 `engineering:system-design` and `engineering:architecture` are not available as skills in this session; their structure is applied directly in the draft.
 
+### Footprint
+
+```
+files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md, docs/plans/2026-11-21-install-one-command-151-round-3.md, docs/plans/2026-11-22-install-one-command-151-round-4.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-21-install-one-command-151.md` (approved by the engineer 2026-11-21; left unstaged for review). **Shape:** a scoped, executable plan of eight tasks under `$PLANS`, with a Mermaid flowchart; no standing reference doc, because `README.md` is the documentation.
@@ -229,15 +238,6 @@ Fold in F20, F21 and F23, with F22 following Q10, as recommended (engineer, in t
 **Documentation pages the plan changes:** `README.md` (Task 4) and the `CHANGELOG.md` bullet (Task 5); `CONTRIBUTING.md` and `docs/` unchanged. No wiki module.
 
 **Other workflows:** #138 shares only `CHANGELOG.md` (answered *proceed and coordinate*); `overlap.sh` printed nothing new, so no question was raised and no lock was taken.
-
-### Footprint
-
-```
-files:      install.sh, tests/install.test.sh, README.md, CONTRIBUTING.md, CHANGELOG.md, docs/plans/2026-11-21-install-one-command-151.md, docs/plans/2026-11-21-install-one-command-151-round-2.md, docs/plans/2026-11-21-install-one-command-151-round-3.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
