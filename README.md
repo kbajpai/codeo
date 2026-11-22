@@ -195,9 +195,9 @@ Commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works o
 The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup`: the steps that work on the project rather than inside one issue's workflow. It runs on your machine in a clone named `<codename>-home` (for this repository, `codeo-home`) that sits on the base branch, or in the `codeo-home` dev container, which is still supported (`.devcontainer/README.md`). `<codename>` is the optional `codename` in `.codeo/config.json` (this repository sets `codeo`); without one it is the clone's own folder name, so a host clone named `<project>-home` needs `codename` set to `<project>` to be recognised as home.
 
 To run it on the host you need:
+
 - Claude Code, `git`, `jq` (the guard reads `baseBranch` with it, and falls back to `main` without it) and `gh` logged in. `/codeo:doctor` checks the login and, when the project has a board, that the token carries the `project` scope.
 - The codeo plugin, installed with `install.sh` (see *Installing*), which needs bash 4.3 or later, `jq`, `git`, `gh` and `claude`.
-- The codeo plugin, installed with `install.sh` (see *Installing*).
 - A git identity: `git config --global user.name "Your Name"` and `git config --global user.email you@example.com`.
 - A clone of the project in a folder named `<codename>-home`, kept on the base branch and current with `git pull`.
 
