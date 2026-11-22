@@ -31,7 +31,7 @@ number and branch filled in:
   `bash codeo-container.sh issue <N> <branch>`. `codeo-container.sh` is the file the download line in
   `.devcontainer/README.md` saves; it needs only Docker. If `codeo-<N>` exists (a stash being resumed), remove it first with `codeo rm <N>`, once `git status` in it shows nothing unpushed, or the command refuses. Then
   `bash codeo-container.sh shell <N>` opens a shell in `codeo-<N>`; start `claude` there.
-- *In a Docker Sandboxes sandbox:* on the host, run `bash codeo-sandbox.sh issue <N> <branch>`, then `bash codeo-sandbox.sh open <N>` (VS Code) or `bash codeo-sandbox.sh shell <N>`. `codeo-sandbox.sh` is the file the download line in `.sbx/README.md` saves. A sandbox is ended with `bash codeo-sandbox.sh end <N>`, not with `docker rm`.
+- *In a Docker Sandboxes sandbox:* on the host, run `bash codeo-sandbox.sh issue <N> <branch>`, then `bash codeo-sandbox.sh open <N>` (VS Code) or `bash codeo-sandbox.sh shell <N>`. `codeo-sandbox.sh` is the file the download line in `.sbx/README.md` saves. A sandbox is ended with `codeo rm <N>` (which runs `bash codeo-sandbox.sh end <N>`), not with `docker rm`.
 
 Whichever route, when the container has started its start script prints
 `lock: took the lock for #<N> on <branch>`; then run `/codeo:plan` there. If the start script

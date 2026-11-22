@@ -181,7 +181,7 @@ cmd_mark() {
 
 cmd_confirm() {
     [[ $# -ge 1 ]] || usage
-    local n=$1 yes=0 local_text= lines= r k nm h s c rm ans
+    local n=$1 yes=0 local_text= lines= r k nm h s c rm ans body
     shift
     valid_num "$n" || usage
     while [[ $# -gt 0 ]]; do

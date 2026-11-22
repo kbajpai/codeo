@@ -139,13 +139,13 @@ case $role in
         case $state in
             finished)
                 if [[ $kind == home ]]; then
-                    echo "$head issue #$number is finished and this container is done (role $role); run it in a home checkout."
+                    echo "$head issue #$number is finished and this checkout is done (role $role); run it in a home checkout."
                 else
                     echo "$head issue #$number is finished and this container is done (role $role); nothing more runs here, and /codeo:cleanup in a home checkout prints how to remove it."
                 fi ;;
             parked)
                 if [[ $kind == home ]]; then
-                    echo "$head issue #$number's workflow was $word and this container holds no lock (role $role); run it in a home checkout."
+                    echo "$head issue #$number's workflow was $word and this checkout holds no lock (role $role); run it in a home checkout."
                 elif [[ $word == stashed ]]; then
                     echo "$head issue #$number's workflow was stashed and this container holds no lock (role $role); /codeo:init #$number in a home checkout is the way back, never the start script, and it opens a new container with this one's name, so remove this one on the host first, once git status here shows nothing unpushed (.devcontainer/README.md says how)."
                 else
@@ -153,7 +153,7 @@ case $role in
                 fi ;;
             lost)
                 if [[ $kind == home ]]; then
-                    echo "$head this is issue #$number's container and it holds no lock (role $role); run it in a home checkout."
+                    echo "$head this is issue #$number's checkout and it holds no lock (role $role); run it in a home checkout."
                 else
                     echo "$head this is issue #$number's container, its workflow is live and it holds no lock (role $role); re-run bash .devcontainer/scripts/devcontainer-start.sh to take the lock."
                 fi ;;
@@ -185,5 +185,5 @@ else
 fi
 about=
 [[ -z $number ]] || about=" (issue #$number)"
-echo "/codeo:$skill runs in $where, but this container's role is $role$about."
+echo "/codeo:$skill runs in $where, but this checkout's role is $role$about."
 exit 1
