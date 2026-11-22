@@ -20,15 +20,15 @@ die() {
 usage() {
     cat >&2 <<'USAGE'
 usage: codeo <command> [args]
-  home [--rebuild]                                          start the home dev container
-  issue <N> [<branch>] [--rebuild] [--container|--sandbox]  start work on issue N
-  shell home|<N> [--container|--sandbox]                    open a shell in the home or issue environment
-  open <N> [--container|--sandbox]                          open the issue's sandbox in VS Code
-  list                                                      list issue containers and sandboxes
-  rm <N> [--force] [--container|--sandbox]                  remove the issue's container or sandbox
-  default [container|sandbox]                               show or set the default kind for issue
-  update                                                    update codeo and its scripts
-  help                                                      show this help
+  home [--rebuild]                                                  start the home dev container
+  issue <N> [<branch>] [--rebuild] [--container|--sandbox] [--yes]  start work on issue N
+  shell home|<N> [--container|--sandbox]                            open a shell in the home or issue environment
+  open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
+  list                                                              list issue containers and sandboxes
+  rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
+  default [container|sandbox]                                       show or set the default kind for issue
+  update                                                            update codeo and its scripts
+  help                                                              show this help
 USAGE
     [[ -z "${1:-}" ]] || echo "codeo: $1" >&2
     exit 2
@@ -74,15 +74,15 @@ cmd_help() {
     cat <<'HELP'
 codeo: work a GitHub issue in a dev container or an sbx sandbox.
 
-  codeo home [--rebuild]                                          start the home dev container
-  codeo issue <N> [<branch>] [--rebuild] [--container|--sandbox]  start work on issue N
-  codeo shell home|<N> [--container|--sandbox]                    open a shell in the home or issue environment
-  codeo open <N> [--container|--sandbox]                          open the issue's sandbox in VS Code
-  codeo list                                                      list issue containers and sandboxes
-  codeo rm <N> [--force] [--container|--sandbox]                  remove the issue's container or sandbox
-  codeo default [container|sandbox]                               show or set the default kind for issue
-  codeo update                                                    update codeo and its scripts
-  codeo help                                                      show this help
+  codeo home [--rebuild]                                                  start the home dev container
+  codeo issue <N> [<branch>] [--rebuild] [--container|--sandbox] [--yes]  start work on issue N
+  codeo shell home|<N> [--container|--sandbox]                            open a shell in the home or issue environment
+  codeo open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
+  codeo list                                                              list issue containers and sandboxes
+  codeo rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
+  codeo default [container|sandbox]                                       show or set the default kind for issue
+  codeo update                                                            update codeo and its scripts
+  codeo help                                                              show this help
 
 codeo list prints what it can; when docker or sbx fails to list it warns on stderr and exits 1.
 HELP
@@ -108,7 +108,7 @@ ensure_home() {
     dir=$(home_dir)
     base=$(raw_base)
     mkdir -p "$dir" 2>/dev/null || die "could not create $dir"
-    for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh; do
+    for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh .devcontainer/codeo-track.sh; do
         name=${f##*/}
         [[ -s "$dir/$name" ]] && continue
         tmp=$(mktemp "$dir/.$name.XXXXXX") || die "could not create a temporary file in $dir"
@@ -289,15 +289,17 @@ parse_kind_flag() {
     kind_flag=$k
 }
 
-# cmd_issue <N> [<branch>] [--rebuild] [--container|--sandbox]: start work on issue N.
+# cmd_issue <N> [<branch>] [--rebuild] [--container|--sandbox] [--yes]: start work on issue N; --yes is passed
+# on to the script as its last argument.
 cmd_issue() {
     [[ $# -ge 1 ]] || usage
-    local n=$1 branch="" rebuild="" a kind
+    local n=$1 branch="" rebuild="" yes="" a kind
     shift
     valid_number "$n" || usage
     for a in "$@"; do
         case "$a" in
             --rebuild) rebuild=--rebuild ;;
+            --yes) yes=--yes ;;
             --container | --sandbox) parse_kind_flag "$a" ;;
             *)
                 [[ -z "$branch" ]] || usage
@@ -318,7 +320,7 @@ cmd_issue() {
         valid_branch "$branch" ||
             die "branch $branch found on origin is not a name codeo accepts; pass a branch: codeo issue $n <branch>"
     fi
-    run_script "codeo-$kind.sh" issue "$n" "$branch" ${rebuild:+"$rebuild"}
+    run_script "codeo-$kind.sh" issue "$n" "$branch" ${rebuild:+"$rebuild"} ${yes:+"$yes"}
 }
 
 # parse_target <args...>: set target (home or N) and kind_flag from one target and an optional kind
@@ -535,6 +537,20 @@ workspace_mount() {
     if [[ "$out" == "volume $1" ]]; then echo volume; else echo other; fi
 }
 
+# track_mark <N> <kind> <name>: record on issue N that <name> is removed, with codeo-track.sh in the home
+# directory (CODEO_TRACK overrides). Its status is ignored; an absent tracker gets one stderr note.
+track_note=""
+track_mark() {
+    local tracker=${CODEO_TRACK:-$(home_dir)/codeo-track.sh}
+    if [[ ! -f "$tracker" ]]; then
+        [[ -n "$track_note" ]] ||
+            echo "codeo: note: codeo-track.sh is not in $(home_dir), so the removal was not recorded on the issue (codeo update fetches it)" >&2
+        track_note=1
+        return 0
+    fi
+    "$BASH" "$tracker" mark "$1" "$2" "$3" removed </dev/null || true
+}
+
 # cmd_rm <N> [--force] [--container|--sandbox]: remove the issue's container or sandbox. A container
 # is checked for unsaved work first; --force skips the refusal and removes even when the check cannot
 # run.
@@ -643,7 +659,10 @@ cmd_rm() {
     fi
     if docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
         # docker rm -f of a missing container exits 0: count it only when it was known to exist.
-        [[ "$existed" -eq 0 ]] || removed_container=1
+        if [[ "$existed" -ne 0 ]]; then
+            removed_container=1
+            track_mark "$n" container "$name"
+        fi
     # With --force a container that is already gone is fine: its volume and image still go.
     elif [[ -z "$force" ]]; then
         die "could not remove container $name"
@@ -659,6 +678,7 @@ cmd_rm() {
         fi
     elif docker volume rm "$name" >/dev/null 2>&1 </dev/null; then
         removed_volume=1
+        track_mark "$n" volume "$name"
     elif docker volume inspect "$name" >/dev/null 2>&1 </dev/null; then
         # The volume exists and would not go.
         if [[ -n "$removed_container" ]]; then
@@ -668,6 +688,7 @@ cmd_rm() {
     fi
     if docker rmi "codeo-dev:$name" >/dev/null 2>&1 </dev/null; then
         removed_image=1
+        track_mark "$n" image "codeo-dev:$name"
     elif [[ -n "$removed_container$removed_volume" ]]; then
         echo "codeo: warning: could not remove image codeo-dev:$name" >&2
     fi
@@ -691,8 +712,8 @@ upd_cleanup() {
     [[ -z "$upd_new" ]] || rm -f "$upd_new"
 }
 
-# cmd_update: replace codeo and both scripts with the latest from the raw URL; a failed
-# download changes nothing. All three are downloaded into a fresh directory in the home directory,
+# cmd_update: replace codeo and its three scripts with the latest from the raw URL; a failed
+# download changes nothing. All four are downloaded into a fresh directory in the home directory,
 # each non-empty and starting with "#!"; only then are the scripts moved into place, and codeo itself
 # last, through a temporary file beside the installed codeo so the running copy is replaced atomically,
 # never truncated. Any failure removes what was made and changes nothing installed. Needs no script
@@ -709,7 +730,7 @@ cmd_update() {
     trap 'exit 130' INT
     trap 'exit 143' TERM
     upd_tmp=$(mktemp -d "$dir/.update.XXXXXX") || die "could not create a temporary directory in $dir"
-    for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh .devcontainer/codeo; do
+    for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh .devcontainer/codeo-track.sh .devcontainer/codeo; do
         name=${f##*/}
         curl -fsSL -o "$upd_tmp/$name" "$base/$f" 2>/dev/null || die "could not download $base/$f; nothing changed"
         [[ -s "$upd_tmp/$name" ]] || die "$base/$f is empty; nothing changed"
@@ -717,13 +738,15 @@ cmd_update() {
     done
     upd_new=$(mktemp "$self_dir/.codeo.XXXXXX") || die "could not write beside $self; nothing changed"
     cp "$upd_tmp/codeo" "$upd_new" || die "could not write beside $self; nothing changed"
-    chmod 755 "$upd_tmp/codeo-container.sh" "$upd_tmp/codeo-sandbox.sh" "$upd_new"
+    chmod 755 "$upd_tmp/codeo-container.sh" "$upd_tmp/codeo-sandbox.sh" "$upd_tmp/codeo-track.sh" "$upd_new"
     mv -f "$upd_tmp/codeo-container.sh" "$dir/codeo-container.sh" ||
         die "update failed part-way: nothing installed was changed; run codeo update again"
     mv -f "$upd_tmp/codeo-sandbox.sh" "$dir/codeo-sandbox.sh" ||
-        die "update failed part-way: codeo-container.sh is new, codeo-sandbox.sh and codeo are still old; run codeo update again to finish"
+        die "update failed part-way: codeo-container.sh is new, codeo-sandbox.sh, codeo-track.sh and codeo are still old; run codeo update again to finish"
+    mv -f "$upd_tmp/codeo-track.sh" "$dir/codeo-track.sh" ||
+        die "update failed part-way: codeo-container.sh and codeo-sandbox.sh are new, codeo-track.sh and codeo are still old; run codeo update again to finish"
     mv -f "$upd_new" "$self" ||
-        die "update failed part-way: both scripts are new, codeo is still old; run codeo update again to finish"
+        die "update failed part-way: all three scripts are new, codeo is still old; run codeo update again to finish"
     upd_new=""
     echo "updated codeo and both scripts"
 }

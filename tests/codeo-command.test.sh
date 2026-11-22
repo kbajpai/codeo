@@ -111,6 +111,14 @@ exit "$(cat "$d/status" 2>/dev/null || echo 0)"
 STUB
         chmod +x "$cm_home/$n"
     done
+    # stub tracker: logs its argv (one line) to $cm_dir/track, never to calls.
+    cat >"$cm_home/codeo-track.sh" <<'STUB'
+#!/bin/bash
+d=${0%/home/*}
+echo "$*" >>"$d/track"
+exit "$(cat "$d/track_status" 2>/dev/null || echo 0)"
+STUB
+    chmod +x "$cm_home/codeo-track.sh"
 }
 
 # cm_run <args...>: run codeo with a clean environment; set cm_status, cm_out and cm_err.
@@ -1441,10 +1449,12 @@ t_update_replaces_three() {
     grep -q 'new codeo-container.sh' "$cm_home/codeo-container.sh" || fail "container script not replaced"
     grep -q 'new codeo-sandbox.sh' "$cm_home/codeo-sandbox.sh" || fail "sandbox script not replaced"
     grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not replaced"
+    grep -q 'new codeo-track.sh' "$cm_home/codeo-track.sh" || fail "tracker not replaced"
+    [[ -x "$cm_home/codeo-track.sh" ]] || fail "tracker not executable"
     [[ -x "$cm_home/codeo-container.sh" && -x "$cm_home/codeo-sandbox.sh" && -x "$cm_dir/inst/codeo" ]] ||
         fail "an installed file is not executable"
     [[ "$(stat -c %a "$cm_home/codeo-container.sh" "$cm_home/codeo-sandbox.sh" "$cm_dir/inst/codeo" | sort -u)" == 755 ]] || fail "installed files are not all mode 755"
-    [[ "$(grep -c '^curl .*-fsSL' "$cm_dir/calls")" -eq 3 ]] || fail "want three curl -fsSL calls: $(cat "$cm_dir/calls")"
+    [[ "$(grep -c '^curl .*-fsSL' "$cm_dir/calls")" -eq 4 ]] || fail "want four curl -fsSL calls: $(cat "$cm_dir/calls")"
     local mvs
     mvs=$(grep '^mv ' "$cm_dir/calls")
     [[ "$(tail -n 1 <<<"$mvs")" == "mv "*" $cm_dir/inst/codeo" ]] || fail "last mv is not onto codeo: $mvs"
@@ -1503,8 +1513,9 @@ expect_update_partial() {
     [[ "$(ls -A "$cm_dir/inst")" == codeo ]] || fail "inst holds more than codeo: $(ls -A "$cm_dir/inst")"
 }
 
-t_update_partial_second_mv() { expect_update_partial 2 "codeo-container.sh is new, codeo-sandbox.sh and codeo are still old"; }
-t_update_partial_final_mv() { expect_update_partial 3 "both scripts are new, codeo is still old"; }
+t_update_partial_second_mv() { expect_update_partial 2 "codeo-container.sh is new, codeo-sandbox.sh, codeo-track.sh and codeo are still old"; }
+t_update_partial_third_mv() { expect_update_partial 3 "codeo-container.sh and codeo-sandbox.sh are new, codeo-track.sh and codeo are still old"; }
+t_update_partial_final_mv() { expect_update_partial 4 "all three scripts are new, codeo is still old"; }
 
 t_update_usage_extra_args() { expect_usage update now; }
 
@@ -1861,6 +1872,103 @@ t_issue_lookup_invalid_branch() {
     expect_no_script
 }
 
+t_issue_yes_passthrough() {
+    cm_setup "$current"
+    cm_run issue 152 b --yes
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-container.sh issue 152 b --yes pwd=$cm_home"
+    cm_setup "$current-2"
+    cm_run issue 152 b --rebuild --yes --container
+    expect_call "codeo-container.sh issue 152 b --rebuild --yes pwd=$cm_home"
+    cm_setup "$current-3"
+    cm_run issue 152 --sandbox b --yes
+    expect_call "codeo-sandbox.sh issue 152 b --yes pwd=$cm_home"
+}
+
+t_yes_refused_elsewhere() {
+    expect_usage home --yes
+    expect_usage shell 5 --yes
+    expect_usage open 5 --yes
+    expect_usage list --yes
+    expect_usage rm 5 --yes
+    expect_usage default --yes
+    expect_usage update --yes
+}
+
+t_usage_and_help_list_yes() {
+    cm_setup "$current"
+    cm_run help
+    grep -qF 'issue <N> [<branch>] [--rebuild] [--container|--sandbox] [--yes]' <<<"$cm_out" || fail "help lacks --yes: $cm_out"
+    cm_run issue
+    grep -qF '[--container|--sandbox] [--yes]' <<<"$cm_err" || fail "usage lacks --yes: $cm_err"
+}
+
+# rm_stubs_152: rm_stubs for issue 152 (the stub names codeo-5).
+rm_stubs_152() {
+    rm_stubs
+    sed -i 's/codeo-5/codeo-152/g' "$cm_dir/bin/docker"
+    echo "volume codeo-152" >"$cm_dir/mounts"
+}
+
+t_rm_container_marks() {
+    cm_setup "$current"
+    rm_stubs_152
+    cm_run rm 152
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local want=$'mark 152 container codeo-152 removed\nmark 152 volume codeo-152 removed\nmark 152 image codeo-dev:codeo-152 removed'
+    [[ "$(cat "$cm_dir/track" 2>/dev/null)" == "$want" ]] || fail "track: $(tr '\n' '|' <"$cm_dir/track")"
+    [[ "$cm_out" == "removed codeo-152 "* ]] || fail "stdout: $cm_out"
+}
+
+t_rm_refused_marks_nothing() {
+    cm_setup "$current"
+    rm_stubs_152
+    printf ' M f\n' >"$cm_dir/g_status"
+    cm_run rm 152
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, want 1"
+    [[ ! -s "$cm_dir/track" ]] || fail "marked: $(cat "$cm_dir/track")"
+}
+
+t_rm_kept_volume_marks_container_and_image() {
+    cm_setup "$current"
+    rm_stubs_152
+    printf 'bind \n' >"$cm_dir/mounts"
+    cm_run rm 152 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local want=$'mark 152 container codeo-152 removed\nmark 152 image codeo-dev:codeo-152 removed'
+    [[ "$(cat "$cm_dir/track" 2>/dev/null)" == "$want" ]] || fail "track: $(tr '\n' '|' <"$cm_dir/track")"
+}
+
+t_rm_sandbox_marks_nothing_in_codeo() {
+    cm_setup "$current"
+    printf 'NAME AGENT STATUS\ncodeo-5 claude running\n' >"$cm_dir/sbx_out"
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ ! -s "$cm_dir/track" ]] || fail "marked: $(cat "$cm_dir/track")"
+}
+
+t_rm_tracker_failure_is_ignored() {
+    cm_setup "$current"
+    rm_stubs
+    echo 3 >"$cm_dir/track_status"
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 && "$cm_out" == "removed codeo-5 "* && -z "$cm_err" ]] || fail "$cm_status out=$cm_out err=$cm_err"
+    cm_setup "$current-2"
+    rm_stubs
+    rm -f "$cm_home/codeo-track.sh"
+    cm_run rm 5
+    [[ "$cm_status" -eq 0 && "$cm_out" == "removed codeo-5 "* ]] || fail "absent: $cm_status out=$cm_out"
+    [[ "$cm_err" == "codeo: note: codeo-track.sh is not in $cm_home, so the removal was not recorded on the issue (codeo update fetches it)" ]] || fail "note: $cm_err"
+}
+
+t_first_use_downloads_tracker() {
+    cm_setup "$current"
+    rm -f "$cm_home"/*.sh
+    cm_run home
+    grep -q "^curl -fsSL -o $cm_home/.* https://raw.githubusercontent.com/kbajpai/codeo/main/.devcontainer/codeo-track.sh\$" "$cm_dir/calls" || fail "no download of the tracker"
+    [[ -x "$cm_home/codeo-track.sh" ]] || fail "tracker not installed executable"
+}
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -1958,6 +2066,7 @@ cases=(
     t_update_without_scripts
     t_update_usage_extra_args
     t_update_partial_second_mv
+    t_update_partial_third_mv
     t_update_partial_final_mv
     t_update_through_symlink
     t_relative_codeo_home
@@ -1990,6 +2099,15 @@ cases=(
     t_rm_inspect_fails_no_restart
     t_codeo_sbx_honoured
     t_issue_lookup_invalid_branch
+    t_issue_yes_passthrough
+    t_yes_refused_elsewhere
+    t_usage_and_help_list_yes
+    t_rm_container_marks
+    t_rm_refused_marks_nothing
+    t_rm_kept_volume_marks_container_and_image
+    t_rm_sandbox_marks_nothing_in_codeo
+    t_rm_tracker_failure_is_ignored
+    t_first_use_downloads_tracker
 )
 
 for current in "${cases[@]}"; do
