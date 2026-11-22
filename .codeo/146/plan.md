@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are answered: the #118 bullet moves to `## v1.0.8`, the README examples (and the install test stubs they are compared with) move to v1.0.8 in the release PR, and the `Config schema` line names `issue.priority`. The release PR is therefore four files, not two. The draft plan is at `.codeo/146/plan-draft.md`, awaiting the engineer's approval.
+Q1-Q3 are answered and the plan is approved and written to `docs/plans/2026-11-22-release-v1-0-8.md` (unstaged). Nothing is open; the next step is `/codeo:implement`.
 
 What exploration found:
 - **The gate is met.** #143, #144, #145, #138, #149 and #151 all read `CLOSED` / `COMPLETED`, and each merged to `main`. `origin/main` is at `6ccd510`, 16 commits past `v1.0.7` (`7b25bc2`).
@@ -73,6 +73,21 @@ Name it on the `Config schema` line (engineer, by the question tool in the conve
 
 Intended shape: one plan under `docs/plans/` (`2026-11-22-release-v1-0-8.md`), modelled on `docs/plans/2026-11-18-release-v1-0-7.md`; no reference doc, since nothing is a standing decision.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-22-release-v1-0-8.md` (unstaged, approved 2026-11-22) |
+| Shape | Plan under `docs/plans/`; no reference doc, since nothing is a standing decision |
+
+**Decisions.** Two pull requests: the release PR comes from `release/v1.0.8`, cut from `origin/main` in a worktree and opened by `/codeo:implement`, because `qc-verdict` fails a head carrying a live dossier; this branch carries the pin and the dossier. `main` is released as it stands (`6ccd510` at planning); all six gating issues are closed and merged. You merge both PRs and tag (lightweight, `git tag v1.0.8 <SHA>`); the agent runs the clean-clone test and publishes the Release (title `v1.0.8`, notes the changelog section only). Q1: the #118 bullet, which landed under `## v1.0.7` after that tag, moves to `## v1.0.8`. Q2: the README's installer examples and the install test's stubs move one version up in the release PR, so it is four files (`plugin.json`, `CHANGELOG.md`, `README.md`, `tests/install.test.sh`); the substitution was dry-run and `tests/install.test.sh` passed. Q3: the `Config schema` line names the optional `issue.priority` key. `Shared state` and `Safe to bump mid-workflow` stay as written. #132 gets no bullet. No other workflow is in flight, so no overlap question arose.
+
+**Rejected.** Leaving the #118 bullet under `## v1.0.7` (Q1); leaving the README at `v1.0.7` or filing a placeholder-version issue (Q2); leaving `Config schema: 1` bare (Q3).
+
+**Documentation pages the plan changes:** `README.md` only (its installer examples, in the release PR). No page under `docs/` moves.
+
+**Risk for `/codeo:qc`.** Criteria 3-6 and 8 depend on your merge, tag and rebuild; criterion 7 is met when `/codeo:close`'s PR merges. The version substitution must run in the order `1.0.7`→`1.0.8` then `1.0.6`→`1.0.7`, on `README.md` and `tests/install.test.sh` only. Task 1 re-reads `## Unreleased` and the line numbers in case `main` moved. Task 7 records a project-scope `codeo@codeo` that does not report 1.0.8 as a finding.
+
 ### Footprint
 
 ```
@@ -82,11 +97,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-22 — Q1-Q3 raised · cost: 2m · fable-5-2 96k in + 1M cached / 8k out
 - 2026-11-22 — Q1-Q3 answered; draft written for the review gate · cost: 6m · fable-5-2 119k in + 2.1M cached / 26k out
+- 2026-11-22 — draft approved; planned: docs/plans/2026-11-22-release-v1-0-8.md · cost: 8m · fable-5-2 128k in + 2.4M cached / 28k out · sonnet-5-5 122k in + 178k cached / 1k out
