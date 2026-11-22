@@ -697,7 +697,7 @@ t_user_replace_names_another_project_only() {
 
 # dropped_line <path> <scope> <version>: the line a replace prints for a project or local install it dropped.
 dropped_line() {
-    local sfx="" tail="run install.sh --scope project there to restore it"
+    local sfx="" tail="run claude plugin install codeo@codeo --scope project there to restore it"
     [[ $2 != local ]] || { sfx=.local; tail="run claude plugin install codeo@codeo --scope local there to restore it"; }
     printf 'install: codeo is no longer installed for %s (%s scope, v%s); its .claude/settings%s.json was not changed; %s' "$1" "$2" "$3" "$sfx" "$tail"
 }
@@ -722,6 +722,18 @@ two_projects() {
     project_json v1.0.6 >"$pb/.claude/settings.json"
     cp "$pa/.claude/settings.json" "$in_dir/before-a"
     cp "$pb/.claude/settings.json" "$in_dir/before-b"
+}
+
+t_restore_line_is_not_a_replace() {
+    local pa="" pb line
+    in_setup restore_not_replace
+    printf 'a\trefs/tags/v1.0.5\nb\trefs/tags/v1.0.7\n' >"$STUB_DIR/tags"
+    two_projects
+    in_cwd="$in_dir/home" in_run --version v1.0.5
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    line=$(grep -F "no longer installed for $pa " <<<"$in_out") || fail "no line for A: $in_out"
+    [[ $line == *'claude plugin install codeo@codeo --scope project'* ]] || fail "line: $line"
+    [[ $line != *install.sh* ]] || fail "the restore command is a replace: $line"
 }
 
 t_user_replace_names_every_dropped_project() {
@@ -1596,6 +1608,7 @@ cases=(
     t_user_replace_names_the_current_project_too
     t_project_replace_names_the_other_projects
     t_dropped_local_entry_is_named_with_its_command
+    t_restore_line_is_not_a_replace
     t_dropped_project_that_no_longer_exists_is_named
     t_no_replace_no_dropped_lines
     t_project_replace_says_the_disabled_user_copy_is_enabled

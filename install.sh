@@ -278,7 +278,7 @@ dropped_installs() {
             and (.scope != "project" or $top == "" or .projectPath != $top))
         | "codeo is no longer installed for \(.projectPath) (\(.scope) scope, v\(.version)); its .claude/settings\(if .scope == "local" then ".local" else "" end).json was not changed; "
           + (if .scope == "local" then "run claude plugin install codeo@codeo --scope local there to restore it"
-             else "run install.sh --scope project there to restore it" end)'
+             else "run claude plugin install codeo@codeo --scope project there to restore it" end)'
 }
 
 # replace_codeo <old-label> <user-entry>: removes the codeo marketplace (which uninstalls codeo at every
