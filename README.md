@@ -195,13 +195,13 @@ Commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works o
 The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup`: the steps that work on the project rather than inside one issue's workflow. It runs on your machine in a clone named `<codename>-home` (for this repository, `codeo-home`) that sits on the base branch, or in the `codeo-home` dev container, which is still supported (`.devcontainer/README.md`). `<codename>` is the optional `codename` in `.codeo/config.json` (this repository sets `codeo`); without one it is the clone's own folder name, so a host clone named `<project>-home` needs `codename` set to `<project>` to be recognised as home.
 
 To run it on the host you need:
-
-- Claude Code, and `gh` logged in. `/codeo:doctor` checks the login and, when the project has a board, that the token carries the `project` scope.
+- Claude Code, `git`, `jq` (the guard reads `baseBranch` with it, and falls back to `main` without it) and `gh` logged in. `/codeo:doctor` checks the login and, when the project has a board, that the token carries the `project` scope.
+- The codeo plugin, installed with `install.sh` (see *Installing*), which needs bash 4.3 or later, `jq`, `git`, `gh` and `claude`.
 - The codeo plugin, installed with `install.sh` (see *Installing*).
 - A git identity: `git config --global user.name "Your Name"` and `git config --global user.email you@example.com`.
 - A clone of the project in a folder named `<codename>-home`, kept on the base branch and current with `git pull`.
 
-It works on Linux, on macOS and on Windows through WSL2. On macOS the `codeo` command needs bash 4.3, and the stock bash 3.2 is too old for it; the role guard and `codeo-container.sh` run on 3.2. On Windows run everything inside WSL2, `codeo` and `gh` included.
+It works on Linux, on macOS and on Windows through WSL2. On macOS, `install.sh` and the `codeo` command need bash 4.3 or later (for example from Homebrew), and the stock bash 3.2 is too old for them; the role guard and `codeo-container.sh` run on 3.2. On Windows run everything inside WSL2, `codeo` and `gh` included.
 
 #### The guard
 
@@ -211,7 +211,7 @@ Each skill asks `.devcontainer/scripts/role.sh --check <skill>` first, and the a
 |---|---|---|---|
 | `home` | a clone named `<codename>-home`, on the base branch, holding no lock | `/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup` | `/codeo:plan`, `/codeo:implement`, `/codeo:qc`, `/codeo:close`: they run in an issue's checkout |
 | `issue:<N>` | holds the lock for issue `<N>`; in a container also in the folder `<codename>-<N>`, on the host in any folder | `/codeo:plan`, `/codeo:implement`, `/codeo:qc`, `/codeo:close` | the four home skills: they run in a home checkout |
-| `stale:<N>`, `stale:?` | a container with no lock, or a `<codename>-home` clone off the base branch | nothing | every guarded skill; the line says what became of the workflow, or to switch back to the base branch |
+| `stale:<N>`, `stale:?` | no lock, and not home: `stale:<N>` in a container's folder `<codename>-<N>`, `stale:?` in a `<codename>-home` (container or host clone) off the base branch | nothing | every guarded skill; the line says what became of the workflow, or to switch back to the base branch |
 | `mismatch:<N>:<folder>` | a container locked for `<N>` in another folder | nothing | every guarded skill |
 | `stray` | a host checkout that is neither home nor an issue's: no lock, and not named `<codename>-home` | nothing | every guarded skill: it is neither the home clone nor an issue's |
 | `unguarded` | a hosted web session (`CLAUDE_CODE_REMOTE=true`), or a container in a folder that is neither `<codename>-home` nor `<codename>-<N>` | everything | nothing |
