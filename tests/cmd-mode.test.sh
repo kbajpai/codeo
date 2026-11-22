@@ -597,6 +597,33 @@ a_missing_tracker_is_noted_and_creation_goes_on() {
     cm_calls | grep -q '^run ' || fail "no docker run: $(cm_calls)"
 }
 
+the_tracker_beside_a_bare_script_name_is_found() {
+    cm_setup track_bare
+    mkdir -p "$cm_dir/here"
+    cp "$script" "$cm_dir/here/codeo-container.sh"
+    printf '%s\n' 'echo "$*" >>"'"$cm_dir"'/track"' > "$cm_dir/here/codeo-track.sh"
+    cm_rc=0
+    (cd "$cm_dir/here" && env -u CODEO_TRACK -u CODEO_CONTEXT -u CODEO_REPO_URL PATH="$cm_dir/bin" HOME="$cm_dir" \
+        "$bash_abs" codeo-container.sh issue 152 feat/x >"$cm_dir/out" 2>"$cm_dir/err") || cm_rc=$?
+    ((cm_rc == 0)) || fail "exited $cm_rc: $(<"$cm_dir/err")"
+    [[ "$(<"$cm_dir/err")" != *"not beside this script"* ]] || fail "tracker not found: $(<"$cm_dir/err")"
+    [[ "$(head -n 1 "$cm_dir/track")" == 'confirm 152' ]] || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+a_tracker_that_fails_does_not_fail_the_creation() {
+    cm_setup track_exit3
+    printf '%s\n' 'echo "$*" >>"${0%/track.sh}/track"' '[[ "$1" == confirm ]] || exit 3' 'exit 0' >"$cm_dir/track.sh"
+    cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(grep -c '^add' "$cm_dir/track")" == 3 ]] || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+the_missing_tracker_note_prints_once() {
+    cm_setup track_once
+    CM_TRACK="$cm_dir/nope.sh" cm_run issue 152 feat/x
+    [[ "$(grep -c 'not beside this script' "$cm_dir/err")" == 1 ]] || fail "note count: $cm_err"
+}
+
 script_uses_only_bash_3_2_and_bsd_constructs() {
     local target=${CM_SCRIPT:-$repo/.devcontainer/codeo-container.sh} code pat hit
     # Whole-line comments and blank lines are dropped; a trailing comment is still scanned.
@@ -707,6 +734,9 @@ cases=(
     an_existing_container_is_warned_about_and_refused_without_the_tracker
     home_and_shell_never_call_the_tracker
     a_missing_tracker_is_noted_and_creation_goes_on
+    the_tracker_beside_a_bare_script_name_is_found
+    a_tracker_that_fails_does_not_fail_the_creation
+    the_missing_tracker_note_prints_once
     issue_on_a_running_container_is_refused
     issue_on_a_stopped_container_is_refused_and_not_started
     issue_rebuild_on_a_matching_clone_goes_ahead

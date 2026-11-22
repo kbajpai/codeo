@@ -35,28 +35,32 @@ usage() {
     exit 2
 }
 
-# track <args...>: run the tracker (CODEO_TRACK, else codeo-track.sh beside this script), ignoring its status:
-# a failed record never fails a creation. When the tracker is not beside this script, say so once and go on.
+# The tracker: CODEO_TRACK, else codeo-track.sh beside this script (a bare script name has no slash, so its
+# directory is .).
+script_dir=${BASH_SOURCE[0]%/*}
+[[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+tracker=${CODEO_TRACK:-$script_dir/codeo-track.sh}
 track_noted=0
-track() {
-    local tracker=${CODEO_TRACK:-${BASH_SOURCE[0]%/*}/codeo-track.sh}
-    if [[ ! -f "$tracker" ]]; then
-        if [[ "$track_noted" == 0 ]]; then
-            track_noted=1
-            echo 'codeo-container: note: codeo-track.sh is not beside this script, so nothing was recorded on the issue (codeo update fetches it)' >&2
-        fi
-        return 0
+
+# track_present: succeed when the tracker exists; otherwise say so once per run and fail.
+track_present() {
+    [[ -f "$tracker" ]] && return 0
+    if [[ "$track_noted" == 0 ]]; then
+        track_noted=1
+        echo 'codeo-container: note: codeo-track.sh is not beside this script, so nothing was recorded on the issue (codeo update fetches it)' >&2
     fi
+    return 1
+}
+
+# track <args...>: run the tracker, ignoring its status: a failed record never fails a creation.
+track() {
+    track_present || return 0
     "$BASH" "$tracker" "$@" || true
 }
 
 # track_confirm <N> <yes:0|1>: ask the tracker whether to go on; exit 1 when it says stop.
 track_confirm() {
-    local tracker=${CODEO_TRACK:-${BASH_SOURCE[0]%/*}/codeo-track.sh}
-    if [[ ! -f "$tracker" ]]; then
-        track confirm "$1"
-        return 0
-    fi
+    track_present || return 0
     if [[ "$2" == 1 ]]; then
         "$BASH" "$tracker" confirm "$1" --yes || exit 1
     else
