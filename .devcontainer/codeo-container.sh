@@ -5,10 +5,12 @@
 # repository into it and runs the container's start script in cmd mode (CODEO_CMD_MODE=1).
 #
 #   codeo-container.sh home [--rebuild]
-#   codeo-container.sh issue <N> <branch> [--rebuild]
+#   codeo-container.sh issue <N> <branch> [--rebuild] [--yes]
 #   codeo-container.sh shell home|<N>
 #
 # CODEO_REPO_URL  the repository to build from and clone (default https://github.com/kbajpai/codeo.git)
+# CODEO_TRACK     the tracker (default: codeo-track.sh beside this script). An issue container, its image and volume are
+#                 recorded on the issue, and a duplicate on another host is asked about first (--yes answers it)
 # CODEO_CONTEXT   the .devcontainer directory of a local clone, to build the image from instead of the Git URL (the
 #                 repository is still cloned from CODEO_REPO_URL)
 set -euo pipefail
@@ -27,10 +29,39 @@ die() {
 usage() {
     {
         echo 'usage: codeo-container.sh home [--rebuild]'
-        echo '       codeo-container.sh issue <N> <branch> [--rebuild]'
+        echo '       codeo-container.sh issue <N> <branch> [--rebuild] [--yes]'
         echo '       codeo-container.sh shell home|<N>'
     } >&2
     exit 2
+}
+
+# track <args...>: run the tracker (CODEO_TRACK, else codeo-track.sh beside this script), ignoring its status:
+# a failed record never fails a creation. When the tracker is not beside this script, say so once and go on.
+track_noted=0
+track() {
+    local tracker=${CODEO_TRACK:-${BASH_SOURCE[0]%/*}/codeo-track.sh}
+    if [[ ! -f "$tracker" ]]; then
+        if [[ "$track_noted" == 0 ]]; then
+            track_noted=1
+            echo 'codeo-container: note: codeo-track.sh is not beside this script, so nothing was recorded on the issue (codeo update fetches it)' >&2
+        fi
+        return 0
+    fi
+    "$BASH" "$tracker" "$@" || true
+}
+
+# track_confirm <N> <yes:0|1>: ask the tracker whether to go on; exit 1 when it says stop.
+track_confirm() {
+    local tracker=${CODEO_TRACK:-${BASH_SOURCE[0]%/*}/codeo-track.sh}
+    if [[ ! -f "$tracker" ]]; then
+        track confirm "$1"
+        return 0
+    fi
+    if [[ "$2" == 1 ]]; then
+        "$BASH" "$tracker" confirm "$1" --yes || exit 1
+    else
+        "$BASH" "$tracker" confirm "$1" || exit 1
+    fi
 }
 
 # container_state <name>: print missing, stopped or running.
@@ -45,19 +76,28 @@ container_state() {
     fi
 }
 
-# ensure_container <name> <ref> <rebuild:0|1> <fresh_only:0|1>: leave the container running, creating it
+# ensure_container <name> <ref> <rebuild:0|1> <fresh_only:0|1> <yes:0|1>: leave the container running, creating it
 # (and its image) when missing. --rebuild removes it first; the volumes are never touched. With fresh_only
 # (issue) a container that exists and is not being rebuilt is refused rather than reused.
 ensure_container() {
-    local name=$1 ref=$2 rebuild=$3 fresh_only=$4 state build_context n
+    local name=$1 ref=$2 rebuild=$3 fresh_only=$4 yes=${5:-0} state build_context n="" tracked=0 built=0
+    case "$name" in codeo-[0-9]*) tracked=1; n=${name#codeo-} ;; esac
     state=$(container_state "$name")
     if [[ "$fresh_only" == 1 && "$rebuild" == 0 && "$state" != missing ]]; then
         n=${name#codeo-}
+        if [[ "$tracked" == 1 ]]; then echo "codeo-container: warning: $name already exists on this host ($state)" >&2; fi
         die "$name already exists: enter it with 'bash codeo-container.sh shell $n', rebuild it with 'bash codeo-container.sh issue $n $ref --rebuild', or remove it (docker rm -f $name; docker volume rm $name, once git status in it shows nothing unpushed) to start from a fresh clone"
+    fi
+    if [[ "$tracked" == 1 && ("$state" == missing || "$rebuild" == 1) ]]; then
+        track_confirm "$n" "$yes"
     fi
     if [[ "$rebuild" == 1 && "$state" != missing ]]; then
         docker rm -f "$name"
         state=missing
+        if [[ "$tracked" == 1 ]]; then
+            track mark "$n" container "$name" removed
+            track mark "$n" image "codeo-dev:$name" removed
+        fi
     fi
     case "$state" in
         running) return 0 ;;
@@ -69,12 +109,18 @@ ensure_container() {
     if [[ "$rebuild" == 1 ]] || ! docker image inspect "codeo-dev:$name" >/dev/null 2>&1; then
         build_context=${context:-$repo_url#$ref:.devcontainer}
         docker build -t "codeo-dev:$name" "$build_context"
+        built=1
     fi
     docker run -d --init --name "$name" --hostname "$name" --memory=4g \
         -v "$name:/workspaces" -v codeo-gh:/home/dev/.config/gh -v codeo-git:/home/dev/.config/git \
         -e GIT_CONFIG_GLOBAL=/home/dev/.config/git/config -e CLAUDE_CONFIG_DIR=/workspaces/.claude \
         -e CODEO_CMD_MODE=1 "codeo-dev:$name" sleep infinity
     docker exec -u root "$name" chown dev:dev /workspaces
+    if [[ "$tracked" == 1 ]]; then
+        if [[ "$built" == 1 ]]; then track add "$n" image "codeo-dev:$name"; fi
+        track add "$n" container "$name"
+        track add "$n" volume "$name"
+    fi
 }
 
 # ensure_clone <name> <ref> <check_branch:0|1>: clone the repository at <ref> into /workspaces/<name> unless
@@ -120,10 +166,10 @@ run_start() {
     docker "$@"
 }
 
-# bring_up <name> <ref> <rebuild:0|1> <fresh_only:0|1>: the whole route for one container, shared by home
+# bring_up <name> <ref> <rebuild:0|1> <fresh_only:0|1> [yes:0|1]: the whole route for one container, shared by home
 # and issue (fresh_only is 1 for issue: it refuses an existing container and a clone on another branch).
 bring_up() {
-    ensure_container "$1" "$2" "$3" "$4"
+    ensure_container "$1" "$2" "$3" "$4" "${5:-0}"
     ensure_clone "$1" "$2" "$4"
     run_start "$1"
 }
@@ -152,19 +198,24 @@ cmd_home() {
     bring_up codeo-home "$base_ref" "$rebuild" 0
 }
 
-# cmd_issue <args...>: issue <N> <branch> [--rebuild]. N is a positive integer without a leading zero;
+# cmd_issue <args...>: issue <N> <branch> [--rebuild] [--yes], the flags in either order. N is a positive integer without a leading zero;
 # the branch starts with a letter or digit and holds only letters, digits, . _ / - and no "..".
 cmd_issue() {
-    local rebuild=0
-    case $# in
-        2) ;;
-        3) [[ "$3" == --rebuild ]] || usage; rebuild=1 ;;
-        *) usage ;;
-    esac
-    case "$1" in '' | 0* | *[!0-9]*) usage ;; esac
-    case "$2" in '' | *..* | [!A-Za-z0-9]* | *[!A-Za-z0-9._/-]*) usage ;; esac
+    local rebuild=0 yes=0 arg num branch
+    [[ $# -ge 2 ]] || usage
+    num=$1 branch=$2
+    shift 2
+    for arg in "$@"; do
+        case "$arg" in
+            --rebuild) rebuild=1 ;;
+            --yes) yes=1 ;;
+            *) usage ;;
+        esac
+    done
+    case "$num" in '' | 0* | *[!0-9]*) usage ;; esac
+    case "$branch" in '' | *..* | [!A-Za-z0-9]* | *[!A-Za-z0-9._/-]*) usage ;; esac
     require_docker
-    bring_up "codeo-$1" "$2" "$rebuild" 1
+    bring_up "codeo-$num" "$branch" "$rebuild" 1 "$yes"
 }
 
 # cmd_shell <args...>: shell home|<N>. Opens a login bash in the container's clone, starting the container
