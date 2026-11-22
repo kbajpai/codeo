@@ -441,6 +441,7 @@ done
 
 # The overlap step stops until it is answered before it says what a non-zero exit means, as in qc.
 must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with or without an'
+must_precede 'the overlap skipping sentence comes after the stop sentence' 'The step stops until it is answered' 'An `overlap: skipping #<M>'\''s changed paths` warning'
 
 if ((failures)); then
     echo "$failures case(s) failed"
