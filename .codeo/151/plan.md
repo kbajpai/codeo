@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3: Q8-Q9 answered, the plan is approved and written to `docs/plans/2026-11-21-install-one-command-151-round-3.md` (unstaged), `## Outcome` has its round, and the hand-off is `/codeo:implement`.
+Round 4 (send-back from qc.md round 3): Q10-Q11 are open. Q10 settles the restore command the installer prints for a dropped project install (F19, blocking); Q11 which of F20-F23 this round folds in. No plan is drafted until they are answered.
 
 ## Questions
 
@@ -121,6 +121,34 @@ Fold in all five (F13, F14, F16, F17, F18), as recommended (engineer, in the con
 **Answer:**
 Accept both and document them, as recommended (engineer, in the conversation, 2026-11-21: "I accept all your recommendations").
 
+### Q10 — What restore command does the installer print for a dropped project install (qc.md round 3, F19)?
+
+**Why it matters:** F19 is the round's one blocking finding. The printed command is `install.sh --scope project`, with no `--version`: after a deliberate `--version v1.0.6` run it installs the latest release, which is a replace, so it moves your own copy back to the latest and drops every other install again. The form chosen also changes the README's *Updating* blocks and the tests tied to them.
+**What exists now:** one machine holds one codeo version, so a dropped project can only come back at the version the machine has. Both candidates below were run with real `claude` 2.1.325 on a throwaway configuration, with the machine at v1.0.6 and the project's committed pin at v1.0.7:
+- `claude plugin install codeo@codeo --scope project`, run in the project: `✔ Successfully installed plugin: codeo@codeo (scope: project)`; `claude plugin list --json` then shows the project entry at 1.0.6; `git status --short` is empty.
+- `install.sh --scope project --version v1.0.6`, run in the project: `install: codeo v1.0.6 installed (project scope)`; the project entry is at 1.0.6; `.claude/settings.json` shows as modified, its `ref` rewritten from `v1.0.7` to `v1.0.6`.
+**Options:**
+- *`claude plugin install codeo@codeo --scope project`* (recommended). The same form the local-scope line already prints. It restores the install at the machine's version, cannot start another replace, changes no file, and needs no `install.sh` on disk, which also settles F22 (the line names a script that someone who installed with `curl … | bash` does not have). The project's committed `ref` stays as the team left it; the README says that moving a project's pin is a separate, deliberate `--scope project` run. The cost: after an update the project's file still names the old `ref` until someone runs that, which is the limit Q9 already accepted and *Troubleshooting* documents.
+- *`install.sh --scope project --version <the tag this run installed>`.* Restores at the machine's version and rewrites the project's `ref` to it, a git change someone has to commit or discard; after a downgrade that change moves the team's pin down. F22 stays open (or the line grows to the full `curl … | bash -s -- …` form).
+- *Add `--version` only when the run was given one.* The common update case keeps today's line; a later release between the update and the restore would still make the restore a replace.
+
+**Answer:**
+
+### Q11 — Which of qc.md round 3's non-blocking findings does this round fix (F20-F23)?
+
+**Why it matters:** F19 is the round; these are small, and each one folded in is a task and more diff after three rounds. Left out, they stay known limits for `/codeo:triage`.
+**What each is:**
+- F20: when a replace fails after the marketplace is removed, the dropped installs are never named; the re-run finds nothing to replace. The list is already in hand before the remove, so printing it on the failure path too is a few lines plus a test, and one README sentence.
+- F21: a user-scope replace re-enables a user copy you had disabled without saying so; only the `--scope project` path prints `(it was disabled; it is enabled now)`. A few words on the `codeo vA -> vB (user scope)` line plus a test.
+- F22: the restore line names `install.sh`. Settled by Q10's recommended answer; with another answer it is a wording choice.
+- F23: a usage error or `--help` exits 1 when a prerequisite is also missing, because the prerequisite check runs before the arguments are read, while the header promises exit 2. Fixing it means reading the arguments in the bash-3.2-safe head, before the check.
+**Options:**
+- *Fold in F20, F21 and F23* (recommended), with F22 following Q10. F20 closes the last silent path of the behaviour Q3 asked for; F21 finishes F16; F23 is the only one that moves existing code (argument parsing into the head), and makes `--help` work on a machine that lacks `jq`.
+- *Fold in F20 and F21 only.* F23 becomes a one-line correction of the header comment (a usage error is reported after the prerequisite check).
+- *None.* F19 only; the four stay as known limits.
+
+**Answer:**
+
 ## Notes
 
 **What the trial showed** (`claude` 2.1.325, an empty `CLAUDE_CONFIG_DIR`, real GitHub):
@@ -219,3 +247,4 @@ sequenced:  none
 - 2026-11-21 — planned (round 2): docs/plans/2026-11-21-install-one-command-151-round-2.md · cost: 8m · fable-5-2 364k in + 2.3M cached / 17k out · sonnet-5-5 348k in + 399k cached / 1k out
 - 2026-11-21 — round 3 (send-back from qc.md round 2): Q8-Q9 raised, answered, plan drafted and approved · cost: 3m · sonnet-5-5 67k in + 1.8M cached / 16k out
 - 2026-11-21 — planned (round 3): docs/plans/2026-11-21-install-one-command-151-round-3.md; engineering:system-design and engineering:architecture unavailable, structure applied directly · cost: see line above
+- 2026-11-22 — round 4 (send-back from qc.md round 3): Q10-Q11 raised (the printed restore command; which of F20-F23 to fold in) · cost: 1m · fable-5-2 175k in + 508k cached / 5k out
