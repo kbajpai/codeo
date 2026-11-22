@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Exploration is done (role.sh, `codeo`, `codeo-container.sh`, `codeo-sandbox.sh`, cleanup/close/init skills, `github.sh`, the tests that pin today's `unguarded` and `home` behaviour). Six questions are open; nothing is drafted past them.
+Round 1, answers in. Q1-Q6 were answered "accept all recommendations" in the conversation and are recorded under each question. The plan is drafted in `.codeo/152/plan-draft.md` and awaits approval; nothing is written under `docs/plans/` before that.
 
 What exploration settled, so the questions below are only the open ones:
 
@@ -27,6 +27,7 @@ What exploration settled, so the questions below are only the open ones:
 **Options:** refuse it like a host checkout, with a line that names the folder rule · keep it `unguarded` for containers only, so the break with #70 is avoided (recommended: keep, since the issue's stated rule is about the *host*, and refusing would strand engineers whose container folder is oddly named, with no way forward but renaming) · no preference, you pick.
 
 **Answer:**
+Keep it `unguarded` for containers only (recommended option). Relayed from the engineer in the conversation, 2026-11-22: "Accept all recommendations".
 
 ### Q2 — On the host, which checkouts count as an issue checkout: any checkout holding the workflow lock, or only a folder named `<codename>-<N>`?
 
@@ -34,6 +35,7 @@ What exploration settled, so the questions below are only the open ones:
 **Options:** any host checkout with a lock whose issue matches `.codeo/active` is `issue:<N>` regardless of folder, and the folder rule applies only in containers (recommended) · the folder rule applies on the host too, so a host issue checkout must be named `<codename>-<N>`.
 
 **Answer:**
+Any host checkout holding a lock that matches `.codeo/active` is `issue:<N>` regardless of folder; the folder rule applies only in containers (recommended option). Relayed from the engineer in the conversation, 2026-11-22: "Accept all recommendations".
 
 ### Q3 — Where does the tracking logic live, given the host scripts are downloaded one by one and run with no repository?
 
@@ -44,6 +46,7 @@ What exploration settled, so the questions below are only the open ones:
 - **C.** Put the table logic inline in each of the three host scripts. No new file to download, three copies.
 
 **Answer:**
+Option A: one new `.devcontainer/codeo-track.sh`, `gh api` direct, called by the host scripts and by the `init/host-workflow` overlay (recommended option). Relayed from the engineer in the conversation, 2026-11-22: "Accept all recommendations".
 
 ### Q4 — How does the removal get recorded, given `/codeo:cleanup` prints raw `docker rm -f …; docker volume rm …` and only `codeo rm` is host-aware?
 
@@ -52,6 +55,7 @@ What exploration settled, so the questions below are only the open ones:
 A related call I'm making unless you object: the branch row is marked `deleted` by `/codeo:close` itself right after `git push origin --delete`, through the same tracker script from the issue's container (which has `gh`).
 
 **Answer:**
+Print `codeo rm {N}` from the `removal-command` and `close/host-workflow` overlays; `/codeo:close` marks the branch row `deleted` itself (recommended option, and the related call). Relayed from the engineer in the conversation, 2026-11-22: "Accept all recommendations".
 
 ### Q5 — Overlap with #146 on `README.md` and `CHANGELOG.md`: how do we handle it?
 
@@ -60,6 +64,7 @@ A related call I'm making unless you object: the branch row is marked `deleted` 
 Overlap tokens, quoted verbatim for `overlap.sh`: `#146` `README.md` `CHANGELOG.md`.
 
 **Answer:**
+Proceed and coordinate; leave `tests/install.test.sh` alone (recommended option). Relayed from the engineer in the conversation, 2026-11-22: "Accept all recommendations".
 
 ### Q6 — One pull request, or split the guard from the tracking comment?
 
@@ -67,6 +72,7 @@ Overlap tokens, quoted verbatim for `overlap.sh`: `#146` `README.md` `CHANGELOG.
 **Options:** one PR with the guard tasks first (recommended, matching the issue's single scope and past plans' Q-"one pull request") · two PRs: guard, then tracking, each its own issue/branch (the second would need `/codeo:issue`) · no preference, you pick.
 
 **Answer:**
+One pull request, guard tasks first (recommended option). Relayed from the engineer in the conversation, 2026-11-22: "Accept all recommendations".
 
 ## Notes
 
@@ -76,7 +82,7 @@ My calls, stated so they can be corrected (none changes scope; they go in the pl
 - The row's Host is the host machine's `hostname`; a row on another host is warned about with the line that it is not proof the container still exists.
 - A comment whose table is malformed is reported and left untouched; text outside the table is preserved.
 - `codeo-container.sh` stays bash 3.2 / macOS portable (`date -u +%Y-%m-%dT%H:%M:%SZ`); tests extend the existing stub-`docker`/`gh` patterns rather than touching real engines.
-- New role names stay inside the existing vocabulary; a host clone named `<codename>-home` with no lock on the base branch and no container markers is `home`; off the base branch it is `stale:?`; any other host checkout without a lock is refused with a line naming the `<codename>-home` rule. `CLAUDE_CODE_REMOTE=true`, `doctor` and `setup` stay exempt.
+- One new role name, `stray`, for a host checkout that is neither home nor an issue's (corrects the earlier note that no role names would be added); a host clone named `<codename>-home` with no lock on the base branch and no container markers is `home`; off the base branch it is `stale:?`; any other host checkout without a lock is refused with a line naming the `<codename>-home` rule. `CLAUDE_CODE_REMOTE=true`, `doctor` and `setup` stay exempt.
 - The README gets a host-home section (Claude Code, `gh`, the plugin, git identity), the guard, the tracking comment and a Linux/macOS/Windows-WSL note, with `codeo-home` kept documented as supported; `.devcontainer/README.md`'s role table and the `unguarded` paragraph are rewritten.
 
 ## Outcome
@@ -86,3 +92,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-22 — Q1-Q6 raised · cost: 4m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 220k in + 1.1M cached / 29k out
+- 2026-11-22 — answers Q1-Q6 recorded, plan drafted for review (engineering skills unavailable: structure applied directly) · cost: 10m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 276k in + 2.1M cached / 60k out
