@@ -73,6 +73,15 @@ Name it on the `Config schema` line (engineer, by the question tool in the conve
 
 Intended shape: one plan under `docs/plans/` (`2026-11-22-release-v1-0-8.md`), modelled on `docs/plans/2026-11-18-release-v1-0-7.md`; no reference doc, since nothing is a standing decision.
 
+### Footprint
+
+```
+files:      .claude-plugin/plugin.json, CHANGELOG.md, README.md, tests/install.test.sh, .codeo/config.json, docs/plans/2026-11-22-release-v1-0-8.md, .codeo/146/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
