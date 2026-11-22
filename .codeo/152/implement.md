@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Tasks 1-7 are built, reviewed and fixed, and the build passes. `## Outcome` is not written: `overlap.sh` found that #154 started after this round began and shares files with this branch, which is Q1. The next step is the answer, then `/codeo:implement` again to write the outcome.
+Round 1 is done and written up under `## Outcome`: Tasks 1-7 are complete, Q1 is answered, and nothing is open. The next step is `/codeo:qc`.
 
 ## Questions
 
@@ -26,7 +26,9 @@ Tasks ran through `superpowers:subagent-driven-development` with every implement
 
 Left as minor, not fixed: the `/codeo:init` resume trigger wording in `.codeo/overlays/init.md`; `codeo rm` of a stash is not test-pinned; the T3 and T4 tracker helpers are duplicated across two shipped scripts; test-scaffolding nits; `.devcontainer/README.md:267` still gives the raw `docker rm -f …; docker volume rm …` before a resumed `issue` without naming `codeo rm <N>`; `codeo rm` on a host without `codeo-track.sh` prints one note and leaves the rows `active` until `codeo update`.
 
-#### Round 1 draft (becomes `## Outcome` once Q1 is answered)
+## Outcome
+
+### Round 1
 
 **Built.** All seven tasks of `docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md`:
 - Task 1 — `role.sh`: a host checkout (no container marker) holding a lock is `issue:<N>` in any folder; a `<codename>-home` clone on the base branch is `home`; off the base branch it is `stale:?`; any other host checkout is the new role `stray`. The check table is two-way: home-only skills run only on `home`, lock skills only on `issue:<N>`; a container in an unshaped folder and a hosted web session stay `unguarded`; refusals say "a home checkout" / "an issue's checkout". `tests/role.test.sh` covers every skill in every role, host and container.
@@ -40,7 +42,7 @@ Left as minor, not fixed: the `/codeo:init` resume trigger wording in `.codeo/ov
 
 **Documentation pages changed:** `README.md`, `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md`, `docs/extension-points.md` (the `cleanup/removal-command` paragraph), as planned.
 
-**Base branch.** `sync-main.sh` merged `origin/main` (one commit, the #146 pin) at the start of the round; no `also changed on main` lines. ``overlap.sh` printed nothing at the start of the round; at the end it printed #154's overlap, raised as Q1.
+**Base branch.** `sync-main.sh` merged `origin/main` (one commit, the #146 pin) at the start of the round; no `also changed on main` lines. ``overlap.sh` printed nothing at the start of the round; at the end it printed #154's overlap, raised as Q1 and answered proceed and coordinate.
 
 **Build.** The one configured suite (`shell`) has build command `true`; it exited 0. No shared environment is configured, so there is no lease and no deployment. The implementers each ran `bash tests/run.sh` (`all cases passed`) at their task's end, and the final reviewer ran it once on the whole branch.
 
@@ -49,10 +51,9 @@ Left as minor, not fixed: the `/codeo:init` resume trigger wording in `.codeo/ov
 - `.sbx/README.md` keeps the phrase "`codeo rm` replaces the `docker rm`" that `tests/sandbox.test.sh` pins; the sentence was reworded to stay true.
 - The plan's Task 7 `CHANGELOG.md` field line `Config schema: 1 (unchanged)` was written as the plan said; nothing else in `skills/` changed (none was needed).
 
-## Outcome
-
-_Pending — written at the hand-off._
+**Q1 (overlap with #154).** Answered proceed and coordinate: `overlap.sh` prints nothing now that the pair is raised, and the branch already contains `origin/main` (`sync-main.sh` merged nothing new).
 
 ## Log
 
 - 2026-11-22 — Tasks 1-7 done through subagent-driven-development (sonnet), final review fix wave merged; built: ok; Q1 raised (overlap with #154), outcome pending · cost: 155m · sonnet-5-5 1.3M in + 44.4M cached / 246k out
+- 2026-11-22 — Q1 answered (proceed and coordinate); Round 1 written up; built: ok · cost: 0m · sonnet-5-5 829 in + 689k cached / 916 out
