@@ -1445,7 +1445,7 @@ t_update_replaces_three() {
     update_setup "$current"
     cm_run update
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
-    [[ "$cm_out" == "updated codeo and both scripts" ]] || fail "stdout: $cm_out"
+    [[ "$cm_out" == "updated codeo and its three scripts" ]] || fail "stdout: $cm_out"
     grep -q 'new codeo-container.sh' "$cm_home/codeo-container.sh" || fail "container script not replaced"
     grep -q 'new codeo-sandbox.sh' "$cm_home/codeo-sandbox.sh" || fail "sandbox script not replaced"
     grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not replaced"

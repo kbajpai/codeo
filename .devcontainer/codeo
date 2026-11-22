@@ -748,7 +748,7 @@ cmd_update() {
     mv -f "$upd_new" "$self" ||
         die "update failed part-way: all three scripts are new, codeo is still old; run codeo update again to finish"
     upd_new=""
-    echo "updated codeo and both scripts"
+    echo "updated codeo and its three scripts"
 }
 
 main() {
