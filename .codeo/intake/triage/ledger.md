@@ -184,9 +184,10 @@
 | `qc:145:F1-F3` | #145 non-blocking QC findings: triage step reference, inflight test date, inflight comments | filed #154 | 2026-11-21 |
 | `qc:118:F1-F6` | #118 non-blocking QC findings (test label, concurrent-beats case, handoff/live.sh wording) | already #138 | 2026-11-21 |
 | `issue:154` | #149 and #145 leftovers; filed 2026-11-21, board Status `Backlog` | leave in the backlog | 2026-11-21 |
-| `issue:152` | Evaluate running the home role on the host; filed 2026-11-21, board Status `Backlog` | leave in the backlog | 2026-11-21 |
+| `issue:152` | Run the home role on the host with a strict role guard and issue tracking comment (rewritten 2026-11-22 from an evaluation) | ready | 2026-11-22 |
 | `qc:138:F22-F23-F25` | #138's live-signal leftovers: fetch collision on equal labels, leftover `codeo-live/*` branches, label changing with the session id | filed #157 | 2026-11-22 |
 | `issue:157` | Live-session signal leftovers from #138; filed 2026-11-22, board Status `Backlog` | leave in the backlog | 2026-11-22 |
 | `qc:151:installer-F12-F20-F22-F26-F27` | #151 installer failure-path findings: recovery line names no tag, unusable restore command, undetected dropped installs | dismissed — engineer's call, run 17 | 2026-11-22 |
 | `qc:151:nits-F4-F5-F6-F8-F9-F13-F14-F17-F25` | #151 README/CHANGELOG wording and test-strength nits | dismissed — engineer's call, run 17 | 2026-11-22 |
 | `qc:151:F7-F15` | "Latest release" is the highest `vX.Y.Z` tag; idempotence compares `plugin.json` with the tag | deferred | 2026-11-22 |
+| `parked:146:2026-11-22` | #146 In progress, live session on codeo-146; v1.0.8 shipped via release/v1.0.8 (#158), feat/release-v1-0-8-once has no PR | deferred | 2026-11-22 |
