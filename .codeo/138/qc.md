@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 is written: **clear**, forward to `/codeo:close` (no blocking finding; the hosted check settled criteria 1 and 4; F21-F25 non-blocking). Earlier rounds follow. Round 2 is written: **back to `/codeo:plan`** (F12 the lock take undoes a stash or abandon, F13 the docs for other projects). Round 1 (below) was also back to `/codeo:plan`; its state follows. Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
+Round 4 is written: **clear**, forward to `/codeo:close` (F21 fixed; F22-F25 non-blocking, later work). Round 3 was clear too, before the F21 send-back from `close.md`. Earlier rounds follow. Round 2 is written: **back to `/codeo:plan`** (F12 the lock take undoes a stash or abandon, F13 the docs for other projects). Round 1 (below) was also back to `/codeo:plan`; its state follows. Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
 
 ## Questions
 
@@ -277,6 +277,46 @@ What that settles: criterion 1 (the workflow shows live in `inflight.sh --live` 
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+
+### Round 4 — 2026-11-22
+
+(re-run after `implement.md` round 4, the send-back from `close.md` round 2 for F21; the build under review is `48e8141`)
+
+**Sync.** `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0; `bash scripts/overlap.sh 138`: nothing.
+
+**Scope.** `git diff origin/main...HEAD --stat`: 21 files, 2059 insertions, 48 deletions. `bash scripts/scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: `.claude/settings.json`, `.codeo/138/…`, `CHANGELOG.md`). No environment is configured. Since round 3's build: `git diff --stat 9730337..HEAD -- . ':!.codeo'` and `git diff --stat d08e357..HEAD -- . ':!.codeo'` (the build the hosted session ran) both print only `CHANGELOG.md | 2 +-`.
+
+**Build and tests.** The `shell` suite's `build` is `true`: rc 0. `bash tests/run.sh` (whole): last line `all cases passed`, `rc=0`, no `FAIL` line.
+
+**Footprint.** `bash scripts/overlap.sh --outside 138`: nothing. `overlay.sh qc invariants-extra` and `qc wiki-rules`: exit 3 (none); no invariants file; no wiki module.
+
+**Documentation check.** `CHANGELOG.md:9` now ends "The config schema is unchanged. (#138)", which agrees with the `Shared state:` line (`CHANGELOG.md:6`) that names the `codeo-live/` namespace; F21 is fixed. `docs/handoff.md` is unchanged since round 3 and matches the code (the reviewer checked it point by point and found nothing untrue).
+
+**Hosted evidence.** Round 3's hosted run (2026-11-22, on `d08e357`) is the evidence for criteria 1, 4 and 5; the only change since that build outside `.codeo/` is the one-line `CHANGELOG.md` edit above, which no code reads. `git ls-remote origin 'refs/heads/codeo-live/*'` still lists `codeo-live/138/web-01Sa1Zqb` (`39a6890`, beaten again since round 3's `80aa47f`) and `codeo-live/138/web-01Sa1Zqc`.
+
+**Independent review** (opus, `QC review:`, the seven criteria as its requirements; quoted in plain text, not this round's verdict): one Important, two Minor; all seven criteria met; "I found nothing untrue in the docs". Its three findings are round 3's F22, F24 and F23, already classified; the reviewer's "Important" for the fetch collision does not change that, since Q3 (a) made it later work.
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Shows live in `inflight.sh --live` on another clone | met | round 3's hosted run on `d08e357` (code unchanged since, per the diff above); `fetch_maps_web_branches_to_signals` |
+| 2 | No write that returned 403 in #112's run | met | `web_beat_publishes_a_branch_not_a_live_ref`; `scripts/live.sh` skips the REST fallback and the delete for web |
+| 3 | Feature branch tip unchanged | met | the same case compares `refs/heads/feat/x` before and after |
+| 4 | Publishes without a manual `beat`; the trigger is present in a web session | met | round 3's hosted run (with its stated limits); `hook_takes_the_lock_in_a_web_session_when_none_exists`, `settings_beat_hook_takes_the_lock_and_publishes` |
+| 5 | Names the engineer's login and `web-<8>` | met | round 3's hosted signal (`user: kbajpai`, `machine: web-01Sa1Zqb`); `web_machine_*`, `user_env_login_wins`, `web_user_*` |
+| 6 | `docs/handoff.md` matches what a web session does | met | `docs/handoff.md` against `hooks/live-signal.sh`, `scripts/lock.sh`, `scripts/live.sh`, `.claude/settings.json` |
+| 7 | Tests cover the web behaviour, including the lock with and without a session id | met | `hook_takes_the_lock_in_a_web_session_when_none_exists`, `hook_without_a_session_id_takes_a_lock_with_session_unknown`, the skip-parked cases in `tests/lock.test.sh` |
+
+**Findings:**
+- **F21 — fixed by `119444a`.** `CHANGELOG.md:9` no longer contradicts the `Shared state:` line.
+- **F22 — non-blocking; later work.** The fetch collision on equal labels (`scripts/live.sh` fetch refspecs); the reviewer reproduced `fatal: Cannot fetch both … to refs/codeo/live/5/web-abc` (rc 128) and graded it Important. Unchanged from round 3.
+- **F23 — non-blocking; later work.** Leftover `codeo-live/*` branches and CI on every beat in a project with `on: push` for all branches; the docs do not warn about the CI trigger. Unchanged from round 3.
+- **F24 — non-blocking; the plan's.** `timeout 8` around `lock.sh take web` can cut a checkout short. Unchanged from round 3.
+- **F25 — non-blocking; later work.** A session's label changes when its id does. Unchanged from round 3.
+
+**Later work, to file with `/codeo:issue` in the home checkout** (it refuses here): F22, F23 and F25. No issue number was filed by this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-21 — round 1 stopped at step 10: build and the full suite pass, review in, Q1-Q3 raised · cost: 6m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 31k in + 624k cached / 3k out
@@ -286,3 +326,4 @@ What that settles: criterion 1 (the workflow shows live in `inflight.sh --live` 
 - 2026-11-21 — round 3 stopped at step 10: build and whole suite pass (one clock-boundary flake in an untouched test, rerun clean), review in, Q5 raised for the hosted check; no verdict · cost: 12m · opus-5-5 180k in + 2M cached / 16k out · sonnet-5-5 110k in + 823k cached / 3k out
 - 2026-11-21 — Q5 recorded from the conversation (a); waiting for the hosted-session outputs; no verdict · cost: 1m
 - 2026-11-22 — round 3 written: clear, forward to /codeo:close (F21-F25 non-blocking); hosted check run and settled criteria 1 and 4 · cost: 451m · opus-5-5 180k in + 2M cached / 16k out · sonnet-5-5 237k in + 2.6M cached / 20k out
+- 2026-11-22 — round 4 written: clear, forward to /codeo:close (F21 fixed; F22-F25 non-blocking) · cost: 7m · opus-5-5 274k in + 1.6M cached / 15k out
