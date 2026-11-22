@@ -85,6 +85,15 @@ My calls, stated so they can be corrected (none changes scope; they go in the pl
 - One new role name, `stray`, for a host checkout that is neither home nor an issue's (corrects the earlier note that no role names would be added); a host clone named `<codename>-home` with no lock on the base branch and no container markers is `home`; off the base branch it is `stale:?`; any other host checkout without a lock is refused with a line naming the `<codename>-home` rule. `CLAUDE_CODE_REMOTE=true`, `doctor` and `setup` stay exempt.
 - The README gets a host-home section (Claude Code, `gh`, the plugin, git identity), the guard, the tracking comment and a Linux/macOS/Windows-WSL note, with `codeo-home` kept documented as supported; `.devcontainer/README.md`'s role table and the `unguarded` paragraph are rewritten.
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/role.sh, .devcontainer/codeo-track.sh, .devcontainer/codeo-container.sh, .devcontainer/codeo, .devcontainer/README.md, .sbx/codeo-sandbox.sh, .sbx/README.md, scripts/cleanup.sh, skills/**, .codeo/overlays/**, docs/extension-points.md, docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md, README.md, CHANGELOG.md, tests/**, .codeo/152/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
