@@ -2530,11 +2530,13 @@ session_title_hooks_are_registered() {
     local cmd='f="${CLAUDE_PROJECT_DIR}/.devcontainer/scripts/session-title.sh"; [ -f "$f" ] && bash "$f" || true' hook
     hook="$(jq -cn --arg c "$cmd" '{type:"command",command:$c,timeout:10}')"
     jq -e '.enabledPlugins["codeo@codeo"] == true' "$f" >/dev/null || fail "codeo plugin not enabled"
-    jq -e '.hooks | has("SessionStart") and has("UserPromptSubmit") and length == 2' "$f" >/dev/null || fail "hook events differ"
-    jq -e --argjson hook "$hook" '.hooks.SessionStart == [{matcher:"startup|resume|fork", hooks:[$hook]}]' "$f" >/dev/null \
-        || fail "SessionStart hook differs"
-    jq -e --argjson hook "$hook" '.hooks.UserPromptSubmit == [{hooks:[$hook]}]' "$f" >/dev/null \
-        || fail "UserPromptSubmit hook differs"
+    jq -e '.hooks | has("SessionStart") and has("UserPromptSubmit")' "$f" >/dev/null || fail "SessionStart or UserPromptSubmit hook event missing"
+    jq -e --argjson hook "$hook" '.hooks.SessionStart[0] == {matcher:"startup|resume|fork", hooks:[$hook]}' "$f" >/dev/null \
+        || fail "SessionStart first group is not the session-title hook"
+    jq -e --argjson hook "$hook" '.hooks.UserPromptSubmit[0] == {hooks:[$hook]}' "$f" >/dev/null \
+        || fail "UserPromptSubmit first group is not the session-title hook"
+    jq -e --argjson hook "$hook" '[.hooks[][].hooks[] | select(. != $hook) | .command] | all(contains("CLAUDE_CODE_REMOTE"))' "$f" >/dev/null \
+        || fail "a hook other than session-title is not gated on CLAUDE_CODE_REMOTE"
 }
 
 # The registered command runs the script when it is there and is silent, exit 0, when it is not.

@@ -9,6 +9,11 @@
 #   lock.sh take <container|web|local> [--sandbox <name>] [session-id]
 #       Writes $CODEO_STATE_DIR/active from the working tree's dossier and prints what it did, or
 #       a TODO line when it could not. Never fails the caller.
+#       With CODEO_LOCK_SKIP_PARKED=1 in the environment it takes no lock, and says so in a TODO
+#       line, when the dossier it found is parked by claim.sh's rule: more park headings
+#       (park_re) in <state>/<N>/close.md than resume lines (resume_re) in <state>/<N>/init.md, both
+#       trimmed of trailing whitespace, an absent file counting 0. Decided before any web checkout.
+#       Unset, or anything else, it behaves as above.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
@@ -20,6 +25,17 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 state_rel=${CODEO_STATE_DIR#"$CODEO_PROJECT_ROOT"/}
 
 say() { echo "lock: $*"; }
+
+# The park rule of claim.sh --stash-live (same regexes and trimming), read from the working tree:
+# parked while the park headings in <dossier>/close.md outnumber the resume lines in <dossier>/init.md.
+park_re='^### Round [0-9]+ — (.+ — )?(stashed|abandoned)([^[:alnum:]].*)?$'
+resume_re='^- .* — resumed: by .* after the (stash|abandon) of '
+is_parked() {
+    local parks=0 resumes=0
+    [[ ! -f $1/close.md ]] || parks=$(sed 's/[[:space:]]*$//' "$1/close.md" | grep -cE "$park_re" || true)
+    [[ ! -f $1/init.md ]] || resumes=$(sed 's/[[:space:]]*$//' "$1/init.md" | grep -cE "$resume_re" || true)
+    ((parks > resumes))
+}
 
 # The issue whose init.md names <branch>: the live dossier at <state>/<N>/ first, else one
 # archived under done/ by close while its PR is open — but only an archive the base branch does
@@ -60,6 +76,10 @@ take() {
         # is checked out: fetch and check it out first, so every later commit and push lands on
         # the issue's branch rather than whatever harness-named branch the session started on.
         mapfile -t live_dirs < <(find "$CODEO_STATE_DIR" -mindepth 1 -maxdepth 1 -type d -name '[0-9]*' 2>/dev/null)
+        if [[ ${CODEO_LOCK_SKIP_PARKED:-} == 1 ]] && ((${#live_dirs[@]} == 1)) && is_parked "${live_dirs[0]}"; then
+            echo "lock: TODO — #$(basename "${live_dirs[0]}") is stashed or abandoned: no lock taken" >&2
+            return 0
+        fi
         if ((${#live_dirs[@]} == 1)) && [[ -f "${live_dirs[0]}/init.md" ]]; then
             dossier_branch=$(sed -n 's/^| Branch | `\([^`]*\)`.*/\1/p' "${live_dirs[0]}/init.md" | head -n1)
             current=$(git branch --show-current)
@@ -141,6 +161,11 @@ take() {
         find_issue "$branch"
         if ((${#found[@]} != 1)); then
             todo+=("no single init.md names branch $branch (found ${#found[@]}): run init for the issue, and bind this host to the branch it pushes")
+        elif n=$(basename "$(dirname "${found[0]}")") &&
+            [[ ${CODEO_LOCK_SKIP_PARKED:-} == 1 ]] && is_parked "$(dirname "${found[0]}")"; then
+            # Opt-in, for a session whose hook retakes the lock: close --stash and an abandon leave
+            # the dossier at <state>/<N>/ with no lock, and a retake would undo them.
+            todo+=("#$n is stashed or abandoned: no lock taken")
         else
             n=$(basename "$(dirname "${found[0]}")")
             {
