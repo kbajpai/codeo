@@ -1587,6 +1587,18 @@ scenario_lines() {
             two_projects
             seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
             in_run --scope project ;;
+        user-replace-disabled)
+            seed_superpowers
+            seed_codeo 1.0.6
+            jq 'map(if .id == "codeo@codeo" then .enabled = false else . end)' "$STUB_DIR/list.json" >"$STUB_DIR/list.new" \
+                && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
+            in_run ;;
+        replace-add-fails-with-drops)
+            local pa pb
+            two_projects
+            seed_local 1.0.6 "$in_dir/pc"
+            : >"$STUB_DIR/add-fail"
+            in_cwd="$in_dir/home" in_run ;;
         replace-add-fails)
             seed_superpowers
             seed_codeo 1.0.6
@@ -1604,8 +1616,8 @@ t_readme_install_blocks_match_the_script() {
     local s all="" block="" line nblocks=0 found pat
     local -a ok_names=(fresh-user rerun-user user-replace-down user-replace-up fresh-project rerun-project
         user-replace-in-pinned-project project-replace-with-user-copy user-replace-two-projects
-        project-replace-other-project user-replace-local restore-project)
-    local -a fail_names=(replace-add-fails project-replace-user-install-fails project-replace-project-install-fails)
+        project-replace-other-project user-replace-local restore-project user-replace-disabled replace-add-fails-with-drops)
+    local -a fail_names=(replace-add-fails replace-add-fails-with-dropsproject-replace-user-install-fails project-replace-project-install-fails)
     local -a got_blocks=()
     for s in "${ok_names[@]}"; do
         got_blocks+=("$(scenario_lines "$s")")
@@ -1619,9 +1631,9 @@ t_readme_install_blocks_match_the_script() {
             nblocks=$((nblocks + 1))
             block=${block%$'\n'}
             found=0
-            block=$(printf '%s' "$block" | sed -E 's/ for [^ ]+ \(/ for <path> (/')
+            block=$(printf '%s' "$block" | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/is no longer installed: .*; run this again$/is no longer installed: <msg>; run this again/')
             for s in "${got_blocks[@]}"; do
-                [[ $(printf '%s' "$s" | sed -E 's/ for [^ ]+ \(/ for <path> (/') != "$block" ]] || found=1
+                [[ $(printf '%s' "$s" | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/is no longer installed: .*; run this again$/is no longer installed: <msg>; run this again/') != "$block" ]] || found=1
             done
             ((found)) || fail "README block matches no scenario:"$'\n'"$block"
             block=""
@@ -1656,6 +1668,8 @@ t_readme_has_no_offered_again_claim() {
 # project install and for a dropped local one (the path and version in each stand for the project's own).
 t_readme_names_the_restore_command() {
     local s line norm
+    grep -qF 'claude plugin install codeo@codeo --scope project' "$repo/README.md" || fail "README lacks the project restore command"
+    ! grep -qF 'install.sh --scope project there' "$repo/README.md" || fail "README still restores a project with the installer"
     for s in user-replace-two-projects user-replace-local; do
         line=$(scenario_lines "$s" | grep -F 'restore it' | tail -n 1)
         [[ -n $line ]] || fail "scenario $s prints no restore line"
@@ -1664,6 +1678,15 @@ t_readme_names_the_restore_command() {
             | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/, v[0-9.]+\)/, vX)/' | grep -qxF "$norm" \
             || fail "README does not quote: $line"
     done
+}
+
+# t_readme_restore_blocks_do_not_replace: no README code block that starts with "$ cd <project>" runs the
+# installer (a restore command is not a replace).
+t_readme_restore_blocks_do_not_replace() {
+    local bad
+    bad=$(awk '/^```/ { if (f) { if (cd && inst) print blk; blk = ""; cd = 0; inst = 0 } f = !f; next }
+        f { blk = blk $0 "\n"; if ($0 ~ /^\$ cd /) cd = 1; if ($0 ~ /install\.sh/) inst = 1 }' "$repo/README.md")
+    [[ -z $bad ]] || fail "a README restore block runs the installer: $bad"
 }
 
 cases=(
@@ -1760,6 +1783,7 @@ cases=(
     t_readme_install_blocks_match_the_script
     t_readme_has_no_offered_again_claim
     t_readme_names_the_restore_command
+    t_readme_restore_blocks_do_not_replace
 )
 
 for current in "${cases[@]}"; do
