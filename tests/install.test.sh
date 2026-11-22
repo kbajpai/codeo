@@ -838,6 +838,29 @@ t_project_replace_says_the_disabled_user_copy_is_enabled() {
         || fail "stdout: $in_out"
 }
 
+t_user_replace_says_the_disabled_copy_is_enabled() {
+    in_setup user_replace_off
+    printf 'a\trefs/tags/v1.0.7\nb\trefs/tags/v1.0.6\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.6
+    jq 'map(if .id == "codeo@codeo" then .enabled = false else . end)' "$STUB_DIR/list.json" >"$STUB_DIR/list.new" \
+        && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope) (it was disabled; it is enabled now)'* ]] || fail "stdout: $in_out"
+}
+
+t_user_replace_of_an_enabled_copy_says_nothing_more() {
+    in_setup user_replace_on
+    printf 'a\trefs/tags/v1.0.7\nb\trefs/tags/v1.0.6\n' >"$STUB_DIR/tags"
+    seed_superpowers
+    seed_codeo 1.0.6
+    in_run
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
+    [[ $in_out == *'install: codeo v1.0.6 -> v1.0.7 (user scope)'$'\n'* ]] || fail "stdout: $in_out"
+    [[ $in_out != *'it was disabled'* ]] || fail "enabled copy called disabled: $in_out"
+}
+
 t_nonnumeric_test_bash_version_is_ignored() {
     local v
     for v in abc 4.x x.3 4.3.1 .3 4. " 4.3" " 4.2" ""; do
@@ -1612,6 +1635,8 @@ cases=(
     t_dropped_project_that_no_longer_exists_is_named
     t_no_replace_no_dropped_lines
     t_project_replace_says_the_disabled_user_copy_is_enabled
+    t_user_replace_says_the_disabled_copy_is_enabled
+    t_user_replace_of_an_enabled_copy_says_nothing_more
     t_nonnumeric_test_bash_version_is_ignored
     t_head_uses_no_bash4_syntax
     t_project_replace_moves_the_user_copy

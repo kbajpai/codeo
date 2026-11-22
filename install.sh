@@ -292,7 +292,7 @@ dropped_installs() {
 # from $HOME, project-scope calls from the project's top level. A failure after the remove leaves codeo
 # uninstalled, and says so.
 replace_codeo() {
-    local old=$1 user_e=$2 out restored= dropped line user_on
+    local old=$1 user_e=$2 out restored= dropped line user_on=
     # The list is read first: the remove empties it.
     dropped=$(dropped_installs) || exit 1
     # Always from $HOME: inside a git repository, remove rewrites its tracked .claude/settings.json.
@@ -312,10 +312,14 @@ replace_codeo() {
         out=$(claude_at user plugin install codeo@codeo --scope user 2>&1) || replace_failed "$out" "$user_e" "$restored" user
     fi
     changed=1
-    say "codeo $old -> $tag ($scope scope)"
+    [[ -z $user_e ]] || read -r _ user_on _ <<<"$user_e"
+    if [[ $scope == user && $user_on == false ]]; then
+        say "codeo $old -> $tag (user scope) (it was disabled; it is enabled now)"
+    else
+        say "codeo $old -> $tag ($scope scope)"
+    fi
     if [[ $scope == project ]]; then
         if [[ -n $user_e ]]; then
-            read -r _ user_on _ <<<"$user_e"
             if [[ $user_on == false ]]; then
                 say "your user-scope codeo moved to $tag too: one machine holds one codeo version (it was disabled; it is enabled now)"
             else
