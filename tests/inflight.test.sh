@@ -988,10 +988,12 @@ assert_contains "line" "  touched:   2026-11-15 (init.md log), 2 days ago" "$(t_
 case_desc="touched_log_ties_updated"
 assert_contains "line" "  touched:   2026-11-15 (plan.md log), 2 days ago" "$(t_block 28)"
 
-# touched: — a branch tip whose committer date does not parse; the dossier dates are still read.
+# touched: — a branch tip whose committer date does not parse; the dossier dates are still read. The tip
+# is dated 2026-11-16, newer than the dossier's Updated row (2026-11-15): with the wrapper applied the
+# line reads the dossier, and a parsable tip would read `2026-11-16 (branch tip), 1 days ago` instead.
 printf '{"number":29,"labels":[],"assignees":[]}' > "$stub_dir/GET_repos_o_n_issues_29.json"
 touched_branch "$t_origin" feat/t29
-raw_dossier "$t_origin" 29 plan 2026-11-10 "# plan
+raw_dossier "$t_origin" 29 plan 2026-11-16 "# plan
 
 | Updated | 2026-11-15 |"
 git -C "$t_origin" checkout -q main
