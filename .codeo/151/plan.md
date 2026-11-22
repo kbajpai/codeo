@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 (send-back from qc.md round 3): Q10-Q11 are open. Q10 settles the restore command the installer prints for a dropped project install (F19, blocking); Q11 which of F20-F23 this round folds in. No plan is drafted until they are answered.
+Round 4 (send-back from qc.md round 3): Q10-Q11 answered as recommended; the draft is `.codeo/151/plan-draft.md`, awaiting your approval before the plan is written.
 
 ## Questions
 
@@ -133,6 +133,7 @@ Accept both and document them, as recommended (engineer, in the conversation, 20
 - *Add `--version` only when the run was given one.* The common update case keeps today's line; a later release between the update and the restore would still make the restore a replace.
 
 **Answer:**
+Print `claude plugin install codeo@codeo --scope project`, as recommended (engineer, in the conversation, 2026-11-22: "I accept all your recommendations"). F22 is settled by it.
 
 ### Q11 — Which of qc.md round 3's non-blocking findings does this round fix (F20-F23)?
 
@@ -148,6 +149,7 @@ Accept both and document them, as recommended (engineer, in the conversation, 20
 - *None.* F19 only; the four stay as known limits.
 
 **Answer:**
+Fold in F20, F21 and F23, with F22 following Q10, as recommended (engineer, in the conversation, 2026-11-22: "I accept all your recommendations").
 
 ## Notes
 
