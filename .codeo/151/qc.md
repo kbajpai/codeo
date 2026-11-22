@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 stopped at step 2: `origin/main` (#138's merge, `ae7b8d6`) conflicts with this branch in `CHANGELOG.md`, so the verdict is back to `/codeo:implement` to merge it (F24). Round 4's implementation (F19-F23) is not yet checked. Criterion 6 stays the engineer's check at `/codeo:close`.
+Round 5 done: the pass ran to the end on the merged tree, no finding is blocking, and the verdict is clear. F25-F27 are non-blocking (a README sentence that reads as unconditional, retry advice that names no release tag, the current project named with a restore command that cannot work yet). Criterion 6 stays the engineer's check at `/codeo:close`.
 
 ## Questions
 
@@ -250,6 +250,56 @@ The pass stopped at step 2: the base branch does not merge cleanly into this bra
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 5 — 2026-11-22
+
+No question was open; the pass ran to the end on the tree after round 5's merge (`d233874`).
+
+**Commands run this pass, and their output**
+- `bash .devcontainer/scripts/role.sh --check qc`: exit 0. The lock names #151 on `docs/install-codeo-one-command-document`, the branch checked out, with a clean tree.
+- `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main` (round 4's `d138fa7` merged #138's pull request, `ae7b8d6`, with `CHANGELOG.md` resolved; re-checked below).
+- `bash scripts/overlap.sh 151` and `bash scripts/overlap.sh --outside 151`: no output.
+- `bash scripts/scope.sh origin/main HEAD`: `suite.shell=true`. `git diff origin/main...HEAD --stat`: 14 files changed, 4047 insertions(+), 44 deletions(-).
+- Build: the `shell` suite's `build` is `true`; exit 0. Tests: `bash tests/run.sh` (the whole suite, 54 files, foreground) ended `all cases passed`, exit 0; 94 install cases are registered. The reviewer's own full run (6m26s) ended `all cases passed` too.
+- `CHANGELOG.md` after the merge: against `origin/main` the only change is this branch's one added bullet (`git diff ae7b8d6 HEAD -- CHANGELOG.md` shows one `+` bullet and one blank line, no `-` line); `main`'s `Shared state:` line and #138's bullet are intact, and the header's three lines are `main`'s. Files `main` also changed (`hooks/live-signal.sh`, `scripts/live.sh`, `scripts/lock.sh`, `docs/handoff.md`, `skills/triage/SKILL.md` and their tests) are none of this branch's.
+- Moved text against `git show origin/main:README.md`: `same: Tests`, `same: Checking a dossier`, `same: Replaying finished dossiers`, `same: Dev container`; none of the four headings is left in `README.md`, which has nine `##` sections (Requirements, Installing, Setting a project up, Your first workflow, The skills, Updating, Uninstalling, Troubleshooting, Contributing).
+- `grep` of `README.md` for `offered again`, `offered them again` and `install.sh --scope project there`: no match.
+- Real runs (claude 2.1.325, throwaway `HOME` and `CLAUDE_CONFIG_DIR`, scratch repositories):
+  - No tools on `PATH` (only a `bash` symlink): `--help` printed `install: usage: install.sh [--version vX.Y.Z] [--scope user|project]`, exit 0; `--bogus` printed `install: unknown option: --bogus` and the usage line, exit 2; `--scope user` printed `jq`, `git`, `gh` and `claude (Claude Code)` each `is not installed` and `install: nothing was installed. …`, exit 1.
+  - Downgrade: a project pinned at v1.0.7, then `install.sh --version v1.0.6` from `$HOME`: `install: codeo v1.0.7 -> v1.0.6 (user scope)` and `install: codeo is no longer installed for <team> (project scope, v1.0.7); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it`. The printed command in the project: `Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: project)`; `claude plugin list --json` listed user 1.0.6 and project 1.0.6, `git status --short` was empty, `"ref": "v1.0.7"` unchanged.
+  - Then `install.sh --scope project` in that restored project, with the machine at v1.0.6 and the latest release v1.0.7: `install: release v1.0.7`, `install: codeo v1.0.6 -> v1.0.7 (project scope)`, `install: your user-scope codeo moved to v1.0.7 too: …`, project and user both at 1.0.7 (F25 below).
+  - Failed replace (a `claude` wrapper failing only `plugin marketplace add kbajpai/codeo@*`, project A installed, a disabled user copy): exit 1; stdout `install: codeo is no longer installed for <app> (project scope, v1.0.6); … run claude plugin install codeo@codeo --scope project there to restore it`; stderr `install: codeo is no longer installed: Error: network unreachable; run this again`. The re-run printed `install: codeo v1.0.7 installed (user scope)` and the list showed the user copy enabled.
+  - Disabled user copy, user-scope replace: `install: codeo v1.0.7 -> v1.0.6 (user scope) (it was disabled; it is enabled now)`; the list then showed `{"version":"1.0.6","scope":"user","enabled":true}`.
+- Independent review (opus): its report is quoted in plain text by finding below. It ran the README's fresh, update, downgrade, restore, failure, disabled-copy, `--scope project`, uninstall and `setup.sh` blocks against real `claude`, found each matches, and judged the branch ready to merge with two Minor findings.
+
+**Earlier rounds' findings, recapped:** F10 and F11 (blocking in round 2) — fixed by `766caf8`, `1f94e21`, `b990804` and `7f7d281`. F19 (blocking in round 3) — fixed by `869b2c5`, `6f8b572` and `64a4d4f`: the restore command a dropped project install prints is `claude plugin install codeo@codeo --scope project`, which restored the install and left `git status` empty and the committed `ref` untouched in both the downgrade case (reproduced above) and the update case (the reviewer's run). F20 (`06a1924`), F21 (`4e31dd3`), F22 (`869b2c5`) and F23 (`76f9aab`) are fixed: the failed replace prints the dropped lines before the error, the disabled-copy line is printed at user scope, the restore line names no `install.sh`, and `--help`/`--bogus` exit 0/2 with `jq` and `gh` missing (all reproduced above). F24 (blocking in round 4) — fixed by `d138fa7`.
+
+**Acceptance criteria**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| 1. One command, shown in the README, installs codeo and `superpowers`; `claude plugin list` shows both enabled | met | `t_fresh_user_install`, `t_readme_install_command_runs`; the reviewer's real fresh run and `cat install.sh \| bash -s -- --version v1.0.6` run |
+| 2. Run again at the same version: nothing changed, and it says so | met | `t_rerun_changes_nothing`, `t_project_rerun_changes_nothing`; the reviewer's real re-run `install: nothing changed - codeo v1.0.7, project scope, superpowers 7.0.2` |
+| 3. A release tag installs that tag; none installs the latest; the version is printed | met | `t_given_tag_installed`, `t_latest_is_highest_release`, `t_bare_version_gets_v`, `t_missing_tag_stops`; real `--version v1.0.6` runs above, and the reviewer's `release v9.9.9 not found in kbajpai/codeo` |
+| 4. Default scope user; project scope installs there and the command says which scope it used | met | `t_default_scope_is_user`, `t_project_scope_installs_both`; every real summary line above names the scope |
+| 5. Old bash, or `jq`, `git`, `gh` missing: each named, no system package, exit non-zero | met | `t_old_bash`, `t_missing_each`, `t_all_missing_named_together`, `t_no_system_package_installed`, `t_usage_error_wins_over_a_missing_prerequisite`; the real no-tools run above (exit 1) and the reviewer's `CODEO_TEST_BASH_VERSION=4.2` run |
+| 6. A project that commits the README's snippet is offered the install when its folder is trusted | not yet checkable — the engineer's check, recorded in the pull request at `/codeo:close` (Q2) | `t_project_scope_writes_the_readme_snippet` shows the snippet equals what a project-scope run writes under `jq -S`; the trust prompt itself is interactive |
+| 7. README has the eight sections, and each command in them was run and its output matches | met | `t_readme_sections`, `t_readme_install_blocks_match_the_script`, `t_readme_restore_blocks_do_not_replace`; the reviewer's real runs of every block; one wording point is F25 |
+| 8. README no longer holds the test, dossier-checker or replay sections; the contributor page holds them unchanged; the README links to it | met | the four `same:` diffs above; `README.md` `## Contributing` |
+| 9. Tests cover the behaviour and run in `bash tests/run.sh`, which ends `all cases passed`; a test fails when the README's install command and the script disagree | met | the full run above; `t_readme_install_command_runs`, `t_readme_install_blocks_match_the_script`; the reviewer's mutation check (`--scope team`, `--release` in the README's command) made `t_readme_install_command_runs` and `t_readme_names_only_real_options` fail |
+| 10. CHANGELOG entry states the config schema, whether the shared state changed, and whether it is safe to bump mid-workflow | met | `CHANGELOG.md` `## Unreleased`: `Config schema: 1`, `Shared state: …` (`main`'s, which names #138's `codeo-live/` namespace), `Safe to bump mid-workflow: yes`, and this branch's `install.sh` bullet |
+
+**Documentation check.** `README.md`, `CONTRIBUTING.md` and `CHANGELOG.md` are the pages the plan names; no other page describes installing the plugin. The README's captured blocks match real runs and it has no issue numbers. One sentence is imprecise (F25).
+
+**Findings**
+- **F25 — non-blocking, `/codeo:implement`'s.** `README.md` line 280 says `install.sh --scope project` run in a restored project "changes nothing, because its install is already at the machine's version". That holds when the machine is at the latest release; after a downgrade the machine's marketplace pin differs from the latest tag, so the run replaces codeo and moves the machine to the latest (reproduced above: `install: codeo v1.0.6 -> v1.0.7 (project scope)`, user copy moved too). The next sentence says a run rewrites the `ref` when "the machine's codeo is at another release", which covers it, but the two sentences read as if the first were unconditional.
+- **F26 — non-blocking, `/codeo:plan`'s.** The recovery advice after a failed replace names no release tag: `install: codeo v1.0.6 is installed at project scope but not at user scope: …; run this again with --scope user` (`install.sh` lines 354 and 356). After a `--version v1.0.6` run, following it replaces codeo at the latest release and drops the project install just made (the reviewer reproduced it, and the run named the dropped project). The messages date from round 2's plan (F6); the failure path is rare, and the output names the project and its restore command.
+- **F27 — non-blocking, `/codeo:plan`'s.** On a failed `--scope project` replace, the current project is named among the dropped installs with a restore command that cannot work until the re-run has finished (the marketplace is gone), while the error line gives another remedy. Round 4's plan specified it (the current project is named when it was not yet reinstalled) and the README says the restore commands apply after the re-run; it is noise, not a wrong instruction.
+- Carried from `implement.md`'s `## Notes`, not re-raised: the deferred Minors of round 4 (test strength for the user-scope no-copy and before-the-remove cases, the duplicated dropped-lines print loop, a `--version` value with an embedded newline now exits 1 not 2, a missing `grep` message) and round 3's parked limits.
+
+**Routing.** No finding is blocking: the criteria hold, the suite passes, and the independent review rates the change ready to merge. F25-F27 are recorded and routed (`/codeo:triage` collects them once the dossier is archived); none sends the change back. Criterion 6 stays the engineer's check at `/codeo:close`, which must not merge without it.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-21 — Q1-Q2 raised (overlap with #138 on CHANGELOG.md; criterion 6 is the engineer's) · cost: 0m · opus-5-5 290k in + 333k cached / 1k out
@@ -258,3 +308,4 @@ The pass stopped at step 2: the base branch does not merge cleanly into this bra
 - 2026-11-21 — pass 2: Q3 answered; round 2: build, suite, criteria, documentation, independent review · cost: 14m · opus-5-5 121k in + 2.8M cached / 29k out · sonnet-5-5 22k in + 7.4M cached / 17k out
 - 2026-11-22 — round 3: build, suite, criteria, documentation, independent review; verdict back to /codeo:plan (F19) · cost: 14m · opus-5-5 211k in + 4.3M cached / 27k out · sonnet-5-5 123k in + 166k cached / 2k out
 - 2026-11-22 — round 4: stopped at step 2 (sync-main: conflict: CHANGELOG.md); verdict back to /codeo:implement (F24) · cost: 0m · opus-5-5 308k in + 681k cached / 3k out
+- 2026-11-22 — round 5: build, suite, criteria, documentation, independent review; verdict clear · cost: 16m · opus-5-5 454k in + 5.6M cached / 29k out · sonnet-5-5 351k in + 399k cached / 6k out
