@@ -1609,6 +1609,11 @@ scenario_lines() {
     { printf '%s\n' "$in_out"; printf '%s\n' "$in_err"; } | grep -E '^install: ' || true
 }
 
+# norm_block: install lines with each project path and the failure message replaced by a placeholder.
+norm_block() {
+    sed -E 's/ for [^ ]+ \(/ for <path> (/; s/is no longer installed: .*; run this again$/is no longer installed: <msg>; run this again/'
+}
+
 # t_readme_install_blocks_match_the_script: every README output block that has an "install: release" line
 # equals the install lines of a stubbed run, and every other install line the README quotes in prose is a
 # line some stubbed run or stubbed failure prints; a "<...>" in the README stands for any text.
@@ -1616,8 +1621,10 @@ t_readme_install_blocks_match_the_script() {
     local s all="" block="" line nblocks=0 found pat
     local -a ok_names=(fresh-user rerun-user user-replace-down user-replace-up fresh-project rerun-project
         user-replace-in-pinned-project project-replace-with-user-copy user-replace-two-projects
-        project-replace-other-project user-replace-local restore-project user-replace-disabled replace-add-fails-with-drops)
-    local -a fail_names=(replace-add-fails replace-add-fails-with-dropsproject-replace-user-install-fails project-replace-project-install-fails)
+        project-replace-other-project user-replace-local restore-project user-replace-disabled
+        # a failed run is compared as a block too: the README shows one, its dropped lines before the error
+        replace-add-fails-with-drops)
+    local -a fail_names=(replace-add-fails replace-add-fails-with-drops project-replace-user-install-fails project-replace-project-install-fails)
     local -a got_blocks=()
     for s in "${ok_names[@]}"; do
         got_blocks+=("$(scenario_lines "$s")")
@@ -1631,9 +1638,9 @@ t_readme_install_blocks_match_the_script() {
             nblocks=$((nblocks + 1))
             block=${block%$'\n'}
             found=0
-            block=$(printf '%s' "$block" | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/is no longer installed: .*; run this again$/is no longer installed: <msg>; run this again/')
+            block=$(printf '%s' "$block" | norm_block)
             for s in "${got_blocks[@]}"; do
-                [[ $(printf '%s' "$s" | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/is no longer installed: .*; run this again$/is no longer installed: <msg>; run this again/') != "$block" ]] || found=1
+                [[ $(printf '%s' "$s" | norm_block) != "$block" ]] || found=1
             done
             ((found)) || fail "README block matches no scenario:"$'\n'"$block"
             block=""
