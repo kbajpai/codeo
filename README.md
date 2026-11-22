@@ -190,6 +190,64 @@ ok superpowers: installed
 
 Commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works on the project. The `suites` array holds the build and test commands `/codeo:implement` and `/codeo:qc` run; `/codeo:doctor` fails a suite whose command does not resolve.
 
+### The home checkout
+
+The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup`: the steps that work on the project rather than inside one issue's workflow. It runs on your machine in a clone named `<codename>-home` (for this repository, `codeo-home`) that sits on the base branch, or in the `codeo-home` dev container, which is still supported (`.devcontainer/README.md`). `<codename>` is the optional `codename` in `.codeo/config.json` (this repository sets `codeo`); without one it is the clone's own folder name, so a host clone named `<project>-home` needs `codename` set to `<project>` to be recognised as home.
+
+To run it on the host you need:
+
+- Claude Code, and `gh` logged in. `/codeo:doctor` checks the login and, when the project has a board, that the token carries the `project` scope.
+- The codeo plugin, installed with `install.sh` (see *Installing*).
+- A git identity: `git config --global user.name "Your Name"` and `git config --global user.email you@example.com`.
+- A clone of the project in a folder named `<codename>-home`, kept on the base branch and current with `git pull`.
+
+It works on Linux, on macOS and on Windows through WSL2. On macOS the `codeo` command needs bash 4.3, and the stock bash 3.2 is too old for it; the role guard and `codeo-container.sh` run on 3.2. On Windows run everything inside WSL2, `codeo` and `gh` included.
+
+#### The guard
+
+Each skill asks `.devcontainer/scripts/role.sh --check <skill>` first, and the answer comes from the clone's folder, the workflow lock and the branch. A refusal is one line naming the role, the skill and where the skill does run, and nothing you say lifts it.
+
+| Role | Means | Runs | Refused |
+|---|---|---|---|
+| `home` | a clone named `<codename>-home`, on the base branch, holding no lock | `/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup` | `/codeo:plan`, `/codeo:implement`, `/codeo:qc`, `/codeo:close`: they run in an issue's checkout |
+| `issue:<N>` | holds the lock for issue `<N>`; in a container also in the folder `<codename>-<N>`, on the host in any folder | `/codeo:plan`, `/codeo:implement`, `/codeo:qc`, `/codeo:close` | the four home skills: they run in a home checkout |
+| `stale:<N>`, `stale:?` | a container with no lock, or a `<codename>-home` clone off the base branch | nothing | every guarded skill; the line says what became of the workflow, or to switch back to the base branch |
+| `mismatch:<N>:<folder>` | a container locked for `<N>` in another folder | nothing | every guarded skill |
+| `stray` | a host checkout that is neither home nor an issue's: no lock, and not named `<codename>-home` | nothing | every guarded skill: it is neither the home clone nor an issue's |
+| `unguarded` | a hosted web session (`CLAUDE_CODE_REMOTE=true`), or a container in a folder that is neither `<codename>-home` nor `<codename>-<N>` | everything | nothing |
+
+`/codeo:doctor` and `/codeo:setup` are outside the guard. A host checkout is no longer `unguarded`: it is `home`, `issue:<N>` or `stray`.
+
+#### The tracking comment
+
+An issue's branch, containers, images, volumes and sandboxes are recorded in one comment on the issue, found by its first line, the hidden marker `<!-- codeo:tracking -->`:
+
+```
+<!-- codeo:tracking -->
+Codeo tracking for #152: branches, containers and their removal.
+
+| Kind | Name | Host | Status | Created (UTC) | Removed (UTC) |
+|---|---|---|---|---|---|
+| branch | `feat/152-example` | | deleted | 2026-11-22T09:00:00Z | 2026-11-23T16:30:00Z |
+| container | `codeo-152` | my-laptop | removed | 2026-11-22T09:05:00Z | 2026-11-23T16:20:00Z |
+| image | `codeo-dev:codeo-152` | my-laptop | active | 2026-11-22T09:05:00Z | |
+| volume | `codeo-152` | my-laptop | removed | 2026-11-22T09:05:00Z | 2026-11-23T16:20:00Z |
+
+Edited by codeo; the table is rewritten, text outside it is kept.
+```
+
+Who writes which row, through `.devcontainer/codeo-track.sh`:
+
+- `/codeo:init` adds the `branch` row once the claim is pushed; running it again changes nothing.
+- `codeo-container.sh issue` adds the `container`, `image` and `volume` rows, and `codeo-sandbox.sh issue` adds the `sandbox` row. Host is the host machine's name.
+- `codeo rm <N>` marks the container, its volume and its image `removed`, and `codeo-sandbox.sh end <N>` marks the sandbox `removed`, with the time.
+- `/codeo:close` marks the `branch` `deleted` after it deletes the remote branch. A kept branch stays `active`.
+- A row nothing has removed stays `active`; a row on another host is not proof the container still exists.
+
+Starting a container or sandbox for an issue that already has an `active` container or sandbox row, or a container of that name on this host, lists them and asks before it creates another. `codeo issue <N> --yes` answers yes; without a terminal and without `--yes` it stops.
+
+A record that fails never fails the creation or the removal. When `gh` is missing, not logged in or failing, the tracker prints one `track:` line naming the row to add by hand and goes on. Edit the comment as you like outside the table: text there is kept. A comment that carries the marker but no recognisable table is reported and left untouched. Two first creations at the same moment can each find no comment and leave two; the first one found by marker is the one codeo then uses.
+
 ## Your first workflow
 
 A piece of work goes through six slash commands in order. Each one owns one file under `.codeo/<N>/`, where `<N>` is the GitHub issue number, and the file records what the step decided, so the next step (and you, later) can read it. The example is a finished workflow, whose files are archived under `.codeo/done/<N>/` once the pull request merges: an issue that fixed three leftovers from earlier changes, archived in this repository under `.codeo/done/143/` (its `init.md`, `plan.md`, `implement.md`, `qc.md` and `close.md` and the `issue.md` the engineer approved), so the files each step below describes can be opened.

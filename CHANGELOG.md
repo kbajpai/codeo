@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1 (unchanged)
+Shared state: an issue gains one comment, marked `<!-- codeo:tracking -->` on its first line, holding a table of its branch, containers, images, volumes and sandboxes (an older reader sees an ordinary comment on the issue and ignores it); no other state changes
+Safe to bump mid-workflow: yes, with one step: run `codeo update` so the installed `codeo` fetches the new `codeo-track.sh`; until then nothing is recorded on the issue and the scripts print one `note:` line
+
+- The role guard no longer leaves a host `unguarded`. On the host a checkout is `home` (a clone named `<codename>-home` on the base branch with no lock), `issue:<N>` (it holds the lock, whatever its folder) or the new role `stray` (neither), and `stray` refuses every guarded skill. `home` no longer runs the lock skills `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:close`: they are refused there, in one line. A hosted web session (`CLAUDE_CODE_REMOTE=true`), `doctor` and `setup` stay outside the guard, and a container in a folder that is neither `<codename>-home` nor `<codename>-<N>` stays `unguarded`. The `codeo-home` container is still supported, and the top-level `README.md` says how to run the home role on the host.
+- The tracking comment. `.devcontainer/codeo-track.sh` (new; `add`, `mark` and `confirm`, bash 3.2 and `gh` only) records an issue's branch, containers, images, volumes and sandboxes, and their removal, in one comment on the issue. `/codeo:init` adds the branch, `codeo-container.sh issue` and `codeo-sandbox.sh issue` add the rest, `codeo rm <N>` and `codeo-sandbox.sh end <N>` mark them `removed`, and `/codeo:close` marks a deleted branch `deleted`. A failed record prints one `track:` line naming the row to add by hand and never fails the step; text outside the table is kept, and a comment with a malformed table is reported and left untouched.
+- `codeo issue <N> --yes`, and `--yes` on `codeo-container.sh issue` and `codeo-sandbox.sh issue`: an issue that already has an `active` container or sandbox on record, or a local container of its name, is listed and asked about before another is created; `--yes` answers yes, and without a terminal the script stops without it.
+- `/codeo:cleanup` and `/codeo:close` print `codeo rm <N>` as the removal, one line that runs in PowerShell and bash, in place of the `docker` commands. `scripts/cleanup.sh` expands `{N}` in the overlay's `command:`.
+- `codeo update` fetches three scripts, `codeo-container.sh`, `codeo-sandbox.sh` and the new `codeo-track.sh`, and prints `updated codeo and its three scripts`.
+
 ## v1.0.8 — 2026-11-22
 
 Config schema: 1 (adds the optional `issue.priority` key; a config without it is unchanged)
