@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1: Q1-Q3 are answered (all picks). The plan is drafted at `.codeo/154/plan-draft.md` and awaits the engineer's approval; the footprint is written after it.
+Round 1: Q1-Q3 are answered (all picks). The plan is approved and saved at `docs/plans/2026-11-22-close-149-145-leftovers-154.md` (unstaged). `overlap.sh` printed five overlaps with #152, raised as Q4; `## Outcome` stays pending until it is answered.
 
 What I found (read against `.devcontainer/codeo`, `.sbx/codeo-sandbox.sh`, `scripts/inflight.sh` and the tests at `de57829`):
 
@@ -62,6 +62,13 @@ A — stop it again: `container_check --no-restart` stops a container it started
 **Answer:**
 Proceed and coordinate: whoever merges second rebases over the other. (Engineer: "go with your picks", 2026-11-22; given in the conversation, recorded here.)
 
+### Q4 — The footprint as written overlaps #152 on five paths: proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh` compares the committed footprint with #152's (branch `feat/run-home-role-host-strict`, assignee kbajpai, step `plan`, waits on `/codeo:implement`, nothing changed on its branch yet) and prints five overlaps: `glob:.devcontainer/README.md`, `glob:.devcontainer/codeo`, `glob:.sbx/README.md`, `glob:CHANGELOG.md` and `glob:tests/codeo-command.test.sh`. Q3 covered these in prose and was answered *proceed and coordinate*; this question names each printed token so the pair is recorded as raised. Here the edits are `container_check` and the `cmd_rm` sandbox hint, one README paragraph block and flowchart, one line of the v1.0.8 CHANGELOG entry plus a new `## Unreleased` bullet, and two new test cases; a clash is a textual conflict the second merge resolves, not a semantic one.
+**Options:** *proceed and coordinate* (my pick, as Q3: whoever merges second rebases and keeps both sides) · *sequence after #152* (this plan waits for #152 to merge, and `sequenced:` then names it) · *re-scope* (say which of the five paths to leave out).
+
+**Answer:**
+
 ## Notes
 
 ### Footprint
@@ -80,3 +87,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-22 — Q1-Q3 raised; `engineering` skills unavailable (plugin not installed) · cost: 2m · fable-5-2 113k in + 1.2M cached / 12k out
+- 2026-11-22 — plan approved, footprint committed, Q4 raised (five overlaps with #152) · cost: unavailable until the hand-off
