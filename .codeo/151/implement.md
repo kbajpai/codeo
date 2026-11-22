@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 done: Tasks 1-5 of the round-4 plan are built and reviewed, the final review's one finding is fixed, and `## Outcome` has its round. Open: acceptance criterion 6 (the trust-prompt check) is the engineer's, recorded in the pull request at `/codeo:close`. The hand-off is `/codeo:qc`.
+Round 5 done: `origin/main` is merged (`d138fa7`), with `CHANGELOG.md` resolved to keep both bullets, and `## Outcome` has its round. Open: acceptance criterion 6 (the trust-prompt check) is the engineer's, recorded in the pull request at `/codeo:close`. The hand-off is `/codeo:qc`.
 
 ## Questions
 
@@ -153,6 +153,25 @@ No environment is configured, so nothing was leased, deployed or released.
 - The dropped-install lines of a failed replace give a command that fails until the re-run succeeds, because the marketplace is gone; the README says so, the lines do not.
 - Round 3's parked limits stand unchanged: a notice line that starts with `[` before the plugin list's array; the projectPath string compare for a symlinked checkout; gaps in the head-syntax test's banned list; a missing `.version` printing `vnull`.
 
+### Round 5
+
+2026-11-22
+(send-back from qc.md round 4)
+
+**What the round answers.** `qc.md` round 4 stopped at step 2: `sync-main.sh` reported `conflict: CHANGELOG.md` against `origin/main`, which had gained one commit since this branch's merge base, `ae7b8d6 fix: publish the live-session signal from a hosted web session as a branch, with the lock taken on the first prompt (#138) (#155)`. F24 holds: this step's own `sync-main.sh` printed the same `sync-main: conflict: CHANGELOG.md`. No plan task is in this round; it is the merge.
+
+**Resolved, and how.** `CHANGELOG.md` was the only conflicted file; git merged the `Shared state:` line cleanly to `main`'s text, which names the `codeo-live/<issue>/<machine>` branch namespace for web sessions' signals. The conflict was the two bullets added at the top of `## Unreleased`: this branch's `install.sh` bullet and #138's hosted-web-session bullet. Both are kept, this branch's first, separated by a blank line as the other bullets are, as `qc.md` Q1 settled (*proceed and coordinate*). Against `origin/main` the file now has one added bullet and no removed line; the `Config schema:`, `Shared state:` and `Safe to bump mid-workflow:` lines are `main`'s. The merge commit is `d138fa7`.
+
+**Files that also changed on `main`** (from the merge; re-checked against this branch's work): `.claude/settings.json`, `.codeo/done/138/*`, `docs/handoff.md`, `docs/plans/2026-11-21-live-signal-web-session-138*.md`, `hooks/live-signal.sh`, `scripts/live.sh`, `scripts/lock.sh`, `skills/triage/SKILL.md`, and the tests `tests/devcontainer.test.sh`, `tests/live-signal.test.sh`, `tests/live.test.sh`, `tests/lock.test.sh`, `tests/triage-skill.test.sh`. None is a file this branch touches except `CHANGELOG.md`; the branch's own files (`install.sh`, `tests/install.test.sh`, `README.md`, `CONTRIBUTING.md`) are unchanged by the merge. `overlap.sh 151` and `overlap.sh --outside 151` print nothing.
+
+**Documentation pages changed:** `CHANGELOG.md` only, by the merge.
+
+**Build result:** the `shell` suite's `build` is `true`; exit 0. The suites are `qc`'s.
+
+**Deviations from the plan:** none.
+
+**Still open, the engineer's:** acceptance criterion 6 (the trust-prompt check), recorded in the pull request at `/codeo:close` (`qc.md` Q2).
+
 ## Log
 
 - 2026-11-21 — Q1 raised (overlap with #149 on CHANGELOG.md) · cost: 7m · sonnet-5-5 12k in + 671k cached / 2k out
@@ -160,3 +179,4 @@ No environment is configured, so nothing was leased, deployed or released.
 - 2026-11-21 — round 2 (after plan.md round 2): Tasks 1-5 implemented and reviewed, final review and one fix wave · cost: 30m · sonnet-5-5 330k in + 16.3M cached / 58k out
 - 2026-11-21 — round 3 (after plan.md round 3): Tasks 1-5 implemented and reviewed, final review, one fix wave and a scoped re-review · cost: 74m · sonnet-5-5 690k in + 22.2M cached / 121k out
 - 2026-11-22 — round 4 (send-back from qc.md round 3): Tasks 1-5 implemented and reviewed, final review, one fix wave and a scoped re-review · cost: 47m · opus-5-5 224k in + 275k cached / 844 out · sonnet-5-5 681k in + 22.2M cached / 99k out
+- 2026-11-22 — round 5 (send-back from qc.md round 4): merged origin/main, resolved the CHANGELOG.md conflict (both bullets kept) · cost: 0m · sonnet-5-5 324k in + 1.4M cached / 3k out
