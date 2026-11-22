@@ -4,11 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/138 |
 | Branch | `fix/live-session-signal-does-not` |
-| Updated | 2026-11-21 |
+| Updated | 2026-11-22 |
 
 ## Where this stands
 
-Round 3 is in progress: no blocking finding so far; Q5 answered (a), waiting for the hosted-session outputs (criteria 1 and 4); no verdict yet. Round 2 is written: **back to `/codeo:plan`** (F12 the lock take undoes a stash or abandon, F13 the docs for other projects). Round 1 (below) was also back to `/codeo:plan`; its state follows. Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
+Round 3 is written: **clear**, forward to `/codeo:close` (no blocking finding; the hosted check settled criteria 1 and 4; F21-F25 non-blocking). Earlier rounds follow. Round 2 is written: **back to `/codeo:plan`** (F12 the lock take undoes a stash or abandon, F13 the docs for other projects). Round 1 (below) was also back to `/codeo:plan`; its state follows. Round 1 is written: **back to `/codeo:plan`**. Q1-Q4 are answered and nothing is open. The build and the full `shell` suite pass, criteria 1, 2, 3 and 7 are met, criteria 4, 5 and 6 are not (F11, F1, F4), and every finding is classified in the round. The hosted-session run (plan Task 7) settled criteria 1 and 3 and showed the `SessionStart` hook leaving no lock. Next: `/codeo:plan`, a new round for F1, F4, F11 and the footprint's `tests/devcontainer.test.sh`.
 
 ## Questions
 
@@ -77,7 +77,7 @@ Given by the engineer from hosted sessions on 2026-11-21, over several messages 
 - **(b) Clear without it.** Criteria 1 and 4 read *not yet checkable* in the round, the verdict is clear on the other findings, and the check is run after the pull request opens.
 
 **Answer:**
-(a) Run the check (engineer, in the conversation, 2026-11-21: "Q5 (a), per your recommendation"; recorded here by the skill). The hosted outputs are still to come: paste them here, or send them in the conversation, and this pass re-runs and writes the verdict.
+(a) Run the check (engineer, in the conversation: "Q5 (a), per your recommendation"; recorded here by the skill). Done on 2026-11-22 in a hosted session after a `git reset --hard origin/fix/live-session-signal-does-not`; the outputs are in round 3.
 
 ## Notes
 
@@ -232,6 +232,51 @@ What that settles: criterion 1 (the workflow shows live in `inflight.sh --live` 
 
 **Verdict: back to `/codeo:plan`.**
 
+
+### Round 3 — 2026-11-22
+
+(re-run after `implement.md` round 3, which followed `plan.md` round 3; the build under review is `d08e357`, whose code is `9730337`'s)
+
+**Sync.** `bash scripts/sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0; `bash scripts/overlap.sh 138`: nothing.
+
+**Scope.** `git diff origin/main...HEAD --stat`: 20 files, 1930 insertions, 48 deletions. `bash scripts/scope.sh origin/main HEAD`: `suite.shell=true` (paths the suite does not classify: `.claude/settings.json`, `.codeo/138/…`, `CHANGELOG.md`). No environment is configured, so no `deploy=` line and no environment step.
+
+**Build and tests.** The `shell` suite's `build` is `true`: rc 0. `bash tests/run.sh` (whole): the first run failed four cases in `tests/intake-lease.test.sh` (a clock-boundary flake: the failing case printed a right-of-way end of `2026-11-21T21:55:56Z` at a clock of about 21:55; the file and `scripts/intake.sh` are not in this diff; `bash tests/run.sh intake-lease` then passed three times); the second whole run: `all cases passed`, `rc=0`, no `FAIL` line.
+
+**Footprint.** `bash scripts/overlap.sh --outside 138`: nothing. `overlay.sh qc invariants-extra` and `qc wiki-rules`: exit 3 (none); no invariants file; no wiki module.
+
+**Documentation check.** `docs/handoff.md` (*Who is working right now* and its diagram) and `CHANGELOG.md` match the code, with one untruth: F21. No issue numbers or "now" in the handoff page.
+
+**Hosted-session check (plan Task 6), run 2026-11-22.** The first hosted session started on the stale `5f0f0ba`; `git pull --ff-only` failed there (the session's clone is truncated; origin's `d08e357` descends from `5f0f0ba`), so the engineer ran `git fetch origin && git reset --hard origin/fix/live-session-signal-does-not` (`HEAD is now at d08e357`). In that session:
+- `cat .codeo/active`: `host: web`, `session: 01Sa1ZqbKsnuSCGqVL9weq61`, `started: 2026-11-22`.
+- `ls .git/codeo-live-lock-try.*`: `.git/codeo-live-lock-try.5984413` (window starting 2026-11-22T05:05:00Z): a file only the new prompt hook writes; and `git log --oneline -1 -- hooks/live-signal.sh`: `52fef27`, round 3's hook.
+- Here, at 05:21:40Z, `git ls-remote origin 'refs/heads/codeo-live/*'` listed `codeo-live/138/web-01Sa1Zqb` (`80aa47f`, 05:21:16Z, `beat: 1795324876`, `user: kbajpai`, `machine: web-01Sa1Zqb`) and an older `codeo-live/138/web-01Sa1Zqc` (`6e648bb`, 05:02:34Z, from the session's earlier id); and `bash scripts/inflight.sh --live` printed `138	kbajpai	web-01Sa1Zqb	web	25` next to the container workflows' rows. The engineer ran no manual `beat`.
+- Limits: the session started on a stale checkout, so the first lock (`…Zqc`, 05:02:34Z) was not taken by this build's hook and its origin is not established; the second lock and the published `…Zqb` signal came after a claim file written by round 3's hook. A refresh of the same label was not observed on this build; it is covered by the throttle tests and was seen in round 1's hosted run.
+
+**Independent review** (opus, `QC review:`, the seven criteria as its requirements; quoted in plain text, not this round's verdict): no Critical, one Important (F21), three Minor (F22-F24); "the code meets all seven acceptance criteria". I checked each claim against the files (`CHANGELOG.md:6,9`, `hooks/live-signal.sh:43-46`, `scripts/live.sh`).
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Shows live in `inflight.sh --live` on another clone | met | the hosted run above (`138 kbajpai web-01Sa1Zqb web 25` here); `fetch_maps_web_branches_to_signals` locally |
+| 2 | No write that returned 403 in #112's run | met | `web_beat_publishes_a_branch_not_a_live_ref`; the hosted signal arrived as a `codeo-live/` branch, and `scripts/live.sh` skips the REST fallback and the delete for web |
+| 3 | Feature branch tip unchanged | met | the same case compares `refs/heads/feat/x` before and after; origin's feature tip stayed `d08e357` while the signal branches moved |
+| 4 | Publishes without a manual `beat`; the trigger is present in a web session | met | the hosted run (lock with a real session id, round 3's claim file, a signal with no manual `beat`); `hook_takes_the_lock_in_a_web_session_when_none_exists`, `settings_beat_hook_takes_the_lock_and_publishes`; the limits above |
+| 5 | Names the engineer's login and `web-<8>` | met | the hosted signal (`user: kbajpai`, `machine: web-01Sa1Zqb`); `web_machine_*`, `user_env_login_wins`, `web_user_*` |
+| 6 | `docs/handoff.md` matches what a web session does | met | `docs/handoff.md` against `hooks/live-signal.sh`, `scripts/lock.sh`, `scripts/live.sh` and `.claude/settings.json`; F21 is in `CHANGELOG.md`, not this page |
+| 7 | Tests cover the web behaviour, including the lock with and without a session id | met | `hook_takes_the_lock_in_a_web_session_when_none_exists`, `hook_without_a_session_id_takes_a_lock_with_session_unknown`, `web_machine_*`, the skip-parked cases in `tests/lock.test.sh` |
+
+**Findings** (each points at a line this change touched):
+- **F12, F13, F14, F15, F18, F19, F20 (earlier rounds) — fixed by `dec8489`, `b96efdb`, `52fef27`, `870631c`, `17d9c6d`, `478866d`.** Recapped as history: F12 (blocking in round 2) and F13 (blocking in round 2) no longer reproduce; the reviewer found no regression in them.
+- **F21 — non-blocking; implement's.** `CHANGELOG.md:9` ends "Config schema and shared state are unchanged. (#138)" while `CHANGELOG.md:6` now says origin gains a `codeo-live/` namespace. A reader judging a mixed-version upgrade gets two answers; the fix is the words "and shared state". The reviewer graded it Important; nothing runs differently, so it is non-blocking, and the engineer may still ask for it in a send-back.
+- **F22 — non-blocking; later work.** `fetch` aborts when `refs/codeo/live/<n>/<m>` and `refs/heads/codeo-live/<n>/<m>` both exist (`scripts/live.sh` fetch refspecs; the reviewer reproduced `fatal: Cannot fetch both …`, rc 128); needs equal labels. Round 2's F17.
+- **F23 — non-blocking; later work.** Every web session leaves a `codeo-live/<issue>/web-<8>` branch nothing deletes (the hosted run left two for one session, since the session id changed once; each had to be deleted by hand). Round 2's F16, with the CI note.
+- **F24 — non-blocking; the plan's.** `hooks/live-signal.sh:44-46` bounds the whole `lock.sh take web` by `timeout 8`, including its fetch and checkout; a kill during the checkout could leave `.git/index.lock`. A narrow window; Q11 (a) chose the bound.
+- **F25 — non-blocking; observed in the hosted run.** One web session published under two labels (`web-01Sa1Zqc`, then `web-01Sa1Zqb`) because the harness session id changed (the lock's session id is refreshed by `lock.sh`). The older row drops from `--live` after the TTL; the engineer sees it as a duplicate for up to 15 minutes. Related to round 1's forked-session label (F6).
+
+**Later work, to file with `/codeo:issue` in the home checkout** (it refuses here): F22, F23 and F25 — the fetch collision on equal labels, the leftover `codeo-live/*` branches with their CI note, and the label that changes when the session id changes. Already in `implement.md`'s notes for F22 and F23. No issue number was filed by this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-21 — round 1 stopped at step 10: build and the full suite pass, review in, Q1-Q3 raised · cost: 6m · opus-5-5 408k in + 2.7M cached / 18k out · sonnet-5-5 31k in + 624k cached / 3k out
@@ -240,3 +285,4 @@ What that settles: criterion 1 (the workflow shows live in `inflight.sh --live` 
 - 2026-11-21 — round 2 written: back to /codeo:plan (F12, F13 blocking); hosted check not run (stale checkouts) · cost: 7m · opus-5-5 554k in + 2.8M cached / 21k out · sonnet-5-5 31k in + 4.4M cached / 11k out
 - 2026-11-21 — round 3 stopped at step 10: build and whole suite pass (one clock-boundary flake in an untouched test, rerun clean), review in, Q5 raised for the hosted check; no verdict · cost: 12m · opus-5-5 180k in + 2M cached / 16k out · sonnet-5-5 110k in + 823k cached / 3k out
 - 2026-11-21 — Q5 recorded from the conversation (a); waiting for the hosted-session outputs; no verdict · cost: 1m
+- 2026-11-22 — round 3 written: clear, forward to /codeo:close (F21-F25 non-blocking); hosted check run and settled criteria 1 and 4 · cost: 451m · opus-5-5 180k in + 2M cached / 16k out · sonnet-5-5 237k in + 2.6M cached / 20k out
