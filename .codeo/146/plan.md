@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are open. Nothing is drafted yet; the draft follows the answers.
+Q1-Q3 are answered: the #118 bullet moves to `## v1.0.8`, the README examples (and the install test stubs they are compared with) move to v1.0.8 in the release PR, and the `Config schema` line names `issue.priority`. The release PR is therefore four files, not two. The draft plan is at `.codeo/146/plan-draft.md`, awaiting the engineer's approval.
 
 What exploration found:
 - **The gate is met.** #143, #144, #145, #138, #149 and #151 all read `CLOSED` / `COMPLETED`, and each merged to `main`. `origin/main` is at `6ccd510`, 16 commits past `v1.0.7` (`7b25bc2`).
@@ -43,6 +43,7 @@ I recommend *move it*: the issue asks for a changelog accurate for everything me
 **Options:** move it to `## v1.0.8` · leave it under `## v1.0.7`.
 
 **Answer:**
+Move it to `## v1.0.8` (engineer, by the question tool in the conversation, 2026-11-22; recorded here by the skill).
 
 ### Q2 — The README's examples say `v1.0.7`. Update them to `v1.0.8` in the release PR, or leave them?
 
@@ -53,6 +54,7 @@ I recommend *leave them*: the lines are examples of what a run prints, the text 
 **Options:** leave them · update them to `v1.0.8` in the release PR · leave them and file an issue for placeholder versions.
 
 **Answer:**
+Update them to `v1.0.8` in the release PR (engineer, by the question tool in the conversation, 2026-11-22; recorded here by the skill).
 
 ### Q3 — Should a header line of the v1.0.8 section name the new optional `issue.priority` key?
 
@@ -63,6 +65,7 @@ I recommend *name it on the line*: the issue singles the key out, a reader decid
 **Options:** name it on the `Config schema` line · leave `Config schema: 1` as it is, the bullets say it.
 
 **Answer:**
+Name it on the `Config schema` line (engineer, by the question tool in the conversation, 2026-11-22; recorded here by the skill).
 
 ## Notes
 
@@ -77,3 +80,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-22 — Q1-Q3 raised · cost: 2m · fable-5-2 96k in + 1M cached / 8k out
+- 2026-11-22 — Q1-Q3 answered; draft written for the review gate · cost: 6m · fable-5-2 119k in + 2.1M cached / 26k out
