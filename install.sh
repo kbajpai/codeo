@@ -11,7 +11,46 @@
 # Exit codes: 0 done; 1 a prerequisite is missing or another failure; 2 a usage error, before any
 # command runs. Every output line starts with "install: ". It never installs a system package.
 
-# The prerequisite check comes first and uses only syntax bash 3.2 can parse (no [[ -v, associative
+# The arguments are parsed before the prerequisite check, so a usage error exits 2 and --help exits 0
+# whatever else is missing. set -u is not on yet, so every variable is set; no [[ =~ ]] (the head test bans it).
+usage_text='install: usage: install.sh [--version vX.Y.Z] [--scope user|project]'
+want_version=""
+scope="user"
+
+# usage [reason]: the reason (when given) and the usage line on stderr, exit 2.
+usage() {
+    [ -z "${1:-}" ] || printf 'install: %s\n' "$1" >&2
+    printf '%s\n' "$usage_text" >&2
+    exit 2
+}
+
+parse_args() {
+    version_re='^v?[0-9]+\.[0-9]+\.[0-9]+$'
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -h | --help)
+                printf '%s\n' "$usage_text"
+                exit 0 ;;
+            --version)
+                [ $# -ge 2 ] || usage "missing value for --version"
+                printf '%s\n' "$2" | grep -Eq "$version_re" || usage "malformed version: $2"
+                want_version=$2
+                shift 2 ;;
+            --scope)
+                [ $# -ge 2 ] || usage "missing value for --scope"
+                case $2 in
+                    user | project) scope=$2 ;;
+                    *) usage "malformed scope: $2 (want user or project)" ;;
+                esac
+                shift 2 ;;
+            *) usage "unknown option: $1" ;;
+        esac
+    done
+}
+parse_args "$@"
+unset version_re
+
+# The prerequisite check comes next and uses only syntax bash 3.2 can parse (no [[ -v, associative
 # arrays, ${var,,}, mapfile, &>>), so an old bash reaches the message below instead of a syntax error.
 # CODEO_TEST_BASH_VERSION (<digits>.<digits>) replaces BASH_VERSINFO, for the tests only; any other value is ignored.
 test_bash=
@@ -45,12 +84,7 @@ if [ -n "$missing" ]; then
     exit 1
 fi
 unset bash_major bash_minor missing
-
 set -euo pipefail
-
-usage_text='install: usage: install.sh [--version vX.Y.Z] [--scope user|project]'
-want_version=""
-scope="user"
 
 # say <text>: one line on stdout.
 say() { printf 'install: %s\n' "$*"; }
@@ -60,36 +94,6 @@ die() {
     local code=${2:-1}
     printf 'install: %s\n' "$1" >&2
     exit "$code"
-}
-
-# usage [reason]: the reason (when given) and the usage line on stderr, exit 2.
-usage() {
-    [[ -z ${1:-} ]] || printf 'install: %s\n' "$1" >&2
-    printf '%s\n' "$usage_text" >&2
-    exit 2
-}
-
-parse_args() {
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            -h | --help)
-                printf '%s\n' "$usage_text"
-                exit 0 ;;
-            --version)
-                [[ $# -ge 2 ]] || usage "missing value for --version"
-                [[ $2 =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]] || usage "malformed version: $2"
-                want_version=$2
-                shift 2 ;;
-            --scope)
-                [[ $# -ge 2 ]] || usage "missing value for --scope"
-                case $2 in
-                    user | project) scope=$2 ;;
-                    *) usage "malformed scope: $2 (want user or project)" ;;
-                esac
-                shift 2 ;;
-            *) usage "unknown option: $1" ;;
-        esac
-    done
 }
 
 repo_url="https://github.com/kbajpai/codeo"
@@ -406,7 +410,6 @@ summary() {
 }
 
 main() {
-    parse_args "$@"
     enter_project
     resolve_release
     ensure_superpowers

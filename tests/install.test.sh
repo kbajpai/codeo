@@ -398,6 +398,33 @@ $closing"
     [[ -z $in_out ]] || fail "stdout should be empty: $in_out"
 }
 
+t_usage_error_wins_over_a_missing_prerequisite() {
+    in_setup usage_first
+    in_hide jq gh
+    in_run --bogus
+    [[ $in_rc -eq 2 ]] || fail "exit $in_rc, want 2 (stderr: $in_err)"
+    [[ $in_err == *'install: unknown option: --bogus'* ]] || fail "reason missing: $in_err"
+    [[ $in_err == *"$usage_line"* ]] || fail "usage line missing: $in_err"
+    [[ $in_err != *'is not installed'* ]] || fail "named a prerequisite: $in_err"
+}
+
+t_help_works_without_the_prerequisites() {
+    in_setup help_bare
+    in_hide jq gh
+    in_run --help
+    [[ $in_rc -eq 0 ]] || fail "exit $in_rc, want 0 (stderr: $in_err)"
+    [[ $in_out == "$usage_line" ]] || fail "stdout is: $in_out"
+}
+
+t_prerequisites_still_checked_after_good_arguments() {
+    in_setup good_args_missing
+    in_hide jq gh
+    in_run --scope user
+    [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1 (stderr: $in_err)"
+    [[ $in_err == *'install: jq is not installed'* ]] || fail "jq not named: $in_err"
+    [[ $in_err == *'install: gh is not installed'* ]] || fail "gh not named: $in_err"
+}
+
 t_no_system_package_installed() {
     in_setup no_pkg
     in_hide jq git gh claude
@@ -1668,6 +1695,9 @@ cases=(
     t_old_bash
     t_missing_each
     t_all_missing_named_together
+    t_usage_error_wins_over_a_missing_prerequisite
+    t_help_works_without_the_prerequisites
+    t_prerequisites_still_checked_after_good_arguments
     t_no_system_package_installed
     t_script_is_executable_with_bash_shebang
     t_fresh_user_install
