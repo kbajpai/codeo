@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Sent back to `/codeo:implement` for F21 (round 2, `CHANGELOG.md:9`); #155 stays open and the dossier is live again under `.codeo/138/`. After the fix `/codeo:qc` runs a whole new round, then `/codeo:close` returns here.
+The pull request is open and waiting for review: #155, updated for F21 (round 3). The dossier is archived under `.codeo/done/138/`. The workflow stays open until it merges; running `/codeo:close` again afterwards finishes it.
 
 ## Questions
 
@@ -32,7 +32,16 @@ The engineer asked, in the conversation, for F21 to be fixed and the change sent
 
 qc round at review: 3
 
+### Round 3 — pull request updated
+
+2026-11-22
+
+(send-back from close.md round 2)
+
+Answers round 2's F21: `implement.md` round 4 changed one phrase in `CHANGELOG.md` (`119444a`), and `qc.md` round 4 cleared it (**clear**, newer than the `qc round at review: 3` in round 2). #155 https://github.com/kbajpai/codeo/pull/155 picks the change up with this push.
+
 ## Log
 
 - 2026-11-22 — opened #155 on qc round 3 (clear); archived the dossier; board: In review on #138 · cost: 0m · sonnet-5-5 26k in + 695k cached / 3k out
 - 2026-11-22 — send-back: review feedback (F21) to /codeo:implement; dossier un-archived; board: In progress on #138 · cost: 0m
+- 2026-11-22 — returned from review: F21 fixed (implement round 4), qc round 4 clear; archived the dossier; updated #155; board.sh: #138 In progress → In review on #3 Codeo · cost: 0m · sonnet-5-5 225k in + 275k cached / 1k out
