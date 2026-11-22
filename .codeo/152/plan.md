@@ -74,6 +74,14 @@ Proceed and coordinate; leave `tests/install.test.sh` alone (recommended option)
 **Answer:**
 One pull request, guard tasks first (recommended option). Relayed from the engineer in the conversation, 2026-11-22: "Accept all recommendations".
 
+### Q7 — Overlap with #146, restated as `overlap.sh` prints it: `glob:README.md`, `glob:CHANGELOG.md`
+
+**Why it matters:** the footprint written after approval overlaps #146 (`feat/release-v1-0-8-once`, assignee kbajpai, step implement) on `glob:README.md` and `glob:CHANGELOG.md`; `overlap.sh` only treats a pair as raised when a question quotes these tokens, and Q5 predates the footprint. The footprint now names each test file instead of `tests/**`, so the `tests/install.test.sh` overlap is gone.
+**Options:** proceed and coordinate · sequence after #146 · re-scope.
+
+**Answer:**
+Proceed and coordinate. Carried over from the engineer's answer to Q5 (same issue, same files); not asked again separately.
+
 ## Notes
 
 My calls, stated so they can be corrected (none changes scope; they go in the plan as decisions):
@@ -85,20 +93,35 @@ My calls, stated so they can be corrected (none changes scope; they go in the pl
 - One new role name, `stray`, for a host checkout that is neither home nor an issue's (corrects the earlier note that no role names would be added); a host clone named `<codename>-home` with no lock on the base branch and no container markers is `home`; off the base branch it is `stale:?`; any other host checkout without a lock is refused with a line naming the `<codename>-home` rule. `CLAUDE_CODE_REMOTE=true`, `doctor` and `setup` stay exempt.
 - The README gets a host-home section (Claude Code, `gh`, the plugin, git identity), the guard, the tracking comment and a Linux/macOS/Windows-WSL note, with `codeo-home` kept documented as supported; `.devcontainer/README.md`'s role table and the `unguarded` paragraph are rewritten.
 
+## Outcome
+
+Plan: `docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md` (left unstaged for review).
+
+**Shape.** A scoped, executable plan under `docs/plans/`, seven tasks in one pull request, guard first. No separate reference doc: the standing description lands in `README.md` and `.devcontainer/README.md` (Task 7).
+
+**Decisions.** Q1 a container in an unshaped folder stays `unguarded` · Q2 on the host any checkout holding a lock is `issue:<N>` in any folder · Q3 one new `.devcontainer/codeo-track.sh` (`add`, `mark`, `confirm`), `gh api` direct, called by the host scripts and, through overlays, by init and close · Q4 the overlays print `codeo rm {N}` and `/codeo:close` marks the branch `deleted` · Q5 and Q7 proceed and coordinate with #146 (`README.md`, `CHANGELOG.md`) · Q6 one pull request. Added by the plan: one new role `stray`; `--yes` as the non-interactive flag; `scripts/cleanup.sh` expands `{N}` in `command:`.
+
+**Rejected.** Option B (tracking verbs in `scripts/github.sh`, branch row written by `skills/init`): two implementations of the table, more plugin-side change. Option C (logic inlined in each host script): three copies. Keeping the raw `docker rm` and appending a `track` command: records even when the removal failed. Refusing containers in unshaped folders: strands engineers with oddly named folders.
+
+**Decisions confirmed at the review gate.** Approved as drafted, including: a local `codeo-<N>` container without `--rebuild` stays a refusal with a warning rather than a confirmation; `stray` for an unlocked host `codeo-<N>` clone; `--yes`.
+
+**Documentation moved.** `README.md`, `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md`, `docs/extension-points.md`; no wiki module.
+
+**Intake questions resolved here.** How a host home is told apart: folder `<codename>-home`, no lock, base branch, no container marker. Where the tracking comment is written from: `codeo-track.sh`, via the host scripts and the init and close overlays. This repository is the plugin source, so the generic skill text was not needed for either.
+
+**Filed:** none. Optional `engineering:*` skills were unavailable; their structure was applied directly.
+
 ### Footprint
 
 ```
-files:      .devcontainer/scripts/role.sh, .devcontainer/codeo-track.sh, .devcontainer/codeo-container.sh, .devcontainer/codeo, .devcontainer/README.md, .sbx/codeo-sandbox.sh, .sbx/README.md, scripts/cleanup.sh, skills/**, .codeo/overlays/**, docs/extension-points.md, docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md, README.md, CHANGELOG.md, tests/**, .codeo/152/**
+files:      .devcontainer/scripts/role.sh, .devcontainer/codeo-track.sh, .devcontainer/codeo-container.sh, .devcontainer/codeo, .devcontainer/README.md, .sbx/codeo-sandbox.sh, .sbx/README.md, scripts/cleanup.sh, skills/**, .codeo/overlays/**, docs/extension-points.md, docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md, README.md, CHANGELOG.md, tests/role.test.sh, tests/role-guard.test.sh, tests/track.test.sh, tests/cmd-mode.test.sh, tests/sandbox.test.sh, tests/codeo-command.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, tests/init-overlay.test.sh, .codeo/152/**
 wiki:       none
 exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-22 — Q1-Q6 raised · cost: 4m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 220k in + 1.1M cached / 29k out
 - 2026-11-22 — answers Q1-Q6 recorded, plan drafted for review (engineering skills unavailable: structure applied directly) · cost: 10m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 276k in + 2.1M cached / 60k out
+- 2026-11-22 — planned: docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md · cost: 14m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 279k in + 2.8M cached / 64k out
