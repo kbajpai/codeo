@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are answered (A, A, A) and nothing is open. The plan is drafted at `.codeo/157/plan-draft.md` and waits for the engineer's approval; it is then saved under `docs/plans/`.
+Planned: the plan is approved and saved at `docs/plans/2026-11-23-live-signal-leftovers-157.md` (unstaged). Q1-Q3 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: commit the plan, then `/codeo:implement`.
 
 What I found (read against `scripts/live.sh`, `hooks/live-signal.sh`, `scripts/lock.sh`, `docs/handoff.md`, `skills/close/SKILL.md`, `tests/live.test.sh` and `.codeo/done/138/qc.md` at `efd02d8`):
 
@@ -63,6 +63,21 @@ A — remember the first label in the checkout's git directory. (Engineer: "go w
 
 ## Notes
 
+None.
+
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-23-live-signal-leftovers-157.md` (unstaged, approved 2026-11-23) |
+| Shape | One executable plan under `docs/plans/`, 8 tasks, one pull request; no reference doc, since nothing here is a standing decision |
+
+**Decisions.** F22: web branches fetch into `refs/codeo/live-web/*` and `list` reads both namespaces, so equal labels give two rows (rejected: one namespace with a collision rule). Q1 A: new `live.sh sweep`, run by `/codeo:close` with `clear`, and `/codeo:cleanup` prints the delete command for a proven issue (rejected: close only; docs only). Q2 A: `[skip ci]` in the web signal's subject plus docs (rejected: docs only). Q3 A: the first web label is kept in `<git dir>/codeo-live-machine` until `clear` (rejected: one fixed label `web`; documenting the duplicate only). A web session still working the issue republishes after a sweep, and a reclaimed VM can still show twice for up to the TTL; both are in the docs task.
+
+**Documentation the plan changes.** `docs/handoff.md` (the live-signal paragraph and its sequence diagram), `docs/skills.md` (`close`, `cleanup`), the `scripts/live.sh` header, `skills/close/SKILL.md`, `skills/cleanup/SKILL.md`, `CHANGELOG.md`.
+
+**Intake questions resolved here.** None; init left nothing open. No `/codeo:issue` filed. The `engineering` plugin is not installed and no component choice was involved, so its structure was not used.
+
 ### Footprint
 
 ```
@@ -72,10 +87,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-23 — Q1-Q3 raised · cost: 2m · fable-5-2 74k in + 518k cached / 10k out
+- 2026-11-23 — planned: docs/plans/2026-11-23-live-signal-leftovers-157.md · cost: 12m · fable-5-2 80k in + 718k cached / 11k out · sonnet-5-5 126k in + 1.9M cached / 26k out
