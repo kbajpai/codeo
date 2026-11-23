@@ -5,7 +5,9 @@
 #   cleanup.sh
 #       Fetches origin with --prune, lists the .codeo/done/<N> directories on origin/<baseBranch>, and prints
 #       one tab-separated line per issue, in ascending N:
-#           <N> TAB proven TAB <command>    every proof passed; <command> is `-` when the overlay gives none
+#           <N> TAB proven TAB <command> TAB <fallback>
+#                                           every proof passed; <command> is `-` when the overlay gives none;
+#                                           <fallback> is the overlay's expanded fallback text, or `-` when it has none
 #           <N> TAB failed TAB <proof>      the first proof that failed
 #       Proofs, in order:
 #           issue         the issue's state is closed
@@ -18,9 +20,9 @@
 #           name          the overlay's name template, pattern and command are all present, and the expanded
 #                         name matches the pattern. The only place a command is built.
 #
-# The overlay body (cleanup/removal-command) is three lines: `name: <template with {N}>`,
-# `pattern: <extended regex>` and `command: <template with {name}>`; it comes from `overlay.sh cleanup removal-command`. No
-# overlay (overlay.sh exit 3, or 2 while the point is unregistered) means `proven` with `-`; any other failure dies.
+# The overlay body (cleanup/removal-command) is three lines, and an optional fourth: `name: <template with {N}>`,
+# `pattern: <extended regex>`, `command: <template with {N} and {name}>` and `fallback: <text with {N} and {name}>`; it comes from `overlay.sh cleanup removal-command`. No
+# overlay (overlay.sh exit 3, or 2 while the point is unregistered) means `proven` with `-` and `-`; any other failure dies.
 #
 # Config keys read: baseBranch (see lib/env.sh).
 set -euo pipefail
@@ -84,16 +86,21 @@ first_failed_proof() {
     echo ok
 }
 
-# Last proof, and the only place a command is built: prints the command, `-`, or `name` for a failure.
+# Last proof, and the only place a command is built: prints `-`, or `name` for a failure, or `cmd:<command>` and then
+# a second line, the expanded fallback or `-`.
 name_proof() {
-    local n=$1 tpl pattern cmd name
+    local n=$1 tpl pattern cmd name fb
     [[ -n $overlay ]] || { echo -; return; }
     tpl=$(overlay_value name) pattern=$(overlay_value pattern) cmd=$(overlay_value command)
     [[ -n $tpl && -n $pattern && -n $cmd ]] || { echo name; return; }
     name=${tpl//\{N\}/$n}
     [[ -n $name && $name =~ $pattern ]] || { echo name; return; }
+    cmd=${cmd//\{N\}/$n}
     cmd=${cmd//\{name\}/"$name"}
-    echo "cmd:$cmd"
+    fb=$(overlay_value fallback)
+    fb=${fb//\{N\}/$n}
+    fb=${fb//\{name\}/"$name"}
+    printf 'cmd:%s\n%s\n' "$cmd" "${fb:--}"
 }
 
 while IFS= read -r n; do
@@ -101,9 +108,9 @@ while IFS= read -r n; do
     if [[ $proof == ok ]]; then
         out=$(name_proof "$n")
         case $out in
-            -) printf '%s\tproven\t-\n' "$n" ;;
+            -) printf '%s\tproven\t-\t-\n' "$n" ;;
             name) printf '%s\tfailed\tname\n' "$n" ;;
-            *) printf '%s\tproven\t%s\n' "$n" "${out#cmd:}" ;;
+            *) printf '%s\tproven\t%s\t%s\n' "$n" "$(head -n1 <<<"${out#cmd:}")" "$(tail -n1 <<<"$out")" ;;
         esac
     else
         printf '%s\tfailed\t%s\n' "$n" "$proof"

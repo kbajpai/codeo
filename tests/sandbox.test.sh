@@ -44,6 +44,12 @@ sb_setup() {
     echo 'codeo-113' >"$sb_dir/lockname"
     : >"$sb_dir/trusted"
     cp "$(dirname "$script")/claude-image" "$sb_dir/default_pin"
+    cat >"$sb_dir/track.sh" <<'TRK'
+d=${0%/track.sh}
+echo "track $*" >>"$d/calls"
+[[ "$1" != confirm ]] || exit "${STUB_CONFIRM_RC:-0}"
+exit 0
+TRK
     local n
     for n in sbx sbx.exe git git.exe code ssh ssh.exe cmd.exe; do
         cat >"$sb_dir/bin/$n" <<'STUB'
@@ -90,13 +96,13 @@ export WSL_DISTRO_NAME=${WSL_DISTRO_NAME:-Ubuntu}
 sb_run() {
     sb_rc=0
     # shellcheck disable=SC2016
-    env -u CODEO_SBX ${SB_NODISTRO:+-u WSL_DISTRO_NAME} PATH="$sb_dir/bin:/usr/bin:/bin" ${SB_SBX:+CODEO_SBX="$SB_SBX"} \
+    env -u CODEO_SBX ${SB_NODISTRO:+-u WSL_DISTRO_NAME} PATH="$sb_dir/bin:/usr/bin:/bin" CODEO_TRACK="${SB_TRACK-$sb_dir/track.sh}" ${SB_SBX:+CODEO_SBX="$SB_SBX"} \
         "$bash_abs" -c 'cd "$1" && shift && exec "$@"' _ "$sb_dir/work" "$bash_abs" "$script" "$@" >"$sb_dir/out" 2>"$sb_dir/err" || sb_rc=$?
     sb_out=$(<"$sb_dir/out")
     sb_err=$(<"$sb_dir/err")
 }
 
-usage_line='usage: codeo-sandbox.sh issue <N> <branch> | open <N> | shell <N> | end <N> [--force]'
+usage_line='usage: codeo-sandbox.sh issue <N> <branch> [--yes] | open <N> | shell <N> | end <N> [--force]'
 
 usage_without_arguments_exits_2() {
     sb_setup usage
@@ -1156,6 +1162,136 @@ docs_the_hand_off_names_the_third_route() {
     grep -Fq '.sbx/README.md' "$repo/.devcontainer/README.md" || fail "the dev container README does not point at .sbx/README.md"
 }
 
+issue_confirms_then_creates_then_adds_the_sandbox_row() {
+    sb_setup trk_create
+    sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    local c
+    c=$(grep '^track confirm 152$\|^sbx create\|^track add 152 sandbox codeo-152$' "$sb_dir/calls" | sed 's/ --clone.*//')
+    [[ "$c" == "track confirm 152"$'\nsbx create'$'\ntrack add 152 sandbox codeo-152' ]] || fail "order: $c"
+}
+
+refusal_leaves_no_clone() {
+    sb_setup noclone
+    STUB_CONFIRM_RC=1 sb_run issue 152 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$(sb_calls)" != *"git clone"* ]] || fail "cloned: $(sb_calls)"
+    [[ ! -e "$sb_dir/work/codeo-152" ]] || fail "codeo-152 exists"
+    [[ "$(sb_calls)" != *"sbx create"* ]] || fail "created: $(sb_calls)"
+}
+
+issue_passes_yes_to_confirm() {
+    sb_setup trk_yes
+    sb_run issue 152 fix/x --yes
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\ntrack confirm 152 --yes\n'* ]] || fail "calls: $(sb_calls)"
+}
+
+issue_warns_about_a_local_container_with_the_same_name() {
+    sb_setup trk_local
+    cat >"$sb_dir/bin/docker" <<'STUB'
+#!/bin/bash
+echo "docker $*" >>"${0%/bin/docker}/calls"
+printf 'other\ncodeo-152\n'
+STUB
+    chmod +x "$sb_dir/bin/docker"
+    sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\ntrack confirm 152 --local a container codeo-152 exists on this host\n'* ]] || fail "calls: $(sb_calls)"
+    sb_setup trk_local_none
+    printf '#!/bin/bash\nexit 1\n' >"$sb_dir/bin/docker"
+    chmod +x "$sb_dir/bin/docker"
+    sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "failing docker: exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *$'\ntrack confirm 152\n'* ]] || fail "failing docker calls: $(sb_calls)"
+}
+
+a_confirm_stop_creates_nothing() {
+    sb_setup trk_stop
+    STUB_CONFIRM_RC=1 sb_run issue 152 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$(sb_calls)" != *"sbx create"* ]] || fail "create was called"
+    [[ "$(sb_calls)" != *"track add"* ]] || fail "add was called"
+}
+
+issue_on_an_existing_sandbox_neither_confirms_nor_adds() {
+    sb_setup trk_exists
+    mkdir -p "$sb_dir/work/codeo-152/.git"
+    echo 'codeo-152 claude running' >"$sb_dir/sandboxes"
+    echo 'codeo-152' >"$sb_dir/lockname"
+    echo 'fix/x' >"$sb_dir/branch"
+    sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" != *"track "* ]] || fail "tracker called: $(sb_calls)"
+}
+
+a_failing_tracker_does_not_fail_the_creation() {
+    sb_setup trk_fail
+    printf 'echo "track $*" >>"${0%%/track.sh}/calls"\n[[ "$1" == confirm ]] || exit 3\n' >"$sb_dir/track.sh"
+    sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls)" == *"track add 152 sandbox codeo-152"* ]] || fail "calls: $(sb_calls)"
+}
+
+# sb_repo_tracker: a tracker that logs the CODEO_REPO_URL it runs with, one line per call, to $sb_dir/repo.
+sb_repo_tracker() {
+    printf '%s\n' 'echo "${CODEO_REPO_URL-unset}" >>"${0%/track.sh}/repo"' 'exit 0' >"$sb_dir/track.sh"
+}
+
+the_tracker_runs_with_the_default_repository_when_none_is_set() {
+    sb_setup trk_repo_default
+    sb_repo_tracker
+    sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ -s "$sb_dir/repo" ]] || fail "tracker not called"
+    [[ "$(sort -u "$sb_dir/repo")" == 'https://github.com/kbajpai/codeo.git' ]] || fail "repo: $(tr '\n' '|' <"$sb_dir/repo")"
+}
+
+the_tracker_runs_with_a_set_repository_unchanged() {
+    sb_setup trk_repo_set
+    sb_repo_tracker
+    CODEO_REPO_URL=https://example.com/fork.git sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ -s "$sb_dir/repo" ]] || fail "tracker not called"
+    [[ "$(sort -u "$sb_dir/repo")" == 'https://example.com/fork.git' ]] || fail "repo: $(tr '\n' '|' <"$sb_dir/repo")"
+}
+
+a_missing_tracker_is_one_note_once() {
+    sb_setup trk_missing
+    SB_TRACK=$sb_dir/nope.sh sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(grep -c 'codeo-sandbox: note: codeo-track.sh is not beside' "$sb_dir/err")" == 1 ]] || fail "stderr: $sb_err"
+}
+
+the_tracker_beside_a_bare_script_name_is_found() {
+    sb_setup trk_bare
+    mkdir -p "$sb_dir/here"
+    cp "$script" "$sb_dir/here/codeo-sandbox.sh"
+    printf 'echo "track $*" >>"%s/calls"\n' "$sb_dir" >"$sb_dir/here/codeo-track.sh"
+    sb_rc=0
+    (cd "$sb_dir/here" && env -u CODEO_TRACK -u CODEO_SBX PATH="$sb_dir/bin:/usr/bin:/bin" "$bash_abs" codeo-sandbox.sh issue 152 fix/x >"$sb_dir/out" 2>"$sb_dir/err") || sb_rc=$?
+    ((sb_rc == 0)) || fail "exited $sb_rc: $(<"$sb_dir/err")"
+    [[ "$(<"$sb_dir/err")" != *"not beside this script"* ]] || fail "tracker not found: $(<"$sb_dir/err")"
+    [[ "$(sb_calls)" == *$'track confirm 152\n'* ]] || fail "calls: $(sb_calls)"
+}
+
+end_marks_the_sandbox_removed_after_the_rm() {
+    end_setup trk_end
+    sb_run end 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    local c
+    c=$(grep '^sbx rm\|^track mark' "$sb_dir/calls")
+    [[ "$c" == "sbx rm --force codeo-113"$'\ntrack mark 113 sandbox codeo-113 removed' ]] || fail "calls: $c"
+}
+
+a_refused_end_marks_nothing() {
+    end_setup trk_end_refused
+    end_commit 1
+    sb_run end 113
+    ((sb_rc == 1)) || fail "exited $sb_rc"
+    [[ "$(sb_calls)" != *"track "* ]] || fail "tracker called: $(sb_calls)"
+}
+
 cases=(
     usage_without_arguments_exits_2
     bad_numbers_and_branches_exit_2_before_any_call
@@ -1253,6 +1389,19 @@ cases=(
     docs_changelog_names_the_sandbox_route
     docs_changelog_names_the_sandbox_lock
     docs_the_hand_off_names_the_third_route
+    issue_confirms_then_creates_then_adds_the_sandbox_row
+    issue_passes_yes_to_confirm
+    refusal_leaves_no_clone
+    issue_warns_about_a_local_container_with_the_same_name
+    a_confirm_stop_creates_nothing
+    issue_on_an_existing_sandbox_neither_confirms_nor_adds
+    a_failing_tracker_does_not_fail_the_creation
+    the_tracker_runs_with_the_default_repository_when_none_is_set
+    the_tracker_runs_with_a_set_repository_unchanged
+    a_missing_tracker_is_one_note_once
+    the_tracker_beside_a_bare_script_name_is_found
+    end_marks_the_sandbox_removed_after_the_rm
+    a_refused_end_marks_nothing
 )
 
 for current in "${cases[@]}"; do

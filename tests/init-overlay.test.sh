@@ -15,12 +15,14 @@ rc=0
 out=$(bash scripts/overlay.sh init host-workflow 2>/dev/null) || rc=$?
 [[ "$rc" -eq 0 ]] || fail "overlay.sh init host-workflow exited $rc"
 
-for needle in 'home container' 'This skill does not write `.codeo/active`' 'Clone Repository in Named Container Volume' \
+for needle in 'home checkout' 'the host clone named `codeo-home`' 'This skill does not write `.codeo/active`' 'Clone Repository in Named Container Volume' \
     'https://github.com/kbajpai/codeo/tree/' 'codeo-<N>' 'git worktree remove' 'git branch -D' \
     '/codeo:plan' 'lock: took the lock for #<N>' \
-    'bash codeo-container.sh issue <N> <branch>' 'bash codeo-container.sh shell <N>' 'command line' 'docker volume rm codeo-<N>'; do
+    'bash codeo-container.sh issue <N> <branch>' 'bash codeo-container.sh shell <N>' 'command line' 'codeo rm <N>' \
+    'bash .devcontainer/codeo-track.sh add <N> branch <branch>' 'track:' 'changes nothing'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
+[[ "$out" != *'docker volume rm'* ]] || fail "overlay output still names docker volume rm"
 [[ "$out" != *'claude --cloud'* ]] || fail "overlay output mentions claude --cloud"
 
 rc=0

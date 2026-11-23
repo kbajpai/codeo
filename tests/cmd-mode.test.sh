@@ -41,11 +41,14 @@ cm_setup() {
     cm_git_bin=""
     mkdir -p "$cm_dir/bin"
     : >"$cm_dir/calls"
+    : >"$cm_dir/all"
+    : >"$cm_dir/track"
     echo missing >"$cm_dir/state"
     cat >"$cm_dir/bin/docker" <<'STUB'
 #!/bin/bash
 d=${0%/bin/docker}
 echo "$*" >>"$d/calls"
+echo "$*" >>"$d/all"
 state=$(<"$d/state")
 case "$1" in
     info)
@@ -81,6 +84,13 @@ esac
 exit 0
 STUB
     chmod +x "$cm_dir/bin/docker"
+    cat >"$cm_dir/track.sh" <<'TRK'
+d=${0%/track.sh}
+echo "$*" >>"$d/track"
+echo "track $*" >>"$d/all"
+[[ "$1" != confirm ]] || exit "${STUB_CONFIRM_RC:-0}"
+exit 0
+TRK
 }
 
 # cm_run <args...>: run the script with only the stub on PATH; sets cm_rc, cm_out, cm_err.
@@ -89,8 +99,8 @@ cm_run() {
     # Per-case settings: cm_git_bin (a directory with git, put on PATH after bin/), CM_GIT_NAME and
     # CM_GIT_EMAIL (the host's GIT_AUTHOR_*), CM_CONTEXT (the host's CODEO_CONTEXT).
     [[ -e "$cm_dir/gitconfig" ]] || : >"$cm_dir/gitconfig"
-    env -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL -u CODEO_CONTEXT -u CODEO_REPO_URL GIT_CONFIG_NOSYSTEM=1 \
-        PATH="$cm_dir/bin${cm_git_bin:+:$cm_git_bin}" HOME="$cm_dir" GIT_CONFIG_GLOBAL="$cm_dir/gitconfig" \
+    env -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL -u CODEO_CONTEXT -u CODEO_REPO_URL GIT_CONFIG_NOSYSTEM=1 ${CM_REPO:+CODEO_REPO_URL="$CM_REPO"} \
+        CODEO_TRACK="${CM_TRACK-$cm_dir/track.sh}" PATH="$cm_dir/bin${cm_git_bin:+:$cm_git_bin}" HOME="$cm_dir" GIT_CONFIG_GLOBAL="$cm_dir/gitconfig" \
         ${CM_GIT_NAME:+GIT_AUTHOR_NAME="$CM_GIT_NAME"} ${CM_GIT_EMAIL:+GIT_AUTHOR_EMAIL="$CM_GIT_EMAIL"} \
         ${CM_CONTEXT:+CODEO_CONTEXT="$CM_CONTEXT"} \
         "$bash_abs" "$script" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_rc=$?
@@ -308,11 +318,12 @@ issue_rebuild_and_rerun_follow_home() {
     echo running >"$cm_dir/state"
     STUB_CLONE=present cm_run issue 113 b
     ((cm_rc == 1)) || fail "rerun exited $cm_rc, not 1"
-    [[ "$cm_err" == "$(issue_existing_line 113 b)" ]] || fail "rerun stderr: $cm_err"
+    [[ "$cm_err" == "$(issue_existing_line 113 b running)" ]] || fail "rerun stderr: $cm_err"
 }
 
-# issue_existing_line <N> <branch>: the stderr line for an issue on an existing container.
+# issue_existing_line <N> <branch> <state>: the stderr lines for an issue on an existing container.
 issue_existing_line() {
+    echo "codeo-container: warning: codeo-$1 already exists on this host ($3)"
     echo "codeo-container: codeo-$1 already exists: enter it with 'bash codeo-container.sh shell $1', rebuild it with 'bash codeo-container.sh issue $1 $2 --rebuild', or remove it (docker rm -f codeo-$1; docker volume rm codeo-$1, once git status in it shows nothing unpushed) to start from a fresh clone"
 }
 
@@ -328,7 +339,7 @@ issue_on_a_running_container_is_refused() {
     echo running >"$cm_dir/state"
     STUB_CLONE=present cm_run issue 5 feat/x
     ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
-    [[ "$cm_err" == "$(issue_existing_line 5 feat/x)" ]] || fail "stderr: $cm_err"
+    [[ "$cm_err" == "$(issue_existing_line 5 feat/x running)" ]] || fail "stderr: $cm_err"
     if cm_calls | grep -qE '^(start|run|rm|build|exec)'; then fail "calls were: $(cm_calls)"; fi
 }
 
@@ -337,7 +348,7 @@ issue_on_a_stopped_container_is_refused_and_not_started() {
     echo stopped >"$cm_dir/state"
     STUB_CLONE=present cm_run issue 5 feat/x
     ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
-    [[ "$cm_err" == "$(issue_existing_line 5 feat/x)" ]] || fail "stderr: $cm_err"
+    [[ "$cm_err" == "$(issue_existing_line 5 feat/x stopped)" ]] || fail "stderr: $cm_err"
     if cm_calls | grep -q '^start'; then fail "the container was started: $(cm_calls)"; fi
 }
 
@@ -493,6 +504,181 @@ shell_without_a_terminal_passes_i_only() {
         || fail "line was: $(cm_calls | tail -n 1)"
 }
 
+# cm_all: the docker calls and tracker calls (prefixed "track ") in the order they happened.
+cm_all() { cat "$cm_dir/all"; }
+
+issue_records_the_rows_after_the_container_is_made() {
+    cm_setup track_fresh
+    cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    local all
+    all=$(cm_all)
+    [[ "$(printf '%s\n' "$all" | grep '^track ')" == "$(lines 'track confirm 152' 'track add 152 image codeo-dev:codeo-152' \
+        'track add 152 container codeo-152' 'track add 152 volume codeo-152')" ]] || fail "tracker calls: $all"
+    local c_at b_at r_at x_at a_at
+    c_at=$(printf '%s\n' "$all" | grep -n '^track confirm' | cut -d: -f1)
+    b_at=$(printf '%s\n' "$all" | grep -n '^build ' | cut -d: -f1)
+    r_at=$(printf '%s\n' "$all" | grep -n '^run ' | cut -d: -f1)
+    x_at=$(printf '%s\n' "$all" | grep -n '^exec -u root' | cut -d: -f1)
+    a_at=$(printf '%s\n' "$all" | grep -n '^track add 152 image' | cut -d: -f1)
+    ((c_at < b_at && b_at < r_at && r_at < x_at && x_at < a_at)) || fail "order was: $all"
+}
+
+issue_without_a_build_records_no_image_row() {
+    cm_setup track_noimage
+    STUB_IMAGE=present cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(<"$cm_dir/track")" == "$(lines 'confirm 152' 'add 152 container codeo-152' 'add 152 volume codeo-152')" ]] \
+        || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+a_refused_confirm_stops_before_build_and_run() {
+    cm_setup track_refuse
+    STUB_CONFIRM_RC=1 cm_run issue 152 feat/x
+    ((cm_rc == 1)) || fail "exited $cm_rc, not 1"
+    if cm_all | grep -qE '^(build|run|rm|start)'; then fail "docker went on: $(cm_all)"; fi
+    [[ "$(<"$cm_dir/track")" == 'confirm 152' ]] || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+yes_goes_to_confirm() {
+    cm_setup track_yes
+    cm_run issue 152 feat/x --yes
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(head -n 1 "$cm_dir/track")" == 'confirm 152 --yes' ]] || fail "tracker calls: $(<"$cm_dir/track")"
+    cm_setup track_yes2
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --yes --rebuild
+    ((cm_rc == 0)) || fail "flags in the other order exited $cm_rc: $cm_err"
+    [[ "$(head -n 1 "$cm_dir/track")" == 'confirm 152 --yes' ]] || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+rebuild_marks_the_old_rows_removed_before_the_new_ones() {
+    cm_setup track_rebuild
+    echo running >"$cm_dir/state"
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(<"$cm_dir/track")" == "$(lines 'mark 152 container codeo-152 removed' 'add 152 image codeo-dev:codeo-152' \
+        'add 152 container codeo-152' 'add 152 volume codeo-152')" ]] || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+rebuild_own_container_does_not_prompt() {
+    cm_setup rebuild_own
+    echo running >"$cm_dir/state"
+    STUB_CONFIRM_RC=1 STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild </dev/null
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    if grep -q '^confirm' "$cm_dir/track"; then fail "confirmed: $(<"$cm_dir/track")"; fi
+    local all rm_at b_at
+    all=$(cm_all)
+    rm_at=$(printf '%s\n' "$all" | grep -n '^rm -f codeo-152' | cut -d: -f1)
+    b_at=$(printf '%s\n' "$all" | grep -n '^build ' | cut -d: -f1)
+    if [[ -z "$rm_at" || -z "$b_at" ]] || ((rm_at > b_at)); then fail "no rm -f then build: $all"; fi
+}
+
+rebuild_leaves_the_image_row() {
+    cm_setup rebuild_image
+    echo running >"$cm_dir/state"
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    if grep -q '^mark 152 image' "$cm_dir/track"; then fail "image marked: $(<"$cm_dir/track")"; fi
+    grep -qx 'mark 152 container codeo-152 removed' "$cm_dir/track" || fail "container not marked: $(<"$cm_dir/track")"
+    grep -qx 'add 152 container codeo-152' "$cm_dir/track" || fail "no new container row: $(<"$cm_dir/track")"
+}
+
+rebuild_without_a_container_still_confirms() {
+    cm_setup rebuild_missing
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(head -n 1 "$cm_dir/track")" == 'confirm 152' ]] || fail "tracker calls: $(<"$cm_dir/track")"
+    cm_setup rebuild_missing_no
+    STUB_CONFIRM_RC=1 STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild
+    ((cm_rc == 1)) || fail "refused confirm exited $cm_rc, not 1"
+}
+
+an_existing_container_is_warned_about_and_refused_without_the_tracker() {
+    local state
+    for state in running stopped; do
+        cm_setup "track_exists_$state"
+        echo "$state" >"$cm_dir/state"
+        cm_run issue 152 feat/x
+        ((cm_rc == 1)) || fail "$state exited $cm_rc, not 1"
+        [[ "$cm_err" == "codeo-container: warning: codeo-152 already exists on this host ($state)"$'\n'* ]] \
+            || fail "$state stderr: $cm_err"
+        [[ ! -s "$cm_dir/track" ]] || fail "$state called the tracker: $(<"$cm_dir/track")"
+        if cm_calls | grep -q '^run '; then fail "$state ran a container"; fi
+    done
+}
+
+home_and_shell_never_call_the_tracker() {
+    cm_setup track_home
+    cm_run home
+    ((cm_rc == 0)) || fail "home exited $cm_rc: $cm_err"
+    echo running >"$cm_dir/state"
+    cm_run shell home
+    cm_setup track_shell
+    echo running >"$cm_dir/state"
+    cm_run shell 152
+    [[ ! -s "$cm_dir/track" ]] || fail "tracker was called: $(<"$cm_dir/track")"
+    [[ ! -s "$scratch/track_home/track" ]] || fail "home called the tracker: $(<"$scratch/track_home/track")"
+}
+
+a_missing_tracker_is_noted_and_creation_goes_on() {
+    cm_setup track_missing
+    CM_TRACK="$cm_dir/nope.sh" cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$cm_err" == *"codeo-container: note: codeo-track.sh is not beside this script, so nothing was recorded on the issue (codeo update fetches it)"* ]] \
+        || fail "no note: $cm_err"
+    cm_calls | grep -q '^run ' || fail "no docker run: $(cm_calls)"
+}
+
+the_tracker_beside_a_bare_script_name_is_found() {
+    cm_setup track_bare
+    mkdir -p "$cm_dir/here"
+    cp "$script" "$cm_dir/here/codeo-container.sh"
+    printf '%s\n' 'echo "$*" >>"'"$cm_dir"'/track"' > "$cm_dir/here/codeo-track.sh"
+    cm_rc=0
+    (cd "$cm_dir/here" && env -u CODEO_TRACK -u CODEO_CONTEXT -u CODEO_REPO_URL PATH="$cm_dir/bin" HOME="$cm_dir" \
+        "$bash_abs" codeo-container.sh issue 152 feat/x >"$cm_dir/out" 2>"$cm_dir/err") || cm_rc=$?
+    ((cm_rc == 0)) || fail "exited $cm_rc: $(<"$cm_dir/err")"
+    [[ "$(<"$cm_dir/err")" != *"not beside this script"* ]] || fail "tracker not found: $(<"$cm_dir/err")"
+    [[ "$(head -n 1 "$cm_dir/track")" == 'confirm 152' ]] || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+a_tracker_that_fails_does_not_fail_the_creation() {
+    cm_setup track_exit3
+    printf '%s\n' 'echo "$*" >>"${0%/track.sh}/track"' '[[ "$1" == confirm ]] || exit 3' 'exit 0' >"$cm_dir/track.sh"
+    cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(grep -c '^add' "$cm_dir/track")" == 3 ]] || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+# cm_repo_tracker: a tracker that logs the CODEO_REPO_URL it runs with, one line per call, to $cm_dir/repo.
+cm_repo_tracker() {
+    printf '%s\n' 'echo "${CODEO_REPO_URL-unset}" >>"${0%/track.sh}/repo"' 'exit 0' >"$cm_dir/track.sh"
+}
+
+the_tracker_runs_with_the_default_repository_when_none_is_set() {
+    cm_setup track_repo_default
+    cm_repo_tracker
+    cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ -s "$cm_dir/repo" ]] || fail "tracker not called"
+    [[ "$(sort -u "$cm_dir/repo")" == 'https://github.com/kbajpai/codeo.git' ]] || fail "repo: $(tr '\n' '|' <"$cm_dir/repo")"
+}
+
+the_tracker_runs_with_a_set_repository_unchanged() {
+    cm_setup track_repo_set
+    cm_repo_tracker
+    CM_REPO=https://example.com/fork.git cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ -s "$cm_dir/repo" ]] || fail "tracker not called"
+    [[ "$(sort -u "$cm_dir/repo")" == 'https://example.com/fork.git' ]] || fail "repo: $(tr '\n' '|' <"$cm_dir/repo")"
+}
+
+the_missing_tracker_note_prints_once() {
+    cm_setup track_once
+    CM_TRACK="$cm_dir/nope.sh" cm_run issue 152 feat/x
+    [[ "$(grep -c 'not beside this script' "$cm_dir/err")" == 1 ]] || fail "note count: $cm_err"
+}
+
 script_uses_only_bash_3_2_and_bsd_constructs() {
     local target=${CM_SCRIPT:-$repo/.devcontainer/codeo-container.sh} code pat hit
     # Whole-line comments and blank lines are dropped; a trailing comment is still scanned.
@@ -595,6 +781,22 @@ cases=(
     issue_uses_the_numbered_name_and_the_branch
     issue_rejects_unsafe_numbers_and_branches
     issue_rebuild_and_rerun_follow_home
+    issue_records_the_rows_after_the_container_is_made
+    issue_without_a_build_records_no_image_row
+    a_refused_confirm_stops_before_build_and_run
+    yes_goes_to_confirm
+    rebuild_marks_the_old_rows_removed_before_the_new_ones
+    rebuild_own_container_does_not_prompt
+    rebuild_leaves_the_image_row
+    rebuild_without_a_container_still_confirms
+    an_existing_container_is_warned_about_and_refused_without_the_tracker
+    home_and_shell_never_call_the_tracker
+    a_missing_tracker_is_noted_and_creation_goes_on
+    the_tracker_beside_a_bare_script_name_is_found
+    a_tracker_that_fails_does_not_fail_the_creation
+    the_missing_tracker_note_prints_once
+    the_tracker_runs_with_the_default_repository_when_none_is_set
+    the_tracker_runs_with_a_set_repository_unchanged
     issue_on_a_running_container_is_refused
     issue_on_a_stopped_container_is_refused_and_not_started
     issue_rebuild_on_a_matching_clone_goes_ahead

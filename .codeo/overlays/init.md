@@ -2,34 +2,37 @@ Project overlay text adds to or narrows a step; it never overrides a rule marked
 
 ## host-workflow
 
-This skill runs in the **home container** — the clone on `main`, holding no lock. A `.codeo/active`
-here means this session is inside some issue's container: stop, and say to run `init` in the home
-container. Another issue's workflow in its own container is no obstacle; that is the point.
+This skill runs in a **home checkout** (the host clone named `codeo-home`, or the home container) — the clone on `main`, holding no lock. A `.codeo/active`
+here means this session is inside some issue's checkout: stop, and say to run `init` in a home
+checkout. Another issue's workflow in its own container is no obstacle; that is the point.
 
-Nothing is switched in the home container's clone — the branch is cut in a scratch worktree and
+Nothing is switched in the home checkout's clone — the branch is cut in a scratch worktree and
 never checked out here — so uncommitted work here is not in the way and is never stashed or discarded.
 
+After the claim push succeeds (and for a resume too), run `bash .devcontainer/codeo-track.sh add <N> branch <branch>` from the project root: it records the branch in the issue's tracking comment, and a second run changes nothing. Relay a `track:` line it prints and carry on whatever its exit status.
+
 Once the claim succeeds, `git worktree remove <scratch>`, then `git branch -D <branch>` (it is on
-origin now, and the home container has no use for a local copy that would only go stale).
+origin now, and the home checkout has no use for a local copy that would only go stale).
 
 **This skill does not write `.codeo/active`** — it has no clone to write it in. The lock is taken
 where it lives, from what the push carried: the issue's container is cloned from the pushed branch,
 takes its lock from the `init.md` on it (`bash .devcontainer/scripts/devcontainer-start.sh`), and
 every skill commits its dossier onto it as it goes.
 
-**Hand off** to `/codeo:plan` — **in the issue's container.** This session is in the home
-container, where no lock exists, so `plan` run here stops. Print the ways to open it, with the
+**Hand off** to `/codeo:plan` — **in the issue's container.** This session is in a home
+checkout, where no lock exists, so `plan` run here stops. Print the ways to open it, with the
 number and branch filled in:
 
 - *In VS Code:* run Dev Containers: Clone Repository in Named Container Volume… (the
   unnamed variant never asks for a name), then give the repository URL with the branch in it,
   `https://github.com/kbajpai/codeo/tree/<branch>`, a new volume named `codeo-<N>`, and the folder
-  `codeo-<N>` (the folder names the container).
+  `codeo-<N>` (the folder names the container). This route records the branch row only; the
+  container, image and volume are not recorded.
 - *From a command line:* on the host, not inside this container, in a terminal, run
   `bash codeo-container.sh issue <N> <branch>`. `codeo-container.sh` is the file the download line in
-  `.devcontainer/README.md` saves; it needs only Docker. If `codeo-<N>` exists (a stash being resumed), remove it first with `docker rm -f codeo-<N>; docker volume rm codeo-<N>`, once `git status` in it shows nothing unpushed, or the command refuses. Then
+  `.devcontainer/README.md` saves; it needs only Docker. If `codeo-<N>` exists (a stash being resumed), remove it first with `codeo rm <N>`, once `git status` in it shows nothing unpushed, or the command refuses. Then
   `bash codeo-container.sh shell <N>` opens a shell in `codeo-<N>`; start `claude` there.
-- *In a Docker Sandboxes sandbox:* on the host, run `bash codeo-sandbox.sh issue <N> <branch>`, then `bash codeo-sandbox.sh open <N>` (VS Code) or `bash codeo-sandbox.sh shell <N>`. `codeo-sandbox.sh` is the file the download line in `.sbx/README.md` saves. A sandbox is ended with `bash codeo-sandbox.sh end <N>`, not with `docker rm`.
+- *In a Docker Sandboxes sandbox:* on the host, run `bash codeo-sandbox.sh issue <N> <branch>`, then `bash codeo-sandbox.sh open <N>` (VS Code) or `bash codeo-sandbox.sh shell <N>`. `codeo-sandbox.sh` is the file the download line in `.sbx/README.md` saves. A sandbox is ended with `codeo rm <N>` (which runs `bash codeo-sandbox.sh end <N>`), not with `docker rm`.
 
 Whichever route, when the container has started its start script prints
 `lock: took the lock for #<N> on <branch>`; then run `/codeo:plan` there. If the start script
