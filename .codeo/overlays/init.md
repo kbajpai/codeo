@@ -26,7 +26,8 @@ number and branch filled in:
 - *In VS Code:* run Dev Containers: Clone Repository in Named Container Volume… (the
   unnamed variant never asks for a name), then give the repository URL with the branch in it,
   `https://github.com/kbajpai/codeo/tree/<branch>`, a new volume named `codeo-<N>`, and the folder
-  `codeo-<N>` (the folder names the container).
+  `codeo-<N>` (the folder names the container). This route records the branch row only; the
+  container, image and volume are not recorded.
 - *From a command line:* on the host, not inside this container, in a terminal, run
   `bash codeo-container.sh issue <N> <branch>`. `codeo-container.sh` is the file the download line in
   `.devcontainer/README.md` saves; it needs only Docker. If `codeo-<N>` exists (a stash being resumed), remove it first with `codeo rm <N>`, once `git status` in it shows nothing unpushed, or the command refuses. Then

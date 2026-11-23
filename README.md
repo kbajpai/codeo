@@ -201,7 +201,7 @@ To run it on the host you need:
 - A git identity: `git config --global user.name "Your Name"` and `git config --global user.email you@example.com`.
 - A clone of the project in a folder named `<codename>-home`, kept on the base branch and current with `git pull`.
 
-It works on Linux, on macOS and on Windows through WSL2. On macOS, `install.sh` and the `codeo` command need bash 4.3 or later (for example from Homebrew), and the stock bash 3.2 is too old for them; the role guard and `codeo-container.sh` run on 3.2. On Windows run everything inside WSL2, `codeo` and `gh` included.
+It works on Linux, on macOS and on Windows through WSL2. On macOS, `install.sh` and the `codeo` command need bash 4.3 or later (for example from Homebrew) and `flock`, and the stock bash 3.2 is too old for them; the role guard and `codeo-container.sh` run on 3.2. On Windows run everything inside WSL2, `codeo` and `gh` included.
 
 #### The guard
 
@@ -220,7 +220,7 @@ Each skill asks `.devcontainer/scripts/role.sh --check <skill>` first, and the a
 
 #### The tracking comment
 
-An issue's branch, containers, images, volumes and sandboxes are recorded in one comment on the issue, found by its first line, the hidden marker `<!-- codeo:tracking -->`:
+An issue's branch, containers, images, volumes and sandboxes are recorded in one comment on the issue, found by its hidden marker `<!-- codeo:tracking -->` anywhere in a comment body:
 
 ```
 <!-- codeo:tracking -->
@@ -243,6 +243,7 @@ Who writes which row, through `.devcontainer/codeo-track.sh`:
 - `codeo rm <N>` marks the container, its volume and its image `removed`, and `codeo-sandbox.sh end <N>` marks the sandbox `removed`, with the time.
 - `/codeo:close` marks the `branch` `deleted` after it deletes the remote branch. A kept branch stays `active`.
 - A row nothing has removed stays `active`; a row on another host is not proof the container still exists.
+- A container opened through VS Code's "Clone Repository in Named Container Volume" is recorded as the branch row alone: its container, image and volume are not recorded.
 
 Starting a container or sandbox for an issue that already has an `active` container or sandbox row, or a container of that name on this host, lists them and asks before it creates another. `codeo issue <N> --yes` answers yes; without a terminal and without `--yes` it stops.
 
