@@ -22,7 +22,8 @@
 #       `(after plan.md round <j>…)` markers (`/codeo:close` when clear, else `/codeo:plan`, `/codeo:implement`
 #       or `/codeo:qc`); with no verdict, the step after the last finished one (init: `/codeo:plan`, plan:
 #       `/codeo:implement`, implement: `/codeo:qc`), stepping past any `close` outcome no earlier rule took
-#       (a spent stash or abandon, or a live one whose `claim.sh --stash-live` check failed); else `nothing known`.
+#       (a spent stash or abandon, or a live one whose `claim.sh --stash-live` check failed or
+#       exited 0 or 4 with no output); else `nothing known`.
 #       `verdict:` follows it, only when
 #       qc.md's last round has a bold Verdict/Routing span: `round <k> — <span>`. Human blocks only; no network.
 #       --branches prints one `N<TAB>branch<TAB>dir` line per workflow (dir is <state>/N or
@@ -239,7 +240,8 @@ last_qc_round() {
 # `/codeo:close`; back to plan or implement: that step until its round answers the verdict's round, then
 # `/codeo:qc`); else the step after the last one finished, which
 # steps past any `close` outcome no earlier rule took (a spent stash or abandon, or a live one whose
-# `claim.sh --stash-live` check failed); else `nothing known`. Any failure falls to the next.
+# `claim.sh --stash-live` check failed or
+# exited 0 or 4 with no output); else `nothing known`. Any failure falls to the next.
 waits_of() {
     local sha=$1 dir=$2 state_token=$3 branch=$4 n=$5 verdict=$6 step=$7
     local s q parts= out rc=0 lead= sb m k j qcr
