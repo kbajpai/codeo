@@ -4,11 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/152 |
 | Branch | `feat/run-home-role-host-strict` |
-| Updated | 2026-11-22 |
+| Updated | 2026-11-23 |
 
 ## Where this stands
 
-Round 1, answers in. Q1-Q6 were answered "accept all recommendations" in the conversation and are recorded under each question. The plan is drafted in `.codeo/152/plan-draft.md` and awaits approval; nothing is written under `docs/plans/` before that.
+Round 2, questions open: Q8-Q12. `/codeo:qc` round 1 sent the change back with three blocking findings that rest on round 1 plan decisions (F1 the printed removal command, F2 the tracker's default repository, F3 what counts as a malformed table) and two non-blocking ones for the plan (F4 the VS Code route, F8 the first removal after an upgrade). Each is a question below with a recommendation. F5-F7 and F9-F12 are `/codeo:implement`'s and need no decision: the round 2 plan lists them as tasks. Nothing is drafted until Q8-Q12 are answered. Round 1's plan and answers (Q1-Q7) stand except where these answers change them.
 
 What exploration settled, so the questions below are only the open ones:
 
@@ -82,6 +82,53 @@ One pull request, guard tasks first (recommended option). Relayed from the engin
 **Answer:**
 Proceed and coordinate. Carried over from the engineer's answer to Q5 (same issue, same files); not asked again separately.
 
+### Q8 — What does `/codeo:close` and `/codeo:cleanup` print for an engineer who has no `codeo` command (QC F1)?
+
+**Why it matters:** round 1 made `codeo rm <N>` the only printed removal and said it runs unmodified in PowerShell and bash. It does not: `codeo` is a bash script for Linux, macOS or WSL2, and engineers on the VS Code route or the bare `codeo-container.sh` route never installed it. Before this branch they were given `docker rm -f codeo-<N>; docker volume rm codeo-<N>`, which runs wherever Docker does. The choice also decides whether the tracking comment can go stale: a raw `docker` removal records nothing.
+**Options:**
+- **A (recommended).** Print `codeo rm <N>` as the command, and beside it one plain sentence: without `codeo` on the host, run `docker rm -f codeo-<N>` then `docker volume rm codeo-<N>`, and the comment's rows then stay `active` until someone runs `bash .devcontainer/codeo-track.sh mark …` from a home checkout. The PowerShell claim is deleted everywhere and replaced by "in a bash shell on the host (Linux, macOS, or WSL2 on Windows)". `scripts/cleanup.sh` gains an optional fourth overlay line, `fallback:`, printed after the command; nothing else about its proofs changes.
+- **B.** Keep `codeo rm <N>` as the only printed command, say `codeo` must be installed to remove a container, and delete the PowerShell claim. Smallest change; VS Code-route engineers must install `codeo` (or work the `docker` command out themselves).
+- **C.** Go back to printing the raw `docker` commands, and print `codeo-track.sh mark` lines after them for the engineer to run. Works everywhere Docker does, but it is four or five commands, the marks need bash and `gh`, and nothing checks for unpushed work first.
+
+**Answer:**
+
+### Q9 — Which repository does the tracker comment on when `CODEO_REPO_URL` is unset (QC F2)?
+
+**Why it matters:** `codeo-track.sh` falls back to `kbajpai/codeo`. The init and close overlays run it inside a checkout where nothing sets `CODEO_REPO_URL`, so in a fork `/codeo:init <N>` would post a comment on the upstream repository's issue `<N>`: a write to someone else's repository.
+**Options:**
+- **A (recommended).** Order: `CODEO_REPO_URL` when set; else, when the current directory is inside a git checkout, that checkout's `origin` URL; else the upstream default. The overlays run in a checkout, so they follow the fork; `codeo`, `codeo-container.sh` and `codeo-sandbox.sh` run from `~/codeo` (not a checkout) and already clone from `CODEO_REPO_URL` or the same default, so the comment goes to the repository the container was cloned from.
+- **B.** As A, but with no default at all: outside a checkout with `CODEO_REPO_URL` unset the tracker records nothing and prints the row. Safest against a wrong-repository write, but upstream users of the downloaded scripts would then get no rows unless they set the variable.
+- **C.** Read `repo.owner`/`repo.name` from `.codeo/config.json` in a checkout, in place of `origin`. Matches `github.sh`, but needs `jq` in a script that must stay bash 3.2 with no dependency beyond `gh`.
+
+**Answer:**
+
+### Q10 — What makes a tracking table malformed, and how much of the comment is left alone (QC F3)?
+
+**Why it matters:** the issue says a malformed table is reported, not overwritten. Round 1 called a table malformed only when its header was missing, so a hand-edited row with too few or too many cells is silently rewritten (an eight-cell row loses two cells).
+**Options:**
+- **A (recommended).** A row is well-formed only with exactly six cells, a known kind (`branch`, `container`, `image`, `volume`, `sandbox`) and a known status (`active`, `removed`, `deleted`). One malformed row makes the whole table malformed: `add` and `mark` change nothing, exit 3 and print one `track:` line naming the row's line and the row they would have written; `confirm` still warns from the rows it can read. Strict, simple to reason about; one bad hand-edit stops recording for that issue until it is fixed.
+- **B.** Keep malformed rows byte-for-byte and edit only the well-formed ones, printing a `track:` note. Recording carries on, but the tracker then writes to a comment it only partly understands.
+
+**Answer:**
+
+### Q11 — Is a container opened through VS Code's "Clone Repository in Named Container Volume" recorded (QC F4)?
+
+**Why it matters:** that route is the first one the init overlay offers, and no host script runs in it, so its container, image and volume never appear in the comment and get no duplicate warning. Inside the container the host's hostname is not known (the container's hostname is its own name), which the Host column needs.
+**Options:**
+- **A (recommended).** State it: the README, `.devcontainer/README.md` and the init overlay say that only containers and sandboxes made by `codeo`, `codeo-container.sh` or `codeo-sandbox.sh` are recorded, and that the VS Code route records the branch row alone. Add the missing `curl` line for `codeo-track.sh` to the bare-script instructions. No new code.
+- **B.** Record it from inside the container at creation (`postCreateCommand`), with the Host cell reading `unknown (VS Code)`. Covers the route, but adds a second writer with a weaker row, needs `gh` logged in before the container is first used, and still cannot mark the removal.
+
+**Answer:**
+
+### Q12 — After an upgrade, how does the first `codeo rm <N>` of a container get the tracker (QC F8)?
+
+**Why it matters:** an older installed `codeo` runs `codeo update` and fetches the new `codeo` and two scripts, not `codeo-track.sh`. The new `codeo` downloads a missing script on any command that reads `~/codeo`, but `rm` of a container deliberately never reads it, so that first removal prints a `note:` and marks nothing.
+**Options:**
+- **A (recommended).** `codeo rm` of a container fetches a missing `codeo-track.sh` before marking, and only that: when `~/codeo` cannot be used (it is a git checkout and `CODEO_HOME` is unset, or the download fails) the removal still goes ahead and prints the `note:` as today. `.devcontainer/README.md`'s sentence that `rm` of a container never reads the home directory is corrected to say it reads it only for the tracker and never stops over it.
+- **B.** No code change: the CHANGELOG upgrade step says to run `codeo update` twice (the second run, by the new `codeo`, fetches the tracker).
+
+**Answer:**
+
 ## Notes
 
 My calls, stated so they can be corrected (none changes scope; they go in the plan as decisions):
@@ -125,3 +172,4 @@ sequenced:  none
 - 2026-11-22 — Q1-Q6 raised · cost: 4m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 220k in + 1.1M cached / 29k out
 - 2026-11-22 — answers Q1-Q6 recorded, plan drafted for review (engineering skills unavailable: structure applied directly) · cost: 10m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 276k in + 2.1M cached / 60k out
 - 2026-11-22 — planned: docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md · cost: 14m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 279k in + 2.8M cached / 64k out
+- 2026-11-23 — round 2 (send-back from qc.md round 1): Q8-Q12 raised · cost: 0m · fable-5-2 99k in + 234k cached / 3k out
