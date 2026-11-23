@@ -17,7 +17,7 @@ rc=0
 out=$(bash scripts/overlay.sh close host-workflow 2>/dev/null) || rc=$?
 [[ "$rc" -eq 0 ]] || fail "overlay.sh close host-workflow exited $rc"
 for needle in 'codeo rm <N>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
-    'not inside this container' 'git status' 'PowerShell' \
+    'not inside this container' 'git status' 'bash shell on the host (Linux, macOS, or WSL2 on Windows)' 'docker rm -f codeo-<N>' 'docker volume rm codeo-<N>' 'does not check for unpushed work' \
     'When the lock'"'"'s `host` is `container`' 'nothing to remove' '/codeo:triage' '/codeo:cleanup' 'home checkout' 'the host clone named `codeo-home`' \
     'After a finished close' 'After a stash:' 'After an abandon:' \
     'its number is the lock'"'"'s `issue`' '/codeo:init #<N>' '.devcontainer/README.md' \
@@ -33,7 +33,8 @@ check_overlay() {
     fin=${fin%%'After a stash:'*}
     [[ "$fin" == *"$cmd"* ]] \
         || { echo "check a: finished-close paragraph lacks the removal command"; return 1; }
-    [[ "$fin" != *'docker rm'* ]] || { echo "check a: finished-close paragraph names docker rm"; return 1; }
+    [[ "$fin" == *'docker rm -f codeo-<N>'* ]] \
+        || { echo "check a: finished-close paragraph lacks the docker fallback"; return 1; }
     rest='After a stash:'${text#*'After a stash:'}
     stash=${rest%%'After an abandon:'*}
     aband='After an abandon:'${rest#*'After an abandon:'}
@@ -77,6 +78,11 @@ check_overlay() {
     done
 }
 msg=$(check_overlay "$out") || fail "$msg"
+
+# No PowerShell claim in the two overlays that print the removal command.
+for f in .codeo/overlays/close.md .codeo/overlays/cleanup.md; do
+    ! grep -qi 'powershell' "$f" || fail "$f still mentions PowerShell"
+done
 
 # Self-check: each mutant of the real overlay must fail, and from its own check.
 cmd='docker rm -f x; docker volume rm x'

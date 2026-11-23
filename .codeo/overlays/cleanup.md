@@ -9,3 +9,4 @@ Run `bash .devcontainer/scripts/role.sh --check cleanup` from the project root. 
 name: codeo-{N}
 pattern: ^codeo-[0-9]+$
 command: codeo rm {N}
+fallback: if codeo is not installed on the host, run docker rm -f {name} and then docker volume rm {name}; the issue's rows stay active in its tracking comment until you mark them with bash .devcontainer/codeo-track.sh mark {N} container {name} removed (and the same for volume and image codeo-dev:{name}), and docker rm does not check for unpushed work
