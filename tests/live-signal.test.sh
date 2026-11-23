@@ -167,7 +167,7 @@ done
     failures=$((failures + 1))
 }
 handoff=$(<"$plugin_root/docs/handoff.md")
-[[ $handoff == *'S->>O: /codeo:close runs live.sh clear and deletes the lock in one command'* ]] || {
+[[ $handoff == *'S->>O: /codeo:close runs live.sh clear and live.sh sweep, and deletes the lock in one command'* ]] || {
     echo "FAIL $case_desc: no [S->>O close line]"
     failures=$((failures + 1))
 }
@@ -180,7 +180,7 @@ done
 
 case_desc=docs_state_the_web_session_signal
 handoff=$(<"$plugin_root/docs/handoff.md")
-for want in 'refs/heads/codeo-live/' 'never deleted' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN' 'takes the lock' 'first assignee' 'else `unknown`'; do
+for want in 'refs/heads/codeo-live/' 'live.sh sweep' '[skip ci]' 'codeo-live/**' 'refs/codeo/live-web/' 'codeo-live-machine' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN' 'takes the lock' 'first assignee' 'else `unknown`'; do
     [[ $handoff == *"$want"* ]] || {
         echo "FAIL $case_desc: no [$want]"
         failures=$((failures + 1))
