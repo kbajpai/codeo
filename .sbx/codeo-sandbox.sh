@@ -2,17 +2,54 @@
 # Starts, opens and ends one Docker Sandboxes (sbx) sandbox per GitHub issue. It runs on a Linux or
 # WSL2 host (never macOS) under bash 4.3 or later, and drives sbx, or sbx.exe from WSL2.
 #
-#   codeo-sandbox.sh issue <N> <branch>
+#   codeo-sandbox.sh issue <N> <branch> [--yes]
 #   codeo-sandbox.sh open <N>
 #   codeo-sandbox.sh shell <N>
 #   codeo-sandbox.sh end <N> [--force]
 #
 # CODEO_SBX  the sbx program to run, instead of sbx or sbx.exe found on PATH
 # CODEO_REPO_URL  the repository issue clones (default https://github.com/kbajpai/codeo.git)
+# CODEO_TRACK  the tracker (default: codeo-track.sh beside this script); issue records the sandbox on the issue, end marks it removed
 set -euo pipefail
 
 sbx=''
 windows=0
+
+# The tracker: CODEO_TRACK, else codeo-track.sh beside this script (a bare script name has no slash, so its
+# directory is .).
+script_dir=${BASH_SOURCE[0]%/*}
+[[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+tracker=${CODEO_TRACK:-$script_dir/codeo-track.sh}
+track_noted=0
+
+# track_present: succeed when the tracker exists; otherwise say so once per run and fail.
+track_present() {
+    [[ -f "$tracker" ]] && return 0
+    if [[ "$track_noted" == 0 ]]; then
+        track_noted=1
+        echo 'codeo-sandbox: note: codeo-track.sh is not beside this script, so nothing was recorded on the issue (codeo update fetches it)' >&2
+    fi
+    return 1
+}
+
+# track <args...>: run the tracker, ignoring its status: a failed record never fails a creation or an end.
+track() {
+    track_present || return 0
+    CODEO_REPO_URL="${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}" "$BASH" "$tracker" "$@" || true
+}
+
+# track_confirm <N> <yes:0|1>: ask the tracker whether to go on (naming a local container codeo-N when docker
+# lists one); exit 1 when it says stop.
+track_confirm() {
+    track_present || return 0
+    local args=(confirm "$1") names
+    if [[ "$2" == 1 ]]; then args+=(--yes); fi
+    if command -v docker >/dev/null 2>&1; then
+        names=$(docker ps -a --format '{{.Names}}' 2>/dev/null) || names=''
+        if grep -Fxq "codeo-$1" <<<"$names"; then args+=(--local "a container codeo-$1 exists on this host"); fi
+    fi
+    CODEO_REPO_URL="${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}" "$BASH" "$tracker" "${args[@]}" || exit 1
+}
 
 # die <message> [exit-code]: print the message as one line on stderr and exit (1 by default).
 die() {
@@ -22,7 +59,7 @@ die() {
 
 # usage: print the usage line on stderr and exit 2.
 usage() {
-    echo 'usage: codeo-sandbox.sh issue <N> <branch> | open <N> | shell <N> | end <N> [--force]' >&2
+    echo 'usage: codeo-sandbox.sh issue <N> <branch> [--yes] | open <N> | shell <N> | end <N> [--force]' >&2
     exit 2
 }
 
@@ -158,6 +195,7 @@ ensure_sandbox() {
         read_pin "$1"
         (cd "$name" && "$sbx" create --clone --name "$name" --cpus 2 --memory 4g "$create_agent" .) ||
             die "could not create the sandbox $name"
+        track add "$1" sandbox "$name"
     fi
     # shellcheck disable=SC2016
     "$sbx" exec "$name" bash -c 'printf "%s\n" "$1" > "$HOME/.codeo-sandbox"' _ "$name" || die "could not mark the sandbox $name"
@@ -209,10 +247,16 @@ ensure_detached() {
 }
 
 cmd_issue() {
+    local yes=0 state
+    if (($# == 3)) && [[ "$3" == --yes ]]; then yes=1; set -- "$1" "$2"; fi
     (($# == 2)) || usage
     valid_number "$1" || usage
     valid_branch "$2" || usage
     pick_sbx
+    # The confirmation needs only <N>: ask before the clone, so a refusal leaves nothing behind. It applies
+    # when the sandbox is to be created, as ensure_sandbox does.
+    state=$(sandbox_state "codeo-$1") || exit 1
+    if [[ "$state" == missing ]]; then track_confirm "$1" "$yes"; fi
     ensure_host_clone "$1" "$2"
     ensure_windows_trust "$1"
     ensure_sandbox "$1"
@@ -408,6 +452,7 @@ cmd_end() {
         return 1
     fi
     "$sbx" rm --force "$name" || die "could not remove $name"
+    track mark "$1" sandbox "$name" removed
     if ((force == 0)); then
         clear_sandbox_refs "$dir" "$name" || die "removed $name, but could not delete its refs under refs/sandboxes/$name/ in ./$dir"
         echo "removed $name"

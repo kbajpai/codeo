@@ -585,10 +585,10 @@ issue it has otherwise proven finished.
 **May rely on.** The issue number, a finished issue that passed every other proof, and the name
 template it supplies expanding with `{N}`.
 
-**Expected back.** Exactly three lines. `name:` is the name of what the issue left behind, with
+**Expected back.** Three lines, and an optional fourth. `name:` is the name of what the issue left behind, with
 `{N}` for the issue number. `pattern:` is an extended regular expression the expanded name must
 match, so a name that is not an issue's own is refused. `command:` is the command that removes it,
-with `{name}` for the expanded name. The script expands and prints the command and never runs it;
+with `{name}` for the expanded name and `{N}` for the issue number. An optional `fallback:` is one line of text for an engineer who cannot run the command, with `{name}` and `{N}` expanded the same way; the script prints it as a fourth tab-separated field on every proven line (`-` when there is none) and the skill shows it beneath the command. The script expands and prints the command and never runs it;
 a missing line or a name that does not match the pattern makes the issue not proven.
 
 **Default when absent.** None; the proven issues are listed and no command is printed.
@@ -601,4 +601,5 @@ a missing line or a name that does not match the pattern makes the issue not pro
 name: widget-{N}
 pattern: ^widget-[0-9]+$
 command: remove-container {name}
+fallback: without remove-container, delete {name} by hand
 ```

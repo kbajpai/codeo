@@ -42,11 +42,12 @@ is the container the message names.
    `cleanup` directory, means a first run. Carry on either way.
 
 1. **Run the script and relay it.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup.sh"` prints one
-   tab-separated line per issue: `<N>`, `proven` and the command (or `-` when the project gives
-   none), or `<N>`, `failed` and the first proof that failed. Relay the lines as two lists, each
+   tab-separated line per issue: `<N>`, `proven`, the command (or `-` when the project gives
+   none) and the `fallback:` text (or `-` when the project gives none), or `<N>`, `failed` and the first proof that failed. Relay the lines as two lists, each
    line as the script printed it:
    - **Proven**, with the command to run. A `-` means the issue is finished and the project has no
      removal command for it.
+     When the fourth field is not `-`, print it on the line beneath the command, as the script printed it.
    - **Not proven**, with the failed proof (`issue`, `pull-request`, `branch`, `dossier`, `lease` or `name`)
      and no command.
    <!-- rule: cleanup-02 -->

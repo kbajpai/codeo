@@ -40,6 +40,10 @@ grep -qF 'every issue under `.codeo/done/`' <<<"$section" || check_fail "docs/sk
 # The overlay's removal-command body, fed to cleanup.sh over a scratch origin with a stubbed gh.
 body=$(awk '/^## removal-command$/{f=1; next} /^## /{f=0} f && NF' "$repo/.codeo/overlays/cleanup.md")
 [[ -n $body ]] || check_fail "the overlay has no removal-command body"
+grep -qxF 'command: codeo rm {N}' <<<"$body" || check_fail "the overlay's command line is not: codeo rm {N}"
+grep -qE '^fallback: .*docker rm -f \{name\}' "$repo/.codeo/overlays/cleanup.md" || check_fail "the cleanup overlay has no docker fallback line"
+! grep -qi powershell "$repo/.codeo/overlays/cleanup.md" || check_fail "the cleanup overlay names PowerShell"
+grep -qF '`fallback:`' "$skill" || check_fail "the skill text does not name the fallback line"
 
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
@@ -84,7 +88,9 @@ for bad in codeo-home codeo-gh codeo-git codeo-; do
     [[ $out == $'70\tfailed\tname' ]] || check_fail "the overlay's pattern does not reject $bad: $out"
 done
 out=$(run "$body")
-[[ $out == $'70\tproven\t'* && $out == *codeo-70* ]] || check_fail "the overlay does not accept codeo-70: $out"
+[[ $out == $'70\tproven\tcodeo rm 70\t'* ]] || check_fail "the overlay does not accept codeo-70: $out"
+fb=${out#$'70\tproven\tcodeo rm 70\t'}
+[[ $fb == *'docker rm -f codeo-70'* && $fb == *'docker volume rm codeo-70'* && $fb == *'codeo-track.sh mark 70 container codeo-70 removed'* && $fb == *'unpushed'* && $fb != *'{'* ]] || check_fail "the overlay's fallback does not expand: $fb"
 
 [[ $fail -eq 0 ]] || exit 1
 echo "all cases passed"
