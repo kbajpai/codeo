@@ -194,3 +194,5 @@
 | `qc:154:F1-F6` | #154 non-blocking README flowchart and paragraph findings (F1-F5 filed, F6 cosmetics listed out of scope) | filed #161 | 2026-11-23 |
 | `qc:146:F1-F3` | #146 v1.0.8 `Shared state:` line omission, release checklist step 6 gap (F1-F2 filed, F3 archived-dossier text out of scope) | filed #161 | 2026-11-23 |
 | `issue:161` | Documentation leftovers from #154 and #146; filed 2026-11-23, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-23 |
+| `qc:152:F13-F20` | #152 non-blocking QC findings and `docs/skills.md` plan gap: cleanup overlay `{N}`, by-hand fallback, `codeo-track.sh` temp-file leak, README wording (F13-F19 filed, F20 reviewer minors out of scope) | filed #163 | 2026-11-23 |
+| `issue:163` | Close the #152 leftovers; filed 2026-11-23, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-23 |
