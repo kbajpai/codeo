@@ -44,6 +44,7 @@ case $method in
             repos/acme/widgets/issues/comments/*)
                 cat "$GH_STATE/body_${path##*/}" 2>/dev/null || exit 1; exit 0 ;;
         esac
+        case $path in repos/*/issues/*/comments) exit 0 ;; esac
         exit 1 ;;
     POST)
         n=${path#repos/acme/widgets/issues/}; n=${n%/comments}
@@ -209,6 +210,54 @@ run add 152 container 'a|b'; assert_eq rc 2 "$rc"
 run add 152 bogus x; assert_eq rc-kind 2 "$rc"
 run mark 152 container 'a|b' removed; assert_eq rc-mark 2 "$rc"
 assert_eq calls "" "$(calls)"
+
+# --- round 2: repository choice, malformed rows, mark misses ---
+repo=$work/repo; mkdir -p "$repo"; git -C "$repo" init -q; git -C "$repo" remote add origin git@github.com:someone/fork.git
+nogit=$work/nogit; mkdir -p "$nogit"
+run_cwd() { local d=$1; shift; out=$(cd "$d" && env -u CODEO_REPO_URL PATH="$stub_bin:$PATH" bash "$script" "$@" 2>&1 < /dev/null); rc=$?; }
+nlines() { printf '%s\n' "$1" | wc -l | tr -d ' '; }
+
+case_desc=slug_from_origin
+reset; run_cwd "$repo" add 152 container c1
+assert_has get "GET repos/someone/fork/issues/152/comments" "$(calls)"
+
+case_desc=slug_url_wins_over_origin
+reset; out=$(cd "$repo" && PATH="$stub_bin:$PATH" bash "$script" add 152 container c1 2>&1 < /dev/null)
+assert_has get "GET repos/acme/widgets/issues/152/comments" "$(calls)"; assert_not fork "someone/fork" "$(calls)"
+
+case_desc=slug_default_outside_checkout
+reset; GIT_CEILING_DIRECTORIES=$work run_cwd "$nogit" add 152 container c1
+assert_has get "GET repos/kbajpai/codeo/issues/152/comments" "$(calls)"
+
+bad_case() { # bad_case <name> <row>
+    case_desc=$1; reset; fixture 77 '| image | `ok` | box1 | active | 2026-11-01T00:00:00Z | |' "$2"
+    run add 152 container c1
+    assert_eq rc 3 "$rc"; assert_eq lines 1 "$(nlines "$out")"; assert_has prefix "track:" "$out"
+    assert_has lineno "line 7" "$out"
+    assert_not patch PATCH "$(calls)"; assert_not post POST "$(calls)"
+}
+bad_case row_five_cells '| image | `x` | box1 | active | 2026-11-01T00:00:00Z |'
+bad_case row_eight_cells '| image | `x` | box1 | active | 2026-11-01T00:00:00Z | | extra |'
+bad_case row_unknown_kind '| widget | `x` | box1 | active | 2026-11-01T00:00:00Z | |'
+bad_case row_unknown_status '| image | `x` | box1 | zombie | 2026-11-01T00:00:00Z | |'
+
+case_desc=confirm_reads_good_rows_before_a_bad_one
+reset; fixture 77 '| container | `c1` | box2 | active | 2026-11-01T00:00:00Z | |' '| image | `x` | box1 | zombie | t | |'
+run confirm 152 --yes
+assert_eq rc 0 "$rc"; assert_has good 'container `c1` on host box2' "$out"; assert_not unreadable "could not read" "$out"
+
+case_desc=mark_miss_prints_a_note
+reset; fixture 77 '| container | `c1` | box1 | active | 2026-11-01T00:00:00Z | |'
+: > "$state/calls"; run mark 152 container nothere removed
+assert_eq rc 0 "$rc"
+assert_eq out "track: no active container nothere row on box1 in #152's tracking comment; nothing changed" "$out"
+assert_not patch PATCH "$(calls)"
+
+case_desc=mark_without_comment_prints_a_note
+reset; run mark 152 container c1 removed
+assert_eq rc 0 "$rc"
+assert_eq out "track: no active container c1 row on box1 in #152's tracking comment; nothing changed" "$out"
+assert_not post POST "$(calls)"
 
 if ((failures)); then echo "$failures failure(s)"; exit 1; fi
 echo "all cases passed"

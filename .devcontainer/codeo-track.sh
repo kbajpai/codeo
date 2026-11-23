@@ -31,7 +31,9 @@ USAGE
 }
 
 repo_slug() {
-    local url=${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git} path
+    local url=${CODEO_REPO_URL:-} path
+    if [[ -z $url ]] && command -v git >/dev/null 2>&1; then url=$(git -C . remote get-url origin 2>/dev/null) || url=; fi
+    [[ -n $url ]] || url=https://github.com/kbajpai/codeo.git
     case $url in
         https://*|http://*) path=${url#*://}; path=${path#*/} ;;
         git@*:*) path=${url#*:} ;;
@@ -67,18 +69,25 @@ read_body() { gh api "repos/$slug/issues/comments/$1" --jq .body 2>/dev/null; }
 # parse_body <body>: sets head_text (through the separator), rows[] (kind|name|host|status|created|removed),
 # tail_text (after the table). Returns 1 when there is no recognisable table.
 rows=()
-head_text=; tail_text=
+head_text=; tail_text=; bad_row=
 parse_body() {
-    local line l state=0 f1 f2 f3 f4 f5 f6
-    rows=(); head_text=; tail_text=
+    local line l state=0 f1 f2 f3 f4 f5 f6 lineno=0 pipes st_ok
+    rows=(); head_text=; tail_text=; bad_row=
     while IFS= read -r line || [[ -n $line ]]; do
+        lineno=$((lineno + 1))
         l=${line%$'\r'}
         case $state in
             0) head_text="$head_text$line$nl"; [[ $l == "$header" ]] && state=1 ;;
             1) if [[ $l == '|'*---* ]]; then head_text="$head_text$line$nl"; state=2; else return 1; fi ;;
             2) if [[ $l == '|'* ]]; then
+                   l=$(trim "$l"); pipes=${l//[!|]/}
                    IFS='|' read -r _ f1 f2 f3 f4 f5 f6 _ <<< "$l"
-                   rows+=("$(trim "$f1")|$(trim "${f2//\`/}")|$(trim "$f3")|$(trim "$f4")|$(trim "$f5")|$(trim "$f6")")
+                   f1=$(trim "$f1"); f4=$(trim "$f4")
+                   case $f4 in active|removed|deleted) st_ok=1 ;; *) st_ok=0 ;; esac
+                   if [[ $l != *"|" || ${#pipes} -ne 7 || $st_ok -ne 1 ]] || ! valid_kind "$f1"; then
+                       bad_row="line $lineno: $l"; return 2
+                   fi
+                   rows+=("$f1|$(trim "${f2//\`/}")|$(trim "$f3")|$f4|$(trim "$f5")|$(trim "$f6")")
                else tail_text="$tail_text$line$nl"; state=3; fi ;;
             3) tail_text="$tail_text$line$nl" ;;
         esac
@@ -114,7 +123,12 @@ load() {
         return 0
     fi
     body=$(read_body "$cid") || fail_record "could not read tracking comment $cid on #$n; $hint"
-    parse_body "$body" || fail_record "tracking comment $cid on #$n has no recognisable table and was left untouched; $hint"
+    parse_body "$body"
+    case $? in
+        0) ;;
+        2) fail_record "tracking comment $cid on #$n has a malformed row ($bad_row) and was left untouched; $hint" ;;
+        *) fail_record "tracking comment $cid on #$n has no recognisable table and was left untouched; $hint" ;;
+    esac
 }
 
 # save <N> <manual-hint>: POST (no comment yet) or PATCH the rebuilt body.
@@ -155,7 +169,7 @@ cmd_add() {
 
 cmd_mark() {
     [[ $# -eq 4 ]] || usage
-    local n=$1 kind=$2 name=$3 status=$4 host removed r k nm h s c rm changed=0 i=0 hint
+    local n=$1 kind=$2 name=$3 status=$4 host removed r k nm h s c rm changed=0 i=0 hint note
     valid_num "$n" && valid_kind "$kind" && valid_text "$name" || usage
     case $status in
         removed) ;;
@@ -166,7 +180,8 @@ cmd_mark() {
     removed=$(now)
     hint="set $kind \`$name\` to $status ($removed) in the tracking comment by hand"
     load "$n" "$hint"
-    [[ -n $cid ]] || return 0
+    note="track: no active $kind $name row on $host in #$n's tracking comment; nothing changed"
+    [[ -n $cid ]] || { printf '%s\n' "$note"; return 0; }
     for r in ${rows[@]+"${rows[@]}"}; do
         IFS='|' read -r k nm h s c rm <<< "$r"
         if [[ $k == "$kind" && $nm == "$name" && $s == active ]] && { [[ $kind == branch ]] || [[ $h == "$host" ]]; }; then
@@ -175,7 +190,7 @@ cmd_mark() {
         fi
         i=$((i + 1))
     done
-    [[ $changed -eq 1 ]] || return 0
+    [[ $changed -eq 1 ]] || { printf '%s\n' "$note"; return 0; }
     save "$n" "$hint"
 }
 
@@ -192,7 +207,7 @@ cmd_confirm() {
         esac
     done
     slug=; cid=
-    if slug=$(repo_slug) && find_comment "$n" && { [[ -z $cid ]] || { body=$(read_body "$cid") && parse_body "$body"; }; }; then
+    if slug=$(repo_slug) && find_comment "$n" && { [[ -z $cid ]] || { body=$(read_body "$cid") && { parse_body "$body"; [[ $? -ne 1 ]]; }; }; }; then
         for r in ${rows[@]+"${rows[@]}"}; do
             IFS='|' read -r k nm h s c rm <<< "$r"
             [[ $s == active && ( $k == container || $k == sandbox ) ]] || continue
