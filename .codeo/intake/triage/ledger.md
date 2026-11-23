@@ -191,3 +191,6 @@
 | `qc:151:nits-F4-F5-F6-F8-F9-F13-F14-F17-F25` | #151 README/CHANGELOG wording and test-strength nits | dismissed — engineer's call, run 17 | 2026-11-22 |
 | `qc:151:F7-F15` | "Latest release" is the highest `vX.Y.Z` tag; idempotence compares `plugin.json` with the tag | dismissed — already documented as accepted limits in README Updating/Installing (engineer accepted recommendation) | 2026-11-22 |
 | `parked:146:2026-11-22` | #146 In progress, live session on codeo-146; v1.0.8 shipped via release/v1.0.8 (#158), feat/release-v1-0-8-once has no PR | deferred | 2026-11-22 |
+| `qc:154:F1-F6` | #154 non-blocking README flowchart and paragraph findings (F1-F5 filed, F6 cosmetics listed out of scope) | filed #161 | 2026-11-23 |
+| `qc:146:F1-F3` | #146 v1.0.8 `Shared state:` line omission, release checklist step 6 gap (F1-F2 filed, F3 archived-dossier text out of scope) | filed #161 | 2026-11-23 |
+| `issue:161` | Documentation leftovers from #154 and #146; filed 2026-11-23, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-23 |
