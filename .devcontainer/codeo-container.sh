@@ -55,16 +55,16 @@ track_present() {
 # track <args...>: run the tracker, ignoring its status: a failed record never fails a creation.
 track() {
     track_present || return 0
-    "$BASH" "$tracker" "$@" || true
+    CODEO_REPO_URL="$repo_url" "$BASH" "$tracker" "$@" || true
 }
 
 # track_confirm <N> <yes:0|1>: ask the tracker whether to go on; exit 1 when it says stop.
 track_confirm() {
     track_present || return 0
     if [[ "$2" == 1 ]]; then
-        "$BASH" "$tracker" confirm "$1" --yes || exit 1
+        CODEO_REPO_URL="$repo_url" "$BASH" "$tracker" confirm "$1" --yes || exit 1
     else
-        "$BASH" "$tracker" confirm "$1" || exit 1
+        CODEO_REPO_URL="$repo_url" "$BASH" "$tracker" confirm "$1" || exit 1
     fi
 }
 

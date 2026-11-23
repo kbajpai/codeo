@@ -99,7 +99,7 @@ cm_run() {
     # Per-case settings: cm_git_bin (a directory with git, put on PATH after bin/), CM_GIT_NAME and
     # CM_GIT_EMAIL (the host's GIT_AUTHOR_*), CM_CONTEXT (the host's CODEO_CONTEXT).
     [[ -e "$cm_dir/gitconfig" ]] || : >"$cm_dir/gitconfig"
-    env -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL -u CODEO_CONTEXT -u CODEO_REPO_URL GIT_CONFIG_NOSYSTEM=1 \
+    env -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL -u CODEO_CONTEXT -u CODEO_REPO_URL GIT_CONFIG_NOSYSTEM=1 ${CM_REPO:+CODEO_REPO_URL="$CM_REPO"} \
         CODEO_TRACK="${CM_TRACK-$cm_dir/track.sh}" PATH="$cm_dir/bin${cm_git_bin:+:$cm_git_bin}" HOME="$cm_dir" GIT_CONFIG_GLOBAL="$cm_dir/gitconfig" \
         ${CM_GIT_NAME:+GIT_AUTHOR_NAME="$CM_GIT_NAME"} ${CM_GIT_EMAIL:+GIT_AUTHOR_EMAIL="$CM_GIT_EMAIL"} \
         ${CM_CONTEXT:+CODEO_CONTEXT="$CM_CONTEXT"} \
@@ -650,6 +650,29 @@ a_tracker_that_fails_does_not_fail_the_creation() {
     [[ "$(grep -c '^add' "$cm_dir/track")" == 3 ]] || fail "tracker calls: $(<"$cm_dir/track")"
 }
 
+# cm_repo_tracker: a tracker that logs the CODEO_REPO_URL it runs with, one line per call, to $cm_dir/repo.
+cm_repo_tracker() {
+    printf '%s\n' 'echo "${CODEO_REPO_URL-unset}" >>"${0%/track.sh}/repo"' 'exit 0' >"$cm_dir/track.sh"
+}
+
+the_tracker_runs_with_the_default_repository_when_none_is_set() {
+    cm_setup track_repo_default
+    cm_repo_tracker
+    cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ -s "$cm_dir/repo" ]] || fail "tracker not called"
+    [[ "$(sort -u "$cm_dir/repo")" == 'https://github.com/kbajpai/codeo.git' ]] || fail "repo: $(tr '\n' '|' <"$cm_dir/repo")"
+}
+
+the_tracker_runs_with_a_set_repository_unchanged() {
+    cm_setup track_repo_set
+    cm_repo_tracker
+    CM_REPO=https://example.com/fork.git cm_run issue 152 feat/x
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ -s "$cm_dir/repo" ]] || fail "tracker not called"
+    [[ "$(sort -u "$cm_dir/repo")" == 'https://example.com/fork.git' ]] || fail "repo: $(tr '\n' '|' <"$cm_dir/repo")"
+}
+
 the_missing_tracker_note_prints_once() {
     cm_setup track_once
     CM_TRACK="$cm_dir/nope.sh" cm_run issue 152 feat/x
@@ -772,6 +795,8 @@ cases=(
     the_tracker_beside_a_bare_script_name_is_found
     a_tracker_that_fails_does_not_fail_the_creation
     the_missing_tracker_note_prints_once
+    the_tracker_runs_with_the_default_repository_when_none_is_set
+    the_tracker_runs_with_a_set_repository_unchanged
     issue_on_a_running_container_is_refused
     issue_on_a_stopped_container_is_refused_and_not_started
     issue_rebuild_on_a_matching_clone_goes_ahead

@@ -35,7 +35,7 @@ track_present() {
 # track <args...>: run the tracker, ignoring its status: a failed record never fails a creation or an end.
 track() {
     track_present || return 0
-    "$BASH" "$tracker" "$@" || true
+    CODEO_REPO_URL="${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}" "$BASH" "$tracker" "$@" || true
 }
 
 # track_confirm <N> <yes:0|1>: ask the tracker whether to go on (naming a local container codeo-N when docker
@@ -48,7 +48,7 @@ track_confirm() {
         names=$(docker ps -a --format '{{.Names}}' 2>/dev/null) || names=''
         if grep -Fxq "codeo-$1" <<<"$names"; then args+=(--local "a container codeo-$1 exists on this host"); fi
     fi
-    "$BASH" "$tracker" "${args[@]}" || exit 1
+    CODEO_REPO_URL="${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}" "$BASH" "$tracker" "${args[@]}" || exit 1
 }
 
 # die <message> [exit-code]: print the message as one line on stderr and exit (1 by default).

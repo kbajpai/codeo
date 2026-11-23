@@ -572,7 +572,7 @@ track_mark() {
         track_note=1
         return 0
     fi
-    "$BASH" "$tracker" mark "$1" "$2" "$3" removed </dev/null || true
+    CODEO_REPO_URL="${CODEO_REPO_URL:-https://github.com/kbajpai/codeo.git}" "$BASH" "$tracker" mark "$1" "$2" "$3" removed </dev/null || true
 }
 
 # cmd_rm <N> [--force] [--container|--sandbox]: remove the issue's container or sandbox. A container
@@ -686,7 +686,7 @@ cmd_rm() {
                 ;;
         esac
     fi
-    ensure_tracker # F8: an older install did not fetch the tracker; never stops the removal
+    ensure_tracker # an older install did not fetch the tracker; fetch it here and never stop the removal over it
     if docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
         # docker rm -f of a missing container exits 0: count it only when it was known to exist.
         if [[ "$existed" -ne 0 ]]; then

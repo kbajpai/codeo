@@ -79,16 +79,10 @@ check_overlay() {
 }
 msg=$(check_overlay "$out") || fail "$msg"
 
-# No page ties PowerShell to the removal command.
-for f in README.md .devcontainer/README.md CHANGELOG.md .codeo/overlays/*.md; do
-    ! grep -i powershell "$f" | grep -qi "codeo rm" || fail "$f ties PowerShell to codeo rm"
+# No page mentions PowerShell.
+for f in README.md .devcontainer/README.md .sbx/README.md CHANGELOG.md .codeo/overlays/*.md; do
+    ! grep -qi 'powershell' "$f" || fail "$f mentions PowerShell"
 done
-
-# No PowerShell claim in the two overlays that print the removal command.
-for f in .codeo/overlays/close.md .codeo/overlays/cleanup.md; do
-    ! grep -qi 'powershell' "$f" || fail "$f still mentions PowerShell"
-done
-
 # Self-check: each mutant of the real overlay must fail, and from its own check.
 cmd='docker rm -f x; docker volume rm x'
 mutant() { # $1 label, $2 overlay text, $3 expected message prefix

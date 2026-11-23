@@ -1233,6 +1233,29 @@ a_failing_tracker_does_not_fail_the_creation() {
     [[ "$(sb_calls)" == *"track add 152 sandbox codeo-152"* ]] || fail "calls: $(sb_calls)"
 }
 
+# sb_repo_tracker: a tracker that logs the CODEO_REPO_URL it runs with, one line per call, to $sb_dir/repo.
+sb_repo_tracker() {
+    printf '%s\n' 'echo "${CODEO_REPO_URL-unset}" >>"${0%/track.sh}/repo"' 'exit 0' >"$sb_dir/track.sh"
+}
+
+the_tracker_runs_with_the_default_repository_when_none_is_set() {
+    sb_setup trk_repo_default
+    sb_repo_tracker
+    sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ -s "$sb_dir/repo" ]] || fail "tracker not called"
+    [[ "$(sort -u "$sb_dir/repo")" == 'https://github.com/kbajpai/codeo.git' ]] || fail "repo: $(tr '\n' '|' <"$sb_dir/repo")"
+}
+
+the_tracker_runs_with_a_set_repository_unchanged() {
+    sb_setup trk_repo_set
+    sb_repo_tracker
+    CODEO_REPO_URL=https://example.com/fork.git sb_run issue 152 fix/x
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ -s "$sb_dir/repo" ]] || fail "tracker not called"
+    [[ "$(sort -u "$sb_dir/repo")" == 'https://example.com/fork.git' ]] || fail "repo: $(tr '\n' '|' <"$sb_dir/repo")"
+}
+
 a_missing_tracker_is_one_note_once() {
     sb_setup trk_missing
     SB_TRACK=$sb_dir/nope.sh sb_run issue 152 fix/x
@@ -1373,6 +1396,8 @@ cases=(
     a_confirm_stop_creates_nothing
     issue_on_an_existing_sandbox_neither_confirms_nor_adds
     a_failing_tracker_does_not_fail_the_creation
+    the_tracker_runs_with_the_default_repository_when_none_is_set
+    the_tracker_runs_with_a_set_repository_unchanged
     a_missing_tracker_is_one_note_once
     the_tracker_beside_a_bare_script_name_is_found
     end_marks_the_sandbox_removed_after_the_rm

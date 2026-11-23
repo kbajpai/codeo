@@ -2035,6 +2035,46 @@ exit 0
 STUB
 }
 
+# rm_repo_tracker: a tracker in the home directory that logs the CODEO_REPO_URL it runs with to $cm_dir/repo.
+rm_repo_tracker() {
+    printf '%s\n' '#!/bin/bash' 'd=${0%/home/*}' 'echo "${CODEO_REPO_URL-unset}" >>"$d/repo"' 'exit 0' >"$cm_home/codeo-track.sh"
+    chmod +x "$cm_home/codeo-track.sh"
+}
+
+# rm_in_fork_checkout: run `codeo rm 152` from a git checkout whose origin is a fork.
+rm_in_fork_checkout() {
+    mkdir -p "$cm_dir/fork"
+    git init -q "$cm_dir/fork" && git -C "$cm_dir/fork" remote add origin https://example.com/fork.git
+    pushd "$cm_dir/fork" >/dev/null || fail "no fork dir"
+    cm_run rm 152
+    popd >/dev/null || true
+}
+
+t_rm_marks_against_the_default_repository_from_a_fork_checkout() {
+    cm_setup "$current"
+    rm_stubs_152
+    rm_repo_tracker
+    local saved=${CODEO_REPO_URL-}
+    unset CODEO_REPO_URL
+    rm_in_fork_checkout
+    [[ -z "$saved" ]] || CODEO_REPO_URL=$saved
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$(grep -c . "$cm_dir/repo")" -eq 3 ]] || fail "calls: $(cat "$cm_dir/repo")"
+    [[ "$(sort -u "$cm_dir/repo")" == 'https://github.com/kbajpai/codeo.git' ]] || fail "repo: $(tr '\n' '|' <"$cm_dir/repo")"
+}
+
+t_rm_passes_a_set_repository_to_the_tracker_unchanged() {
+    cm_setup "$current"
+    rm_stubs_152
+    rm_repo_tracker
+    local saved=${CODEO_REPO_URL-} was_set=${CODEO_REPO_URL+1}
+    CODEO_REPO_URL=https://example.com/other.git
+    rm_in_fork_checkout
+    if [[ -n "$was_set" ]]; then CODEO_REPO_URL=$saved; else unset CODEO_REPO_URL; fi
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$(sort -u "$cm_dir/repo")" == 'https://example.com/other.git' ]] || fail "repo: $(tr '\n' '|' <"$cm_dir/repo")"
+}
+
 t_rm_container_fetches_missing_tracker() {
     cm_setup "$current"
     rm_stubs_152
@@ -2213,6 +2253,8 @@ cases=(
     t_rm_kept_volume_marks_container_and_image
     t_rm_sandbox_marks_nothing_in_codeo
     t_rm_tracker_failure_is_ignored
+    t_rm_marks_against_the_default_repository_from_a_fork_checkout
+    t_rm_passes_a_set_repository_to_the_tracker_unchanged
     t_first_use_downloads_tracker
     t_rm_container_fetches_missing_tracker
     t_rm_container_tracker_download_fails_but_removes
