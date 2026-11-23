@@ -2011,6 +2011,7 @@ t_rm_tracker_failure_is_ignored() {
     cm_setup "$current-2"
     rm_stubs
     rm -f "$cm_home/codeo-track.sh"
+    touch "$cm_dir/curl_fail" # the missing tracker cannot be fetched either
     cm_run rm 5
     [[ "$cm_status" -eq 0 && "$cm_out" == "removed codeo-5 "* ]] || fail "absent: $cm_status out=$cm_out"
     [[ "$cm_err" == "codeo: note: codeo-track.sh is not in $cm_home, so the removal was not recorded on the issue (codeo update fetches it)" ]] || fail "note: $cm_err"
@@ -2022,6 +2023,54 @@ t_first_use_downloads_tracker() {
     cm_run home
     grep -q "^curl -fsSL -o $cm_home/.* https://raw.githubusercontent.com/kbajpai/codeo/main/.devcontainer/codeo-track.sh\$" "$cm_dir/calls" || fail "no download of the tracker"
     [[ -x "$cm_home/codeo-track.sh" ]] || fail "tracker not installed executable"
+}
+
+# rm_tracker_body: the curl stub serves a tracker that logs like the stub tracker.
+rm_tracker_body() {
+    cat >"$cm_dir/curl_body" <<'STUB'
+#!/bin/bash
+d=${0%/home/*}
+echo "$*" >>"$d/track"
+exit 0
+STUB
+}
+
+t_rm_container_fetches_missing_tracker() {
+    cm_setup "$current"
+    rm_stubs_152
+    rm -f "$cm_home/codeo-track.sh"
+    rm_tracker_body
+    cm_run rm 152
+    [[ "$cm_status" -eq 0 && -z "$cm_err" ]] || fail "exit $cm_status, err: $cm_err"
+    [[ -x "$cm_home/codeo-track.sh" ]] || fail "tracker not installed"
+    [[ "$(grep -c '^curl ' "$cm_dir/calls")" -eq 1 ]] || fail "want one curl: $(cat "$cm_dir/calls")"
+    grep '^curl ' "$cm_dir/calls" | grep -q 'codeo-track.sh$' || fail "wrong file fetched"
+    local want=$'mark 152 container codeo-152 removed\nmark 152 volume codeo-152 removed\nmark 152 image codeo-dev:codeo-152 removed'
+    [[ "$(cat "$cm_dir/track" 2>/dev/null)" == "$want" ]] || fail "track: $(tr '\n' '|' <"$cm_dir/track")"
+}
+
+t_rm_container_tracker_download_fails_but_removes() {
+    cm_setup "$current"
+    rm_stubs_152
+    rm -f "$cm_home/codeo-track.sh"
+    touch "$cm_dir/curl_fail"
+    cm_run rm 152
+    [[ "$cm_status" -eq 0 && "$cm_out" == "removed codeo-152 "* ]] || fail "exit $cm_status out=$cm_out err=$cm_err"
+    [[ "$cm_err" == "codeo: note: codeo-track.sh is not in $cm_home, so the removal was not recorded on the issue (codeo update fetches it)" ]] || fail "note: $cm_err"
+    [[ ! -e "$cm_home/codeo-track.sh" ]] || fail "tracker appeared"
+}
+
+t_rm_container_with_git_checkout_home_goes_ahead() {
+    cm_setup "$current"
+    rm_stubs_152
+    mkdir -p "$cm_dir/h/codeo/.git"
+    cm_nohome=1
+    cm_run rm 152
+    cm_nohome=""
+    [[ "$cm_status" -eq 0 && "$cm_out" == "removed codeo-152 "* ]] || fail "exit $cm_status out=$cm_out err=$cm_err"
+    [[ "$(grep -c 'codeo: note:' <<<"$cm_err")" -eq 1 ]] || fail "want one note: $cm_err"
+    ! grep -q '^curl ' "$cm_dir/calls" || fail "downloaded: $(cat "$cm_dir/calls")"
+    [[ "$(ls -A "$cm_dir/h/codeo")" == ".git" ]] || fail "wrote into ~/codeo: $(ls -A "$cm_dir/h/codeo")"
 }
 
 cases=(
@@ -2165,6 +2214,9 @@ cases=(
     t_rm_sandbox_marks_nothing_in_codeo
     t_rm_tracker_failure_is_ignored
     t_first_use_downloads_tracker
+    t_rm_container_fetches_missing_tracker
+    t_rm_container_tracker_download_fails_but_removes
+    t_rm_container_with_git_checkout_home_goes_ahead
 )
 
 for current in "${cases[@]}"; do

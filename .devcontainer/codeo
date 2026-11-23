@@ -125,6 +125,27 @@ ensure_home() {
     done
 }
 
+# ensure_tracker: download codeo-track.sh, only that file, into the home directory when it is missing, the same
+# way ensure_home does. It always returns 0 and never calls die: a home directory that cannot be used or a
+# download that fails leaves the tracker absent, and track_mark then says so.
+ensure_tracker() {
+    local dir base tmp
+    [[ -z "${CODEO_TRACK:-}" ]] || return 0
+    dir=$(home_dir 2>/dev/null) || return 0
+    [[ -s "$dir/codeo-track.sh" ]] && return 0
+    base=$(raw_base)
+    mkdir -p "$dir" 2>/dev/null || return 0
+    tmp=$(mktemp "$dir/.codeo-track.sh.XXXXXX" 2>/dev/null) || return 0
+    if ! curl -fsSL -o "$tmp" "$base/.devcontainer/codeo-track.sh" 2>/dev/null ||
+        [[ "$(head -c2 "$tmp")" != "#!" ]]; then
+        rm -f "$tmp"
+        return 0
+    fi
+    chmod +x "$tmp" 2>/dev/null || true
+    mv -f "$tmp" "$dir/codeo-track.sh" 2>/dev/null || rm -f "$tmp"
+    return 0
+}
+
 # find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was
 # found. Uses a blob-less bare clone in the home directory, pointed at the current repository URL and
 # fetched on every lookup; rev-parse needs only the trees the fetch brought, never a blob. The whole
@@ -542,10 +563,12 @@ workspace_mount() {
 # directory (CODEO_TRACK overrides). Its status is ignored; an absent tracker gets one stderr note.
 track_note=""
 track_mark() {
-    local tracker=${CODEO_TRACK:-$(home_dir)/codeo-track.sh}
+    local home tracker
+    home=$(home_dir 2>/dev/null) || home="~/codeo" # a refused home directory must not stop a removal
+    tracker=${CODEO_TRACK:-$home/codeo-track.sh}
     if [[ ! -f "$tracker" ]]; then
         [[ -n "$track_note" ]] ||
-            echo "codeo: note: codeo-track.sh is not in $(home_dir), so the removal was not recorded on the issue (codeo update fetches it)" >&2
+            echo "codeo: note: codeo-track.sh is not in $home, so the removal was not recorded on the issue (codeo update fetches it)" >&2
         track_note=1
         return 0
     fi
@@ -663,6 +686,7 @@ cmd_rm() {
                 ;;
         esac
     fi
+    ensure_tracker # F8: an older install did not fetch the tracker; never stops the removal
     if docker rm -f "$name" >/dev/null 2>&1 </dev/null; then
         # docker rm -f of a missing container exits 0: count it only when it was known to exist.
         if [[ "$existed" -ne 0 ]]; then
