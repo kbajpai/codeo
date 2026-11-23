@@ -186,7 +186,7 @@
 | `issue:154` | #149 and #145 leftovers; board Status `Backlog` → Ready on the engineer's say-so, run 19 | ready | 2026-11-22 |
 | `issue:152` | Run the home role on the host with a strict role guard and issue tracking comment (rewritten 2026-11-22 from an evaluation) | ready | 2026-11-22 |
 | `qc:138:F22-F23-F25` | #138's live-signal leftovers: fetch collision on equal labels, leftover `codeo-live/*` branches, label changing with the session id | filed #157 | 2026-11-22 |
-| `issue:157` | Live-session signal leftovers from #138; filed 2026-11-22, board Status `Backlog` | leave in the backlog | 2026-11-22 |
+| `issue:157` | Live-session signal leftovers from #138; in Backlog, engineer asked about it again (`/codeo:triage #157`) | ready | 2026-11-23 |
 | `qc:151:installer-F12-F20-F22-F26-F27` | #151 installer failure-path findings: recovery line names no tag, unusable restore command, undetected dropped installs | dismissed — engineer's call, run 17 | 2026-11-22 |
 | `qc:151:nits-F4-F5-F6-F8-F9-F13-F14-F17-F25` | #151 README/CHANGELOG wording and test-strength nits | dismissed — engineer's call, run 17 | 2026-11-22 |
 | `qc:151:F7-F15` | "Latest release" is the highest `vX.Y.Z` tag; idempotence compares `plugin.json` with the tag | dismissed — already documented as accepted limits in README Updating/Installing (engineer accepted recommendation) | 2026-11-22 |
