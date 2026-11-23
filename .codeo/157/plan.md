@@ -80,6 +80,7 @@ A — remember the first label in the checkout's git directory. (Engineer: "go w
 - **C — docs only.** The code stays. `docs/handoff.md` and `CHANGELOG.md` say a session that ends and resumes under another id can show twice for up to the TTL. Meets the criterion's second half, but leaves the duplicate #138's hosted run actually produced whenever a session end falls between the two ids.
 
 **Answer:**
+A — never: the label belongs to the checkout, `clear` stops removing the file. (Engineer: "A", 2026-11-23; given in the conversation, recorded here.)
 
 ## Notes
 
