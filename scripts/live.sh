@@ -18,11 +18,12 @@
 #       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp and its
 #       branch ages out after the TTL. Exits 0 whatever happens.
 #   live.sh fetch
-#       Brings origin's signals into refs/codeo/live/ (a web session's codeo-live branches map onto
-#       the same refs), pruning the ones cleared there. Exit 0, or
-#       exit 1 with one `live:` stderr line.
+#       Brings origin's signals into refs/codeo/live/, and a web session's codeo-live branches into
+#       refs/codeo/live-web/ (their own namespace, so equal labels never collide), pruning the ones
+#       cleared there. Exit 0, or exit 1 with one `live:` stderr line.
 #   live.sh list [--tsv]
-#       Prints the signals last fetched (it never fetches) that are within the TTL. --tsv:
+#       Prints the signals last fetched (it never fetches) from refs/codeo/live/ and
+#       refs/codeo/live-web/ that are within the TTL. --tsv:
 #       issue<TAB>user<TAB>machine<TAB>host<TAB>age-in-seconds, oldest issue first. Otherwise one
 #       `#<issue>  <user> on <machine> (<host>), <age> ago` line each. A signal missing a field, or
 #       with a non-numeric beat, is skipped; a beat up to the TTL in the future counts as age 0, one
@@ -205,7 +206,7 @@ clear() {
 
 fetch() {
     local reason
-    if reason=$(bounded git fetch -q --prune origin '+refs/codeo/live/*:refs/codeo/live/*' '+refs/heads/codeo-live/*:refs/codeo/live/*' 2>&1); then return 0; fi
+    if reason=$(bounded git fetch -q --prune origin '+refs/codeo/live/*:refs/codeo/live/*' '+refs/heads/codeo-live/*:refs/codeo/live-web/*' 2>&1); then return 0; fi
     warn "could not fetch — $(last_line "$reason")"
     return 1
 }
@@ -233,7 +234,7 @@ list() {
         ((age >= 0)) || age=0
         ((age <= ttl)) || continue
         printf '%s\t%s\t%s\t%s\t%s\n' "$issue" "$user" "$machine" "$host" "$age"
-    done < <(git for-each-ref --format='%(refname)' refs/codeo/live/) | sort -t $'\t' -k1,1n -s |
+    done < <(git for-each-ref --format='%(refname)' refs/codeo/live/ refs/codeo/live-web/) | sort -t $'\t' -k1,1n -s |
         if [[ -n $tsv ]]; then
             cat
         else

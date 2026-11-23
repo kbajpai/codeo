@@ -583,6 +583,27 @@ git -C "$origin" update-ref -d refs/codeo/live/105/codeo-105
 live "$other" fetch
 assert_eq "only web remains" "$(printf '104\talice\tweb-abcdef01\tweb')" "$(live "$other" list --tsv | cut -f1-4)"
 
+case_desc=fetch_survives_a_web_and_a_container_signal_with_equal_labels
+new_world
+now=$(date +%s)
+plant refs/codeo/live/104/same "$(signal 104 alice same container "$now")"
+plant refs/heads/codeo-live/104/same "$(signal 104 bob same web "$now")"
+other=$(clone_of "$origin")
+rc=0; live "$other" fetch 2> /dev/null || rc=$?
+assert_eq "fetch exit" 0 "$rc"
+tsv=$(live "$other" list --tsv | cut -f1-4)
+assert_contains "container row" "$(printf '104\talice\tsame\tcontainer')" "$tsv"
+assert_contains "web row" "$(printf '104\tbob\tsame\tweb')" "$tsv"
+
+case_desc=fetch_prunes_a_web_copy_the_old_refspec_left_in_refs_codeo_live
+new_world
+plant refs/heads/codeo-live/104/web-old "$(signal 104 bob web-old web "$(date +%s)")"
+other=$(clone_of "$origin")
+git -C "$other" fetch -q origin '+refs/heads/codeo-live/*:refs/codeo/live/*'
+live "$other" fetch
+assert_eq "no web copy in the container namespace" "" "$(git -C "$other" for-each-ref refs/codeo/live/)"
+assert_contains "row still listed" "$(printf '104\tbob\tweb-old\tweb')" "$(live "$other" list --tsv | cut -f1-4)"
+
 case_desc=web_push_refused_warns_once_and_does_not_fall_back
 new_world; clone_with_lock 104 web abcdef0123456789
 mkdir -p "$origin/hooks"
