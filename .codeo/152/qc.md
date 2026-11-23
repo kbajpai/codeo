@@ -4,11 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/152 |
 | Branch | `feat/run-home-role-host-strict` |
-| Updated | 2026-11-22 |
+| Updated | 2026-11-23 |
 
 ## Where this stands
 
-Round 1 is written up under `## Outcome` and sent back to `/codeo:plan`: the suite passes and every acceptance criterion is met as the plan read it, but three blocking findings rest on plan decisions (a printed command that is not available everywhere and a false PowerShell claim, a tracker that defaults to the upstream repository, and a narrower "malformed table" than the issue asks for). Nothing is open.
+Round 2 is written up under `## Outcome`: the build and the full suite pass, every acceptance criterion is met, the three round-1 blocking findings (F1-F3) are fixed, and nothing blocking is left. Eight non-blocking findings (F13-F20) are recorded, four the plan's and four the implementation's, for `/codeo:triage` or a follow-up. The verdict is clear and the next step is `/codeo:close`. Nothing is open.
 
 ## Questions
 
@@ -16,14 +16,14 @@ None.
 
 ## Notes
 
-Evidence from this pass (nothing quoted from `implement.md`):
-- `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`. `overlap.sh 152`: nothing printed. `overlap.sh --outside 152`: nothing printed (every changed path is inside the plan's footprint).
-- `scope.sh origin/main HEAD`: `suite.shell=true` (`scope: suite shell needed for unclassified paths: .codeo/152/implement.md, .codeo/152/init.md, .codeo/152/plan.md, CHANGELOG.md, README.md`). No `deploy=` line, no shared environment configured: step 9 does not apply.
-- Build, suite `shell`: `true` → exit 0.
-- Test, suite `shell`: `bash tests/run.sh` → exit 0, last line `all cases passed` (55 test files, 6m57s).
-- No invariants file and no `invariants-extra`/`wiki-rules` overlay (exit 3): the criteria and the reviewer are the standard.
-- Documentation check: README.md, `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md` and `docs/extension-points.md` were read against the code; findings F1, F4, F8, F9, F10 and F12 are documentation.
-- Independent review (`QC review:` dispatch on the reviewer model, handed the acceptance criteria and the issue's requirements, not the implementer's account): verdict "With fixes", findings F1-F12 below. F2 and F3 were confirmed by reading `.devcontainer/codeo-track.sh` (`repo_slug` defaults to `kbajpai/codeo` when `CODEO_REPO_URL` is unset; `parse_body` state 2 accepts any `|` line as a row and `fmt_row` rewrites it).
+Evidence from round 2 (nothing quoted from `implement.md`; round 1's notes are in the Round 1 section below):
+- `role.sh --check qc`: exit 0. `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`. `overlap.sh 152`: nothing printed. `overlap.sh --outside 152`: nothing printed.
+- `scope.sh origin/main HEAD`: `suite.shell=true` (`scope: suite shell needed for unclassified paths: .codeo/152/implement.md, .codeo/152/init.md, .codeo/152/plan.md, .codeo/152/qc.md, CHANGELOG.md, README.md`). No `deploy=` line, no shared environment configured: step 9 does not apply.
+- Build, suite `shell`: `true` -> exit 0. Test, suite `shell`: `bash tests/run.sh` -> exit 0, last line `all cases passed` (408s).
+- No invariants file and no `invariants-extra` or `wiki-rules` overlay (both exit 3): the criteria and the reviewer are the standard.
+- Independent review (`QC review:` dispatch on opus, handed the issue's criteria and the diff, told not to read `.codeo/152/` or the plan): verdict "With fixes", no Critical finding, two Important and nine Minor. It ran nine test files (role, track, cleanup, sandbox, codeo-command, cmd-mode, close-removal, cleanup-skill, init-overlay), all passing. I re-read the code behind each finding; each finding says what I confirmed and what I did not.
+
+Later work, promised and not yet filed (the role check refuses `/codeo:issue` in this checkout; file with `/codeo:issue` in a home checkout, or let `/codeo:triage` collect it): the by-hand removal fallback text in `.codeo/overlays/cleanup.md` and `.codeo/overlays/close.md` (F14); a note that the cleanup overlay's `{N}` needs a plugin release (F13); the temporary-file leak in `codeo-track.sh` (F15); the README corrections F16-F18; documenting upkeep and the sandbox classification (F19, F20).
 
 ## Outcome
 
@@ -63,6 +63,47 @@ No issue was filed from this pass. Findings F1-F3 are blocking and rest on plan 
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 2 — 2026-11-23
+
+Commands run: `role.sh --check qc` (exit 0), `sync-main.sh --abort-on-conflict`, `overlap.sh 152`, `overlap.sh --outside 152`, `scope.sh origin/main HEAD`, suite `shell` build `true` (exit 0) and test `bash tests/run.sh` (exit 0, `all cases passed`, 408s), as under `## Notes`. No `also changed on main:` lines: the branch already contained `origin/main`. The whole pass was re-run from step 0 on `b50841b`.
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| `role.sh --check` allows `issue`, `init`, `triage`, `cleanup` only in a home checkout and refuses each in an issue checkout, one line; a test covers every skill in every role | met | `tests/role.test.sh` `check_matrix`; the reviewer ran it |
+| refuses `plan`, `implement`, `qc`, `close` in home, host or container; a host checkout that is neither is refused | met | `.devcontainer/scripts/role.sh`, `tests/role.test.sh` `host_stray`, `host_home_off_base` |
+| `home` for a host clone named `<codename>-home`, no lock, base branch, no Docker | met | `tests/role.test.sh` `host_home` (no docker on PATH) |
+| `/codeo:init <N>` posts exactly one tracking comment; a second run or a resume edits it | met — the tracker is idempotent and `.codeo/overlays/init.md` calls it after the claim push; the simultaneous-first-creation race is documented, see F20 | `tests/track.test.sh` (`add_creates_once`, `add_edits_existing`), `tests/init-overlay.test.sh` |
+| a container, sandbox, image and volume each appear as a row with the host's hostname and a UTC time | met for the script routes; a VS Code-opened container records the branch row only, and the README says so | `tests/cmd-mode.test.sh`, `tests/sandbox.test.sh`, `tests/track.test.sh` |
+| after the printed removal the rows are `removed`, a branch deleted at close is `deleted`, an unremoved item stays `active` | met through `codeo rm`; the by-hand fallback's text misleads, see F14 | `tests/codeo-command.test.sh`, `tests/sandbox.test.sh`, `tests/close-removal.test.sh`, `tests/cleanup-skill.test.sh` |
+| creating a container or sandbox with an `active` row or a local `codeo-<N>` warns and needs confirmation; opening does not | met — the README's wording of the local-container case is wrong, see F16 | `tests/cmd-mode.test.sh`, `tests/sandbox.test.sh`, `tests/track.test.sh` `confirm_*` |
+| `gh` unavailable does not fail the creation; the script prints the row | met | `tests/track.test.sh` `gh_missing_and_failing`; callers use `|| true` |
+| the README documents the host home, the guard, the tracking comment and Linux, macOS, Windows/WSL; `codeo-home` stays documented as supported | met, with documentation gaps F17-F19 | `README.md` "The home checkout", `.devcontainer/README.md`, `.sbx/README.md` |
+| existing tests still pass | met | `bash tests/run.sh` -> exit 0, `all cases passed` |
+
+Round 1's blocking findings, recapped as history:
+- F1 (blocking in round 1) — fixed: `codeo rm <N>` is printed with a docker fallback sentence beside it, and no PowerShell claim remains (`grep -rni powershell` over the overlays, READMEs, CHANGELOG, `docs/` and `skills/` finds only `skills/plan/SKILL.md` and an unrelated `docs/dev-environment-sbx-evaluation.md` line, neither written by this change). The fallback text itself has defects, see F14.
+- F2 (blocking in round 1) — fixed: `repo_slug` in `.devcontainer/codeo-track.sh` takes `CODEO_REPO_URL`, then the checkout's `origin`, then the upstream default (read at lines 33-47); `tests/track.test.sh` runs its cases with `CODEO_REPO_URL` unset (`run_cwd`).
+- F3 (blocking in round 1) — fixed: a malformed row is refused in one `track:` line and nothing is written; the reviewer confirmed it, and CRLF bodies from the web UI, by experiment.
+- F4-F12 (non-blocking in round 1) — each is addressed in the diff (the VS Code route documented, `mark` prints a note when it matches nothing, rebuild no longer confirms or marks the image, `codeo rm` fetches a missing tracker, the sandbox confirms before the clone, the marker-anywhere and host-scoping wording, the macOS `flock` note); the suite passes and the reviewer found none of them open.
+
+Documentation check: README.md, `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md` and `docs/extension-points.md` (fourth field and `fallback:` described) were read against the code. `docs/skills.md`'s cleanup section does not mention the `fallback:` line or the fourth field; nothing there is false, so it is not a finding. F16-F19 are documentation.
+
+#### Findings
+
+- **F13 — non-blocking, `/codeo:plan`'s.** `.codeo/overlays/cleanup.md:11` prints `codeo rm {N}` and relies on `scripts/cleanup.sh` expanding `{N}` in `command:`. The `origin/main` version of `cleanup.sh` (read directly) expands only `{name}` there, and the project pins the plugin at `ref` `v1.0.8`. Until a release carrying this branch's `cleanup.sh` is installed, `/codeo:cleanup` prints `codeo rm {N}` literally and drops the `fallback:` line, and the CHANGELOG does not say so. Root cause: the plan changed an overlay and the script that reads it in one change without naming the release that makes them agree. Non-blocking: the window closes with the project's own release.
+- **F14 — non-blocking, `/codeo:plan`'s.** The by-hand fallback (`.codeo/overlays/cleanup.md:12`, `.codeo/overlays/close.md:11`) tells the engineer to mark the image `codeo-dev:<name>` `removed` although its two docker commands never remove an image, so the comment would show a `removed` image that still exists (read directly). It does not say where to run `bash .devcontainer/codeo-track.sh mark …`: a container row's Host is the machine that ran `codeo-container.sh`, `mark` changes only rows whose Host equals `hostname` (`codeo-track.sh:187`), and the issue container runs with `--hostname <name>` (`codeo-container.sh:118`), so run inside a container it prints its no-match note and changes nothing. It also names `docker rm` for a sandbox, which does not end one (reviewer's claim from `.sbx/README.md`; not re-read). The text follows plan Q8, which fixed the sentence's shape but not its content.
+- **F15 — non-blocking, `/codeo:implement`'s.** `.devcontainer/codeo-track.sh:54,137`: `save` calls `f=$(new_tmp)`, so `tmp_files+=("$f")` runs in the command substitution's subshell and the `EXIT` trap never removes the file; each `add` or `mark` leaves a `codeo-track.XXXXXX` file holding the comment body in `$TMPDIR`. Confirmed by reading the code; the reviewer counted 348 left by the test runs.
+- **F16 — non-blocking, `/codeo:implement`'s.** `README.md:248` says a local container of that name "lists them and asks before it creates another"; `codeo-container.sh:92-93` warns and refuses outright. `.devcontainer/README.md` describes it correctly.
+- **F17 — non-blocking, `/codeo:implement`'s.** `README.md:199` says `jq` is needed for `baseBranch` and the guard falls back to `main` without it. `container-name.sh:30-31` also reads the codename with `jq` and falls back to the folder name, so without `jq` a `codeo-home` folder gives the codename `codeo-home` and the home clone can read as `stray`. Plausible from the code read; not run.
+- **F18 — non-blocking, `/codeo:implement`'s.** `README.md:219` says "A host checkout is no longer `unguarded`", which describes the change rather than the system; the example comment at `README.md:227` uses this issue's number and the branch `feat/152-example`.
+- **F19 — non-blocking, `/codeo:plan`'s.** The criterion says "install and upkeep"; the README's host-home section covers the clone (`git pull`) and the plugin through `install.sh`, and says nothing about keeping Claude Code or the `gh` login current.
+- **F20 — non-blocking, `/codeo:plan`'s.** Reviewer-reported minors, not re-run: macOS `hostname` follows the network, so a container removed on another network leaves rows `active`; the image row is written only when this run built the image, so a failed `docker run` after a build leaves the image untracked; a sandbox has no container marker and reads as a host checkout, so a finished sandbox is `stray` with a message that does not explain it, and no page says how a sandbox is classified; two simultaneous first creations can leave two tracking comments (documented in the README).
+
+No issue was filed from this pass: the role check refuses `/codeo:issue` here, so the later work is promised under `## Notes`. All eight findings are non-blocking and none sends the change back.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-22 — qc round 1: build and suite passed, 10/10 criteria met as planned, F1-F3 blocking and plan-owned, F4-F12 non-blocking; sent back to /codeo:plan · cost: 13m · opus-5-5 479k in + 5M cached / 30k out · sonnet-5-5 366k in + 414k cached / 7k out
+- 2026-11-23 — qc round 2: build and suite passed, 10/10 criteria met, round-1 F1-F3 fixed, F13-F20 non-blocking and recorded; clear, forward to /codeo:close · cost: 9m · opus-5-5 251k in + 4.4M cached / 35k out · sonnet-5-5 131k in + 818k cached / 6k out
