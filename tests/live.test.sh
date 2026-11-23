@@ -735,6 +735,56 @@ run beat --force
 assert_contains "local signal" "host: local" "$(web_msg "$(git -C "$origin" for-each-ref --format='%(refname)' refs/codeo/live/ | head -n 1)")"
 assert_eq "no web branch" "" "$(git -C "$origin" for-each-ref refs/heads/codeo-live/)"
 
+# --- sweep -------------------------------------------------------------------------------------
+
+case_desc=sweep_deletes_this_issues_web_branches_only
+new_world; clone_with_lock 10 container codeo-10
+for r in refs/heads/codeo-live/10/web-a refs/heads/codeo-live/10/web-b refs/heads/codeo-live/104/web-c refs/heads/codeo-live/11/web-d refs/codeo/live/10/codeo-10; do
+    plant "$r" "x"
+done
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "stderr" "" "$err"
+assert_eq "heads left" "$(printf 'refs/heads/codeo-live/104/web-c\nrefs/heads/codeo-live/11/web-d')" "$(heads)"
+assert_eq "container signal kept" refs/codeo/live/10/codeo-10 "$(refs)"
+
+case_desc=sweep_from_a_web_session_deletes_nothing
+new_world; clone_with_lock 104 web abcdef0123456789
+plant refs/heads/codeo-live/104/web-a "x"
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "branch stays" refs/heads/codeo-live/104/web-a "$(heads)"
+assert_eq "stderr" "" "$err"
+
+case_desc=sweep_without_a_lock_deletes_nothing
+new_world
+plant refs/heads/codeo-live/104/web-a "x"
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "branch stays" refs/heads/codeo-live/104/web-a "$(heads)"
+assert_eq "stderr" "" "$err"
+
+case_desc=sweep_with_a_refused_delete_warns_once_and_exits_0
+new_world; clone_with_lock 104 container codeo-104
+plant refs/heads/codeo-live/104/web-a "x"
+mkdir -p "$origin/hooks"
+printf '#!/bin/sh\nwhile read old new ref; do case $new in 0*) echo refused >&2; exit 1;; esac; done\n' > "$origin/hooks/pre-receive"
+chmod +x "$origin/hooks/pre-receive"
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "one line" 1 "$(grep -c . <<< "$err")"
+assert_contains "warning" "live: could not sweep" "$err"
+assert_eq "branch stays" refs/heads/codeo-live/104/web-a "$(heads)"
+
+case_desc=sweep_with_nothing_to_delete_is_quiet
+new_world; clone_with_lock 104 container codeo-104
+plant refs/heads/codeo-live/11/web-d "x"
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "stderr" "" "$err"
+assert_eq "stdout" "" "$out"
+assert_eq "branch stays" refs/heads/codeo-live/11/web-d "$(heads)"
+
 if ((failures)); then
     echo "$failures assertion(s) failed"
     exit 1

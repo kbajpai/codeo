@@ -18,6 +18,11 @@
 #       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp, its saved
 #       machine label (codeo-live-machine) and its
 #       branch ages out after the TTL. Exits 0 whatever happens.
+#   live.sh sweep
+#       Deletes every refs/heads/codeo-live/<issue>/* branch on origin for the lock's issue (a bounded
+#       `git ls-remote`, then one `git push --delete`), the web signals a web session cannot delete
+#       itself. Does nothing without a lock or for a web host, and touches no other issue's branch and
+#       nothing under refs/codeo/live/. Exits 0 whatever happens; a failure is one `live:` stderr line.
 #   live.sh fetch
 #       Brings origin's signals into refs/codeo/live/, and a web session's codeo-live branches into
 #       refs/codeo/live-web/ (their own namespace, so equal labels never collide), pruning the ones
@@ -53,8 +58,8 @@
 #   - Two beats started together from one checkout can both push the same ref, and one can
 #     lose the origin's ref lock; the other has then just published, so the signal is fresh
 #     either way.
-#   - A web session's signal is a branch that is never deleted: it expires from `list` after the TTL
-#     but the branch stays on origin until someone removes it.
+#   - A web session cannot delete its signal branch: it expires from `list` after the TTL, and the
+#     branch stays on origin until `sweep`, run from another session, removes it.
 #   - A web checkout keeps its first label until `clear`: a session id that changes between beats
 #     does not publish a second signal, but a changed CODEO_MACHINE never rewrites the saved label.
 #   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
@@ -227,6 +232,28 @@ clear() {
     warn "could not clear — $(last_line "$reason")"
 }
 
+# Deletes every refs/heads/codeo-live/<issue>/<label> on origin for this lock's issue: the web
+# sessions' signal branches, which a web session cannot delete itself. Nothing else is touched.
+sweep() {
+    local listing reason line ref refs=()
+    read_lock || return 0
+    [[ $host != web ]] || return 0
+    if ! listing=$(bounded git ls-remote --heads origin "refs/heads/codeo-live/$issue/*" 2>&1); then
+        warn "could not sweep — $(last_line "$listing")"
+        return 0
+    fi
+    while IFS= read -r line; do
+        ref=${line#*$'\t'}
+        [[ $ref =~ ^refs/heads/codeo-live/$issue/[A-Za-z0-9._-]+$ ]] || continue
+        refs+=("$ref")
+    done <<< "$listing"
+    ((${#refs[@]})) || return 0
+    if ! reason=$(bounded git push -q --no-verify origin --delete "${refs[@]}" 2>&1); then
+        warn "could not sweep — $(last_line "$reason")"
+    fi
+    return 0
+}
+
 fetch() {
     local reason
     if reason=$(bounded git fetch -q --prune origin '+refs/codeo/live/*:refs/codeo/live/*' '+refs/heads/codeo-live/*:refs/codeo/live-web/*' 2>&1); then return 0; fi
@@ -271,7 +298,8 @@ list() {
 case ${1:-} in
     beat) shift; beat "$@" || true; exit 0 ;;
     clear) clear || true; exit 0 ;;
+    sweep) sweep || true; exit 0 ;;
     fetch) fetch ;;
     list) shift; list "$@" ;;
-    *) echo "usage: live.sh beat [--force] | clear | fetch | list [--tsv]" >&2; exit 1 ;;
+    *) echo "usage: live.sh beat [--force] | clear | sweep | fetch | list [--tsv]" >&2; exit 1 ;;
 esac
