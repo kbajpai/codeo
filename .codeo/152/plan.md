@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, answers in (Q8-Q12 answered "accept all recommendations"). The round 2 plan is drafted in `.codeo/152/plan-draft.md` and awaits approval; nothing is written under `docs/plans/` before that. `/codeo:qc` round 1 sent the change back with three blocking findings that rest on round 1 plan decisions (F1 the printed removal command, F2 the tracker's default repository, F3 what counts as a malformed table) and two non-blocking ones for the plan (F4 the VS Code route, F8 the first removal after an upgrade). Each is a question below with a recommendation. F5-F7 and F9-F12 are `/codeo:implement`'s and need no decision: the round 2 plan lists them as tasks. Round 1's plan and answers (Q1-Q7) stand except where these answers change them.
+Round 2 planned: the plan file's `## Round 2` (Tasks 8-12) is written and awaits commit; next step `/codeo:implement`. Nothing is open.
 
 What exploration settled, so the questions below are only the open ones:
 
@@ -145,15 +145,6 @@ My calls, stated so they can be corrected (none changes scope; they go in the pl
 - One new role name, `stray`, for a host checkout that is neither home nor an issue's (corrects the earlier note that no role names would be added); a host clone named `<codename>-home` with no lock on the base branch and no container markers is `home`; off the base branch it is `stale:?`; any other host checkout without a lock is refused with a line naming the `<codename>-home` rule. `CLAUDE_CODE_REMOTE=true`, `doctor` and `setup` stay exempt.
 - The README gets a host-home section (Claude Code, `gh`, the plugin, git identity), the guard, the tracking comment and a Linux/macOS/Windows-WSL note, with `codeo-home` kept documented as supported; `.devcontainer/README.md`'s role table and the `unguarded` paragraph are rewritten.
 
-### Footprint
-
-```
-files:      .devcontainer/scripts/role.sh, .devcontainer/codeo-track.sh, .devcontainer/codeo-container.sh, .devcontainer/codeo, .devcontainer/README.md, .sbx/codeo-sandbox.sh, .sbx/README.md, scripts/cleanup.sh, skills/**, .codeo/overlays/**, docs/extension-points.md, docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md, README.md, CHANGELOG.md, tests/role.test.sh, tests/role-guard.test.sh, tests/track.test.sh, tests/cmd-mode.test.sh, tests/sandbox.test.sh, tests/codeo-command.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, tests/init-overlay.test.sh, .codeo/152/**
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 Plan: `docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md` (left unstaged for review).
@@ -172,9 +163,36 @@ Plan: `docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md` (left u
 
 **Filed:** none. Optional `engineering:*` skills were unavailable; their structure was applied directly.
 
+### Round 2 — 2026-11-23
+(send-back from qc.md round 1)
+
+Plan: `docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md`, the new `## Round 2` section (Tasks 8-12), left unstaged for review; three Global Constraints lines corrected (the PowerShell claim, the marker-anywhere wording, the malformed-row wording). Tasks 1-7 stand as built.
+
+**Shape.** Five tasks in the same pull request: tracker (8), container and sandbox scripts (9), `codeo rm` (10), cleanup and overlays (11), documentation (12). Each has its failing test first and its proof.
+
+**Decisions.** Q8 `codeo rm <N>` stays the printed command, with a `docker` fallback sentence from a new optional `fallback:` overlay line (a fourth tab field in `scripts/cleanup.sh`'s output) and the PowerShell claim deleted · Q9 tracker repository from `CODEO_REPO_URL`, else the checkout's `origin`, else the upstream default · Q10 a row is well-formed only with six cells, a known kind and a known status, and one bad row stops every write · Q11 the VS Code route is documented as recording the branch row only · Q12 `codeo rm` of a container fetches a missing tracker and never stops over it.
+
+**Rejected.** Q8 B (no fallback; `codeo` mandatory) and C (raw `docker` commands again plus `mark` lines) · Q9 B (no default) and C (`.codeo/config.json`, which needs `jq`) · Q10 B (keep bad rows byte for byte) · Q11 B (record from `postCreateCommand`) · Q12 B (run `codeo update` twice).
+
+**Findings routed.** F1-F4, F8 by the decisions above; F5, F7, F11 in Task 9, F6 in Task 8, F9, F10, F12 in Task 12.
+
+**Documentation moved.** `README.md`, `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md`, `.codeo/overlays/init.md`, `docs/extension-points.md`; no wiki module.
+
+**Filed:** none. No other workflow in flight; `overlap.sh` and `overlap.sh --outside` printed nothing. Optional `engineering:*` skills unavailable; structure applied directly.
+
+### Footprint
+
+```
+files:      .devcontainer/scripts/role.sh, .devcontainer/codeo-track.sh, .devcontainer/codeo-container.sh, .devcontainer/codeo, .devcontainer/README.md, .sbx/codeo-sandbox.sh, .sbx/README.md, scripts/cleanup.sh, skills/**, .codeo/overlays/**, docs/extension-points.md, docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md, README.md, CHANGELOG.md, tests/role.test.sh, tests/role-guard.test.sh, tests/track.test.sh, tests/cmd-mode.test.sh, tests/sandbox.test.sh, tests/codeo-command.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, tests/init-overlay.test.sh, .codeo/152/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-22 — Q1-Q6 raised · cost: 4m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 220k in + 1.1M cached / 29k out
 - 2026-11-22 — answers Q1-Q6 recorded, plan drafted for review (engineering skills unavailable: structure applied directly) · cost: 10m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 276k in + 2.1M cached / 60k out
 - 2026-11-22 — planned: docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md · cost: 14m · fable-5-2 70k in + 335k cached / 4k out · sonnet-5-5 279k in + 2.8M cached / 64k out
 - 2026-11-23 — round 2 (send-back from qc.md round 1): Q8-Q12 raised · cost: 0m · fable-5-2 99k in + 234k cached / 3k out
+- 2026-11-23 — planned round 2: docs/plans/2026-11-22-host-home-strict-guard-and-tracking-152.md (Tasks 8-12; engineering skills unavailable: structure applied directly) · cost: 4m · fable-5-2 110k in + 744k cached / 7k out · sonnet-5-5 133k in + 1.2M cached / 14k out
