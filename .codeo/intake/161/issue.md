@@ -1,4 +1,4 @@
-# Issue new-docs-leftovers-154-146 — issue
+# Issue #161 — issue
 
 ## Questions
 
@@ -13,4 +13,4 @@ Body: see `body.md` in this directory.
 
 ## Log
 
-2026-11-23 — draft written, awaiting approval · cost: unavailable
+2026-11-23 — draft approved; filed as #161 · cost: unavailable
