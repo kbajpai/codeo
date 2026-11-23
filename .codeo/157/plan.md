@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after the send-back in `qc.md` round 1: Q4 is open and nothing is drafted until it is answered. Round 1's plan (`docs/plans/2026-11-23-live-signal-leftovers-157.md`) is built and committed; Q1-Q3 stand as answered.
+Planned (round 2, after the send-back in `qc.md` round 1): Q4 is answered A and the round-2 plan is approved and saved at `docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md` (unstaged). Next step: commit it, then `/codeo:implement`. Round 1's plan (`docs/plans/2026-11-23-live-signal-leftovers-157.md`) is built and committed; Q1-Q3 stand as answered.
 
 What the send-back found, checked against `scripts/live.sh` and `hooks/live-signal.sh` on this branch:
 
@@ -84,14 +84,7 @@ A — never: the label belongs to the checkout, `clear` stops removing the file.
 
 ## Notes
 
-### Footprint
-
-```
-files:      scripts/live.sh, scripts/cleanup.sh, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, tests/live.test.sh, tests/live-signal.test.sh, tests/close-skill.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/inflight.test.sh, docs/plans/2026-11-23-live-signal-leftovers-157.md, docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
+None.
 
 ## Outcome
 
@@ -106,8 +99,32 @@ sequenced:  none
 
 **Intake questions resolved here.** None; init left nothing open. No `/codeo:issue` filed. The `engineering` plugin is not installed and no component choice was involved, so its structure was not used.
 
+### Round 2 — 2026-11-23
+(send-back from qc.md round 1)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md` (unstaged, approved 2026-11-23) |
+| Shape | One short executable plan under `docs/plans/`, 4 tasks, same branch and pull request; no reference doc |
+
+**Decisions.** F1: Q4 A — `clear` stops removing `<git dir>/codeo-live-machine`, so a web checkout keeps its first label for good and a session that ends and resumes shows as one row; the label names the checkout, and a reclaimed VM or new checkout still shows twice for up to the TTL (rejected: B, remove it only at `/codeo:close` through a new flag or verb; C, docs only). F2-F5 are fixed in the same round: the CHANGELOG header, an `inflight.sh --live` collision test, the `cleanup` entry in `docs/skills.md`, and the `create` event in the CI sentence.
+
+**Documentation the plan changes.** `scripts/live.sh` header, `docs/handoff.md`, `docs/skills.md`, `CHANGELOG.md`.
+
+**Intake questions resolved here.** None. No `/codeo:issue` filed. The `engineering` plugin is not installed and no component choice was involved.
+
+### Footprint
+
+```
+files:      scripts/live.sh, scripts/cleanup.sh, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, tests/live.test.sh, tests/live-signal.test.sh, tests/close-skill.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/inflight.test.sh, docs/plans/2026-11-23-live-signal-leftovers-157.md, docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-23 — Q1-Q3 raised · cost: 2m · fable-5-2 74k in + 518k cached / 10k out
 - 2026-11-23 — planned: docs/plans/2026-11-23-live-signal-leftovers-157.md · cost: 12m · fable-5-2 80k in + 718k cached / 11k out · sonnet-5-5 126k in + 1.9M cached / 26k out
 - 2026-11-23 — round 2: Q4 raised after the send-back in qc.md round 1 · cost: 1m · fable-5-2 117k in + 23k cached / 1k out
+- 2026-11-23 — planned: docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md (round 2) · cost: 36m · fable-5-2 121k in + 304k cached / 3k out · sonnet-5-5 136k in + 1.3M cached / 8k out
