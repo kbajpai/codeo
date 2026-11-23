@@ -649,9 +649,39 @@ assert_eq "hostname" "refs/heads/codeo-live/104/$host_label" "$(heads)"
 case_desc=two_web_sessions_on_one_issue_publish_two_branches
 new_world; clone_with_lock 104 web abcdef0123456789
 run beat --force
+rm -f "$(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-machine)"  # a second checkout has no saved label
 clone_with_lock 104 web 1234567890abcdef
 run beat --force
 assert_eq "two branches" 2 "$(heads | grep -c .)"
+
+case_desc=web_label_stays_when_the_session_id_changes
+new_world; clone_with_lock 104 web abcdef0123456789
+run beat --force
+clone_with_lock 104 web 99999999aaaaaaaa
+run beat --force
+assert_eq "one branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
+
+case_desc=web_clear_forgets_the_label
+new_world; clone_with_lock 104 web abcdef0123456789
+run beat --force
+run clear
+clone_with_lock 104 web 99999999aaaaaaaa
+run beat --force
+assert_contains "first label" "104/web-abcdef01" "$(heads)"
+assert_contains "second label" "104/web-99999999" "$(heads)"
+
+case_desc=codeo_machine_is_not_saved_as_the_web_label
+new_world; clone_with_lock 104 web abcdef0123456789
+CODEO_MACHINE=boxA run beat --force
+run beat --force
+assert_contains "env label" "104/boxA" "$(heads)"
+assert_contains "web label" "104/web-abcdef01" "$(heads)"
+
+case_desc=a_saved_label_with_unsafe_text_is_ignored
+new_world; clone_with_lock 104 web abcdef0123456789
+printf 'a b;c\n' > "$(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-machine)"
+run beat --force
+assert_eq "branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
 
 case_desc=user_env_login_wins
 new_world; clone_with_lock 104 container codeo-104

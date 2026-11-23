@@ -15,7 +15,8 @@
 #       whatever happens; a failure is one `live:` stderr line.
 #   live.sh clear
 #       Deletes this checkout's signal (`git push --delete`, else `github.sh ref delete`) and its
-#       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp and its
+#       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp, its saved
+#       machine label (codeo-live-machine) and its
 #       branch ages out after the TTL. Exits 0 whatever happens.
 #   live.sh fetch
 #       Brings origin's signals into refs/codeo/live/, and a web session's codeo-live branches into
@@ -37,8 +38,9 @@
 #       machine: <label>
 #       host: <container|web|local>   (always web when CLAUDE_CODE_REMOTE is true, whatever the lock's host says)
 #       beat: <epoch seconds>
-#   The machine is $CODEO_MACHINE, else the container's volume or sandbox, else `web-<first 8 of the session>`,
-#   else `hostname`, cut to 64 characters of [A-Za-z0-9._-] and made a valid ref component. The
+#   The machine is $CODEO_MACHINE, else the container's volume or sandbox, else for a web session the label
+#   saved in <git dir>/codeo-live-machine by its first beat (kept while it is a clean label; `clear` removes
+#   it), else `web-<first 8 of the session>`, else `hostname`, cut to 64 characters of [A-Za-z0-9._-] and made a valid ref component. The
 #   commit's identity is codeo-live <codeo-live@invalid>, passed per command; no git config is read
 #   for it or written, and no email address goes in the message.
 #
@@ -53,6 +55,8 @@
 #     either way.
 #   - A web session's signal is a branch that is never deleted: it expires from `list` after the TTL
 #     but the branch stays on origin until someone removes it.
+#   - A web checkout keeps its first label until `clear`: a session id that changes between beats
+#     does not publish a second signal, but a changed CODEO_MACHINE never rewrites the saved label.
 #   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
 #   - `clear` can take two bounds (the push `--delete`, then the REST delete), so the `SessionEnd`
 #     hook allows 20 seconds. That is two bounds at the default of 8; at 10 or more the hook can
@@ -107,10 +111,23 @@ ref_label() {
     printf '%s' "$label"
 }
 
+# Where a web checkout keeps its first machine label, so a session id that changes later does not
+# publish under a second one.
+label_file() { git rev-parse --git-path codeo-live-machine; }
+
+# The saved web label, or nothing when there is none or it is not already a clean ref label.
+saved_label() {
+    local saved
+    saved=$(head -n 1 "$(label_file)" 2> /dev/null) || saved=
+    if [[ -n $saved && $(ref_label "$saved") == "$saved" ]]; then printf '%s' "$saved"; fi
+}
+
 machine_label() {
-    local host=$1 name=
+    local host=$1 name= saved
     if [[ -n ${CODEO_MACHINE:-} ]]; then
         name=$CODEO_MACHINE
+    elif [[ $host == web ]] && saved=$(saved_label) && [[ -n $saved ]]; then
+        name=$saved
     else
         case $host in
             container) name=$(lock_field volume); [[ -n $name ]] || name=$(lock_field sandbox) ;;
@@ -173,6 +190,10 @@ beat() {
         [[ $last =~ ^[0-9]+$ ]] && ((now - last < refresh)) && return 0
     fi
     echo "$now" > "$(stamp)"
+    # A web checkout keeps the first label it publishes under; CODEO_MACHINE is never saved.
+    if [[ $host == web && -z ${CODEO_MACHINE:-} ]]; then
+        printf '%s\n' "$machine" > "$(label_file)" 2> /dev/null || true
+    fi
 
     message_file=$(mktemp "$(git rev-parse --git-path codeo-live-message).XXXXXX")
     printf 'codeo live signal\n\nissue: %s\nuser: %s\nmachine: %s\nhost: %s\nbeat: %s\n' \
@@ -197,7 +218,7 @@ beat() {
 clear() {
     local reason
     read_lock || return 0
-    rm -f "$(stamp)"
+    rm -f "$(stamp)" "$(label_file)"
     [[ $host != web ]] || return 0
     bounded git push -q --no-verify origin --delete "$signal_ref" > /dev/null 2>&1 && return 0
     if reason=$(bounded bash "$github" ref delete "$signal_ref" 2>&1 > /dev/null); then return 0; fi
