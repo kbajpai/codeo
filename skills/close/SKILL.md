@@ -513,8 +513,8 @@ is the container the message names.
     re-invokable rather than orphaned with no lock. Do it with the live-signal clear and the
     branch sweep in one command,
     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh" clear; bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh" sweep; rm -f .codeo/active`:
-    `clear` needs the lock to name the signal, and a separate call would let the next hook
-    publish it again. A `clear` that cannot reach origin prints one `live:` line and changes
+    `clear` and `sweep` need the lock to name the issue, and a separate call would let the next
+    hook publish the signal again. A `clear` that cannot reach origin prints one `live:` line and changes
     nothing; the signal then expires (`docs/handoff.md`). `sweep` deletes the issue's
     `codeo-live/<issue>/*` branches on origin; it does nothing in a hosted web session, which
     cannot delete a branch, and when it fails it prints one `live:` line and the lock still
