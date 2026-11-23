@@ -63,7 +63,14 @@ A — remember the first label in the checkout's git directory. (Engineer: "go w
 
 ## Notes
 
-None yet.
+### Footprint
+
+```
+files:      scripts/live.sh, scripts/cleanup.sh, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, tests/live.test.sh, tests/live-signal.test.sh, tests/close-skill.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, docs/plans/2026-11-23-live-signal-leftovers-157.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
