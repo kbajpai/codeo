@@ -31,7 +31,7 @@
 #       further ahead is skipped.
 #
 # The signal's commit message:
-#       codeo live signal
+#       codeo live signal   (a web host: `codeo live signal [skip ci]`, so push-triggered CI skips the beat; subject line only)
 #
 #       issue: <N>
 #       user: <GitHub login, else git user.name, else unknown; a web session never uses git config user.name>
@@ -177,7 +177,7 @@ read_lock() {
 stamp() { git rev-parse --git-path codeo-live-beat; }
 
 beat() {
-    local force= now last base current tree sha message_file reason
+    local force= subject now last base current tree sha message_file reason
     [[ ${1:-} != --force ]] || force=1
     read_lock || return 0
     base=$(codeo_base_branch 2> /dev/null) || base=
@@ -196,8 +196,10 @@ beat() {
     fi
 
     message_file=$(mktemp "$(git rev-parse --git-path codeo-live-message).XXXXXX")
-    printf 'codeo live signal\n\nissue: %s\nuser: %s\nmachine: %s\nhost: %s\nbeat: %s\n' \
-        "$issue" "$(user_label)" "$machine" "$host" "$now" > "$message_file"
+    subject='codeo live signal'
+    [[ $host == web ]] && subject='codeo live signal [skip ci]'
+    printf '%s\n\nissue: %s\nuser: %s\nmachine: %s\nhost: %s\nbeat: %s\n' \
+        "$subject" "$issue" "$(user_label)" "$machine" "$host" "$now" > "$message_file"
     tree=$(git hash-object -t tree -w /dev/null)
     sha=$(GIT_AUTHOR_NAME=codeo-live GIT_AUTHOR_EMAIL=codeo-live@invalid \
         GIT_COMMITTER_NAME=codeo-live GIT_COMMITTER_EMAIL=codeo-live@invalid \

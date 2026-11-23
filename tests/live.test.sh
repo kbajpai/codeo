@@ -583,6 +583,17 @@ git -C "$origin" update-ref -d refs/codeo/live/105/codeo-105
 live "$other" fetch
 assert_eq "only web remains" "$(printf '104\talice\tweb-abcdef01\tweb')" "$(live "$other" list --tsv | cut -f1-4)"
 
+case_desc=web_signal_subject_says_skip_ci_and_others_do_not
+new_world; clone_with_lock 105 container codeo-105
+run beat --force
+clone_with_lock 104 web abcdef0123456789
+run beat --force
+assert_eq "web subject" "codeo live signal [skip ci]" "$(git -C "$origin" log -1 --format=%s refs/heads/codeo-live/104/web-abcdef01)"
+assert_eq "container subject" "codeo live signal" "$(git -C "$origin" log -1 --format=%s refs/codeo/live/105/codeo-105)"
+other=$(clone_of "$origin")
+live "$other" fetch
+assert_eq "both listed" "$(printf '104\talice\tweb-abcdef01\tweb\n105\talice\tcodeo-105\tcontainer')" "$(live "$other" list --tsv | cut -f1-4)"
+
 case_desc=fetch_survives_a_web_and_a_container_signal_with_equal_labels
 new_world
 now=$(date +%s)
