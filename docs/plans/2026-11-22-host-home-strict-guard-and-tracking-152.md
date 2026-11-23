@@ -12,14 +12,14 @@
 
 ## Global Constraints
 
-- **Decisions, not to be reopened.** Q1 a container in an unshaped folder stays `unguarded` · Q2 on the host any checkout holding a lock is `issue:<N>` whatever its folder · Q3 one new `.devcontainer/codeo-track.sh`, `gh api` direct, branch row via the `init/host-workflow` overlay · Q4 the overlays print `codeo rm {N}` and `/codeo:close` marks the branch `deleted` itself · Q5 proceed and coordinate with #146 (`README.md`, `CHANGELOG.md`), `tests/install.test.sh` untouched · Q6 one pull request, guard first.
+- **Decisions, not to be reopened.** Q1 a container in an unshaped folder stays `unguarded` · Q2 on the host any checkout holding a lock is `issue:<N>` whatever its folder · Q3 one new `.devcontainer/codeo-track.sh`, `gh api` direct, branch row via the `init/host-workflow` overlay · Q4 the overlays print `codeo rm {N}` and `/codeo:close` marks the branch `deleted` itself · Q5 proceed and coordinate with #146 (`README.md`, `CHANGELOG.md`), `tests/install.test.sh` untouched · Q6 one pull request, guard first. Round 2: Q8-Q12 (see `## Round 2`).
 - **Exemptions that stay:** `CLAUDE_CODE_REMOTE=true` (`unguarded`), and `doctor` / `setup` (outside the guard: `--check` exits 2).
 - **Guard tables, exactly.** Home-only skills `issue init triage cleanup` run on `home` (and `unguarded`); lock skills `plan implement qc close` run on `issue:<N>` (and `unguarded`). Every other role refuses, one line, naming the role, the skill and where the skill does run. The refusal in each skill stays a `rule` that no words lift; the `role-guard` overlays are unchanged.
-- **Tracking comment.** Hidden marker `<!-- codeo:tracking -->` on the first line; table header `| Kind | Name | Host | Status | Created (UTC) | Removed (UTC) |`; kinds `branch container image volume sandbox`; statuses `active removed deleted`; times `YYYY-MM-DDTHH:MM:SSZ`; Host is the host machine's `hostname` (never the container's own, which is its name), empty for `branch`. One comment per issue: found by marker, edited with `PATCH`, created once. Text outside the table is kept; a comment with the marker but no recognisable table is reported and left untouched.
+- **Tracking comment.** Hidden marker `<!-- codeo:tracking -->` on the first line; table header `| Kind | Name | Host | Status | Created (UTC) | Removed (UTC) |`; kinds `branch container image volume sandbox`; statuses `active removed deleted`; times `YYYY-MM-DDTHH:MM:SSZ`; Host is the host machine's `hostname` (never the container's own, which is its name), empty for `branch`. One comment per issue: found by its marker anywhere in a comment, edited with `PATCH`, created once. Text outside the table is kept; a comment with the marker but no recognisable table, or with a malformed row (not exactly six cells, an unknown kind or an unknown status), is reported and left untouched.
 - **A failed record never fails a creation.** `gh` missing, unauthenticated or failing makes the tracker print one `track:` line naming the row to add by hand and exit 3; callers ignore its status.
 - **Portability.** `codeo-container.sh` and `codeo-track.sh` stay bash 3.2 / macOS-portable: no `date -d`, `${v,,}`, `mapfile`, associative arrays, `grep -P`; the tracker is run as `"$BASH" "$track"` because `tests/cmd-mode.test.sh` runs the container script with a PATH holding only a stub `docker`.
 - **codeo is project-agnostic in `skills/`, `scripts/`, `lib/`** (`tests/agnostic.test.sh` forbids three project-specific words only, but the existing convention keeps Docker out of `scripts/`): the Docker and tracker knowledge stays in `.devcontainer/`, `.sbx/` and `.codeo/overlays/`. The only generic change is `scripts/cleanup.sh` expanding `{N}` in `command:`.
-- **Printed commands run unmodified in PowerShell and bash:** one line, no variables. `codeo rm 152` qualifies (the host is Linux, macOS with bash 4.3, or WSL2).
+- **Printed commands run in a bash shell on the host (Linux, macOS, or WSL2):** one line, no variables. `codeo rm 152` qualifies but needs `codeo`; the overlays print a `docker` fallback sentence beside it (round 2).
 - **No `/codeo:cleanup` container command, no change to `.devcontainer/Dockerfile` or `devcontainer.json`, `codeo-home` and its files stay.**
 - **Executable bits.** New scripts are committed `100755` (`tests/modes.test.sh`, `tests/devcontainer.test.sh`).
 - **Invariants.** No invariants document is configured, so there is nothing to check this plan against. No shared environment, no `wiki` module and no `resources[]`: no task carries `Needs lease:`, and every task is proved in this checkout. No task runs on the engineer's host, so no `Runs on:` or `Shell:` marker; every command below is bash in this session's shell.
@@ -226,3 +226,100 @@ sequenceDiagram
 
 - **Coverage.** AC1-3 → Task 1; AC4 → Tasks 2 and 6 (branch row, idempotent `add`); AC5 → Tasks 2-5; AC6 → Tasks 2, 4-6 (`removed`, `deleted`, unremoved stay `active`); AC7 → Tasks 2-5; AC8 → Task 2 (exit 3, printed row) and the callers' ignore; AC9 → Task 7; AC10 → every task's full-suite run.
 - **Decisions to confirm at this gate** (my calls, not the engineer's): (a) the local-container case in `codeo-container.sh issue` stays a refusal with a warning, not a confirmation, because proceeding is impossible without removal or `--rebuild`; (b) one new role name, `stray`; (c) `--yes` as the flag; (d) a `stale`/`stray` host `codeo-<N>` clone without a lock is `stray`, with no finished-issue wording; (e) the `{N}` expansion in `scripts/cleanup.sh` is the one generic-layer change.
+
+## Round 2 (send-back from `qc.md` round 1)
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Tasks 8-12 run after Tasks 1-7, which are built and stay as they are except where a task below says so. Same proof rule as before: the task's own test file run alone, then `bash tests/run.sh`, each ending `all cases passed`.
+
+**Goal:** Close QC round 1's findings F1-F12: no false PowerShell claim and a removal route for engineers without `codeo`, a tracker that cannot comment on the wrong repository or rewrite a damaged table, and the smaller defects.
+
+**Decisions (Q8-Q12, not to be reopened).**
+- Q8 `codeo rm <N>` stays the printed command, with one fallback sentence beside it; the PowerShell claim is deleted everywhere.
+- Q9 tracker repository: `CODEO_REPO_URL`, else the current checkout's `origin`, else `https://github.com/kbajpai/codeo.git`.
+- Q10 a row is well-formed only with exactly six cells, a known kind and a known status; one bad row means nothing is written.
+- Q11 the VS Code route records the branch row alone, and the docs say so.
+- Q12 `codeo rm` of a container fetches a missing `codeo-track.sh` and never stops over it.
+
+```mermaid
+flowchart TD
+    S[codeo-track.sh add / mark] --> R{CODEO_REPO_URL set?}
+    R -- yes --> G[owner/repo from it]
+    R -- no --> O{inside a git checkout<br/>with an origin?}
+    O -- yes --> G2[owner/repo from origin]
+    O -- no --> D[upstream default]
+    G --> P[read comment]
+    G2 --> P
+    D --> P
+    P --> T{every table row has 6 cells,<br/>known kind, known status?}
+    T -- yes --> W[edit the row, PATCH]
+    T -- no --> X["track: names the line, nothing written, exit 3"]
+```
+
+**Review Focus (round 2).** A fork whose `origin` is not upstream, with `CODEO_REPO_URL` unset · a row with five or eight cells, an unknown kind, or an unknown status in the middle of the table · `mark` for a row that is not there · `codeo rm` with `~/codeo` holding no tracker and no network · a rebuild of the container the row already shows · a sandbox refused at the duplicate prompt.
+
+### Task 8: The tracker reads the right repository and refuses a damaged table (F2, F3, F6)
+
+**Files:** Modify `.devcontainer/codeo-track.sh` (`repo_slug`, `parse_body`, `cmd_mark`, `cmd_confirm`), `tests/track.test.sh`.
+
+**Interfaces:**
+- Consumes: the seams `CODEO_REPO_URL`, `CODEO_TRACK_HOST`, `CODEO_TRACK_NOW`, `CODEO_TRACK_TTY`.
+- Produces: unchanged commands and exit codes; `repo_slug` order as Q9; `parse_body` returns 2 and sets `bad_row` (`line <k>: <the line>`) for a malformed row; `mark` prints `track: no active <kind> <name> row on <host> in #<N>'s tracking comment; nothing changed` (exit 0) when nothing matched or no comment exists.
+
+- [ ] **Step 1: failing tests** in `tests/track.test.sh`, names: `slug_from_origin` (`CODEO_REPO_URL` unset, a temp git repo with `origin` `git@github.com:someone/fork.git`, the `gh` stub sees `repos/someone/fork/...`), `slug_url_wins_over_origin`, `slug_default_outside_checkout` (run in a directory that is not a repository; stub sees `kbajpai/codeo`), `row_five_cells`, `row_eight_cells`, `row_unknown_kind`, `row_unknown_status` (each: `add` exits 3, prints one `track:` line naming the line number, and the stub saw no `PATCH`/`POST`), `confirm_reads_good_rows_before_a_bad_one`, `mark_miss_prints_a_note` (exit 0, the note, no write), `mark_without_comment_prints_a_note`.
+- [ ] **Step 2:** `bash tests/track.test.sh` → the new cases FAIL (the default slug is used; the rows are rewritten; `mark` is silent).
+- [ ] **Step 3:** implement. `repo_slug` tries `git remote get-url origin` with `git -C .` only when `CODEO_REPO_URL` is empty, parses it with the existing case statement, and falls through to the default when `git` or the remote is absent; a URL it cannot parse is still a `fail_record`. `parse_body` state 2 splits the line on `|` and requires `|` first and last, exactly six cells, `valid_kind` and a status in `active removed deleted` after `trim` (the name cell keeps its backtick stripping); anything else sets `bad_row` and returns 2, and `load` turns that into `fail_record "tracking comment <id> on #<N> has a malformed row (<bad_row>) and was left untouched; <hint>"`. `cmd_confirm` keeps the rows parsed before the bad one and carries on.
+- [ ] **Step 4:** `bash tests/track.test.sh` → `all cases passed`; then `bash tests/run.sh` → `all cases passed`.
+- [ ] **Step 5: commit** `fix(track): read the checkout's repository, refuse a malformed row, say when mark finds nothing (#152)`.
+
+### Task 9: Container and sandbox scripts: rebuild, image row, sandbox order (F5, F7, F11)
+
+**Files:** Modify `.devcontainer/codeo-container.sh` (`ensure_container`), `.sbx/codeo-sandbox.sh` (the `issue` path), `tests/cmd-mode.test.sh`, `tests/sandbox.test.sh`.
+
+**Interfaces:** consumes the tracker's `confirm`, `add`, `mark`; produces no new options.
+
+- [ ] **Step 1: failing tests**: `cmd-mode.test.sh` `rebuild_own_container_does_not_prompt` (an existing local `codeo-<N>` and an `active` row for it on this host; `issue <N> <branch> --rebuild` with no tty and no `--yes` goes ahead, the stub `docker` sees `rm -f` then `build`), `rebuild_leaves_the_image_row` (no `mark … image … removed` call; the container row is marked `removed` and a new one added), `rebuild_without_a_container_still_confirms`; `sandbox.test.sh` `refusal_leaves_no_clone` (`confirm` answers no: no `git clone` ran and no `codeo-<N>` directory exists).
+- [ ] **Step 2:** run each file alone → the new cases FAIL.
+- [ ] **Step 3:** in `ensure_container` call `track_confirm` only when the container is missing (`$state == missing`), drop the image `mark` on rebuild and keep the container's `mark`; in the sandbox `issue` path move `track_confirm` before the host clone (it needs only `<N>`), keeping the clone reuse as it is.
+- [ ] **Step 4:** both test files, then `bash tests/run.sh` → `all cases passed`.
+- [ ] **Step 5: commit** `fix(container,sandbox): no prompt for a rebuild, keep the image row, confirm before cloning (#152)`.
+
+### Task 10: `codeo rm` fetches a missing tracker (F8)
+
+**Files:** Modify `.devcontainer/codeo` (`cmd_rm` container path, one helper beside `ensure_home`), `tests/codeo-command.test.sh`.
+
+**Interfaces:** produces `ensure_tracker`: downloads only `codeo-track.sh` into the home directory when it is missing, returns 0 whether or not that worked, never calls `die`.
+
+- [ ] **Step 1: failing tests**: `rm_container_fetches_missing_tracker` (empty `CODEO_HOME`, a stub `curl` serving a script starting `#!`: after `codeo rm <N>` the tracker is there and the `mark` calls ran), `rm_container_tracker_download_fails_but_removes` (stub `curl` exits 22: the removal still succeeds, one `note:` line, exit 0), `rm_container_with_git_checkout_home_goes_ahead` (`CODEO_HOME` unset and `~/codeo` a git checkout: removal succeeds, nothing written there).
+- [ ] **Step 2:** `bash tests/codeo-command.test.sh` → the new cases FAIL.
+- [ ] **Step 3:** implement `ensure_tracker` using the same temporary-file-and-rename download as `ensure_home` for that one file, guarded so a `die` from `home_dir` in a subshell becomes a silent return; call it at the start of the container removal path and set the tracker path the marks use to the home copy when it now exists.
+- [ ] **Step 4:** the test file, then `bash tests/run.sh` → `all cases passed`.
+- [ ] **Step 5: commit** `fix(codeo): rm of a container fetches a missing tracker (#152)`.
+
+### Task 11: A removal an engineer without `codeo` can run, and no PowerShell claim (F1)
+
+**Files:** Modify `scripts/cleanup.sh`, `skills/cleanup/SKILL.md`, `.codeo/overlays/cleanup.md`, `.codeo/overlays/close.md`, `docs/extension-points.md`, `tests/cleanup.test.sh`, `tests/cleanup-skill.test.sh`, `tests/close-removal.test.sh`.
+
+**Interfaces:**
+- Consumes: the `removal-command` overlay body (`name:`, `pattern:`, `command:`).
+- Produces: an optional fourth line `fallback: <text with {N} and {name}>`; `scripts/cleanup.sh` prints a fourth TAB field on every `proven` line, the expanded text or `-` when there is none; the skill prints it on the line under the command.
+
+- [ ] **Step 1: failing tests**: `cleanup.test.sh` `fallback_expanded` (overlay with `fallback: docker rm -f {name}`; the proven line's fourth field is `docker rm -f codeo-7`), `fallback_absent_is_dash`, `failed_lines_unchanged`; `cleanup-skill.test.sh` the skill text names the fallback line; `close-removal.test.sh` neither `close.md` nor the README text contains `PowerShell` and each close case still prints `codeo rm <N>`.
+- [ ] **Step 2:** run the three files → the new cases FAIL.
+- [ ] **Step 3:** implement: `scripts/cleanup.sh` `name_proof` also reads `fallback` and expands `{N}`/`{name}`; `skills/cleanup/SKILL.md` prints the fourth field beneath each proven command when it is not `-`; `.codeo/overlays/cleanup.md` adds `fallback: if codeo is not installed on the host, run docker rm -f {name} and then docker volume rm {name}; the issue's rows stay active in its tracking comment until you mark them with bash .devcontainer/codeo-track.sh mark {N} container {name} removed (and the same for volume and image), and docker rm does not check for unpushed work`; `.codeo/overlays/close.md` gets the same sentence for the container case and `codeo rm <N>` is described as "run in a bash shell on the host (Linux, macOS, or WSL2 on Windows)"; the sentence "it runs unmodified in PowerShell and in bash" is deleted from `close.md`; `docs/extension-points.md` documents `fallback:`.
+- [ ] **Step 4:** the three files, then `bash tests/run.sh` → `all cases passed`.
+- [ ] **Step 5: commit** `fix(cleanup): print a docker fallback beside codeo rm, drop the PowerShell claim (#152)`.
+
+### Task 12: Documentation corrections (F1, F4, F8, F9, F10, F12)
+
+**Files:** Modify `README.md`, `.devcontainer/README.md`, `.sbx/README.md`, `CHANGELOG.md`, `.codeo/overlays/init.md`.
+
+Each page says what the system does, in the present tense, no issue numbers:
+
+- `.devcontainer/README.md`: the sentence that `codeo rm` runs in PowerShell is replaced by "in a bash shell on the host"; the download section tells the bare-script route to fetch `codeo-track.sh` beside `codeo-container.sh` (a second `curl` line) and says what is recorded without it; the tracking section states the repository order (`CODEO_REPO_URL`, the checkout's `origin`, the upstream default), that a table with a malformed row is reported and left untouched, that `mark` prints a note when no row matches, that `mark` changes only the rows of this host for non-branch kinds, and that the comment is found by its marker anywhere in a comment (not "its first line"); the home-directory paragraph says `rm` of a container reads `~/codeo` only to fetch a missing tracker and never stops over it.
+- `README.md`: the macOS paragraph names `flock` with bash 4.3; the tracking paragraph says containers opened through VS Code's "Clone Repository in Named Container Volume" are not recorded beyond the branch row, and that the comment is found by its marker.
+- `.codeo/overlays/init.md`: the VS Code hand-off says the same in one sentence.
+- `.sbx/README.md`: the repository order sentence.
+- `CHANGELOG.md` `## Unreleased`: the fallback line, the repository order, the malformed-row rule, `rm` fetching the tracker; the upgrade note stays "run `codeo update`".
+- Proof: `bash tests/run.sh` → `all cases passed` (the READMEs are pinned by `tests/install.test.sh` headings and by the cases above), plus `grep -rn "PowerShell" README.md .devcontainer/README.md .codeo/overlays CHANGELOG.md` printing nothing about `codeo rm`.
+- [ ] **Commit** `docs: removal fallback, repository order, malformed table, untracked VS Code route (#152)`.
+
