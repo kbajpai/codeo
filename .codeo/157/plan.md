@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are raised and open. Nothing is drafted yet. Next step: answer them here (or in the conversation), then run `/codeo:plan` again.
+Q1-Q3 are answered (A, A, A) and nothing is open. The plan is drafted at `.codeo/157/plan-draft.md` and waits for the engineer's approval; it is then saved under `docs/plans/`.
 
 What I found (read against `scripts/live.sh`, `hooks/live-signal.sh`, `scripts/lock.sh`, `docs/handoff.md`, `skills/close/SKILL.md`, `tests/live.test.sh` and `.codeo/done/138/qc.md` at `efd02d8`):
 
@@ -38,6 +38,7 @@ My calls, stated so they can be corrected (not questions):
 - **C — docs only.** `docs/handoff.md` says when the branch can be deleted and with which command. No code.
 
 **Answer:**
+A — `/codeo:close` sweeps through a new `live.sh sweep`, and `/codeo:cleanup` prints the delete command for a finished issue's leftover branches. (Engineer: "go with your picks", 2026-11-23; given in the conversation, recorded here.)
 
 ### Q2 — F23: only document the CI run on every beat, or also mark the web signal `[skip ci]`?
 
@@ -47,6 +48,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — docs only.** The page names the trigger and tells the project to exclude `codeo-live/**` in its `on: push` filter.
 
 **Answer:**
+A — docs, plus `[skip ci]` in the web signal's commit message. (Engineer: "go with your picks", 2026-11-23; given in the conversation, recorded here.)
 
 ### Q3 — F25: how does a web session keep one label when its session id changes?
 
@@ -57,6 +59,7 @@ My calls, stated so they can be corrected (not questions):
 - **C — accept and document.** No code; the docs state the duplicate and its 15-minute bound.
 
 **Answer:**
+A — remember the first label in the checkout's git directory. (Engineer: "go with your picks", 2026-11-23; given in the conversation, recorded here.)
 
 ## Notes
 
