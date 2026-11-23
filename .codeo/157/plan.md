@@ -84,7 +84,14 @@ A — never: the label belongs to the checkout, `clear` stops removing the file.
 
 ## Notes
 
-None.
+### Footprint
+
+```
+files:      scripts/live.sh, scripts/cleanup.sh, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, tests/live.test.sh, tests/live-signal.test.sh, tests/close-skill.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/inflight.test.sh, docs/plans/2026-11-23-live-signal-leftovers-157.md, docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
@@ -98,15 +105,6 @@ None.
 **Documentation the plan changes.** `docs/handoff.md` (the live-signal paragraph and its sequence diagram), `docs/skills.md` (`close`, `cleanup`), the `scripts/live.sh` header, `skills/close/SKILL.md`, `skills/cleanup/SKILL.md`, `CHANGELOG.md`.
 
 **Intake questions resolved here.** None; init left nothing open. No `/codeo:issue` filed. The `engineering` plugin is not installed and no component choice was involved, so its structure was not used.
-
-### Footprint
-
-```
-files:      scripts/live.sh, scripts/cleanup.sh, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, tests/live.test.sh, tests/live-signal.test.sh, tests/close-skill.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, docs/plans/2026-11-23-live-signal-leftovers-157.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
