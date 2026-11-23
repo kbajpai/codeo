@@ -43,13 +43,17 @@ is the container the message names.
 
 1. **Run the script and relay it.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup.sh"` prints one
    tab-separated line per issue: `<N>`, `proven`, the command (or `-` when the project gives
-   none) and the `fallback:` text (or `-` when the project gives none), or `<N>`, `failed` and the first proof that failed. Relay the lines as two lists, each
+   none) and the `fallback:` text (or `-` when the project gives none), or `<N>`, `failed` and the first proof that failed. Relay the lines as three lists, each
    line as the script printed it:
    - **Proven**, with the command to run. A `-` means the issue is finished and the project has no
      removal command for it.
      When the fourth field is not `-`, print it on the line beneath the command, as the script printed it.
    - **Not proven**, with the failed proof (`issue`, `pull-request`, `branch`, `dossier`, `lease` or `name`)
      and no command.
+   - **Leftover web signal branches**, each `leftover` line as printed: `<N>`, `leftover` and a
+     `git push origin --delete codeo-live/<N>/<machine> …` command. A hosted web session cannot delete its
+     own live-signal branches, so they stay on `origin` after the workflow closed. The command deletes
+     remote branches; the engineer runs it, on the host.
    <!-- rule: cleanup-02 -->
    A removal command is printed only for an issue the script proved. An issue that failed a proof
    gets no command, however finished it looks.
@@ -70,7 +74,7 @@ is the container the message names.
      nothing left to lose.
 
 3. **Record what was printed.** Write `.codeo/intake/cleanup/<YYYY-MM-DD>.md` (a second run on the
-   same day adds `-2`): the two lists as printed and the date. Commit it with
+   same day adds `-2`): the lists as printed and the date. Commit it with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit cleanup "docs(codeo): cleanup record for <date>"`
    and say what `intake.sh` printed. Nothing else is written.
 
