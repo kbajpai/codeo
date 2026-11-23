@@ -8,7 +8,17 @@
 
 ## Where this stands
 
-Planned: the plan is approved and saved at `docs/plans/2026-11-23-live-signal-leftovers-157.md` (unstaged). Q1-Q3 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: commit the plan, then `/codeo:implement`.
+Round 2, after the send-back in `qc.md` round 1: Q4 is open and nothing is drafted until it is answered. Round 1's plan (`docs/plans/2026-11-23-live-signal-leftovers-157.md`) is built and committed; Q1-Q3 stand as answered.
+
+What the send-back found, checked against `scripts/live.sh` and `hooks/live-signal.sh` on this branch:
+
+- **F1 (blocking).** `clear` removes the saved web label (`scripts/live.sh:228`), and `hooks/live-signal.sh:52-53` runs `clear` at every `SessionEnd`, web sessions included. `/codeo:close` step 16 is the only other caller. A web `clear` deletes nothing on origin, so the old branch stays; a session that ends and resumes in the same checkout under another id then publishes a second label, and two rows show for up to the TTL. `docs/handoff.md:209` and `CHANGELOG.md` say such a session shows as one row. Round 1's Q3 answer ("until `clear`") did not account for `clear` running at session end.
+- **F2-F5 (non-blocking)** are small documentation and test gaps in files already in the footprint.
+
+My calls for round 2, stated so they can be corrected (not questions):
+
+- **F2-F5 are fixed in this round too**, since each is a sentence or one test in a file the round already opens: the `CHANGELOG.md` header lines (shared state, mixed-version note), a test that runs `inflight.sh --live` against the collision, the `cleanup` entry in `docs/skills.md`, and a sentence on the `create` event in `docs/handoff.md`.
+- **One short plan file** for the round, `docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md`, on the same branch and pull request.
 
 What I found (read against `scripts/live.sh`, `hooks/live-signal.sh`, `scripts/lock.sh`, `docs/handoff.md`, `skills/close/SKILL.md`, `tests/live.test.sh` and `.codeo/done/138/qc.md` at `efd02d8`):
 
@@ -61,6 +71,16 @@ A — docs, plus `[skip ci]` in the web signal's commit message. (Engineer: "go 
 **Answer:**
 A — remember the first label in the checkout's git directory. (Engineer: "go with your picks", 2026-11-23; given in the conversation, recorded here.)
 
+### Q4 — F1: when does a web checkout forget its saved label?
+
+**Why it matters:** it decides whether `scripts/live.sh` and its tests change again or only the docs do, and what the docs may truthfully say about one row. Asked because `qc.md` round 1 sent the change back on it.
+**Options:**
+- **A — never: the label belongs to the checkout (my pick).** `clear` stops removing `<git dir>/codeo-live-machine`; nothing removes it. Only a web host ever reads or writes the file, and a web `clear` cannot delete the branch anyway, so there is nothing for the removal to keep in step with. A session that ends and resumes in the same checkout keeps one label and one row. A later issue worked in the same web checkout publishes under the same `web-<first 8>` label, which then names the checkout, not the current session id; the docs say so. A reclaimed VM is still a new checkout and can still show twice for up to the TTL.
+- **B — only at `/codeo:close`.** The `SessionEnd` hook keeps the label and step 16 removes it, through a flag or a second verb on `live.sh`. Same result as A within one issue; the label follows the session id again for the next issue in that checkout. Costs a new interface on `live.sh`, a hook change and a `skills/close/SKILL.md` change, for a distinction no reader of the rows uses.
+- **C — docs only.** The code stays. `docs/handoff.md` and `CHANGELOG.md` say a session that ends and resumes under another id can show twice for up to the TTL. Meets the criterion's second half, but leaves the duplicate #138's hosted run actually produced whenever a session end falls between the two ids.
+
+**Answer:**
+
 ## Notes
 
 None.
@@ -91,3 +111,4 @@ sequenced:  none
 
 - 2026-11-23 — Q1-Q3 raised · cost: 2m · fable-5-2 74k in + 518k cached / 10k out
 - 2026-11-23 — planned: docs/plans/2026-11-23-live-signal-leftovers-157.md · cost: 12m · fable-5-2 80k in + 718k cached / 11k out · sonnet-5-5 126k in + 1.9M cached / 26k out
+- 2026-11-23 — round 2: Q4 raised after the send-back in qc.md round 1 · cost: 1m · fable-5-2 117k in + 23k cached / 1k out
