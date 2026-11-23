@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, questions open: Q8-Q12. `/codeo:qc` round 1 sent the change back with three blocking findings that rest on round 1 plan decisions (F1 the printed removal command, F2 the tracker's default repository, F3 what counts as a malformed table) and two non-blocking ones for the plan (F4 the VS Code route, F8 the first removal after an upgrade). Each is a question below with a recommendation. F5-F7 and F9-F12 are `/codeo:implement`'s and need no decision: the round 2 plan lists them as tasks. Nothing is drafted until Q8-Q12 are answered. Round 1's plan and answers (Q1-Q7) stand except where these answers change them.
+Round 2, answers in (Q8-Q12 answered "accept all recommendations"). The round 2 plan is drafted in `.codeo/152/plan-draft.md` and awaits approval; nothing is written under `docs/plans/` before that. `/codeo:qc` round 1 sent the change back with three blocking findings that rest on round 1 plan decisions (F1 the printed removal command, F2 the tracker's default repository, F3 what counts as a malformed table) and two non-blocking ones for the plan (F4 the VS Code route, F8 the first removal after an upgrade). Each is a question below with a recommendation. F5-F7 and F9-F12 are `/codeo:implement`'s and need no decision: the round 2 plan lists them as tasks. Round 1's plan and answers (Q1-Q7) stand except where these answers change them.
 
 What exploration settled, so the questions below are only the open ones:
 
@@ -91,6 +91,7 @@ Proceed and coordinate. Carried over from the engineer's answer to Q5 (same issu
 - **C.** Go back to printing the raw `docker` commands, and print `codeo-track.sh mark` lines after them for the engineer to run. Works everywhere Docker does, but it is four or five commands, the marks need bash and `gh`, and nothing checks for unpushed work first.
 
 **Answer:**
+Option A: print `codeo rm <N>` with one sentence giving the `docker` fallback and saying the rows stay `active`; delete the PowerShell claim; `scripts/cleanup.sh` gains an optional `fallback:` overlay line (recommended option). Relayed from the engineer in the conversation, 2026-11-23: "Accept all recommendations, proceed with plan".
 
 ### Q9 — Which repository does the tracker comment on when `CODEO_REPO_URL` is unset (QC F2)?
 
@@ -101,6 +102,7 @@ Proceed and coordinate. Carried over from the engineer's answer to Q5 (same issu
 - **C.** Read `repo.owner`/`repo.name` from `.codeo/config.json` in a checkout, in place of `origin`. Matches `github.sh`, but needs `jq` in a script that must stay bash 3.2 with no dependency beyond `gh`.
 
 **Answer:**
+Option A: `CODEO_REPO_URL`, else the current checkout's `origin`, else the upstream default (recommended option). Relayed from the engineer in the conversation, 2026-11-23: "Accept all recommendations, proceed with plan".
 
 ### Q10 — What makes a tracking table malformed, and how much of the comment is left alone (QC F3)?
 
@@ -110,6 +112,7 @@ Proceed and coordinate. Carried over from the engineer's answer to Q5 (same issu
 - **B.** Keep malformed rows byte-for-byte and edit only the well-formed ones, printing a `track:` note. Recording carries on, but the tracker then writes to a comment it only partly understands.
 
 **Answer:**
+Option A: a row needs exactly six cells, a known kind and a known status; one malformed row makes the table malformed, nothing is written, one `track:` line names it (recommended option). Relayed from the engineer in the conversation, 2026-11-23: "Accept all recommendations, proceed with plan".
 
 ### Q11 — Is a container opened through VS Code's "Clone Repository in Named Container Volume" recorded (QC F4)?
 
@@ -119,6 +122,7 @@ Proceed and coordinate. Carried over from the engineer's answer to Q5 (same issu
 - **B.** Record it from inside the container at creation (`postCreateCommand`), with the Host cell reading `unknown (VS Code)`. Covers the route, but adds a second writer with a weaker row, needs `gh` logged in before the container is first used, and still cannot mark the removal.
 
 **Answer:**
+Option A: document that only the script routes are recorded and the VS Code route records the branch row alone; add the `curl` line for `codeo-track.sh` (recommended option). Relayed from the engineer in the conversation, 2026-11-23: "Accept all recommendations, proceed with plan".
 
 ### Q12 — After an upgrade, how does the first `codeo rm <N>` of a container get the tracker (QC F8)?
 
@@ -128,6 +132,7 @@ Proceed and coordinate. Carried over from the engineer's answer to Q5 (same issu
 - **B.** No code change: the CHANGELOG upgrade step says to run `codeo update` twice (the second run, by the new `codeo`, fetches the tracker).
 
 **Answer:**
+Option A: `codeo rm` of a container fetches a missing `codeo-track.sh` and never stops the removal over it (recommended option). Relayed from the engineer in the conversation, 2026-11-23: "Accept all recommendations, proceed with plan".
 
 ## Notes
 
