@@ -92,7 +92,8 @@ ensure_container() {
         if [[ "$tracked" == 1 ]]; then echo "codeo-container: warning: $name already exists on this host ($state)" >&2; fi
         die "$name already exists: enter it with 'bash codeo-container.sh shell $n', rebuild it with 'bash codeo-container.sh issue $n $ref --rebuild', or remove it (docker rm -f $name; docker volume rm $name, once git status in it shows nothing unpushed) to start from a fresh clone"
     fi
-    if [[ "$tracked" == 1 && ("$state" == missing || "$rebuild" == 1) ]]; then
+    # A rebuild replaces a container rather than duplicating one, so only a missing container asks.
+    if [[ "$tracked" == 1 && "$state" == missing ]]; then
         track_confirm "$n" "$yes"
     fi
     if [[ "$rebuild" == 1 && "$state" != missing ]]; then
@@ -100,7 +101,6 @@ ensure_container() {
         state=missing
         if [[ "$tracked" == 1 ]]; then
             track mark "$n" container "$name" removed
-            track mark "$n" image "codeo-dev:$name" removed
         fi
     fi
     case "$state" in

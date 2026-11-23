@@ -189,11 +189,10 @@ ensure_windows_trust() {
 # one is left alone: sbx exec starts it), then write the marker session-title.sh looks for, holding the sandbox name. The marker is
 # written on every run, so a rerun repairs a missing one.
 ensure_sandbox() {
-    local name=codeo-$1 state yes=${2:-0}
+    local name=codeo-$1 state
     state=$(sandbox_state "$name")
     if [[ "$state" == missing ]]; then
         read_pin "$1"
-        track_confirm "$1" "$yes"
         (cd "$name" && "$sbx" create --clone --name "$name" --cpus 2 --memory 4g "$create_agent" .) ||
             die "could not create the sandbox $name"
         track add "$1" sandbox "$name"
@@ -248,15 +247,19 @@ ensure_detached() {
 }
 
 cmd_issue() {
-    local yes=0
+    local yes=0 state
     if (($# == 3)) && [[ "$3" == --yes ]]; then yes=1; set -- "$1" "$2"; fi
     (($# == 2)) || usage
     valid_number "$1" || usage
     valid_branch "$2" || usage
     pick_sbx
+    # The confirmation needs only <N>: ask before the clone, so a refusal leaves nothing behind. It applies
+    # when the sandbox is to be created, as ensure_sandbox does.
+    state=$(sandbox_state "codeo-$1") || exit 1
+    if [[ "$state" == missing ]]; then track_confirm "$1" "$yes"; fi
     ensure_host_clone "$1" "$2"
     ensure_windows_trust "$1"
-    ensure_sandbox "$1" "$yes"
+    ensure_sandbox "$1"
     run_start "codeo-$1" ||
         die "the start script failed in codeo-$1: fix what it printed above, then run codeo-sandbox.sh issue $1 $2 again, or codeo-sandbox.sh shell $1 to look inside"
     check_name "codeo-$1"

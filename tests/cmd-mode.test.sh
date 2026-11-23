@@ -556,9 +556,41 @@ rebuild_marks_the_old_rows_removed_before_the_new_ones() {
     echo running >"$cm_dir/state"
     STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild
     ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
-    [[ "$(<"$cm_dir/track")" == "$(lines 'confirm 152' 'mark 152 container codeo-152 removed' \
-        'mark 152 image codeo-dev:codeo-152 removed' 'add 152 image codeo-dev:codeo-152' \
+    [[ "$(<"$cm_dir/track")" == "$(lines 'mark 152 container codeo-152 removed' 'add 152 image codeo-dev:codeo-152' \
         'add 152 container codeo-152' 'add 152 volume codeo-152')" ]] || fail "tracker calls: $(<"$cm_dir/track")"
+}
+
+rebuild_own_container_does_not_prompt() {
+    cm_setup rebuild_own
+    echo running >"$cm_dir/state"
+    STUB_CONFIRM_RC=1 STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild </dev/null
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    if grep -q '^confirm' "$cm_dir/track"; then fail "confirmed: $(<"$cm_dir/track")"; fi
+    local all rm_at b_at
+    all=$(cm_all)
+    rm_at=$(printf '%s\n' "$all" | grep -n '^rm -f codeo-152' | cut -d: -f1)
+    b_at=$(printf '%s\n' "$all" | grep -n '^build ' | cut -d: -f1)
+    if [[ -z "$rm_at" || -z "$b_at" ]] || ((rm_at > b_at)); then fail "no rm -f then build: $all"; fi
+}
+
+rebuild_leaves_the_image_row() {
+    cm_setup rebuild_image
+    echo running >"$cm_dir/state"
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    if grep -q '^mark 152 image' "$cm_dir/track"; then fail "image marked: $(<"$cm_dir/track")"; fi
+    grep -qx 'mark 152 container codeo-152 removed' "$cm_dir/track" || fail "container not marked: $(<"$cm_dir/track")"
+    grep -qx 'add 152 container codeo-152' "$cm_dir/track" || fail "no new container row: $(<"$cm_dir/track")"
+}
+
+rebuild_without_a_container_still_confirms() {
+    cm_setup rebuild_missing
+    STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild
+    ((cm_rc == 0)) || fail "exited $cm_rc: $cm_err"
+    [[ "$(head -n 1 "$cm_dir/track")" == 'confirm 152' ]] || fail "tracker calls: $(<"$cm_dir/track")"
+    cm_setup rebuild_missing_no
+    STUB_CONFIRM_RC=1 STUB_IMAGE=present STUB_CLONE=present STUB_BRANCH=feat/x cm_run issue 152 feat/x --rebuild
+    ((cm_rc == 1)) || fail "refused confirm exited $cm_rc, not 1"
 }
 
 an_existing_container_is_warned_about_and_refused_without_the_tracker() {
@@ -731,6 +763,9 @@ cases=(
     a_refused_confirm_stops_before_build_and_run
     yes_goes_to_confirm
     rebuild_marks_the_old_rows_removed_before_the_new_ones
+    rebuild_own_container_does_not_prompt
+    rebuild_leaves_the_image_row
+    rebuild_without_a_container_still_confirms
     an_existing_container_is_warned_about_and_refused_without_the_tracker
     home_and_shell_never_call_the_tracker
     a_missing_tracker_is_noted_and_creation_goes_on

@@ -1171,6 +1171,15 @@ issue_confirms_then_creates_then_adds_the_sandbox_row() {
     [[ "$c" == "track confirm 152"$'\nsbx create'$'\ntrack add 152 sandbox codeo-152' ]] || fail "order: $c"
 }
 
+refusal_leaves_no_clone() {
+    sb_setup noclone
+    STUB_CONFIRM_RC=1 sb_run issue 152 fix/x
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$(sb_calls)" != *"git clone"* ]] || fail "cloned: $(sb_calls)"
+    [[ ! -e "$sb_dir/work/codeo-152" ]] || fail "codeo-152 exists"
+    [[ "$(sb_calls)" != *"sbx create"* ]] || fail "created: $(sb_calls)"
+}
+
 issue_passes_yes_to_confirm() {
     sb_setup trk_yes
     sb_run issue 152 fix/x --yes
@@ -1359,6 +1368,7 @@ cases=(
     docs_the_hand_off_names_the_third_route
     issue_confirms_then_creates_then_adds_the_sandbox_row
     issue_passes_yes_to_confirm
+    refusal_leaves_no_clone
     issue_warns_about_a_local_container_with_the_same_name
     a_confirm_stop_creates_nothing
     issue_on_an_existing_sandbox_neither_confirms_nor_adds
