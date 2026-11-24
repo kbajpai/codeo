@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written and routed back to `/codeo:implement`: two blocking findings, both one-line label fixes in the `.devcontainer/README.md` removal flowchart (F1, F2). Everything else in the change holds. Next step: `/codeo:implement` fixes F1 and F2, then `/codeo:qc` runs a second round from step 0.
+Round 2 is written and routed back to `/codeo:implement` once more: F1 and F2 from round 1 are fixed, but the `G` edge label (round 1's F3) reads false on the `--force` path, so it is now blocking (F3). It is one label. Next step: `/codeo:implement` rewrites the `G` label, then `/codeo:qc` runs round 3 from step 0.
 
 ## Questions
 
@@ -59,6 +59,45 @@ Not findings: both hook tests pass (`tests/devcontainer.test.sh`'s gating check 
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-24
+
+**Scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`. `overlap.sh 161` and `overlap.sh --outside 161` printed nothing and exited 0. `git diff origin/main...HEAD --stat`: 12 files, 295 insertions, 9 deletions (round 1's 11 plus `.codeo/161/qc.md`). `scope.sh origin/main HEAD` printed `suite.shell=true`, the unclassified paths being `.claude/hooks/session-start.sh`, `.claude/settings.json`, `.codeo/161/*` and `CHANGELOG.md`. Head `dc0101a`, base `a389a65`. No overlay rules, invariants file, wiki module or shared environment.
+
+**Build.** The `shell` suite's build is `true`: exit 0.
+
+**Suites.** `bash tests/run.sh`, whole, exit 1, ending `failed: install.test.sh`; every other file passed, `live.test.sh` included. `install.test.sh`: 200 `FAIL` lines, 57 distinct cases (the first `t_list_notice_does_not_hide_dropped_installs: exit 127 (stderr: rm: command not found)`), identical after normalising temp paths and numbers to the same file run on a pristine copy of `origin/main` in round 1, so they are this sandbox's, not this change's.
+
+**Criteria.**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| The flowchart edge from `G` names the failed follow-up `docker ps -a` listing under `--force`, and the `H` edge no longer carries a `--force` parenthesis | not met — `H` is now `docker rm -f failed`, but the `G` label names the listing and reads false (F3) | `.devcontainer/README.md:220-221`; `.devcontainer/codeo:695-702` |
+| The sandbox paragraph no longer says the script stops "before it reads `--force`" and still names `sbx rm --force codeo-<N>` as the way out | met | `.devcontainer/README.md:228` ("refuses at the missing clone with or without `--force`"); `grep -c "stops before it reads"` prints 0; `.sbx/codeo-sandbox.sh:416-425` |
+| The inspect paragraph no longer says a container `codeo` "had to start" is always stopped again | met | `.devcontainer/README.md:191`; `.devcontainer/codeo:523-537` |
+| Node `Q`'s label is true for every edge that reaches it | met | `.devcontainer/README.md:199`; the reviewer traced B, C, R, X and F into `Q` through `container_check` and `stop_started` (`.devcontainer/codeo:477-478, 530-550`) and found the label true on each |
+| `CHANGELOG.md`'s v1.0.8 `Shared state:` line names the exact `## Outcome` match in `dossier-check.sh`, `inflight.sh` and `qc-verdict.sh` and the `### Round <n> — stashed\|abandoned` reader in `lock.sh` | met | `CHANGELOG.md:23`; `git show v1.0.8:scripts/lock.sh` has `is_parked` (3 matches), `v1.0.7` has none; the exact match is in all three scripts at v1.0.8 (`dossier-check.sh:133`, `inflight.sh`, `qc-verdict.sh`); see F7 for one overstatement in the wording |
+| `docs/release-checklist.md` step 6 names the README installer examples and `tests/install.test.sh` stubs as files a release also moves | met | `docs/release-checklist.md:74-76` |
+
+**Documentation.** Every flowchart edge into `Q`, `G`, `H` and `Y` was re-read against `cmd_rm` and `container_check`. The flowchart was not rendered (`mmdc` is not installed); the edits are label text only and every quote in the block is balanced. The `SessionStart` hook still has no `CHANGELOG.md` bullet or page (F6). Round 1 cited `CHANGELOG.md:20`; that is the `## v1.0.8` heading, and the `Shared state:` line is line 23.
+
+**Independent review** (`opus`, criteria and git range only). Quoted in plain text: "Ready to merge? With fixes. Five of the six criteria are met cleanly, including Q, H and the sandbox and inspect paragraphs. The G to Y edge names the listing failure but now reads as false for `--force`, which this issue was meant to fix, so it should be reworded before merge."
+
+**Findings.**
+
+- F1 (blocking in round 1) — fixed by `0bffad7`: the `H` edge reads `docker rm -f failed`.
+- F2 (blocking in round 1) — fixed by `0bffad7`: node `Q` says a container `codeo` knows it started is stopped again.
+- **F3 — blocking — `/codeo:implement`'s** (non-blocking in round 1, raised here after the reviewer's trace and a re-read of `cmd_rm`). `.devcontainer/README.md:220`: the `G` label opens with an unqualified "docker rm -f failed", but with `--force` a failed `docker rm -f` ends in `Y` only when the follow-up listing fails or still lists the container (`.devcontainer/codeo:699-701`); and "the follow-up docker ps -a listing failed" reads as a cause on its own, though that listing runs only inside the `else` after `docker rm -f` has failed. The label misdescribes #154 F1's own case. Fix: `docker rm -f failed (with --force, only when the follow-up docker ps -a listing fails or still lists the container), or volume rm failed and the volume still exists`.
+- F4 — non-blocking — `/codeo:implement`'s. Unchanged from round 1: `docs/release-checklist.md:74-76` says the examples "move to the latest release", but the README's `--version v1.0.7` example and older-tag stubs move to the release before it and the `v1.0.9`/`v1.0.10`/`v2.0.0-rc1` ordering stubs do not move.
+- F5 — non-blocking — `/codeo:implement`'s. Unchanged from round 1: the hook's skip check greps for `superpowers@superpowers-marketplace` while `install.sh` accepts `superpowers@*` (`install.sh:246`), treats a disabled codeo as installed, and has no matcher, so it also runs on `clear` and `compact`.
+- F6 — non-blocking — `/codeo:plan`'s. Unchanged from round 1: the `SessionStart` hook, `.claude/settings.json` and the `tests/live-signal.test.sh` assertion are outside the issue and no `CHANGELOG.md` bullet or page covers them.
+- F7 — non-blocking — `/codeo:implement`'s. `CHANGELOG.md:23` says the three scripts match `## Outcome` exactly "so `## Outcomes` and `## Outcome notes` no longer count". For `dossier-check.sh` only `## Outcome notes` stopped counting: at v1.0.7 (`scripts/dossier-check.sh:131`, `index($3, name " ") == 1`) `## Outcomes` was already ignored, and v1.0.8 adds `name != "Outcome" &&` (`:133`). `inflight.sh` and `qc-verdict.sh` had a bare `/^## Outcome/` at v1.0.7, so both forms stopped counting there. The sentence is the issue's own wording; the fix is to say which script stopped counting which heading.
+- F8 — non-blocking — `/codeo:implement`'s. `.claude/hooks/session-start.sh:2` says the hook installs the plugins "so /codeo:* commands load"; the repository `README.md` says sessions already open need a restart to load newly installed plugins, so the commands may load only in the next session. Plausible, not verified at runtime.
+
+Not findings: `tests/live-signal.test.sh:265` pins only the group count, not that the new group is the installer (low impact); both hook tests pass in the full run.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-24 — round 1: sync merged origin/main, build true, suite shell failed only install.test.sh (same 57 cases as origin/main), opus review, 2 blocking findings → back to implement · cost: 7m · opus-5-5 120k in + 1.4M cached / 12k out · sonnet-5-5 52k in + 5.9M cached / 18k out
+- 2026-11-24 — round 2: build true, suite shell failed only install.test.sh (same 57 cases as origin/main), opus review, F1 and F2 fixed, 1 blocking finding (F3, the G edge label) → back to implement · cost: 7m · opus-5-5 117k in + 1.1M cached / 12k out · sonnet-5-5 15k in + 4M cached / 15k out
