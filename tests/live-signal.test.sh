@@ -233,7 +233,7 @@ for e in UserPromptSubmit PostToolUse; do
     [[ $(scmd $e) == *'live-signal.sh" beat'* ]] && ok=yes || ok=no
     assert_eq "$e beat" yes "$ok"
 done
-assert_eq "SessionStart groups" 1 "$(jq -r '.hooks.SessionStart | length' "$s")"
+assert_eq "SessionStart groups" 2 "$(jq -r '.hooks.SessionStart | length' "$s")"
 for e in SessionStart UserPromptSubmit; do
     [[ $(scmd $e) == *'session-title.sh'* ]] && ok=yes || ok=no
     assert_eq "$e session-title kept" yes "$ok"
