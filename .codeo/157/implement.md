@@ -4,11 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/157 |
 | Branch | `fix/live-session-signal-leftovers-138` |
-| Updated | 2026-11-23 |
+| Updated | 2026-11-24 |
 
 ## Where this stands
 
-Built (round 2, after the send-back in `qc.md` round 1): the three tasks of `docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md` are done and pushed, the build passes (`true`, the `shell` suite's `build`) and nothing is open. Next step: `/codeo:qc`.
+Built (round 3, after the send-back in `qc.md` round 2): the two tasks of `docs/plans/2026-11-24-live-signal-leftovers-157-round-3.md` are done and pushed (task 3 is the whole suite), the build passes (`true`, the `shell` suite's `build`) and nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -82,7 +82,31 @@ None.
 - Task 3 reviewed by the controller, not a fresh reviewer, because the diff is one test case with a mutation proof. Cost if wrong: a test-quality issue found at `/codeo:qc`.
 - No whole-branch review for round 2. Cost if wrong: an interaction between the three commits found at `/codeo:qc`.
 
+### Round 3 — 2026-11-24
+(send-back from qc.md round 2)
+
+**Built** (two commits, `072024d..fee6ba3`, each task reviewed by a fresh reviewer, no Critical or Important findings; sync with `main` was a no-op, no overlap):
+
+| Task | Commit | What |
+|---|---|---|
+| 1 | `072024d` | `skills/close/SKILL.md` names the sweep in its frontmatter description, its Hand-off **Deletes** bullet and its Non-goals (only the issue's own `codeo-live/<issue>/*` branches, deleted without asking, since each holds an empty signal commit); the `close` purpose and non-goal lines of `docs/skills.md` say the same; pins in `tests/close-skill.test.sh` and `tests/live-signal.test.sh` (F6). |
+| 2 | `fee6ba3` | The `scripts/cleanup.sh` header and `skills/cleanup/SKILL.md` step 1 say a proven issue with leftover branches gets a second `leftover` line (F7); the `CHANGELOG.md` `Shared state` line says a hosted web session's close deletes none (F9); pins first. |
+| 3 | — | No commit: the build and the whole suite. |
+
+**Documentation pages changed:** `skills/close/SKILL.md`, `docs/skills.md`, `skills/cleanup/SKILL.md`, `CHANGELOG.md`, and `scripts/cleanup.sh`'s header.
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. No shared environment is configured, so no lease, deploy or redeploy check. `bash tests/run.sh` printed `all cases passed` after the last commit; grading it is `/codeo:qc`'s.
+
+**Deviations from the plan:** none.
+
+**Left as they are** (reviewers' minors): the new Non-goals sentence in `skills/close/SKILL.md` is the densest line in the section; the sentence added to `skills/cleanup/SKILL.md` step 1 sits on an already long line; the Hand-off mirror line in `docs/skills.md` says the signal is swept but not "without asking" (the plan did not ask for it).
+
+**Rulings I made:**
+- No whole-branch review for round 3. Cost if wrong: an interaction between the two commits found at `/codeo:qc`; the diff is words and grep pins in disjoint files apart from `tests/live-signal.test.sh`.
+- Task 3 run by the controller, not an implementer: it is two commands and writes nothing.
+
 ## Log
 
 - 2026-11-23 — built: 8 commits `6143c40..d1cb064`, build exit 0, whole-branch review clean · cost: 35m · sonnet-5-5 629k in + 13.7M cached / 84k out
 - 2026-11-24 — round 2 built: 3 commits `0c0b2ef..63eb330`, build exit 0 · cost: 14m · sonnet-5-5 337k in + 3.7M cached / 19k out
+- 2026-11-24 — round 3 built: 2 commits `072024d..fee6ba3`, build exit 0 · cost: 26m · sonnet-5-5 178k in + 4.6M cached / 20k out
