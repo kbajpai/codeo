@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Written after the work was done, from the commits `6cf2227` and `a2c7114`. The edits were made directly in a hosted web session, not through `/codeo:implement`, so there was no per-task subagent dispatch and no per-task review. Next step: `/codeo:qc`.
+Round 2 is written, answering `qc.md` round 1: F1 and F2, the two blocking findings, are fixed in `.devcontainer/README.md`. Written after the edits, in the same hosted web session, not through `/codeo:implement`, so there was no per-task subagent dispatch. F3-F6 are non-blocking and were left as they are. Next step: `/codeo:qc` for round 2, from step 0.
 
 ## Questions
 
@@ -41,6 +41,26 @@ None.
 
 **Subagents:** none dispatched.
 
+### Round 2 — 2026-11-24
+
+(send-back from qc.md round 1)
+
+**Built** (one commit on top of the `qc.md` round 1 commit `ac4b211`):
+
+- **F1** (`.devcontainer/README.md`, the `H` edge): the label is now `docker rm -f failed`. `H` is reached only without `--force`, where `cmd_rm` dies on any `docker rm -f` failure with no listing (`.devcontainer/codeo:697`); the "only while the container is still listed" clause belongs to the `--force` branch at `:701`.
+- **F2** (`.devcontainer/README.md`, node `Q`): the label is now `refuse: nothing removed (a container codeo knows it started for the read is stopped again)`, the wording the inspect paragraph already uses, because `stop_started` stops only a container `codeo` knows it started (`.devcontainer/codeo:477-478, 537`).
+
+**Documentation pages changed:** `.devcontainer/README.md`. No wiki module.
+
+**Build result:** documentation only. `tests/devcontainer.test.sh` and `tests/codeo-command.test.sh`, the two files that read this README, both exit 0 after the edit; the full `tests/run.sh` was not re-run (round 1's run failed only in `install.test.sh`, the same 57 cases as `origin/main`, from this sandbox's guard `rm`).
+
+**Deviations from the round 1 findings, and why:** none for F1 and F2.
+
+**Left as they are, none blocking:** F3 (the `G` edge wording), F4 (the release checklist's "latest release"), F5 (the hook's skip check) and F6 (the `SessionStart` hook outside the issue's scope). They are recorded in `qc.md` round 1 as non-blocking, so this round did not take them.
+
+**Subagents:** none dispatched.
+
 ## Log
 
 - 2026-11-24 — implementation recorded after the work: 6cf2227, a2c7114 · cost: unavailable
+- 2026-11-24 — round 2 recorded after the edits: F1, F2 from qc.md round 1 · cost: unavailable
