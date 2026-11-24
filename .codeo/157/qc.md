@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written and the verdict is back to `/codeo:plan`: one blocking finding (F1), and the plan's design for the saved label missed that `SessionEnd` runs `clear`. Nothing is open.
+Round 2 is written and the verdict is back to `/codeo:plan`: round 1's F1 is fixed, and the review found one new blocking finding (F6), a contradiction in `skills/close/SKILL.md`. Nothing is open.
 
 ## Questions
 
@@ -53,6 +53,46 @@ No issue was filed from this pass.
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 2 — 2026-11-24
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`, exit 0. `overlap.sh 157` and `overlap.sh --outside 157` printed nothing. `git diff origin/main...HEAD --stat`: 20 files, 943 insertions, 48 deletions. `scope.sh origin/main HEAD`: `suite.shell=true` (`suite shell needed for unclassified paths: .codeo/157/*, CHANGELOG.md`). No `deploy=` line: no environment is configured.
+
+**Build.** Suite `shell`, build `true`: exit 0.
+
+**Suites.** `bash tests/run.sh`: `all cases passed`.
+
+**Acceptance criteria**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Both refs on origin: `live.sh fetch` exits 0, no `live: unknown` for that cause, a test reproduces it | met | `tests/live.test.sh` `fetch_survives_a_web_and_a_container_signal_with_equal_labels`; `tests/inflight.test.sh` `live_survives_a_web_and_a_container_signal_with_equal_labels` runs `inflight.sh --live` with the real `live.sh` (exit 0, two rows, no `live:`) and failed with the old refspec |
+| 2 | After close no `codeo-live/<issue>/*` remains, or the docs say how to remove one | met | `live.sh sweep` in `/codeo:close` step 16; `docs/handoff.md:173` gives `git push origin --delete codeo-live/<issue>/<machine>` |
+| 3 | The web-signal docs name the CI trigger on every beat | met | `docs/handoff.md:173` names `on: push`, `[skip ci]`, the `create` event and excluding `codeo-live/**`; pinned in `tests/live-signal.test.sh` |
+| 4 | A session whose id changes between two beats shows as one row, or the docs say it can show twice for up to the TTL | met | `tests/live.test.sh` `web_label_stays_when_the_session_id_changes` and `web_clear_keeps_the_label` (a `SessionEnd` between the beats); `docs/handoff.md:209` states the new-checkout case |
+
+**Documentation.** Round 1's gaps are closed: the label sentence, the `create` event, the `cleanup` entry in `docs/skills.md` and the CHANGELOG header lines. New gaps: F6, F7, F9.
+
+**Independent review** (Opus, given the criteria only): no Critical, one Important, five Minor; it found sound the fetch split and `--prune`, the sweep and `leftover_proof` input handling, the `[skip ci]` claims and every caller of `live.sh clear`.
+
+**Findings**
+
+- F1 (blocking in round 1) — fixed by `c6da81d`: `clear` keeps the saved web label; the test and the docs say so.
+- F2 (non-blocking in round 1) — fixed by `4396240`: the CHANGELOG `Shared state` and `Safe to bump` lines.
+- F3 (non-blocking in round 1) — fixed by `63eb330`: `inflight.sh --live` is tested against the collision.
+- F4 (non-blocking in round 1) — fixed by `4396240`: the `cleanup` entry in `docs/skills.md`.
+- F5 (non-blocking in round 1) — fixed by `4396240`: the `create` event.
+- F6 — blocking, `/codeo:plan`'s: step 16 of `skills/close/SKILL.md:515` runs `live.sh sweep`, which deletes the issue's `codeo-live/<issue>/*` branches without asking, yet the skill's own **Deletes** bullet (`:723-725`), its Non-goals (`:753-756`: "Doesn't delete a branch without GitHub's merged state, a tip that matches the pull request's head and the engineer's yes") and its frontmatter description (`:3`, "delete the remote branch on the engineer's yes") still say it deletes only the merged branch, on a yes. An agent checking close against its own non-goals will flag or refuse the sweep. I confirmed the three passages. The code does what the plan says; the plan named step 16 and its sentences but not these three passages, so the correction is a plan decision: the sweep's exception stated in each.
+- F7 — non-blocking, plan's: `scripts/cleanup.sh:7` and `skills/cleanup/SKILL.md:44-45` say "one tab-separated line per issue", but a proven issue with leftovers prints a `proven` and a `leftover` line; the header's own `:12` row contradicts `:7`.
+- F8 — non-blocking, plan's: `scripts/cleanup.sh:133` withholds the leftover command when only the `name` proof failed, although the branches' deletability does not depend on the container name; with a misconfigured overlay no leftover command is ever printed.
+- F9 — non-blocking, plan's: `CHANGELOG.md:6` says `/codeo:close` deletes the issue's `codeo-live/<issue>/*` branches with no qualifier; in a hosted web session the sweep is a no-op (`scripts/live.sh:240`), which `docs/handoff.md:173` and `skills/close/SKILL.md:518-519` state.
+- F10 — non-blocking, plan's: `scripts/live.sh:130-147,198-201` saves whatever label the first beat computed, including the `hostname` or `unknown` fallback; two web VMs on one issue that both fell back to one hostname then publish to one branch and show as one row. A hosted session sets `CLAUDE_CODE_REMOTE_SESSION_ID`, so the fallback is unlikely.
+- F11 — non-blocking, plan's: `sweep` (`scripts/live.sh:250`) and `leftover_proof` (`scripts/cleanup.sh:117`) skip names such as `codeo-live/<N>/a/b`; the documented manual command covers them.
+
+No issue was filed from this pass.
+
+**Verdict: back to `/codeo:plan`.**
+
 ## Log
 
 - 2026-11-23 — Round 1: build ok; shell suite passed; criteria 1-4 met with F1 against 4's docs; review one Important, four Minor; verdict back to plan · cost: 9m · opus-5-5 75k in + 417k cached / 9k out · sonnet-5-5 96k in + 798k cached / 2k out
+- 2026-11-24 — Round 2: build ok; shell suite passed; criteria 1-4 met; round 1's F1-F5 fixed; review one Important (F6) and five Minor; verdict back to plan · cost: 12m · opus-5-5 99k in + 1.4M cached / 18k out · sonnet-5-5 181k in + 1M cached / 5k out
