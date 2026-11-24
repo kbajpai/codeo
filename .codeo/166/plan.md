@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored, nothing drafted. Q1-Q3 are open; the plan is drafted once they are answered.
+Q1-Q3 are answered (the picks). The plan is drafted at `.codeo/166/plan-draft.md` and awaits approval.
 
 What I found (read at `5207e1e`):
 
@@ -39,7 +39,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — a new `live.sh leftover` subcommand.** It lists the issue's `codeo-live/<issue>/*` branches on origin with the same name filter as `sweep` and prints one `git push origin --delete …` line, or nothing. Step 16 runs it before the lock goes and step 17 relays its output. The command is exact, and a failed sweep outside a web session is reported too. It adds a subcommand, its tests, and lines in `docs/handoff.md` and the CHANGELOG, and it is the larger change for a non-blocking finding.
 
 **Answer:**
-
+A — a fixed sentence in step 17, no new `live.sh` subcommand. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
 ### Q2 — F8, a `leftover` line after `failed name`: reword rule `cleanup-02`, or leave it?
 
 **Why it matters:** the third criterion makes `cleanup.sh` print a `leftover` command for an issue whose only failed proof is `name`. Rule `cleanup-02` in `skills/cleanup/SKILL.md` reads "A removal command is printed only for an issue the script proved. An issue that failed a proof gets no command, however finished it looks." Rewording a rule-marked paragraph also changes `docs/skills-inventory.md` and `tests/fixtures/skills-inventory.rules.sha256`.
@@ -48,14 +48,14 @@ My calls, stated so they can be corrected (not questions):
 - **B — leave the rule as written.** Read "removal command" as the container command only, and change the step's prose around the rule, the script header and `docs/skills.md`. No inventory or checksum change, but the rule's second sentence then says "no command" beside a script that prints one.
 
 **Answer:**
-
+A — reword the second sentence of rule `cleanup-02`; the inventory line and checksum follow. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
 ### Q3 — #161 lists `CHANGELOG.md`, which this plan edits: proceed, sequence, or re-scope?
 
 **Why it matters:** #161 (branches `claude/ecstatic-mendel-n3qyzl` and `docs/documentation-leftovers-154-146-removal`, assignee kbajpai, step `qc`, verdict clear, waits on `/codeo:close`) has `CHANGELOG.md` in its footprint and its changed files. This plan edits one bullet there: the #157 line under `## Unreleased` that says `/codeo:cleanup` prints the delete command "for a proven issue's leftovers", which F8 widens to an issue that failed only `name`. #161 also lists `tests/live-signal.test.sh`, which this plan leaves alone by my call above. Whoever merges second rebases one section of one file.
 **Options:** *proceed and coordinate* (my pick: #161 is one step from merging, and this edit is one clause in one bullet) · *sequence after #161* (this plan waits for #161 to merge) · *re-scope* (leave `CHANGELOG.md` out; the bullet then still says "a proven issue").
 
 **Answer:**
-
+Proceed and coordinate: whoever merges second rebases `CHANGELOG.md` and keeps both sides. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
 ## Notes
 
 None.
