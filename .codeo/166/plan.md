@@ -40,6 +40,7 @@ My calls, stated so they can be corrected (not questions):
 
 **Answer:**
 A — a fixed sentence in step 17, no new `live.sh` subcommand. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
+
 ### Q2 — F8, a `leftover` line after `failed name`: reword rule `cleanup-02`, or leave it?
 
 **Why it matters:** the third criterion makes `cleanup.sh` print a `leftover` command for an issue whose only failed proof is `name`. Rule `cleanup-02` in `skills/cleanup/SKILL.md` reads "A removal command is printed only for an issue the script proved. An issue that failed a proof gets no command, however finished it looks." Rewording a rule-marked paragraph also changes `docs/skills-inventory.md` and `tests/fixtures/skills-inventory.rules.sha256`.
@@ -49,6 +50,7 @@ A — a fixed sentence in step 17, no new `live.sh` subcommand. (Engineer: "go w
 
 **Answer:**
 A — reword the second sentence of rule `cleanup-02`; the inventory line and checksum follow. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
+
 ### Q3 — #161 lists `CHANGELOG.md`, which this plan edits: proceed, sequence, or re-scope?
 
 **Why it matters:** #161 (branches `claude/ecstatic-mendel-n3qyzl` and `docs/documentation-leftovers-154-146-removal`, assignee kbajpai, step `qc`, verdict clear, waits on `/codeo:close`) has `CHANGELOG.md` in its footprint and its changed files. This plan edits one bullet there: the #157 line under `## Unreleased` that says `/codeo:cleanup` prints the delete command "for a proven issue's leftovers", which F8 widens to an issue that failed only `name`. #161 also lists `tests/live-signal.test.sh`, which this plan leaves alone by my call above. Whoever merges second rebases one section of one file.
@@ -56,6 +58,7 @@ A — reword the second sentence of rule `cleanup-02`; the inventory line and ch
 
 **Answer:**
 Proceed and coordinate: whoever merges second rebases `CHANGELOG.md` and keeps both sides. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
+
 ## Notes
 
 None.
