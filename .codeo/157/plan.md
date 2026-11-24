@@ -4,11 +4,24 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/157 |
 | Branch | `fix/live-session-signal-leftovers-138` |
-| Updated | 2026-11-23 |
+| Updated | 2026-11-24 |
 
 ## Where this stands
 
-Planned (round 2, after the send-back in `qc.md` round 1): Q4 is answered A and the round-2 plan is approved and saved at `docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md` (unstaged). Next step: commit it, then `/codeo:implement`. Round 1's plan (`docs/plans/2026-11-23-live-signal-leftovers-157.md`) is built and committed; Q1-Q3 stand as answered.
+Planning round 3, after the send-back in `qc.md` round 2: the draft is at `.codeo/157/plan-draft.md` and waits for the engineer's approval; nothing is open. Rounds 1 and 2 (`docs/plans/2026-11-23-live-signal-leftovers-157.md` and `-round-2.md`) are built and committed; Q1-Q4 stand as answered.
+
+What round 2 of `qc.md` found, checked against the files on this branch, and my calls for round 3, stated so they can be corrected (not questions):
+
+- **F6 (blocking).** `skills/close/SKILL.md` runs `live.sh sweep` at step 16, but its frontmatter description, its **Deletes** bullet and its Non-goals still say it deletes only the merged branch on the engineer's yes; `docs/skills.md` repeats the description and the non-goal. Q1 (answered A) already decided that close sweeps without asking, so the fix is words: each passage names the exception and its reason (a live-signal branch holds an empty signal commit, no work). Rejected: making the sweep ask first, which reopens Q1 and adds a question to every close.
+- **F7, F9 (non-blocking) are fixed in this round**: one sentence each in `scripts/cleanup.sh`'s header, `skills/cleanup/SKILL.md` step 1 and the `CHANGELOG.md` `Shared state` line.
+- **F8 is left as it is**: printing a leftover command for an issue whose `name` proof failed goes against rule `cleanup-02` (an issue that failed a proof gets no command), and the manual command in `docs/handoff.md` covers it.
+- **F10, F11 are left as they are**: unlikely in a hosted session (F10) or covered by the documented manual command (F11). They stay in `qc.md` round 2 for `/codeo:triage`.
+- **One short plan file**, `docs/plans/2026-11-24-live-signal-leftovers-157-round-3.md`, three tasks, same branch and pull request. No script changes behaviour.
+- **In flight:** `inflight.sh --except 157` prints `no other workflow in flight`.
+
+Earlier rounds, as written then:
+
+Planned (round 2, after the send-back in `qc.md` round 1): Q4 is answered A and the round-2 plan was approved and saved at `docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md`.
 
 What the send-back found, checked against `scripts/live.sh` and `hooks/live-signal.sh` on this branch:
 
@@ -128,3 +141,4 @@ sequenced:  none
 - 2026-11-23 — planned: docs/plans/2026-11-23-live-signal-leftovers-157.md · cost: 12m · fable-5-2 80k in + 718k cached / 11k out · sonnet-5-5 126k in + 1.9M cached / 26k out
 - 2026-11-23 — round 2: Q4 raised after the send-back in qc.md round 1 · cost: 1m · fable-5-2 117k in + 23k cached / 1k out
 - 2026-11-23 — planned: docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md (round 2) · cost: 36m · fable-5-2 121k in + 304k cached / 3k out · sonnet-5-5 136k in + 1.3M cached / 8k out
+- 2026-11-24 — round 3: draft at .codeo/157/plan-draft.md after the send-back in qc.md round 2, no question raised · cost: 2m · fable-5-2 121k in + 765k cached / 11k out
