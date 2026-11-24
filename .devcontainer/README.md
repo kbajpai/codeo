@@ -217,7 +217,7 @@ flowchart TD
     F -- "anything else, no --force" --> H["remove container and image, keep the volume (and say so when it exists)"]
     F -- "inspect failed, --force" --> G
     F -- "inspect failed, no --force" --> Q
-    G -- "docker rm -f failed, or with --force the follow-up docker ps -a listing failed (otherwise only while the container is still listed), or volume rm failed and the volume still exists" --> Y["error: could not remove container or volume codeo-N"]
+    G -- "docker rm -f failed (with --force, only when the follow-up docker ps -a listing fails or still lists the container), or volume rm failed and the volume still exists" --> Y["error: could not remove container or volume codeo-N"]
     H -- "docker rm -f failed" --> Y
     G --> Z["last line: what was removed; or nothing named codeo-N to remove"]
     H --> Z
