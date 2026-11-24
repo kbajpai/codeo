@@ -180,7 +180,7 @@ done
 
 case_desc=docs_state_the_web_session_signal
 handoff=$(<"$plugin_root/docs/handoff.md")
-for want in 'refs/heads/codeo-live/' 'live.sh sweep' '[skip ci]' 'codeo-live/**' 'refs/codeo/live-web/' 'codeo-live-machine' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN' 'takes the lock' 'first assignee' 'else `unknown`'; do
+for want in 'refs/heads/codeo-live/' 'live.sh sweep' '[skip ci]' 'codeo-live/**' 'refs/codeo/live-web/' 'codeo-live-machine' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN' 'takes the lock' 'first assignee' 'else `unknown`' 'names the checkout' 'a `create` event'; do
     [[ $handoff == *"$want"* ]] || {
         echo "FAIL $case_desc: no [$want]"
         failures=$((failures + 1))
@@ -206,6 +206,22 @@ for gone in 'nothing else is needed' 'same two groups'; do
         failures=$((failures + 1))
     }
 done
+
+case_desc=changelog_and_skills_state_the_saved_label
+changelog=$(<"$plugin_root/CHANGELOG.md")
+[[ $changelog == *'older plugin'* ]] || {
+    echo "FAIL $case_desc: no [older plugin]"
+    failures=$((failures + 1))
+}
+[[ $changelog != *'until `live.sh clear`'* ]] || {
+    echo "FAIL $case_desc: still has [until live.sh clear]"
+    failures=$((failures + 1))
+}
+skills=$(<"$plugin_root/docs/skills.md")
+[[ $skills == *'refs/remotes/origin/codeo-live/<N>/*'* ]] || {
+    echo "FAIL $case_desc: skills.md reads no [refs/remotes/origin/codeo-live/<N>/*]"
+    failures=$((failures + 1))
+}
 
 case_desc=live_sh_comment_names_both_bounded_calls
 entry=$(awk '/^#   CODEO_LIVE_PUSH_TIMEOUT/{f=1;print;next} f&&/^# {10,}/{print;next} {f=0}' \
