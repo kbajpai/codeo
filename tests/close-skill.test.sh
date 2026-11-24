@@ -127,6 +127,7 @@ section_order() {
 description=$(sed -n 's/^description:[[:space:]]*//p' "$skill" | head -1)
 grep -qF 'stash' <<<"$description" || fail "the description does not name the stash path"
 grep -qF 'closed unmerged' <<<"$description" || fail "the description does not tie abandoning to a pull request closed unmerged"
+grep -qF 'live-signal branches' <<<"$description" || fail "the description does not name the live-signal sweep"
 if grep -qF '"abandon this"' <<<"$description"; then
     fail "the description triggers on \"abandon this\", which has no phase row"
 fi
@@ -280,6 +281,10 @@ section_contains "the hand-off names the abandon deletion" Hand-off 'on an aband
 section_contains "the non-goals allow the abandon deletion on request" Non-goals 'except on an abandon, when the engineer asks in so many words'
 section_contains "the non-goals never dispatch a workflow" Non-goals 'workflow dispatch'
 section_contains "overlay text is never executed" Non-goals 'never executed'
+section_contains "the hand-off names the swept branches" Hand-off 'codeo-live/<issue>/*'
+section_contains_flat "the hand-off says the sweep does not ask" Hand-off 'without asking'
+section_contains "the non-goals except the swept branches" Non-goals 'codeo-live/<issue>/*'
+section_contains_flat "the non-goals say the sweep does not ask" Non-goals 'without asking'
 
 # Re-invocation safety.
 step_contains "an interrupted stash is detected without --stash" 1 "ends in a \`— stashed\` round while the lock is held"

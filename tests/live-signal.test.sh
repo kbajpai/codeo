@@ -223,6 +223,15 @@ skills=$(<"$plugin_root/docs/skills.md")
     failures=$((failures + 1))
 }
 
+case_desc=skills_doc_states_the_sweep_exception
+close_doc=$(awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md")
+for want in "sweeps the issue's leftover live-signal branches" 'deletes without asking'; do
+    [[ $close_doc == *"$want"* ]] || {
+        echo "FAIL $case_desc: no [$want]"
+        failures=$((failures + 1))
+    }
+done
+
 case_desc=live_sh_comment_names_both_bounded_calls
 entry=$(awk '/^#   CODEO_LIVE_PUSH_TIMEOUT/{f=1;print;next} f&&/^# {10,}/{print;next} {f=0}' \
     "$plugin_root/scripts/live.sh")

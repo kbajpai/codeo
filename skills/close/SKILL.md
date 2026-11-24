@@ -1,6 +1,6 @@
 ---
 name: close
-description: End a codeo workflow — open the pull request, wait for the engineer to merge it, route review feedback or a conflict with the base branch back through /codeo:implement and /codeo:qc, release the shared environment at approval when it is still held, then prove the merge, delete the remote branch on the engineer's yes, release every lease and the lock. Also the way to stash a workflow (park it, Ready to start again), and to abandon one whose pull request was closed unmerged (back to the backlog). Trigger on "close", "close the workflow", "open the PR", "it's merged", "clean up", "stash this", or right after /codeo:qc returns a clear verdict. Never merges the PR and never writes code.
+description: End a codeo workflow — open the pull request, wait for the engineer to merge it, route review feedback or a conflict with the base branch back through /codeo:implement and /codeo:qc, release the shared environment at approval when it is still held, then prove the merge, delete the remote branch on the engineer's yes, sweep the issue's leftover live-signal branches, release every lease and the lock. Also the way to stash a workflow (park it, Ready to start again), and to abandon one whose pull request was closed unmerged (back to the backlog). Trigger on "close", "close the workflow", "open the PR", "it's merged", "clean up", "stash this", or right after /codeo:qc returns a clear verdict. Never merges the PR and never writes code.
 argument-hint: "[optional: --stash to park the workflow instead of finishing it]"
 model: sonnet
 ---
@@ -721,9 +721,11 @@ ran.
   per invocation — and the commits carrying it and the archive moves; the clean base-branch merge
   step 9 makes on `BEHIND`, its one commit that is not a dossier commit; the pull request and its
   comments. Nothing else.
-- **Deletes** `.codeo/active` and the merged branch on the remote — or, on an abandon, the
-  unmerged one, only when the engineer asks — and moves the dossier directory
-  in and out of `.codeo/done/`. It is the only skill that may do any of these.
+- **Deletes** `.codeo/active`; the issue's `codeo-live/<issue>/*` live-signal branches on the
+  remote, through `live.sh sweep` and without asking, since each holds only an empty signal
+  commit and no work; and the merged branch on the remote — or, on an abandon, the unmerged
+  one, only when the engineer asks — and moves the dossier directory in and out of
+  `.codeo/done/`. It is the only skill that may do any of these.
 - **Releases** every lease the issue holds at every exit — the merge, a stash, an abandon — and
   the environment at approval when it is still held; `/codeo:qc` normally released that already.
   It takes `$ENV_RESOURCE` only for a put-back, when the issue no longer holds it, and releases it
@@ -752,8 +754,9 @@ ran.
   send-backs.
 - Doesn't delete a branch without GitHub's merged state, a tip that matches the pull request's
   head and the engineer's yes — except on an abandon, when the engineer asks in so many words,
-  after the same confirmation — and never deletes the base branch, force-pushes, or rewrites
-  history.
+  after the same confirmation, and except the issue's own `codeo-live/<issue>/*` live-signal
+  branches, which step 16's `live.sh sweep` deletes without asking: they hold an empty signal
+  commit, never work — and never deletes the base branch, force-pushes, or rewrites history.
 - Doesn't commit to the base branch. Its last commit is on the branch, before the merge.
 - Doesn't start the next workflow. Releasing the lock is the invitation; `/codeo:init` is still
   the engineer's to run.

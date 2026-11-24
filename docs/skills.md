@@ -182,7 +182,7 @@ The skill is the gate between building and merging. It never fixes what it finds
 
 ### Purpose and triggers
 
-Ends a codeo workflow. It opens the pull request, waits for the engineer to merge it, routes review feedback or a conflict with the base branch back through `/codeo:implement` and `/codeo:qc`, releases the shared environment at approval when it is still held, then proves the merge, deletes the remote branch on the engineer's yes, and releases every lease and the lock. It is also the way to stash a workflow (park it, Ready to start again) and to abandon one whose pull request was closed unmerged (back to the backlog). It triggers on "close", "close the workflow", "open the PR", "it's merged", "clean up", "stash this", or right after `/codeo:qc` returns a clear verdict.
+Ends a codeo workflow. It opens the pull request, waits for the engineer to merge it, routes review feedback or a conflict with the base branch back through `/codeo:implement` and `/codeo:qc`, releases the shared environment at approval when it is still held, then proves the merge, deletes the remote branch on the engineer's yes, sweeps the issue's leftover live-signal branches, and releases every lease and the lock. It is also the way to stash a workflow (park it, Ready to start again) and to abandon one whose pull request was closed unmerged (back to the backlog). It triggers on "close", "close the workflow", "open the PR", "it's merged", "clean up", "stash this", or right after `/codeo:qc` returns a clear verdict.
 
 The skill is the pipeline's last step. The workflow ends at the merge, not when the pull request opens: until then review feedback still has somewhere to go. It never merges, approves or reviews; the merge is the engineer's. It runs in phases and works out which one from facts (the lock, where the dossier sits, and the pull request's state on GitHub), so running it again is safe at any time.
 
@@ -202,7 +202,7 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 - Does not merge, approve or review the pull request, and does not answer review comments on the implementer's behalf beyond a summary of what changed.
 - Does not re-run the build, the suites or the acceptance criteria; that is `/codeo:qc`'s.
 - Does not fix anything, whether a problem found on the way past or a review comment; those are send-backs.
-- Does not delete a branch without GitHub's merged state, a tip that matches the pull request's head and the engineer's yes (on an abandon, the engineer must ask in so many words, after the same confirmation). It never deletes the base branch, force-pushes, or rewrites history.
+- Does not delete a branch without GitHub's merged state, a tip that matches the pull request's head and the engineer's yes (on an abandon, the engineer must ask in so many words, after the same confirmation). The one exception is the issue's own `codeo-live/<issue>/*` live-signal branches, which it deletes without asking: each holds an empty signal commit and no work. It never deletes the base branch, force-pushes, or rewrites history.
 - Does not commit to the base branch; its last commit is on the branch, before the merge.
 - Does not start the next workflow; releasing the lock is the invitation, and `/codeo:init` is still the engineer's to run.
 - Does not remove the checkout it runs in; it relays how, from the project's host workflow.
