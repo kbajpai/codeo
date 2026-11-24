@@ -70,3 +70,4 @@ _Pending — written at the hand-off._
 
 ## Log
 - 2026-11-24 — Q1-Q3 raised; the engineering plugin is not installed and was not needed · cost: 2m · fable-5-2 111k in + 989k cached / 13k out
+- 2026-11-24 — Q1-Q3 answered as recommended in the conversation; draft written to .codeo/163/plan-draft.md · cost: 4m · fable-5-2 116k in + 1.3M cached / 14k out · sonnet-5-5 126k in + 300k cached / 15k out
