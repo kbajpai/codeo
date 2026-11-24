@@ -36,4 +36,4 @@ None.
 
 ## Log
 
-- 2026-11-24 — drafted for the gate
+- 2026-11-24 — initialized: branch docs/close-157-leftovers-hosted-web off main at a389a6577b15ff9529023666f63e42a7cd2967ed · cost: 1m · sonnet-5-5 16k in + 683k cached / 3k out
