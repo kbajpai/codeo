@@ -20,6 +20,8 @@ grep -qF 'any branch other than `codeo/intake`' "$skill" || check_fail "the hand
 ! grep -qF 'recorded a clean tree' "$skill" || check_fail "the skill still claims close.md recorded a clean tree"
 grep -qF '`issue`, `pull-request`, `branch`, `dossier`, `lease` or `name`' "$skill" || check_fail "step 1 does not list the five proofs"
 grep -qF '`leftover`' "$skill" || check_fail "step 1 does not name the leftover lines"
+grep -qF 'a second line, `leftover`' "$skill" || check_fail "step 1 does not say a proven issue can print two lines"
+grep -qF 'a second line, `leftover`' "$repo/scripts/cleanup.sh" || check_fail "the script header does not say a proven issue can print two lines"
 grep -qF 'git push origin --delete' "$skill" || check_fail "step 1 does not show the leftover command as printed"
 grep -qF '/codeo:init #<M>' "$skill" || check_fail "the closing block does not name /codeo:init #<M>"
 ! grep -qF '/codeo:init #<N>' "$skill" || check_fail "the closing block still names /codeo:init #<N>"

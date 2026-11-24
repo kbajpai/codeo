@@ -43,7 +43,7 @@ is the container the message names.
 
 1. **Run the script and relay it.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup.sh"` prints one
    tab-separated line per issue: `<N>`, `proven`, the command (or `-` when the project gives
-   none) and the `fallback:` text (or `-` when the project gives none), or `<N>`, `failed` and the first proof that failed. Relay the lines as three lists, each
+   none) and the `fallback:` text (or `-` when the project gives none), or `<N>`, `failed` and the first proof that failed. A proven issue whose web live-signal branches are still on `origin` gets a second line, `leftover`, right after its own. Relay the lines as three lists, each
    line as the script printed it:
    - **Proven**, with the command to run. A `-` means the issue is finished and the project has no
      removal command for it.

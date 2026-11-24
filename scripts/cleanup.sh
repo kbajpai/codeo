@@ -4,7 +4,8 @@
 #
 #   cleanup.sh
 #       Fetches origin with --prune, lists the .codeo/done/<N> directories on origin/<baseBranch>, and prints
-#       one tab-separated line per issue, in ascending N:
+#       one tab-separated line per issue, in ascending N, and after a proven issue with leftover branches
+#       a second line, `leftover`:
 #           <N> TAB proven TAB <command> TAB <fallback>
 #                                           every proof passed; <command> is `-` when the overlay gives none;
 #                                           <fallback> is the overlay's expanded fallback text, or `-` when it has none

@@ -217,6 +217,10 @@ changelog=$(<"$plugin_root/CHANGELOG.md")
     echo "FAIL $case_desc: still has [until live.sh clear]"
     failures=$((failures + 1))
 }
+[[ $changelog == *"a hosted web session's close deletes none"* ]] || {
+    echo "FAIL $case_desc: no [a hosted web session's close deletes none]"
+    failures=$((failures + 1))
+}
 skills=$(<"$plugin_root/docs/skills.md")
 [[ $skills == *'refs/remotes/origin/codeo-live/<N>/*'* ]] || {
     echo "FAIL $case_desc: skills.md reads no [refs/remotes/origin/codeo-live/<N>/*]"

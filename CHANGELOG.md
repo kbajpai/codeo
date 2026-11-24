@@ -3,7 +3,7 @@
 ## Unreleased
 
 Config schema: 1 (unchanged)
-Shared state: an issue gains one comment, marked `<!-- codeo:tracking -->` (found anywhere in a comment body), holding a table of its branch, containers, images, volumes and sandboxes (an older reader sees an ordinary comment on the issue and ignores it); no other state changes beyond the live-signal branches: `/codeo:close` deletes the issue's `codeo-live/<issue>/*` branches on origin, and readers keep web signals in the local `refs/codeo/live-web/*`
+Shared state: an issue gains one comment, marked `<!-- codeo:tracking -->` (found anywhere in a comment body), holding a table of its branch, containers, images, volumes and sandboxes (an older reader sees an ordinary comment on the issue and ignores it); no other state changes beyond the live-signal branches: `/codeo:close` deletes the issue's `codeo-live/<issue>/*` branches on origin (a hosted web session's close deletes none, since it cannot delete a branch), and readers keep web signals in the local `refs/codeo/live-web/*`
 Safe to bump mid-workflow: yes, with one step: run `codeo update` so the installed `codeo` fetches the new `codeo-track.sh`; until then nothing is recorded on the issue and the scripts print one `note:` line; a reader on an older plugin keeps the old fetch and still aborts on a collision until it updates
 
 - A hosted web session's live signal no longer aborts `live.sh fetch` when a web and a container signal share one `<issue>/<machine>`: the `codeo-live` branches are fetched into `refs/codeo/live-web/*`, `refs/codeo/live/*` stays for the rest, and `list` reads both, so they show as two rows (#157).
