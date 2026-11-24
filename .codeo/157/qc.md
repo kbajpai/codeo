@@ -4,11 +4,11 @@
 |---|---|
 | Issue | https://github.com/kbajpai/codeo/issues/157 |
 | Branch | `fix/live-session-signal-leftovers-138` |
-| Updated | 2026-11-23 |
+| Updated | 2026-11-24 |
 
 ## Where this stands
 
-Round 2 is written and the verdict is back to `/codeo:plan`: round 1's F1 is fixed, and the review found one new blocking finding (F6), a contradiction in `skills/close/SKILL.md`. Nothing is open.
+Round 3 is written and the verdict is clear: round 2's F6, F7 and F9 are fixed, all four criteria are met, and the review found two non-blocking gaps (F12, F13) in how `/codeo:close` reports and describes the web-session case. Nothing is open. Next step: `/codeo:close`.
 
 ## Questions
 
@@ -92,7 +92,42 @@ No issue was filed from this pass.
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 3 — 2026-11-24
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`, exit 0. `overlap.sh 157` and `overlap.sh --outside 157` printed nothing, exit 0. `git diff origin/main...HEAD --stat`: 21 files changed, 1157 insertions, 57 deletions. `scope.sh origin/main HEAD`: `suite.shell=true` (`suite shell needed for unclassified paths: .codeo/157/*, CHANGELOG.md`, among others). No `deploy=` line: no environment is configured.
+
+**Build.** Suite `shell`, build `true`: exit 0.
+
+**Suites.** `bash tests/run.sh`: `all cases passed`, exit 0.
+
+**Acceptance criteria**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Both refs on origin: `live.sh fetch` exits 0, no `live: unknown` for that cause, a test reproduces it | met | `tests/live.test.sh` `fetch_survives_a_web_and_a_container_signal_with_equal_labels` (the web branches fetch into `refs/codeo/live-web/*`, `scripts/live.sh:259`); `tests/inflight.test.sh` `live_survives_a_web_and_a_container_signal_with_equal_labels` runs `inflight.sh --live` with the real `live.sh` |
+| 2 | After close no `codeo-live/<issue>/*` remains, or the docs say how to remove one | met | `live.sh sweep` in `/codeo:close` step 16 (outside a web session); `docs/handoff.md:173` gives `git push origin --delete codeo-live/<issue>/<machine>`; `/codeo:cleanup` prints it for a proven issue |
+| 3 | The web-signal docs name the CI trigger on every beat | met | `docs/handoff.md:173` names `on: push`, `[skip ci]`, the `create` event and excluding `codeo-live/**`; pinned in `tests/live-signal.test.sh` |
+| 4 | A session whose id changes shows as one row, or the docs say it can show twice for up to the TTL | met | `tests/live.test.sh` `web_label_stays_when_the_session_id_changes` and `web_clear_keeps_the_label`; `docs/handoff.md:209` states the new-checkout case |
+
+**Documentation.** Round 2's gaps are closed: `skills/close/SKILL.md` names the sweep in its description (`:3`), its Deletes bullet (`:724-728`) and its Non-goals (`:756-759`), and `docs/skills.md` in the `close` purpose and non-goal lines; the `scripts/cleanup.sh` header (`:6-7`), `skills/cleanup/SKILL.md` step 1 and the CHANGELOG `Shared state` line say what the code does. I searched `skills/close/SKILL.md`, `docs/skills.md` and `docs/handoff.md` for a remaining "deletes only the merged branch" sentence and found none that contradicts the sweep. New gaps: F12, F13, both non-blocking.
+
+**Independent review** (Opus, given the criteria only): no Critical, one Important (F12), four Minor; it ran the six affected test files and they pass, and it found sound the fetch split and prune, `sweep`'s scope and exit-0 behaviour, the `leftover` line's use of pruned refs, the saved label and the CI wording. Its Minor items are F13, F8 again, a missing sweep entry in step 17's evidence sentence (not a defect: `sweep` only warns on failure) and the round-1 test adaptation `two_web_sessions_on_one_issue_publish_two_branches`, which `implement.md` round 1 records as a deliberate deviation.
+
+**Findings**
+
+- F6 (blocking in round 2) — fixed by `072024d`: the three passages of `skills/close/SKILL.md` and the two of `docs/skills.md` state the sweep and its reason.
+- F7 (non-blocking in round 2) — fixed by `fee6ba3`: the script header and the skill say a proven issue can print a second `leftover` line.
+- F9 (non-blocking in round 2) — fixed by `fee6ba3`: the CHANGELOG says a hosted web session's close deletes none.
+- F12 — non-blocking, `/codeo:plan`'s: `skills/close/SKILL.md:537` (step 17, `host: web`) tells the engineer "nothing to remove: the hosted session is done once the engineer closes it". In a hosted web session step 16's `sweep` does nothing, so the session's `codeo-live/<N>/<machine>` branch stays on origin, and the report neither says so nor names the delete command; the same holds for `host: local` with `CLAUDE_CODE_REMOTE=true`. I confirmed the line and that no plan task named step 17. The sentence is about the checkout, criterion 2 stays met through `docs/handoff.md:173` and `/codeo:cleanup`, and nothing is lost, so it does not block the merge.
+- F13 — non-blocking, plan's: `skills/close/SKILL.md:3` and `docs/skills.md:185` say close "sweeps the issue's leftover live-signal branches" without the web-session exception that step 16, `docs/handoff.md:173` and the CHANGELOG state; `docs/skills.md:193` carries it.
+- F8, F10, F11 — non-blocking, carried from round 2 and unchanged (the plan left them on purpose): `scripts/cleanup.sh:134` prints no leftover command when only the `name` proof failed; the saved label can lock in a `hostname` fallback; branch names with more path segments are skipped by `sweep` and `cleanup.sh`, which the manual command covers.
+
+No issue was filed from this pass. F8, F10, F11, F12 and F13 stay in this dossier for `/codeo:triage`.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-23 — Round 1: build ok; shell suite passed; criteria 1-4 met with F1 against 4's docs; review one Important, four Minor; verdict back to plan · cost: 9m · opus-5-5 75k in + 417k cached / 9k out · sonnet-5-5 96k in + 798k cached / 2k out
 - 2026-11-24 — Round 2: build ok; shell suite passed; criteria 1-4 met; round 1's F1-F5 fixed; review one Important (F6) and five Minor; verdict back to plan · cost: 12m · opus-5-5 99k in + 1.4M cached / 18k out · sonnet-5-5 181k in + 1M cached / 5k out
+- 2026-11-24 — Round 3: build ok; shell suite passed; criteria 1-4 met; round 2's F6, F7, F9 fixed; review one Important (F12, non-blocking) and four Minor; verdict clear · cost: 14m · opus-5-5 271k in + 1.8M cached / 14k out · sonnet-5-5 31k in + 1M cached / 5k out
