@@ -583,6 +583,38 @@ git -C "$origin" update-ref -d refs/codeo/live/105/codeo-105
 live "$other" fetch
 assert_eq "only web remains" "$(printf '104\talice\tweb-abcdef01\tweb')" "$(live "$other" list --tsv | cut -f1-4)"
 
+case_desc=web_signal_subject_says_skip_ci_and_others_do_not
+new_world; clone_with_lock 105 container codeo-105
+run beat --force
+clone_with_lock 104 web abcdef0123456789
+run beat --force
+assert_eq "web subject" "codeo live signal [skip ci]" "$(git -C "$origin" log -1 --format=%s refs/heads/codeo-live/104/web-abcdef01)"
+assert_eq "container subject" "codeo live signal" "$(git -C "$origin" log -1 --format=%s refs/codeo/live/105/codeo-105)"
+other=$(clone_of "$origin")
+live "$other" fetch
+assert_eq "both listed" "$(printf '104\talice\tweb-abcdef01\tweb\n105\talice\tcodeo-105\tcontainer')" "$(live "$other" list --tsv | cut -f1-4)"
+
+case_desc=fetch_survives_a_web_and_a_container_signal_with_equal_labels
+new_world
+now=$(date +%s)
+plant refs/codeo/live/104/same "$(signal 104 alice same container "$now")"
+plant refs/heads/codeo-live/104/same "$(signal 104 bob same web "$now")"
+other=$(clone_of "$origin")
+rc=0; live "$other" fetch 2> /dev/null || rc=$?
+assert_eq "fetch exit" 0 "$rc"
+tsv=$(live "$other" list --tsv | cut -f1-4)
+assert_contains "container row" "$(printf '104\talice\tsame\tcontainer')" "$tsv"
+assert_contains "web row" "$(printf '104\tbob\tsame\tweb')" "$tsv"
+
+case_desc=fetch_prunes_a_web_copy_the_old_refspec_left_in_refs_codeo_live
+new_world
+plant refs/heads/codeo-live/104/web-old "$(signal 104 bob web-old web "$(date +%s)")"
+other=$(clone_of "$origin")
+git -C "$other" fetch -q origin '+refs/heads/codeo-live/*:refs/codeo/live/*'
+live "$other" fetch
+assert_eq "no web copy in the container namespace" "" "$(git -C "$other" for-each-ref refs/codeo/live/)"
+assert_contains "row still listed" "$(printf '104\tbob\tweb-old\tweb')" "$(live "$other" list --tsv | cut -f1-4)"
+
 case_desc=web_push_refused_warns_once_and_does_not_fall_back
 new_world; clone_with_lock 104 web abcdef0123456789
 mkdir -p "$origin/hooks"
@@ -628,9 +660,40 @@ assert_eq "hostname" "refs/heads/codeo-live/104/$host_label" "$(heads)"
 case_desc=two_web_sessions_on_one_issue_publish_two_branches
 new_world; clone_with_lock 104 web abcdef0123456789
 run beat --force
+rm -f "$(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-machine)"  # a second checkout has no saved label
 clone_with_lock 104 web 1234567890abcdef
 run beat --force
 assert_eq "two branches" 2 "$(heads | grep -c .)"
+
+case_desc=web_label_stays_when_the_session_id_changes
+new_world; clone_with_lock 104 web abcdef0123456789
+run beat --force
+clone_with_lock 104 web 99999999aaaaaaaa
+run beat --force
+assert_eq "one branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
+
+case_desc=web_clear_keeps_the_label
+new_world; clone_with_lock 104 web abcdef0123456789
+run beat --force
+run clear
+[[ -f "$(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-machine)" ]] && label_kept=yes || label_kept=no
+assert_eq "label file kept" yes "$label_kept"
+clone_with_lock 104 web 99999999aaaaaaaa
+run beat --force
+assert_eq "one branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
+
+case_desc=codeo_machine_is_not_saved_as_the_web_label
+new_world; clone_with_lock 104 web abcdef0123456789
+CODEO_MACHINE=boxA run beat --force
+run beat --force
+assert_contains "env label" "104/boxA" "$(heads)"
+assert_contains "web label" "104/web-abcdef01" "$(heads)"
+
+case_desc=a_saved_label_with_unsafe_text_is_ignored
+new_world; clone_with_lock 104 web abcdef0123456789
+printf 'a b;c\n' > "$(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-machine)"
+run beat --force
+assert_eq "branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
 
 case_desc=user_env_login_wins
 new_world; clone_with_lock 104 container codeo-104
@@ -672,6 +735,56 @@ new_world; clone_with_lock 104 local
 run beat --force
 assert_contains "local signal" "host: local" "$(web_msg "$(git -C "$origin" for-each-ref --format='%(refname)' refs/codeo/live/ | head -n 1)")"
 assert_eq "no web branch" "" "$(git -C "$origin" for-each-ref refs/heads/codeo-live/)"
+
+# --- sweep -------------------------------------------------------------------------------------
+
+case_desc=sweep_deletes_this_issues_web_branches_only
+new_world; clone_with_lock 10 container codeo-10
+for r in refs/heads/codeo-live/10/web-a refs/heads/codeo-live/10/web-b refs/heads/codeo-live/104/web-c refs/heads/codeo-live/11/web-d refs/codeo/live/10/codeo-10; do
+    plant "$r" "x"
+done
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "stderr" "" "$err"
+assert_eq "heads left" "$(printf 'refs/heads/codeo-live/104/web-c\nrefs/heads/codeo-live/11/web-d')" "$(heads)"
+assert_eq "container signal kept" refs/codeo/live/10/codeo-10 "$(refs)"
+
+case_desc=sweep_from_a_web_session_deletes_nothing
+new_world; clone_with_lock 104 web abcdef0123456789
+plant refs/heads/codeo-live/104/web-a "x"
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "branch stays" refs/heads/codeo-live/104/web-a "$(heads)"
+assert_eq "stderr" "" "$err"
+
+case_desc=sweep_without_a_lock_deletes_nothing
+new_world
+plant refs/heads/codeo-live/104/web-a "x"
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "branch stays" refs/heads/codeo-live/104/web-a "$(heads)"
+assert_eq "stderr" "" "$err"
+
+case_desc=sweep_with_a_refused_delete_warns_once_and_exits_0
+new_world; clone_with_lock 104 container codeo-104
+plant refs/heads/codeo-live/104/web-a "x"
+mkdir -p "$origin/hooks"
+printf '#!/bin/sh\nwhile read old new ref; do case $new in 0*) echo refused >&2; exit 1;; esac; done\n' > "$origin/hooks/pre-receive"
+chmod +x "$origin/hooks/pre-receive"
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "one line" 1 "$(grep -c . <<< "$err")"
+assert_contains "warning" "live: could not sweep" "$err"
+assert_eq "branch stays" refs/heads/codeo-live/104/web-a "$(heads)"
+
+case_desc=sweep_with_nothing_to_delete_is_quiet
+new_world; clone_with_lock 104 container codeo-104
+plant refs/heads/codeo-live/11/web-d "x"
+run sweep
+assert_eq "exit" 0 "$rc"
+assert_eq "stderr" "" "$err"
+assert_eq "stdout" "" "$out"
+assert_eq "branch stays" refs/heads/codeo-live/11/web-d "$(heads)"
 
 if ((failures)); then
     echo "$failures assertion(s) failed"

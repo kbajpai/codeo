@@ -167,7 +167,7 @@ done
     failures=$((failures + 1))
 }
 handoff=$(<"$plugin_root/docs/handoff.md")
-[[ $handoff == *'S->>O: /codeo:close runs live.sh clear and deletes the lock in one command'* ]] || {
+[[ $handoff == *'S->>O: /codeo:close runs live.sh clear and live.sh sweep, and deletes the lock in one command'* ]] || {
     echo "FAIL $case_desc: no [S->>O close line]"
     failures=$((failures + 1))
 }
@@ -180,7 +180,7 @@ done
 
 case_desc=docs_state_the_web_session_signal
 handoff=$(<"$plugin_root/docs/handoff.md")
-for want in 'refs/heads/codeo-live/' 'never deleted' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN' 'takes the lock' 'first assignee' 'else `unknown`'; do
+for want in 'refs/heads/codeo-live/' 'live.sh sweep' '[skip ci]' 'codeo-live/**' 'refs/codeo/live-web/' 'codeo-live-machine' 'CLAUDE_CODE_REMOTE_SESSION_ID' 'CODEO_GITHUB_LOGIN' 'takes the lock' 'first assignee' 'else `unknown`' 'names the checkout' 'a `create` event'; do
     [[ $handoff == *"$want"* ]] || {
         echo "FAIL $case_desc: no [$want]"
         failures=$((failures + 1))
@@ -203,6 +203,35 @@ done
 for gone in 'nothing else is needed' 'same two groups'; do
     [[ $handoff != *"$gone"* ]] || {
         echo "FAIL $case_desc: still has [$gone]"
+        failures=$((failures + 1))
+    }
+done
+
+case_desc=changelog_and_skills_state_the_saved_label
+changelog=$(<"$plugin_root/CHANGELOG.md")
+[[ $changelog == *'older plugin'* ]] || {
+    echo "FAIL $case_desc: no [older plugin]"
+    failures=$((failures + 1))
+}
+[[ $changelog != *'until `live.sh clear`'* ]] || {
+    echo "FAIL $case_desc: still has [until live.sh clear]"
+    failures=$((failures + 1))
+}
+[[ $changelog == *"a hosted web session's close deletes none"* ]] || {
+    echo "FAIL $case_desc: no [a hosted web session's close deletes none]"
+    failures=$((failures + 1))
+}
+skills=$(<"$plugin_root/docs/skills.md")
+[[ $skills == *'refs/remotes/origin/codeo-live/<N>/*'* ]] || {
+    echo "FAIL $case_desc: skills.md reads no [refs/remotes/origin/codeo-live/<N>/*]"
+    failures=$((failures + 1))
+}
+
+case_desc=skills_doc_states_the_sweep_exception
+close_doc=$(awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md")
+for want in "sweeps the issue's leftover live-signal branches" 'deletes without asking'; do
+    [[ $close_doc == *"$want"* ]] || {
+        echo "FAIL $case_desc: no [$want]"
         failures=$((failures + 1))
     }
 done

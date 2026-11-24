@@ -257,6 +257,23 @@ plant_signal "$origin" 7 codeo-7 bob 1000
 out=$(run_inflight "$clone")
 assert_eq "no live line" 0 "$(printf '%s\n' "$out" | grep -c 'live:' || true)"
 
+case_desc="live_survives_a_web_and_a_container_signal_with_equal_labels"
+clear_signals "$origin"
+plant_signal "$origin" 7 codeo-7 bob 35
+web_tree=$(git -C "$origin" hash-object -t tree -w /dev/null)
+web_sha=$(printf 'codeo live signal\n\nissue: 7\nuser: dana\nmachine: codeo-7\nhost: web\nbeat: %s\n' "$(($(date +%s) - 20))" |
+    git -C "$origin" commit-tree "$web_tree" -F -)
+git -C "$origin" update-ref refs/heads/codeo-live/7/codeo-7 "$web_sha"
+live_rc=0
+out=$(cd "$clone" && PATH="$stub_bin:$PATH" bash "$plugin/scripts/inflight.sh" --live 2>"$scratch_root/err") || live_rc=$?
+assert_eq "--live exit" 0 "$live_rc"
+assert_eq "--live stderr" "" "$(cat "$scratch_root/err")"
+assert_eq "two rows" 2 "$(printf '%s\n' "$out" | grep -c .)"
+assert_contains "container row" "7${tab}bob${tab}codeo-7${tab}container" "$out"
+assert_contains "web row" "7${tab}dana${tab}codeo-7${tab}web" "$out"
+assert_eq "no live: line" 0 "$(grep -c 'live:' "$scratch_root/err" || true)"
+git -C "$origin" update-ref -d refs/heads/codeo-live/7/codeo-7
+
 case_desc="a_failed_fetch_prints_unknown_not_stale_refs"
 clear_signals "$origin"
 plant_signal "$origin" 7 codeo-7 bob 35

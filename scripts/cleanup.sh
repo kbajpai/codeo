@@ -4,11 +4,16 @@
 #
 #   cleanup.sh
 #       Fetches origin with --prune, lists the .codeo/done/<N> directories on origin/<baseBranch>, and prints
-#       one tab-separated line per issue, in ascending N:
+#       one tab-separated line per issue, in ascending N, and after a proven issue with leftover branches
+#       a second line, `leftover`:
 #           <N> TAB proven TAB <command> TAB <fallback>
 #                                           every proof passed; <command> is `-` when the overlay gives none;
 #                                           <fallback> is the overlay's expanded fallback text, or `-` when it has none
 #           <N> TAB failed TAB <proof>      the first proof that failed
+#           <N> TAB leftover TAB <command>  right after a proven line, when origin still holds codeo-live/<N>/<machine> branches
+#                                           (a hosted web session's live signal); <command> is one `git push origin --delete` naming
+#                                           each such branch whose name is only letters, digits, `.`, `_` and `-`. Read from the
+#                                           refs the fetch pruned; none, no line.
 #       Proofs, in order:
 #           issue         the issue's state is closed
 #           pull-request  done/<N>/close.md has a `#<number> <url>` line and that PR has a merged_at
@@ -18,8 +23,9 @@
 #           lease         no lease is held and no wait is recorded for the issue on the intake branch
 #                         (intake.sh lease list --tsv, read once after the fetch; unreadable stops the script)
 #           name          the overlay's name template, pattern and command are all present, and the expanded
-#                         name matches the pattern. The only place a command is built.
+#                         name matches the pattern.
 #
+# The overlay's command is built in name_proof and the leftover delete in leftover_proof: the only two places a command is built.
 # The overlay body (cleanup/removal-command) is three lines, and an optional fourth: `name: <template with {N}>`,
 # `pattern: <extended regex>`, `command: <template with {N} and {name}>` and `fallback: <text with {N} and {name}>`; it comes from `overlay.sh cleanup removal-command`. No
 # overlay (overlay.sh exit 3, or 2 while the point is unregistered) means `proven` with `-` and `-`; any other failure dies.
@@ -86,7 +92,7 @@ first_failed_proof() {
     echo ok
 }
 
-# Last proof, and the only place a command is built: prints `-`, or `name` for a failure, or `cmd:<command>` and then
+# Last proof; builds the overlay's command: prints `-`, or `name` for a failure, or `cmd:<command>` and then
 # a second line, the expanded fallback or `-`.
 name_proof() {
     local n=$1 tpl pattern cmd name fb
@@ -103,6 +109,19 @@ name_proof() {
     printf 'cmd:%s\n%s\n' "$cmd" "${fb:--}"
 }
 
+# The `<N>\tleftover\t<command>` line for issue $1, or nothing. Reads the refs the fetch pruned, never ls-remote (a failed
+# ls-remote prints nothing and would read as "none"). Only names that are exactly codeo-live/<N>/<letters, digits, . _ ->
+# go in: anyone with push access can name a branch with shell metacharacters, and the engineer runs what is printed.
+leftover_proof() {
+    local n=$1 name names=()
+    while IFS= read -r name; do
+        [[ $name =~ ^codeo-live/$n/[A-Za-z0-9._-]+$ ]] || continue
+        names+=("$name")
+    done < <(git for-each-ref --format='%(refname:strip=3)' "refs/remotes/origin/codeo-live/$n/")
+    ((${#names[@]})) || return 0
+    printf '%s\tleftover\tgit push origin --delete %s\n' "$n" "${names[*]}"
+}
+
 while IFS= read -r n; do
     proof=$(first_failed_proof "$n")
     if [[ $proof == ok ]]; then
@@ -112,6 +131,7 @@ while IFS= read -r n; do
             name) printf '%s\tfailed\tname\n' "$n" ;;
             *) printf '%s\tproven\t%s\t%s\n' "$n" "$(head -n1 <<<"${out#cmd:}")" "$(tail -n1 <<<"$out")" ;;
         esac
+        [[ $out == name ]] || leftover_proof "$n"
     else
         printf '%s\tfailed\t%s\n' "$n" "$proof"
     fi
