@@ -196,7 +196,7 @@ The removal is `docker rm -f codeo-<N>`, `docker volume rm codeo-<N>` and `docke
 flowchart TD
     A["codeo rm N, container"] --> M["docker inspect: what is mounted at /workspaces"]
     M --> B["start if stopped; fetch --prune origin; fetch pull-request heads"]
-    B -- "no such container, no --force" --> Q["refuse: nothing removed (a container codeo started for the read is stopped again)"]
+    B -- "no such container, no --force" --> Q["refuse: nothing removed (a container codeo knows it started for the read is stopped again)"]
     B -- "no such container, --force" --> G
     B --> C{"read: status --untracked-files=normal, stash, detached HEAD, unpushed"}
     C -- "dirty" --> R["no --force: refuse; --force: say what is not kept"]
@@ -218,7 +218,7 @@ flowchart TD
     F -- "inspect failed, --force" --> G
     F -- "inspect failed, no --force" --> Q
     G -- "docker rm -f failed, or with --force the follow-up docker ps -a listing failed (otherwise only while the container is still listed), or volume rm failed and the volume still exists" --> Y["error: could not remove container or volume codeo-N"]
-    H -- "docker rm -f failed (only while the container is still listed)" --> Y
+    H -- "docker rm -f failed" --> Y
     G --> Z["last line: what was removed; or nothing named codeo-N to remove"]
     H --> Z
 ```
