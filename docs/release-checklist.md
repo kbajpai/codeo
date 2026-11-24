@@ -71,8 +71,9 @@ constrain other people and accidents, not the owner.
 
    The list must show both rulesets as `active` before the next step.
 
-6. Before tagging, set the release's version in `.claude-plugin/plugin.json` only
-   (`.claude-plugin/marketplace.json` carries none), and retitle `CHANGELOG.md`'s `## Unreleased`
+6. Before tagging, set the release's version in `.claude-plugin/plugin.json`, in the installer examples
+   in `README.md` and in the stubs of `tests/install.test.sh`, which move to the latest release
+   (`.claude-plugin/marketplace.json` carries no version), and retitle `CHANGELOG.md`'s `## Unreleased`
    as `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change. Once that pull
    request merges, test the merged commit — the one the tag will name — from a clean clone:
 
