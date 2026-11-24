@@ -1,8 +1,8 @@
-# Issue (new) — issue
+# Issue #166 — issue
 
 ## Where this stands
 
-Drafted from the triage finding `qc:157`; scope was chosen by the engineer in triage (F12, F13, F8 in; F10, F11 out). No open question. Waiting for approval of the draft in `body.md`.
+Filed as #166. Drafted from the triage finding `qc:157`; scope was chosen by the engineer in triage (F12, F13, F8 in; F10, F11 out). No open question. Waiting for approval of the draft in `body.md`.
 
 ## Questions
 
@@ -14,4 +14,4 @@ Draft: title "Close the #157 leftovers: a hosted web close that says nothing rem
 
 ## Log
 
-- 2026-11-24 — drafted, awaiting approval
+- 2026-11-24 — approved and filed as #166
