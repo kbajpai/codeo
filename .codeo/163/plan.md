@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored, Q1-Q3 raised, nothing drafted. The draft waits for the three answers.
+Q1-Q3 answered as recommended ("go with your picks"). The draft is at `.codeo/163/plan-draft.md`, awaiting the engineer's approval; nothing is written under `docs/plans/` yet, and there is no outcome until it is approved.
 
 What I found (read against the code at `2619567`):
 
@@ -29,7 +29,8 @@ My calls, stated so they can be corrected (not questions):
 - **F15:** `new_tmp` stops printing the path and sets a variable in the calling shell (`new_tmp || fail_record …; f=$tmp_file`), so the trap's list is filled where the trap runs. A new case in `tests/track.test.sh` gives the script an empty `TMPDIR` and counts `codeo-track.*` there before and after an `add`, a `mark` and a failed `add` (the stub's `fail` file).
 - **F16-F19 are README only.** F17 names both reads the guard makes with `jq` (the codename and `baseBranch`) and what each does without it, with the `stray` refusal reproduced above; the guard's code is not changed. F18's example uses an invented issue (`#12`, `feat/12-order-export`), as `docs/dossier.md` does. F19 gets a short "keeping it current" list: `claude update`, `gh auth status` (and `gh auth login` when it fails), `install.sh` for the plugin (pointing at *Updating*), `codeo update` for the host command and its scripts, `git pull` for the clone.
 - **`docs/skills.md`:** one sentence in the cleanup section's *Purpose and triggers* names the fourth field and the overlay's `fallback:` line, and the *Extension points* bullet's default is left as it is.
-- `skills/cleanup/SKILL.md` and `scripts/cleanup.sh` are not edited unless Q1 is answered B.
+- `skills/cleanup/SKILL.md` and `scripts/cleanup.sh` are not edited (Q1 was A).
+- **Correction to the F14 call above:** the close overlay's `sandbox:` paragraph is not edited. `tests/close-removal.test.sh` checks e and g require it to hold no `docker rm` and no `codeo-sandbox.sh end`; the sandbox sentence goes into the `container` paragraph's fallback as a parenthesis, and the cleanup overlay's one-line fallback names both.
 - The `engineering` plugin is not installed here; no new component or technology choice is involved, so its structure is not needed.
 
 ## Questions
@@ -43,6 +44,7 @@ My calls, stated so they can be corrected (not questions):
 - **C — both A and B.**
 
 **Answer:**
+A — the CHANGELOG names the release (v1.0.9); the overlay stays `command: codeo rm {N}`. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
 
 ### Q2 — F14, the image in the by-hand fallback: remove it too, or stop marking it?
 
@@ -52,6 +54,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — stop marking it.** The fallback keeps its two docker commands, says to mark the container and the volume only, and says the image `codeo-dev:<name>` is left on disk with its row `active`. Shorter, and the image (a few hundred MB per issue) stays until someone removes it.
 
 **Answer:**
+A — remove it too: the fallback names `docker rmi codeo-dev:<name>`. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
 
 ### Q3 — #161 also changes `CHANGELOG.md`: proceed, sequence, or re-scope?
 
@@ -59,6 +62,7 @@ My calls, stated so they can be corrected (not questions):
 **Options:** *proceed and coordinate* (my pick: #161 is one step from merging and both changes add lines to the same section, so whichever merges second rebases and keeps both sides) · *sequence after #161* (this plan is drafted once #161 has merged) · *re-scope* (say what to leave out of `CHANGELOG.md`).
 
 **Answer:**
+Proceed and coordinate. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
 
 ## Notes
 
