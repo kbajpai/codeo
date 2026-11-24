@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Built: all seven code and documentation tasks of `docs/plans/2026-11-23-live-signal-leftovers-157.md` are done and pushed, the build passes (`true`, the `shell` suite's `build`) and nothing is open. Next step: `/codeo:qc`.
+Built (round 2, after the send-back in `qc.md` round 1): the three tasks of `docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md` are done and pushed, the build passes (`true`, the `shell` suite's `build`) and nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -59,6 +59,30 @@ None.
 - Task 4's missing failing-`ls-remote` test is acceptable for the reason above. Cost if wrong: an untested warn branch.
 - Task 6's absence-only cases are acceptable for the reason above. Cost if wrong: a regression in the prefix match goes unpinned.
 
+### Round 2 — 2026-11-24
+(after plan.md round 2, answering qc.md round 1)
+
+**Built** (three commits, `0c0b2ef..63eb330`; tasks 1 and 2 each reviewed by a fresh reviewer, no Critical or Important findings):
+
+| Task | Commit | What |
+|---|---|---|
+| 1 | `c6da81d` | `live.sh clear` removes only the throttle stamp and keeps `<git dir>/codeo-live-machine`, so a web session that ends and resumes under another id shows as one row (F1). The test `web_clear_forgets_the_label` became `web_clear_keeps_the_label`; the header comments say the same. |
+| 2 | `4396240` | `docs/handoff.md` (the label names the checkout; the `create` event is not suppressed by `[skip ci]`), `docs/skills.md` (`cleanup` prints the leftover-branch delete command and reads `refs/remotes/origin/codeo-live/<N>/*`), `CHANGELOG.md` (`Shared state`, `Safe to bump mid-workflow` and the label bullet); pins first in `tests/live-signal.test.sh` (F1 wording, F2, F4, F5). |
+| 3 | `63eb330` | `tests/inflight.test.sh` case `live_survives_a_web_and_a_container_signal_with_equal_labels`: `inflight.sh --live` with the real `live.sh` exits 0, prints a container row and a web row and no `live:` line (F3). With the old refspec put back the case failed (`Cannot fetch both refs/codeo/live/7/codeo-7 and refs/heads/codeo-live/7/codeo-7`); restored. |
+
+**Documentation pages changed:** `docs/handoff.md`, `docs/skills.md`, `CHANGELOG.md`, `scripts/live.sh`'s header.
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. No shared environment is configured, so no lease, deploy or redeploy check. `bash tests/run.sh` also printed `all cases passed` after the last commit; grading it is `/codeo:qc`'s.
+
+**Deviations from the plan:** task 2 added one pin for `docs/skills.md` (`refs/remotes/origin/codeo-live/<N>/*`) in a new case, `changelog_and_skills_state_the_saved_label`, which the brief did not list. Task 3 had no separate reviewer: the controller read its 17-line diff, and the mutation check above is its proof. There was no whole-branch review this round; round 1's covered the rest, and the round-2 diff is three commits.
+
+**Left as they are** (reviewers' minors): `scripts/live.sh` header lines 18-20 read awkwardly (a dangling "and its branch"); `docs/skills.md:108` says `cleanup` prints the leftover command for each issue, where the script prints it only when leftovers exist; the label bullet in `CHANGELOG.md` is a long sentence.
+
+**Rulings I made:**
+- Task 3 reviewed by the controller, not a fresh reviewer, because the diff is one test case with a mutation proof. Cost if wrong: a test-quality issue found at `/codeo:qc`.
+- No whole-branch review for round 2. Cost if wrong: an interaction between the three commits found at `/codeo:qc`.
+
 ## Log
 
 - 2026-11-23 — built: 8 commits `6143c40..d1cb064`, build exit 0, whole-branch review clean · cost: 35m · sonnet-5-5 629k in + 13.7M cached / 84k out
+- 2026-11-24 — round 2 built: 3 commits `0c0b2ef..63eb330`, build exit 0 · cost: 14m · sonnet-5-5 337k in + 3.7M cached / 19k out
