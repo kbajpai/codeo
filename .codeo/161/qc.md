@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written and routed back to `/codeo:implement` once more: F1 and F2 from round 1 are fixed, but the `G` edge label (round 1's F3) reads false on the `--force` path, so it is now blocking (F3). It is one label. Next step: `/codeo:implement` rewrites the `G` label, then `/codeo:qc` runs round 3 from step 0.
+Round 3 is written and the verdict is clear: F3, the one blocking finding of round 2, is fixed, and nothing blocking is left. Eight non-blocking findings and a few pre-existing notes remain on record. Next step: `/codeo:close` opens the pull request.
 
 ## Questions
 
@@ -18,6 +18,7 @@ None.
 
 - The unchanged sentence "A container that `codeo` started itself is read once" in the same README is also untrue when `docker ps -a` fails (such a container is then restarted). It is pre-existing and outside #154 F1-F5, so it is not a finding (qc-02); say it once if F2's fix touches that paragraph.
 - `implement.md` and `plan.md` were written after the work was done, in a hosted web session; this round judged the diff against `init.md`'s criteria, not against those records.
+- Pre-existing, outside #161 and not findings (qc-02), to file later with `/codeo:issue` in a checkout the role check allows, no issue number yet: (1) `.devcontainer/README.md` flowchart edge `C -- "clean, was running, inspect failed, no --force: no restart" --> Q` and its sibling `"clean, was running, inspect ok or --force"` call a container "was running" when `docker ps -a` failed and `codeo` may have started a stopped one (`started=0`); (2) `.devcontainer/README.md:186-188` says "A container that `codeo` started itself is read once" and "A container that was running is read a second time", untrue on the same path; (3) the `CHANGELOG.md` `## Unreleased` #154 bullet says a refused `codeo rm` "stops a container it started for the read", the over-claim #161 removed from the README; (4) `stop_started` ignores a failing `docker stop` (`.devcontainer/codeo:477-478`), so a refusal can still leave a container `codeo` knew it started running.
 
 ## Outcome
 
@@ -97,7 +98,42 @@ Not findings: `tests/live-signal.test.sh:265` pins only the group count, not tha
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-24
+
+**Scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`. `overlap.sh 161` and `overlap.sh --outside 161` printed nothing and exited 0. `git diff origin/main...HEAD --stat`: 12 files, 353 insertions, 9 deletions. `scope.sh origin/main HEAD` printed `suite.shell=true`, the unclassified paths being `.claude/hooks/session-start.sh`, `.claude/settings.json`, `.codeo/161/*` and `CHANGELOG.md`. Head `efd913b`, base `a389a65`, tree clean. No overlay rules, invariants file, wiki module or shared environment, so no environment block and no lease to release.
+
+**Build.** The `shell` suite's build is `true`: exit 0.
+
+**Suites.** `bash tests/run.sh`, whole, exit 1, ending `failed: install.test.sh`; every other file passed. `install.test.sh`: 200 `FAIL` lines, 57 distinct cases (the first `t_list_notice_does_not_hide_dropped_installs: exit 127 (stderr: rm: command not found)`), identical after normalising temp paths and numbers to the same file run on a pristine copy of `origin/main` in round 1, so they are this sandbox's (a guard `rm` earlier in `PATH`), not this change's. The CI `tests` job was not read by this pass.
+
+**Criteria.**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| The flowchart edge from `G` names the failed follow-up `docker ps -a` listing under `--force`, and the `H` edge no longer carries a `--force` parenthesis | met | `.devcontainer/README.md:220-221`: `G` reads "docker rm -f failed (with --force, only when the follow-up docker ps -a listing fails or still lists the container), or volume rm failed…", `H` reads "docker rm -f failed"; `.devcontainer/codeo:695-702` (no `--force`: any failure dies; `--force`: the listing runs only after `docker rm -f` failed) |
+| The sandbox paragraph no longer says the script stops "before it reads `--force`" and still names `sbx rm --force codeo-<N>` as the way out | met | `.devcontainer/README.md:228`; `grep -c "stops before it reads"` prints 0; `.sbx/codeo-sandbox.sh:416-425` |
+| The inspect paragraph no longer says a container `codeo` "had to start" is always stopped again | met | `.devcontainer/README.md:191`; `.devcontainer/codeo:523-537` |
+| Node `Q`'s label is true for every edge that reaches it | met | `.devcontainer/README.md:199`; the reviewer traced B, C, F, R and X into `Q` through `container_check` and `stop_started` (`.devcontainer/codeo:477-478, 530-550`) |
+| `CHANGELOG.md`'s v1.0.8 `Shared state:` line names the exact `## Outcome` match in `dossier-check.sh`, `inflight.sh` and `qc-verdict.sh` and the `### Round <n> — stashed\|abandoned` reader in `lock.sh` | met | `CHANGELOG.md:23`; `is_parked`/`CODEO_LOCK_SKIP_PARKED` are in `v1.0.8:scripts/lock.sh` and not in `v1.0.7`; the exact match is in all three scripts at v1.0.8 and not at v1.0.7; see F7 for one overstatement in the wording |
+| `docs/release-checklist.md` step 6 names the README installer examples and `tests/install.test.sh` stubs as files a release also moves | met | `docs/release-checklist.md:74-76`; the v1.0.8 release moved `plugin.json`, `CHANGELOG.md`, `README.md` and `tests/install.test.sh` |
+
+**Documentation.** Every flowchart edge into `Q`, `G`, `H`, `Y` and `Z` was re-read against `cmd_rm` and `container_check`. The flowchart was not rendered (`mmdc` is not installed); the edits are label text only and every quote in lines 196-222 is balanced. The `SessionStart` hook still has no `CHANGELOG.md` bullet or page (F6); the reviewer judges that unnecessary, because `.claude/settings.json` is repo-local and not shipped to adopters.
+
+**Independent review** (`opus`, criteria and git range only). No Critical or Important issues. Quoted in plain text: "Ready to merge? Yes. All six criteria are met, and every sentence and edge label the diff changes is true against the code on every path into G, H, Q, Y and Z. The remaining issues are minor and mostly predate this diff." Its five Minor items are the pre-existing notes above, plus F4.
+
+**Findings.**
+
+- F3 (blocking in round 2) — fixed by `d1dc8b7`: the `G` edge label is true on every path.
+- F4 — non-blocking — `/codeo:implement`'s. `docs/release-checklist.md:74-76` says the examples "move to the latest release", but the README's `--version v1.0.7` example and older-tag stubs move to the release before it and the `v1.0.9`/`v1.0.10`/`v2.0.0-rc1` ordering stubs do not move. Both reviews raised it; the sentence follows the issue's own wording, so it does not fail the criterion.
+- F5 — non-blocking — `/codeo:implement`'s. The hook's skip check greps for `superpowers@superpowers-marketplace` while `install.sh` accepts `superpowers@*` (`install.sh:246`), treats a disabled codeo as installed, and has no matcher, so it also runs on `clear` and `compact`.
+- F6 — non-blocking — `/codeo:plan`'s. The `SessionStart` hook, `.claude/settings.json` and the `tests/live-signal.test.sh` assertion are outside the issue; the plan listed no task for them.
+- F7 — non-blocking — `/codeo:implement`'s. `CHANGELOG.md:23` says the three scripts match `## Outcome` exactly "so `## Outcomes` and `## Outcome notes` no longer count"; at v1.0.7 `scripts/dossier-check.sh:131` (`index($3, name " ") == 1`) already ignored `## Outcomes`, so for that script only `## Outcome notes` stopped counting. The sentence is the issue's own wording.
+- F8 — non-blocking — `/codeo:implement`'s. `.claude/hooks/session-start.sh:2` says the hook installs the plugins "so /codeo:* commands load"; the repository `README.md` says open sessions need a restart, so the commands may load only in the next session. Plausible, not verified at runtime.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-24 — round 1: sync merged origin/main, build true, suite shell failed only install.test.sh (same 57 cases as origin/main), opus review, 2 blocking findings → back to implement · cost: 7m · opus-5-5 120k in + 1.4M cached / 12k out · sonnet-5-5 52k in + 5.9M cached / 18k out
 - 2026-11-24 — round 2: build true, suite shell failed only install.test.sh (same 57 cases as origin/main), opus review, F1 and F2 fixed, 1 blocking finding (F3, the G edge label) → back to implement · cost: 7m · opus-5-5 117k in + 1.1M cached / 12k out · sonnet-5-5 15k in + 4M cached / 15k out
+- 2026-11-24 — round 3: sync clean, build true, suite shell failed only install.test.sh (same 57 cases as origin/main), opus review, F3 fixed, no blocking finding → clear · cost: 7m · opus-5-5 124k in + 1.5M cached / 14k out · sonnet-5-5 14k in + 3.1M cached / 11k out
