@@ -196,3 +196,5 @@
 | `issue:161` | Documentation leftovers from #154 and #146; filed 2026-11-23, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-23 |
 | `qc:152:F13-F20` | #152 non-blocking QC findings and `docs/skills.md` plan gap: cleanup overlay `{N}`, by-hand fallback, `codeo-track.sh` temp-file leak, README wording (F13-F19 filed, F20 reviewer minors out of scope) | filed #163 | 2026-11-23 |
 | `issue:163` | Close the #152 leftovers; filed 2026-11-23, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-23 |
+| `qc:157:F8-F10-F11-F12-F13` | #157 non-blocking QC findings: web close says "nothing to remove" though the branch stays, sweep wording without the web exception, cleanup drops the leftover command on a failed name proof (F8, F12, F13 filed, F10-F11 out of scope) | filed #166 | 2026-11-24 |
+| `issue:166` | Close the #157 leftovers; filed 2026-11-24, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-24 |
