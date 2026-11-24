@@ -672,14 +672,15 @@ clone_with_lock 104 web 99999999aaaaaaaa
 run beat --force
 assert_eq "one branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
 
-case_desc=web_clear_forgets_the_label
+case_desc=web_clear_keeps_the_label
 new_world; clone_with_lock 104 web abcdef0123456789
 run beat --force
 run clear
+[[ -f "$(git -C "$clone" rev-parse --path-format=absolute --git-path codeo-live-machine)" ]] && label_kept=yes || label_kept=no
+assert_eq "label file kept" yes "$label_kept"
 clone_with_lock 104 web 99999999aaaaaaaa
 run beat --force
-assert_contains "first label" "104/web-abcdef01" "$(heads)"
-assert_contains "second label" "104/web-99999999" "$(heads)"
+assert_eq "one branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
 
 case_desc=codeo_machine_is_not_saved_as_the_web_label
 new_world; clone_with_lock 104 web abcdef0123456789

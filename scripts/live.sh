@@ -15,8 +15,8 @@
 #       whatever happens; a failure is one `live:` stderr line.
 #   live.sh clear
 #       Deletes this checkout's signal (`git push --delete`, else `github.sh ref delete`) and its
-#       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp, its saved
-#       machine label (codeo-live-machine) and its
+#       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp and keeps its saved
+#       machine label (codeo-live-machine), which names the checkout until the checkout goes, and its
 #       branch ages out after the TTL. Exits 0 whatever happens.
 #   live.sh sweep
 #       Deletes every refs/heads/codeo-live/<issue>/* branch on origin for the lock's issue (a bounded
@@ -44,8 +44,8 @@
 #       host: <container|web|local>   (always web when CLAUDE_CODE_REMOTE is true, whatever the lock's host says)
 #       beat: <epoch seconds>
 #   The machine is $CODEO_MACHINE, else the container's volume or sandbox, else for a web session the label
-#   saved in <git dir>/codeo-live-machine by its first beat (kept while it is a clean label; `clear` removes
-#   it), else `web-<first 8 of the session>`, else `hostname`, cut to 64 characters of [A-Za-z0-9._-] and made a valid ref component. The
+#   saved in <git dir>/codeo-live-machine by its first beat (kept while it is a clean label, and across `clear`;
+#   it is never removed), else `web-<first 8 of the session>`, else `hostname`, cut to 64 characters of [A-Za-z0-9._-] and made a valid ref component. The
 #   commit's identity is codeo-live <codeo-live@invalid>, passed per command; no git config is read
 #   for it or written, and no email address goes in the message.
 #
@@ -60,7 +60,7 @@
 #     either way.
 #   - A web session cannot delete its signal branch: it expires from `list` after the TTL, and the
 #     branch stays on origin until `sweep`, run from another session, removes it.
-#   - A web checkout keeps its first label until `clear`: a session id that changes between beats
+#   - A web checkout keeps its first label for the life of the checkout, `clear` included: a session id that changes between beats
 #     does not publish a second signal, but a changed CODEO_MACHINE never rewrites the saved label.
 #   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
 #   - `clear` can take two bounds (the push `--delete`, then the REST delete), so the `SessionEnd`
@@ -225,7 +225,7 @@ beat() {
 clear() {
     local reason
     read_lock || return 0
-    rm -f "$(stamp)" "$(label_file)"
+    rm -f "$(stamp)"
     [[ $host != web ]] || return 0
     bounded git push -q --no-verify origin --delete "$signal_ref" > /dev/null 2>&1 && return 0
     if reason=$(bounded bash "$github" ref delete "$signal_ref" 2>&1 > /dev/null); then return 0; fi
