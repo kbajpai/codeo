@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written, answering `qc.md` round 1: F1 and F2, the two blocking findings, are fixed in `.devcontainer/README.md`. Written after the edits, in the same hosted web session, not through `/codeo:implement`, so there was no per-task subagent dispatch. F3-F6 are non-blocking and were left as they are. Next step: `/codeo:qc` for round 2, from step 0.
+Round 3 is written, answering `qc.md` round 2: F3, its one blocking finding, is fixed in `.devcontainer/README.md`. Written after the edit, in the same hosted web session, not through `/codeo:implement`, so there was no per-task subagent dispatch. F4-F8 are non-blocking and were left as they are. Next step: `/codeo:qc` for round 3, from step 0.
 
 ## Questions
 
@@ -60,7 +60,26 @@ None.
 
 **Subagents:** none dispatched.
 
+### Round 3 — 2026-11-24
+
+(send-back from qc.md round 2)
+
+**Built** (one commit on top of the `qc.md` round 2 commit):
+
+- **F3** (`.devcontainer/README.md`, the `G` edge): the label is now `docker rm -f failed (with --force, only when the follow-up docker ps -a listing fails or still lists the container), or volume rm failed and the volume still exists`. Without `--force` any `docker rm -f` failure ends in `Y` (`.devcontainer/codeo:697`); with `--force` the follow-up listing runs only after `docker rm -f` has failed, and a failure there, or a listing that still names the container, ends in `Y` (`:699-701`).
+
+**Documentation pages changed:** `.devcontainer/README.md`. No wiki module.
+
+**Build result:** documentation only. `tests/devcontainer.test.sh` and `tests/codeo-command.test.sh`, the two files that read this README, both exit 0 after the edit; the full `tests/run.sh` was not re-run (round 2's run failed only in `install.test.sh`, the same 57 cases as `origin/main`, from this sandbox's guard `rm`).
+
+**Deviations from the round 2 findings, and why:** none for F3.
+
+**Left as they are, none blocking:** F4 (the release checklist's "latest release"), F5 (the hook's skip check), F6 (the `SessionStart` hook outside the issue's scope), F7 (`CHANGELOG.md:23`'s "no longer count" for `dossier-check.sh`) and F8 (the hook comment). They are recorded in `qc.md` round 2 as non-blocking, so this round did not take them.
+
+**Subagents:** none dispatched.
+
 ## Log
 
 - 2026-11-24 — implementation recorded after the work: 6cf2227, a2c7114 · cost: unavailable
 - 2026-11-24 — round 2 recorded after the edits: F1, F2 from qc.md round 1 · cost: unavailable
+- 2026-11-24 — round 3 recorded after the edit: F3 from qc.md round 2 · cost: unavailable
