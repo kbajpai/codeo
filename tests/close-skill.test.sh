@@ -127,6 +127,7 @@ section_order() {
 description=$(sed -n 's/^description:[[:space:]]*//p' "$skill" | head -1)
 grep -qF 'stash' <<<"$description" || fail "the description does not name the stash path"
 grep -qF 'closed unmerged' <<<"$description" || fail "the description does not tie abandoning to a pull request closed unmerged"
+grep -qF 'live-signal branches' <<<"$description" || fail "the description does not name the live-signal sweep"
 if grep -qF '"abandon this"' <<<"$description"; then
     fail "the description triggers on \"abandon this\", which has no phase row"
 fi
@@ -280,6 +281,10 @@ section_contains "the hand-off names the abandon deletion" Hand-off 'on an aband
 section_contains "the non-goals allow the abandon deletion on request" Non-goals 'except on an abandon, when the engineer asks in so many words'
 section_contains "the non-goals never dispatch a workflow" Non-goals 'workflow dispatch'
 section_contains "overlay text is never executed" Non-goals 'never executed'
+section_contains "the hand-off names the swept branches" Hand-off 'codeo-live/<issue>/*'
+section_contains_flat "the hand-off says the sweep does not ask" Hand-off 'without asking'
+section_contains "the non-goals except the swept branches" Non-goals 'codeo-live/<issue>/*'
+section_contains_flat "the non-goals say the sweep does not ask" Non-goals 'without asking'
 
 # Re-invocation safety.
 step_contains "an interrupted stash is detected without --stash" 1 "ends in a \`— stashed\` round while the lock is held"
@@ -338,9 +343,9 @@ section_contains "init resumes a stash" "$stash_section" '/codeo:init #<N>'
 section_contains "an open pull request stays open" "$stash_section" 'stays open'
 section_contains "the abandon deletes the branch only on request" "$stash_section" 'same confirmation as step 14'
 section_order "a stash deletes the lock last" "$stash_section" 'lease release-all <N>' 'Delete `.codeo/active`'
-step_contains "step 16 clears the live signal with the lock" 16 'live.sh" clear; rm -f .codeo/active'
-paragraph_contains_flat "a stash clears the signal with the lock" "$stash_section" 'Then write beneath the round what the environment is left carrying' 'Delete `.codeo/active` last, as step 16 does, with the signal cleared'
-paragraph_contains_flat "an abandon clears the signal with the lock" "$stash_section" 'Work that never merged is kept unless someone says otherwise' 'the lock is deleted last, as a stash does, as step 16 does, with the signal cleared'
+step_contains "step 16 clears the live signal with the lock" 16 'live.sh" clear; bash "${CLAUDE_PLUGIN_ROOT}/scripts/live.sh" sweep; rm -f .codeo/active'
+paragraph_contains_flat "a stash clears the signal with the lock" "$stash_section" 'Then write beneath the round what the environment is left carrying' 'Delete `.codeo/active` last, as step 16 does, with the signal cleared and its web branches swept'
+paragraph_contains_flat "an abandon clears the signal with the lock" "$stash_section" 'Work that never merged is kept unless someone says otherwise' 'the lock is deleted last, as a stash does, as step 16 does, with the signal cleared and its web branches swept'
 for id in close-11 close-12 close-13; do
     section_contains "$id sits in the stash section" "$stash_section" "<!-- rule: $id -->"
 done

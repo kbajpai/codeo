@@ -133,6 +133,34 @@ fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 set_overlay "$overlay"
 assert_eq "line" "12${tab}proven${tab}$want_cmd${tab}-" "$(run_cleanup)"
 
+case_desc="leftover branches of a proven issue are printed after its line"
+setup_repo "7:$body"
+fixture 7 closed 41 2026-01-01T00:00:00Z feat/7
+push_branch codeo-live/7/web-a
+push_branch codeo-live/7/web-b
+assert_eq "lines" "7${tab}proven${tab}-${tab}-
+7${tab}leftover${tab}git push origin --delete codeo-live/7/web-a codeo-live/7/web-b" "$(run_cleanup)"
+
+case_desc="an issue that failed a proof gets no leftover line"
+setup_repo "7:$body"
+fixture 7 open 41 2026-01-01T00:00:00Z feat/7
+push_branch codeo-live/7/web-a
+assert_eq "line" "7${tab}failed${tab}issue" "$(run_cleanup)"
+
+case_desc="a leftover branch with metacharacters is not printed"
+setup_repo "7:$body"
+fixture 7 closed 41 2026-01-01T00:00:00Z feat/7
+push_branch codeo-live/7/web-a
+push_branch 'codeo-live/7/x;touch-y'
+assert_eq "lines" "7${tab}proven${tab}-${tab}-
+7${tab}leftover${tab}git push origin --delete codeo-live/7/web-a" "$(run_cleanup)"
+
+case_desc="leftovers of another issue are not printed"
+setup_repo "7:$body"
+fixture 7 closed 41 2026-01-01T00:00:00Z feat/7
+push_branch codeo-live/70/web-z
+assert_eq "line" "7${tab}proven${tab}-${tab}-" "$(run_cleanup)"
+
 case_desc="issue still open"
 setup_repo "12:$body"
 fixture 12 open 41 2026-01-01T00:00:00Z feat/12

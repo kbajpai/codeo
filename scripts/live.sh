@@ -15,29 +15,37 @@
 #       whatever happens; a failure is one `live:` stderr line.
 #   live.sh clear
 #       Deletes this checkout's signal (`git push --delete`, else `github.sh ref delete`) and its
-#       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp and its
+#       throttle stamp. A web session deletes nothing (it cannot): it removes the stamp and keeps its saved
+#       machine label (codeo-live-machine), which names the checkout until the checkout goes, and its
 #       branch ages out after the TTL. Exits 0 whatever happens.
+#   live.sh sweep
+#       Deletes every refs/heads/codeo-live/<issue>/* branch on origin for the lock's issue (a bounded
+#       `git ls-remote`, then one `git push --delete`), the web signals a web session cannot delete
+#       itself. Does nothing without a lock or for a web host, and touches no other issue's branch and
+#       nothing under refs/codeo/live/. Exits 0 whatever happens; a failure is one `live:` stderr line.
 #   live.sh fetch
-#       Brings origin's signals into refs/codeo/live/ (a web session's codeo-live branches map onto
-#       the same refs), pruning the ones cleared there. Exit 0, or
-#       exit 1 with one `live:` stderr line.
+#       Brings origin's signals into refs/codeo/live/, and a web session's codeo-live branches into
+#       refs/codeo/live-web/ (their own namespace, so equal labels never collide), pruning the ones
+#       cleared there. Exit 0, or exit 1 with one `live:` stderr line.
 #   live.sh list [--tsv]
-#       Prints the signals last fetched (it never fetches) that are within the TTL. --tsv:
+#       Prints the signals last fetched (it never fetches) from refs/codeo/live/ and
+#       refs/codeo/live-web/ that are within the TTL. --tsv:
 #       issue<TAB>user<TAB>machine<TAB>host<TAB>age-in-seconds, oldest issue first. Otherwise one
 #       `#<issue>  <user> on <machine> (<host>), <age> ago` line each. A signal missing a field, or
 #       with a non-numeric beat, is skipped; a beat up to the TTL in the future counts as age 0, one
 #       further ahead is skipped.
 #
 # The signal's commit message:
-#       codeo live signal
+#       codeo live signal   (a web host: `codeo live signal [skip ci]`, so push-triggered CI skips the beat; subject line only)
 #
 #       issue: <N>
 #       user: <GitHub login, else git user.name, else unknown; a web session never uses git config user.name>
 #       machine: <label>
 #       host: <container|web|local>   (always web when CLAUDE_CODE_REMOTE is true, whatever the lock's host says)
 #       beat: <epoch seconds>
-#   The machine is $CODEO_MACHINE, else the container's volume or sandbox, else `web-<first 8 of the session>`,
-#   else `hostname`, cut to 64 characters of [A-Za-z0-9._-] and made a valid ref component. The
+#   The machine is $CODEO_MACHINE, else the container's volume or sandbox, else for a web session the label
+#   saved in <git dir>/codeo-live-machine by its first beat (kept while it is a clean label, and across `clear`;
+#   it is never removed), else `web-<first 8 of the session>`, else `hostname`, cut to 64 characters of [A-Za-z0-9._-] and made a valid ref component. The
 #   commit's identity is codeo-live <codeo-live@invalid>, passed per command; no git config is read
 #   for it or written, and no email address goes in the message.
 #
@@ -50,8 +58,10 @@
 #   - Two beats started together from one checkout can both push the same ref, and one can
 #     lose the origin's ref lock; the other has then just published, so the signal is fresh
 #     either way.
-#   - A web session's signal is a branch that is never deleted: it expires from `list` after the TTL
-#     but the branch stays on origin until someone removes it.
+#   - A web session cannot delete its signal branch: it expires from `list` after the TTL, and the
+#     branch stays on origin until `sweep`, run from another session, removes it.
+#   - A web checkout keeps its first label for the life of the checkout, `clear` included: a session id that changes between beats
+#     does not publish a second signal, but a changed CODEO_MACHINE never rewrites the saved label.
 #   - A detached `beat` can republish after `clear`; that signal simply expires after the TTL.
 #   - `clear` can take two bounds (the push `--delete`, then the REST delete), so the `SessionEnd`
 #     hook allows 20 seconds. That is two bounds at the default of 8; at 10 or more the hook can
@@ -106,10 +116,23 @@ ref_label() {
     printf '%s' "$label"
 }
 
+# Where a web checkout keeps its first machine label, so a session id that changes later does not
+# publish under a second one.
+label_file() { git rev-parse --git-path codeo-live-machine; }
+
+# The saved web label, or nothing when there is none or it is not already a clean ref label.
+saved_label() {
+    local saved
+    saved=$(head -n 1 "$(label_file)" 2> /dev/null) || saved=
+    if [[ -n $saved && $(ref_label "$saved") == "$saved" ]]; then printf '%s' "$saved"; fi
+}
+
 machine_label() {
-    local host=$1 name=
+    local host=$1 name= saved
     if [[ -n ${CODEO_MACHINE:-} ]]; then
         name=$CODEO_MACHINE
+    elif [[ $host == web ]] && saved=$(saved_label) && [[ -n $saved ]]; then
+        name=$saved
     else
         case $host in
             container) name=$(lock_field volume); [[ -n $name ]] || name=$(lock_field sandbox) ;;
@@ -159,7 +182,7 @@ read_lock() {
 stamp() { git rev-parse --git-path codeo-live-beat; }
 
 beat() {
-    local force= now last base current tree sha message_file reason
+    local force= subject now last base current tree sha message_file reason
     [[ ${1:-} != --force ]] || force=1
     read_lock || return 0
     base=$(codeo_base_branch 2> /dev/null) || base=
@@ -172,10 +195,16 @@ beat() {
         [[ $last =~ ^[0-9]+$ ]] && ((now - last < refresh)) && return 0
     fi
     echo "$now" > "$(stamp)"
+    # A web checkout keeps the first label it publishes under; CODEO_MACHINE is never saved.
+    if [[ $host == web && -z ${CODEO_MACHINE:-} ]]; then
+        printf '%s\n' "$machine" > "$(label_file)" 2> /dev/null || true
+    fi
 
     message_file=$(mktemp "$(git rev-parse --git-path codeo-live-message).XXXXXX")
-    printf 'codeo live signal\n\nissue: %s\nuser: %s\nmachine: %s\nhost: %s\nbeat: %s\n' \
-        "$issue" "$(user_label)" "$machine" "$host" "$now" > "$message_file"
+    subject='codeo live signal'
+    [[ $host == web ]] && subject='codeo live signal [skip ci]'
+    printf '%s\n\nissue: %s\nuser: %s\nmachine: %s\nhost: %s\nbeat: %s\n' \
+        "$subject" "$issue" "$(user_label)" "$machine" "$host" "$now" > "$message_file"
     tree=$(git hash-object -t tree -w /dev/null)
     sha=$(GIT_AUTHOR_NAME=codeo-live GIT_AUTHOR_EMAIL=codeo-live@invalid \
         GIT_COMMITTER_NAME=codeo-live GIT_COMMITTER_EMAIL=codeo-live@invalid \
@@ -203,9 +232,31 @@ clear() {
     warn "could not clear — $(last_line "$reason")"
 }
 
+# Deletes every refs/heads/codeo-live/<issue>/<label> on origin for this lock's issue: the web
+# sessions' signal branches, which a web session cannot delete itself. Nothing else is touched.
+sweep() {
+    local listing reason line ref refs=()
+    read_lock || return 0
+    [[ $host != web ]] || return 0
+    if ! listing=$(bounded git ls-remote --heads origin "refs/heads/codeo-live/$issue/*" 2>&1); then
+        warn "could not sweep — $(last_line "$listing")"
+        return 0
+    fi
+    while IFS= read -r line; do
+        ref=${line#*$'\t'}
+        [[ $ref =~ ^refs/heads/codeo-live/$issue/[A-Za-z0-9._-]+$ ]] || continue
+        refs+=("$ref")
+    done <<< "$listing"
+    ((${#refs[@]})) || return 0
+    if ! reason=$(bounded git push -q --no-verify origin --delete "${refs[@]}" 2>&1); then
+        warn "could not sweep — $(last_line "$reason")"
+    fi
+    return 0
+}
+
 fetch() {
     local reason
-    if reason=$(bounded git fetch -q --prune origin '+refs/codeo/live/*:refs/codeo/live/*' '+refs/heads/codeo-live/*:refs/codeo/live/*' 2>&1); then return 0; fi
+    if reason=$(bounded git fetch -q --prune origin '+refs/codeo/live/*:refs/codeo/live/*' '+refs/heads/codeo-live/*:refs/codeo/live-web/*' 2>&1); then return 0; fi
     warn "could not fetch — $(last_line "$reason")"
     return 1
 }
@@ -233,7 +284,7 @@ list() {
         ((age >= 0)) || age=0
         ((age <= ttl)) || continue
         printf '%s\t%s\t%s\t%s\t%s\n' "$issue" "$user" "$machine" "$host" "$age"
-    done < <(git for-each-ref --format='%(refname)' refs/codeo/live/) | sort -t $'\t' -k1,1n -s |
+    done < <(git for-each-ref --format='%(refname)' refs/codeo/live/ refs/codeo/live-web/) | sort -t $'\t' -k1,1n -s |
         if [[ -n $tsv ]]; then
             cat
         else
@@ -247,7 +298,8 @@ list() {
 case ${1:-} in
     beat) shift; beat "$@" || true; exit 0 ;;
     clear) clear || true; exit 0 ;;
+    sweep) sweep || true; exit 0 ;;
     fetch) fetch ;;
     list) shift; list "$@" ;;
-    *) echo "usage: live.sh beat [--force] | clear | fetch | list [--tsv]" >&2; exit 1 ;;
+    *) echo "usage: live.sh beat [--force] | clear | sweep | fetch | list [--tsv]" >&2; exit 1 ;;
 esac
