@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Planning round 3, after the send-back in `qc.md` round 2: the draft is at `.codeo/157/plan-draft.md` and waits for the engineer's approval; nothing is open. Rounds 1 and 2 (`docs/plans/2026-11-23-live-signal-leftovers-157.md` and `-round-2.md`) are built and committed; Q1-Q4 stand as answered.
+Planned (round 3, after the send-back in `qc.md` round 2): the round-3 plan is approved and saved at `docs/plans/2026-11-24-live-signal-leftovers-157-round-3.md`; nothing is open. Next step: commit it, then `/codeo:implement`. Rounds 1 and 2 are built and committed; Q1-Q4 stand as answered.
 
 What round 2 of `qc.md` found, checked against the files on this branch, and my calls for round 3, stated so they can be corrected (not questions):
 
@@ -97,15 +97,7 @@ A — never: the label belongs to the checkout, `clear` stops removing the file.
 
 ## Notes
 
-### Footprint
-
-```
-files:      scripts/live.sh, scripts/cleanup.sh, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, tests/live.test.sh, tests/live-signal.test.sh, tests/close-skill.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/inflight.test.sh, docs/plans/2026-11-23-live-signal-leftovers-157.md, docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md, docs/plans/2026-11-24-live-signal-leftovers-157-round-3.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
+None.
 
 ## Outcome
 
@@ -134,6 +126,29 @@ sequenced:  none
 
 **Intake questions resolved here.** None. No `/codeo:issue` filed. The `engineering` plugin is not installed and no component choice was involved.
 
+### Round 3 — 2026-11-24
+(send-back from qc.md round 2)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-24-live-signal-leftovers-157-round-3.md` (approved 2026-11-24) |
+| Shape | One short executable plan under `docs/plans/`, 3 tasks, same branch and pull request; no reference doc |
+
+**Decisions.** F6: the sweep's exception is stated in words in every passage that says what close deletes: the frontmatter description, the Hand-off **Deletes** bullet and the Non-goals of `skills/close/SKILL.md`, and the `close` purpose and non-goal lines of `docs/skills.md` (rejected: making the sweep ask first, which reopens Q1). F7 and F9 are fixed in the same round: cleanup's second `leftover` line in the script header and the skill, and the web-session close in the CHANGELOG `Shared state` line. F8 stays (rule `cleanup-02`; the manual command covers it); F10 and F11 stay in `qc.md` round 2 for `/codeo:triage`.
+
+**Documentation the plan changes.** `skills/close/SKILL.md`, `docs/skills.md`, `scripts/cleanup.sh` header, `skills/cleanup/SKILL.md`, `CHANGELOG.md`.
+
+**Intake questions resolved here.** None. No `/codeo:issue` filed. The `engineering` plugin is not installed and no component choice was involved.
+
+### Footprint
+
+```
+files:      scripts/live.sh, scripts/cleanup.sh, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/handoff.md, docs/skills.md, CHANGELOG.md, tests/live.test.sh, tests/live-signal.test.sh, tests/close-skill.test.sh, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/inflight.test.sh, docs/plans/2026-11-23-live-signal-leftovers-157.md, docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md, docs/plans/2026-11-24-live-signal-leftovers-157-round-3.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-23 — Q1-Q3 raised · cost: 2m · fable-5-2 74k in + 518k cached / 10k out
@@ -141,3 +156,4 @@ sequenced:  none
 - 2026-11-23 — round 2: Q4 raised after the send-back in qc.md round 1 · cost: 1m · fable-5-2 117k in + 23k cached / 1k out
 - 2026-11-23 — planned: docs/plans/2026-11-23-live-signal-leftovers-157-round-2.md (round 2) · cost: 36m · fable-5-2 121k in + 304k cached / 3k out · sonnet-5-5 136k in + 1.3M cached / 8k out
 - 2026-11-24 — round 3: draft at .codeo/157/plan-draft.md after the send-back in qc.md round 2, no question raised · cost: 2m · fable-5-2 121k in + 765k cached / 11k out
+- 2026-11-24 — planned: docs/plans/2026-11-24-live-signal-leftovers-157-round-3.md (round 3) · cost: 1m · sonnet-5-5 125k in + 753k cached / 4k out
