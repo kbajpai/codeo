@@ -316,7 +316,91 @@ Run the command in Steps 1. A step that was interrupted can be run again: it wor
 
 ## Configuration
 
-_Written in Task 7._
+The project's settings live in `.codeo/config.json`. It is committed, so everyone on the project shares it. Four keys are required (`schema`, `repo.owner`, `repo.name`, `baseBranch`); every other key is optional and has the default shown. A key the plugin does not know is ignored without a message, so a misspelt key does nothing. `/codeo:doctor` checks `schema`, `codename`, `board`, `issue.priority`, `ci.requiredChecks` and each suite's `build` and `test`, and nothing else. `/codeo:setup` writes only the required keys plus an empty `suites` and an empty `resources`.
+
+The table runs in five groups, in this order: required keys, project and suites, board and issues, environment and leases, models and checks. A key written `suites[].name` is a field of each entry in the `suites` list.
+
+| Key | Required? | Default | What it does |
+|---|---|---|---|
+| `schema` | yes | none | The config format version, an integer. It is `1` today; a number higher than the plugin understands is refused. |
+| `repo.owner` | yes | none | The GitHub owner of the repository. |
+| `repo.name` | yes | none | The GitHub name of the repository. |
+| `baseBranch` | yes | none | The branch workflows start from and pull requests target, such as `main`. |
+| `codename` | no | the clone's folder name | A short name for the project, used to name its clones and dev containers (`<codename>-home`, `<codename>-<N>`). Lower-case letters, digits and single hyphens, starting with a letter, 2 to 30 characters. |
+| `plugin.repo` | no | none | The codeo plugin repository the dev container installs. Set it together with `plugin.ref`. |
+| `plugin.ref` | no | none | The tag of the codeo plugin the dev container installs. |
+| `suites[].name` | yes, per suite | none | The suite's name. |
+| `suites[].paths` | no | none (never matches) | Globs of the files that make this suite run; `*` stays within a folder, `**` crosses folders. |
+| `suites[].build` | no | none | The command `/codeo:implement` and `/codeo:qc` run to build. `/codeo:doctor` fails one whose first word is not found. |
+| `suites[].test` | no | none | The command `/codeo:qc` runs to test. Checked by `/codeo:doctor` like `build`. |
+| `suites[].filter` | no | none (the whole `test` command is the proof) | A command that runs one test; `{}` stands for the test's name. |
+| `suites[].parallel` | no | `false` | `true` lets the suite run at the same time as other parallel suites. |
+| `skipGlobs` | no | none | Globs of changed files to ignore when deciding which suites run. |
+| `docsDir` | no | `docs` | The project's documentation folder. |
+| `plansDir` | no | `docs/plans` | Where `/codeo:plan` saves plans. |
+| `invariants` | no | none | The path of the project's invariants document. `/codeo:plan` reads it and `/codeo:qc` checks the change against it. |
+| `modules` | no | none | Optional modules to switch on. Only `wiki` means anything; other entries are ignored. |
+| `labelTypes` | no | `enhancement:feat`, `bug:fix`, `documentation:docs`; any other label gives `chore` | Maps an issue label to the type that starts its branch name. A `labelTypes` you write replaces the defaults whole. |
+| `stacks` | no | none | Written by `/codeo:setup --stack`; read by nothing. It only records the stack names. |
+| `board.owner` | yes, when `board` is set | none | The owner of the GitHub Projects board. |
+| `board.gateProject` | yes, when `board` is set | none | The board's project number. `/codeo:init` starts only an issue whose card is in its Ready column. |
+| `board.projects` | no | just `board.gateProject` | Every project number whose cards move as a workflow advances. |
+| `board.statuses.backlog` | no | `Backlog` | The name of the board column for backlog. |
+| `board.statuses.ready` | no | `Ready` | The name of the column for issues that may be started. |
+| `board.statuses.inProgress` | no | `In progress` | The name of the column for issues being worked on. |
+| `board.statuses.inReview` | no | `In review` | The name of the column for issues with a pull request open. |
+| `board.statuses.done` | no | `Done` | The name of the column for finished issues. |
+| `issue.priority` | no | off (only `true` turns it on) | `/codeo:issue` assigns one priority label (`blocker`, `high`, `medium` or `low`); `/codeo:doctor` checks the four labels exist. |
+| `triage.parkedDays` | no | `7` | Days without a pushed change after which `/codeo:triage` asks about a workflow in flight as parked. |
+| `resources[].name` | yes, per resource | none | The name of an exclusive resource, a lease two workflows cannot hold at once. |
+| `resources[].paths` | no | none | Globs of the files that need the resource; used for the one named by `environment.resource` to tell when a change must be deployed. |
+| `resources[].parameterised` | no | `false` | `true` makes the resource stand for `<name>:<suffix>` leases, never the bare name. |
+| `environment.resource` | no | none (no shared environment) | The resource that is the project's shared environment. `/codeo:implement` takes its lease at the first task that needs it and `/codeo:qc` releases it. |
+| `environment.hooks.start` | no | skipped | A command run first when the environment lease is taken; a non-zero exit refuses the lease. |
+| `environment.hooks.preflight` | no | skipped | Run after `start`; a non-zero exit refuses the lease. |
+| `environment.hooks.activate` | no | skipped | Run after `preflight`; a non-zero exit refuses the lease. |
+| `environment.hooks.revoke` | no | skipped | Run when the lease is released or a take fails; a failure is ignored. |
+| `environment.hooks.deploy` | no | none (`/codeo:implement` stops if a plan needs a deploy) | The project's deploy command; its last line of output is the deployed revision. |
+| `environment.hooks.deployed` | no | none | A command that prints one tab-separated row per workload (name, revision, state, and optionally declared yes or no), for `/codeo:qc` to check. |
+| `hooks.onLeaseChange` | no | none | A command run, without failing the workflow, after every lease change that reaches origin. Top-level `hooks`, not under `environment`. |
+| `models.subagent` | no | `sonnet` | The model every subagent of a workflow runs on; a hook refuses any other while a workflow is active. |
+| `models.reviewer` | no | `opus` | The model of the `/codeo:qc` code reviewer, the one subagent allowed to differ. |
+| `ci.requiredChecks` | no | `tests` and `qc-verdict` | The status checks the base branch's ruleset must require; `/codeo:doctor` checks them. |
+
+The file `/codeo:setup` writes needs only the required keys:
+
+```json
+{
+  "schema": 1,
+  "repo": { "owner": "acme", "name": "shop" },
+  "baseBranch": "main",
+  "suites": [],
+  "resources": []
+}
+```
+
+A fuller file adds a codename, a shell suite, a board, priorities and models:
+
+```json
+{
+  "schema": 1,
+  "codename": "shop",
+  "repo": { "owner": "acme", "name": "shop" },
+  "baseBranch": "main",
+  "suites": [
+    {
+      "name": "shell",
+      "paths": ["scripts/**", "tests/**"],
+      "build": "bash -n scripts/*.sh",
+      "test": "bash tests/run.sh"
+    }
+  ],
+  "resources": [],
+  "board": { "owner": "acme", "gateProject": 3 },
+  "issue": { "priority": true },
+  "models": { "subagent": "sonnet", "reviewer": "opus" }
+}
+```
 
 ## Troubleshooting
 
