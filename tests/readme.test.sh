@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Guards README.md, docs/updating.md and docs/home-checkout.md as the complete guide:
 #   commands         every /codeo:<name> is a directory under skills/
-#   paths            every backticked repo path (.codeo/ docs/ scripts/ tests/ hooks/ lib/ skills/ .devcontainer/)
-#                    resolves to a file or directory
+#   paths            every path-shaped word in a backticked span (.codeo/ docs/ scripts/ tests/ hooks/ lib/ skills/ .devcontainer/)
+#                    resolves to a file or directory; .codeo/active and .codeo/intake are allowed by name (gitignored)
 #   links            every relative link resolves, and its #anchor is a GitHub slug of a heading in the target
 #   config-keys      the Configuration table lists exactly the keys in known_keys below (a hand-kept list: a key the
 #                    code starts reading is added there by hand), and each key's last segment (its parent, for name,
@@ -65,12 +65,18 @@ while IFS= read -r name; do
     [[ -d "skills/$name" ]] || fail commands "/codeo:$name has no skills/$name/"
 done < <(grep -ho '/codeo:[a-z][a-z-]*' "${pages[@]}" | sed 's|/codeo:||' | sort -u)
 
-# paths: backticked repo paths resolve.
+# paths: every path-shaped word inside a backticked span resolves, so `bash scripts/x.sh arg` is checked
+# as well as a bare path. Two paths the README names for a user's project are not in this repository:
+# .codeo/active is the per-checkout lock and .codeo/intake is the intake branch's worktree; both are
+# gitignored (.codeo/.gitignore), so they are allowed by name rather than looked up.
+runtime_paths=".codeo/active .codeo/intake"
 for page in "${pages[@]}"; do
-    while IFS= read -r tok; do
-        [[ "$tok" == *'<'* || "$tok" == *'*'* || "$tok" == *'{'* || "$tok" == *' '* ]] && continue
-        [[ -e "${tok%/}" ]] || fail paths "$page: \`$tok\` does not exist"
-    done < <(prose "$page" | grep -o '`[^`]*`' | tr -d '`' |
+    while IFS= read -r word; do
+        word=${word%[.,;:)]}
+        [[ "$word" == *'<'* || "$word" == *'*'* || "$word" == *'{'* ]] && continue
+        grep -qxF -- "${word%/}" < <(printf '%s\n' $runtime_paths) && continue
+        [[ -e "${word%/}" ]] || fail paths "$page: \`$word\` does not exist"
+    done < <(prose "$page" | grep -o '`[^`]*`' | tr -d '`' | tr ' ' '\n' |
         grep -E '^(\.codeo/|docs/|scripts/|tests/|hooks/|lib/|skills/|\.devcontainer/)' | sort -u || true)
 done
 

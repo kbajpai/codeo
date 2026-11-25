@@ -35,7 +35,7 @@ codeo is an agent-workflow plugin for Claude Code. It is for engineers who work 
 - `gh`, the GitHub CLI; board use also needs `gh project`, which reads GraphQL, so the token must be allowed to use it
 - `claude`, Claude Code
 
-`install.sh` checks all five tools in one run and names every one that is missing or too old; `/codeo:doctor` checks bash, `jq`, `git` and `gh`, and never runs `claude`. It installs none of them: use your system's package manager, then run it again.
+`install.sh` checks all five tools in one run and names every one that is missing or too old; `/codeo:doctor` checks bash, `jq`, `git` and `gh`, and never runs `claude`. The installer installs none of them: use your system's package manager, then run it again.
 
 ## Installing
 
@@ -195,7 +195,7 @@ codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doct
 }
 ```
 
-   `board`, `codename`, `plugin`, `models` and everything else optional are written by hand; setup leaves them out.
+   `board`, `codename`, `plugin`, `models` and everything else optional are written by hand; setup leaves them out (`/codeo:setup --stack <name>` also writes `stacks`).
 
 3. **Run `/codeo:doctor`.** It checks that everything the workflow needs is in place and reports every failure, not only the first. Fix what it reports (see [Troubleshooting](#troubleshooting)) and run it again until it ends clean. With a logged-in `gh` and superpowers installed it prints:
 
@@ -357,7 +357,7 @@ The table runs in five groups, in this order: required keys, project and suites,
 | `issue.priority` | no | off (only `true` turns it on) | `/codeo:issue` assigns one priority label (`priority: blocker`, `priority: high`, `priority: medium` or `priority: low`); `/codeo:doctor` checks the four labels exist. |
 | `triage.parkedDays` | no | `7` | Days without a pushed change after which `/codeo:triage` asks about a workflow in flight as parked. |
 | `resources[].name` | yes, per resource | none | The name of an exclusive resource, a lease two workflows cannot hold at once. |
-| `resources[].paths` | no | none | Globs of the files that need the resource; used for the one named by `environment.resource` to tell when a change must be deployed. |
+| `resources[].paths` | no | none | Globs of the files that need the resource. `/codeo:plan` uses them to fill the `exclusive:` line of a plan's footprint, and for the resource named by `environment.resource` they also tell when a change must be deployed. |
 | `resources[].parameterised` | no | `false` | `true` makes the resource stand for `<name>:<suffix>` leases, never the bare name. |
 | `environment.resource` | no | none (no shared environment) | The resource that is the project's shared environment. `/codeo:implement` takes its lease at the first task that needs it; `/codeo:qc` releases it at a clear verdict, otherwise `/codeo:close` does. The `environment.hooks.*` commands run only for this resource. |
 | `environment.hooks.start` | no | skipped | A command run first when the environment lease is taken; a non-zero exit refuses the lease. |
