@@ -6,7 +6,7 @@ Config schema: 1 (unchanged)
 Shared state: none
 Safe to bump mid-workflow: yes
 
-- The sbx issue sandbox runs on macOS 14 or later on Apple silicon: `.sbx/codeo-sandbox.sh` checks for `sbx` and `code` there and names the Homebrew command only for a missing `sbx` (`brew trust docker/tap`, `brew install docker/tap/sbx`); a missing `code` gets "Install 'code' command in PATH" or `CODEO_CODE`, git on a Mac without the Command Line Tools counts as unusable and the identity comes from `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL`, and `codeo open` over SSH on the Mac was not shown (#176).
+- The sbx issue sandbox runs on macOS (Docker lists macOS 14 or later on Apple silicon; it was run on macOS 27.2.1 on `arm64`): `.sbx/codeo-sandbox.sh` names the Homebrew install (`brew trust docker/tap`, `brew install docker/tap/sbx`) when `sbx` is missing and how to put `code` on `PATH` when it is missing (#176).
 - The README is restructured: Start here, a step-by-step first workflow, a Configuration table of every key, and troubleshooting for a role-guard refusal, a stuck or foreign lock, an interrupted step and a card that is not Ready. The update, replace and restore walk-throughs moved to `docs/updating.md`, and the home-checkout, guard and tracking-comment text to `docs/home-checkout.md`. `tests/readme.test.sh` checks the commands, paths and config keys the README names. Nothing the plugin does changes (#171).
 
 ## v1.0.9 — 2026-11-25

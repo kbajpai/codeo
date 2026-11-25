@@ -67,7 +67,7 @@ What Docker's pages say, which does not settle it:
 
 So the plan's assumption that `sbx` is run in bash inside WSL2 is not what the documentation describes: the documented Windows route is a Windows install, and the documented Linux route needs KVM. The trials settled the question: this host takes the Windows route, driven from WSL bash through `sbx.exe`.
 
-macOS (T14, 2026-11-25): whether `sbx` runs on a Mac: **yes**, on the one Mac tried, over SSH. That Mac is macOS 27.2.1 (build 26B131, from `sw_vers`) on `arm64`, with Homebrew 7.0.16 and Homebrew's bash 5.3.20. `brew trust docker/tap` and `brew install docker/tap/sbx` installed cask `sbx` 0.54.1 (`sbx version v0.54.1`), and the route from `sbx login` to `codeo issue 176 --sandbox`, `list`, `shell` and `rm` ran; T14 has what was and was not shown. What Docker's install page says, which T14 does not settle for other Macs: macOS Sonoma 14 or later on Apple silicon, no Docker Desktop required, install with `brew trust docker/tap` and then `brew install docker/tap/sbx`, then `sbx login`; Intel Macs are not listed. (install, read 2026-11-25)
+macOS (T14, 2026-11-25): whether `sbx` runs on a Mac: **yes**, on the one Mac tried, over SSH. That Mac is macOS 27.2.1 (build 26B131, from `sw_vers`) on `arm64`, with Homebrew 7.0.16 and Homebrew's bash 5.3.20. `brew trust docker/tap` and `brew install docker/tap/sbx` installed cask `sbx` 0.54.1 (`sbx version v0.54.1`), and the route from `sbx login` to `codeo issue 176 --sandbox`, `list`, `shell`, `open` and `rm` ran; T14 has what was and was not shown. What Docker's install page says, which T14 does not settle for other Macs: macOS Sonoma 14 or later on Apple silicon, no Docker Desktop required, install with `brew trust docker/tap` and then `brew install docker/tap/sbx`, then `sbx login`; Intel Macs are not listed. (install, read 2026-11-25)
 
 ## Drivers
 
@@ -551,13 +551,15 @@ sandbox │ codeo-176 │ mac-studio.lan │ removed │ 2026-11-25T20:44:45Z �
 
 A later `codeo open 176 --sandbox` and `codeo rm 176 --sandbox` printed `codeo-sandbox: codeo-176 does not exist: create it with codeo-sandbox.sh issue 176 <branch>` and `codeo-sandbox: no sandbox codeo-176`.
 
-Reading: `sbx` runs on this Mac over SSH, and `codeo issue --sandbox`, `list`, `shell` and `rm` worked, with the lock taken and the tracking row added and marked `removed`. Not shown:
+`codeo open 176 --sandbox` was run again with `main`'s script and with this branch's script. With `main`'s it printed `window-title: codeo [#176]`, `/Users/kbajpai/codeo/codeo-sandbox.sh: line 290: code: command not found` and `codeo-sandbox: could not start VS Code`. With this branch's it printed `window-title: codeo [#176]` and `codeo-sandbox: code is not on PATH: in VS Code run "Shell Command: Install 'code' command in PATH", or set CODEO_CODE to the VS Code program`. After the engineer installed VS Code's `code` command they reported "Yes, I was able to open code. I had to install \"code\" command for VS Code".
 
-- `codeo open`'s result. The `codeo open 176 --sandbox` that ran before the removal was not captured, and whether a VS Code window opened on the Mac is not known. The one that ran after the removal only said the sandbox did not exist.
+Reading: `sbx` runs on this Mac over SSH, and `codeo issue --sandbox`, `list`, `shell` and `rm` worked, with the lock taken and the tracking row added and marked `removed`; `codeo open` opened VS Code once its `code` command was installed. Not shown:
+
+- Whether the VS Code window connected to `codeo-176.sbx`, and where it opened.
 - The pasted output of the first `codeo rm 176 --sandbox`. Only the `removed` row shows that it ran.
 - Running without Docker Desktop. Docker's page says it is not needed, but this Mac also runs the dev containers through Docker, so the trial does not show `sbx` alone.
 
-Differed from the plan: the plan's own commands were wrong in two ways. `codeo open` and `codeo rm` stopped with `both a container and a sandbox codeo-176 exist; add --container or --sandbox to pick one`, because #176's own dev container also exists, so they need `--sandbox`. `gh issue view 176 --comments` printed `failed to run git: fatal: not a git repository` outside a checkout, so it needs `--repo kbajpai/codeo`. And `sbx policy init` has to come before the gallery rule on a host with no global policy; `sbx` asks for it when it creates its first sandbox.
+Differed from the plan: the plan's own commands were wrong in three ways. `codeo open` and `codeo rm` stopped with `both a container and a sandbox codeo-176 exist; add --container or --sandbox to pick one`, because #176's own dev container also exists, so they need `--sandbox`. `gh issue view 176 --comments` printed `failed to run git: fatal: not a git repository` outside a checkout, so it needs `--repo kbajpai/codeo`. And `sbx policy init` has to come before the gallery rule on a host with no global policy; `sbx` asks for it when it creates its first sandbox.
 
 
 ## Recommendation

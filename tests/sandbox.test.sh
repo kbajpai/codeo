@@ -1133,6 +1133,8 @@ a_missing_xcode_select_on_macos_counts_as_no_git() {
 }
 
 open_on_macos_without_code_is_one_line() {
+    # A VS Code package may install a real code in these directories, which the PATH here keeps.
+    [[ -x /usr/bin/code || -x /bin/code ]] && return 0
     sb_setup macnocode
     echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
     sb_macos
