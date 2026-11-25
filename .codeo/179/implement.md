@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is done: the findings of `qc.md` round 1 are fixed in `6b5de95` and the build ran. Next step: `/codeo:qc`.
+Round 3 is done: the findings of `qc.md` round 2 are fixed in `50a2d52` and the build ran. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -57,7 +57,24 @@ None.
 
 **Deviations from the plan:** none beyond round 1's. The fix commit was reviewed by the controller reading its diff, not by a separate reviewer.
 
+### Round 3 — 2026-11-25
+(send-back from qc.md round 2)
+
+`sync-main.sh`: the branch already contained `origin/main`; `overlap.sh 179` printed nothing. I checked each finding against the code before acting: G1 against `skills/init/SKILL.md:119-127,178-195` and `skills/close/SKILL.md:684-711`, which the round's reviewer had read (an abandoned issue's branch is still on origin, so init skips the Ready gate and stops on `claim.sh` exit 4, and the way on is to say so in so many words or delete the old branch; round 1's F2, which introduced the Backlog clause, had not read them); G2 and G3 held; G4 asked for no change. One sonnet implementer fixed G1-G3 in `50a2d52`; I read its diff and ran `bash tests/run.sh readme` (`all cases passed`).
+
+- **G1:** the README lock entry says `/codeo:init #<N>` fixes the "found 0" TODO and resumes a stashed issue; for an abandoned one it stops with `claim: #<N> was abandoned …`, and the two ways on are to say in so many words that you are taking the work up again, or to delete the old branch on origin and run `/codeo:init #<N>` again with the card Ready. The Backlog clause is gone.
+- **G2:** the entry opens "do what it says, except as set out here", and the "found more than one" clause says that, despite the line's "run init for the issue", `/codeo:init` does not fix it.
+- **G3:** the `tests/readme.test.sh` header says the four paths are the ones "these pages name for a user's project".
+- **G4:** no change; the guard is the weaker part, the section is correct.
+
+**Documentation pages changed:** `README.md`; guarded by `tests/readme.test.sh`.
+
+**Build:** the `shell` suite's `build` is `true`: exit 0. No shared environment.
+
+**Deviations from the plan:** none beyond the earlier rounds'. The fix commit was reviewed by the controller reading its diff, not by a separate reviewer.
+
 ## Log
 
 - 2026-11-25 — implemented: plan docs/plans/2026-11-25-close-171-leftovers-179.md, tasks 1-4, build exit 0 · cost: 21m · sonnet-5-5 338k in + 9.1M cached / 59k out
 - 2026-11-25 — implemented round 2 (send-back from qc round 1): F1, F2, F3, F5, F6 fixed in 6b5de95, build exit 0 · cost: 2m · sonnet-5-5 49k in + 1.7M cached / 8k out
+- 2026-11-25 — implemented round 3 (send-back from qc round 2): G1-G3 fixed in 50a2d52, build exit 0 · cost: 1m · sonnet-5-5 57k in + 1.1M cached / 5k out
