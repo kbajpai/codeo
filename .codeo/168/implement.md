@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Plan: `docs/plans/2026-11-25-release-v1-0-9.md` (committed, `d71d60f`). Task 1 is done: the release PR is #174, https://github.com/kbajpai/codeo/pull/174, from `release/v1.0.9` (worktree `../codeo-168-release`), cut from `origin/main` at `24577ac`. Its proof held: base `main`, exactly the four files, `qc-verdict` passing; `tests` was still running when this was written. **Waiting at Task 2: the engineer merges #174.** Tasks 3-7 follow (clean-clone test, tag, Release, pin, rebuild check).
+Plan: `docs/plans/2026-11-25-release-v1-0-9.md` (committed, `d71d60f`). Task 1 is done: the release PR is #174, https://github.com/kbajpai/codeo/pull/174, from `release/v1.0.9` (worktree `../codeo-168-release`), cut from `origin/main` at `24577ac`. Its proof held: base `main`, exactly the four files, `qc-verdict` passing; `tests` was still running when this was written. **Task 2 done: #174 merged as `6e6628336c9bd40037c1cd7c80c8694f0ecddc21`. Task 3 done: a clean clone at that commit has `HEAD` equal to that SHA, version `1.0.9`, and `bash tests/run.sh` ends `all cases passed` (the clone is kept for Task 5). **Waiting at Task 4: the engineer tags and pushes `v1.0.9`.** Tasks 5-7 follow (Release, pin, rebuild check).
 
 Round 1 ran inline (`superpowers:executing-plans`), no subagents, because the plan's agent work is a few shell steps.
 
