@@ -221,7 +221,7 @@ See [docs/home-checkout.md](docs/home-checkout.md) for the home checkout, the gu
 
 ## Your first workflow
 
-A piece of work goes through six slash commands, one after the other. Each step owns one file under `.codeo/<N>/`, where `<N>` is the GitHub issue number. That file is the step's *dossier*: it records what the step decided, so the next step (and you, later) can read it. After the pull request merges, the whole folder moves to `.codeo/done/<N>/`.
+A piece of work goes through six slash commands, one after the other. Each step owns one file under `.codeo/<N>/`, where `<N>` is the GitHub issue number. That file is the step's *dossier*: it records what the step decided, so the next step (and you, later) can read it. When `/codeo:close` opens the pull request, the folder moves to `.codeo/done/<N>/` inside the pull request itself, so it lands on the base branch when the pull request merges.
 
 The example is issue #143, which fixed leftovers from an earlier change. Its finished workflow is archived in this repository under `.codeo/done/143/`, so you can open the file each step wrote: [issue.md](.codeo/done/143/issue.md), [init.md](.codeo/done/143/init.md), [plan.md](.codeo/done/143/plan.md), [implement.md](.codeo/done/143/implement.md), [qc.md](.codeo/done/143/qc.md) and [close.md](.codeo/done/143/close.md). For the long detail of each skill, follow its link to [docs/skills.md](docs/skills.md).
 
@@ -293,9 +293,9 @@ Details: [docs/skills.md#qc](docs/skills.md#qc).
 
 - **Run:** `/codeo:close [--stash]`. `--stash` parks the workflow instead of finishing it.
 - **It asks:** whether to delete the remote branch, once, after the merge. It never merges: you merge the pull request on GitHub, then run the command again.
-- **It writes:** [.codeo/<N>/close.md](.codeo/done/143/close.md). It opens the pull request, waits, proves the merge, releases every lease and the lock, and moves the dossier to `.codeo/done/<N>/`. A stash sends the card back to Ready. A pull request closed unmerged can be abandoned, which sends the card to Backlog.
+- **It writes:** [.codeo/<N>/close.md](.codeo/done/143/close.md). It opens the pull request, and the dossier moves to `.codeo/done/<N>/` inside that pull request. After you merge and run it again, it proves the merge, asks about deleting the branch, and releases every lease and the lock. A stash sends the card back to Ready. A pull request closed unmerged can be abandoned, which sends the card to Backlog.
 - **It commits:** `docs(codeo): close dossier for #<N> — PR #<pr>`. Review feedback or a conflict with the base branch is another round (`— review feedback`) and goes back through `/codeo:implement` and `/codeo:qc`.
-- **Next:** `/codeo:triage`, which looks for loose ends the work left behind.
+- **Next:** the first run ends by telling you to review and merge the pull request, then run `/codeo:close` again. After the merge, `/codeo:triage`, which looks for loose ends the work left behind. A stash ends with `/codeo:init #<N>`, to start it again.
 
 Details: [docs/skills.md#close](docs/skills.md#close).
 
