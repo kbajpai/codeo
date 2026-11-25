@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1 (F1 and F2 blocking, both the plan's; F3-F7 non-blocking). Nothing new is ambiguous, so no question is raised: the round-2 draft is at `.codeo/173/plan-draft.md`, awaiting the engineer's approval. Round 1's outcome below stands as written.
+Round 2, after a send-back from `/codeo:qc` round 1 (F1 and F2 blocking, both the plan's; F3-F7 non-blocking). The draft is approved and written to `docs/plans/2026-11-25-close-161-leftovers-173-round-2.md` (unstaged). The footprint check found a new overlap with #177 on `CHANGELOG.md` and `docs/release-checklist.md`: Q4-Q5 are open, and the round-2 outcome waits for them. Round 1's outcome stands as written.
 
 ## Questions
 
@@ -51,6 +51,26 @@ Either way the skip check itself is fixed (that part of the criterion has no "or
 **Answer:**
 Not known; word it without the claim. Given in the session's question dialog on 2026-11-25 and recorded here.
 
+### Q4 — #177 and `CHANGELOG.md` overlap: proceed, sequence or re-scope?
+
+`overlap.sh 173` printed `177	CHANGELOG.md` and `177	glob:CHANGELOG.md`. #177 is on branch `docs/177-close-163-166-168-leftovers`, assigned to kbajpai, at step `init` (its plan dossier is written and it waits for `/codeo:plan`'s outcome; its branch has changed no file yet beyond `.codeo/177/`). Its footprint names `CHANGELOG.md`. Round 2 of this plan edits the v1.0.8 `Shared state:` line and the first `(#173)` bullet under `## Unreleased`; round 1 already added three bullets there. #176 (`feat/176-support-sbx-issue-sandbox-macos`, step `qc`) also names `CHANGELOG.md`; that overlap was answered *proceed and coordinate* in qc.md Q3.
+
+**Why it matters:** three branches add `## Unreleased` bullets after the same line; whichever merges later resolves a small textual conflict by keeping every bullet.
+
+**Options:** *proceed and coordinate* (recommended: the edits are bullets and one released line, and #177 has written no code yet) · *sequence after #177* · *re-scope*.
+
+**Answer:**
+
+### Q5 — #177 and `docs/release-checklist.md` overlap: proceed, sequence or re-scope?
+
+`overlap.sh 173` printed `177	docs/release-checklist.md` and `177	glob:docs/release-checklist.md`. #177 is on branch `docs/177-close-163-166-168-leftovers`, assigned to kbajpai, at step `init`. Its footprint names `docs/release-checklist.md`. This branch already rewrote step 6 in round 1 (three groups) and round 2 extends those groups with `docs/updating.md` and the `v1.0.9;x` stub.
+
+**Why it matters:** if #177 edits step 6 (rather than another step), the later merge conflicts on those lines. #177's plan is not merged and its text on this file is not visible from its branch yet.
+
+**Options:** *proceed and coordinate* (recommended: say in the pull request that step 6 changed, and let #177 sync before it edits that step) · *sequence after #177* · *re-scope*.
+
+**Answer:**
+
 ## Notes
 
 **Decided without a question** (say so under any answer if one is wrong):
@@ -92,3 +112,4 @@ sequenced:  none
 
 - 2026-11-25 — Q1-Q3 raised · cost: 1m · fable-5-2 72k in + 382k cached / 4k out
 - 2026-11-25 — planned: docs/plans/2026-11-25-close-161-leftovers-173.md · cost: 12m · fable-5-2 53k in + 925k cached / 18k out · sonnet-5-5 135k in + 185k cached / 1k out
+- 2026-11-25 — round 2 draft approved; Q4-Q5 raised (overlaps with #177) · cost: 5m · fable-5-2 299k in + 974k cached / 14k out · sonnet-5-5 27k in + 1.2M cached / 2k out
