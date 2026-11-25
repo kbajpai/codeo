@@ -1100,6 +1100,58 @@ issue_takes_the_identity_from_the_host_gitconfig() {
     [[ "$(sb_calls)" == *'env CODEO_CMD_MODE=1 GIT_AUTHOR_NAME=Cfg Dev GIT_AUTHOR_EMAIL=cfg@x.test bash .devcontainer'* ]] || fail "calls: $(sb_calls)"
 }
 
+# sb_gitcfg_macos <xcode-select exit code|none>: a macOS issue run with a gitconfig holding Cfg Dev and the
+# environment holding Env Dev.
+sb_gitcfg_macos() {
+    mkdir -p "$sb_dir/home" "$sb_dir/work/codeo-113/.git"
+    printf '[user]\n\tname = Cfg Dev\n\temail = cfg@x.test\n' >"$sb_dir/home/.gitconfig"
+    sb_macos
+    if [[ $1 != none ]]; then
+        printf '#!/bin/bash\nexit %s\n' "$1" >"$sb_dir/bin/xcode-select"
+        chmod +x "$sb_dir/bin/xcode-select"
+    fi
+    GIT_AUTHOR_NAME='Env Dev' GIT_AUTHOR_EMAIL=env@x.test HOME="$sb_dir/home" GIT_CONFIG_GLOBAL="$sb_dir/home/.gitconfig" SB_REAL_GIT="$real_git" sb_run issue 113 fix/x
+}
+
+issue_on_macos_without_command_line_tools_takes_the_identity_from_the_environment() {
+    sb_setup macnoclt
+    sb_gitcfg_macos 1
+    [[ "$(sb_calls)" == *'GIT_AUTHOR_NAME=Env Dev GIT_AUTHOR_EMAIL=env@x.test bash .devcontainer'* && "$(sb_calls)" != *'Cfg Dev'* ]] || fail "calls: $(sb_calls)"
+}
+
+issue_on_macos_with_command_line_tools_takes_the_identity_from_gitconfig() {
+    sb_setup macclt
+    sb_gitcfg_macos 0
+    [[ "$(sb_calls)" == *'GIT_AUTHOR_NAME=Cfg Dev GIT_AUTHOR_EMAIL=cfg@x.test bash .devcontainer'* ]] || fail "calls: $(sb_calls)"
+}
+
+a_missing_xcode_select_on_macos_counts_as_no_git() {
+    sb_setup macnoxs
+    sb_gitcfg_macos none
+    [[ "$(sb_calls)" == *'GIT_AUTHOR_NAME=Env Dev GIT_AUTHOR_EMAIL=env@x.test bash .devcontainer'* && "$(sb_calls)" != *'Cfg Dev'* ]] || fail "calls: $(sb_calls)"
+}
+
+open_on_macos_without_code_is_one_line() {
+    sb_setup macnocode
+    echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
+    sb_macos
+    rm "$sb_dir/bin/code"
+    sb_run open 113
+    ((sb_rc == 1)) || fail "exited $sb_rc: $sb_err"
+    [[ "$sb_err" == "codeo-sandbox: code is not on PATH"* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
+    [[ "$sb_err" == *"Install 'code' command in PATH"* && "$sb_err" == *CODEO_CODE* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *$'\ncode '* && "$(sb_calls)" != code* ]] || fail "calls: $(sb_calls)"
+}
+
+open_on_macos_with_code_launches_it() {
+    sb_setup maccode
+    echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
+    sb_macos
+    sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls | tail -n 1)" == 'code --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone' ]] || fail "calls: $(sb_calls)"
+}
+
 shell_execs_bash_in_the_clone() {
     sb_setup shell
     echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
@@ -1398,6 +1450,11 @@ cases=(
     open_percent_encodes_the_folder_path
     issue_with_no_lock_says_to_start_the_workflow
     issue_takes_the_identity_from_the_host_gitconfig
+    issue_on_macos_without_command_line_tools_takes_the_identity_from_the_environment
+    issue_on_macos_with_command_line_tools_takes_the_identity_from_gitconfig
+    a_missing_xcode_select_on_macos_counts_as_no_git
+    open_on_macos_without_code_is_one_line
+    open_on_macos_with_code_launches_it
     shell_execs_bash_in_the_clone
     end_with_nothing_to_lose_removes_the_sandbox
     end_with_an_unpushed_commit_removes_nothing

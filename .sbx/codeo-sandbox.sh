@@ -210,7 +210,11 @@ ensure_sandbox() {
 
 # git_is_usable: git is on PATH and will not open an installer (a Mac stub).
 git_is_usable() {
-    command -v git >/dev/null 2>&1
+    command -v git >/dev/null 2>&1 || return 1
+    if host_is_macos; then
+        xcode-select -p >/dev/null 2>&1 || return 1
+    fi
+    return 0
 }
 
 # run_start <name>: run the start script in the sandbox, carrying the host's git identity (read as in
@@ -294,6 +298,9 @@ launch_code() {
             cmd.exe /c code --folder-uri "$1"
         )
     else
+        if host_is_macos && ! command -v code >/dev/null 2>&1; then
+            die "code is not on PATH: in VS Code run \"Shell Command: Install 'code' command in PATH\", or set CODEO_CODE to the VS Code program"
+        fi
         code --folder-uri "$1"
     fi
 }
