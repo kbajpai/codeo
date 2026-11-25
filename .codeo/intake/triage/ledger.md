@@ -211,3 +211,5 @@
 | `qc:171:H1-H6` | #171 non-blocking findings H1-H6 plus the plan's promised items (handoff skill count, role-guard adoption docs, README indentation) | filed #179 | 2026-11-25 |
 | `issue:173` | Close the #161 leftovers; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
 | `issue:176` | Support the sbx issue sandbox on macOS; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
+| `qc:170:F1` | #170 F1: `docs/home-checkout.md:22` says `install.sh` needs `flock`; only `codeo` does | deferred | 2026-11-25 |
+| `issue:179` | Close the #171 leftovers; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
