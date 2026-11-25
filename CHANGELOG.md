@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1 (unchanged)
+Shared state: none
+Safe to bump mid-workflow: yes
+
+- The README is restructured: Start here, a step-by-step first workflow, a Configuration table of every key, and troubleshooting for a role-guard refusal, a stuck or foreign lock, an interrupted step and a card that is not Ready. The update, replace and restore walk-throughs moved to `docs/updating.md`, and the home-checkout, guard and tracking-comment text to `docs/home-checkout.md`. `tests/readme.test.sh` checks the commands, paths and config keys the README names. Nothing the plugin does changes (#171).
+
 ## v1.0.9 — 2026-11-25
 
 Config schema: 1 (unchanged)

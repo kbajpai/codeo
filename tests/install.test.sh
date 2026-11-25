@@ -1443,9 +1443,9 @@ t_remove_from_home_leaves_project_settings() {
 
 t_readme_sections() {
     local want got h
-    want=$'## Requirements\n## Installing\n## Setting a project up\n## Your first workflow\n## The skills\n## Updating\n## Uninstalling\n## Troubleshooting\n## Contributing'
+    want=$'## Contents\n## Start here\n## Requirements\n## Installing\n## Setting a project up\n## Your first workflow\n## Configuration\n## Troubleshooting\n## Updating\n## Uninstalling\n## The skills\n## More documentation\n## Contributing'
     got=$(readme_headings "$repo/README.md" '##')
-    [[ $got == "$want" ]] || fail "README ## headings are not the nine in order: $got"
+    [[ $got == "$want" ]] || fail "README ## headings are not the thirteen in order: $got"
     for h in 'Tests' 'Checking a dossier' 'Replaying finished dossiers' 'Dev container'; do
         ! grep -qxF "## $h" "$repo/README.md" || fail "README still has ## $h"
     done
@@ -1462,12 +1462,12 @@ t_contributing_sections() {
 
 t_readme_links_resolve() {
     local f target
-    for f in README.md CONTRIBUTING.md; do
+    for f in README.md docs/updating.md CONTRIBUTING.md; do
         [[ -f $repo/$f ]] || { fail "$f does not exist"; continue; }
         while IFS= read -r target; do
             target=${target%%#*}
             [[ -n $target ]] || continue
-            [[ -e $repo/$target ]] || fail "$f links to $target, which does not exist"
+            [[ -e $repo/$(dirname "$f")/$target ]] || fail "$f links to $target, which does not exist"
         done < <(grep -o ']([^)]*)' "$repo/$f" | sed 's/^](//; s/)$//' | grep -v -E '^[a-z]+:' || true)
     done
 }
@@ -1528,13 +1528,13 @@ readme_install_blocks() {
     awk '
         /^```/ { if (on) { if (has) { printf "%s--\n", buf } on = 0; has = 0; buf = "" } else { on = 1 } next }
         on && /^install: / { buf = buf $0 "\n"; if ($0 ~ /^install: release/) has = 1 }
-    ' "$repo/README.md"
+    ' "$repo/README.md" "$repo/docs/updating.md"
 }
 
 # readme_install_prose: every README line outside fenced blocks that starts "install: ", and every
 # inline code span there that starts "install: " (backticks stripped), one per line.
 readme_install_prose() {
-    awk '/^```/ { f = !f; next } !f' "$repo/README.md" | {
+    awk '/^```/ { f = !f; next } !f' "$repo/README.md" "$repo/docs/updating.md" | {
         grep -E '^install: ' || true
         grep -oE '`install: [^`]*`' | tr -d '`' || true
     }
@@ -1666,7 +1666,7 @@ t_readme_install_blocks_match_the_script() {
 # is offered again.
 t_readme_has_no_offered_again_claim() {
     local f
-    for f in README.md CHANGELOG.md; do
+    for f in README.md docs/updating.md CHANGELOG.md; do
         ! grep -qE 'offered again|offered them again|are offered' "$repo/$f" || fail "$f still says an install is offered again"
     done
 }
@@ -1675,13 +1675,14 @@ t_readme_has_no_offered_again_claim() {
 # project install and for a dropped local one (the path and version in each stand for the project's own).
 t_readme_names_the_restore_command() {
     local s line norm
-    grep -qF 'claude plugin install codeo@codeo --scope project' "$repo/README.md" || fail "README lacks the project restore command"
-    ! grep -qF 'install.sh --scope project there' "$repo/README.md" || fail "README still restores a project with the installer"
+    local docs=("$repo/README.md" "$repo/docs/updating.md")
+    grep -qF 'claude plugin install codeo@codeo --scope project' "${docs[@]}" || fail "README lacks the project restore command"
+    ! grep -qF 'install.sh --scope project there' "${docs[@]}" || fail "README still restores a project with the installer"
     for s in user-replace-two-projects user-replace-local; do
         line=$(scenario_lines "$s" | grep -F 'restore it' | tail -n 1)
         [[ -n $line ]] || fail "scenario $s prints no restore line"
         norm=$(printf '%s' "$line" | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/, v[0-9.]+\)/, vX)/')
-        grep -E '^install: codeo is no longer installed for ' "$repo/README.md" \
+        grep -hE '^install: codeo is no longer installed for ' "${docs[@]}" \
             | sed -E 's/ for [^ ]+ \(/ for <path> (/; s/, v[0-9.]+\)/, vX)/' | grep -qxF "$norm" \
             || fail "README does not quote: $line"
     done
@@ -1692,7 +1693,7 @@ t_readme_names_the_restore_command() {
 t_readme_restore_blocks_do_not_replace() {
     local bad
     bad=$(awk '/^```/ { if (f) { if (cd && inst) print blk; blk = ""; cd = 0; inst = 0 } f = !f; next }
-        f { blk = blk $0 "\n"; if ($0 ~ /^\$ cd /) cd = 1; if ($0 ~ /install\.sh/) inst = 1 }' "$repo/README.md")
+        f { blk = blk $0 "\n"; if ($0 ~ /^\$ cd /) cd = 1; if ($0 ~ /install\.sh/) inst = 1 }' "$repo/README.md" "$repo/docs/updating.md")
     [[ -z $bad ]] || fail "a README restore block runs the installer: $bad"
 }
 
