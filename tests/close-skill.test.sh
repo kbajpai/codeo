@@ -454,6 +454,10 @@ done
 must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with or without an'
 must_precede 'the overlap skipping sentence comes after the stop sentence' 'The step stops until it is answered' 'An `overlap: skipping #<M>'\''s changed paths` warning'
 
+# The web-session exception is in the description and in docs/skills.md, not only in step 16.
+sed -n 3p "$skill" | grep -qF 'a hosted web session deletes none' || fail "the description has no web-session exception"
+awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md" | grep -qF 'a hosted web session deletes none' || fail "docs/skills.md close section has no web-session exception"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
