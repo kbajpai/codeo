@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written. The build and the full suite pass, but two README statements are untrue and the change goes back to `/codeo:implement`. Next step: `/codeo:implement`.
+Round 2 is written. The build and the suite pass in this checkout, but the new README test fails on a clean checkout (G1), so the change goes back to `/codeo:implement`. Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -61,6 +61,44 @@ Issues filed by this pass: none.
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-25
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`. `overlap.sh 171` and `overlap.sh --outside 171`: nothing printed, exit 0. `scope.sh origin/main HEAD`: `suite.shell=true`. Diff: 12 files, +1313/−231; head `5b269d4`.
+
+**Build.** `true` (suite `shell`): exit 0.
+
+**Tests.** `bash tests/run.sh` in this checkout: exit 0, `all cases passed`. In a clean worktree of `HEAD` (no gitignored files), `bash tests/readme.test.sh`: `FAIL paths: README.md: \`.codeo/active\` does not exist`, exit 1. The first run passes only because this checkout holds the lock, and `.codeo/active` exists here.
+
+**Round 1 recap.** F1 (blocking in round 1) — fixed by `ca7f2f3`: README.md:38 now says the installer checks all five tools and doctor checks bash, `jq`, `git` and `gh`. F2 (blocking in round 1) — fixed by `ca7f2f3`: the lock entry no longer contradicts itself and the `lock: TODO` example has the right fix. F3-F10 are fixed by `ca7f2f3`; the reviewer re-read each against the code and found them correct.
+
+**Criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Summary, contents, "start here" | met | README.md:3, :5-18, :20-28; `tests/readme.test.sh` start-here and sections checks |
+| 2 | Install, update/replace/restore, uninstall separate; common install first | met | `## Installing` :40, `## Updating`, `## Uninstalling`; `t_readme_sections` |
+| 3 | First workflow, six steps with command, asks, writes, next | met | README.md:244-302; reviewer checked each commit subject and file against skills/*/SKILL.md |
+| 4 | Every key read, optionality, example | met | the 46-row table and two JSON examples; reviewer checked keys and defaults against `lib/env.sh`, `board.sh`, `branch-name.sh`, `scope.sh`, `intake.sh` |
+| 5 | Troubleshooting: role guard, lock, interruption, card not Ready, plus doctor entries | met | README.md:413-445; the lock entry is now consistent (`scripts/lock.sh:154,172-181`) |
+| 6 | Every command, path and link exists and is spelled as in the repo | met | commands, paths and anchors resolve in a clean worktree except `.codeo/active`, which is a runtime file the README names correctly; see G1 for the test |
+| 7 | `bash tests/run.sh` passes | not met | passes here, but `tests/readme.test.sh` fails on a clean checkout (G1), so CI (`.github/workflows/ci.yml:18` runs `bash tests/run.sh`) fails |
+
+**Documentation check.** No behaviour changed, so no other page moves. No page talks about the issue instead of the system; the "no longer" hits are quoted installer output.
+
+**Independent review (opus).** Quoted, not bold: one Critical, one Important, four Minor; assessment "With fixes". It confirmed the config table, doctor coverage, walkthrough commit subjects, role-guard and lock lines against the code, and that no old README content was lost; it mutated a copy to show the test catches a misspelt command, a broken anchor, a missing path and a missing key.
+
+**Findings.**
+
+- **G1 — blocking, `/codeo:implement`'s.** `tests/readme.test.sh` (the `paths` loop) requires every backticked `.codeo/…` token to exist in the repository. The round-2 wording at README.md:429 backticks `.codeo/active`, which is gitignored (`.codeo/.gitignore`) and exists only in a checkout that holds the lock. Reproduced above: clean worktree, exit 1. Cause: the check tests the README's user-project paths against codeo's own repository, and the other such paths (`.codeo/config.json`, `docs/plans/`) pass only because codeo dogfoods them. The code did what the plan said; the new README sentence tripped the test, so it is the implementer's. The fix is the implementer's to choose: an allow-list of runtime paths, or limit the check to plugin-repo paths.
+- **G2 — non-blocking, `/codeo:implement`'s.** The `paths` check skips any backticked token with a space, so `bash scripts/dossier-check.sh .codeo/<N>` (README.md:439), `bash .devcontainer/scripts/devcontainer-start.sh` (README.md:419) and `.devcontainer/scripts/role.sh --check <skill>` (`docs/home-checkout.md:26`) are not checked; renaming them in a copy left the test green. All exist today. Already parked as a minor in `implement.md`; the header's "every backticked repo path … resolves" overstates it.
+- **G3 — non-blocking.** README.md:360: the `resources[].paths` row describes only the environment resource; `/codeo:plan` also uses every resource's `paths` to decide a footprint's `exclusive:` entries (`skills/plan/SKILL.md:243-246`).
+- **G4 — non-blocking.** README.md:38: "It installs none of them" now reads as if doctor installs, where the installer is meant.
+- **G5 — non-blocking.** README.md:198 says setup leaves out everything else, but `/codeo:setup --stack` writes `stacks` (`scripts/setup.sh:62`); README.md:323 says so correctly.
+
+Issues filed by this pass: none.
+
+**Verdict: back to `/codeo:implement`.**
 ## Log
 
 - 2026-11-25 — qc round 1: build and suite pass; two blocking documentation findings (F1, F2), eight non-blocking; back to implement · cost: 5m · opus-5-5 263k in + 6.7M cached / 25k out · sonnet-5-5 98k in + 265k cached / 609 out
+- 2026-11-25 — qc round 2: build and suite pass here; one blocking finding (G1, the readme test fails on a clean checkout), four non-blocking; back to implement · cost: 4m · opus-5-5 329k in + 5.3M cached / 24k out · sonnet-5-5 27k in + 343k cached / 1k out
