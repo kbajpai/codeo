@@ -102,5 +102,12 @@ for needle in 'docker rmi codeo-dev:codeo-70' 'codeo-sandbox.sh end 70' 'docker 
     [[ $fb == *"$needle"* ]] || check_fail "the overlay's fallback lacks: $needle"
 done
 
+# The by-hand fallback: git status before any docker command, the sandbox script's own marking, marks after removal.
+fbline=$(grep -E '^fallback: ' "$repo/.codeo/overlays/cleanup.md")
+[[ ${fbline%%docker rm -f*} == *'git status'* ]] || check_fail "the overlay's fallback does not put git status before the first docker rm -f"
+for needle in 'from the folder that holds the script' 'when codeo-track.sh sits beside' 'records nothing' 'once the removal succeeds'; do
+    [[ $fbline == *"$needle"* ]] || check_fail "the overlay's fallback line lacks: $needle"
+done
+
 [[ $fail -eq 0 ]] || exit 1
 echo "all cases passed"
