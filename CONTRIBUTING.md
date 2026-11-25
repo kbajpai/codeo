@@ -4,6 +4,18 @@
 
 The home container and the per-issue containers, how to open each and the folder names Docker accepts: [`.devcontainer/README.md`](.devcontainer/README.md).
 
+## Hosted sessions
+
+This repository's `.claude/settings.json` runs `.claude/hooks/session-start.sh` at `SessionStart`. It runs only in a hosted session (`CLAUDE_CODE_REMOTE=true`) and only when a session starts, resumes or forks, not on `clear` or `compact`.
+
+The hook runs `install.sh` (the latest release, at user scope) unless `codeo@codeo` and a `superpowers` plugin from any marketplace are both installed and enabled at user scope. A disabled one is enabled by `install.sh`.
+
+A failed install does not stop the session (the command ends `|| true`) and is bounded at 300 seconds.
+
+If the `/codeo:*` commands are not listed after the hook ran, start a new session; the [README](README.md#installing) says sessions that are already open need a restart to load the plugins.
+
+`tests/session-start-hook.test.sh` covers the skip rule.
+
 ## Tests
 
 ```bash

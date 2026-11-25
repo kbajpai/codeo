@@ -855,7 +855,7 @@ t_host_kinds_exact_name() {
 # <dir> <sub> prints $d/g_<sub> (g_branch defaults to main) and fails for fetch when fetch_fail
 # exists, or for the git subcommand named in exec_fail; docker ps lists nothing once docker rm ran when gone_after_rm exists; docker start fails too when gone exists; docker start, rm, volume rm and rmi fail when start_fail, rm_fail, vol_fail, rmi_fail exist;
 # docker inspect prints $d/mounts (default "volume codeo-5") and fails when inspect_fail exists; docker volume inspect
-# and rm fail when vol_gone exists; docker restart fails when restart_fail exists; once docker restart is in the calls file, $d/g2_<sub> (when it
+# and rm fail when vol_gone exists; docker restart fails when restart_fail exists; docker stop fails when stop_fail exists; once docker restart is in the calls file, $d/g2_<sub> (when it
 # exists) replaces $d/g_<sub> as the output of docker exec ... git -C <dir> <sub>.
 rm_stubs() {
     cat >"$cm_dir/bin/docker" <<'STUB'
@@ -870,6 +870,7 @@ case "$1" in
         elif [[ "$*" == *State* ]]; then echo "codeo-5 $(cat "$d/dstate" 2>/dev/null || echo running)"; else echo codeo-5; fi ;;
     start) [[ ! -e "$d/start_fail" && ! -e "$d/gone" ]] || exit 1 ;;
     restart) [[ ! -e "$d/restart_fail" ]] || exit 1 ;;
+    stop) [[ ! -e "$d/stop_fail" ]] || exit 1 ;;
     rm) [[ ! -e "$d/rm_fail" ]] || exit 1 ;;
     volume)
         [[ "$2" != inspect && "$2" != rm || ! -e "$d/vol_gone" ]] || exit 1
@@ -1895,6 +1896,70 @@ t_rm_inspect_fails_stops_started_container() {
     ! grep -q '^docker stop' "$cm_dir/calls" || fail "--force: stopped: $(tr '\n' '|' <"$cm_dir/calls")"
 }
 
+t_rm_reports_a_failed_stop() {
+    local line='codeo: could not stop codeo-5 again; it is left running'
+    # the check cannot run, the stop fails
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/prfetch_fail" "$cm_dir/stop_fail"
+    cm_run rm 5 --container
+    expect_refused 'could not check'
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "cannot-check: no docker stop"
+    [[ $(head -n 1 <<<"$cm_err") == "$line" ]] || fail "cannot-check: first stderr line: $cm_err"
+    [[ -z "$cm_out" ]] || fail "cannot-check: stdout: $cm_out"
+    # a dirty read, the stop fails
+    cm_setup "$current-2"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/inspect_fail" "$cm_dir/stop_fail"
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5
+    expect_refused 'holds work that exists only there'
+    [[ $(head -n 1 <<<"$cm_err") == "$line" ]] || fail "dirty: first stderr line: $cm_err"
+    # the stop succeeds: no line
+    cm_setup "$current-3"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/prfetch_fail"
+    cm_run rm 5 --container
+    expect_refused 'could not check'
+    ! grep -qF 'could not stop' <<<"$cm_err" || fail "stop ok: $cm_err"
+    # a running container is never stopped, so nothing to report
+    cm_setup "$current-4"
+    rm_stubs
+    touch "$cm_dir/prfetch_fail" "$cm_dir/stop_fail"
+    cm_run rm 5 --container
+    expect_refused 'could not check'
+    ! grep -q '^docker stop' "$cm_dir/calls" || fail "running: stopped"
+    ! grep -qF 'could not stop' <<<"$cm_err" || fail "running: $cm_err"
+}
+
+t_rm_force_does_not_report_a_failed_stop() {
+    # the check cannot run, the stop fails, --force removes anyway
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/prfetch_fail" "$cm_dir/stop_fail"
+    cm_run rm 5 --force --container
+    [[ "$cm_status" -eq 0 ]] || fail "cannot-check: exit $cm_status, err: $cm_err"
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "cannot-check: stop no longer called"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "cannot-check: not removed"
+    ! grep -qF 'could not stop' <<<"$cm_err" || fail "cannot-check: $cm_err"
+    grep -qF -- '--force: could not check codeo-5 for unsaved work; removing anyway' <<<"$cm_out" || fail "cannot-check: stdout: $cm_out"
+    # a dirty read, the stop fails, --force removes anyway
+    cm_setup "$current-2"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/stop_fail"
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5 --force
+    [[ "$cm_status" -eq 0 ]] || fail "dirty: exit $cm_status, err: $cm_err"
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "dirty: stop no longer called"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "dirty: not removed"
+    ! grep -qF 'could not stop' <<<"$cm_err" || fail "dirty: $cm_err"
+}
+
 t_codeo_sbx_honoured() {
     cm_setup "$current"
     mkdir -p "$cm_dir/alt"
@@ -2243,6 +2308,8 @@ cases=(
     t_rm_inspect_fails
     t_rm_inspect_fails_no_restart
     t_rm_inspect_fails_stops_started_container
+    t_rm_reports_a_failed_stop
+    t_rm_force_does_not_report_a_failed_stop
     t_codeo_sbx_honoured
     t_issue_lookup_invalid_branch
     t_issue_yes_passthrough
