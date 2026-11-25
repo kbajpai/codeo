@@ -121,6 +121,8 @@ Checking for updates for plugin "superpowers@superpowers-marketplace"…
 ✔ superpowers is already at the latest version (7.0.2).
 ```
 
+Afterwards, restart every open Claude Code session, so it loads the updated plugin.
+
 ## Moving a project's pin
 
 A project's pin lives in its `.claude/settings.json`: edit `ref` under `extraKnownMarketplaces.codeo.source` to the new tag, commit it, and a teammate who trusts the folder gets the new release. To move your own copy to the same release, run the install command with `--version` and that tag, then restart every open Claude Code session.

@@ -1,6 +1,6 @@
 # The hand-off protocol
 
-Seven pipeline skills, each with its own artifacts. This file is the authority on who owns what, how they
+Six pipeline skills, each with its own artifacts. This file is the authority on who owns what, how they
 talk to each other, and what they spend on subagents; each `SKILL.md` states only its own half of
 the contract and points here. `dossier.md` is its companion — the same discipline applied to what
 a skill asks the *engineer*, and to the file it asks in.
