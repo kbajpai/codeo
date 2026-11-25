@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The plan is approved and written to `docs/plans/2026-11-25-close-163-166-168-leftovers-177.md` (unstaged). Q1-Q6 are answered. `overlap.sh 177` still prints the #173 and #176 overlaps because Q5 and Q6 do not quote its tokens, so Q7 and Q8 restate them and are open; `## Outcome` waits for them.
+Round 1 is done: the plan is approved, written to `docs/plans/2026-11-25-close-163-166-168-leftovers-177.md` (unstaged) and the footprint is clear of #173 and #176 (Q5-Q8 answered). Nothing is open. Next step: `/codeo:implement`.
 
 What exploration found:
 
@@ -99,6 +99,7 @@ Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 **Options:** proceed and coordinate, as Q5 (my pick) · sequence after #173 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 
 ### Q8 — Confirm: #176 overlaps on `glob:CHANGELOG.md`
 
@@ -108,12 +109,23 @@ Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 **Options:** proceed and coordinate, as Q6 (my pick) · sequence after #176 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 
 ## Notes
 
 - #179 (`docs/179-close-171-leftovers-readme-wording`, step `init`) has no footprint yet and has changed nothing, so there is nothing to compare; its title suggests README wording, and it may reach `docs/home-checkout.md`. `overlap.sh` is run again on the written footprint after approval.
 - No invariants document, shared environment, wiki module or exclusive resource is configured. The `plan` overlay sets only `role-guard`; `plan-shape`, `proof-of-done` and `wiki-rules` are unset, so the plan follows the recent plans under `docs/plans/` and each task's proof is the `shell` suite's whole `test` command, `bash tests/run.sh` (the suite has no `filter`).
 - Out of scope, as the issue says: #168's grep-count deviation (F3), and any redesign of `/codeo:cleanup` or the live signal. Q2's option C adds no code to `scripts/live.sh`.
+
+## Outcome
+
+Plan file: `docs/plans/2026-11-25-close-163-166-168-leftovers-177.md` (unstaged, approved 2026-11-25). Shape: a `$PLANS` task plan of nine tasks, no reference doc (nothing here is a standing decision).
+
+**Decisions.** One pull request. Q1: #168's three stale lines get dated notes, not rewrites. Q2: `/codeo:close` step 17 runs `git ls-remote --heads origin 'codeo-live/<issue>/*'` and prints one exact delete command per branch found; it keeps the literal `<machine>` form as the fallback when the read fails. Q3: the changelog date is the UTC date the release pull request opens. Q4: the v1.0.9 GitHub Release is left as published. Q5-Q8: proceed and coordinate with #173 (`CHANGELOG.md`, `docs/release-checklist.md`) and #176 (`CHANGELOG.md`).
+**Rejected.** Rewriting #168's lines in place (Q1 B, C); naming the label file only, or filling the command from it (Q2 A, B); re-syncing the Release on the host (Q4 B); sequencing behind #173 or #176.
+**My calls, recorded in the plan:** the duplicate `name`-proof clause is removed from the `(#157)` bullet; the new `(#177)` bullet goes under `## Unreleased`; a `leftover` line counts as a command to run in cleanup's closing block.
+**Documentation pages the plan changes:** `docs/home-checkout.md`, `docs/release-checklist.md`, `CHANGELOG.md`; `docs/skills.md` and `docs/handoff.md` only where they state the old behaviour. The README's two cited sentences now live in `docs/home-checkout.md` (#171 moved them). No wiki module.
+**Intake questions resolved here:** none (init.md's "Open at intake" was `None`). `overlap.sh 177` and `overlap.sh --outside 177` print nothing; no exclusive resource, so no lease.
 
 ### Footprint
 
@@ -124,11 +136,9 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 
 - 2026-11-25 — Q1-Q6 raised · cost: 2m · fable-5-2 103k in + 714k cached / 9k out
 - 2026-11-25 — plan approved and written; Q7-Q8 raised (overlap tokens) · cost: 28m · fable-5-2 117k in + 1.1M cached / 15k out · sonnet-5-5 148k in + 1.3M cached / 21k out
+- 2026-11-25 — Q7-Q8 answered; planned: docs/plans/2026-11-25-close-163-166-168-leftovers-177.md · cost: 49m · fable-5-2 117k in + 1.1M cached / 15k out · sonnet-5-5 151k in + 2M cached / 23k out
