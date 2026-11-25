@@ -16,7 +16,7 @@ The host is Linux, macOS or WSL2 with bash 4.3 or later, `git` and `curl`.
 sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"
 ```
 
-  It adds two global rules, one per host, which apply to every sandbox. `sbx policy rm network --resource <host>` removes one of them, run once per host. From WSL2 the same line runs through `sbx.exe`.
+  A host with no global policy refuses the rule (`412 Precondition Failed`) until `sbx policy init balanced` has run, which `sbx` also asks for when it creates its first sandbox. It adds two global rules, one per host, which apply to every sandbox. `sbx policy rm network --resource <host>` removes one of them, run once per host. From WSL2 the same line runs through `sbx.exe`.
 - VS Code with Remote - SSH, and this user setting, which installs the extensions in every sandbox:
 
 ```json
@@ -44,9 +44,10 @@ The script runs on a Mac with these additions to the prerequisites above:
 - The stock bash is 3.2. Run `brew install bash` and make it the first `bash` on `PATH`.
 - `codeo` also needs `flock`: `brew install flock` (see *Installing the `codeo` command* in `.devcontainer/README.md`).
 - `code` must be on `PATH` for `open`: in VS Code, run *Shell Command: Install 'code' command in PATH*, or set `CODEO_CODE` to the program.
-- Over SSH, `sbx login` does not open a browser from the SSH shell. It prints a one-time code and the URL `https://login.docker.com/activate`; open the URL on any machine and enter the code. It first stopped with `macOS Keychain denied access` until the login keychain was unlocked with `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` (see *The keychain over SSH on macOS* in `.devcontainer/README.md`, `#the-keychain-over-ssh-on-macos`). It then signed in and printed the warning `schedule credential exchange failed`, the same warning as on Windows, which did not block.
-- `sbx secret set github --command 'gh auth token'` reading `gh`'s token from the keychain is untried.
-- `sbx setup ssh` on a Mac is untried.
+- Over SSH, `sbx login` does not open a browser from the SSH shell. It prints a one-time code and the URL `https://login.docker.com/activate`; open the URL on any machine and enter the code. It fails with `macOS Keychain denied access` until the login keychain is unlocked with `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` (see *The keychain over SSH on macOS* in `.devcontainer/README.md`, `#the-keychain-over-ssh-on-macos`). It then signs in and prints the warning `schedule credential exchange failed`, the same warning as on Windows, which is harmless.
+- `sbx secret set github --command 'gh auth token'` resolves `gh`'s token and saves it as a global secret. `sbx setup ssh` enables the `*.sbx` hosts; it warns that it could not pre-trust the host key yet, and the first connect trusts it on use.
+- A Mac with no global `user.name` and `user.email` gets the start script's git identity `TODO` in the sandbox: set them on the Mac with `git config --global user.name 'Your Name'` and `git config --global user.email you@example.com`.
+- Where a container `codeo-<N>` also exists, `codeo open`, `codeo shell` and `codeo rm` stop and ask for `--sandbox`.
 - `codeo open` starting VS Code on the Mac itself, rather than on the machine you SSH from, is untried.
 
 ## Commands

@@ -1288,6 +1288,14 @@ docs_changelog_names_the_macos_sandbox() {
     grep -Eq '^- .*macOS.*sandbox.*\(#176' "$repo/CHANGELOG.md" || fail "no CHANGELOG bullet for the macOS sandbox"
 }
 
+docs_evaluation_page_records_the_macos_check() {
+    local f="$repo/docs/dev-environment-sbx-evaluation.md" s
+    grep -Fxq -- "**T14: sbx on macOS.**" "$f" || fail "the evaluation page lacks the T14 line"
+    for s in "brew install docker/tap/sbx" "sw_vers" "Apple silicon"; do
+        grep -Fq -- "$s" "$f" || fail "the evaluation page lacks '$s'"
+    done
+}
+
 issue_confirms_then_creates_then_adds_the_sandbox_row() {
     sb_setup trk_create
     sb_run issue 152 fix/x
@@ -1528,6 +1536,7 @@ cases=(
     docs_nothing_says_a_sandbox_needs_linux_or_wsl2_only
     docs_sbx_readme_says_what_macos_needs
     docs_changelog_names_the_macos_sandbox
+    docs_evaluation_page_records_the_macos_check
     issue_confirms_then_creates_then_adds_the_sandbox_row
     issue_passes_yes_to_confirm
     refusal_leaves_no_clone

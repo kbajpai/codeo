@@ -1,6 +1,6 @@
 # Evaluation: Docker Sandboxes (`sbx`) against the dev container
 
-> **Status: complete, recommendation hybrid, follow-up issues #85 and #86 filed and consolidated into #99.** Trials T1 to T13 were run by the engineer on 2026-11-14, 2026-11-15 and 2026-11-17; rows they settled say `tried T<n>`, the rest still rest on Docker's documentation (`cited`).
+> **Status: complete, recommendation hybrid, follow-up issues #85 and #86 filed and consolidated into #99.** Trials T1 to T13 were run by the engineer on 2026-11-14, 2026-11-15 and 2026-11-17, and T14 ran on macOS on 2026-11-25; rows they settled say `tried T<n>`, the rest still rest on Docker's documentation (`cited`).
 
 ## Contents
 
@@ -66,6 +66,8 @@ What Docker's pages say, which does not settle it:
 - The only WSL mention is a troubleshooting entry: on Windows, `sbx run --clone` against a repository on a WSL filesystem can fail with "not in a Git repository" because of Git's dubious-ownership check, fixed by adding the repository to `safe.directory`. (troubleshooting, read 2026-11-14)
 
 So the plan's assumption that `sbx` is run in bash inside WSL2 is not what the documentation describes: the documented Windows route is a Windows install, and the documented Linux route needs KVM. The trials settled the question: this host takes the Windows route, driven from WSL bash through `sbx.exe`.
+
+macOS (T14, 2026-11-25): whether `sbx` runs on a Mac: **yes**, on the one Mac tried, over SSH. That Mac is macOS 27.2.1 (build 26B131, from `sw_vers`) on `arm64`, with Homebrew 7.0.16 and Homebrew's bash 5.3.20. `brew trust docker/tap` and `brew install docker/tap/sbx` installed cask `sbx` 0.54.1 (`sbx version v0.54.1`), and the route from `sbx login` to `codeo issue 176 --sandbox`, `list`, `shell` and `rm` ran; T14 has what was and was not shown. What Docker's install page says, which T14 does not settle for other Macs: macOS Sonoma 14 or later on Apple silicon, no Docker Desktop required, install with `brew trust docker/tap` and then `brew install docker/tap/sbx`, then `sbx login`; Intel Macs are not listed. (install, read 2026-11-25)
 
 ## Drivers
 
@@ -446,6 +448,116 @@ To https://github.com/<owner>/codeo
 ```
 
 Inside the sandbox, `gh auth token` and `GH_TOKEN` print the same fixed placeholder, and `git push` works with no login after `gh auth setup-git`. Where the real token is held, and how it is swapped in, was not shown. The scopes the placeholder carries were not checked.
+
+
+**T14: sbx on macOS.**
+
+Settles whether `sbx` and `codeo issue <N> --sandbox` run on a Mac, driven over SSH.
+
+```bash
+sw_vers
+uname -m
+bash --version
+brew --version
+brew trust docker/tap
+brew install docker/tap/sbx
+sbx version
+sbx login
+env CODEO_RAW_URL=https://raw.githubusercontent.com/kbajpai/codeo/feat/176-support-sbx-issue-sandbox-macos codeo update
+sbx secret set github --command "gh auth token"
+sbx setup ssh
+sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"
+codeo issue 176 --sandbox --yes
+sbx exec codeo-176 cat .codeo/active
+codeo list
+codeo shell 176 --sandbox
+codeo open 176 --sandbox
+codeo rm 176 --sandbox
+gh issue view 176 --repo kbajpai/codeo --comments
+```
+
+Expected: the install and `sbx login` work over SSH; `issue` creates the sandbox, takes the lock and adds a `sandbox` row; `list` shows it; `shell` and `open` reach it; `rm` removes it and marks the row `removed`.
+
+Result (2026-11-25, a Mac over SSH, Apple silicon, `sbx` v0.54.1, in several pastes by the engineer, trimmed):
+
+Host. `sw_vers` printed `ProductName: macOS`, `ProductVersion: 27.2.1`, `BuildVersion: 26B131`; `uname -m` printed `arm64`; Homebrew 7.0.16; Homebrew's `bash` 5.3.20. Only `arm64` is known of the chip.
+
+Install and login:
+
+```
+brew trust docker/tap                     -> Trusted tap: docker/tap
+brew install docker/tap/sbx               -> Cask sbx (0.54.1), sbx was successfully installed
+sbx version                               -> sbx version v0.54.1 3df896d5784200e8dfe6dca28ebd7102fe064169
+sbx login   (first)                       -> a one-time device code and the URL https://login.docker.com/activate?user_code=<code>
+  error: signed in to Docker, but SBX could not save the credentials because macOS Keychain denied access; ...
+security -v unlock-keychain ~/Library/Keychains/login.keychain-db   (asked for the login password)
+sbx login   (second)                      -> Signed in as <account>.
+  warning: schedule credential exchange failed: the schedule service could not verify your Docker sign-in
+```
+
+`sbx login` over SSH used the device-code flow, with a URL and a code and no browser from the SSH shell. It failed to save its credentials until the login keychain was unlocked. After that it signed in and printed the same `schedule credential exchange failed` warning as on Windows, which did not block anything later.
+
+Setup:
+
+```
+sbx secret set github --command "gh auth token"  -> command resolved successfully; Saved command secret github (global)
+sbx setup ssh                                    -> Status: enabled · signed in as <account>; Access: *.sbx -> sandboxd.sock (no port · login-gated)
+  warning: Could not pre-trust host key yet (...docker_sandboxes_ssh_ed25519: no such file or directory); first connect will trust on use.
+sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"   (before any policy existed)
+  error: allow network rule: request failed: 412 Precondition Failed: global network policy has not been initialized; run: sbx policy init <allow-all|balanced|deny-all>
+```
+
+`codeo issue` then made `sbx` ask for a network policy (`Choice [1-3, default 2]: 2`, "Set network policy Balanced"). The gallery rule was added afterwards and printed `Added rule ... to policy local (scope: global)` once for each host.
+
+The route:
+
+```
+codeo issue 176 --sandbox --yes
+Issue #176 already has containers on record:
+  - container `codeo-176` on host mac-studio.lan, created 2026-11-25T18:55:41Z, status active
+  - a container codeo-176 exists on this host
+Cloning into 'codeo-176'...
+✓ Created sandbox codeo-176
+plugins: installed superpowers
+plugins: installed codeo v1.0.9
+lock: took the lock for #176 on feat/176-support-sbx-issue-sandbox-macos
+devcontainer-start: TODO — the GitHub token lacks the project scope: run gh auth refresh -s project
+devcontainer-start: TODO — git identity is not set (missing: user.name, user.email; ...)
+devcontainer-start: TODO — Claude Code is not logged in: run claude auth login
+✓ sandbox codeo-176 — running detached
+
+sbx exec codeo-176 cat .codeo/active -> issue: 176, branch: feat/176-support-sbx-issue-sandbox-macos, started: 2026-11-25, host: container, sandbox: codeo-176
+
+codeo list
+#176  container  running  feat/176-support-sbx-issue-sandbox-macos
+#176  sandbox  detached  feat/176-support-sbx-issue-sandbox-macos
+
+codeo shell 176 --sandbox -> agent@codeo-176:/Users/kbajpai/codeo/codeo-176$
+```
+
+`issue` listed the container already on record for #176 and went on because of `--yes`. It cloned, created the sandbox from the pinned image `docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332` with 2 CPUs and 4g, installed both plugins, took the lock and left the sandbox running detached. The identity TODO is right for this Mac: `git config --global user.name` and `git config --global user.email` printed nothing, and `xcode-select -p` printed `/Library/Developer/CommandLineTools`, so git was usable but there was no identity to pass on. The sandbox's own `.codeo/active` holds `sandbox: codeo-176`.
+
+The issue's tracking comment gained the row (the others are #176's dev container):
+
+```
+sandbox │ codeo-176 │ mac-studio.lan │ active │ 2026-11-25T20:44:45Z
+```
+
+After the shell, `codeo rm 176 --sandbox` was run; its own output was not pasted. The row then read:
+
+```
+sandbox │ codeo-176 │ mac-studio.lan │ removed │ 2026-11-25T20:44:45Z │ 2026-11-25T20:48:4…
+```
+
+A later `codeo open 176 --sandbox` and `codeo rm 176 --sandbox` printed `codeo-sandbox: codeo-176 does not exist: create it with codeo-sandbox.sh issue 176 <branch>` and `codeo-sandbox: no sandbox codeo-176`.
+
+Reading: `sbx` runs on this Mac over SSH, and `codeo issue --sandbox`, `list`, `shell` and `rm` worked, with the lock taken and the tracking row added and marked `removed`. Not shown:
+
+- `codeo open`'s result. The `codeo open 176 --sandbox` that ran before the removal was not captured, and whether a VS Code window opened on the Mac is not known. The one that ran after the removal only said the sandbox did not exist.
+- The pasted output of the first `codeo rm 176 --sandbox`. Only the `removed` row shows that it ran.
+- Running without Docker Desktop. Docker's page says it is not needed, but this Mac also runs the dev containers through Docker, so the trial does not show `sbx` alone.
+
+Differed from the plan: the plan's own commands were wrong in two ways. `codeo open` and `codeo rm` stopped with `both a container and a sandbox codeo-176 exist; add --container or --sandbox to pick one`, because #176's own dev container also exists, so they need `--sandbox`. `gh issue view 176 --comments` printed `failed to run git: fatal: not a git repository` outside a checkout, so it needs `--repo kbajpai/codeo`. And `sbx policy init` has to come before the gallery rule on a host with no global policy; `sbx` asks for it when it creates its first sandbox.
 
 
 ## Recommendation
