@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bas
 The latest release is the highest `vX.Y.Z` tag of the repository. It prints one `install:` line per step, between the lines `claude` prints itself. Claude Code sessions that are already open need a restart to load the plugins.
 
 ```
-install: release v1.0.8
+install: release v1.0.9
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/obra/superpowers-marketplace.git
 Refreshing marketplace cache (timeout: 120s)…
 Cloning repository (timeout: 120s): https://github.com/obra/superpowers-marketplace.git
@@ -34,23 +34,23 @@ Installing plugin "superpowers@superpowers-marketplace"...✔ Successfully insta
 install: superpowers installed (user scope)
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/kbajpai/codeo.git
 Refreshing marketplace cache (timeout: 120s)…
-Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.8)
+Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.9)
 Clone complete, validating marketplace…
 Cleaning up old marketplace cache…
 ✔ Successfully added marketplace: codeo (declared in user settings)
 Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: user)
-install: codeo v1.0.8 installed (user scope)
-install: done - codeo v1.0.8, user scope, superpowers 7.0.2
+install: codeo v1.0.9 installed (user scope)
+install: done - codeo v1.0.9, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
 Run it again and nothing changes:
 
 ```
-install: release v1.0.8
+install: release v1.0.9
 install: superpowers already installed (user scope), left alone
-install: codeo v1.0.8 already installed (user scope)
-install: nothing changed - codeo v1.0.8, user scope, superpowers 7.0.2
+install: codeo v1.0.9 already installed (user scope)
+install: nothing changed - codeo v1.0.9, user scope, superpowers 7.0.2
 ```
 
 `claude plugin list` shows what is installed:
@@ -59,7 +59,7 @@ install: nothing changed - codeo v1.0.8, user scope, superpowers 7.0.2
 Installed plugins:
 
   ❯ codeo@codeo
-    Version: 1.0.8
+    Version: 1.0.9
     Scope: user
     Status: ✔ enabled
 
@@ -69,22 +69,22 @@ Installed plugins:
     Status: ✔ enabled
 ```
 
-Two options follow `bash -s --`. `--version` picks a release other than the latest (`v1.0.7`, or `1.0.7`); the installer checks the tag exists before it changes anything, and a run that asks for a different version than the one installed replaces it:
+Two options follow `bash -s --`. `--version` picks a release other than the latest (`v1.0.8`, or `1.0.8`); the installer checks the tag exists before it changes anything, and a run that asks for a different version than the one installed replaces it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.7
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.8
 ```
 
 ```
-install: release v1.0.7
+install: release v1.0.8
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.8 -> v1.0.7 (user scope)
-install: done - codeo v1.0.7, user scope, superpowers 7.0.2
+install: codeo v1.0.9 -> v1.0.8 (user scope)
+install: done - codeo v1.0.8, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -95,7 +95,7 @@ curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bas
 ```
 
 ```
-install: release v1.0.8
+install: release v1.0.9
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/obra/superpowers-marketplace.git
 Refreshing marketplace cache (timeout: 120s)…
 Cloning repository (timeout: 120s): https://github.com/obra/superpowers-marketplace.git
@@ -106,13 +106,13 @@ Installing plugin "superpowers@superpowers-marketplace"...✔ Successfully insta
 install: superpowers installed (project scope)
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/kbajpai/codeo.git
 Refreshing marketplace cache (timeout: 120s)…
-Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.8)
+Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.9)
 Clone complete, validating marketplace…
 Cleaning up old marketplace cache…
 ✔ Successfully added marketplace: codeo (declared in project settings)
 Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: project)
-install: codeo v1.0.8 installed (project scope)
-install: done - codeo v1.0.8, project scope, superpowers 7.0.2
+install: codeo v1.0.9 installed (project scope)
+install: done - codeo v1.0.9, project scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -127,7 +127,7 @@ Commit the file it wrote. This is its content (`jq -S . .claude/settings.json`),
   "extraKnownMarketplaces": {
     "codeo": {
       "source": {
-        "ref": "v1.0.8",
+        "ref": "v1.0.9",
         "repo": "kbajpai/codeo",
         "source": "github"
       }
@@ -298,33 +298,33 @@ in `docs/dossier.md` and `docs/handoff.md`.
 Run the install command again. With no `--version` it installs the latest release; if that differs from what you have, it removes the codeo marketplace, which uninstalls codeo at every scope on the machine, adds the marketplace back at the new tag, and installs codeo at the scope you asked for. A plain run installs it for you; a run with `--scope project` installs it for the project:
 
 ```
-install: release v1.0.8
+install: release v1.0.9
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.7 -> v1.0.8 (user scope)
-install: done - codeo v1.0.8, user scope, superpowers 7.0.2
+install: codeo v1.0.8 -> v1.0.9 (user scope)
+install: done - codeo v1.0.9, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
 One machine holds one codeo version, so a replace does not keep the other scopes' copies: removing the marketplace uninstalls codeo from every project and every local install on the machine, not only the one you ran the command in. The installer prints one line for each project install and each local install it dropped, with the command that restores it, and it leaves every project's `.claude/settings.json` and `.claude/settings.local.json` as they were, so `git status` stays clean. The project the command runs in is named too, when you ran a plain run inside it. A plain update run from your home folder, with codeo installed for two projects and locally for a third:
 
 ```
-install: release v1.0.8
+install: release v1.0.9
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.7 -> v1.0.8 (user scope)
-install: codeo is no longer installed for /home/you/app (project scope, v1.0.7); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: codeo is no longer installed for /home/you/api (project scope, v1.0.7); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: codeo is no longer installed for /home/you/loc (local scope, v1.0.7); its .claude/settings.local.json was not changed; run claude plugin install codeo@codeo --scope local there to restore it
-install: done - codeo v1.0.8, user scope, superpowers 7.0.2
+install: codeo v1.0.8 -> v1.0.9 (user scope)
+install: codeo is no longer installed for /home/you/app (project scope, v1.0.8); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: codeo is no longer installed for /home/you/api (project scope, v1.0.8); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: codeo is no longer installed for /home/you/loc (local scope, v1.0.8); its .claude/settings.local.json was not changed; run claude plugin install codeo@codeo --scope local there to restore it
+install: done - codeo v1.0.9, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -347,35 +347,35 @@ Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo
 `claude plugin list` then shows the install again, with its scope and the machine's version. The restore does not move the project's pin. To move it, edit `ref` in the project's `.claude/settings.json` and commit it, as the end of this section describes; `install.sh --scope project` run in a restored project changes nothing, because its install is already at the machine's version. A `--scope project` run rewrites the project's `ref` only when it installs or replaces codeo at project scope (the project has no install, or the machine's codeo is at another release). That run also reinstalls a user-scope copy that existed at the same release and names every other project it dropped:
 
 ```
-install: release v1.0.8
+install: release v1.0.9
 install: superpowers already installed (project scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.7 -> v1.0.8 (project scope)
-install: your user-scope codeo moved to v1.0.8 too: one machine holds one codeo version
-install: codeo is no longer installed for /home/you/api (project scope, v1.0.7); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: done - codeo v1.0.8, project scope, superpowers 7.0.2
+install: codeo v1.0.8 -> v1.0.9 (project scope)
+install: your user-scope codeo moved to v1.0.9 too: one machine holds one codeo version
+install: codeo is no longer installed for /home/you/api (project scope, v1.0.8); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: done - codeo v1.0.9, project scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
-The marketplace is removed before the new one is added, so if a step fails in between (the network drops, say), codeo is left uninstalled. The installer then prints the dropped-install lines, if any, and ends with `install: codeo is no longer installed: <the last line claude printed>; run this again`; running the same command again finishes the job, and the restore commands apply once it has finished, because they need the codeo marketplace. When a `--scope project` update that removed a user-scope copy fails, the line ends `run this again with --scope project, then once without --scope to restore your user-scope copy`. When one scope was reinstalled and the other was not, it prints `install: codeo v1.0.8 is installed at project scope but not at user scope: <the last line claude printed>; run this again with --scope user`. A user-scope copy that was disabled comes back enabled, and the line says so: `install: codeo v1.0.7 -> v1.0.8 (user scope) (it was disabled; it is enabled now)`.
+The marketplace is removed before the new one is added, so if a step fails in between (the network drops, say), codeo is left uninstalled. The installer then prints the dropped-install lines, if any, and ends with `install: codeo is no longer installed: <the last line claude printed>; run this again`; running the same command again finishes the job, and the restore commands apply once it has finished, because they need the codeo marketplace. When a `--scope project` update that removed a user-scope copy fails, the line ends `run this again with --scope project, then once without --scope to restore your user-scope copy`. When one scope was reinstalled and the other was not, it prints `install: codeo v1.0.9 is installed at project scope but not at user scope: <the last line claude printed>; run this again with --scope user`. A user-scope copy that was disabled comes back enabled, and the line says so: `install: codeo v1.0.8 -> v1.0.9 (user scope) (it was disabled; it is enabled now)`.
 
 A plain update run from your home folder that fails at the add step, with codeo installed for two projects and locally for a third, prints the dropped installs before the error:
 
 ```
-install: release v1.0.8
+install: release v1.0.9
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo is no longer installed for /home/you/app (project scope, v1.0.7); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: codeo is no longer installed for /home/you/api (project scope, v1.0.7); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: codeo is no longer installed for /home/you/loc (local scope, v1.0.7); its .claude/settings.local.json was not changed; run claude plugin install codeo@codeo --scope local there to restore it
+install: codeo is no longer installed for /home/you/app (project scope, v1.0.8); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: codeo is no longer installed for /home/you/api (project scope, v1.0.8); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: codeo is no longer installed for /home/you/loc (local scope, v1.0.8); its .claude/settings.local.json was not changed; run claude plugin install codeo@codeo --scope local there to restore it
 install: codeo is no longer installed: Error: network unreachable; run this again
 ```
 
@@ -505,7 +505,7 @@ fail superpowers: not installed; install it with: claude plugin install superpow
 **`its source doesn't match its extraKnownMarketplaces entry`.** Adding the codeo marketplace at a second tag by hand fails, because the marketplace is already added at the first:
 
 ```
-$ claude plugin marketplace add kbajpai/codeo@v1.0.8
+$ claude plugin marketplace add kbajpai/codeo@v1.0.9
 Adding marketplace…✘ Failed to add marketplace: Cannot add marketplace "codeo": its source doesn't match its extraKnownMarketplaces entry in user or managed settings; add it from the source that entry lists, or change the entry.
 ```
 
