@@ -8,11 +8,11 @@
 
 ## Where this stands
 
-Round 1 is complete and handed to `/codeo:qc`. All five tasks are done: Tasks 2-4 are built and
-reviewed, Task 5 (the engineer's run on the Mac, recorded as trial T14) is written, the final
-whole-branch review is done and its one fix wave is re-reviewed. The head is `193bed8`, pushed;
-`bash tests/run.sh` exits 0 there and the suite's build command (`true`) exits 0. One thing is left
-for QC to judge, not to fix here: `codeo open` over SSH on the Mac was never shown.
+Round 2, after a send-back from `/codeo:qc` round 1. Nothing is built yet: Q6 ('177 also changes
+`CHANGELOG.md`) and Q7 (prove `codeo open` with VS Code, or accept it as shown to stop cleanly) are
+open. Once they are answered this round fixes qc findings F2-F8 (README wording, the Command Line
+Tools note, one non-hermetic test, the T14 count, the CHANGELOG bullet, the policy-init step order)
+and records the new Mac evidence in trial T14 and the README.
 
 ## Questions
 
@@ -288,6 +288,40 @@ My reading, labelled as mine: `codeo open`'s result is not shown. T14 records it
 tried over SSH, and the outcome says criterion 3's `open` clause is unchecked, so `/codeo:qc` can
 route it. It can go back as a later round if the engineer re-runs it or says what happened.
 
+### Q6 — #177 also changes `CHANGELOG.md`: proceed and coordinate, sequence after it, or re-scope?
+
+**Why it matters:** #177 (branch `docs/177-close-163-166-168-leftovers`, assignee kbajpai, step
+`init`) lists `CHANGELOG.md` in its footprint, and `overlap.sh` prints `177	CHANGELOG.md` and
+`177	glob:CHANGELOG.md`. This round rewrites the one bullet this branch added under `## Unreleased`
+(qc round 1, F7: the bullet overstates what the script checks, and F3 asks it to drop the
+Command Line Tools fallback clause). Two branches editing under the same heading merge by keeping
+both, the way #173's identical overlap was settled (proceed and coordinate); sequencing after #177
+would hold the reword until it merges, and re-scoping would leave the overstated bullet as it is.
+**Options:** proceed and coordinate (recommended) · sequence after #177 · re-scope: leave the
+CHANGELOG bullet unchanged and fix the rest.
+
+**Answer:**
+
+### Q7 — Prove `codeo open` with VS Code on the Mac, or accept it as shown to stop cleanly?
+
+**Why it matters:** qc round 1 (F1) found acceptance criterion 3's `codeo open` clause unproven, and
+only you can settle how: it needs VS Code on the Mac. What the Mac has shown since (see *Evidence
+after qc round 1* in `## Notes`): with `main`'s script `codeo open` fails with `line 290: code:
+command not found`; with this branch's script it prints `window-title: codeo [#176]` and then
+`codeo-sandbox: code is not on PATH: in VS Code run "Shell Command: Install 'code' command in
+PATH", or set CODEO_CODE to the VS Code program`, which is Task 3's check working on a real Mac.
+VS Code has not opened on the sandbox from the Mac, and `codeo rm`'s own output was never
+captured (the sandbox is running again after the second `codeo issue`). If you prove it, T14 and the
+README record a window opening; if you accept it, they record the clean stop and say opening VS
+Code over SSH is untried, your decision stands in this dossier, and the next `/codeo:qc` judges
+criterion 3 with it.
+**Options:** prove it (recommended when VS Code is on the Mac: install its `code` command, run
+`codeo open 176 --sandbox` at the Mac's screen, say whether a window opened and connected to
+`codeo-176.sbx`, then `codeo rm 176 --sandbox`, and paste both) · accept the gap, and still paste
+`codeo rm 176 --sandbox` so its output is on record · no preference, you pick.
+
+**Answer:**
+
 ## Notes
 
 - **Task 1 gate: passed.** `uname -m` is `arm64`, and the bash triple `aarch64-apple-darwin27.0.0`
@@ -300,6 +334,33 @@ route it. It can go back as a later round if the engineer re-runs it or says wha
   signed in with the device-code flow (a URL and a code, no browser opened from the shell) and
   printed the same `schedule credential exchange failed` warning as on Windows. Brew's bash 5.3.20
   is the Mac's `bash`. These are tried, not untried, in Task 4's `## On macOS`.
+- **Evidence after qc round 1** (pasted by the engineer in conversation, 2026-11-25, trimmed):
+
+  ```
+  $ codeo issue 176 --sandbox --yes          (a second time, after the earlier rm)
+  plugins: superpowers, codeo v1.0.9
+  devcontainer-start: TODO — the GitHub token lacks the project scope: …
+  devcontainer-start: TODO — git identity is not set (missing: user.name, user.email; …)
+  devcontainer-start: TODO — Claude Code is not logged in: run claude auth login
+  $ codeo open 176 --sandbox                 (with main's scripts, after a plain codeo update)
+  window-title: codeo [#176]
+  /Users/kbajpai/codeo/codeo-sandbox.sh: line 290: code: command not found
+  codeo-sandbox: could not start VS Code
+  $ env CODEO_RAW_URL=…/feat/176-support-sbx-issue-sandbox-macos codeo update
+  updated codeo and its three scripts
+  $ codeo open 176 --sandbox                 (with this branch's scripts)
+  window-title: codeo [#176]
+  codeo-sandbox: code is not on PATH: in VS Code run "Shell Command: Install 'code' command in PATH", or set CODEO_CODE to the VS Code program
+  ```
+
+  Line 290 of `main`'s `.sbx/codeo-sandbox.sh` is `code --folder-uri "$1"`; on this branch that line is
+  304, behind the new check, so the first `open` ran `main`'s copy. The second `codeo issue` printed no
+  `lock:` line, because the clone from the first run still holds its lock.
+- **qc round 1 findings, checked against the code (receiving-code-review):** F2-F8 hold. F3 in
+  particular: `cmd_issue` runs `ensure_host_clone` (`git clone`) before `run_start` reads
+  `git_is_usable`, so on a Mac without the Command Line Tools `issue` stops at the clone and the
+  identity fallback is only reached when a clone already exists. F1 is the engineer's to settle (Q7).
+  Nothing was pushed back.
 
 ## Outcome
 
@@ -347,3 +408,4 @@ No `Deployed revision:` (no shared environment is configured). No `/codeo:issue`
 - 2026-11-25 — Q3 answered: tracking row, identity and shell shown; open and rm still unrun, Q4 raised · cost: 76m · sonnet-5-5 320k in + 10.2M cached / 53k out
 - 2026-11-25 — Q4 answered: the sandbox row reads removed; codeo open's result not captured, Q5 raised · cost: 79m · sonnet-5-5 328k in + 11M cached / 57k out
 - 2026-11-25 — implemented: Tasks 2-5 built and reviewed, final review and one fix wave, pushed at 193bed8; criterion 3's codeo open not shown · cost: 98m · sonnet-5-5 616k in + 18.9M cached / 108k out
+- 2026-11-25 — round 2 started: qc round 1 read and its findings checked; Q6 (overlap with #177 on CHANGELOG.md) and Q7 (codeo open) raised · cost: 1m · sonnet-5-5 19k in + 806k cached / 5k out
