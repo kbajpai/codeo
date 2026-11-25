@@ -172,6 +172,31 @@ files, raised as Q4. No exclusive resource is configured, so none can overlap.
   decision. Rejected: a bash-version guard in the script, a refusal on Intel Macs when `sbx` is
   present, an `open -a` fallback for VS Code (each is untried or already covered by documentation).
 
+## Outcome
+
+2026-11-25
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-25-sbx-sandbox-macos-176.md` (unstaged until the engineer commits it) |
+| Shape | an executable plan under `docs/plans/`; no reference doc, since nothing here is a standing decision |
+| Tasks | 5: engineer's preflight on the Mac (stops the plan below macOS 14 or off Apple silicon) · a macOS message for a missing `sbx` · git and `code` checks on macOS · the docs and "never macOS" removed · the full route on the Mac, recorded as trial T14 |
+
+**Decisions.**
+- Docker's install page now lists macOS 14 or later on Apple silicon, installed with `brew install docker/tap/sbx`, so the work is a check plus small fixes, not a port.
+- The Mac trial is the plan's first task, not run before drafting (Q1, the engineer's pick left to this skill): the engineer answered without trial output. A failure the full-route trial shows beyond the planned fixes returns to `/codeo:plan` as a second round.
+- The engineer works over SSH (Q2); the chip and macOS version are recorded by Task 1, and the docs mark each SSH statement untried until Task 5 replaces the mark with what T14 showed.
+- The trial uses #176 itself (Q3, the engineer's pick left to this skill).
+- Overlap with #173 on `.devcontainer/codeo`, `.devcontainer/README.md` and `CHANGELOG.md`: proceed and coordinate (Q4, Q5); `sequenced:` is `none`.
+
+**Rejected.** A bash-version guard in the script (the README names bash 4.3, as `codeo` and `install.sh` do); a refusal on Intel Macs when `sbx` is present (`sbx` says so itself); an `open -a` fallback for VS Code (untried).
+
+**Documentation the plan changes.** `.sbx/README.md` (*Prerequisites*, the diagram's participant, a new `## On macOS`), `.devcontainer/README.md` (the host sentence), `docs/dev-environment-sbx-evaluation.md` (*Host*, T14, the banner), `CHANGELOG.md`. The root `README.md` and `docs/home-checkout.md` carry no sandbox text and are deliberately unchanged.
+
+**Intake questions resolved.** Whether sbx is available on macOS: Docker's install page lists it (macOS 14 or later, Apple silicon, no Docker Desktop), read 2026-11-25; whether it works there is Task 1 and Task 5's to show. Whether `codeo-sandbox.sh` works on a Mac: nothing in it is Linux-only by reading, and T14 is where it is run.
+
+No `/codeo:issue` was filed. The `engineering` plugin's skills were not needed.
+
 ### Footprint
 
 ```
@@ -181,12 +206,9 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-25 — Q1-Q3 raised · cost: 1m · fable-5-2 87k in + 585k cached / 7k out · sonnet-5-5 13k in + 5k cached / 2k out
 - 2026-11-25 — plan drafted (not committed) and Q4 raised, the overlap with #173 · cost: 5m · fable-5-2 13k in + 258k cached / 759 out · sonnet-5-5 140k in + 932k cached / 25k out
 - 2026-11-25 — plan approved and written, footprint committed, Q5 raised (the overlap with #173 as overlap.sh prints it) · cost: 1m · fable-5-2 6k in + 120k cached / 2k out
+- 2026-11-25 — planned: docs/plans/2026-11-25-sbx-sandbox-macos-176.md · cost: 30m · fable-5-2 13k in + 258k cached / 759 out · sonnet-5-5 163k in + 3.3M cached / 35k out
