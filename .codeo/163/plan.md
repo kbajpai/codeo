@@ -66,7 +66,14 @@ Proceed and coordinate. (Engineer: "go with your picks", 2026-11-24; given in th
 
 ## Notes
 
-None yet.
+### Footprint
+
+```
+files:      .devcontainer/codeo-track.sh, tests/track.test.sh, .codeo/overlays/cleanup.md, .codeo/overlays/close.md, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, CHANGELOG.md, README.md, docs/skills.md, docs/plans/2026-11-25-close-152-leftovers-cleanup-overlay-163.md, .codeo/163/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
