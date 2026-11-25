@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is done: tasks 1-4 are built and reviewed, the build ran, and the one minor finding of the final review is fixed in `22feaee`. Next step: `/codeo:qc`.
+Round 2 is done: the findings of `qc.md` round 1 are fixed in `6b5de95` and the build ran. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -39,6 +39,25 @@ None.
 - Task 4 had no review of its own (two lines, read in full by the controller); the final whole-branch review covered it. The final-review fix in `22feaee` was made directly and not re-reviewed.
 - Three minor review notes left as they are: `grep -q` at the end of a pipe under `pipefail` in the new checks (the existing file does the same, inputs are a few KB); the `lock-entry` check is weak on the "fresh init fixes" group; "report what was printed" in `docs/home-checkout.md` against the overlay's "what it printed".
 
+### Round 2 — 2026-11-25
+(send-back from qc.md round 1)
+
+`sync-main.sh`: the branch already contained `origin/main` (QC's own merge, `0ede470`); `overlap.sh 179` printed nothing. I read each finding against the code before acting (`scripts/lock.sh:158-170`, `skills/close/SKILL.md`, `skills/init/SKILL.md`, the guard page against `.codeo/overlays/plan.md`); F1, F2, F3, F5 and F6 held, F4 asked for no change. One sonnet implementer fixed the five in `6b5de95`; I read its diff and ran `bash tests/run.sh readme` (`all cases passed`).
+
+- **F1:** the `tests/readme.test.sh` header names `.codeo/`, `.codeo/.gitignore`, `.codeo/config.json` and `docs/plans/` as the paths that resolve only because codeo uses itself.
+- **F2:** the README lock entry says `/codeo:init #<N>` fixes the "found 0" and stashed-or-abandoned TODOs, that an abandoned issue's card is back in Backlog so `/codeo:init` waits for Ready (pointing at "A card that is not Ready"), and that "found more than one" means two issues' dossiers name the branch, to be settled by hand before re-running.
+- **F3:** `docs/home-checkout.md` says the skill reads the exit and, on exit 1, the one line; on any other exit it reports what the check printed.
+- **F5:** `troubleshooting-groups` fails with `the doctor group has no entry <name>.` for each of the twelve checks missing as a lead (proved on a scratch copy with one lead removed).
+- **F6:** `skill-count` greps for line content, not line numbers, and fails if `docs/handoff.md` still says "Seven pipeline skills".
+- **F4:** no change; the wording is the criterion's own.
+
+**Documentation pages changed:** `README.md`, `docs/home-checkout.md`; guarded by `tests/readme.test.sh`.
+
+**Build:** the `shell` suite's `build` is `true`: exit 0. No shared environment.
+
+**Deviations from the plan:** none beyond round 1's. The fix commit was reviewed by the controller reading its diff, not by a separate reviewer.
+
 ## Log
 
 - 2026-11-25 — implemented: plan docs/plans/2026-11-25-close-171-leftovers-179.md, tasks 1-4, build exit 0 · cost: 21m · sonnet-5-5 338k in + 9.1M cached / 59k out
+- 2026-11-25 — implemented round 2 (send-back from qc round 1): F1, F2, F3, F5, F6 fixed in 6b5de95, build exit 0 · cost: 2m · sonnet-5-5 49k in + 1.7M cached / 8k out
