@@ -412,7 +412,7 @@ The entries are in two groups. *During a workflow* covers what stops a step whil
 
 - **Symptom.** The skill stops with one line that starts `/codeo:<skill> can't run here:` or says where the skill runs.
 - **Cause.** The skill belongs in another checkout. `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` run in a home checkout; `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:close` run in the issue's own checkout.
-- **Fix.** Run the skill in the checkout the line names. Nothing you say in the session lifts a refusal. A line with `role stale:<N>` says what became of the workflow: finished (`/codeo:cleanup` in a home checkout prints how to remove the container), stashed (`/codeo:init #<N>` in a home checkout is the way back) or lost its lock (re-run `bash .devcontainer/scripts/devcontainer-start.sh`). A clone named `<codename>-home` that reads as `stray` needs `jq` installed; see [docs/home-checkout.md](docs/home-checkout.md).
+- **Fix.** Run the skill in the checkout the line names. Nothing you say in the session lifts a refusal. In a dev container, a line with `role stale:<N>` says what became of the workflow: finished (`/codeo:cleanup` in a home checkout prints how to remove the container), stashed (`/codeo:init #<N>` in a home checkout is the way back, never the start script, and the old container is removed on the host first) or abandoned (nothing more runs there; check the branch is still on origin before removing the container). A workflow that is live but lost its lock is fixed by re-running `bash .devcontainer/scripts/devcontainer-start.sh`. The `stale` row of [.devcontainer/README.md](.devcontainer/README.md#roles-and-the-guard) has the full list. A clone named `<codename>-home` that reads as `stray` needs `jq` installed; see [docs/home-checkout.md](docs/home-checkout.md).
 
 ```
 /codeo:plan runs in an issue's checkout, but this checkout's role is home.
@@ -422,16 +422,16 @@ The entries are in two groups. *During a workflow* covers what stops a step whil
 
 - **Symptom.** A skill stops and says there is no lock; or says the lock's `branch` differs from the branch you are on; or says the lock names a different issue from the one you asked for; or `/codeo:init` refuses because a lock already exists; or a `lock: TODO …` line appears.
 - **Cause.** No lock means the step before was skipped, or you are in another checkout. A branch mismatch means someone switched branches or the lock is stale. The other two mean this checkout already holds a workflow.
-- **Fix.** For no lock, run `/codeo:init #<N>`. For a branch mismatch, switch back to the lock's branch yourself, or finish the workflow there with `/codeo:close` or `/codeo:close --stash`; never edit the lock to match the branch. For another issue, finish or stash that one first, in its own checkout. When `/codeo:init` refuses, run it in another checkout (a second clone or a `git worktree`), or finish this workflow with `/codeo:close`. For a `lock: TODO …` line, fix what it says, then take the lock again as the closing block of that step tells you.
+- **Fix.** For no lock, run `/codeo:init #<N>`. For a branch mismatch, switch back to the lock's branch yourself, or finish the workflow there with `/codeo:close` or `/codeo:close --stash`; the lock file is only ever written by the plugin's own script, so do not edit it, and do not switch branches to make it agree. For another issue, finish or stash that one first, in its own checkout. When `/codeo:init` refuses, run it in another checkout (a second clone or a `git worktree`), or finish this workflow with `/codeo:close`. For a `lock: TODO …` line, fix what it says, then take the lock again as the closing block of that step tells you.
 
 ```
-lock: TODO — #12 is stashed or abandoned: no lock taken
+lock: TODO — could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)
 ```
 
 **A step that was interrupted.** Every step resumes from its dossier file in `.codeo/<N>/` and from GitHub, not from the conversation.
 
 - **Symptom.** A session ended part way, a push failed, or a step is waiting on an answer.
-- **Cause.** The step stopped before it finished its dossier turn, or an open question has no answer yet.
+- **Cause.** The session ended, a push failed, or a question was left unanswered.
 - **Fix.** Run the same command again. An unanswered question is a `### Q<n>` heading in `.codeo/<N>/<step>.md` with an empty `**Answer:**`: write your answer under it and run the command again. A failed push is loud; the commit stays on your machine until the push lands, so push again before you continue elsewhere. `/codeo:close` is safe to repeat at any point. If `/codeo:init` stops half way, the next run reports a leftover local branch and the `git worktree remove --force <scratch>` and `git branch -D <branch>` commands that remove it; run them, then run `/codeo:init #<N>` again. Contributors to codeo can check a dossier's shape with `bash scripts/dossier-check.sh .codeo/<N>` (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 **A card that is not Ready.** This applies when the project has a board.
