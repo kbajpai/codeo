@@ -1933,6 +1933,7 @@ t_rm_reports_a_failed_stop() {
     expect_refused 'could not check'
     ! grep -q '^docker stop' "$cm_dir/calls" || fail "running: stopped"
     ! grep -qF 'could not stop' <<<"$cm_err" || fail "running: $cm_err"
+}
 
 t_rm_force_does_not_report_a_failed_stop() {
     # the check cannot run, the stop fails, --force removes anyway
@@ -1957,7 +1958,6 @@ t_rm_force_does_not_report_a_failed_stop() {
     grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "dirty: stop no longer called"
     grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "dirty: not removed"
     ! grep -qF 'could not stop' <<<"$cm_err" || fail "dirty: $cm_err"
-}
 }
 
 t_codeo_sbx_honoured() {
