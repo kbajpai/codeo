@@ -8,11 +8,8 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1. Nothing is built yet: Q6 (#177 also changes
-`CHANGELOG.md`) and Q7 (prove `codeo open` with VS Code, or accept it as shown to stop cleanly) are
-open. Once they are answered this round fixes qc findings F2-F8 (README wording, the Command Line
-Tools note, one non-hermetic test, the T14 count, the CHANGELOG bullet, the policy-init step order)
-and records the new Mac evidence in trial T14 and the README.
+Round 2 is complete and handed back to `/codeo:qc`. Q6 and Q7 are answered; qc findings F1-F8 are
+addressed in `dc74188`, pushed, with `bash tests/run.sh` exiting 0 there. Round 1 above is unchanged.
 
 ## Questions
 
@@ -404,6 +401,46 @@ My reading, labelled as mine: with VS Code's `code` command on `PATH`, `codeo op
 
 No `Deployed revision:` (no shared environment is configured). No `/codeo:issue` was filed.
 
+### Round 2
+
+2026-11-25
+(send-back from qc.md round 1)
+
+**Answers to the findings:**
+
+| Finding | What this round did |
+|---|---|
+| F1 (blocking): criterion 3's `codeo open` clause not shown | Q7 answered by the engineer: VS Code opened once its `code` command was installed. Trial T14 records the three runs: `main`'s script (`line 290: code: command not found`), this branch's script (the one-line `code is not on PATH` message) and the engineer's report that VS Code then opened. Still not shown, and the page says so: whether the window connected to `codeo-176.sbx`, where it opened, the first `codeo rm`'s own output, and running without Docker Desktop |
+| F2: README states trial history, no longer says which sbx version is supported | the sbx bullet is a requirement again (`sbx` v0.53.0 or later); *On macOS* lost its "checked with" sentence and says the script needs bash 4.3 or later |
+| F3: Command Line Tools | *On macOS* gains a bullet (`xcode-select --install`; without them `git` is an installer stub, so `issue` cannot clone); the CHANGELOG bullet drops the identity-fallback clause |
+| F4: a test not sealed from a host with `/usr/bin/code` | `open_on_macos_without_code_is_one_line` returns early, with a comment, when `/usr/bin/code` or `/bin/code` is executable |
+| F5: two bullets true on every host | the container-and-sandbox bullet is removed (the Commands text already says `--sandbox` picks when both exist); the identity bullet is host-agnostic |
+| F6: "two ways" over three items | "three ways" |
+| F7: CHANGELOG overstates | the bullet says what holds: Docker lists macOS 14 or later on Apple silicon, it was run on macOS 27.2.1 on `arm64`, the script names the Homebrew install for a missing `sbx` and how to put `code` on `PATH` |
+| F8: policy step order | `sbx policy init balanced` is a step before the gallery rule |
+
+**Commits:** `dc74188` (the fixes). The round's review found no Critical or Important issue; its one
+Minor, a Mac-specific aside left in the identity bullet, is kept: it names a real case and does not
+contradict the host-agnostic wording.
+
+**Documentation pages changed:** `.sbx/README.md`, `docs/dev-environment-sbx-evaluation.md`,
+`CHANGELOG.md`. No code under `.sbx/codeo-sandbox.sh` changed this round.
+
+**Build result:** the `shell` suite's build command (`true`) exits 0; `bash tests/run.sh` exits 0 at
+`dc74188` ("all cases passed"), run whole after the last edit. Base-branch changes: none
+(`sync-main.sh`: "the branch already contains origin/main"). `overlap.sh 176` and
+`overlap.sh --outside 176` print nothing, so the footprint above still covers every changed path.
+
+**Deviations:** none from the plan this round. #177 also changes `CHANGELOG.md`: proceed and
+coordinate (Q6); this round edits only this branch's one bullet.
+
+**Rulings:** the engineer's Q7 answer is recorded as "VS Code opened" and no more: it did not say
+whether the window connected to the sandbox or where it opened, and the docs claim neither (a
+wrong claim here would be a README statement a Mac user acts on). The review ran on `sonnet`, as
+this skill requires.
+
+No `Deployed revision:` (no shared environment). No `/codeo:issue` was filed.
+
 ## Log
 
 - 2026-11-25 — Q1 raised, waiting on Task 1's output from the Mac · cost: 2m · sonnet-5-5 12k in + 610k cached / 1k out
@@ -413,3 +450,4 @@ No `Deployed revision:` (no shared environment is configured). No `/codeo:issue`
 - 2026-11-25 — Q4 answered: the sandbox row reads removed; codeo open's result not captured, Q5 raised · cost: 79m · sonnet-5-5 328k in + 11M cached / 57k out
 - 2026-11-25 — implemented: Tasks 2-5 built and reviewed, final review and one fix wave, pushed at 193bed8; criterion 3's codeo open not shown · cost: 98m · sonnet-5-5 616k in + 18.9M cached / 108k out
 - 2026-11-25 — round 2 started: qc round 1 read and its findings checked; Q6 (overlap with #177 on CHANGELOG.md) and Q7 (codeo open) raised · cost: 1m · sonnet-5-5 19k in + 806k cached / 5k out
+- 2026-11-25 — round 2 (send-back from qc round 1): Q6-Q7 answered, qc findings F1-F8 addressed in dc74188, full suite exit 0 · cost: 23m · sonnet-5-5 144k in + 6.8M cached / 30k out
