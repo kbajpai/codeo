@@ -97,6 +97,15 @@ Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 - No invariants document, shared environment, wiki module or exclusive resource is configured. The `plan` overlay sets only `role-guard`; `plan-shape`, `proof-of-done` and `wiki-rules` are unset, so the plan follows the recent plans under `docs/plans/` and each task's proof is the `shell` suite's whole `test` command, `bash tests/run.sh` (the suite has no `filter`).
 - Out of scope, as the issue says: #168's grep-count deviation (F3), and any redesign of `/codeo:cleanup` or the live signal. Q2's option C adds no code to `scripts/live.sh`.
 
+### Footprint
+
+```
+files:      docs/home-checkout.md, tests/readme.test.sh, .codeo/overlays/cleanup.md, .codeo/overlays/close.md, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, skills/cleanup/SKILL.md, skills/close/SKILL.md, tests/close-skill.test.sh, docs/skills.md, docs/handoff.md, CHANGELOG.md, tests/track.test.sh, docs/release-checklist.md, .codeo/done/168/plan.md, .codeo/done/168/init.md, docs/plans/2026-11-25-close-163-166-168-leftovers-177.md, .codeo/177/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
