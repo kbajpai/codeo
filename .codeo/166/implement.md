@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-All six tasks of `docs/plans/2026-11-25-close-157-leftovers-166.md` are done and committed; the build passes. Next step: `/codeo:qc`.
+Round 2 is done: QC round 1's F1 is fixed and F6 with it, and the build passes. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -35,6 +35,23 @@ Plan: `docs/plans/2026-11-25-close-157-leftovers-166.md` (committed as `e3cbb96`
 - Task 3's new paragraph ends "Never describe such a close as leaving nothing behind." The plan's wording, "leaving nothing to remove", contains the string its own negative pin forbids.
 - Task 5's `task-done` could not record a test run (no test file matches `changelog`); its two `grep` checks passed (2 and 1) and Task 6's full suite covers it.
 
+### Round 2
+2026-11-25
+(send-back from qc.md round 1)
+
+Step 2a: the branch already contains `origin/main`; `overlap.sh` printed nothing.
+
+**Checked against the code before acting:** F1 holds (`docs/skills.md:252` still said "an issue that fails a proof is listed with it and no command", beside line 254 saying a `failed name` issue gets the `leftover` delete). F6 holds (two stale labels). F2-F5 are `non-blocking` and the plan's, not this round's work: step 4 of `skills/cleanup/SKILL.md`, the `<machine>` placeholder, the "stays on origin" sentence and the CHANGELOG `(#157)` clause are all as the plan wrote them (Global Constraints and Task 5), so they stay for `/codeo:triage`.
+
+**Built** (`2b00571`): `docs/skills.md:252` now says "listed with it and no container command (one that failed only `name` still gets its leftover branch delete)", pinned by a new check in `tests/cleanup-skill.test.sh` that failed first; the labels `a web host has no checkout to remove` and `a local host has no checkout to remove` in `tests/close-skill.test.sh`.
+
+**Documentation changed:** `docs/skills.md` (`cleanup` section).
+
+**Build:** the `shell` suite's `build` is `true`: exit 0. `bash tests/run.sh cleanup-skill`, `close-skill`, `skills` and `inventory` pass.
+
+No deviation from the plan.
+
 ## Log
 
 - 2026-11-25 — implemented: 5 tasks committed, Task 6 suite green, build ok · cost: 10m · sonnet-5-5 36k in + 4.7M cached / 12k out
+- 2026-11-25 — round 2: F1 and F6 fixed, F2-F5 left for triage, build ok · cost: 0m · sonnet-5-5 14k in + 684k cached / 1k out
