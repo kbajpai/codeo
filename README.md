@@ -316,7 +316,7 @@ Run the command in Steps 1. A step that was interrupted can be run again: it wor
 
 ## Configuration
 
-The project's settings live in `.codeo/config.json`. It is committed, so everyone on the project shares it. Four keys are required (`schema`, `repo.owner`, `repo.name`, `baseBranch`); every other key is optional and has the default shown. A key the plugin does not know is ignored without a message, so a misspelt key does nothing. `/codeo:doctor` checks `schema`, `codename`, `board`, `issue.priority`, `ci.requiredChecks` and each suite's `build` and `test`, and nothing else. `/codeo:setup` writes only the required keys plus an empty `suites` and an empty `resources`.
+The project's settings live in `.codeo/config.json`. It is committed, so everyone on the project shares it. Four keys are required (`schema`, `repo.owner`, `repo.name`, `baseBranch`); every other key is optional and has the default shown. A key the plugin does not know is ignored without a message, so a misspelt key does nothing. The four required keys fail validation if they are missing or still hold the `TODO-set-me` marker that `/codeo:setup` writes for a value it could not read. `/codeo:doctor` checks that, and then `schema`, `codename`, `board` (`board.owner` and `board.projects` are read, and the board counts as set if either is present), `issue.priority`, `ci.requiredChecks` (against the base branch's ruleset, which also reads `repo.*` and `baseBranch`) and each suite's `build` and `test`. It does not check `resources`, `environment`, `modules`, `models`, `triage`, `invariants`, `docsDir`, `plansDir`, `labelTypes`, `skipGlobs`, `plugin` or `stacks`. `/codeo:setup` writes only the required keys plus an empty `suites` and an empty `resources`; `/codeo:setup --stack <name>` also writes `stacks`.
 
 The table runs in five groups, in this order: required keys, project and suites, board and issues, environment and leases, models and checks. A key written `suites[].name` is a field of each entry in the `suites` list.
 
@@ -327,12 +327,12 @@ The table runs in five groups, in this order: required keys, project and suites,
 | `repo.name` | yes | none | The GitHub name of the repository. |
 | `baseBranch` | yes | none | The branch workflows start from and pull requests target, such as `main`. |
 | `codename` | no | the clone's folder name | A short name for the project, used to name its clones and dev containers (`<codename>-home`, `<codename>-<N>`). Lower-case letters, digits and single hyphens, starting with a letter, 2 to 30 characters. |
-| `plugin.repo` | no | none | The codeo plugin repository the dev container installs. Set it together with `plugin.ref`. |
-| `plugin.ref` | no | none | The tag of the codeo plugin the dev container installs. |
+| `plugin.repo` | no | none | The codeo plugin repository the dev container installs, as `owner/name`. Set it together with `plugin.ref`. |
+| `plugin.ref` | no | none | The tag or branch of the codeo plugin the dev container installs. Needed together with `plugin.repo`. |
 | `suites[].name` | yes, per suite | none | The suite's name. |
-| `suites[].paths` | no | none (never matches) | Globs of the files that make this suite run; `*` stays within a folder, `**` crosses folders. |
-| `suites[].build` | no | none | The command `/codeo:implement` and `/codeo:qc` run to build. `/codeo:doctor` fails one whose first word is not found. |
-| `suites[].test` | no | none | The command `/codeo:qc` runs to test. Checked by `/codeo:doctor` like `build`. |
+| `suites[].paths` | no | none (never matches) | Globs of the files that make this suite run; `*` stays within a folder, `**` crosses folders. A suite without `paths` never matches a path itself, but every suite runs when a changed path matches no suite. |
+| `suites[].build` | no, but `/codeo:doctor` fails a suite without one | none | The command `/codeo:implement` and `/codeo:qc` run to build. `/codeo:doctor` fails a suite whose `build` is empty or unset, or whose first word is not found. |
+| `suites[].test` | no, but `/codeo:doctor` fails a suite without one | none | The command `/codeo:qc` runs to test. `/codeo:doctor` fails a suite whose `test` is empty or unset, or whose first word is not found. |
 | `suites[].filter` | no | none (the whole `test` command is the proof) | A command that runs one test; `{}` stands for the test's name. |
 | `suites[].parallel` | no | `false` | `true` lets the suite run at the same time as other parallel suites. |
 | `skipGlobs` | no | none | Globs of changed files to ignore when deciding which suites run. |
@@ -350,12 +350,12 @@ The table runs in five groups, in this order: required keys, project and suites,
 | `board.statuses.inProgress` | no | `In progress` | The name of the column for issues being worked on. |
 | `board.statuses.inReview` | no | `In review` | The name of the column for issues with a pull request open. |
 | `board.statuses.done` | no | `Done` | The name of the column for finished issues. |
-| `issue.priority` | no | off (only `true` turns it on) | `/codeo:issue` assigns one priority label (`blocker`, `high`, `medium` or `low`); `/codeo:doctor` checks the four labels exist. |
+| `issue.priority` | no | off (only `true` turns it on) | `/codeo:issue` assigns one priority label (`priority: blocker`, `priority: high`, `priority: medium` or `priority: low`); `/codeo:doctor` checks the four labels exist. |
 | `triage.parkedDays` | no | `7` | Days without a pushed change after which `/codeo:triage` asks about a workflow in flight as parked. |
 | `resources[].name` | yes, per resource | none | The name of an exclusive resource, a lease two workflows cannot hold at once. |
 | `resources[].paths` | no | none | Globs of the files that need the resource; used for the one named by `environment.resource` to tell when a change must be deployed. |
 | `resources[].parameterised` | no | `false` | `true` makes the resource stand for `<name>:<suffix>` leases, never the bare name. |
-| `environment.resource` | no | none (no shared environment) | The resource that is the project's shared environment. `/codeo:implement` takes its lease at the first task that needs it and `/codeo:qc` releases it. |
+| `environment.resource` | no | none (no shared environment) | The resource that is the project's shared environment. `/codeo:implement` takes its lease at the first task that needs it; `/codeo:qc` releases it at a clear verdict, otherwise `/codeo:close` does. The `environment.hooks.*` commands run only for this resource. |
 | `environment.hooks.start` | no | skipped | A command run first when the environment lease is taken; a non-zero exit refuses the lease. |
 | `environment.hooks.preflight` | no | skipped | Run after `start`; a non-zero exit refuses the lease. |
 | `environment.hooks.activate` | no | skipped | Run after `preflight`; a non-zero exit refuses the lease. |
