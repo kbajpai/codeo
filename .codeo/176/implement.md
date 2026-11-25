@@ -64,8 +64,8 @@ The `sw_vers` output was not in the paste.
 ## Notes
 
 - **Task 1 gate: passed.** `uname -m` is `arm64`, and the bash triple `aarch64-apple-darwin27.0.0`
-  is Darwin 27, newer than Darwin 23 (macOS 14). `sw_vers` is still wanted before Task 5, so T14
-  records the exact `ProductVersion`; it does not block Tasks 2-4.
+  is Darwin 27, newer than Darwin 23 (macOS 14). `sw_vers`, pasted by the engineer afterwards, prints
+  `ProductName: macOS`, `ProductVersion: 27.2.1`, `BuildVersion: 26B131`; T14 quotes it.
 - **What Task 1 showed, for Tasks 4 and 5:** Homebrew installed `sbx` v0.54.1 (the Windows trial
   and `.sbx/README.md` say v0.53.0, so the macOS text must not claim the same version). Over SSH,
   `sbx login` failed to save its credentials with `macOS Keychain denied access` until
