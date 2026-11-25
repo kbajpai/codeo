@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written: the verdict is back to `/codeo:plan`. Two blocking findings, both the plan's: F1 (the corrected v1.0.8 `Shared state:` line is still untrue for one read in `dossier-check.sh`) and F2 (the stop-failure line is printed on a `--force` removal, where it is false). Five non-blocking findings are recorded. Nothing is open.
+Round 2 is written: the verdict is clear, forward to `/codeo:close`. Round 1's blocking findings F1 and F2 are fixed; five non-blocking findings (R2-F1 to R2-F5) are recorded. Nothing is open.
 
 ## Questions
 
@@ -109,7 +109,51 @@ No finding needs an issue of its own; the `docs/updating.md` gap noted in `imple
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 2 — 2026-11-25
+
+(after implement.md round 2, which answered the send-back to `/codeo:plan` from round 1)
+
+**Scope.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0. `overlap.sh 173` printed nothing, exit 0 (the #176 overlaps were raised in this file's Q1-Q3, and the #177 overlaps in `plan.md`'s Q4-Q5). `overlap.sh --outside 173` printed nothing, exit 0; `plan.md` has a round 2, so a path printed here would have been blocking. `git diff origin/main...HEAD --stat`: 17 files, 1238 insertions, 29 deletions. `scope.sh origin/main HEAD` printed `scope: suite shell needed for unclassified paths:` (`.claude/hooks/session-start.sh`, `.claude/settings.json`, `.codeo/173/*`, `CHANGELOG.md`, `CONTRIBUTING.md`) and `suite.shell=true`, exit 0. No `invariants-extra` or `wiki-rules` overlay section (exit 3), no invariants file, no shared environment, no `wiki` module, so there is no environment block.
+
+**Build.** The `shell` suite's build is `true`: exit 0.
+
+**Suites.** `bash tests/run.sh`, whole, `shell` suite: last line `all cases passed`, exit 0.
+
+**Criteria.**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| `docs/release-checklist.md` step 6 says which examples and stubs move to the release being cut, which move to the one before it, and which do not move | met | `docs/release-checklist.md` step 6, three groups naming `README.md`, `docs/updating.md` and the `tests/install.test.sh` stubs; checked against those files (the reviewer's R2-F3 is a wording point inside the groups) |
+| `CHANGELOG.md:23` says which script stopped counting which heading, matching `dossier-check.sh`, `inflight.sh` and `qc-verdict.sh` at v1.0.7 | met | `CHANGELOG.md:36`, the v1.0.8 `Shared state:` line; `git show v1.0.7:scripts/dossier-check.sh` (`section_range` matched the heading or the heading plus a space; `last_round_clear`, behind `finished-qc-clear`, matched `/^## Outcome/`) and `v1.0.8` (both exact), and `inflight.sh` and `qc-verdict.sh` from `/^## Outcome/` to `/^## Outcome[[:space:]]*$/` |
+| The flowchart edges and the paragraph at `.devcontainer/README.md:186-188` hold when `docker ps -a` fails and `codeo` started the container | met | `.devcontainer/README.md:197` and edges `:214-216`, against `container_check` (`.devcontainer/codeo:526-556`): with no listing `started` stays 0 |
+| The `CHANGELOG.md` #154 bullet no longer says a refusal stops the container unconditionally | met | `CHANGELOG.md:30` |
+| A refusal after a failed `docker stop` either reports it or is documented as leaving the container running; a test pins whichever is chosen | met | `.devcontainer/codeo:478-484` (`stop_started`) and `:644` (`--quiet-stop` only under `--force`); `t_rm_reports_a_failed_stop` and `t_rm_force_does_not_report_a_failed_stop`, both top-level and in `cases` (`tests/codeo-command.test.sh:2311-2312`) |
+| The hook's behaviour has a `CHANGELOG.md` bullet | met | `CHANGELOG.md:11` |
+| The hook's skip check treats `superpowers@*` and a disabled codeo as `install.sh` does, and the hook does not re-run on `clear` or `compact`, or the page says it does | met | `.claude/hooks/session-start.sh:17-22` (user scope, `.enabled != false`, `startswith("superpowers@")`); `.claude/settings.json` matcher `startup\|resume\|fork`, pinned by `tests/live-signal.test.sh`; `tests/session-start-hook.test.sh` (12 cases). One edge differs from `install.sh` (R2-F1, non-blocking) |
+| The hook comment and the README agree on when `/codeo:*` commands load in a hosted session | met | Neither claims when they load: the hook comment points at `CONTRIBUTING.md` → Hosted sessions, which restates the README's restart sentence |
+
+**Round 1's findings.**
+- F1 (blocking in round 1) — fixed by `d621a10`: the v1.0.8 `Shared state:` line names each read of `dossier-check.sh`.
+- F2 (blocking in round 1) — fixed by `c1f1ade` and `9d35d3a`: `--force` passes `--quiet-stop`, the stop is unchanged, and `t_rm_force_does_not_report_a_failed_stop` pins it.
+- F3, F7 — fixed by `fb07071`; F4 — fixed by `acb5e2b` (with `c1f1ade`); F5 — answered by `acb5e2b`, the comment now says any enabled `superpowers@*` entry counts; F6 — fixed by `c1f1ade`.
+
+**Documentation.** Every page the change touches was read against the code and the tags: `.devcontainer/README.md` (the two paragraphs, the "A refusal removes nothing" sentences, the flowchart's edges and node `Q`) against `cmd_rm`, `container_check` and `stop_started`; `CONTRIBUTING.md` → Hosted sessions against the hook and `.claude/settings.json`; `CHANGELOG.md` against the code and `v1.0.7`/`v1.0.8`; `docs/release-checklist.md` step 6 against `README.md`, `docs/updating.md` and `tests/install.test.sh`. The added page text has no "now", "no longer" or issue number (`git diff d097737..HEAD` of the three pages, grepped). The flowchart was not rendered (`mmdc` is not installed); the edits are label text inside the existing double quotes.
+
+**Independent review** (`opus`, given the acceptance criteria and the git range only; it ran `tests/run.sh session-start-hook`, `live-signal` and `codeo-command`, all passing). Quoted in plain text: "Ready to merge? Yes. All eight criteria are met by the lines cited, and each claim I checked against the code and tags holds. Exit statuses and existing output lines are unchanged, and the new tests would catch a regression in either direction. The remaining items are minor wording or rare-edge mismatches."
+
+**Findings.**
+- **R2-F1 — non-blocking — `/codeo:plan`'s.** `.claude/hooks/session-start.sh:19-21`: the hook skips when any user-scope `superpowers@*` entry is enabled; `install.sh`'s `installed_entry` judges only the first. With a disabled `superpowers@a` listed before an enabled `superpowers@superpowers-marketplace`, the hook skips where `install.sh` would enable the first. Plan round 2 chose this deliberately (F5) and the comment states it; an enabled `superpowers` exists in that case, so nothing is missing.
+- **R2-F2 — non-blocking — `/codeo:plan`'s.** `.devcontainer/README.md:199`: "It prints no stop-failure line, because the container is removed" — when `docker rm -f` then fails, the container stays and no stop-failure line is printed. `codeo rm` still dies with its own removal error, so the outcome is visible.
+- **R2-F3 — non-blocking — `/codeo:plan`'s.** `docs/release-checklist.md` step 6: `v1.0.5` sits in "do not move", described as stubs that "only order tags or are refused", but `tests/install.test.sh:757-759` asks for it with `--version`. The explicit list settles what a maintainer does; the description is loose. The `v1.0.9` and `v1.0.8` tags in `t_latest_is_highest_release` (`:236`) are named by no group.
+- **R2-F4 — non-blocking — `/codeo:implement`'s.** `.claude/hooks/session-start.sh:16`: the comment says a failure "leaves both counts empty"; the code has one variable, `ready`.
+- **R2-F5 — non-blocking — neither's.** `CONTRIBUTING.md` → Hosted sessions: whether "start a new session" loads the plugins in a fresh hosted environment is not verified here. The text is hedged and agrees with the README, as round 1's Q3 settled.
+
+No blocking finding. No issue was filed for this pass; R2-F1 to R2-F4 are small enough to collect with `/codeo:triage` after the merge.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-25 — Q1-Q3 raised (overlaps with #176) · cost: 0m · opus-5-5 232k in + 282k cached / 629 out
 - 2026-11-25 — round 1: suite passed, independent review with fixes, verdict back to /codeo:plan (F1, F2 blocking) · cost: 72m · opus-5-5 332k in + 2.5M cached / 20k out · sonnet-5-5 259k in + 2.2M cached / 12k out
+- 2026-11-25 — round 2: build and suite passed, independent review Yes, verdict clear · cost: 4m · opus-5-5 471k in + 2.5M cached / 19k out
