@@ -1,4 +1,4 @@
-# Issue draft new-release-v1-0-10 — issue
+# Issue #182 — issue
 
 Requested by the engineer: "Create a new release to the point where all issues that are in progress as of now & pin the codeo plugin. Also, check the @README.md is up to date, if not then update."
 
@@ -30,6 +30,8 @@ Restated problem: once the four issues in progress today (#173, #176, #177, #179
 
 ## Outcome
 
+Filed as #182 (2026-11-25).
+
 ## Log
 
 - 2026-11-25 — questions 1-5 raised
@@ -44,3 +46,4 @@ Restated problem: once the four issues in progress today (#173, #176, #177, #179
 **Title:** Release v1.0.10 once #173, #176, #177 and #179 are closed, check the README, and pin codeo to it
 **Labels:** `enhancement`, `priority: medium` (rubric: nothing blocked, no defect). No type (`issue-types` prints nothing).
 Body: `body.md` in this directory.
+- 2026-11-25 — approved and filed as #182
