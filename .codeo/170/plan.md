@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2. `/codeo:implement` stopped before any task: its base merge brought in #171, which moved the macOS paragraph to `docs/home-checkout.md` and added `tests/readme.test.sh`, so round 1's Tasks 1-2 no longer fit. Q6 is answered; the reworked draft awaits approval.
+Round 2 planned and approved; the plan is `docs/plans/2026-11-25-codeo-host-command-docs-170.md`, modified and unstaged for the engineer to commit. Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -65,15 +65,6 @@ Round 2. `/codeo:implement` stopped before any task: its base merge brought in #
 - Verified in the repo: `install.sh` installs the two plugins only; `.devcontainer/codeo` calls `flock` (line 159) and prints the `PATH` line from `codeo help`; the install line for the command is at `.devcontainer/README.md:101`.
 - `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` is the command from the issue; it is written as the issue gives it.
 
-### Footprint
-
-```
-files:      README.md, docs/home-checkout.md, .devcontainer/README.md, tests/readme.test.sh, docs/plans/2026-11-25-codeo-host-command-docs-170.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 Plan: `docs/plans/2026-11-25-codeo-host-command-docs-170.md` (approved by the engineer; left unstaged).
@@ -87,7 +78,28 @@ Plan: `docs/plans/2026-11-25-codeo-host-command-docs-170.md` (approved by the en
 **Documentation the plan changes:** `README.md` (*Installing*, *The home checkout* macOS paragraph) and `.devcontainer/README.md` (*Installing the `codeo` command*, new *The keychain over SSH on macOS*). No `CHANGELOG.md` entry (no Unreleased block; #168 owns the release notes). No intake question was resolved here, and no `/codeo:issue` was filed.
 
 
+### Round 2
+2026-11-25
+
+Plan: `docs/plans/2026-11-25-codeo-host-command-docs-170.md`, rewritten in place before any task ran (approved by the engineer; the file stays as `git diff` shows it). `/codeo:implement` stopped at its first step: its base merge brought in #171, which moved the macOS paragraph to `docs/home-checkout.md` and added `tests/readme.test.sh`.
+
+**Decisions:** Q6 (answered in conversation): `brew install flock` and the keychain pointer go in `docs/home-checkout.md` only, and criterion 2 is read as that paragraph. The pin moves from `tests/install.test.sh` to a new `host-command` check in `tests/readme.test.sh`. `README.md` gains only the *Installing* paragraph; `.devcontainer/README.md` is unchanged from round 1 (host sentence, new keychain subsection).
+
+**Rejected:** editing `README.md`'s *Requirements* as well, or instead.
+
+**Documentation the plan changes:** `README.md` (*Installing*), `docs/home-checkout.md` (*The home checkout*), `.devcontainer/README.md`. No intake question was resolved and no `/codeo:issue` was filed.
+
+### Footprint
+
+```
+files:      README.md, docs/home-checkout.md, .devcontainer/README.md, tests/readme.test.sh, docs/plans/2026-11-25-codeo-host-command-docs-170.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-25 — Q1-Q5 raised · cost: 1m · fable-5-2 65k in + 455k cached / 3k out
 - 2026-11-25 — planned: docs/plans/2026-11-25-codeo-host-command-docs-170.md · cost: 5m · fable-5-2 75k in + 643k cached / 7k out · sonnet-5-5 91k in + 686k cached / 10k out
+- 2026-11-25 — re-planned after #171 moved the macOS paragraph: docs/plans/2026-11-25-codeo-host-command-docs-170.md · cost: 4m · fable-5-2 139k in + 830k cached / 9k out · sonnet-5-5 26k in + 138k cached / 950 out
