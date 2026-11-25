@@ -35,7 +35,7 @@ codeo is an agent-workflow plugin for Claude Code. It is for engineers who work 
 - `gh`, the GitHub CLI; board use also needs `gh project`, which reads GraphQL, so the token must be allowed to use it
 - `claude`, Claude Code
 
-`install.sh` and `/codeo:doctor` both check all five tools. The installer checks them in one run and names every one that is missing or too old. It installs none of them: use your system's package manager, then run it again.
+`install.sh` checks all five tools in one run and names every one that is missing or too old; `/codeo:doctor` checks bash, `jq`, `git` and `gh`, and never runs `claude`. It installs none of them: use your system's package manager, then run it again.
 
 ## Installing
 
@@ -155,6 +155,8 @@ Commit the file it wrote. This is its content (`jq -S . .claude/settings.json`),
   }
 }
 ```
+
+`ref` pins the codeo release the project uses; write the newest release tag, which `git ls-remote --tags --refs https://github.com/kbajpai/codeo 'v*'` lists. A teammate who opens the folder in Claude Code and trusts it is offered both plugins. A later run that replaces codeo on your machine drops this project's install (see [Updating](#updating)). To move the project to another release, change `ref` ([Moving a project's pin](docs/updating.md#moving-a-projects-pin)).
 
 Updating, replacing and restoring are in [Updating](#updating).
 
@@ -318,7 +320,7 @@ Run the command in Steps 1. A step that was interrupted can be run again: it wor
 
 ## Configuration
 
-The project's settings live in `.codeo/config.json`. It is committed, so everyone on the project shares it. Four keys are required (`schema`, `repo.owner`, `repo.name`, `baseBranch`); every other key is optional and has the default shown. A key the plugin does not know is ignored without a message, so a misspelt key does nothing. The four required keys fail validation if they are missing or still hold the `TODO-set-me` marker that `/codeo:setup` writes for a value it could not read. `/codeo:doctor` checks that, and then `schema`, `codename`, `board` (`board.owner` and `board.projects` are read, and the board counts as set if either is present), `issue.priority`, `ci.requiredChecks` (against the base branch's ruleset, which also reads `repo.*` and `baseBranch`) and each suite's `build` and `test`. It does not check `resources`, `environment`, `modules`, `models`, `triage`, `invariants`, `docsDir`, `plansDir`, `labelTypes`, `skipGlobs`, `plugin` or `stacks`. `/codeo:setup` writes only the required keys plus an empty `suites` and an empty `resources`; `/codeo:setup --stack <name>` also writes `stacks`.
+The project's settings live in `.codeo/config.json`. It is committed, so everyone on the project shares it. Four keys are required (`schema`, `repo.owner`, `repo.name`, `baseBranch`); every other key is optional and has the default shown. A key the plugin does not know is ignored without a message, so a misspelt key does nothing. The four required keys fail validation if they are missing or still hold the `TODO-set-me` marker that `/codeo:setup` writes for a value it could not read. `/codeo:doctor` checks that, and then `schema`, `codename`, `board` (`board.owner` and `board.projects` are read, and the board counts as set if either is present), `issue.priority`, `ci.requiredChecks` (against the base branch's ruleset, which also reads `repo.*` and `baseBranch`) and each suite's `build` and `test`. It does not check `resources`, `environment`, `hooks`, `modules`, `models`, `triage`, `invariants`, `docsDir`, `plansDir`, `labelTypes`, `skipGlobs`, `plugin` or `stacks`. `/codeo:setup` writes only the required keys plus an empty `suites` and an empty `resources`; `/codeo:setup --stack <name>` also writes `stacks`.
 
 The table runs in five groups, in this order: required keys, project and suites, board and issues, environment and leases, models and checks. A key written `suites[].name` is a field of each entry in the `suites` list.
 
@@ -420,11 +422,11 @@ The entries are in two groups. *During a workflow* covers what stops a step whil
 /codeo:plan runs in an issue's checkout, but this checkout's role is home.
 ```
 
-**A lock that is stuck or not yours.** Every step after `/codeo:init` checks the workflow lock file first. The file belongs to one checkout (it is not committed), and only `/codeo:close` removes it, when the workflow ends, is stashed or is abandoned.
+**A lock that is stuck or not yours.** Every step after `/codeo:init` checks the workflow lock file first. The file belongs to one checkout (it is not committed), and `/codeo:close` removes it when the workflow ends, is stashed or is abandoned (the dev container start script also removes an empty one).
 
 - **Symptom.** A skill stops and says there is no lock; or says the lock's `branch` differs from the branch you are on; or says the lock names a different issue from the one you asked for; or `/codeo:init` refuses because a lock already exists; or a `lock: TODO …` line appears.
-- **Cause.** No lock means the step before was skipped, or you are in another checkout. A branch mismatch means someone switched branches or the lock is stale. The other two mean this checkout already holds a workflow.
-- **Fix.** For no lock, run `/codeo:init #<N>`. For a branch mismatch, switch back to the lock's branch yourself, or finish the workflow there with `/codeo:close` or `/codeo:close --stash`; the lock file is only ever written by the plugin's own script, so do not edit it, and do not switch branches to make it agree. For another issue, finish or stash that one first, in its own checkout. When `/codeo:init` refuses, run it in another checkout (a second clone or a `git worktree`), or finish this workflow with `/codeo:close`. For a `lock: TODO …` line, fix what it says, then take the lock again as the closing block of that step tells you.
+- **Cause.** No lock means the step before was skipped, or you are in another checkout. A branch mismatch means someone switched branches or the lock is stale. The other two mean this checkout already holds a workflow. A `lock: TODO …` line means the lock script could not finish part of its work, and the line says which.
+- **Fix.** For no lock, run `/codeo:init #<N>`. For a branch mismatch, switch back to the branch the lock names (`git switch <branch>`), or finish the workflow there with `/codeo:close` or `/codeo:close --stash`; do not edit `.codeo/active` to make it agree with the branch. For another issue, finish or stash that one first, in its own checkout. When `/codeo:init` refuses, run it in another checkout (a second clone or a `git worktree`), or finish this workflow with `/codeo:close`. For a `lock: TODO …` line, do what it says: the example below is the one case where you edit the lock, by writing the volume name into its `volume:` line (`docker volume ls` on the host lists the volumes). For a TODO that says the lock was not taken (for instance no `init.md` names the branch), run `/codeo:init #<N>`. Taking a lock that exists only prints `lock already taken`.
 
 ```
 lock: TODO — could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)
@@ -532,7 +534,7 @@ install: done - codeo v1.0.9, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
-Then restart any Claude Code sessions already open. Before you run it, read [`CHANGELOG.md`](CHANGELOG.md) for every release between yours and the new one; each entry opens with `Config schema`, `Shared state` and `Safe to bump mid-workflow`, which say what to check or finish first.
+Before you run the install command, read [`CHANGELOG.md`](CHANGELOG.md) for every release between yours and the new one; each entry opens with `Config schema`, `Shared state` and `Safe to bump mid-workflow`, which say what to check or finish first. Then restart any Claude Code sessions already open.
 
 superpowers is left alone by the installer when it is already installed. Update it with `claude plugin update superpowers@superpowers-marketplace`.
 

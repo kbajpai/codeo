@@ -109,7 +109,7 @@ install: codeo is no longer installed for /home/you/loc (local scope, v1.0.8); i
 install: codeo is no longer installed: Error: network unreachable; run this again
 ```
 
-Before you run it, read [`CHANGELOG.md`](../CHANGELOG.md) for every release between yours and the new one. Each entry opens with three lines: `Config schema` (a project's `.codeo/config.json` must not be newer than the plugin understands), `Shared state` (what the plugin keeps on GitHub or in `.codeo/` that changed) and `Safe to bump mid-workflow` (`yes`, or what to finish first). Projects whose install the update drops are named in its output (see *What a replace drops*).
+Before you run the install command, read [`CHANGELOG.md`](../CHANGELOG.md) for every release between yours and the new one. Each entry opens with three lines: `Config schema` (a project's `.codeo/config.json` must not be newer than the plugin understands), `Shared state` (what the plugin keeps on GitHub or in `.codeo/` that changed) and `Safe to bump mid-workflow` (`yes`, or what to finish first). Projects whose install the update drops are named in its output (see *What a replace drops*).
 
 ## Updating superpowers
 
@@ -123,4 +123,4 @@ Checking for updates for plugin "superpowers@superpowers-marketplace"…
 
 ## Moving a project's pin
 
-Restart every open Claude Code session afterwards. A project's pin lives in its `.claude/settings.json`: edit `ref` under `extraKnownMarketplaces.codeo.source` to the new tag, commit it, and a teammate who trusts the folder gets the new release. To move your own copy to the same release, run the install command with `--version` and that tag.
+A project's pin lives in its `.claude/settings.json`: edit `ref` under `extraKnownMarketplaces.codeo.source` to the new tag, commit it, and a teammate who trusts the folder gets the new release. To move your own copy to the same release, run the install command with `--version` and that tag, then restart every open Claude Code session.

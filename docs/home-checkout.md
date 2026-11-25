@@ -2,7 +2,7 @@
 
 ## The home checkout
 
-The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup`: the steps that work on the project rather than inside one issue's workflow. It runs on your machine in a clone named `<codename>-home` (for this repository, `codeo-home`) that sits on the base branch, or in the `codeo-home` dev container, which is still supported ([`.devcontainer/README.md`](../.devcontainer/README.md)). `<codename>` is the optional `codename` in `.codeo/config.json` (this repository sets `codeo`); without one it is the clone's own folder name, so a host clone named `<project>-home` needs `codename` set to `<project>` to be recognised as home.
+The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup`: the steps that work on the project rather than inside one issue's workflow. It runs on your machine in a clone named `<codename>-home` (for this repository, `codeo-home`) that sits on the base branch, or in the `codeo-home` dev container ([`.devcontainer/README.md`](../.devcontainer/README.md)). `<codename>` is the optional `codename` in `.codeo/config.json` (this repository sets `codeo`); without one it is the clone's own folder name, so a host clone named `<project>-home` needs `codename` set to `<project>` to be recognised as home.
 
 To run it on the host you need:
 

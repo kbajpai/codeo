@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Guards README.md (and docs/updating.md, docs/home-checkout.md once they exist) as the complete guide:
+# Guards README.md, docs/updating.md and docs/home-checkout.md as the complete guide:
 #   commands         every /codeo:<name> is a directory under skills/
 #   paths            every backticked repo path (.codeo/ docs/ scripts/ tests/ hooks/ lib/ skills/ .devcontainer/)
 #                    resolves to a file or directory
 #   links            every relative link resolves, and its #anchor is a GitHub slug of a heading in the target
-#   config-keys      the Configuration table lists exactly the keys the plugin reads (known_keys below), and each
-#                    key's last segment appears in the code ("stacks" only in scripts/setup.sh, "read by nothing")
+#   config-keys      the Configuration table lists exactly the keys in known_keys below (a hand-kept list: a key the
+#                    code starts reading is added there by hand), and each key's last segment (its parent, for name,
+#                    paths, build and test) appears somewhere in the code, a weak check ("stacks" only in scripts/setup.sh, "read by nothing")
 #   sections         the "##" headings are the thirteen expected ones, in order; Contents links to all the others
 #   start-here       Start here links #installing, #setting-a-project-up and #your-first-workflow
 #   walkthrough      Your first workflow has six "###" steps: issue, init, plan, implement, qc, close
@@ -54,9 +55,10 @@ slugs() {
         tr 'A-Z' 'a-z' | sed 's/[^a-z0-9 _-]//g; s/ /-/g'
 }
 
+pages=("$readme" docs/updating.md docs/home-checkout.md)
+for p in "${pages[@]:1}"; do [[ -f $p ]] || fail pages "$p is missing"; done
 pages=("$readme")
-[[ -f docs/updating.md ]] && pages+=(docs/updating.md)
-[[ -f docs/home-checkout.md ]] && pages+=(docs/home-checkout.md)
+for p in docs/updating.md docs/home-checkout.md; do [[ -f $p ]] && pages+=("$p"); done
 
 # commands: every /codeo:<name> on every page, fences included.
 while IFS= read -r name; do
