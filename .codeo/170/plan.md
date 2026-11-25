@@ -65,6 +65,15 @@ Round 2. `/codeo:implement` stopped before any task: its base merge brought in #
 - Verified in the repo: `install.sh` installs the two plugins only; `.devcontainer/codeo` calls `flock` (line 159) and prints the `PATH` line from `codeo help`; the install line for the command is at `.devcontainer/README.md:101`.
 - `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` is the command from the issue; it is written as the issue gives it.
 
+### Footprint
+
+```
+files:      README.md, docs/home-checkout.md, .devcontainer/README.md, tests/readme.test.sh, docs/plans/2026-11-25-codeo-host-command-docs-170.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 Plan: `docs/plans/2026-11-25-codeo-host-command-docs-170.md` (approved by the engineer; left unstaged).
@@ -77,14 +86,6 @@ Plan: `docs/plans/2026-11-25-codeo-host-command-docs-170.md` (approved by the en
 
 **Documentation the plan changes:** `README.md` (*Installing*, *The home checkout* macOS paragraph) and `.devcontainer/README.md` (*Installing the `codeo` command*, new *The keychain over SSH on macOS*). No `CHANGELOG.md` entry (no Unreleased block; #168 owns the release notes). No intake question was resolved here, and no `/codeo:issue` was filed.
 
-### Footprint
-
-```
-files:      README.md, .devcontainer/README.md, tests/install.test.sh, docs/plans/2026-11-25-codeo-host-command-docs-170.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
