@@ -95,6 +95,9 @@ out=$(run "$body")
 [[ $out == $'70\tproven\tcodeo rm 70\t'* ]] || check_fail "the overlay does not accept codeo-70: $out"
 fb=${out#$'70\tproven\tcodeo rm 70\t'}
 [[ $fb == *'docker rm -f codeo-70'* && $fb == *'docker volume rm codeo-70'* && $fb == *'codeo-track.sh mark 70 container codeo-70 removed'* && $fb == *'unpushed'* && $fb != *'{'* ]] || check_fail "the overlay's fallback does not expand: $fb"
+for needle in 'docker rmi codeo-dev:codeo-70' 'codeo-sandbox.sh end 70' 'docker rm does not end a sandbox' 'on the host that created the container' 'not inside a container' 'mark 70 image codeo-dev:codeo-70 removed'; do
+    [[ $fb == *"$needle"* ]] || check_fail "the overlay's fallback lacks: $needle"
+done
 
 [[ $fail -eq 0 ]] || exit 1
 echo "all cases passed"
