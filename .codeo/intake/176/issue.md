@@ -1,14 +1,14 @@
-# Issue: Support the sbx issue sandbox on macOS — issue
+# Issue #176 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/176 |
 | Branch | none |
 | Updated | 2026-11-25 |
 
 ## Where this stands
 
-Round 1 answered; draft below awaits approval.
+Filed as #176.
 
 ## Problem as restated
 
