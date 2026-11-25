@@ -15,8 +15,9 @@ showed that the sandbox starts, takes the lock and lists; the rest (`open`, `she
 tracking row, the git identity) did not run as the plan wrote the commands, so Q3 asks for them with
 the corrections. Q3 is answered: the tracking row is there, the identity TODO is expected (the Mac
 has no global git identity), and `codeo shell` works. Q4 asks for the last three: `open`, `rm` and
-the `removed` row. T14 and the README are written once Q4 is answered, and the whole-branch review
-follows, because Task 5 edits `.sbx/README.md` and the evaluation page.
+the `removed` row. Q4 is answered: the sandbox is `removed` on the issue, but `codeo open`'s result
+was not captured, so Q5 asks one thing about it. T14 and the README are written once Q5 is answered,
+and the whole-branch review follows, because Task 5 edits `.sbx/README.md` and the evaluation page.
 
 ## Questions
 
@@ -246,6 +247,36 @@ If `codeo rm` refuses over unpushed or uncommitted work, paste what it printed a
 `codeo update` afterwards puts `main`'s scripts back.
 
 **Answer:**
+Pasted by the engineer in conversation, 2026-11-25, trimmed (the issue body is left out):
+
+```
+$ codeo open 176 --sandbox
+codeo-sandbox: codeo-176 does not exist: create it with codeo-sandbox.sh issue 176 <branch>
+$ codeo rm 176 --sandbox
+codeo-sandbox: no sandbox codeo-176
+$ gh issue view 176 --repo kbajpai/codeo --comments
+  … Codeo tracking for #176 …
+   sandbox   │ codeo-176 │ mac-studio.lan │ removed │ 2026-11-25T20:44:45Z │ 2026-11-25T20:48:4…
+```
+
+Read: the sandbox was already gone when these ran. Its row says `removed` at 20:48, four minutes after
+it was created at 20:44:45, so the `codeo open` and `codeo rm` lines in the Q3 paste, which ran
+after the engineer left the sandbox shell, did run, and `codeo rm` removed the sandbox and marked
+the row. What they printed was not captured, and `codeo open`'s result is not known.
+
+### Q5 — Did `codeo open 176 --sandbox` open VS Code on the Mac when it ran in the Q3 paste?
+
+**Why it matters:** `codeo open` opening the sandbox is the one clause of criterion 3 with no
+evidence yet (`list`, `shell`, `rm` and the `removed` row are shown). T14 records it as shown or as
+not shown, and the `## On macOS` text says what `codeo open` does on a Mac over SSH only if it was
+seen; a "not shown" here goes to `/codeo:qc` as a criterion it cannot check. The sandbox no longer
+exists, so a new run means `codeo issue 176 --sandbox --yes` again (a couple of minutes), then
+`codeo open 176 --sandbox`, then `codeo rm 176 --sandbox`.
+**Options:** yes, a window opened on the Mac and connected to `codeo-176.sbx` · a window opened but
+did not connect (say what it showed) · nothing opened, or not looked · run the three commands again
+and paste what they print.
+
+**Answer:**
 
 ## Notes
 
@@ -270,3 +301,4 @@ _Pending — written at the hand-off._
 - 2026-11-25 — Task 1 gate passed (Q1 answered); Tasks 2-4 built, each reviewed clean and pushed; Q2 raised for Task 5 on the Mac · cost: 27m · sonnet-5-5 262k in + 8.2M cached / 40k out
 - 2026-11-25 — Q2 answered: sandbox starts, takes the lock, lists on the Mac; open, rm and the tracking row did not run as planned, Q3 raised with corrected commands · cost: 74m · sonnet-5-5 310k in + 9.3M cached / 44k out
 - 2026-11-25 — Q3 answered: tracking row, identity and shell shown; open and rm still unrun, Q4 raised · cost: 76m · sonnet-5-5 320k in + 10.2M cached / 53k out
+- 2026-11-25 — Q4 answered: the sandbox row reads removed; codeo open's result not captured, Q5 raised · cost: 79m · sonnet-5-5 328k in + 11M cached / 57k out
