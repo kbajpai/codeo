@@ -81,4 +81,4 @@ _Pending — written at the hand-off._
 
 ## Log
 
-- 2026-11-25 — explored at `92bbe45`; Q1-Q4 raised
+- 2026-11-25 — explored at `92bbe45`; Q1-Q4 raised · cost: 2m · fable-5-2 103k in + 728k cached / 12k out
