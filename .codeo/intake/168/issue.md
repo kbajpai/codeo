@@ -1,4 +1,4 @@
-# Issue new-release-v1-0-9 — issue
+# Issue #168 — issue
 
 Requested by the engineer: "Create an issue to create a release after all current issues are closed. Any issues after the release get another issue."
 
@@ -38,3 +38,4 @@ Body: `body.md` in this directory.
 ## Log
 
 - 2026-11-25 — answers 1-3 received; draft written for the review gate
+- 2026-11-25 — approved and filed as #168
