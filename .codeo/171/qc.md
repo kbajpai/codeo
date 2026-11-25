@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written. The build and the suite pass in this checkout, but the new README test fails on a clean checkout (G1), so the change goes back to `/codeo:implement`. Next step: `/codeo:implement`.
+Round 3 is written: build and suite pass here and in a clean worktree, no blocking finding, six non-blocking notes. The verdict is clear. Next step: `/codeo:close`.
 
 ## Questions
 
@@ -98,7 +98,46 @@ Issues filed by this pass: none.
 Issues filed by this pass: none.
 
 **Verdict: back to `/codeo:implement`.**
+### Round 3 — 2026-11-25
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`. `overlap.sh 171` and `overlap.sh --outside 171`: nothing printed, exit 0. `scope.sh origin/main HEAD`: `suite.shell=true`. Diff: 12 files, +1374/−231; head `349443c`. No shared environment is configured, so there is no environment block.
+
+**Build.** `true` (suite `shell`): exit 0.
+
+**Tests.** `bash tests/run.sh` in this checkout: `all cases passed`, exit 0. The same command in a clean `git worktree` at `349443c`, with no gitignored files and so no `.codeo/active`: `all cases passed`, exit 0. The round 2 failure does not recur.
+
+**Round 2 recap.** G1 (blocking in round 2) — fixed by `078331a`: `tests/readme.test.sh` allows `.codeo/active` and `.codeo/intake` by name; the clean-worktree run above passes. G2-G5 (non-blocking in round 2) — fixed by `078331a`; the reviewer renamed a script path used as a command argument in a copy and the test failed.
+
+**Criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | Summary, contents, "start here" | met | README.md:3, :5-18, :20-28; `tests/readme.test.sh` start-here and sections checks |
+| 2 | Install, update/replace/restore, uninstall separate; common install first | met | `## Installing`, `## Updating`, `## Uninstalling`; `t_readme_sections` in `tests/install.test.sh` |
+| 3 | First workflow, six steps with command, asks, writes, next | met | README.md:244-302; reviewer checked each commit subject and file against skills/*/SKILL.md |
+| 4 | Every key read, optionality, an example | met | the Configuration table and two JSON examples; reviewer matched the table to every `config.sh get` and `codeo_cfg` read in the code |
+| 5 | Troubleshooting: role guard, lock, interruption, card not Ready, plus doctor entries | met | README.md:413-445; each cause and fix matches `scripts/lock.sh`, `.devcontainer/scripts/role.sh`, `scripts/board.sh` and skills/init/SKILL.md |
+| 6 | Every command, path and link exists and is spelled as in the repo | met | `tests/readme.test.sh` commands, paths (now including paths inside commands) and links checks, passing in a clean worktree; reviewer mutated a copy for each and every mutation failed |
+| 7 | `bash tests/run.sh` passes | met | both runs above |
+
+**Documentation check.** No behaviour changed, so no other page moves. The pages talk about the system: the only "no longer" lines are quoted installer output.
+
+**Independent review (opus).** Quoted, not bold: no Critical, no Important, six Minor; assessment "With fixes (all minor)". It ran the suite in a clean worktree, mutated `tests/readme.test.sh` thirteen ways, and found no content lost from the old README.
+
+**Findings (all non-blocking, all `/codeo:implement`'s if picked up).**
+
+- **H1 — non-blocking.** README.md:447: the "Checks from /codeo:doctor" intro says each entry is one doctor check, but the last two entries (`its source doesn't match its extraKnownMarketplaces entry`, and a hand-edited `ref`) are `claude plugin` and `install.sh` problems that `scripts/doctor.sh` does not check. They need their own heading or a reworded intro.
+- **H2 — non-blocking.** README.md:27: Start here step 6 says to merge the pull request and "see the workflow finish". The workflow finishes only when `/codeo:close` is run again after the merge (`skills/close/SKILL.md` step 8); README.md:302 says so, the start path does not.
+- **H3 — non-blocking.** README.md:429: the advice to run `/codeo:init #<N>` for a `lock: TODO` that says no lock was taken also catches the diverged and stale-local TODOs of `scripts/lock.sh:94,103,115`, which say to reconcile by hand and re-run the script.
+- **H4 — non-blocking.** `tests/readme.test.sh:52-56`: the heading-slug function does not produce GitHub's `-1` suffix for a repeated heading, so a link to one would fail falsely. No page repeats a heading today.
+- **H5 — non-blocking.** `tests/readme.test.sh:72-81`: paths the README names for a user's project (`docs/plans/`, `.codeo/config.json`) pass because codeo uses itself; the header does not say so.
+- **H6 — non-blocking.** `docs/updating.md`, "Updating superpowers": no advice to restart Claude Code sessions after `claude plugin update superpowers@…`.
+
+Issues filed by this pass: none. H1-H6 are small enough to carry as notes for `/codeo:triage`.
+
+**Verdict: clear — forward to `/codeo:close`.**
 ## Log
 
 - 2026-11-25 — qc round 1: build and suite pass; two blocking documentation findings (F1, F2), eight non-blocking; back to implement · cost: 5m · opus-5-5 263k in + 6.7M cached / 25k out · sonnet-5-5 98k in + 265k cached / 609 out
 - 2026-11-25 — qc round 2: build and suite pass here; one blocking finding (G1, the readme test fails on a clean checkout), four non-blocking; back to implement · cost: 4m · opus-5-5 329k in + 5.3M cached / 24k out · sonnet-5-5 27k in + 343k cached / 1k out
+- 2026-11-25 — qc round 3: build and suite pass here and in a clean worktree; no blocking finding, six non-blocking (H1-H6); clear · cost: 8m · opus-5-5 360k in + 7.4M cached / 26k out · sonnet-5-5 25k in + 441k cached / 805 out
