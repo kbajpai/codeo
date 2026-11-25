@@ -33,3 +33,14 @@ Restated problem: once the four issues in progress today (#173, #176, #177, #179
 ## Log
 
 - 2026-11-25 — questions 1-5 raised
+- 2026-11-25 — answers received: 1 v1.0.10; 2 yes; 3 yes (read as option b); "4. Medium" read as the priority; pin taken as yes (asked for in the request). Draft written for the review gate
+
+## Answers (engineer, 2026-11-25)
+
+1. v1.0.10. 2. Yes. 3. Yes (option b). 4. Medium (priority). Pin: yes.
+
+## Draft
+
+**Title:** Release v1.0.10 once #173, #176, #177 and #179 are closed, check the README, and pin codeo to it
+**Labels:** `enhancement`, `priority: medium` (rubric: nothing blocked, no defect). No type (`issue-types` prints nothing).
+Body: `body.md` in this directory.
