@@ -38,10 +38,41 @@ sbx login
 ```
 
 **Answer:**
+Pasted by the engineer in conversation, 2026-11-25, trimmed to the lines that matter:
+
+```
+arm64
+GNU bash, version 5.3.20(1)-release (aarch64-apple-darwin27.0.0)
+Homebrew 7.0.16
+Trusted tap: docker/tap
+✔︎ Cask sbx (0.54.1)
+🍺  sbx was successfully installed!
+  sbx version v0.54.1 3df896d5784200e8dfe6dca28ebd7102fe064169
+  Your one-time device confirmation code is: TMKF-PDJT
+  Open this URL to sign in: https://login.docker.com/activate?user_code=TMKF-PDJT
+  error: signed in to Docker, but SBX could not save the credentials because macOS Keychain denied access; unlock the login keychain in Keychain Access or allow SBX access, then run 'sbx login' again
+kbajpai@mac-studio:~$ security -v unlock-keychain ~/Library/Keychains/login.keychain-db
+  (prompted for the login password)
+kbajpai@mac-studio:~$ sbx login
+  Open this URL to sign in: https://login.docker.com/activate?user_code=HKPB-BGNF
+  Signed in as kbajpai.
+  warning: schedule credential exchange failed: the schedule service could not verify your Docker sign-in
+```
+
+The `sw_vers` output was not in the paste.
 
 ## Notes
 
-None.
+- **Task 1 gate: passed.** `uname -m` is `arm64`, and the bash triple `aarch64-apple-darwin27.0.0`
+  is Darwin 27, newer than Darwin 23 (macOS 14). `sw_vers` is still wanted before Task 5, so T14
+  records the exact `ProductVersion`; it does not block Tasks 2-4.
+- **What Task 1 showed, for Tasks 4 and 5:** Homebrew installed `sbx` v0.54.1 (the Windows trial
+  and `.sbx/README.md` say v0.53.0, so the macOS text must not claim the same version). Over SSH,
+  `sbx login` failed to save its credentials with `macOS Keychain denied access` until
+  `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` was run, after which it
+  signed in with the device-code flow (a URL and a code, no browser opened from the shell) and
+  printed the same `schedule credential exchange failed` warning as on Windows. Brew's bash 5.3.20
+  is the Mac's `bash`. These are tried, not untried, in Task 4's `## On macOS`.
 
 ## Outcome
 
