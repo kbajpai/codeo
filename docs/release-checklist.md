@@ -74,7 +74,9 @@ constrain other people and accidents, not the owner.
 6. Before tagging, set the release's version in `.claude-plugin/plugin.json`, in the installer examples
    in `README.md` and in the stubs of `tests/install.test.sh`, which move to the latest release
    (`.claude-plugin/marketplace.json` carries no version), and retitle `CHANGELOG.md`'s `## Unreleased`
-   as `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change. Once that pull
+   as `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change. The date is the UTC date the
+   release pull request opens (`gh pr view --json createdAt`), which can be the day after the engineer's
+   local date. Once that pull
    request merges, test the merged commit — the one the tag will name — from a clean clone:
 
    ```bash
