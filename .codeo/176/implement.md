@@ -15,9 +15,9 @@ showed that the sandbox starts, takes the lock and lists; the rest (`open`, `she
 tracking row, the git identity) did not run as the plan wrote the commands, so Q3 asks for them with
 the corrections. Q3 is answered: the tracking row is there, the identity TODO is expected (the Mac
 has no global git identity), and `codeo shell` works. Q4 asks for the last three: `open`, `rm` and
-the `removed` row. Q4 is answered: the sandbox is `removed` on the issue, but `codeo open`'s result
-was not captured, so Q5 asks one thing about it. T14 and the README are written once Q5 is answered,
-and the whole-branch review follows, because Task 5 edits `.sbx/README.md` and the evaluation page.
+the `removed` row. Q4 and Q5 are answered: the sandbox is `removed` on the issue, and `codeo open`'s
+result was never captured, so T14 records it as not shown. T14 and the README are written next,
+then the whole-branch review, because Task 5 edits `.sbx/README.md` and the evaluation page.
 
 ## Questions
 
@@ -277,6 +277,13 @@ did not connect (say what it showed) · nothing opened, or not looked · run the
 and paste what they print.
 
 **Answer:**
+The engineer pasted the same terminal output as in Q4 (the `codeo open` and `codeo rm` "does not
+exist" lines and the tracking view with the `removed` row), 2026-11-25, and said nothing about a
+window opening.
+
+My reading, labelled as mine: `codeo open`'s result is not shown. T14 records it as not shown and not
+tried over SSH, and the outcome says criterion 3's `open` clause is unchecked, so `/codeo:qc` can
+route it. It can go back as a later round if the engineer re-runs it or says what happened.
 
 ## Notes
 
