@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are answered and the plan is approved and saved at `docs/plans/2026-11-25-close-157-leftovers-166.md` (unstaged). `overlap.sh` then printed four overlaps with #163, now Q4; `## Outcome` stays pending until it is answered. Next step: answer Q4, then run `/codeo:plan` again.
+Planned: the plan is approved and saved at `docs/plans/2026-11-25-close-157-leftovers-166.md` (unstaged). Q1-Q4 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: commit the plan, then `/codeo:implement`.
 
 What I found (read at `5207e1e`):
 
@@ -65,8 +65,23 @@ Proceed and coordinate: whoever merges second rebases `CHANGELOG.md` and keeps b
 **Options:** *proceed and coordinate* (my pick: both changes are single sentences and pins in different places; whoever merges second rebases and keeps both sides, as with #161 in Q3) · *sequence after #163* (this plan waits for #163 to merge, then is rebased onto its code) · *re-scope* (say which of the five files to leave out; the close overlay sentence and `tests/close-removal.test.sh` are what Task 3 cannot do without).
 
 **Answer:**
-
+Proceed and coordinate: whoever merges second rebases the five shared files and keeps both sides. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 ## Notes
+
+None.
+
+## Outcome
+
+Plan: `docs/plans/2026-11-25-close-157-leftovers-166.md` (approved, unstaged). Shape: a plan under `docs/plans/` only; no reference doc, since nothing here is a standing decision.
+
+**Decisions.**
+- Q1 (A): step 17 of `skills/close/SKILL.md` gets a fixed paragraph for `host: web` and any lock with `CLAUDE_CODE_REMOTE=true`, naming `git push origin --delete codeo-live/<issue>/<machine>`; both default bullets say "no checkout to remove". Rejected: a new `live.sh leftover` subcommand (more code, tests and docs for a non-blocking finding). This repo's `.codeo/overlays/close.md` changes with it, because step 17 relays that overlay here.
+- Q2 (A): rule `cleanup-02` is reworded so `scripts/cleanup.sh` can print the `leftover` line after `failed name`; the inventory line and its pinned hash follow. Rejected: leaving the rule as written beside a script that prints a command.
+- Q3, Q4: proceed and coordinate with #161 (`CHANGELOG.md`) and #163 (`CHANGELOG.md`, `docs/skills.md`, `tests/cleanup-skill.test.sh`, `tests/close-removal.test.sh`); whoever merges second rebases and keeps both sides. Rejected: sequencing, re-scoping.
+- F13: both sweep descriptions gain "(a hosted web session deletes none: it cannot delete a branch)".
+- Out of scope, unchanged: #157 F10 and F11, and a hosted session deleting its own branch. No intake question was resolved by this skill; no issue was filed; the `engineering` plugin was not needed.
+
+**Documentation the plan changes.** `skills/close/SKILL.md` (description, step 17), `.codeo/overlays/close.md`, `skills/cleanup/SKILL.md`, `docs/skills.md` (`close` and `cleanup` sections), `docs/skills-inventory.md`, `CHANGELOG.md`.
 
 ### Footprint
 
@@ -77,11 +92,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-24 — Q1-Q3 raised · cost: 1m · fable-5-2 82k in + 533k cached / 5k out
 - 2026-11-25 — plan approved and saved; Q4 raised (overlap with #163) · cost: 103m · fable-5-2 96k in + 866k cached / 11k out · sonnet-5-5 224k in + 899k cached / 16k out
+- 2026-11-25 — Q4 answered; planned: docs/plans/2026-11-25-close-157-leftovers-166.md · cost: 119m · fable-5-2 96k in + 866k cached / 11k out · sonnet-5-5 228k in + 1.3M cached / 19k out
