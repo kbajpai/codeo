@@ -6,7 +6,7 @@ An issue's work can run in a Docker Sandboxes (sbx) sandbox instead of a dev con
 
 The host is Linux, macOS or WSL2 with bash 4.3 or later, `git` and `curl`.
 
-- `sbx` v0.53.0, or `sbx.exe` reachable on `PATH` from WSL2. The script uses `sbx`, else `sbx.exe`; `CODEO_SBX` names the program instead. On macOS, `sbx` needs macOS 14 (Sonoma) or later on Apple silicon (Intel Macs are not on Docker's list), and no Docker Desktop: `brew trust docker/tap`, then `brew install docker/tap/sbx` (Homebrew installed v0.54.1 on the checked Mac).
+- `sbx` (the Windows trial and the Linux and WSL2 text used v0.53.0; Homebrew installed v0.54.1 on the checked Mac), or `sbx.exe` reachable on `PATH` from WSL2. The script uses `sbx`, else `sbx.exe`; `CODEO_SBX` names the program instead. On macOS, `sbx` needs macOS 14 (Sonoma) or later on Apple silicon (Intel Macs are not on Docker's list), and no Docker Desktop: `brew trust docker/tap`, then `brew install docker/tap/sbx`.
 - `sbx login`.
 - `sbx secret set github --command 'gh auth token'`. The sandbox's `gh` holds a placeholder token; inside the sandbox `gh auth token` and `GH_TOKEN` print it and a push works with no login; where the real token is held was not shown.
 - `sbx setup ssh` (experimental). It makes the `*.sbx` hosts resolve, which `open` needs.
@@ -39,12 +39,14 @@ Run the commands from the directory that holds the downloaded file. The clone `c
 
 ## On macOS
 
+macOS was checked with Homebrew bash 5.3.20; the script needs 4.3 or later, and 4.3 itself was not run.
+
 The script runs on a Mac with these additions to the prerequisites above:
 
 - The stock bash is 3.2. Run `brew install bash` and make it the first `bash` on `PATH`.
 - `codeo` also needs `flock`: `brew install flock` (see *Installing the `codeo` command* in `.devcontainer/README.md`).
 - `code` must be on `PATH` for `open`: in VS Code, run *Shell Command: Install 'code' command in PATH*, or set `CODEO_CODE` to the program.
-- Over SSH, `sbx login` does not open a browser from the SSH shell. It prints a one-time code and the URL `https://login.docker.com/activate`; open the URL on any machine and enter the code. It fails with `macOS Keychain denied access` until the login keychain is unlocked with `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` (see *The keychain over SSH on macOS* in `.devcontainer/README.md`, `#the-keychain-over-ssh-on-macos`). It then signs in and prints the warning `schedule credential exchange failed`, the same warning as on Windows, which is harmless.
+- Over SSH, `sbx login` does not open a browser from the SSH shell. It prints a one-time code and the URL `https://login.docker.com/activate`; open the URL on any machine and enter the code. It fails with `macOS Keychain denied access` until the login keychain is unlocked with `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` (see *The keychain over SSH on macOS* in `.devcontainer/README.md`, `#the-keychain-over-ssh-on-macos`). It then signs in and prints the warning `schedule credential exchange failed`, the same warning as on Windows, which did not block anything.
 - `sbx secret set github --command 'gh auth token'` resolves `gh`'s token and saves it as a global secret. `sbx setup ssh` enables the `*.sbx` hosts; it warns that it could not pre-trust the host key yet, and the first connect trusts it on use.
 - A Mac with no global `user.name` and `user.email` gets the start script's git identity `TODO` in the sandbox: set them on the Mac with `git config --global user.name 'Your Name'` and `git config --global user.email you@example.com`.
 - Where a container `codeo-<N>` also exists, `codeo open`, `codeo shell` and `codeo rm` stop and ask for `--sandbox`.

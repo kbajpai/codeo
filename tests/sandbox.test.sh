@@ -1106,10 +1106,11 @@ sb_gitcfg_macos() {
     mkdir -p "$sb_dir/home" "$sb_dir/work/codeo-113/.git"
     printf '[user]\n\tname = Cfg Dev\n\temail = cfg@x.test\n' >"$sb_dir/home/.gitconfig"
     sb_macos
-    if [[ $1 != none ]]; then
-        printf '#!/bin/bash\nexit %s\n' "$1" >"$sb_dir/bin/xcode-select"
-        chmod +x "$sb_dir/bin/xcode-select"
-    fi
+    # "none" still installs a stub, exiting 127 as a missing command would, so a real /usr/bin/xcode-select is never reached
+    local xs=$1
+    [[ $xs == none ]] && xs=127
+    printf '#!/bin/bash\nexit %s\n' "$xs" >"$sb_dir/bin/xcode-select"
+    chmod +x "$sb_dir/bin/xcode-select"
     GIT_AUTHOR_NAME='Env Dev' GIT_AUTHOR_EMAIL=env@x.test HOME="$sb_dir/home" GIT_CONFIG_GLOBAL="$sb_dir/home/.gitconfig" SB_REAL_GIT="$real_git" sb_run issue 113 fix/x
 }
 
@@ -1141,6 +1142,19 @@ open_on_macos_without_code_is_one_line() {
     [[ "$sb_err" == "codeo-sandbox: code is not on PATH"* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
     [[ "$sb_err" == *"Install 'code' command in PATH"* && "$sb_err" == *CODEO_CODE* ]] || fail "stderr was: $sb_err"
     [[ "$(sb_calls)" != *$'\ncode '* && "$(sb_calls)" != code* ]] || fail "calls: $(sb_calls)"
+}
+
+open_on_macos_with_codeo_code_skips_the_code_check() {
+    sb_setup maccodeocode
+    echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
+    sb_macos
+    rm "$sb_dir/bin/code"
+    printf '#!/bin/bash\necho "mycode $*" >>"%s/calls"\n' "$sb_dir" >"$sb_dir/bin/mycode"
+    chmod +x "$sb_dir/bin/mycode"
+    CODEO_CODE=mycode sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls | tail -n 1)" == 'mycode --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone' ]] || fail "calls: $(sb_calls)"
+    [[ "$sb_err" != *"code is not on PATH"* ]] || fail "stderr was: $sb_err"
 }
 
 open_on_macos_with_code_launches_it() {
@@ -1291,7 +1305,7 @@ docs_changelog_names_the_macos_sandbox() {
 docs_evaluation_page_records_the_macos_check() {
     local f="$repo/docs/dev-environment-sbx-evaluation.md" s
     grep -Fxq -- "**T14: sbx on macOS.**" "$f" || fail "the evaluation page lacks the T14 line"
-    for s in "brew install docker/tap/sbx" "sw_vers" "Apple silicon"; do
+    for s in "brew install docker/tap/sbx" "sw_vers" "Apple silicon" "macOS Keychain denied access"; do
         grep -Fq -- "$s" "$f" || fail "the evaluation page lacks '$s'"
     done
 }
@@ -1484,6 +1498,7 @@ cases=(
     issue_on_macos_with_command_line_tools_takes_the_identity_from_gitconfig
     a_missing_xcode_select_on_macos_counts_as_no_git
     open_on_macos_without_code_is_one_line
+    open_on_macos_with_codeo_code_skips_the_code_check
     open_on_macos_with_code_launches_it
     shell_execs_bash_in_the_clone
     end_with_nothing_to_lose_removes_the_sandbox

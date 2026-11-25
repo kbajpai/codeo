@@ -478,7 +478,7 @@ gh issue view 176 --repo kbajpai/codeo --comments
 
 Expected: the install and `sbx login` work over SSH; `issue` creates the sandbox, takes the lock and adds a `sandbox` row; `list` shows it; `shell` and `open` reach it; `rm` removes it and marks the row `removed`.
 
-Result (2026-11-25, a Mac over SSH, Apple silicon, `sbx` v0.54.1, in several pastes by the engineer, trimmed):
+Result (2026-11-25, a Mac over SSH, arm64, `sbx` v0.54.1, in several pastes by the engineer, trimmed):
 
 Host. `sw_vers` printed `ProductName: macOS`, `ProductVersion: 27.2.1`, `BuildVersion: 26B131`; `uname -m` printed `arm64`; Homebrew 7.0.16; Homebrew's `bash` 5.3.20. Only `arm64` is known of the chip.
 
