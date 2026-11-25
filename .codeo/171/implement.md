@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Implemented: all eight tasks of `docs/plans/2026-11-25-readme-complete-guide-171.md` are done, reviewed and committed (`a427f86`..`b3270bb`), and the build ran. Next step: `/codeo:qc`.
+Round 2 is done: the findings of `qc.md` round 1 are fixed in `ca7f2f3` and the build ran. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -50,6 +50,25 @@ None.
 
 **Not in this plan, to file** (promised in `plan.md`'s `## Notes`): `docs/handoff.md:3` says "Seven pipeline skills" where `docs/skills.md` says six; how another project adopts the role guard.
 
+
+### Round 2 — 2026-11-25
+(send-back from qc.md round 1)
+
+I read each finding against the code before acting (F1-F3 were checked against `scripts/doctor.sh`, `scripts/lock.sh` and the old README). All ten held. The edits were small, so I made them directly rather than dispatching a subagent; they are all in `ca7f2f3`.
+
+- **F1:** README "Requirements" now says the installer checks all five tools and `/codeo:doctor` checks bash, `jq`, `git` and `gh`, never `claude`.
+- **F2:** the lock entry separates what you may do (`git switch` to the lock's branch) from what you may not (edit `.codeo/active` to match a branch); the `lock: TODO` volume example is named as the one case of a by-hand edit, and a TODO that says no lock was taken is fixed with `/codeo:init #<N>`.
+- **F3:** the `git ls-remote` tag lookup, the trusted-folder sentence and the replace-drops-the-install sentence are back beside the hand-written settings example.
+- **F4, F5:** "Restart …" moved to the end of the `--version` step under Moving a project's pin; "Before you run it" now says "the install command" in README and docs/updating.md.
+- **F6, F7:** `tests/readme.test.sh` states that its key check is weak and its list hand-kept, and it fails with `FAIL pages: <page> is missing` when either docs page is absent (checked by moving one away).
+- **F8:** "which is still supported" removed from docs/home-checkout.md.
+- **F9, F10:** the lock sentence names the dev container start script's removal of an empty lock; `hooks` is in doctor's unchecked list.
+
+**Build:** `true` (suite `shell`): exit 0. `bash tests/run.sh` also ran and ended `all cases passed`; grading it is `/codeo:qc`'s.
+
+No deployment: no shared environment is configured.
+
 ## Log
 
 - 2026-11-25 — implemented: plan docs/plans/2026-11-25-readme-complete-guide-171.md, tasks 1-8, build exit 0 · cost: 35m · sonnet-5-5 945k in + 25.9M cached / 150k out
+- 2026-11-25 — implemented round 2 (send-back from qc round 1): F1-F10 fixed in ca7f2f3, build exit 0 · cost: 5m · sonnet-5-5 24k in + 1.5M cached / 6k out
