@@ -155,6 +155,20 @@ push_branch 'codeo-live/7/x;touch-y'
 assert_eq "lines" "7${tab}proven${tab}-${tab}-
 7${tab}leftover${tab}git push origin --delete codeo-live/7/web-a" "$(run_cleanup)"
 
+case_desc="an issue that failed only the name proof still gets its leftover line"
+setup_repo "7:$body"
+fixture 7 closed 41 2026-01-01T00:00:00Z feat/7
+set_overlay 'name: codeo-{N}'
+push_branch codeo-live/7/web-a
+assert_eq "lines" "7${tab}failed${tab}name
+7${tab}leftover${tab}git push origin --delete codeo-live/7/web-a" "$(run_cleanup)"
+
+case_desc="an issue that failed only the name proof with no leftover branch gets one line"
+setup_repo "7:$body"
+fixture 7 closed 41 2026-01-01T00:00:00Z feat/7
+set_overlay 'name: codeo-{N}'
+assert_eq "line" "7${tab}failed${tab}name" "$(run_cleanup)"
+
 case_desc="leftovers of another issue are not printed"
 setup_repo "7:$body"
 fixture 7 closed 41 2026-01-01T00:00:00Z feat/7
