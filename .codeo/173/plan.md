@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1 (F1 and F2 blocking, both the plan's; F3-F7 non-blocking). The draft is approved and written to `docs/plans/2026-11-25-close-161-leftovers-173-round-2.md` (unstaged). The footprint check found a new overlap with #177 on `CHANGELOG.md` and `docs/release-checklist.md`: Q4-Q5 are open, and the round-2 outcome waits for them. Round 1's outcome stands as written.
+Round 2, planned: Q4-Q5 answered and the outcome written. The plan is at `docs/plans/2026-11-25-close-161-leftovers-173-round-2.md`, awaiting the engineer's commit, then `/codeo:implement`.
 
 ## Questions
 
@@ -60,6 +60,7 @@ Not known; word it without the claim. Given in the session's question dialog on 
 **Options:** *proceed and coordinate* (recommended: the edits are bullets and one released line, and #177 has written no code yet) · *sequence after #177* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the session on 2026-11-25 ("go with your picks") and recorded here.
 
 ### Q5 — #177 and `docs/release-checklist.md` overlap: proceed, sequence or re-scope?
 
@@ -70,6 +71,7 @@ Not known; word it without the claim. Given in the session's question dialog on 
 **Options:** *proceed and coordinate* (recommended: say in the pull request that step 6 changed, and let #177 sync before it edits that step) · *sequence after #177* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the session on 2026-11-25 ("go with your picks") and recorded here.
 
 ## Notes
 
@@ -81,15 +83,6 @@ Not known; word it without the claim. Given in the session's question dialog on 
 - **Release checklist step 6**, from `tests/install.test.sh` and `README.md` today: the `v1.0.9` examples and stubs move to the release being cut; the `--version v1.0.8` example (`README.md:101-104`), the `v1.0.8 -> v1.0.9` replace line (`:534`) and the older-tag stubs (`v1.0.8`) move to the one before it; the ordering stubs (`v1.0.5`, `v1.0.10`, `v1.0.9.1`, `v2.0.0-rc1`, `v9.9.9`) do not move. The implementer confirms each group against the test before writing the sentence.
 - **README flowchart and paragraph** (`.devcontainer/README.md:197, 214-216`): "was running" becomes "not started by `codeo` as far as it knows (running, or `docker ps -a` failed)", and "A container that `codeo` started itself is read once" becomes "knows it started", since with no listing `started` stays 0 and the container is restarted and read twice.
 - **Proof of done** for every task is the `shell` suite (`bash tests/run.sh`; it has no single-test filter).
-
-### Footprint
-
-```
-files:      .devcontainer/codeo, .devcontainer/README.md, .claude/hooks/session-start.sh, .claude/settings.json, tests/codeo-command.test.sh, tests/session-start-hook.test.sh, tests/live-signal.test.sh, CONTRIBUTING.md, CHANGELOG.md, docs/release-checklist.md, docs/plans/2026-11-25-close-161-leftovers-173.md, docs/plans/2026-11-25-close-161-leftovers-173-round-2.md, .codeo/173/**
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Outcome
 
@@ -108,8 +101,35 @@ sequenced:  none
 
 **Intake questions resolved here:** init's open item F8 (whether `/codeo:*` commands load in the same session) is not verified and is worded around, per Q3; `issue.md` Q2 (documentation-only fix acceptable?) is answered by Q1 above: the code reports.
 
+### Round 2 — 2026-11-25
+
+(send-back from qc.md round 1)
+
+**Plan.** `docs/plans/2026-11-25-close-161-leftovers-173-round-2.md` (unstaged, awaiting the engineer's commit): five tasks on the same branch and pull request. Round 1's plan file is not edited. Shape as in round 1, a plan under `docs/plans/` with no reference doc.
+
+**Findings answered.** F1 and F2 are blocking and the plan's. F3-F7 are non-blocking; the round takes F3-F7 too, except F5's choice below, so one more pass does not have to.
+- **F2 — `--force` printed a false line.** Chosen: gate the line. `container_check` takes `--quiet-stop`, which `cmd_rm` passes under `--force`, and `stop_started` prints only without it; the stop itself is unchanged, so `--force` stops and removes exactly what it did. Rejected: skipping the stop under `--force` (changes what `--force` does and borders on the out-of-scope redesign of the check); rewording the line so it is true on both paths (loses the half that matters on a refusal, which Q1 of round 1 chose). A new case pins `--force` with a failing stop after a cannot-check and after a dirty read (Task 1); the `container_check` header comment is rewritten (F6, Task 1).
+- **F1 — the v1.0.8 `Shared state:` line.** Names each read of `dossier-check.sh` separately: its section reads never counted `## Outcomes` and no longer count `## Outcome notes`, and its `finished-qc-clear` read no longer counts either. The plan's step 1 checks each against the `v1.0.7` and `v1.0.8` tags with `grep -F` (Task 2). The `## Unreleased` bullet says a `--force` removal prints no such line.
+- **F3, F7 — release checklist step 6.** `docs/updating.md` joins both "move" groups and the refused stub `v1.0.9;x` joins "do not move" (Task 4).
+- **F4 — README.** One sentence says the line is printed on any refusal of a container `codeo` started, and one says `--force` prints none (Task 3).
+- **F5 — hook comment.** Rewords "as install.sh reads it" to say the list is parsed as `install.sh` parses it and any enabled `superpowers@*` entry counts. Rejected: making the hook judge only the first entry as `install.sh` does, since the hook then would install where an enabled `superpowers` already exists (Task 3).
+
+**Documentation pages the plan changes:** `.devcontainer/README.md` (the "A refusal removes nothing" paragraph), `CHANGELOG.md` (the v1.0.8 `Shared state:` line and one `## Unreleased` bullet), `docs/release-checklist.md` (step 6). No page under `docs/` other than the checklist describes `stop_started`.
+
+**Questions resolved this round.** Q4 and Q5 (the overlaps with #177 on `CHANGELOG.md` and `docs/release-checklist.md`): *proceed and coordinate*; `sequenced:` stays `none`. #176's overlap on the same files was answered in `qc.md` round 1.
+
+### Footprint
+
+```
+files:      .devcontainer/codeo, .devcontainer/README.md, .claude/hooks/session-start.sh, .claude/settings.json, tests/codeo-command.test.sh, tests/session-start-hook.test.sh, tests/live-signal.test.sh, CONTRIBUTING.md, CHANGELOG.md, docs/release-checklist.md, docs/plans/2026-11-25-close-161-leftovers-173.md, docs/plans/2026-11-25-close-161-leftovers-173-round-2.md, .codeo/173/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-25 — Q1-Q3 raised · cost: 1m · fable-5-2 72k in + 382k cached / 4k out
 - 2026-11-25 — planned: docs/plans/2026-11-25-close-161-leftovers-173.md · cost: 12m · fable-5-2 53k in + 925k cached / 18k out · sonnet-5-5 135k in + 185k cached / 1k out
 - 2026-11-25 — round 2 draft approved; Q4-Q5 raised (overlaps with #177) · cost: 5m · fable-5-2 299k in + 974k cached / 14k out · sonnet-5-5 27k in + 1.2M cached / 2k out
+- 2026-11-25 — planned round 2: docs/plans/2026-11-25-close-161-leftovers-173-round-2.md · cost: 27m · fable-5-2 299k in + 974k cached / 14k out · sonnet-5-5 30k in + 2.2M cached / 5k out
