@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, stopped at step 2. `sync-main.sh --abort-on-conflict` printed `sync-main: the branch already contains origin/main`. `overlap.sh 173` printed six overlaps with #176, a workflow that started after this one's plan. Its footprint names three files this branch changes. Q1-Q3 must be answered before the build, the suites and the review run.
+Round 1, resumed after Q1-Q3 (the #176 overlaps) were answered proceed and coordinate. The pass continues from step 2's diff and scope.
 
 ## Questions
 
@@ -21,6 +21,7 @@ Round 1, stopped at step 2. `sync-main.sh --abort-on-conflict` printed `sync-mai
 **Options:** *proceed and coordinate* (recommended: this change is small and done, while #176 has not started its code, so #176 picks it up at its next `sync-main.sh`) · *sequence after #176* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the session on 2026-11-25 ("go with your picks") and recorded here.
 
 ### Q2 — #176 and `.devcontainer/README.md` overlap: proceed, sequence or re-scope?
 
@@ -31,6 +32,7 @@ Round 1, stopped at step 2. `sync-main.sh --abort-on-conflict` printed `sync-mai
 **Options:** *proceed and coordinate* (recommended, as in Q1) · *sequence after #176* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the session on 2026-11-25 ("go with your picks") and recorded here.
 
 ### Q3 — #176 and `CHANGELOG.md` overlap: proceed, sequence or re-scope?
 
@@ -41,6 +43,7 @@ Round 1, stopped at step 2. `sync-main.sh --abort-on-conflict` printed `sync-mai
 **Options:** *proceed and coordinate* (recommended: the second to merge resolves it by keeping both bullets) · *sequence after #176* · *re-scope*.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the session on 2026-11-25 ("go with your picks") and recorded here.
 
 ## Notes
 
