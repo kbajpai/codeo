@@ -8,11 +8,10 @@
 
 ## Where this stands
 
-Round 1. The code, the READMEs, the tests and the sbx evaluation are read, and Docker's install
-page was read again today. It now lists macOS, so the first of intake's two open points is answered
-on paper (see Notes). The second, whether `codeo-sandbox.sh` works on a Mac, can only be answered on
-a Mac, and this session runs in a Linux container. Nothing is drafted until Q1-Q3 are answered: they
-decide whether the plan fixes failures a trial has shown or failures it guesses at.
+Round 1. Q1-Q3 are answered and the plan is drafted (`.codeo/176/plan-draft.md`, not committed):
+five tasks, two of them run by the engineer on the Mac over SSH (a preflight, then the full route
+recorded as trial T14). The draft is not put up for approval while Q4 is open: #173 now lists
+three files this plan also changes, and the answer may change the file list.
 
 ## Questions
 
@@ -52,6 +51,13 @@ codeo rm <N>
 `codeo shell <N>`, `cat .codeo/active` shows the lock; paste it.
 
 **Answer:**
+Your pick (the engineer, in conversation, 2026-11-25).
+
+My pick: the trial is the plan's first task, run by the engineer on the Mac, and the plan carries the
+fixes readable from the code around it. Reason: the engineer answered without trial output, so a
+trial "now" would stall planning again; Task 1 records `sw_vers` and `uname -m` first and the plan
+stops there when the Mac is not on Sonoma 14 or later with Apple silicon, and whatever the trial
+shows beyond the planned fixes comes back as a second planning round.
 
 ### Q2 — Which Mac is this, and do you run these commands at its screen or over SSH?
 
@@ -66,6 +72,8 @@ at the Mac's screen once, and the acceptance check for `codeo open` is run there
 screen", "over SSH from <what machine>", or "both".
 
 **Answer:**
+Over SSH (the engineer, in conversation, 2026-11-25). No chip or macOS version was given; Task 1
+records both and is where the plan stops if the Mac is below Docker's minimum.
 
 ### Q3 — Which issue number does the trial sandbox use?
 
@@ -76,6 +84,27 @@ lands on the issue it belongs to. On a scratch issue nothing touches #176, but t
 `.codeo/<N>/init.md` on origin for `codeo` to find it, so a scratch issue needs `/codeo:init` first.
 **Options:** #176 itself, answering yes when it asks (recommended) · a scratch issue you name · no
 preference, you pick.
+
+**Answer:**
+Your pick (the engineer, in conversation, 2026-11-25).
+
+My pick: #176 itself, answering yes when `codeo issue` asks about the existing container.
+
+### Q4 — #173 changes three files this plan changes: proceed, sequence after it, or re-scope?
+
+**Why it matters:** #173 (branch `docs/173-close-161-leftovers-release-checklist`, assignee
+kbajpai, step `plan`) lists `.devcontainer/codeo`, `.devcontainer/README.md` and `CHANGELOG.md` in
+its footprint; this plan's Task 4 edits the first line of the `.devcontainer/codeo` header comment
+(`Needs bash 4.3 or later on Linux` → `on Linux or macOS`), one sentence of
+`.devcontainer/README.md`'s *Installing the `codeo` command* (the host sentence), and adds one bullet
+under `CHANGELOG.md`'s `## Unreleased`. Three small edits in different lines merge cleanly unless
+#173 edits the same lines; the `CHANGELOG.md` bullet is the likeliest to conflict, because both
+branches append under the same heading. Sequencing after #173 would hold Task 4 until it merges;
+re-scoping would drop the `.devcontainer/codeo` header edit (it is a comment only) and leave the
+README sentence and the changelog bullet.
+**Options:** proceed and coordinate (recommended: whichever merges second resolves the changelog
+bullets by keeping both) · sequence after #173 · re-scope: drop the `.devcontainer/codeo` header
+edit.
 
 **Answer:**
 
@@ -115,8 +144,15 @@ my calls, to be corrected at the review gate):
   `## Host` section and a new trial under `## Trials`, in the form the page already uses.
 - One pull request. No shared environment and no exclusive resource is involved.
 
-**Other workflows in flight:** #173 (`docs/173-close-161-leftovers-release-checklist`, kbajpai) is
-at `init` with no footprint and no changed files yet, so there is nothing to compare until it plans.
+**Other workflows in flight:** #173 (`docs/173-close-161-leftovers-release-checklist`, kbajpai) was
+at `init` when Q1-Q3 were raised and has since planned; its footprint overlaps this plan's on three
+files, raised as Q4. No exclusive resource is configured, so none can overlap.
+
+**The draft's decisions** (for the review gate; the file is `.codeo/176/plan-draft.md`):
+
+- *Shape:* an executable plan under `docs/plans/`, no reference doc: nothing here is a standing
+  decision. Rejected: a bash-version guard in the script, a refusal on Intel Macs when `sbx` is
+  present, an `open -a` fallback for VS Code (each is untried or already covered by documentation).
 
 ## Outcome
 
@@ -125,3 +161,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-25 — Q1-Q3 raised · cost: 1m · fable-5-2 87k in + 585k cached / 7k out · sonnet-5-5 13k in + 5k cached / 2k out
+- 2026-11-25 — plan drafted (not committed) and Q4 raised, the overlap with #173 · cost: 5m · fable-5-2 13k in + 258k cached / 759 out · sonnet-5-5 140k in + 932k cached / 25k out
