@@ -8,10 +8,10 @@
 
 ## Where this stands
 
-Round 1. Q1-Q3 are answered and the plan is drafted (`.codeo/176/plan-draft.md`, not committed):
-five tasks, two of them run by the engineer on the Mac over SSH (a preflight, then the full route
-recorded as trial T14). The draft is not put up for approval while Q4 is open: #173 now lists
-three files this plan also changes, and the answer may change the file list.
+Round 1. The plan is approved and written to `docs/plans/2026-11-25-sbx-sandbox-macos-176.md`
+(unstaged): five tasks, two of them run by the engineer on the Mac over SSH (a preflight, then the
+full route recorded as trial T14). The footprint is committed. Q5 is open only because Q4 did not
+quote the overlaps in the form `overlap.sh` matches; the outcome is written once it is answered.
 
 ## Questions
 
@@ -109,6 +109,20 @@ edit.
 **Answer:**
 Proceed and coordinate (the engineer, in conversation, 2026-11-25).
 
+### Q5 — Does "proceed and coordinate" (Q4) stand for #173's overlaps, as `overlap.sh` prints them?
+
+**Why it matters:** `overlap.sh` compares this plan's committed footprint with #173's
+(branch `docs/173-close-161-leftovers-release-checklist`, assignee kbajpai, step `plan`) and prints
+`173	glob:.devcontainer/README.md`, `173	glob:.devcontainer/codeo` and
+`173	glob:CHANGELOG.md`. It treats a pair as raised only when a question quotes `#173` and the token
+verbatim, which Q4 did not; Q4's answer was proceed and coordinate. If it stands, the plan's
+outcome is written now with `sequenced:` left `none`; if you would rather sequence after #173 or
+drop the `.devcontainer/codeo` header edit, Task 4 and the footprint change.
+**Options:** proceed and coordinate, as Q4 (recommended) · sequence after #173 · re-scope: drop the
+`.devcontainer/codeo` header edit.
+
+**Answer:**
+
 ## Notes
 
 **What Docker's install page says today** (https://docs.docker.com/ai/sandboxes/install/, read
@@ -172,3 +186,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-25 — Q1-Q3 raised · cost: 1m · fable-5-2 87k in + 585k cached / 7k out · sonnet-5-5 13k in + 5k cached / 2k out
 - 2026-11-25 — plan drafted (not committed) and Q4 raised, the overlap with #173 · cost: 5m · fable-5-2 13k in + 258k cached / 759 out · sonnet-5-5 140k in + 932k cached / 25k out
+- 2026-11-25 — plan approved and written, footprint committed, Q5 raised (the overlap with #173 as overlap.sh prints it) · cost: 1m · fable-5-2 6k in + 120k cached / 2k out
