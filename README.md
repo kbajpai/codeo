@@ -221,16 +221,98 @@ See [docs/home-checkout.md](docs/home-checkout.md) for the home checkout, the gu
 
 ## Your first workflow
 
-A piece of work goes through six slash commands in order. Each one owns one file under `.codeo/<N>/`, where `<N>` is the GitHub issue number, and the file records what the step decided, so the next step (and you, later) can read it. The example is a finished workflow, whose files are archived under `.codeo/done/<N>/` once the pull request merges: an issue that fixed three leftovers from earlier changes, archived in this repository under `.codeo/done/143/` (its `init.md`, `plan.md`, `implement.md`, `qc.md` and `close.md` and the `issue.md` the engineer approved), so the files each step below describes can be opened.
+A piece of work goes through six slash commands, one after the other. Each step owns one file under `.codeo/<N>/`, where `<N>` is the GitHub issue number. That file is the step's *dossier*: it records what the step decided, so the next step (and you, later) can read it. After the pull request merges, the whole folder moves to `.codeo/done/<N>/`.
 
-1. **`/codeo:issue`** turns a raw idea, bug or finding into a GitHub issue. It asks you questions until the problem, the requirements and the acceptance criteria are clear, shows you a draft, and files it only when you approve. The draft is kept in `.codeo/intake/<N>/issue.md` on the project's intake branch. It stands alone and hands off to nobody.
-2. **`/codeo:init`** starts work on an issue that is ready (on the project board's Ready column, when the project has a board). Name the issue number. It claims the number, cuts and pushes a branch off the base branch, moves the card to In progress, takes the workflow lock, and writes `.codeo/<N>/init.md`: the issue, the branch, the state and the acceptance criteria copied word for word. It asks you nothing beyond the number; its question list reads `None`.
-3. **`/codeo:plan`** explores the code and writes down how to make the change. It puts its questions to you in `.codeo/<N>/plan.md`, each with why it matters, what exists now and the options, and a recommendation; you answer them (in the example, all nine as recommended), then review the plan. The plan itself is saved under `docs/plans/` only once you approve it, and `plan.md` records the decisions. Nothing is written to the application's code.
-4. **`/codeo:implement`** builds the approved plan task by task, through the superpowers skills, committing each task, and confirms the change builds. It asks you only when the plan looks wrong or stale. It writes `.codeo/<N>/implement.md`: what was built, with the commit for each task.
-5. **`/codeo:qc`** checks the result without fixing anything: the build, the configured test suites, each acceptance criterion, an independent code review, and what the project's shared environment runs, if it has one. It writes `.codeo/<N>/qc.md` with a verdict and sends you forward to a pull request or back to `/codeo:implement` or `/codeo:plan`.
-6. **`/codeo:close`** opens the pull request and waits. You review and merge it; `close` never merges. Review feedback or a conflict with the base branch goes back through `/codeo:implement` and `/codeo:qc`. After the merge it proves the merge, asks before deleting the remote branch, releases every lease and the lock, and moves the dossier to `.codeo/done/<N>/`. It writes `.codeo/<N>/close.md`.
+The example is issue #143, which fixed leftovers from an earlier change. Its finished workflow is archived in this repository under `.codeo/done/143/`, so you can open the file each step wrote: [issue.md](.codeo/done/143/issue.md), [init.md](.codeo/done/143/init.md), [plan.md](.codeo/done/143/plan.md), [implement.md](.codeo/done/143/implement.md), [qc.md](.codeo/done/143/qc.md) and [close.md](.codeo/done/143/close.md). For the long detail of each skill, follow its link to [docs/skills.md](docs/skills.md).
 
-Run the next command when a step hands off; each says which one. `/codeo:close` is also how you stash a workflow to come back to, or abandon one whose pull request was closed unmerged. A step that is interrupted can be run again: it works out where the workflow stands from the dossier and GitHub.
+```mermaid
+flowchart LR
+  I["/codeo:issue"] --> N["/codeo:init"]
+  N --> P["/codeo:plan"]
+  P --> M["/codeo:implement"]
+  M --> Q["/codeo:qc"]
+  Q -->|clear| C["/codeo:close"]
+  Q -->|findings| M
+  Q -->|plan is wrong| P
+  C -->|review feedback or conflict| M
+  C -->|"--stash, or PR closed unmerged"| S(["parked: back to Ready or Backlog"])
+  C -->|merged| D(["archived in .codeo/done/N"])
+```
+
+### 1. /codeo:issue
+
+- **Run:** `/codeo:issue <idea, bug, or problem to turn into an issue>`.
+- **It asks:** numbered questions (the problem, what is out of scope, what done looks like, constraints) in a draft file, `.codeo/intake/new-<slug>/issue.md`. It shows you the finished draft in the conversation and files nothing on GitHub until you approve.
+- **It writes:** `.codeo/intake/<N>/issue.md` on the project's `codeo/intake` branch only (the example: [issue.md](.codeo/done/143/issue.md)), and the GitHub issue itself. With a project board, the card goes to Backlog.
+- **It commits:** `docs(codeo): issue dossier for #<N> — filed`.
+- **Next:** `/codeo:init #<N>` when the issue is Ready (or the project has no board). Otherwise `/codeo:triage` first, then `/codeo:init #<N>`.
+
+Details: [docs/skills.md#issue](docs/skills.md#issue).
+
+### 2. /codeo:init
+
+- **Run:** `/codeo:init <number>`. The number can be `42`, `#42` or the issue's URL.
+- **It asks:** almost nothing. It stops for one review of `init.md` (approve, change or reject), and for an override if you are taking over someone else's claim. Its own question list normally reads `None.`
+- **It writes:** [.codeo/<N>/init.md](.codeo/done/143/init.md): the issue, the branch, the state, and the acceptance criteria word for word. It also copies the approved draft to `.codeo/<N>/issue.md`. It cuts and pushes the branch (`<type>/<N>-<slug>`), moves the card to In progress and takes the workflow lock.
+- **It commits:** `docs(codeo): init dossier for #<N>`.
+- **Next:** `/codeo:plan`, usually in the same session.
+
+Details: [docs/skills.md#init](docs/skills.md#init).
+
+### 3. /codeo:plan
+
+- **Run:** `/codeo:plan [optional: which part of the locked issue to plan]`.
+- **It asks:** its questions go in the dossier, `.codeo/<N>/plan.md`, each with why it matters and the options. The run stops until you answer there; run the command again to continue. You then review the plan in the conversation.
+- **It writes:** [.codeo/<N>/plan.md](.codeo/done/143/plan.md), the decisions. The plan itself goes under `docs/plans/` only after you approve it, and is left uncommitted for you to review. It never writes application code.
+- **It commits:** only the dossier: `docs(codeo): plan dossier for #<N>`, or with a suffix such as `— Q1-Q9 raised` or `— footprint`.
+- **Next:** review and commit the plan, then `/codeo:implement`.
+
+Details: [docs/skills.md#plan](docs/skills.md#plan).
+
+### 4. /codeo:implement
+
+- **Run:** `/codeo:implement [optional: plan path or slug]`. With no argument it uses the plan `plan.md` names.
+- **It asks:** only in the dossier, `.codeo/<N>/implement.md`, and only when the plan looks wrong or unclear. A design question goes back to `/codeo:plan`.
+- **It writes:** [.codeo/<N>/implement.md](.codeo/done/143/implement.md), with an `## Outcome` of what was built and the commit for each task. The code is built task by task through the plan's superpowers skill. It builds each configured suite but does not run its tests.
+- **It commits:** one commit per task, then `docs(codeo): implement dossier for #<N>`.
+- **Next:** `/codeo:qc`.
+
+Details: [docs/skills.md#implement](docs/skills.md#implement).
+
+### 5. /codeo:qc
+
+- **Run:** `/codeo:qc`. It checks the workflow that holds the lock.
+- **It asks:** nothing in the conversation, unless a question must be answered in the dossier, `.codeo/<N>/qc.md`. It fixes nothing.
+- **It writes:** [.codeo/<N>/qc.md](.codeo/done/143/qc.md): one `### Round` per pass, a table of the acceptance criteria, findings marked blocking or not, and a bold verdict with where to go next.
+- **It commits:** `docs(codeo): qc dossier for #<N>` (`— round <n>` for a later pass).
+- **Next:** `/codeo:close` when the verdict is clear. Otherwise `/codeo:implement` or `/codeo:plan`.
+
+Details: [docs/skills.md#qc](docs/skills.md#qc).
+
+### 6. /codeo:close
+
+- **Run:** `/codeo:close [--stash]`. `--stash` parks the workflow instead of finishing it.
+- **It asks:** whether to delete the remote branch, once, after the merge. It never merges: you merge the pull request on GitHub, then run the command again.
+- **It writes:** [.codeo/<N>/close.md](.codeo/done/143/close.md). It opens the pull request, waits, proves the merge, releases every lease and the lock, and moves the dossier to `.codeo/done/<N>/`. A stash sends the card back to Ready. A pull request closed unmerged can be abandoned, which sends the card to Backlog.
+- **It commits:** `docs(codeo): close dossier for #<N> — PR #<pr>`. Review feedback or a conflict with the base branch is another round (`— review feedback`) and goes back through `/codeo:implement` and `/codeo:qc`.
+- **Next:** `/codeo:triage`, which looks for loose ends the work left behind.
+
+Details: [docs/skills.md#close](docs/skills.md#close).
+
+**Where each step runs.** `/codeo:issue` and `/codeo:init` run in a home checkout when the project has a role guard. `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:close` run in the issue's own checkout, the one that holds the lock. A project with no role guard, such as one just set up with `/codeo:setup`, has no such split: `/codeo:init` switches this checkout to the issue's branch, takes the lock and hands off to `/codeo:plan` in the same session. See [docs/home-checkout.md](docs/home-checkout.md).
+
+**The closing block, and running a step again.** Every step ends with the same three-part block, so you never have to work out what to type next:
+
+```
+---
+**Done:** <what this run did, in plain words>
+**Next goal:** <the one outcome to reach next, and the skill that gets there>
+**Steps:**
+1. <the exact command to run first>
+2. <the action after it>
+```
+
+Run the command in Steps 1. A step that was interrupted can be run again: it works out where the workflow stands from its dossier and from GitHub, and carries on. If it does not, see [Troubleshooting](#troubleshooting).
 
 ## Configuration
 
