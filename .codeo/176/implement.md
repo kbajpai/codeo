@@ -13,7 +13,9 @@ review, `bash tests/run.sh` exits 0 at `86fc0bf`, and the suite's build command 
 Task 5 is the engineer's: the full route on the Mac, recorded as trial T14. Q2 is answered and
 showed that the sandbox starts, takes the lock and lists; the rest (`open`, `shell`, `rm`, the
 tracking row, the git identity) did not run as the plan wrote the commands, so Q3 asks for them with
-the corrections. T14 and the README are written once Q3 is answered, and the whole-branch review
+the corrections. Q3 is answered: the tracking row is there, the identity TODO is expected (the Mac
+has no global git identity), and `codeo shell` works. Q4 asks for the last three: `open`, `rm` and
+the `removed` row. T14 and the README are written once Q4 is answered, and the whole-branch review
 follows, because Task 5 edits `.sbx/README.md` and the evaluation page.
 
 ## Questions
@@ -191,6 +193,59 @@ work, paste what it printed and stop there; do not add `--force`. Afterwards, pl
 puts `main`'s scripts back.
 
 **Answer:**
+Pasted by the engineer in conversation, 2026-11-25, trimmed (the issue body is left out):
+
+```
+$ git config --global user.name
+$ git config --global user.email
+  (both printed nothing)
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"
+  Added rule 42ff739f-35fe-41a1-ac04-7ad5a7783ed6 to policy local (scope: global): *.gallery.vsassets.io [tcp]
+  Added rule 2be98cb1-850e-4092-b1d7-f0fd4b322353 to policy local (scope: global): *.gallerycdn.vsassets.io [tcp]
+$ gh issue view 176 --repo kbajpai/codeo --comments
+  … Codeo tracking for #176: branches, containers and their removal.
+   branch    │ feat/176-support-sbx-issue-sandbox-macos │                │ active │ 2026-11-25T18:53:13Z
+   image     │ codeo-dev:codeo-176                      │ mac-studio.lan │ active │ 2026-11-25T18:55:39Z
+   container │ codeo-176                                │ mac-studio.lan │ active │ 2026-11-25T18:55:41Z
+   volume    │ codeo-176                                │ mac-studio.lan │ active │ 2026-11-25T18:55:42Z
+   sandbox   │ codeo-176                                │ mac-studio.lan │ active │ 2026-11-25T20:44:45Z
+$ codeo shell 176 --sandbox
+✓ agent@codeo-176:/Users/kbajpai/codeo/codeo-176$
+```
+
+The paste ends at the sandbox shell's prompt: the lines after `codeo shell` (`codeo open`,
+`codeo rm`, the second `gh issue view`) printed nothing in it, so they did not run on the Mac.
+
+### Q4 — What do `codeo open`, `codeo rm` and the second tracking view print on the Mac?
+
+**Why it matters:** Q3 settled the identity and the tracking row. The Mac has no global git
+identity (`user.name` and `user.email` printed nothing), so the start script's identity TODO is the
+right answer there, not a defect in `codeo-sandbox.sh`; `xcode-select -p` is
+`/Library/Developer/CommandLineTools`, so `git_is_usable` counted git as usable. The `sandbox`
+row is on the issue, `active`. `codeo shell 176 --sandbox` opened the sandbox's shell. What is still
+unshown is the end of criterion 3: that `codeo open` opens the sandbox and that `codeo rm` removes
+it and marks the row `removed`. T14 and the README are written from the whole run, so they wait for
+this.
+**Options:** the pasted output below · `open` skipped, said so (T14 then records it as not tried
+over SSH; `rm` is the one that has to run) · a step failed, say which and what it printed.
+
+Type `exit` to leave the sandbox shell first, then over SSH on the Mac, one command at a time,
+paste what each prints. Close any VS Code window `codeo open` opened before `codeo rm`: the removal
+cuts it off.
+
+```
+exit
+codeo open 176 --sandbox
+codeo rm 176 --sandbox
+gh issue view 176 --repo kbajpai/codeo --comments
+```
+
+If `codeo rm` refuses over unpushed or uncommitted work, paste what it printed and stop there. Plain
+`codeo update` afterwards puts `main`'s scripts back.
+
+**Answer:**
 
 ## Notes
 
@@ -214,3 +269,4 @@ _Pending — written at the hand-off._
 - 2026-11-25 — Q1 raised, waiting on Task 1's output from the Mac · cost: 2m · sonnet-5-5 12k in + 610k cached / 1k out
 - 2026-11-25 — Task 1 gate passed (Q1 answered); Tasks 2-4 built, each reviewed clean and pushed; Q2 raised for Task 5 on the Mac · cost: 27m · sonnet-5-5 262k in + 8.2M cached / 40k out
 - 2026-11-25 — Q2 answered: sandbox starts, takes the lock, lists on the Mac; open, rm and the tracking row did not run as planned, Q3 raised with corrected commands · cost: 74m · sonnet-5-5 310k in + 9.3M cached / 44k out
+- 2026-11-25 — Q3 answered: tracking row, identity and shell shown; open and rm still unrun, Q4 raised · cost: 76m · sonnet-5-5 320k in + 10.2M cached / 53k out
