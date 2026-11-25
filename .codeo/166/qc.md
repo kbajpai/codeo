@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is written and the verdict is back to `/codeo:implement`: all three acceptance criteria are met and the shell suite passes, but `docs/skills.md:252` still says an issue that fails a proof gets no command, which the change makes untrue (F1, blocking). Nothing is open. Next step: `/codeo:implement`.
+Round 2 is written and the verdict is clear: round 1's F1 and F6 are fixed, all three criteria are met, and the review found no blocking finding. Nothing is open. Next step: `/codeo:close`.
 
 ## Questions
 
@@ -65,6 +65,53 @@ No issue was filed from this pass. F2-F6 stay in this dossier for `/codeo:triage
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-25
+
+**Scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main` (exit 0). `overlap.sh 166`: nothing (exit 0). `overlap.sh --outside 166`: nothing (exit 0). `scope.sh origin/main HEAD`, quoted:
+
+```
+scope: suite shell needed for unclassified paths:
+  .codeo/166/implement.md
+  .codeo/166/init.md
+  .codeo/166/issue.md
+  .codeo/166/plan.md
+  .codeo/166/qc.md
+  CHANGELOG.md
+suite.shell=true
+```
+
+No `deploy=` line and no environment configured, so no environment step. Diff: 18 files, 463 insertions, 22 deletions.
+
+**Build.** The `shell` suite's `build` is `true`: exit 0.
+
+**Suites.** `bash tests/run.sh` (the `shell` suite, whole): `all cases passed`, exit 0.
+
+**Criteria**
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| Step 17 of `skills/close/SKILL.md`, for `host: web` and `host: local` with `CLAUDE_CODE_REMOTE=true`, does not say "nothing to remove" while a `codeo-live/<N>/*` branch remains; it names `git push origin --delete codeo-live/<issue>/<machine>`, and a test pins it | met | `skills/close/SKILL.md:537,543` and `:546-552`; the reviewer ran the `close-skill` pins against the old skill in a scratch worktree and 7 cases failed |
+| `skills/close/SKILL.md:3` and `docs/skills.md:185` carry the web-session exception, or say nothing the exception contradicts | met | both read "(a hosted web session deletes none: it cannot delete a branch)", pinned in `tests/close-skill.test.sh`; `docs/handoff.md:173` and step 16 say the same |
+| A test of `scripts/cleanup.sh` with the `name` proof failing and a `codeo-live/<N>/<machine>` branch present on origin expects the `leftover` line | met | `tests/cleanup.test.sh`, case `an issue that failed only the name proof still gets its leftover line`; it fails against the old `scripts/cleanup.sh:134` |
+
+**Documentation.** `docs/skills.md:252` now says "an issue that fails a proof is listed with it and no container command (one that failed only `name` still gets its leftover branch delete)", pinned in `tests/cleanup-skill.test.sh`, and agrees with lines 254 and 258. `grep -rn "nothing to remove"` over the skills, docs, README and overlays finds no close or cleanup sentence left that the change contradicts.
+
+**Independent review** (Opus, given the criteria only): no Critical, no Important, four Minor; it re-ran the affected test files and the old-code mutations and they behave as stated. Its assessment, in plain text: ready to merge. Its Minor items are F2, F3 and F4 again, and the cleanup skill's frontmatter description, which names no leftover branch delete and predates this change.
+
+**Findings**
+
+- F1 (blocking in round 1) — fixed by `2b00571`: `docs/skills.md:252` says no container command, with the `leftover` exception.
+- F6 — fixed by `2b00571`: the two stale test labels read "no checkout to remove".
+- F2 — non-blocking, plan's, carried from round 1 and unchanged: `skills/cleanup/SKILL.md` step 4 branches on "something was proven", so a run whose only output is a `leftover` line for a `failed name` issue is sent to `/codeo:triage` first.
+- F3 — non-blocking, plan's, carried: `skills/close/SKILL.md:549-550` leaves `<machine>` as written, as the criterion's wording allows.
+- F4 — non-blocking, plan's, carried: `skills/close/SKILL.md:547-548` says the session's branch "stays on `origin`" even when no beat ever pushed.
+- F5 — non-blocking, plan's, carried: the `CHANGELOG.md:11` clause for the `name` proof carries `(#157)`, and the `(#166)` bullet repeats it.
+
+No issue was filed from this pass. F2-F5 stay in this dossier for `/codeo:triage`.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-25 — Round 1: build ok; shell suite passed; criteria 1-3 met; review one Important (F1, blocking) and five Minor; verdict back to implement · cost: 7m · opus-5-5 264k in + 2.2M cached / 10k out · sonnet-5-5 190k in + 455k cached / 653 out
+- 2026-11-25 — Round 2: build ok; shell suite passed; criteria 1-3 met; round 1's F1 and F6 fixed; review four Minor, none blocking; verdict clear · cost: 7m · opus-5-5 305k in + 1.5M cached / 10k out · sonnet-5-5 22k in + 754k cached / 512 out
