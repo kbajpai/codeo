@@ -511,11 +511,30 @@ Adding marketplace…✘ Failed to add marketplace: Cannot add marketplace "code
 
 Run the install command instead, which removes the marketplace and adds it at the tag you ask for (the latest, or the one after `--version`).
 
-**A hand-edited `ref` does not take effect.** After you edit `ref` under `extraKnownMarketplaces.codeo.source` in a project's `.claude/settings.json`, `install.sh --scope project` still installs what the machine's codeo marketplace holds: the installer reads the machine's pin, not the project's file. Run `claude plugin marketplace remove codeo` first (from outside any project, to leave every project's settings file alone; it drops codeo from every project on the machine, so restore each as shown in *Updating*), then `install.sh --scope project` in the project. The install rewrites `ref` to the latest release; to keep an older one, run `install.sh --scope project --version <tag>` instead.
+**A hand-edited `ref` does not take effect.** After you edit `ref` under `extraKnownMarketplaces.codeo.source` in a project's `.claude/settings.json`, `install.sh --scope project` still installs what the machine's codeo marketplace holds: the installer reads the machine's pin, not the project's file. Run `claude plugin marketplace remove codeo` first (from outside any project, to leave every project's settings file alone; it drops codeo from every project on the machine, so restore each as in [Restoring a project or local install](docs/updating.md#restoring-a-project-or-local-install)), then `install.sh --scope project` in the project. The install rewrites `ref` to the latest release; to keep an older one, run `install.sh --scope project --version <tag>` instead.
 
 ## Updating
 
-Run the install command again. With no `--version` it installs the latest release; if that differs from what you have, it replaces codeo, which uninstalls it at every scope on the machine and reinstalls it at the scope you asked for, and it names each project install it dropped. The walk-throughs, with the installer's output, are in [docs/updating.md](docs/updating.md): updating, what a replace drops, restoring a project or local install, when an update fails, updating superpowers, and moving a project's pin.
+Run the install command again. With no `--version` it installs the latest release. If that differs from what you have, it replaces codeo: one machine holds one codeo version, so the replace removes the codeo marketplace, which uninstalls codeo at every scope on the machine, and installs the new release at the scope you asked for. A plain run installs it for you:
+
+```
+install: release v1.0.9
+install: superpowers already installed (user scope), left alone
+✔ Successfully removed marketplace: codeo
+Also uninstalled 1 plugin from this marketplace:
+  codeo@codeo
+The removal also deletes their saved options, secrets and data where it can.
+To use a plugin again, add the marketplace back and reinstall the plugin.
+install: codeo v1.0.8 -> v1.0.9 (user scope)
+install: done - codeo v1.0.9, user scope, superpowers 7.0.2
+install: restart any Claude Code sessions already open to load the plugins
+```
+
+Then restart any Claude Code sessions already open. Before you run it, read [`CHANGELOG.md`](CHANGELOG.md) for every release between yours and the new one; each entry opens with `Config schema`, `Shared state` and `Safe to bump mid-workflow`, which say what to check or finish first.
+
+superpowers is left alone by the installer when it is already installed. Update it with `claude plugin update superpowers@superpowers-marketplace`.
+
+A replace drops every project and local install of codeo on the machine and prints a restore command for each. [docs/updating.md](docs/updating.md) covers [what a replace drops](docs/updating.md#what-a-replace-drops), [restoring a project or local install](docs/updating.md#restoring-a-project-or-local-install), [when an update fails](docs/updating.md#when-an-update-fails) and [moving a project's pin](docs/updating.md#moving-a-projects-pin).
 
 ## Uninstalling
 
@@ -554,7 +573,7 @@ The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
 ```
 
-Every project-scope and local install is gone afterwards, whichever project you ran it from; the installer does the same on a replace and prints a restore command for each (see *Updating*). Run it from outside any project (`cd ~` first): then it leaves every project's `.claude/settings.json` alone. Run inside a project that declares codeo, it also removes `codeo@codeo` from that project's `enabledPlugins` and the `codeo` entry from its `extraKnownMarketplaces`, and the file shows as modified in `git status`.
+Every project-scope and local install is gone afterwards, whichever project you ran it from; the installer does the same on a replace and prints a restore command for each (see [Restoring a project or local install](docs/updating.md#restoring-a-project-or-local-install)). Run it from outside any project (`cd ~` first): then it leaves every project's `.claude/settings.json` alone. Run inside a project that declares codeo, it also removes `codeo@codeo` from that project's `enabledPlugins` and the `codeo` entry from its `extraKnownMarketplaces`, and the file shows as modified in `git status`.
 
 superpowers is separate: `claude plugin uninstall superpowers@superpowers-marketplace` (add `--scope project` for a project-scope install).
 
@@ -591,7 +610,14 @@ in `docs/dossier.md` and `docs/handoff.md`.
 
 ## More documentation
 
-_Written in Task 8._
+- [`docs/skills.md`](docs/skills.md): each skill, what it reads and writes, what it hands off to
+- [`docs/extension-points.md`](docs/extension-points.md): the overlay files and the format of each extension point
+- [`docs/dossier.md`](docs/dossier.md): the dossier files under `.codeo/<issue>/` and their protocol
+- [`docs/handoff.md`](docs/handoff.md): how a workflow moves between steps, sessions and machines
+- [`docs/home-checkout.md`](docs/home-checkout.md): the home checkout, the role guard and the tracking comment
+- [`docs/updating.md`](docs/updating.md): updating, replacing, restoring and moving a project's pin
+- [`.devcontainer/README.md`](.devcontainer/README.md): the dev container, roles and the `codeo` host command
+- [`CHANGELOG.md`](CHANGELOG.md): every release, with its config schema, shared state and mid-workflow safety
 
 ## Contributing
 
