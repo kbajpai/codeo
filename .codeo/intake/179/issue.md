@@ -1,8 +1,8 @@
-# Issue (new) — issue
+# Issue #179 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/179 |
 | Source | `/codeo:triage` run 2026-11-25-2, Q1 (`qc:171:H1-H6`), answered *file it* |
 | Updated | 2026-11-25 |
 
@@ -70,3 +70,4 @@ Changing doctor, the lock script or the installer. Findings already in #173, #17
 
 2026-11-25 — claims verified on origin/main; draft and Q1-Q3 written
 2026-11-25 — Q1-Q3 answered with the recommended picks; draft awaiting approval at the review gate
+2026-11-25 — draft approved; filed as #179 with labels documentation, priority: low
