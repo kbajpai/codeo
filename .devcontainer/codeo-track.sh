@@ -51,7 +51,8 @@ this_host() { if [[ -n ${CODEO_TRACK_HOST:-} ]]; then printf '%s\n' "$CODEO_TRAC
 tmp_files=()
 cleanup() { local f; for f in ${tmp_files[@]+"${tmp_files[@]}"}; do rm -f "$f"; done; }
 trap cleanup EXIT
-new_tmp() { local f; f=$(mktemp "${TMPDIR:-/tmp}/codeo-track.XXXXXX") || return 1; tmp_files+=("$f"); printf '%s\n' "$f"; }
+tmp_file=
+new_tmp() { tmp_file=$(mktemp "${TMPDIR:-/tmp}/codeo-track.XXXXXX") || return 1; tmp_files+=("$tmp_file"); }
 
 trim() { local v=$1; v=${v#"${v%%[![:space:]]*}"}; v=${v%"${v##*[![:space:]]}"}; printf '%s' "$v"; }
 
@@ -134,7 +135,8 @@ load() {
 # save <N> <manual-hint>: POST (no comment yet) or PATCH the rebuilt body.
 save() {
     local n=$1 hint=$2 f
-    f=$(new_tmp) || fail_record "could not write a temporary file; $hint"
+    new_tmp || fail_record "could not write a temporary file; $hint"
+    f=$tmp_file
     { printf '%s' "$head_text"; build_table_text; printf '%s' "$tail_text"; } > "$f"
     if [[ -z $cid ]]; then
         gh api -X POST "repos/$slug/issues/$n/comments" -F "body=@$f" >/dev/null 2>&1 \
