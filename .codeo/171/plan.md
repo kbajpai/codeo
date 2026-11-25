@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Questions raised (Q1-Q5), none answered. Exploration is done; the plan is not drafted, because the answers change its tasks. Next step: answer the questions in this file, then run `/codeo:plan` again.
+Q1-Q5 are answered, all as recommended. The plan is drafted at `.codeo/171/plan-draft.md` and awaits the engineer's approval; nothing under `docs/plans/` is written before it. Next step: approve, change or reject the draft.
 
 What I found (read at `d93369c`):
 
@@ -41,6 +41,7 @@ My calls, stated so they can be corrected (not questions):
 - **C — keep the samples in the README but fold them into collapsed `<details>` blocks.** The common path reads clean and the pins keep passing; the blocks are hidden on GitHub until opened and the README's length is unchanged.
 
 **Answer:**
+A — move the replace-and-restore detail to `docs/updating.md`; the pins follow. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q2 — *The home checkout*, *The guard* and *The tracking comment*: leave in the README, or move to `docs/`?
 
@@ -51,6 +52,7 @@ My calls, stated so they can be corrected (not questions):
 - **C — delete the tracking-comment section from the README and link `.devcontainer/README.md#the-tracking-comment`**, which already carries one, and move only the home-checkout and guard text.
 
 **Answer:**
+A — move them to `docs/home-checkout.md`, with a two-sentence summary and a link in the README. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q3 — The configuration section: one table of every key in the README, or a short README section and the full reference in `docs/`?
 
@@ -60,6 +62,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — a short README section (the four required keys, `suites` and `board` with examples, and a pointer) and the full table in a new `docs/configuration.md`.** The README stays short; the criterion's "a section describes every key" is met by the linked page, which is a reading of it the engineer may not intend.
 
 **Answer:**
+A — the full table and a fuller example in the README. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q4 — The role guard is not part of a new project: how should the README say so?
 
@@ -70,6 +73,7 @@ My calls, stated so they can be corrected (not questions):
 - **C — the same entry, with no issue filed.** The entry says the guard is the project's own and stops there.
 
 **Answer:**
+A — write the entry for projects that have the guard, say so in its first sentence, and file the adoption gap as its own issue (promised under `## Notes`, since `/codeo:issue` is refused in this checkout). (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q5 — A stuck or foreign lock: document only what the repo documents, or also say how to clear one by hand?
 
@@ -79,6 +83,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — A, plus "if you are sure no workflow of yours is running, delete `.codeo/active`".** It unblocks someone with a lock file left by a crash, but it is the one step the repo never recommends and the file is what stops the wrong branch shipping.
 
 **Answer:**
+A — only the documented recovery, plus a diagnosis that deletes nothing. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ## Notes
 
