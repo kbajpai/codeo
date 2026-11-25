@@ -4,13 +4,13 @@
 #
 #   cleanup.sh
 #       Fetches origin with --prune, lists the .codeo/done/<N> directories on origin/<baseBranch>, and prints
-#       one tab-separated line per issue, in ascending N, and after a proven issue with leftover branches
-#       a second line, `leftover`:
+#       one tab-separated line per issue, in ascending N, and after a proven issue (or one whose only failed proof is
+#       `name`) with leftover branches a second line, `leftover`:
 #           <N> TAB proven TAB <command> TAB <fallback>
 #                                           every proof passed; <command> is `-` when the overlay gives none;
 #                                           <fallback> is the overlay's expanded fallback text, or `-` when it has none
 #           <N> TAB failed TAB <proof>      the first proof that failed
-#           <N> TAB leftover TAB <command>  right after a proven line, when origin still holds codeo-live/<N>/<machine> branches
+#           <N> TAB leftover TAB <command>  right after a proven line, or a `failed name` line, when origin still holds codeo-live/<N>/<machine> branches
 #                                           (a hosted web session's live signal); <command> is one `git push origin --delete` naming
 #                                           each such branch whose name is only letters, digits, `.`, `_` and `-`. Read from the
 #                                           refs the fetch pruned; none, no line.
@@ -111,7 +111,7 @@ name_proof() {
 
 # The `<N>\tleftover\t<command>` line for issue $1, or nothing. Reads the refs the fetch pruned, never ls-remote (a failed
 # ls-remote prints nothing and would read as "none"). Only names that are exactly codeo-live/<N>/<letters, digits, . _ ->
-# go in: anyone with push access can name a branch with shell metacharacters, and the engineer runs what is printed.
+# go in (the five proofs that the issue is finished passed, so its branches are deletable whatever the container name): anyone with push access can name a branch with shell metacharacters, and the engineer runs what is printed.
 leftover_proof() {
     local n=$1 name names=()
     while IFS= read -r name; do
@@ -131,7 +131,7 @@ while IFS= read -r n; do
             name) printf '%s\tfailed\tname\n' "$n" ;;
             *) printf '%s\tproven\t%s\t%s\n' "$n" "$(head -n1 <<<"${out#cmd:}")" "$(tail -n1 <<<"$out")" ;;
         esac
-        [[ $out == name ]] || leftover_proof "$n"
+        leftover_proof "$n"
     else
         printf '%s\tfailed\t%s\n' "$n" "$proof"
     fi

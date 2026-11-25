@@ -219,13 +219,19 @@ step_contains "the host-workflow point is fetched" 17 'overlay.sh" close host-wo
 step_order "the host-workflow exit 3 is handled" 17 'close host-workflow' 'on exit 3'
 step_order "the host-workflow failure exits are handled" 17 'close host-workflow' 'on exit 1, 2 or 4'
 step_contains "the host line is read before the lock goes" 17 'before step 16 deletes it'
-step_contains "a web host has nothing to remove" 17 '`host: web`'
+step_contains "a web host has no checkout to remove" 17 '`host: web`'
 step_contains "a container host names the volume" 17 '`host: container`'
 step_contains "the container's volume line is named" 17 '`volume:`'
-step_contains "a local host has nothing to remove" 17 '`host: local`'
+step_contains "a local host has no checkout to remove" 17 '`host: local`'
 step_contains "triage is suggested" 17 '/codeo:triage'
 step_contains "step 17 conditions its body on the finished exit" 17 'When step 16 deleted `.codeo/active`, fetch'
 step_contains "step 17 reports how the close ended" 17 'Report** how the close ended: finished when step 16 deleted `.codeo/active`, lock kept when it did not.'
+step_contains "step 17 names the web branch delete command" 17 'git push origin --delete codeo-live/<issue>/<machine>'
+step_contains "step 17 covers a hosted session whatever the lock's host" 17 'CLAUDE_CODE_REMOTE'
+step_contains "step 17 names /codeo:cleanup for the exact command" 17 'prints it with the branch'"'"'s exact name'
+step_order "the web branch paragraph follows the host-workflow bullets" 17 'on exit 1, 2 or 4' 'git push origin --delete codeo-live/<issue>/<machine>'
+step_order "the web branch paragraph comes before the finished-exit text" 17 'git push origin --delete codeo-live/<issue>/<machine>' 'On the finished exit only'
+if step 17 | grep -qF 'nothing to remove'; then fail "step 17 still says nothing to remove"; fi
 must_contain "the abandon exit has a finished closing block" '**Closing block — abandon finished:**'
 must_contain "the abandon exit has an interrupted closing block" '**Closing block — abandon interrupted:**'
 must_contain "the abandon ends with the matching closing block" 'End with the closing block that matches how the abandon ended'
@@ -447,6 +453,10 @@ done
 # The overlap step stops until it is answered before it says what a non-zero exit means, as in qc.
 must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with or without an'
 must_precede 'the overlap skipping sentence comes after the stop sentence' 'The step stops until it is answered' 'An `overlap: skipping #<M>'\''s changed paths` warning'
+
+# The web-session exception is in the description and in docs/skills.md, not only in step 16.
+sed -n 3p "$skill" | grep -qF 'a hosted web session deletes none' || fail "the description has no web-session exception"
+awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md" | grep -qF 'a hosted web session deletes none' || fail "docs/skills.md close section has no web-session exception"
 
 if ((failures)); then
     echo "$failures case(s) failed"

@@ -43,20 +43,22 @@ is the container the message names.
 
 1. **Run the script and relay it.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup.sh"` prints one
    tab-separated line per issue: `<N>`, `proven`, the command (or `-` when the project gives
-   none) and the `fallback:` text (or `-` when the project gives none), or `<N>`, `failed` and the first proof that failed. A proven issue whose web live-signal branches are still on `origin` gets a second line, `leftover`, right after its own. Relay the lines as three lists, each
+   none) and the `fallback:` text (or `-` when the project gives none), or `<N>`, `failed` and the first proof that failed. A proven issue, or an issue whose only failed proof is `name`, whose web live-signal branches are still on `origin` gets a second line, `leftover`, right after its own. Relay the lines as three lists, each
    line as the script printed it:
    - **Proven**, with the command to run. A `-` means the issue is finished and the project has no
      removal command for it.
      When the fourth field is not `-`, print it on the line beneath the command, as the script printed it.
    - **Not proven**, with the failed proof (`issue`, `pull-request`, `branch`, `dossier`, `lease` or `name`)
-     and no command.
+     and no container command; an issue whose only failed proof is `name` still gets its `leftover` line (below).
    - **Leftover web signal branches**, each `leftover` line as printed: `<N>`, `leftover` and a
      `git push origin --delete codeo-live/<N>/<machine> …` command. A hosted web session cannot delete its
      own live-signal branches, so they stay on `origin` after the workflow closed. The command deletes
      remote branches; the engineer runs it, on the host.
    <!-- rule: cleanup-02 -->
    A removal command is printed only for an issue the script proved. An issue that failed a proof
-   gets no command, however finished it looks.
+   gets no removal command, however finished it looks; the one command it can get is the `leftover`
+   branch delete, and it gets that only when `name` is the proof that failed, since the five proofs
+   that it is finished passed.
    <!-- rule: cleanup-04 -->
    Print only what the script printed. Never build a container name or a command in this skill,
    never edit one, never fill a gap the script left.
