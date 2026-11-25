@@ -47,6 +47,8 @@ No bullet (engineer, by the question tool in the conversation, 2026-11-25; recor
 
 `superpowers:brainstorming` ran before these questions and `superpowers:writing-plans` before the plan was written. The session was in plan mode, so the questions were asked with the question tool and the draft was reviewed as the plan-mode file, not as `plan-draft.md`; this file was first written after the approval. The plan overlays `plan-shape`, `proof-of-done` and `wiki-rules` are not set (exit 3), so the generic shape and the default proof apply. No invariants document, no shared environment, no `wiki` module and no exclusive resources are configured. The role check (`role.sh --check plan`) exited 0. Steps 6 and 7 of the skill did not apply: no new component and no architectural choice.
 
+2026-11-25 (added by #177): the plan file was committed in d71d60f; the "(unstaged)" in "## Where this stands" and in "## Outcome" was true when written.
+
 ## Outcome
 
 | | |
