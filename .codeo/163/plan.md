@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 answered as recommended ("go with your picks"). The draft is at `.codeo/163/plan-draft.md`, awaiting the engineer's approval; nothing is written under `docs/plans/` yet, and there is no outcome until it is approved.
+Planned: the plan is approved and saved at `docs/plans/2026-11-25-close-152-leftovers-cleanup-overlay-163.md` (unstaged). Q1-Q3 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: commit the plan, then `/codeo:implement`.
 
 What I found (read against the code at `2619567`):
 
@@ -66,6 +66,28 @@ Proceed and coordinate. (Engineer: "go with your picks", 2026-11-24; given in th
 
 ## Notes
 
+None; the footprint is at the end of `## Outcome`.
+
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-25-close-152-leftovers-cleanup-overlay-163.md` (approved, unstaged) |
+| Shape | An implementation plan under `docs/plans/`; no reference doc, because nothing here is a standing decision |
+
+**Decisions.**
+- Q1 (A): the CHANGELOG names the release (v1.0.9) from which `{N}` in `command:` and the `fallback:` line work; the overlay stays `command: codeo rm {N}`. Rejected: an overlay both versions expand (it would stop `name` being the container's name and weaken the pattern check).
+- Q2 (A): the by-hand fallback also removes the image (`docker rmi codeo-dev:<name>`), as `codeo rm` does. Rejected: leaving the image and not marking it.
+- Q3: proceed and coordinate with #161 on `CHANGELOG.md`'s `## Unreleased`.
+- `mark` is run on the host that created the container, never inside one; a sandbox is ended with `bash codeo-sandbox.sh end <N>`. The close overlay's `sandbox:` paragraph is not edited, because `tests/close-removal.test.sh` checks e and g forbid it there.
+- F15: `new_tmp` sets a variable instead of printing the path. F17 is documented, not changed in the guard.
+
+**Tasks.** 1 `codeo-track.sh` leak (test first) · 2 both overlays' fallback and their test pins · 3 CHANGELOG · 4 README F16-F19 · 5 `docs/skills.md`.
+
+**Documentation pages the plan changes:** `CHANGELOG.md`, `README.md`, `docs/skills.md`. `docs/extension-points.md` already describes the fourth field and is not edited.
+
+**Intake questions resolved:** none; intake left nothing open.
+
 ### Footprint
 
 ```
@@ -75,10 +97,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 - 2026-11-24 — Q1-Q3 raised; the engineering plugin is not installed and was not needed · cost: 2m · fable-5-2 111k in + 989k cached / 13k out
 - 2026-11-24 — Q1-Q3 answered as recommended in the conversation; draft written to .codeo/163/plan-draft.md · cost: 4m · fable-5-2 116k in + 1.3M cached / 14k out · sonnet-5-5 126k in + 300k cached / 15k out
+- 2026-11-25 — planned: docs/plans/2026-11-25-close-152-leftovers-cleanup-overlay-163.md · cost: 104m · fable-5-2 116k in + 1.3M cached / 14k out · sonnet-5-5 277k in + 1.3M cached / 20k out
