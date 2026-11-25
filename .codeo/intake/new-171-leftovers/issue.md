@@ -16,17 +16,17 @@ Claims re-checked on `origin/main` (README.md:27, :429, :447; `docs/handoff.md:3
 **What:** `implement.md` also lists "how another project adopts the role guard" (undocumented), the "Seven pipeline skills" miscount, and the awkward list/code indentation in README "Setting a project up". The draft below includes all three.
 **Why it matters:** the role-guard item is a writing task with a decision in it (which page), unlike the one-line fixes.
 **Options:** (a) all in one issue, as drafted (recommended) · (b) drop the role-guard item to its own issue · (c) drop the three extras
-**Answer:**
+**Answer:** (a) all in one issue, as drafted — engineer: "go with your picks"
 
 ### Q2. Priority
 **What:** `issue.priority` is on. Proposed `priority: low` — "polish, cleanup, or a follow-up nobody is waiting on" (rubric line 4). Nothing breaks if it waits.
 **Options:** low · medium · other
-**Answer:**
+**Answer:** low — engineer: "go with your picks"
 
 ### Q3. Type and labels
 **What:** this repository has no Issue Types, so none is set. Proposed label: `documentation`.
 **Options:** as proposed · change
-**Answer:**
+**Answer:** as proposed (no type, label `documentation`) — engineer: "go with your picks"
 
 ## Draft
 
@@ -69,3 +69,4 @@ Changing doctor, the lock script or the installer. Findings already in #173, #17
 ## Log
 
 2026-11-25 — claims verified on origin/main; draft and Q1-Q3 written
+2026-11-25 — Q1-Q3 answered with the recommended picks; draft awaiting approval at the review gate
