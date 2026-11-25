@@ -8,11 +8,10 @@
 
 ## Where this stands
 
-Round 1, before any task. The plan (`docs/plans/2026-11-25-sbx-sandbox-macos-176.md`) is committed
-and pushed, the branch already contains `origin/main`, and `overlap.sh` prints nothing. Task 1 is a
-preflight the engineer runs on the Mac over SSH, and the plan says Task 2 does not start until it
-shows macOS 14 or later on Apple silicon, because below that the plan becomes a refusal and Tasks
-2-5 are rewritten. Nothing is built until Q1 is answered.
+Round 1. Tasks 2, 3 and 4 are built, reviewed and pushed (`537af9d`, `4b60010`, `86fc0bf`); each passed its
+review, `bash tests/run.sh` exits 0 at `86fc0bf`, and the suite's build command (`true`) exits 0.
+Task 5 is the engineer's: the full route on the Mac, recorded as trial T14. It waits on Q2, and the
+whole-branch review follows it, because Task 5 still edits `.sbx/README.md` and the evaluation page.
 
 ## Questions
 
@@ -61,6 +60,44 @@ kbajpai@mac-studio:~$ sbx login
 
 The `sw_vers` output was not in the paste.
 
+### Q2 — What did Task 5's full route print on the Mac?
+
+**Why it matters:** this is the plan's only proof that `codeo issue 176 --sandbox`, `codeo list`,
+`codeo open` and `codeo rm` work on a Mac, and it settles the acceptance criteria that no test here
+can: the sandbox starts, takes the lock and adds the `sandbox` row; `codeo rm` removes it and marks
+the row `removed`. Task 5 writes trial T14 and the `## On macOS` section from what you paste. A step
+that fails beyond what Tasks 2-3 fixed is not patched here: it is recorded as it happened and sent
+back to `/codeo:plan`.
+**Options:** the pasted output below · a step failed, say which and what it printed.
+
+Tasks 2-4 are committed and pushed (`86fc0bf`), so the Mac can fetch them. Over SSH on the Mac, one
+command at a time, paste what each prints. The first replaces `codeo` and its three scripts in
+`~/codeo` with this branch's; run plain `codeo update` afterwards to go back to `main`'s. The
+sandbox is for #176, so its lock and tracking row appear on this same issue; answer yes if
+`codeo issue` asks about the existing container (`--yes` does).
+
+```
+env CODEO_RAW_URL=https://raw.githubusercontent.com/kbajpai/codeo/feat/176-support-sbx-issue-sandbox-macos codeo update
+sbx secret set github --command "gh auth token"
+sbx setup ssh
+sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"
+codeo issue 176 --sandbox --yes
+sbx exec codeo-176 cat .codeo/active
+gh issue view 176 --comments
+codeo list
+codeo open 176
+codeo rm 176
+gh issue view 176 --comments
+```
+
+Unlock the login keychain first in the session if a step stops on a keychain error
+(`security -v unlock-keychain ~/Library/Keychains/login.keychain-db`). `codeo open 176` starts VS
+Code on the Mac itself: say whether a window opened there; if it did not over SSH, run it at the
+Mac's screen. Before `codeo rm 176`, run `codeo shell 176` once at the Mac, check it opens a shell
+in the sandbox, and exit it.
+
+**Answer:**
+
 ## Notes
 
 - **Task 1 gate: passed.** `uname -m` is `arm64`, and the bash triple `aarch64-apple-darwin27.0.0`
@@ -81,3 +118,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-25 — Q1 raised, waiting on Task 1's output from the Mac · cost: 2m · sonnet-5-5 12k in + 610k cached / 1k out
+- 2026-11-25 — Task 1 gate passed (Q1 answered); Tasks 2-4 built, each reviewed clean and pushed; Q2 raised for Task 5 on the Mac · cost: 27m · sonnet-5-5 262k in + 8.2M cached / 40k out
