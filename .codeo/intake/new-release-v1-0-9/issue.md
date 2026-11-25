@@ -24,3 +24,17 @@ Restated problem: once every issue open today (#163, #166) has closed, cut the n
 ## Log
 
 - 2026-11-25 — questions 1-3 raised
+
+## Answers (engineer, 2026-11-25)
+
+1. v1.0.9. 2. yes, a second pin PR. 3. yes, gate on #163 and #166.
+
+## Draft
+
+**Title:** Release v1.0.9 once #163 and #166 are closed, and pin codeo to it
+**Labels:** `enhancement` (as #146). No type (`issue-types` prints nothing). No priority.
+Body: `body.md` in this directory.
+
+## Log
+
+- 2026-11-25 — answers 1-3 received; draft written for the review gate
