@@ -62,6 +62,15 @@ Not known; word it without the claim. Given in the session's question dialog on 
 - **README flowchart and paragraph** (`.devcontainer/README.md:197, 214-216`): "was running" becomes "not started by `codeo` as far as it knows (running, or `docker ps -a` failed)", and "A container that `codeo` started itself is read once" becomes "knows it started", since with no listing `started` stays 0 and the container is restarted and read twice.
 - **Proof of done** for every task is the `shell` suite (`bash tests/run.sh`; it has no single-test filter).
 
+### Footprint
+
+```
+files:      .devcontainer/codeo, .devcontainer/README.md, .claude/hooks/session-start.sh, .claude/settings.json, tests/codeo-command.test.sh, tests/session-start-hook.test.sh, tests/live-signal.test.sh, CONTRIBUTING.md, CHANGELOG.md, docs/release-checklist.md, docs/plans/2026-11-25-close-161-leftovers-173.md, docs/plans/2026-11-25-close-161-leftovers-173-round-2.md, .codeo/173/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 | | |
@@ -78,15 +87,6 @@ Not known; word it without the claim. Given in the session's question dialog on 
 **Documentation pages the plan changes:** `.devcontainer/README.md` (removal flowchart, two paragraphs), `CONTRIBUTING.md` (new `## Hosted sessions`), `CHANGELOG.md`, `docs/release-checklist.md` (step 6).
 
 **Intake questions resolved here:** init's open item F8 (whether `/codeo:*` commands load in the same session) is not verified and is worded around, per Q3; `issue.md` Q2 (documentation-only fix acceptable?) is answered by Q1 above: the code reports.
-
-### Footprint
-
-```
-files:      .devcontainer/codeo, .devcontainer/README.md, .claude/hooks/session-start.sh, .claude/settings.json, tests/codeo-command.test.sh, tests/session-start-hook.test.sh, tests/live-signal.test.sh, CONTRIBUTING.md, CHANGELOG.md, docs/release-checklist.md, docs/plans/2026-11-25-close-161-leftovers-173.md, .codeo/173/**
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
