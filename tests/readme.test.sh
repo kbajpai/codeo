@@ -3,8 +3,9 @@
 #   commands         every /codeo:<name> is a directory under skills/
 #   paths            every path-shaped word in a backticked span (.codeo/ docs/ scripts/ tests/ hooks/ lib/ skills/ .devcontainer/)
 #                    resolves to a file or directory; .codeo/active and .codeo/intake are allowed by name (gitignored).
-#                    docs/plans/ and .codeo/config.json, which the README names for a user's project, resolve only
-#                    because codeo uses itself, so this check cannot catch a path a new project lacks
+#                    .codeo/, .codeo/.gitignore, .codeo/config.json and docs/plans/, which the README names for a
+#                    user's project, resolve only because codeo uses itself, so this check cannot catch a path a
+#                    new project lacks
 #   links            every relative link resolves, and its #anchor is a GitHub slug of a heading in the target
 #   slugs            a self-check: repeated headings get -1, -2 as GitHub does (so a link to the second one resolves)
 #   config-keys      the Configuration table lists exactly the keys in known_keys below (a hand-kept list: a key the
@@ -23,7 +24,7 @@
 #   adopting-guard   docs/home-checkout.md has "Adopting the guard in your project" (role-guard, .codeo/overlays/,
 #                    /codeo:doctor); the README role-guard entry and docs/extension-points.md link to it
 #   updating         docs/updating.md's Updating superpowers section says restart
-#   skill-count      docs/handoff.md line 3 starts "Six pipeline skills", docs/skills.md line 5 starts "Six skills"
+#   skill-count      docs/handoff.md has a line starting "Six pipeline skills" (and none "Seven"), docs/skills.md one starting "Six skills form the pipeline"
 #   host-command     Installing points at the codeo command's section of .devcontainer/README.md; home-checkout.md and
 #                    .devcontainer/README.md carry the macOS notes (flock, the keychain over SSH)
 # Headings and backticked tokens inside a ``` fence do not count; commands inside a fence do.
@@ -248,6 +249,11 @@ else
         grep -qxF -- "$lead" < <(printf '%s\n' $doctor_checks) ||
             fail troubleshooting-groups "an entry under Checks from /codeo:doctor starts \"${line:0:60}\", not one of the twelve checks"
     done < <(subsection "$trouble" "Checks from /codeo:doctor" | grep '^\*\*' || true)
+    doctor_leads=$(subsection "$trouble" "Checks from /codeo:doctor" | grep '^\*\*' | sed -n 's/^\*\*\([^*]*\)\*\*.*$/\1/p' | sed 's/\.$//' || true)
+    for check in $doctor_checks; do
+        grep -qxF -- "$check" <<<"$doctor_leads" ||
+            fail troubleshooting-groups "the doctor group has no entry $check."
+    done
 fi
 if ! grep -qxF '### Installing and the pin' <<<"$trouble"; then
     fail troubleshooting-groups "Troubleshooting has no ### Installing and the pin"
@@ -279,10 +285,12 @@ section docs/updating.md "Updating superpowers" | grep -qF restart ||
     fail updating "docs/updating.md's Updating superpowers section does not say restart"
 
 # skill-count: the page ledes say six.
-[[ "$(sed -n 3p docs/handoff.md)" == "Six pipeline skills"* ]] ||
-    fail skill-count "docs/handoff.md line 3 does not start \"Six pipeline skills\""
-[[ "$(sed -n 5p docs/skills.md)" == "Six skills"* ]] ||
-    fail skill-count "docs/skills.md line 5 does not start \"Six skills\""
+grep -q '^Six pipeline skills' docs/handoff.md ||
+    fail skill-count "docs/handoff.md has no line starting \"Six pipeline skills\""
+! grep -q '^Seven pipeline skills' docs/handoff.md ||
+    fail skill-count "docs/handoff.md still says Seven pipeline skills"
+grep -q '^Six skills form the pipeline' docs/skills.md ||
+    fail skill-count "docs/skills.md has no line starting \"Six skills form the pipeline\""
 
 # host-command: the codeo command's install pointer and the macOS notes. Each assertion fails on its own.
 grep -qF '](.devcontainer/README.md#installing-the-codeo-command)' <(section "$readme" Installing) ||

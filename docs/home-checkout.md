@@ -46,7 +46,7 @@ To add one, give each of the eight guarded skills (`issue`, `init`, `triage`, `c
 - 1: print the one line and stop; nothing the engineer says lifts it.
 - Anything else: report what was printed and go on.
 
-The check is any script the project writes. The skill never reads its output beyond the exit and the one line. `/codeo:doctor`'s `overlays` check confirms each section name is a registered point and used once.
+The check is any script the project writes. The skill reads the exit and, on exit 1, the one line the check prints; on any other exit it reports what the check printed. `/codeo:doctor`'s `overlays` check confirms each section name is a registered point and used once.
 
 codeo's own guard is the worked example: `.codeo/overlays/plan.md` (a one-paragraph section) and `.devcontainer/scripts/role.sh`, whose roles are the table above. The script reads the clone's folder, the lock and the branch, calls `container-name.sh` beside it, and assumes the folder names `<codename>-home` and `<codename>-<N>`. It is not shipped for other projects, so a project writes its own check for its own layout.
 
