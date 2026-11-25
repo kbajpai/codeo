@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The intake, the three source reports (`.codeo/done/{163,166,168}/qc.md`) and the code behind each finding are read. Q1-Q6 are open; nothing is drafted until they are answered. Q1-Q4 decide what gets written, Q5-Q6 are overlaps with #173 and #176.
+Round 1. The plan is approved and written to `docs/plans/2026-11-25-close-163-166-168-leftovers-177.md` (unstaged). Q1-Q6 are answered. `overlap.sh 177` still prints the #173 and #176 overlaps because Q5 and Q6 do not quote its tokens, so Q7 and Q8 restate them and are open; `## Outcome` waits for them.
 
 What exploration found:
 
@@ -91,6 +91,24 @@ Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 **Answer:**
 Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 
+### Q7 — Confirm: #173 overlaps on `glob:CHANGELOG.md` and `glob:docs/release-checklist.md`
+
+`overlap.sh 177` printed `173	glob:CHANGELOG.md` and `173	glob:docs/release-checklist.md` for the written footprint. This is Q5's overlap, restated with the exact tokens so the checker can pair it with #173 (branch `docs/173-close-161-leftovers-release-checklist`, assignee kbajpai, step `qc`, sent back to `/codeo:plan`). Your answer to Q5 was *proceed and coordinate*.
+
+**Why it matters:** if Q5's answer stands, the hand-off is written at once; any other option holds it or changes Task 7.
+**Options:** proceed and coordinate, as Q5 (my pick) · sequence after #173 · re-scope.
+
+**Answer:**
+
+### Q8 — Confirm: #176 overlaps on `glob:CHANGELOG.md`
+
+`overlap.sh 177` printed `176	glob:CHANGELOG.md`. This is Q6's overlap, restated with the token, for #176 (branch `feat/176-support-sbx-issue-sandbox-macos`, assignee kbajpai, step `implement`). Your answer to Q6 was *proceed and coordinate*.
+
+**Why it matters:** as Q7.
+**Options:** proceed and coordinate, as Q6 (my pick) · sequence after #176 · re-scope.
+
+**Answer:**
+
 ## Notes
 
 - #179 (`docs/179-close-171-leftovers-readme-wording`, step `init`) has no footprint yet and has changed nothing, so there is nothing to compare; its title suggests README wording, and it may reach `docs/home-checkout.md`. `overlap.sh` is run again on the written footprint after approval.
@@ -113,3 +131,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-25 — Q1-Q6 raised · cost: 2m · fable-5-2 103k in + 714k cached / 9k out
+- 2026-11-25 — plan approved and written; Q7-Q8 raised (overlap tokens) · cost: 28m · fable-5-2 117k in + 1.1M cached / 15k out · sonnet-5-5 148k in + 1.3M cached / 21k out
