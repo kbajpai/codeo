@@ -544,12 +544,17 @@ is the container the message names.
       still in it, theirs to delete or keep.
 
     A hosted web session cannot delete a branch. For `host: web`, and for any lock when
-    `CLAUDE_CODE_REMOTE` is `true`, step 16's `sweep` did nothing, so the session's
-    `codeo-live/<issue>/<machine>` live-signal branch stays on `origin`. On the finished exit say that,
-    whatever the host workflow printed, and name the command with the lock's issue filled in:
-    `git push origin --delete codeo-live/<issue>/<machine>`, run outside the hosted session.
+    `CLAUDE_CODE_REMOTE` is `true`, step 16's `sweep` did nothing, so a `codeo-live/<issue>/<machine>`
+    live-signal branch stays on `origin` only when a beat pushed one. On the finished exit, whatever the
+    host workflow printed, read `origin` with the lock's issue filled in:
+    `git ls-remote --heads origin 'codeo-live/<issue>/*'`. For each branch it prints whose name is
+    `codeo-live/<issue>/` followed only by letters, digits, `.`, `_` or `-`, say it stays on `origin` and print
+    one `git push origin --delete <branch>` per branch it printed, with that exact name, run outside the hosted session. When it prints
+    none, say no live-signal branch is on `origin`. When the read fails, say so and give the fallback: the
+    machine label is saved in `<git dir>/codeo-live-machine` (`git rev-parse --git-path codeo-live-machine`;
+    `CODEO_MACHINE` wins when set), and the command is `git push origin --delete codeo-live/<issue>/<machine>`.
     `/codeo:cleanup` prints it with the branch's exact name once the issue is finished.
-    Never describe such a close as leaving nothing behind.
+    When the read printed a branch, never describe such a close as leaving nothing behind.
 
     On the finished exit only: everything the workflow committed is merged or on origin; anything
     left uncommitted or unpushed in the checkout is not, which is why the host workflow's clean-up
