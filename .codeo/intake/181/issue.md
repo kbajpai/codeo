@@ -1,4 +1,4 @@
-# Issue (new) — session title shows when the session started
+# Issue #181 — issue
 
 | | |
 |---|---|
@@ -7,7 +7,7 @@
 
 ## Where this stands
 
-Draft at the review gate; Q1-Q7 answered.
+Filed as #181 (https://github.com/kbajpai/codeo/issues/181) on the engineer's approval.
 
 ## Questions
 
@@ -41,3 +41,11 @@ UTC (containers usually run in UTC), or the container's local time zone?
 Title: Session title: prefix the session id with a per-container hex sequence number (`codeo [home] · 1A-2cb71525`)
 Type: none (user-owned repository has no Issue Types). Labels: `enhancement`, `priority: low` (rubric "low": polish nobody is waiting on).
 Body: see `body.md`.
+
+## Outcome
+
+Filed #181 https://github.com/kbajpai/codeo/issues/181 — labels `enhancement`, `priority: low`.
+
+## Log
+
+- 2026-11-25 — filed #181 · cost: 20m · opus-5-5 97k in + 1.2M cached / 8k out
