@@ -1,0 +1,63 @@
+# Issue #170 — plan
+
+| | |
+|---|---|
+| Issue | https://github.com/kbajpai/codeo/issues/170 |
+| Branch | `docs/docs-say-codeo-host-command` |
+| Updated | 2026-11-25 |
+
+## Where this stands
+
+Round 1. The code and both READMEs are read; nothing is drafted. Five questions are open (Q1-Q5); the plan is drafted once they are answered. No other workflow is in flight (`inflight.sh --except 170`), so there is no overlap to ask about yet.
+
+What is settled without a question: one pull request; documentation only, no change to `.devcontainer/codeo` or `install.sh`; the *Installing* line goes directly under the `curl … install.sh | bash` block in `README.md` and links to `.devcontainer/README.md#installing-the-codeo-command` (the heading `## Installing the `codeo` command`, line 94); `brew install flock` goes into the macOS sentence at `README.md:212`.
+
+## Questions
+
+### Q1 — Where does the keychain note live?
+
+**Why it matters:** it decides which file the task edits and what the README sentence says. `codeo home` and the Docker build are documented in `.devcontainer/README.md`; the macOS paragraph is in `README.md` (*The home checkout*, line 212).
+**Options:** (a) the full note in `.devcontainer/README.md`, beside *Installing the `codeo` command*, and one sentence in the README's macOS paragraph that points to it — my recommendation, because that is the page a Mac user is on when the build fails · (b) the full note in the README's macOS paragraph only · (c) the full note in both.
+
+**Answer:**
+
+### Q2 — What is the error text to quote?
+
+**Why it matters:** the criterion asks for "the keychain error text", and the issue quotes it with an ellipsis: `error getting credentials ... keychain cannot be accessed because the current session does not allow user interaction`. I cannot reproduce it here (Linux container), and the part before the ellipsis differs between Docker versions.
+**Options:** (a) quote only the stable part, `keychain cannot be accessed because the current session does not allow user interaction`, and say it follows `error getting credentials` — my recommendation · (b) quote the whole line: paste it here as your terminal printed it.
+
+**Answer:**
+
+### Q3 — Does the note also offer dropping `credsStore` from `~/.docker/config.json`?
+
+**Why it matters:** the issue's *Key Requirements* name it ("with its trade-off"), the acceptance criteria do not, and *Out of Scope* excludes macOS behaviour not yet verified. With it, the note gains a second remedy and a sentence on the trade-off (registry logins are then kept unencrypted in `config.json`); without it, the note is the unlock command alone.
+**Options:** (a) include it — say so only if you ran it and the build then passed · (b) leave it out; the unlock command is the one documented remedy — my recommendation unless you verified it.
+
+**Answer:**
+
+### Q4 — Is the "host is Linux" sentence in `.devcontainer/README.md` corrected here?
+
+**Why it matters:** the new README line links to *Installing the `codeo` command*, whose first paragraph (line 96) says "The host is Linux with bash 4.3 or later, `curl`, `git` and `flock` (util-linux)". The README says the command works on macOS. A Mac user who follows the new link reads that their host is not supported. Fixing it adds one task: the sentence names Linux and macOS, and Homebrew for bash and `flock` on macOS (sandboxes stay Linux and WSL2 only, as `.sbx/README.md` says).
+**Options:** (a) correct it in this issue — my recommendation · (b) leave it; I record it under `## Notes` for `/codeo:triage` to file.
+
+**Answer:**
+
+### Q5 — Are the new sentences pinned by a test?
+
+**Why it matters:** no test pins the README's macOS paragraph or the *Installing* prose today, so "doc-pin tests updated" is met by changing none. A pin adds one task and a case in `tests/install.test.sh`: the README names `brew install flock`, the unlock command, and a link whose target heading exists in `.devcontainer/README.md`. Without one, each task's proof is a `grep` the task names plus `bash tests/run.sh`.
+**Options:** (a) add the pin case — my recommendation; it is how this repository keeps a README claim from drifting, and it checks the link's anchor · (b) no new test.
+
+**Answer:**
+
+## Notes
+
+- Verified in the repo: `install.sh` installs the two plugins only; `.devcontainer/codeo` calls `flock` (line 159) and prints the `PATH` line from `codeo help`; the install line for the command is at `.devcontainer/README.md:101`.
+- `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` is the command from the issue; it is written as the issue gives it.
+
+## Outcome
+
+_Pending — written at the hand-off._
+
+## Log
+
+- 2026-11-25 — Q1-Q5 raised · cost: 1m · fable-5-2 65k in + 455k cached / 3k out
