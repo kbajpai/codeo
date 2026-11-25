@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # codeo: the host command for working an issue in a dev container or a Docker Sandboxes (sbx)
 # sandbox. It wraps codeo-container.sh and codeo-sandbox.sh, which live in $CODEO_HOME (default
-# ~/codeo). Needs bash 4.3 or later on Linux; docker and sbx are each optional.
+# ~/codeo). Needs bash 4.3 or later on Linux or macOS; docker and sbx are each optional.
 #
 #   codeo help
 #
