@@ -1,6 +1,31 @@
 # codeo
 
-codeo is an agent-workflow plugin for Claude Code: it carries a piece of work from issue to merged pull request through six steps: issue, init, plan, implement, QC and close. It is unrelated to SYSGO's CODEO IDE and to GoCodeo.
+codeo is an agent-workflow plugin for Claude Code. It is for engineers who work from GitHub issues: it carries a piece of work from issue to merged pull request through six steps (issue, init, plan, implement, QC and close), keeping a dossier of each step in the repository. It needs bash, `jq`, `git`, `gh` and `claude`, and a GitHub repository to work in. It is unrelated to SYSGO's CODEO IDE and to GoCodeo.
+
+## Contents
+
+- [Start here](#start-here)
+- [Requirements](#requirements)
+- [Installing](#installing)
+- [Setting a project up](#setting-a-project-up)
+- [Your first workflow](#your-first-workflow)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
+- [Updating](#updating)
+- [Uninstalling](#uninstalling)
+- [The skills](#the-skills)
+- [More documentation](#more-documentation)
+- [Contributing](#contributing)
+
+## Start here
+
+1. Run the one install command in [Installing](#installing) and watch it print an `install:` line for each step.
+2. Restart Claude Code, so the new session lists the codeo commands.
+3. In your project, run `/codeo:setup` and then `/codeo:doctor`, and see `.codeo/config.json` written and every check pass ([Setting a project up](#setting-a-project-up)).
+4. File your first issue with `/codeo:issue` and see it created on GitHub.
+5. Run the six steps for that issue, each handing off to the next ([Your first workflow](#your-first-workflow)).
+6. Merge the pull request that `/codeo:close` opens, and see the workflow finish.
+7. If something stops, find its message in [Troubleshooting](#troubleshooting).
 
 ## Requirements
 
@@ -10,17 +35,17 @@ codeo is an agent-workflow plugin for Claude Code: it carries a piece of work fr
 - `gh`, the GitHub CLI; board use also needs `gh project`, which reads GraphQL, so the token must be allowed to use it
 - `claude`, Claude Code
 
-The installer checks for all five in one run and names every one that is missing or too old. It installs none of them: use your system's package manager, then run it again.
+The installer checks for all five in one run and names every one that is missing or too old. It installs none of them: use your system's package manager, then run it again. `/codeo:doctor` checks them again once a project is set up.
 
 ## Installing
 
-One command installs the latest release of codeo and of the superpowers plugin it builds on, for you, in every project:
+One command installs codeo and the superpowers plugin it builds on, for you, in every project:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash
 ```
 
-The latest release is the highest `vX.Y.Z` tag of the repository. It prints one `install:` line per step, between the lines `claude` prints itself. Claude Code sessions that are already open need a restart to load the plugins.
+It installs the latest release, which is the highest `vX.Y.Z` tag of the repository. Claude Code sessions that are already open need a restart to load the plugins. It prints one `install:` line per step, between the lines `claude` prints itself.
 
 ```
 install: release v1.0.9
@@ -59,13 +84,14 @@ install: nothing changed - codeo v1.0.9, user scope, superpowers 7.0.2
 Installed plugins:
 
   ❯ codeo@codeo
-    Version: 1.0.9
-    Scope: user
-    Status: ✔ enabled
+### Options
 
-  ❯ superpowers@superpowers-marketplace
-    Version: 7.0.2
-    Scope: user
+`--version` installs a release other than the latest (`v1.0.8`, or `1.0.8`). The installer checks the tag exists before it changes anything. Asking for a different version than the one installed replaces it; [docs/updating.md](docs/updating.md) shows what that prints, including a downgrade:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.8
+```
+
     Status: ✔ enabled
 ```
 
@@ -129,7 +155,7 @@ Commit the file it wrote. This is its content (`jq -S . .claude/settings.json`),
 }
 ```
 
-`ref` pins the codeo release the project uses; write the newest release tag, which `git ls-remote --tags --refs https://github.com/kbajpai/codeo 'v*'` lists. A teammate who opens the folder in Claude Code and trusts it is offered both plugins. A later run that replaces codeo on your machine drops this project's install (see *Updating*). To move the project to another release, change `ref` (see *Updating*).
+Updating, replacing and restoring are in [Updating](#updating).
 
 ## Setting a project up
 
@@ -196,81 +222,9 @@ A piece of work goes through six slash commands in order. Each one owns one file
 
 Run the next command when a step hands off; each says which one. `/codeo:close` is also how you stash a workflow to come back to, or abandon one whose pull request was closed unmerged. A step that is interrupted can be run again: it works out where the workflow stands from the dossier and GitHub.
 
-## The skills
+## Configuration
 
-The six pipeline skills run in order inside one workflow, each owning one dossier file under `.codeo/<issue>/`; `triage` and `cleanup` run outside the workflow lock, between workflows, and a project's role guard (see [`.devcontainer/README.md`](.devcontainer/README.md#roles-and-the-guard)) keeps each skill in the checkout it belongs in; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
-
-| Skill | Purpose |
-|-------|---------|
-| [`/codeo:issue`](docs/skills.md#issue) | Turn a raw idea or finding into a well-formed GitHub issue through a question-and-answer pass |
-| [`/codeo:init`](docs/skills.md#init) | Start work on a Ready issue: claim the branch, write its dossier, take the lock, hand off to plan |
-| [`/codeo:plan`](docs/skills.md#plan) | Explore, ask, and document a change as a reference doc or implementation plan, and check its footprint against every other workflow in flight |
-| [`/codeo:implement`](docs/skills.md#implement) | Execute the approved plan task by task through the superpowers execution skills, deploy to a shared environment under its lease when the plan needs it, build, and hand off to QC |
-| [`/codeo:qc`](docs/skills.md#qc) | Check the build, the suites, the criteria, the documentation and an independent review, read what the environment runs, and route forward or back |
-| [`/codeo:close`](docs/skills.md#close) | Open the pull request, wait for the merge, route review feedback back, verify the merge, clean up and release the lock; also the way to stash or abandon a workflow |
-| [`/codeo:triage`](docs/skills.md#triage) | Find the loose ends development left behind and route them to issues |
-| [`/codeo:cleanup`](docs/skills.md#cleanup) | Print the commands that remove finished issues' containers; it proves each one first and runs nothing |
-
-[`/codeo:setup`](docs/skills.md#setup) writes `.codeo/` with a starter `config.json` and creates `docs/plans/`;
-[`/codeo:doctor`](docs/skills.md#doctor) checks the whole set-up — config, GitHub login and scopes, board, branch ruleset, suites, dependencies, overlays and superpowers — and reports every failure.
-
-A project shapes a skill without editing it through overlay files, `.codeo/overlays/<skill>.md`.
-Each skill's extension points are listed in `docs/skills.md` and documented in
-`docs/extension-points.md`, which also gives the file format. The dossier and hand-off protocols are
-in `docs/dossier.md` and `docs/handoff.md`.
-
-## Updating
-
-Run the install command again. With no `--version` it installs the latest release; if that differs from what you have, it replaces codeo, which uninstalls it at every scope on the machine and reinstalls it at the scope you asked for, and it names each project install it dropped. The walk-throughs, with the installer's output, are in [docs/updating.md](docs/updating.md): updating, what a replace drops, restoring a project or local install, when an update fails, updating superpowers, and moving a project's pin.
-
-## Uninstalling
-
-Uninstall codeo for you:
-
-```
-$ claude plugin uninstall codeo@codeo
-✔ Successfully uninstalled plugin: codeo (scope: user)
-```
-
-Run in a project, the bare command acts on the copy you installed for yourself when there is one: with a user-scope copy and a project-scope install side by side, it uninstalls the user-scope copy and leaves the project's install in place:
-
-```
-$ cd /home/you/app
-$ claude plugin uninstall codeo@codeo
-✔ Successfully uninstalled plugin: codeo (scope: user)
-```
-
-When codeo is installed there at project scope and nowhere at user scope, `claude` refuses, and the scope must be named:
-
-```
-$ claude plugin uninstall codeo@codeo
-✘ Failed to uninstall plugin "codeo@codeo": Plugin "codeo@codeo" is enabled at project scope (.claude/settings.json, shared with your team). To disable just for you: claude plugin disable codeo@codeo --scope local
-```
-
-`claude plugin uninstall codeo@codeo --scope project`, run in the project, uninstalls it and removes `codeo@codeo` from `enabledPlugins` in the project's `.claude/settings.json`; the `codeo` entry under `extraKnownMarketplaces` stays, so the marketplace is still declared.
-
-To remove codeo and its marketplace together, which also uninstalls codeo at every scope on the machine:
-
-```
-$ claude plugin marketplace remove codeo
-✔ Successfully removed marketplace: codeo
-Also uninstalled 1 plugin from this marketplace:
-  codeo@codeo
-The removal also deletes their saved options, secrets and data where it can.
-To use a plugin again, add the marketplace back and reinstall the plugin.
-```
-
-Every project-scope and local install is gone afterwards, whichever project you ran it from; the installer does the same on a replace and prints a restore command for each (see *Updating*). Run it from outside any project (`cd ~` first): then it leaves every project's `.claude/settings.json` alone. Run inside a project that declares codeo, it also removes `codeo@codeo` from that project's `enabledPlugins` and the `codeo` entry from its `extraKnownMarketplaces`, and the file shows as modified in `git status`.
-
-superpowers is separate: `claude plugin uninstall superpowers@superpowers-marketplace` (add `--scope project` for a project-scope install).
-
-What stays in each project that used codeo, unless you ran one of the commands above inside it:
-
-- `.codeo/`, with the config and every dossier, committed to the project's repository
-- `docs/plans/`, the plans
-- `.claude/settings.json`, which still declares both marketplaces and plugins
-
-To take codeo out of a project, delete `.codeo/` and `docs/plans/` (or keep the plans), and remove the `codeo` entries from `extraKnownMarketplaces` and `enabledPlugins` in `.claude/settings.json`, then commit.
+_Written in Task 7._
 
 ## Troubleshooting
 
@@ -344,6 +298,86 @@ Adding marketplace…✘ Failed to add marketplace: Cannot add marketplace "code
 Run the install command instead, which removes the marketplace and adds it at the tag you ask for (the latest, or the one after `--version`).
 
 **A hand-edited `ref` does not take effect.** After you edit `ref` under `extraKnownMarketplaces.codeo.source` in a project's `.claude/settings.json`, `install.sh --scope project` still installs what the machine's codeo marketplace holds: the installer reads the machine's pin, not the project's file. Run `claude plugin marketplace remove codeo` first (from outside any project, to leave every project's settings file alone; it drops codeo from every project on the machine, so restore each as shown in *Updating*), then `install.sh --scope project` in the project. The install rewrites `ref` to the latest release; to keep an older one, run `install.sh --scope project --version <tag>` instead.
+
+## Updating
+
+Run the install command again. With no `--version` it installs the latest release; if that differs from what you have, it replaces codeo, which uninstalls it at every scope on the machine and reinstalls it at the scope you asked for, and it names each project install it dropped. The walk-throughs, with the installer's output, are in [docs/updating.md](docs/updating.md): updating, what a replace drops, restoring a project or local install, when an update fails, updating superpowers, and moving a project's pin.
+
+## Uninstalling
+
+Uninstall codeo for you:
+
+```
+$ claude plugin uninstall codeo@codeo
+✔ Successfully uninstalled plugin: codeo (scope: user)
+```
+
+Run in a project, the bare command acts on the copy you installed for yourself when there is one: with a user-scope copy and a project-scope install side by side, it uninstalls the user-scope copy and leaves the project's install in place:
+
+```
+$ cd /home/you/app
+$ claude plugin uninstall codeo@codeo
+✔ Successfully uninstalled plugin: codeo (scope: user)
+```
+
+When codeo is installed there at project scope and nowhere at user scope, `claude` refuses, and the scope must be named:
+
+```
+$ claude plugin uninstall codeo@codeo
+✘ Failed to uninstall plugin "codeo@codeo": Plugin "codeo@codeo" is enabled at project scope (.claude/settings.json, shared with your team). To disable just for you: claude plugin disable codeo@codeo --scope local
+```
+
+`claude plugin uninstall codeo@codeo --scope project`, run in the project, uninstalls it and removes `codeo@codeo` from `enabledPlugins` in the project's `.claude/settings.json`; the `codeo` entry under `extraKnownMarketplaces` stays, so the marketplace is still declared.
+
+To remove codeo and its marketplace together, which also uninstalls codeo at every scope on the machine:
+
+```
+$ claude plugin marketplace remove codeo
+✔ Successfully removed marketplace: codeo
+Also uninstalled 1 plugin from this marketplace:
+  codeo@codeo
+The removal also deletes their saved options, secrets and data where it can.
+To use a plugin again, add the marketplace back and reinstall the plugin.
+```
+
+Every project-scope and local install is gone afterwards, whichever project you ran it from; the installer does the same on a replace and prints a restore command for each (see *Updating*). Run it from outside any project (`cd ~` first): then it leaves every project's `.claude/settings.json` alone. Run inside a project that declares codeo, it also removes `codeo@codeo` from that project's `enabledPlugins` and the `codeo` entry from its `extraKnownMarketplaces`, and the file shows as modified in `git status`.
+
+superpowers is separate: `claude plugin uninstall superpowers@superpowers-marketplace` (add `--scope project` for a project-scope install).
+
+What stays in each project that used codeo, unless you ran one of the commands above inside it:
+
+- `.codeo/`, with the config and every dossier, committed to the project's repository
+- `docs/plans/`, the plans
+- `.claude/settings.json`, which still declares both marketplaces and plugins
+
+To take codeo out of a project, delete `.codeo/` and `docs/plans/` (or keep the plans), and remove the `codeo` entries from `extraKnownMarketplaces` and `enabledPlugins` in `.claude/settings.json`, then commit.
+
+## The skills
+
+The six pipeline skills run in order inside one workflow, each owning one dossier file under `.codeo/<issue>/`; `triage` and `cleanup` run outside the workflow lock, between workflows, and a project's role guard (see [`.devcontainer/README.md`](.devcontainer/README.md#roles-and-the-guard)) keeps each skill in the checkout it belongs in; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
+
+| Skill | Purpose |
+|-------|---------|
+| [`/codeo:issue`](docs/skills.md#issue) | Turn a raw idea or finding into a well-formed GitHub issue through a question-and-answer pass |
+| [`/codeo:init`](docs/skills.md#init) | Start work on a Ready issue: claim the branch, write its dossier, take the lock, hand off to plan |
+| [`/codeo:plan`](docs/skills.md#plan) | Explore, ask, and document a change as a reference doc or implementation plan, and check its footprint against every other workflow in flight |
+| [`/codeo:implement`](docs/skills.md#implement) | Execute the approved plan task by task through the superpowers execution skills, deploy to a shared environment under its lease when the plan needs it, build, and hand off to QC |
+| [`/codeo:qc`](docs/skills.md#qc) | Check the build, the suites, the criteria, the documentation and an independent review, read what the environment runs, and route forward or back |
+| [`/codeo:close`](docs/skills.md#close) | Open the pull request, wait for the merge, route review feedback back, verify the merge, clean up and release the lock; also the way to stash or abandon a workflow |
+| [`/codeo:triage`](docs/skills.md#triage) | Find the loose ends development left behind and route them to issues |
+| [`/codeo:cleanup`](docs/skills.md#cleanup) | Print the commands that remove finished issues' containers; it proves each one first and runs nothing |
+
+[`/codeo:setup`](docs/skills.md#setup) writes `.codeo/` with a starter `config.json` and creates `docs/plans/`;
+[`/codeo:doctor`](docs/skills.md#doctor) checks the whole set-up — config, GitHub login and scopes, board, branch ruleset, suites, dependencies, overlays and superpowers — and reports every failure.
+
+A project shapes a skill without editing it through overlay files, `.codeo/overlays/<skill>.md`.
+Each skill's extension points are listed in `docs/skills.md` and documented in
+`docs/extension-points.md`, which also gives the file format. The dossier and hand-off protocols are
+in `docs/dossier.md` and `docs/handoff.md`.
+
+## More documentation
+
+_Written in Task 8._
 
 ## Contributing
 

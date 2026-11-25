@@ -1443,9 +1443,9 @@ t_remove_from_home_leaves_project_settings() {
 
 t_readme_sections() {
     local want got h
-    want=$'## Requirements\n## Installing\n## Setting a project up\n## Your first workflow\n## The skills\n## Updating\n## Uninstalling\n## Troubleshooting\n## Contributing'
+    want=$'## Contents\n## Start here\n## Requirements\n## Installing\n## Setting a project up\n## Your first workflow\n## Configuration\n## Troubleshooting\n## Updating\n## Uninstalling\n## The skills\n## More documentation\n## Contributing'
     got=$(readme_headings "$repo/README.md" '##')
-    [[ $got == "$want" ]] || fail "README ## headings are not the nine in order: $got"
+    [[ $got == "$want" ]] || fail "README ## headings are not the thirteen in order: $got"
     for h in 'Tests' 'Checking a dossier' 'Replaying finished dossiers' 'Dev container'; do
         ! grep -qxF "## $h" "$repo/README.md" || fail "README still has ## $h"
     done
