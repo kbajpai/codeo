@@ -34,6 +34,7 @@ The lines are `.codeo/done/168/plan.md:11` (`## Where this stands`: "(unstaged)"
 - **C — mixed.** `plan.md:11` is rewritten (a status line, meant to be rewritten each round); the two `## Outcome` lines get the note.
 
 **Answer:**
+A — note only. (Engineer, in the conversation: "go with your picks".)
 
 ### Q2 — How far should `/codeo:close` step 17 go to make the `<machine>` command usable?
 
@@ -46,6 +47,7 @@ Today step 17 prints `git push origin --delete codeo-live/<issue>/<machine>` wit
 - **C — ask origin (my pick).** Step 17 runs `git ls-remote --heads origin 'codeo-live/<N>/*'` and prints one `git push origin --delete <exact name>` per branch found, or says none is on origin; when the read fails it falls back to A's sentence. Covers `CODEO_MACHINE`, a failed push and a second machine. No change to `scripts/live.sh`.
 
 **Answer:**
+C — ask origin. (Engineer, in the conversation: "go with your picks".)
 
 ### Q3 — Which date does the changelog heading carry?
 
@@ -55,6 +57,7 @@ Today step 17 prints `git push origin --delete codeo-live/<issue>/<machine>` wit
 **Options:** the UTC date the release pull request opens (my pick: it is what v1.0.9 did, and it matches GitHub's `createdAt`) · the UTC date the tag is pushed · your local date, with the day named.
 
 **Answer:**
+The UTC date the release pull request opens. (Engineer, in the conversation: "go with your picks".)
 
 ### Q4 — The corrected changelog lines are in the released v1.0.9 section. What about the v1.0.9 GitHub Release?
 
@@ -66,6 +69,7 @@ Criterion 3 changes `CHANGELOG.md:28` ("an invented example issue") and removes 
 - **B — re-sync it.** A last task, marked `Runs on: the engineer's host`: `gh release edit v1.0.9 --notes-file <the section>` after the merge.
 
 **Answer:**
+A — leave the Release as published. (Engineer, in the conversation: "go with your picks".)
 
 ### Q5 — Overlap with #173 on `CHANGELOG.md` and `docs/release-checklist.md`
 
@@ -75,6 +79,7 @@ Criterion 3 changes `CHANGELOG.md:28` ("an invented example issue") and removes 
 **Options:** proceed and coordinate (my pick: the edits are single sentences and bullets, and #173 is back at plan) · sequence after #173 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 
 ### Q6 — Overlap with #176 on `CHANGELOG.md`
 
@@ -84,6 +89,7 @@ Criterion 3 changes `CHANGELOG.md:28` ("an invented example issue") and removes 
 **Options:** proceed and coordinate (my pick) · sequence after #176 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (Engineer, in the conversation: "go with your picks".)
 
 ## Notes
 
