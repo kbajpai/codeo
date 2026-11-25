@@ -22,7 +22,8 @@ for needle in 'codeo rm <N>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
     'After a finished close' 'After a stash:' 'After an abandon:' \
     'its number is the lock'"'"'s `issue`' '/codeo:init #<N>' '.devcontainer/README.md' \
     'When the lock has a `sandbox:` line' 'codeo-sandbox.sh issue <N> <branch>' \
-    'bash .devcontainer/codeo-track.sh mark <N> branch <branch> deleted' 'track:' 'project root' 'step 14'; do
+    'bash .devcontainer/codeo-track.sh mark <N> branch <branch> deleted' 'track:' 'project root' 'step 14' \
+    'docker rmi codeo-dev:codeo-<N>' 'on the host that created the container' 'bash codeo-sandbox.sh end <N>' 'does not end a sandbox'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 
