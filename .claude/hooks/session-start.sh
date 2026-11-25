@@ -1,7 +1,8 @@
 #!/bin/bash
 # Install the codeo and superpowers plugins in a cloud session when either is missing or disabled
 # at user scope, by running install.sh. Cloud sessions only (CLAUDE_CODE_REMOTE=true); skipped when
-# both are installed and enabled, read from `claude plugin list --json` as install.sh reads it.
+# both are installed and enabled, read from `claude plugin list --json`, parsed as install.sh parses
+# it; any enabled `superpowers@*` entry counts.
 # What the session then lists is described in CONTRIBUTING.md → Hosted sessions.
 set -euo pipefail
 
