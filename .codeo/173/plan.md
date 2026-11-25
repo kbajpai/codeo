@@ -22,6 +22,7 @@ Round 1. The code and text the issue names are read (line numbers below are toda
 - **fail harder** — a failed stop changes the exit status or the message of the refusal. I would not: the command already exits non-zero on a refusal, and "Redesigning the `codeo rm` check" is out of scope.
 
 **Answer:**
+Report it, as recommended. Given in the session's question dialog on 2026-11-25 and recorded here.
 
 ### Q2 — Should the install hook stop running on `clear` and `compact`, or should the page say it runs there?
 
@@ -35,6 +36,7 @@ Round 1. The code and text the issue names are read (line numbers below are toda
 Either way the skip check itself is fixed (that part of the criterion has no "or"): it reads `claude plugin list --json` with `jq`, as `install.sh` does, skips only when `codeo@codeo` and some `superpowers@*` are both installed *and enabled* at user scope, and otherwise runs `install.sh`, which enables a disabled one. A new test case runs the hook against a stubbed `claude` for: both present, `superpowers` from another marketplace, codeo disabled, one missing, and `CLAUDE_CODE_REMOTE` unset. My call, unless you object: the hook is described in `CONTRIBUTING.md` (it is this repository's own session setup, not something the plugin ships to adopters), with a `CHANGELOG.md` bullet under `## Unreleased`.
 
 **Answer:**
+`"matcher": "startup|resume|fork"`, as recommended. Given in the session's question dialog on 2026-11-25 and recorded here. No objection was raised to describing the hook in `CONTRIBUTING.md`.
 
 ### Q3 — In a hosted session, do `/codeo:*` commands load in the same session the hook installs them in?
 
@@ -47,6 +49,7 @@ Either way the skip check itself is fixed (that part of the criterion has no "or
 - **verify first** — the plan gains a task you run in a fresh hosted session (`Runs on:` a web session) and the wording follows its result; the work waits for that run.
 
 **Answer:**
+Not known; word it without the claim. Given in the session's question dialog on 2026-11-25 and recorded here.
 
 ## Notes
 
