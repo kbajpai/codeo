@@ -1,0 +1,84 @@
+# Issue #179 — plan
+
+| | |
+|---|---|
+| Issue | https://github.com/kbajpai/codeo/issues/179 |
+| Branch | `docs/179-close-171-leftovers-readme-wording` |
+| Updated | 2026-11-25 |
+
+## Where this stands
+
+Explored, not drafted: Q1-Q4 are open. Each has my pick; the draft waits for the answers.
+
+What I found (read at `92bbe45`):
+
+- **Six of the nine items need no decision.** They are wording or a test edit whose content the code already fixes:
+  - **H2**, `README.md:27`: step 6 says to merge the pull request and then run `/codeo:close` again, which is what finishes the workflow (as `README.md:302-304` already says).
+  - **H3**, `README.md:429`: the lock entry splits the `lock: TODO` lines of `scripts/lock.sh` into those `/codeo:init #<N>` fixes (`no single init.md names branch …`, `#<N> is stashed or abandoned: no lock taken`) and those that say to reconcile by hand and re-run (`local <branch> holds commits … lacks`, `… have diverged`), which `/codeo:init` does not fix.
+  - **H4**, `tests/readme.test.sh` `slugs()`: a second and third heading with the same text get `-1` and `-2`, as GitHub does.
+  - **H5**, the same file's header: it names `docs/plans/` and `.codeo/config.json` as paths that resolve only because codeo uses itself.
+  - **H6**, `docs/updating.md` "Updating superpowers": one sentence, restart every open Claude Code session after the update.
+  - **Skill count**, `docs/handoff.md:3`: "Seven pipeline skills" becomes "Six", the count `docs/skills.md:5` and `README.md:596` give (`issue`, `init`, `plan`, `implement`, `qc`, `close`).
+- **Three items carry a choice:** where the role-guard page goes and how much it promises (Q1, Q2), how "Setting a project up" is repaired (Q3), and where the two non-doctor entries go (Q4).
+- **No Markdown renderer is installed here** (no `cmark`, `pandoc`, `python3` or `node`), so "renders as intended in a strict Markdown renderer" is proved by a structural check in `tests/readme.test.sh`, not by rendering. Q3's options differ in what that check is.
+- **`.devcontainer/scripts/role.sh` is not standalone.** It calls `container-name.sh` beside it, reads `baseBranch` and `codename` from `.codeo/config.json`, and assumes the `<codename>-home` and `<codename>-<N>` folder names. `tests/role.test.sh` covers it in this repository's layout only. That bears on Q2.
+- **In flight:** #173 (`qc`, sent back to plan) and #176 (`implement`) both change `CHANGELOG.md` and `.devcontainer/README.md`; #177 is at `init` with no footprint and no changed files, so there is nothing of its to compare yet. This plan touches neither file (see my calls), so I expect no overlap; `overlap.sh` decides once the footprint is committed.
+
+My calls, stated so they can be corrected (not questions):
+
+- **One plan under `docs/plans/`, one pull request, no reference doc.** No `engineering` skill applies: there is no component or technology choice.
+- **Tests first.** Each README or docs fix that a check can pin gets its check in `tests/readme.test.sh` before the wording changes: step 6 names `/codeo:close` again, the lock entry names both groups, "Updating superpowers" says restart, the two skill counts agree, the adoption section exists and is linked. H4 is pinned by a self-check in the same file that feeds `slugs` a scratch file with a repeated heading and expects `x`, `x-1`, `x-2`.
+- **No `CHANGELOG.md` line.** The `## Unreleased` entry from #171 already describes the README; these are corrections to it. That also keeps this branch out of the file #173 and #176 both change.
+- **`.devcontainer/README.md` is not edited.** The adoption text links to its *Roles and the guard* section; it does not move or change it.
+- **Proof of done** is `bash tests/run.sh readme` per task and `bash tests/run.sh` at the end, the second also in a clean worktree (`git worktree add`), which is the last acceptance criterion. The `shell` suite has no `filter`, so a pattern argument to `tests/run.sh` is the single-file form, as in the #170 plan.
+
+## Questions
+
+### Q1 — Which page tells another project how to adopt the role guard?
+
+**Why it matters:** the criterion is "a page tells another project how". Today three pages each hold a piece: `docs/home-checkout.md` (*The guard*: what codeo's own guard does), `.devcontainer/README.md` (*Roles and the guard*: the roles in full) and `docs/extension-points.md` (the eight `<skill>/role-guard` points, each with a `scripts/role-check.sh` example). None says "to add a guard to your project, do this".
+**Options:**
+- **A — a new section `## Adopting the guard in your project` in `docs/home-checkout.md`, after *The guard* (my pick).** It is where the README's role-guard troubleshooting entry and *Running on the host* already send a reader, and `tests/readme.test.sh` already checks that page's links and paths. `docs/extension-points.md` (*Adding a project overlay*) and the README entry each gain one link to it.
+- **B — a section in `docs/extension-points.md`, before *The points*.** It sits with the overlay mechanics, but that page is a reference for overlay authors and is outside the readme test's pages, so its links are unchecked unless the test grows a page.
+- **C — a new page `docs/role-guard.md`.** Cleanest to link to, but it splits the guard across four pages and adds a row to *More documentation*.
+
+**Answer:**
+
+### Q2 — How much does the adoption text promise?
+
+**Why it matters:** `role.sh` is this repository's script, tested only in its own layout, and it needs `container-name.sh` and the `<codename>-home` naming. Saying "copy these files" makes that a supported path someone can report bugs against; saying only what a guard must do leaves the script to the project.
+**Options:**
+- **A — the contract, with codeo's own guard as the worked example (my pick).** The section says: add a `## role-guard` section to `.codeo/overlays/<skill>.md` for each of the eight guarded skills; the section's text runs the project's check and tells the skill what each exit means (0 go on, 1 print the one line and stop, anything else report and go on); the check is any script the project writes; `/codeo:doctor`'s `overlays` check confirms the section names. It then names codeo's own `.codeo/overlays/plan.md` and `.devcontainer/scripts/role.sh` as an example to read, and says plainly that the script assumes codeo's folder names and is not shipped for other projects.
+- **B — A, plus a copy recipe.** It lists the files to copy (`role.sh`, `container-name.sh`, the eight overlay sections), what to set (`codename`, `baseBranch`) and the folder names it then expects. More useful on day one, but it documents a path no test runs outside this repository.
+
+**Answer:**
+
+### Q3 — "Setting a project up": how are the three steps repaired?
+
+**Why it matters:** today each numbered step is followed by a code fence at column 0, which ends the list; step 2 and step 3 then start new lists, and the paragraphs indented three spaces after a fence belong to nothing. GitHub shows it acceptably; a strict renderer can restart the numbering or indent unevenly. The two repairs differ in what else they touch.
+**Options:**
+- **A — turn the three steps into `###` headings, as *Your first workflow* does (my pick).** `### 1. Run /codeo:setup`, `### 2. Edit .codeo/config.json`, `### 3. Run /codeo:doctor`, each followed by ordinary paragraphs and column-0 fences. Nothing is nested, so every renderer agrees. The check: the section has those three `###` headings before *Running on the host*, and no line in it starts with spaces followed by text outside a fence. No test's fence detection changes.
+- **B — keep the numbered list and indent each fence and continuation paragraph three spaces under its item.** This is the standard form and keeps the look. But `tests/readme.test.sh` (`prose`) and four `awk` filters in `tests/install.test.sh` detect a fence only at column 0 (`/^```/`), so an indented fence's contents would be read as prose; both tests would need their fence detection widened in the same change.
+
+**Answer:**
+
+### Q4 — The two entries that are not doctor checks: where do they go?
+
+**Why it matters:** `its source doesn't match its extraKnownMarketplaces entry` and *A hand-edited `ref` does not take effect* sit under *Checks from /codeo:doctor*, whose intro says each entry is one doctor check. Both are `claude plugin` and `install.sh` problems.
+**Options:**
+- **A — a third group with its own heading, `### Installing and the pin`, after *Checks from /codeo:doctor* (my pick).** The Troubleshooting intro says three groups; the doctor intro stays true as written. A new check pins it: every bold lead under *Checks from /codeo:doctor* is one of the check names `scripts/doctor.sh` prints, and the two entries sit under the new heading. The `##` headings do not change, so the `sections` pins hold.
+- **B — leave them where they are, and reword the doctor intro** to say the last two entries are not doctor checks, labelling each. One heading fewer, but the group's name stays wrong for two of its entries.
+
+**Answer:**
+
+## Notes
+
+None yet.
+
+## Outcome
+
+_Pending — written at the hand-off._
+
+## Log
+
+- 2026-11-25 — explored at `92bbe45`; Q1-Q4 raised
