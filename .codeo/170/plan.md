@@ -59,6 +59,15 @@ What is settled without a question: one pull request; documentation only, no cha
 - Verified in the repo: `install.sh` installs the two plugins only; `.devcontainer/codeo` calls `flock` (line 159) and prints the `PATH` line from `codeo help`; the install line for the command is at `.devcontainer/README.md:101`.
 - `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` is the command from the issue; it is written as the issue gives it.
 
+### Footprint
+
+```
+files:      README.md, .devcontainer/README.md, tests/install.test.sh, docs/plans/2026-11-25-codeo-host-command-docs-170.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
