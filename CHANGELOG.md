@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.9 — 2026-11-25
 
 Config schema: 1 (unchanged)
 Shared state: an issue gains one comment, marked `<!-- codeo:tracking -->` (found anywhere in a comment body), holding a table of its branch, containers, images, volumes and sandboxes (an older reader sees an ordinary comment on the issue and ignores it); no other state changes beyond the live-signal branches: `/codeo:close` deletes the issue's `codeo-live/<issue>/*` branches on origin (a hosted web session's close deletes none, since it cannot delete a branch), and readers keep web signals in the local `refs/codeo/live-web/*`
