@@ -200,7 +200,7 @@
 | `issue:166` | Close the #157 leftovers; filed 2026-11-24, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-24 |
 | `qc:161:F4-F7-preexisting` | #161 F4, F7 and four pre-existing README/CHANGELOG/`stop_started` gaps | already #173 | 2026-11-25 |
 | `qc:161:F5-F6-F8` | #161 `SessionStart` hook: skip check, undocumented, restart wording | already #173 | 2026-11-25 |
-| `unclosed:161` | `origin/claude/ecstatic-mendel-n3qyzl` still on origin though #161 merged; the other branch is gone | deferred | 2026-11-25 |
+| `unclosed:161` | `origin/claude/ecstatic-mendel-n3qyzl` still on origin though #161 merged | fix named — `/codeo:close` in #161's checkout; the branch delete is by hand | 2026-11-25 |
 | `issue:168` | Release v1.0.9; filed 2026-11-25 or earlier, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
 | `issue:170` | Docs: host command installs separately, macOS flock and keychain; board Status `Backlog` → `Ready` | ready | 2026-11-25 |
 | `issue:171` | README complete guide; board Status `Backlog` → `Ready` | ready | 2026-11-25 |
@@ -208,3 +208,6 @@
 | `qc:166:F2-F5` | #166 cleanup closing block, `<machine>`, "stays on origin", repeated changelog clause | filed #177 | 2026-11-25 |
 | `qc:168:F1-F4` | #168 stale plan lines and UTC changelog date | filed #177 | 2026-11-25 |
 | `issue:177` | Close the #163, #166 and #168 leftovers; filed 2026-11-25, board Status Backlog | backlog | 2026-11-25 |
+| `qc:171:H1-H6` | #171 non-blocking findings H1-H6 plus the plan's promised items (handoff skill count, role-guard adoption docs, README indentation) | filed #179 | 2026-11-25 |
+| `issue:173` | Close the #161 leftovers; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
+| `issue:176` | Support the sbx issue sandbox on macOS; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
