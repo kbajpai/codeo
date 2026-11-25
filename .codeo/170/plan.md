@@ -8,9 +8,7 @@
 
 ## Where this stands
 
-Round 1. The code and both READMEs are read; nothing is drafted. Five questions are open (Q1-Q5); the plan is drafted once they are answered. No other workflow is in flight (`inflight.sh --except 170`), so there is no overlap to ask about yet.
-
-What is settled without a question: one pull request; documentation only, no change to `.devcontainer/codeo` or `install.sh`; the *Installing* line goes directly under the `curl … install.sh | bash` block in `README.md` and links to `.devcontainer/README.md#installing-the-codeo-command` (the heading `## Installing the `codeo` command`, line 94); `brew install flock` goes into the macOS sentence at `README.md:212`.
+Planned and approved. The plan is `docs/plans/2026-11-25-codeo-host-command-docs-170.md`, unstaged for the engineer to commit. Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -59,6 +57,18 @@ What is settled without a question: one pull request; documentation only, no cha
 - Verified in the repo: `install.sh` installs the two plugins only; `.devcontainer/codeo` calls `flock` (line 159) and prints the `PATH` line from `codeo help`; the install line for the command is at `.devcontainer/README.md:101`.
 - `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` is the command from the issue; it is written as the issue gives it.
 
+## Outcome
+
+Plan: `docs/plans/2026-11-25-codeo-host-command-docs-170.md` (approved by the engineer; left unstaged).
+
+**Shape.** A scoped, executable plan under `$PLANS`; no reference doc, because there is no architectural choice to keep.
+
+**Decisions** (Q1-Q5, all answered "go with your picks"): the full keychain note lives in `.devcontainer/README.md` with one pointer sentence in the README's macOS paragraph; the error text is quoted from the stable part only; no `credsStore` remedy (not verified); the "host is Linux" sentence of *Installing the `codeo` command* is corrected in this issue; one new pin case in `tests/install.test.sh`.
+
+**Rejected:** the full note in the README only, or in both pages; quoting the whole error line with its Docker-version-dependent prefix; the `credsStore` remedy; leaving the Linux-only sentence for triage; no test pin.
+
+**Documentation the plan changes:** `README.md` (*Installing*, *The home checkout* macOS paragraph) and `.devcontainer/README.md` (*Installing the `codeo` command*, new *The keychain over SSH on macOS*). No `CHANGELOG.md` entry (no Unreleased block; #168 owns the release notes). No intake question was resolved here, and no `/codeo:issue` was filed.
+
 ### Footprint
 
 ```
@@ -68,10 +78,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-25 — Q1-Q5 raised · cost: 1m · fable-5-2 65k in + 455k cached / 3k out
+- 2026-11-25 — planned: docs/plans/2026-11-25-codeo-host-command-docs-170.md · cost: 5m · fable-5-2 75k in + 643k cached / 7k out · sonnet-5-5 91k in + 686k cached / 10k out
