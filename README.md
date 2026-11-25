@@ -24,7 +24,7 @@ codeo is an agent-workflow plugin for Claude Code. It is for engineers who work 
 3. In your project, run `/codeo:setup` and then `/codeo:doctor`, and see `.codeo/config.json` written and every check pass or each failure explained ([Setting a project up](#setting-a-project-up)).
 4. File your first issue with `/codeo:issue` and see it created on GitHub.
 5. Run the six steps for that issue, each handing off to the next ([Your first workflow](#your-first-workflow)).
-6. Merge the pull request that `/codeo:close` opens, and see the workflow finish.
+6. Merge the pull request that `/codeo:close` opens, then run `/codeo:close` again: the workflow finishes on that second run.
 7. If something stops, find its message in [Troubleshooting](#troubleshooting).
 
 ## Requirements
@@ -166,13 +166,15 @@ Updating, replacing and restoring are in [Updating](#updating).
 
 Run these once, in the project's git repository, inside Claude Code, after installing the plugin. Each skill runs a script, and the script's own output is what the skill reports.
 
-1. **Run `/codeo:setup`.** It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
+### 1. Run /codeo:setup
+
+It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
 
 ```
 codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doctor next
 ```
 
-   That file reads:
+That file reads:
 
 ```json
 {
@@ -187,7 +189,9 @@ codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doct
 }
 ```
 
-2. **Edit `.codeo/config.json`.** Every key is in [Configuration](#configuration). The one thing most projects set first is `suites`, the build and test commands `/codeo:implement` and `/codeo:qc` run. A suite names itself and gives its commands:
+### 2. Edit .codeo/config.json
+
+Every key is in [Configuration](#configuration). The one thing most projects set first is `suites`, the build and test commands `/codeo:implement` and `/codeo:qc` run. A suite names itself and gives its commands:
 
 ```json
 {
@@ -197,9 +201,11 @@ codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doct
 }
 ```
 
-   `board`, `codename`, `plugin`, `models` and everything else optional are written by hand; setup leaves them out (`/codeo:setup --stack <name>` also writes `stacks`).
+`board`, `codename`, `plugin`, `models` and everything else optional are written by hand; setup leaves them out (`/codeo:setup --stack <name>` also writes `stacks`).
 
-3. **Run `/codeo:doctor`.** It checks that everything the workflow needs is in place and reports every failure, not only the first. Fix what it reports (see [Troubleshooting](#troubleshooting)) and run it again until it ends clean. With a logged-in `gh` and superpowers installed it prints:
+### 3. Run /codeo:doctor
+
+It checks that everything the workflow needs is in place and reports every failure, not only the first. Fix what it reports (see [Troubleshooting](#troubleshooting)) and run it again until it ends clean. With a logged-in `gh` and superpowers installed it prints:
 
 ```
 ok config: config.json is valid
@@ -410,11 +416,11 @@ A fuller file adds a codename, a shell suite, a board, priorities and models:
 
 ## Troubleshooting
 
-The entries are in two groups. *During a workflow* covers what stops a step while you work an issue: a refused skill, a lock that is not yours, a step that stopped half way, and a card that is not Ready. *Checks from /codeo:doctor* covers the lines `/codeo:doctor` prints when codeo is not ready in a project. Each entry gives the symptom, the cause and the fix.
+The entries are in three groups. *During a workflow* covers what stops a step while you work an issue: a refused skill, a lock that is not yours, a step that stopped half way, and a card that is not Ready. *Checks from /codeo:doctor* covers the lines `/codeo:doctor` prints when codeo is not ready in a project. *Installing and the pin* covers two problems with `claude plugin` and `install.sh` that `/codeo:doctor` does not check. Each entry gives the symptom, the cause and the fix.
 
 ### During a workflow
 
-**A role-guard refusal.** The guard is the project's own, not the plugin's: it is this project's role check, run at the start of each skill, and a project set up with `/codeo:setup` has none and is never refused. If you meet a refusal, you are in a project that has added the guard; [docs/home-checkout.md](docs/home-checkout.md) and [.devcontainer/README.md](.devcontainer/README.md#roles-and-the-guard) describe it.
+**A role-guard refusal.** The guard is the project's own, not the plugin's: it is this project's role check, run at the start of each skill, and a project set up with `/codeo:setup` has none and is never refused. If you meet a refusal, you are in a project that has added the guard; [docs/home-checkout.md](docs/home-checkout.md) and [.devcontainer/README.md](.devcontainer/README.md#roles-and-the-guard) describe it. To add a guard to your own project, see [Adopting the guard in your project](docs/home-checkout.md#adopting-the-guard-in-your-project).
 
 - **Symptom.** The skill stops with one line that starts `/codeo:<skill> can't run here:` or says where the skill runs.
 - **Cause.** The skill belongs in another checkout. `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` run in a home checkout; `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:close` run in the issue's own checkout.
@@ -428,7 +434,7 @@ The entries are in two groups. *During a workflow* covers what stops a step whil
 
 - **Symptom.** A skill stops and says there is no lock; or says the lock's `branch` differs from the branch you are on; or says the lock names a different issue from the one you asked for; or `/codeo:init` refuses because a lock already exists; or a `lock: TODO …` line appears.
 - **Cause.** No lock means the step before was skipped, or you are in another checkout. A branch mismatch means someone switched branches or the lock is stale. The other two mean this checkout already holds a workflow. A `lock: TODO …` line means the lock script could not finish part of its work, and the line says which.
-- **Fix.** For no lock, run `/codeo:init #<N>`. For a branch mismatch, switch back to the branch the lock names (`git switch <branch>`), or finish the workflow there with `/codeo:close` or `/codeo:close --stash`; do not edit `.codeo/active` to make it agree with the branch. For another issue, finish or stash that one first, in its own checkout. When `/codeo:init` refuses, run it in another checkout (a second clone or a `git worktree`), or finish this workflow with `/codeo:close`. For a `lock: TODO …` line, do what it says: the example below is the one case where you edit the lock, by writing the volume name into its `volume:` line (`docker volume ls` on the host lists the volumes). For a TODO that says the lock was not taken (for instance no `init.md` names the branch), run `/codeo:init #<N>`. Taking a lock that exists only prints `lock already taken`.
+- **Fix.** For no lock, run `/codeo:init #<N>`. For a branch mismatch, switch back to the branch the lock names (`git switch <branch>`), or finish the workflow there with `/codeo:close` or `/codeo:close --stash`; do not edit `.codeo/active` to make it agree with the branch. For another issue, finish or stash that one first, in its own checkout. When `/codeo:init` refuses, run it in another checkout (a second clone or a `git worktree`), or finish this workflow with `/codeo:close`. For a `lock: TODO …` line, do what it says: the example below is the one case where you edit the lock, by writing the volume name into its `volume:` line (`docker volume ls` on the host lists the volumes). For a TODO that says no lock was taken because no single `init.md` names the branch, or that the issue is stashed or abandoned, run `/codeo:init #<N>`. For a TODO that says the local branch holds commits origin lacks, or that the branch and `origin/<branch>` have diverged, reconcile by hand (the `git log --oneline …` command the line prints shows the commits) and re-run the script; `/codeo:init` does not fix it. Taking a lock that exists only prints `lock already taken`.
 
 ```
 lock: TODO — could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)
@@ -507,6 +513,8 @@ fail suites: not installed or unset: api:make api:pytest
 ```
 fail superpowers: not installed; install it with: claude plugin install superpowers@superpowers-marketplace
 ```
+
+### Installing and the pin
 
 **`its source doesn't match its extraKnownMarketplaces entry`.** Adding the codeo marketplace at a second tag by hand fails, because the marketplace is already added at the first:
 
