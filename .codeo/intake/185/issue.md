@@ -1,11 +1,7 @@
-# Issue (new) — issue
+# Issue #185 — issue
 
-## Draft (awaiting approval)
+Filed as #185: Close the #173, #176 and #170 QC leftovers (documentation, priority: low). Approved by the engineer.
 
-Title: Close the #173, #176 and #170 QC leftovers
-Type: none (no Issue Types). Labels: documentation. Priority: low — follow-up nobody is waiting on.
-
----
 
 ### Description
 
