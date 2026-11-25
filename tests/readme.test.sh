@@ -3,7 +3,7 @@
 #   commands         every /codeo:<name> is a directory under skills/
 #   paths            every path-shaped word in a backticked span (.codeo/ docs/ scripts/ tests/ hooks/ lib/ skills/ .devcontainer/)
 #                    resolves to a file or directory; .codeo/active and .codeo/intake are allowed by name (gitignored).
-#                    .codeo/, .codeo/.gitignore, .codeo/config.json and docs/plans/, which the README names for a
+#                    .codeo/, .codeo/.gitignore, .codeo/config.json and docs/plans/, which these pages name for a
 #                    user's project, resolve only because codeo uses itself, so this check cannot catch a path a
 #                    new project lacks
 #   links            every relative link resolves, and its #anchor is a GitHub slug of a heading in the target
