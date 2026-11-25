@@ -1933,6 +1933,31 @@ t_rm_reports_a_failed_stop() {
     expect_refused 'could not check'
     ! grep -q '^docker stop' "$cm_dir/calls" || fail "running: stopped"
     ! grep -qF 'could not stop' <<<"$cm_err" || fail "running: $cm_err"
+
+t_rm_force_does_not_report_a_failed_stop() {
+    # the check cannot run, the stop fails, --force removes anyway
+    cm_setup "$current"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/prfetch_fail" "$cm_dir/stop_fail"
+    cm_run rm 5 --force --container
+    [[ "$cm_status" -eq 0 ]] || fail "cannot-check: exit $cm_status, err: $cm_err"
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "cannot-check: stop no longer called"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "cannot-check: not removed"
+    ! grep -qF 'could not stop' <<<"$cm_err" || fail "cannot-check: $cm_err"
+    grep -qF -- '--force: could not check codeo-5 for unsaved work; removing anyway' <<<"$cm_out" || fail "cannot-check: stdout: $cm_out"
+    # a dirty read, the stop fails, --force removes anyway
+    cm_setup "$current-2"
+    rm_stubs
+    echo exited >"$cm_dir/dstate"
+    touch "$cm_dir/stop_fail"
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    cm_run rm 5 --force
+    [[ "$cm_status" -eq 0 ]] || fail "dirty: exit $cm_status, err: $cm_err"
+    grep -q '^docker stop codeo-5' "$cm_dir/calls" || fail "dirty: stop no longer called"
+    grep -q '^docker rm -f codeo-5' "$cm_dir/calls" || fail "dirty: not removed"
+    ! grep -qF 'could not stop' <<<"$cm_err" || fail "dirty: $cm_err"
+}
 }
 
 t_codeo_sbx_honoured() {
@@ -2284,6 +2309,7 @@ cases=(
     t_rm_inspect_fails_no_restart
     t_rm_inspect_fails_stops_started_container
     t_rm_reports_a_failed_stop
+    t_rm_force_does_not_report_a_failed_stop
     t_codeo_sbx_honoured
     t_issue_lookup_invalid_branch
     t_issue_yes_passthrough
