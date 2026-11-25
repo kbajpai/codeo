@@ -8,16 +8,11 @@
 
 ## Where this stands
 
-Round 1. Tasks 2, 3 and 4 are built, reviewed and pushed (`537af9d`, `4b60010`, `86fc0bf`); each passed its
-review, `bash tests/run.sh` exits 0 at `86fc0bf`, and the suite's build command (`true`) exits 0.
-Task 5 is the engineer's: the full route on the Mac, recorded as trial T14. Q2 is answered and
-showed that the sandbox starts, takes the lock and lists; the rest (`open`, `shell`, `rm`, the
-tracking row, the git identity) did not run as the plan wrote the commands, so Q3 asks for them with
-the corrections. Q3 is answered: the tracking row is there, the identity TODO is expected (the Mac
-has no global git identity), and `codeo shell` works. Q4 asks for the last three: `open`, `rm` and
-the `removed` row. Q4 and Q5 are answered: the sandbox is `removed` on the issue, and `codeo open`'s
-result was never captured, so T14 records it as not shown. T14 and the README are written next,
-then the whole-branch review, because Task 5 edits `.sbx/README.md` and the evaluation page.
+Round 1 is complete and handed to `/codeo:qc`. All five tasks are done: Tasks 2-4 are built and
+reviewed, Task 5 (the engineer's run on the Mac, recorded as trial T14) is written, the final
+whole-branch review is done and its one fix wave is re-reviewed. The head is `193bed8`, pushed;
+`bash tests/run.sh` exits 0 there and the suite's build command (`true`) exits 0. One thing is left
+for QC to judge, not to fix here: `codeo open` over SSH on the Mac was never shown.
 
 ## Questions
 
@@ -126,6 +121,14 @@ A row on another host is not proof the container still exists.
 Cloning into 'codeo-176'...
   Choose the network policy for sandboxes … Choice [1-3, default 2]: 2
   Set network policy Balanced
+  SANDBOX
+    Name:       codeo-176
+    Agent:      claude
+    Kit:        docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    Workspace:  ~/codeo/codeo-176 (rw)
+    Image:      docker.io/sbx/claude@sha256:fd56087ae3f35db02c34657e7eaafa9817f8b268b1ac08139cc13d8277593332
+    CPU:        2
+    Memory:     4g
     ✓ Created sandbox codeo-176
 plugins: installed superpowers
 plugins: installed codeo v1.0.9
@@ -300,7 +303,41 @@ route it. It can go back as a later round if the engineer re-runs it or says wha
 
 ## Outcome
 
-_Pending — written at the hand-off._
+2026-11-25
+
+**Built** (plan `docs/plans/2026-11-25-sbx-sandbox-macos-176.md`, five tasks):
+
+| Task | Result | Commits |
+|---|---|---|
+| 1. Preflight on the Mac | passed: macOS 27.2.1, `arm64`, Homebrew 7.0.16, `sbx` v0.54.1, bash 5.3.20 (Q1, engineer's paste) | none |
+| 2. Missing `sbx` on macOS | `host_is_macos`; `pick_sbx` names `brew trust docker/tap`, `brew install docker/tap/sbx`, `sbx login`, macOS 14 and Apple silicon, and `codeo issue <N> --container`; the Linux and WSL2 message is unchanged | `537af9d` |
+| 3. Git and VS Code on macOS | `git_is_usable` needs `xcode-select -p` on macOS; a missing `code` is one line naming *Shell Command: Install 'code' command in PATH* and `CODEO_CODE` | `4b60010` |
+| 4. Docs | "never macOS" gone from `README.md`, `.sbx`, `.devcontainer`, `docs/*.md`; `.sbx/README.md` has `## On macOS`; host sentences name macOS; one `CHANGELOG.md` bullet | `86fc0bf` |
+| 5. The route on the Mac, recorded | trial T14 and a macOS part of *Host* in `docs/dev-environment-sbx-evaluation.md`; `## On macOS` rewritten from the run | `701f464` |
+| Fix wave after the final review | CHANGELOG claim corrected, one macOS test made hermetic, one case and one assertion added, README wording tightened | `193bed8` |
+
+**Documentation pages changed:** `.sbx/README.md` (*Prerequisites*, the diagram's participant, `## On macOS`), `.devcontainer/README.md` (the host sentence), `docs/dev-environment-sbx-evaluation.md` (*Host*, T14, the banner), `CHANGELOG.md`. The root `README.md` and `docs/home-checkout.md` are unchanged, as the plan says.
+
+**Build result:** the `shell` suite's build command is `true` and exits 0; `bash tests/run.sh` exits 0 at `193bed8` ("all cases passed"). Full suites and the criteria are `/codeo:qc`'s.
+
+**What the Mac showed** (Q1-Q5, trial T14): `codeo issue 176 --sandbox --yes` created the sandbox, took the lock (`lock: took the lock for #176 …`, and the sandbox's `.codeo/active` holds `sandbox: codeo-176`), and added the `sandbox` row to the issue's tracking comment; `codeo list` showed `#176  sandbox  detached`; `codeo shell 176 --sandbox` opened a shell; `codeo rm 176 --sandbox` ran and the row reads `removed` (2026-11-25T20:48). **Not shown:** `codeo open`'s result (its output was never captured and the engineer did not say whether a window opened; Q5), the first `codeo rm`'s own output, and running `sbx` without Docker Desktop. QC should mark the `codeo open` clause of acceptance criterion 3 as not shown rather than met.
+
+**Deviations from the plan, and why:**
+- Task 5's command list was wrong in three places and the plan text was not edited: `codeo open`, `codeo shell` and `codeo rm` need `--sandbox` because #176's own dev container shares the number; `gh issue view` needs `--repo kbajpai/codeo` outside a checkout; `sbx policy init` must come before the gallery rule. Q3 and Q4 carried the corrected commands.
+- `.sbx/README.md` gained a statement the plan did not name, that a host with no global policy refuses the gallery rule (412) until `sbx policy init balanced` has run. It documents what T14 showed and also holds for Linux and WSL2.
+- The macOS README text states `sbx login`, `sbx secret set` and `sbx setup ssh` as tried (Q1, Q2) where the plan expected them marked untried until Task 5; only `codeo open` over SSH stays untried.
+- The test helper `sb_gitcfg_macos` was added to share setup across the three identity cases; trial T14's title line stands alone so a test can match it exactly.
+- The engineer's Mac still has this branch's scripts installed by `codeo update` (`CODEO_RAW_URL`), and the clone `~/codeo/codeo-176`; `codeo update` restores `main`'s scripts.
+
+**Found and left alone:** `git_is_usable` on macOS treats a working Homebrew git with no Command Line Tools as unusable, so the identity then comes from `GIT_AUTHOR_*` only; it fails safe, and `CODEO_CODE` covers a `code` that is not on `PATH`. The Mac has no global git identity, so the start script's identity TODO there is correct, not a defect.
+
+**Rulings** (made without waiting, each with its cost if wrong):
+- Task 4 states what Task 1 showed as tried and does not claim v0.53.0 for macOS: a wording fix if wrong.
+- Q1, Q3 and the Q5 reading are the controller's: the Mac trial is the plan's first task, the trial sandbox is #176 itself, and a pasted output that does not say a window opened is "not shown": a later round if the engineer re-runs `codeo open`.
+- The Task 5 review's one Important finding (the image digest, 2 CPUs and 4g in T14) was a trimmed paste, not an invented value: the lines were restored in Q2's answer; nothing in T14 changed.
+- The whole-branch review and one scoped re-review ran on the subagent model (`sonnet`), as this skill requires, not the most capable model.
+
+No `Deployed revision:` (no shared environment is configured). No `/codeo:issue` was filed.
 
 ## Log
 
@@ -309,3 +346,4 @@ _Pending — written at the hand-off._
 - 2026-11-25 — Q2 answered: sandbox starts, takes the lock, lists on the Mac; open, rm and the tracking row did not run as planned, Q3 raised with corrected commands · cost: 74m · sonnet-5-5 310k in + 9.3M cached / 44k out
 - 2026-11-25 — Q3 answered: tracking row, identity and shell shown; open and rm still unrun, Q4 raised · cost: 76m · sonnet-5-5 320k in + 10.2M cached / 53k out
 - 2026-11-25 — Q4 answered: the sandbox row reads removed; codeo open's result not captured, Q5 raised · cost: 79m · sonnet-5-5 328k in + 11M cached / 57k out
+- 2026-11-25 — implemented: Tasks 2-5 built and reviewed, final review and one fix wave, pushed at 193bed8; criterion 3's codeo open not shown · cost: 98m · sonnet-5-5 616k in + 18.9M cached / 108k out
