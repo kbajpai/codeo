@@ -198,9 +198,13 @@
 | `issue:163` | Close the #152 leftovers; filed 2026-11-23, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-23 |
 | `qc:157:F8-F10-F11-F12-F13` | #157 non-blocking QC findings: web close says "nothing to remove" though the branch stays, sweep wording without the web exception, cleanup drops the leftover command on a failed name proof (F8, F12, F13 filed, F10-F11 out of scope) | filed #166 | 2026-11-24 |
 | `issue:166` | Close the #157 leftovers; filed 2026-11-24, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-24 |
-| `qc:161:F4-F7-preexisting` | #161 non-blocking findings F4, F7 and four pre-existing README/CHANGELOG/`stop_started` gaps | filed #173 | 2026-11-25 |
-| `qc:161:F5-F6-F8` | #161 `SessionStart` hook: skip check, undocumented, restart wording | filed #173 | 2026-11-25 |
-| `unclosed:161` | `docs/documentation-leftovers-154-146-removal` and `claude/ecstatic-mendel-n3qyzl` still on origin after PR #167 merged | fix named — `git push origin --delete docs/documentation-leftovers-154-146-removal claude/ecstatic-mendel-n3qyzl` | 2026-11-25 |
+| `qc:161:F4-F7-preexisting` | #161 F4, F7 and four pre-existing README/CHANGELOG/`stop_started` gaps | already #173 | 2026-11-25 |
+| `qc:161:F5-F6-F8` | #161 `SessionStart` hook: skip check, undocumented, restart wording | already #173 | 2026-11-25 |
+| `unclosed:161` | `origin/claude/ecstatic-mendel-n3qyzl` still on origin though #161 merged; the other branch is gone | deferred | 2026-11-25 |
 | `issue:168` | Release v1.0.9; filed 2026-11-25 or earlier, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
 | `issue:170` | Docs: host command installs separately, macOS flock and keychain; board Status `Backlog` → `Ready` | ready | 2026-11-25 |
 | `issue:171` | README complete guide; board Status `Backlog` → `Ready` | ready | 2026-11-25 |
+| `qc:163:F1-F6` | #163 doc inaccuracies and two parked minors | filed #177 | 2026-11-25 |
+| `qc:166:F2-F5` | #166 cleanup closing block, `<machine>`, "stays on origin", repeated changelog clause | filed #177 | 2026-11-25 |
+| `qc:168:F1-F4` | #168 stale plan lines and UTC changelog date | filed #177 | 2026-11-25 |
+| `issue:177` | Close the #163, #166 and #168 leftovers; filed 2026-11-25, board Status Backlog | backlog | 2026-11-25 |
