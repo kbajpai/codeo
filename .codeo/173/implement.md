@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is built and its build command passes. Nothing is open; next is `/codeo:qc`.
+Round 2 is built (the send-back from `qc.md` round 1) and its build command passes. Nothing is open; next is `/codeo:qc`.
 
 ## Questions
 
@@ -41,6 +41,26 @@ Built from `docs/plans/2026-11-25-close-161-leftovers-173.md` by `superpowers:su
 
 **Deviations from the plan:** none. Task 4's two `git show` verification commands, run literally as written, matched nothing (`grep` read `^` mid-pattern as literal and `git show` took two paths); the implementer re-ran them with `grep -F` and the expectation held.
 
+### Round 2 — 2026-11-25
+
+(send-back from qc.md round 1)
+
+Built from `docs/plans/2026-11-25-close-161-leftovers-173-round-2.md` by `superpowers:subagent-driven-development`: one implementer and one reviewer per task, all on `sonnet` (`models.subagent`), one fix round on Task 1, then one whole-branch review of the round. `superpowers:receiving-code-review` was read first; each finding was already checked against the code and the tags by `qc` and again by the plan, so none was pushed back on. `sync-main.sh` said the branch already contains `origin/main`; `overlap.sh 173` printed nothing.
+
+**Built**
+- Task 1, `c1f1ade` and `9d35d3a` (F2, F6): `cmd_rm` passes `--quiet-stop` to `container_check` under `--force`, `container_check` hands a non-empty third argument to each of its three `stop_started` calls, and `stop_started` prints `codeo: could not stop codeo-<N> again; it is left running` only when that argument is empty. The stop itself is unchanged. New `t_rm_force_does_not_report_a_failed_stop` (a failing stop after a check that could not run and after a dirty read, both under `--force`: `docker stop` and `docker rm -f` still called, no line); the `container_check` header comment is rewritten. The reviewer found the new function nested inside round 1's `t_rm_reports_a_failed_stop` (a missing `}` and a stray one): fix round 1 closed it, and the scoped re-review found it addressed.
+- Task 2, `d621a10` (F1): the v1.0.8 `Shared state:` line names each read of `dossier-check.sh` (section reads never counted `## Outcomes` and no longer count `## Outcome notes`; the `finished-qc-clear` read no longer counts either), checked against the `v1.0.7` and `v1.0.8` tags; the `## Unreleased` stop bullet says a `--force` removal prints no such line.
+- Task 3, `acb5e2b` (F4, F5): two sentences in `.devcontainer/README.md`'s "A refusal removes nothing" paragraph; the hook's header comment says the list is parsed as `install.sh` parses it and any enabled `superpowers@*` entry counts (no code line changed).
+- Task 4, `fb07071` (F3, F7): release checklist step 6 names `docs/updating.md` in both "move" groups and adds `v1.0.9;x` to "do not move".
+- Task 5: no change. The grep counts match the plan (`.devcontainer/README.md` 2, `CHANGELOG.md` 1), and the whole-branch review checked each of F1-F7 against the diff.
+
+**Documentation pages changed:** `.devcontainer/README.md`, `CHANGELOG.md`, `docs/release-checklist.md`.
+
+**Build result:** the `shell` suite's `build` is `true` and passes. `bash tests/run.sh` ran whole on the finished round and ended `all cases passed`; the grading run belongs to `/codeo:qc`.
+
+**Deviations from the plan:** none. No fix was needed beyond the Task 1 brace.
+
 ## Log
 
 - 2026-11-25 — built round 1: five task commits `d7eef54..54a5ad2`, five task reviews and one whole-branch review, all clean · cost: 36m · sonnet-5-5 456k in + 10.5M cached / 62k out
+- 2026-11-25 — built round 2: five commits d889717..fb07071 plus one fix round, five task reviews and one whole-branch review, all clean · cost: 26m · sonnet-5-5 341k in + 12.6M cached / 45k out
