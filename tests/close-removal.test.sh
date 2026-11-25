@@ -27,8 +27,9 @@ for needle in 'codeo rm <N>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 
-[[ "${out%%docker rm -f codeo-<N>*}" == *'git status'* ]] || fail "git status does not come before the first docker rm -f codeo-<N>"
-for needle in 'from the folder that holds the script' 'when codeo-track.sh sits beside'; do
+seg=${out#*'Add one sentence'}
+[[ "${seg%%'docker rm -f'*}" == *'git status'* ]] || fail "the without-codeo sentence does not put git status before docker rm -f"
+for needle in 'go on only when it shows nothing unpushed' 'from the folder that holds the script' 'when codeo-track.sh sits beside'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 
