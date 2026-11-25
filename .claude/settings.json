@@ -13,6 +13,15 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] && bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.sh\" || true",
+            "timeout": 300
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
