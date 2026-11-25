@@ -50,8 +50,6 @@ None.
 
 **Not in this plan, to file** (promised in `plan.md`'s `## Notes`): `docs/handoff.md:3` says "Seven pipeline skills" where `docs/skills.md` says six; how another project adopts the role guard.
 
-**Deployed revision:** none; no shared environment.
-
 ## Log
 
 - 2026-11-25 — implemented: plan docs/plans/2026-11-25-readme-complete-guide-171.md, tasks 1-8, build exit 0 · cost: 35m · sonnet-5-5 945k in + 25.9M cached / 150k out
