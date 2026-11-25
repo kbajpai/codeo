@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Planned. Q1-Q3 answered; the plan is at `docs/plans/2026-11-25-close-161-leftovers-173.md`, awaiting the engineer's commit, then `/codeo:implement`.
+Round 2, after a send-back from `/codeo:qc` round 1 (F1 and F2 blocking, both the plan's; F3-F7 non-blocking). Nothing new is ambiguous, so no question is raised: the round-2 draft is at `.codeo/173/plan-draft.md`, awaiting the engineer's approval. Round 1's outcome below stands as written.
 
 ## Questions
 
