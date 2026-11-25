@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q4 are answered and the plan is approved and saved at `docs/plans/2026-11-25-close-171-leftovers-179.md` (unstaged). `overlap.sh` found #177 listing three of the same files (`docs/handoff.md`, `docs/home-checkout.md`, `tests/readme.test.sh`), so Q5-Q7 are open; `## Outcome` stays pending until they are answered. I recommend proceeding on all three: the edits are in different passages.
+Planned: the plan is approved and saved at `docs/plans/2026-11-25-close-171-leftovers-179.md` (unstaged). Q1-Q7 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: review and commit the plan, then `/codeo:implement`.
 
 What I found (read at `92bbe45`):
 
@@ -84,6 +84,7 @@ A — a third group with its own heading, `### Installing and the pin`. (Enginee
 - **C — re-scope.** Drop the one-line skill-count fix from this plan and hand it to #177's author. That leaves criterion 6 of #179 unmet here.
 
 **Answer:**
+A — proceed and coordinate. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q6 — Overlap with #177 on `glob:docs/home-checkout.md`: proceed, sequence, or re-scope?
 
@@ -94,6 +95,7 @@ A — a third group with its own heading, `### Installing and the pin`. (Enginee
 - **C — re-scope.** Move the adoption section to `docs/extension-points.md` (Q1 option B), which #177 does not touch. That moves it out of the page `tests/readme.test.sh` already checks.
 
 **Answer:**
+A — proceed and coordinate. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q7 — Overlap with #177 on `glob:tests/readme.test.sh`: proceed, sequence, or re-scope?
 
@@ -104,8 +106,31 @@ A — a third group with its own heading, `### Installing and the pin`. (Enginee
 - **C — re-scope.** Split this plan's test changes out of the file, which loses the tests-first order Task 1 relies on.
 
 **Answer:**
+A — proceed and coordinate. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ## Notes
+
+None.
+
+
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-25-close-171-leftovers-179.md` (approved 2026-11-25, unstaged) |
+| Shape | one plan under `docs/plans/`, four tasks, tests first; no reference doc, no `engineering` skill (no component or technology choice) |
+
+**Decisions.**
+- **Q1:** the role-guard adoption text is a new `## Adopting the guard in your project` in `docs/home-checkout.md`, after *The guard*, linked from the README's role-guard entry and from `docs/extension-points.md`.
+- **Q2:** it states the contract (a `## role-guard` section per guarded skill, the three exits, `/codeo:doctor`'s `overlays` check) with codeo's own overlay and `role.sh` as the example, and says `role.sh` is not shipped for other projects.
+- **Q3:** "Setting a project up" becomes three `###` steps with fences at column 0; pinned by a structural check, since no Markdown renderer is installed.
+- **Q4:** the two non-doctor entries move under a new `### Installing and the pin`; the doctor group's intro stays true.
+- **Q5-Q7:** proceed and coordinate with #177 on `docs/handoff.md`, `docs/home-checkout.md` and `tests/readme.test.sh`; the edits are in different passages.
+- Also decided: no `CHANGELOG.md` entry, `.devcontainer/README.md` linked and not edited, `slugs()` fixed with a self-check.
+
+**Rejected:** the adoption text in `docs/extension-points.md` or a new page (Q1); a copy recipe for `role.sh` (Q2); indenting fences under a numbered list, which would widen fence detection in two tests (Q3); rewording the doctor intro instead of a third group (Q4); sequencing after, or splitting from, #177 (Q5-Q7).
+
+**Documentation pages the plan changes:** `README.md`, `docs/home-checkout.md`, `docs/extension-points.md`, `docs/updating.md`, `docs/handoff.md`; guarded by `tests/readme.test.sh`. No wiki module. No intake question was resolved by this skill; no issue was filed; the `engineering` skills were not used.
 
 ### Footprint
 files: tests/readme.test.sh, README.md, docs/home-checkout.md, docs/extension-points.md, docs/updating.md, docs/handoff.md, docs/plans/2026-11-25-close-171-leftovers-179.md, .codeo/179/**
@@ -113,12 +138,9 @@ wiki: none
 exclusive: none
 sequenced: none
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-25 — explored at `92bbe45`; Q1-Q4 raised · cost: 2m · fable-5-2 103k in + 728k cached / 12k out
 - 2026-11-25 — Q1-Q4 answered (the picks); draft written to .codeo/179/plan-draft.md, awaiting approval · cost: 13m · fable-5-2 108k in + 990k cached / 13k out · sonnet-5-5 109k in + 156k cached / 9k out
 - 2026-11-25 — plan approved and written; footprint committed; overlap with #177 raised as Q5-Q7 · cost: 34m · fable-5-2 108k in + 990k cached / 13k out · sonnet-5-5 122k in + 1.2M cached / 14k out
+- 2026-11-25 — planned: docs/plans/2026-11-25-close-171-leftovers-179.md · cost: 44m · fable-5-2 108k in + 990k cached / 13k out · sonnet-5-5 123k in + 1.6M cached / 15k out
