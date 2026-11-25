@@ -534,14 +534,22 @@ is the container the message names.
     printed text to the engineer as what they do next with this checkout, filling in the lock's
     `volume:`, `sandbox:` or `session:` line where it asks — it is theirs to run, never this skill's; on exit 3, the default below, by the lock's host;
     on exit 1, 2 or 4, report the one `codeo:` line it printed and use the default.
-    - **`host: web`** — nothing to remove: the hosted session is done once the engineer closes it.
+    - **`host: web`** — no checkout to remove: the hosted session is done once the engineer closes it.
     - **`host: container`** — the checkout is a container, which this skill cannot remove from
       inside it. Name the lock's `volume:` or `sandbox:` line: either identifies what the host
       removes. Say that the removal is done with commands that run on the host, not inside this
       container, and that the engineer runs `git status` in that clone first: unpushed work is
       lost with the volume.
-    - **`host: local`** — nothing to remove: the checkout is the engineer's own, the local branch
+    - **`host: local`** — no checkout to remove: the checkout is the engineer's own, the local branch
       still in it, theirs to delete or keep.
+
+    A hosted web session cannot delete a branch. For `host: web`, and for any lock when
+    `CLAUDE_CODE_REMOTE` is `true`, step 16's `sweep` did nothing, so the session's
+    `codeo-live/<issue>/<machine>` live-signal branch stays on `origin`. On the finished exit say that,
+    whatever the host workflow printed, and name the command with the lock's issue filled in:
+    `git push origin --delete codeo-live/<issue>/<machine>`, run outside the hosted session.
+    `/codeo:cleanup` prints it with the branch's exact name once the issue is finished.
+    Never describe such a close as leaving nothing behind.
 
     On the finished exit only: everything the workflow committed is merged or on origin; anything
     left uncommitted or unpushed in the checkout is not, which is why the host workflow's clean-up
