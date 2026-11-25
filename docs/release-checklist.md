@@ -74,13 +74,17 @@ constrain other people and accidents, not the owner.
 6. Before tagging, set the release's version where it is written:
    - **move to the release being cut:** `.claude-plugin/plugin.json`'s version; in `README.md`, the
      installer transcripts, the `ref` in the settings example and the `marketplace add` example; in
-     `tests/install.test.sh`, the stubs that stand for the latest release;
+     `tests/install.test.sh`, the stubs that stand for the latest release; in `docs/updating.md`,
+     every version that stands for the latest release;
    - **move to the release before it:** in `README.md`, the `--version` example and the left side of
      the `codeo vA -> vB` replace line; in `tests/install.test.sh`, the stubs that stand for an older
-     release that is installed, pinned or asked for;
+     release that is installed, pinned or asked for; in `docs/updating.md`, every version that
+     stands for the release before it (the installed side of the update transcripts, the
+     downgrade's target and the dropped-install lines);
    - **do not move:** the test's stubs that only order tags or are refused (`v1.0.5`, `v1.0.10`,
-     `v1.0.9.1`, `v2.0.0-rc1`, `v9.9.9`, `v1.0`), unless the release being cut is one of them, in
-     which case that stub takes the next higher version.
+     `v1.0.9.1`, `v2.0.0-rc1`, `v9.9.9`, `v1.0`, and `v1.0.9;x`, which stays refused whatever the
+     release), unless the release being cut is one of them, in which case that stub takes the next
+     higher version.
 
    (`.claude-plugin/marketplace.json` carries no version.) Also retitle `CHANGELOG.md`'s
    `## Unreleased` as `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change. Once that pull
