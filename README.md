@@ -21,7 +21,7 @@ codeo is an agent-workflow plugin for Claude Code. It is for engineers who work 
 
 1. Run the one install command in [Installing](#installing) and watch it print an `install:` line for each step.
 2. Restart Claude Code, so the new session lists the codeo commands.
-3. In your project, run `/codeo:setup` and then `/codeo:doctor`, and see `.codeo/config.json` written and every check pass ([Setting a project up](#setting-a-project-up)).
+3. In your project, run `/codeo:setup` and then `/codeo:doctor`, and see `.codeo/config.json` written and every check pass or each failure explained ([Setting a project up](#setting-a-project-up)).
 4. File your first issue with `/codeo:issue` and see it created on GitHub.
 5. Run the six steps for that issue, each handing off to the next ([Your first workflow](#your-first-workflow)).
 6. Merge the pull request that `/codeo:close` opens, and see the workflow finish.
@@ -210,6 +210,8 @@ ok deps: jq, git, bash 5.3.9(1)-release
 ok overlays: none
 ok superpowers: installed
 ```
+
+That is what a project sees when its base branch has the ruleset. A new repository has no branch ruleset yet, so `ruleset` fails (`fail ruleset: main does not require: tests qc-verdict`, or `could not read rules`) until the base branch requires the checks `tests` and `qc-verdict`, or you list your own under `ci.requiredChecks` (see [Configuration](#configuration)); see **ruleset.** in [Checks from /codeo:doctor](#checks-from-codeodoctor).
 
 Then commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works on the project.
 
@@ -515,7 +517,7 @@ Run the install command instead, which removes the marketplace and adds it at th
 
 ## Updating
 
-Run the install command again. With no `--version` it installs the latest release. If that differs from what you have, it replaces codeo: one machine holds one codeo version, so the replace removes the codeo marketplace, which uninstalls codeo at every scope on the machine, and installs the new release at the scope you asked for. A plain run installs it for you:
+Run the install command again. With no `--version` it installs the latest release. If that differs from what you have, it replaces codeo: one machine holds one codeo version, so the replace removes the codeo marketplace, which uninstalls codeo at every scope on the machine, and installs the new release at the scope you asked for. A plain run installs it at user scope, for you; `--scope project` installs it for the project; `--version <tag>` picks a release, and moving to an older one also replaces codeo ([docs/updating.md](docs/updating.md)):
 
 ```
 install: release v1.0.9

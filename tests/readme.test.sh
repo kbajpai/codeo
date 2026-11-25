@@ -58,10 +58,10 @@ pages=("$readme")
 [[ -f docs/updating.md ]] && pages+=(docs/updating.md)
 [[ -f docs/home-checkout.md ]] && pages+=(docs/home-checkout.md)
 
-# commands: every /codeo:<name> in the README, fences included.
+# commands: every /codeo:<name> on every page, fences included.
 while IFS= read -r name; do
     [[ -d "skills/$name" ]] || fail commands "/codeo:$name has no skills/$name/"
-done < <(grep -o '/codeo:[a-z][a-z-]*' "$readme" | sed 's|/codeo:||' | sort -u)
+done < <(grep -ho '/codeo:[a-z][a-z-]*' "${pages[@]}" | sed 's|/codeo:||' | sort -u)
 
 # paths: backticked repo paths resolve.
 for page in "${pages[@]}"; do
