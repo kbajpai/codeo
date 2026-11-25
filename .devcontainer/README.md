@@ -93,7 +93,7 @@ Two variables change where the script reads from, and `CODEO_SBX` picks the sbx 
 
 ## Installing the `codeo` command
 
-`codeo` is a host command that wraps `codeo-container.sh` and `codeo-sandbox.sh`, so `codeo issue 133` replaces `bash codeo-container.sh issue 133 <branch>` and finds the branch itself. It is one bash script, `.devcontainer/codeo`. The host is Linux or macOS with bash 4.3 or later, `curl`, `git` and `flock` (util-linux on Linux, `brew install flock` on macOS); a sandbox needs Linux or WSL2 (`.sbx/README.md`). `docker` and `sbx` are each optional, and a missing one counts as none of that kind.
+`codeo` is a host command that wraps `codeo-container.sh` and `codeo-sandbox.sh`, so `codeo issue 133` replaces `bash codeo-container.sh issue 133 <branch>` and finds the branch itself. It is one bash script, `.devcontainer/codeo`. The host is Linux or macOS with bash 4.3 or later, `curl`, `git` and `flock` (util-linux on Linux, `brew install flock` on macOS); a sandbox needs Linux, macOS or WSL2 (`.sbx/README.md`). `docker` and `sbx` are each optional, and a missing one counts as none of that kind.
 
 Install it once:
 

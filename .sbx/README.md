@@ -4,19 +4,19 @@ An issue's work can run in a Docker Sandboxes (sbx) sandbox instead of a dev con
 
 ## Prerequisites
 
-The host is Linux or WSL2 (never macOS) with bash 4.3 or later, `git` and `curl`.
+The host is Linux, macOS or WSL2 with bash 4.3 or later, `git` and `curl`.
 
-- `sbx` v0.53.0, or `sbx.exe` reachable on `PATH` from WSL2. The script uses `sbx`, else `sbx.exe`; `CODEO_SBX` names the program instead.
+- `sbx` v0.53.0 or later, or `sbx.exe` reachable on `PATH` from WSL2. The script uses `sbx`, else `sbx.exe`; `CODEO_SBX` names the program instead. On macOS, `sbx` needs macOS 14 (Sonoma) or later on Apple silicon (Intel Macs are not on Docker's list), and no Docker Desktop: `brew trust docker/tap`, then `brew install docker/tap/sbx`.
 - `sbx login`.
 - `sbx secret set github --command 'gh auth token'`. The sandbox's `gh` holds a placeholder token; inside the sandbox `gh auth token` and `GH_TOKEN` print it and a push works with no login; where the real token is held was not shown.
 - `sbx setup ssh` (experimental). It makes the `*.sbx` hosts resolve, which `open` needs.
-- A one-time network rule for the VS Code extension gallery, set before the setting below. Under the default `balanced` policy the VS Code server in the sandbox gets `Server returned 403` from `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io`, and the failed install stops the remote extension host. `remote.downloadExtensionsLocally` does not cover `remote.SSH.defaultExtensions`, so the rule is the way:
+- A one-time network rule for the VS Code extension gallery, set before the setting below. On a host with no global network policy, run `sbx policy init balanced` first; without one the rule below is refused with `412 Precondition Failed` (`sbx` also asks for a policy when it creates its first sandbox). Under the default `balanced` policy the VS Code server in the sandbox gets `Server returned 403` from `*.gallery.vsassets.io` and `*.gallerycdn.vsassets.io`, and the failed install stops the remote extension host. `remote.downloadExtensionsLocally` does not cover `remote.SSH.defaultExtensions`, so the rule is the way:
 
 ```bash
 sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"
 ```
 
-  It adds two global rules, one per host, which apply to every sandbox. `sbx policy rm network --resource <host>` removes one of them, run once per host. From WSL2 the same line runs through `sbx.exe`.
+  The rule adds two global rules, one per host, which apply to every sandbox. `sbx policy rm network --resource <host>` removes one of them, run once per host. From WSL2 the same line runs through `sbx.exe`.
 - VS Code with Remote - SSH, and this user setting, which installs the extensions in every sandbox:
 
 ```json
@@ -37,6 +37,19 @@ The `codeo` command runs this script for you: `codeo issue <N> [<branch>] --sand
 
 Run the commands from the directory that holds the downloaded file. The clone `codeo-<N>` is made in that directory. When `CODEO_SBX_IMAGE` is set, the script reads the image pin from the file it names, and refuses when that file is missing. Otherwise it reads `codeo-<N>/.sbx/claude-image` in the clone, then `.sbx/claude-image` on `origin/HEAD` of the clone (`git -C codeo-<N> show origin/HEAD:.sbx/claude-image`). No file beside the script is read. `CODEO_REPO_URL` names another repository to clone (default `https://github.com/kbajpai/codeo.git`), and `CODEO_CODE` names the VS Code program `open` runs, in place of `code`.
 
+## On macOS
+
+The script needs bash 4.3 or later and runs on a Mac with these additions to the prerequisites above:
+
+- The stock bash is 3.2. Run `brew install bash` and make it the first `bash` on `PATH`.
+- `codeo` also needs `flock`: `brew install flock` (see *Installing the `codeo` command* in `.devcontainer/README.md`).
+- `code` must be on `PATH` for `open`: in VS Code, run *Shell Command: Install 'code' command in PATH*, or set `CODEO_CODE` to the program.
+- Over SSH, `sbx login` does not open a browser from the SSH shell. It prints a one-time code and the URL `https://login.docker.com/activate`; open the URL on any machine and enter the code. It fails with `macOS Keychain denied access` until the login keychain is unlocked with `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` (see *The keychain over SSH on macOS* in `.devcontainer/README.md`, `#the-keychain-over-ssh-on-macos`). It then signs in and prints the warning `schedule credential exchange failed`, the same warning as on Windows, which does not stop the sign-in.
+- `sbx secret set github --command 'gh auth token'` resolves `gh`'s token and saves it as a global secret. `sbx setup ssh` enables the `*.sbx` hosts; it warns that it could not pre-trust the host key yet, and the first connect trusts it on use.
+- A host with no global `user.name` and `user.email` gets the start script's git identity `TODO` in the sandbox: set them with `git config --global user.name 'Your Name'` and `git config --global user.email you@example.com` (a Mac that has not set them gets it).
+- git needs the Command Line Tools: `xcode-select --install` (Homebrew installs them). Without them `git` is a stub that opens an installer, so `issue` cannot clone.
+- `codeo open` starts VS Code on the Mac with the `code` command. Without `code` on `PATH` it stops with one line naming the fix (`Shell Command: Install 'code' command in PATH`, or `CODEO_CODE`). After installing the command, VS Code opened (see T14 in `docs/dev-environment-sbx-evaluation.md`).
+
 ## Commands
 
 | Command | `codeo` form | What it does |
@@ -50,7 +63,7 @@ Run the commands from the directory that holds the downloaded file. The clone `c
 
 ```mermaid
 sequenceDiagram
-    participant E as Engineer (Linux or WSL2 bash)
+    participant E as Engineer (Linux, macOS or WSL2 bash)
     participant S as codeo-sandbox.sh
     participant G as host git / git.exe
     participant X as sbx or sbx.exe

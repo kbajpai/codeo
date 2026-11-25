@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Starts, opens and ends one Docker Sandboxes (sbx) sandbox per GitHub issue. It runs on a Linux or
-# WSL2 host (never macOS) under bash 4.3 or later, and drives sbx, or sbx.exe from WSL2.
+# Starts, opens and ends one Docker Sandboxes (sbx) sandbox per GitHub issue. It runs on a Linux, macOS
+# or WSL2 host under bash 4.3 or later, and drives sbx, or sbx.exe from WSL2.
 #
 #   codeo-sandbox.sh issue <N> <branch> [--yes]
 #   codeo-sandbox.sh open <N>
@@ -63,8 +63,12 @@ usage() {
     exit 2
 }
 
+# host_is_macos: succeed when uname -s prints Darwin; a missing or failing uname is not macOS.
+host_is_macos() { [[ "$(uname -s 2>/dev/null || true)" == Darwin ]]; }
+
 # pick_sbx: set sbx to the program to run (CODEO_SBX, else sbx, else sbx.exe) and windows to 1 when
-# its name ends in .exe, else 0.
+# its name ends in .exe, else 0. With none of them, die naming where to get sbx: brew on macOS, else
+# the WSL2 hint.
 pick_sbx() {
     if [[ -n "${CODEO_SBX:-}" ]]; then
         sbx=$CODEO_SBX
@@ -73,6 +77,9 @@ pick_sbx() {
     elif command -v sbx.exe >/dev/null 2>&1; then
         sbx=sbx.exe
     else
+        if host_is_macos; then
+            die "sbx is not installed: on macOS 14 or later with Apple silicon, run \"brew trust docker/tap\" and \"brew install docker/tap/sbx\", then \"sbx login\"; or work the issue in a dev container with \"codeo issue <N> --container\""
+        fi
         die "sbx is not installed: install Docker Sandboxes (sbx), or from WSL2 make sbx.exe reachable on PATH"
     fi
     if [[ "${sbx##*/}" == *.exe ]]; then windows=1; else windows=0; fi
@@ -203,7 +210,11 @@ ensure_sandbox() {
 
 # git_is_usable: git is on PATH and will not open an installer (a Mac stub).
 git_is_usable() {
-    command -v git >/dev/null 2>&1
+    command -v git >/dev/null 2>&1 || return 1
+    if host_is_macos; then
+        xcode-select -p >/dev/null 2>&1 || return 1
+    fi
+    return 0
 }
 
 # run_start <name>: run the start script in the sandbox, carrying the host's git identity (read as in
@@ -287,6 +298,9 @@ launch_code() {
             cmd.exe /c code --folder-uri "$1"
         )
     else
+        if host_is_macos && ! command -v code >/dev/null 2>&1; then
+            die "code is not on PATH: in VS Code run \"Shell Command: Install 'code' command in PATH\", or set CODEO_CODE to the VS Code program"
+        fi
         code --folder-uri "$1"
     fi
 }

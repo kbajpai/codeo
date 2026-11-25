@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guards .sbx/codeo-sandbox.sh, the host-side script that starts, opens and ends one Docker Sandboxes
-# (sbx) sandbox per GitHub issue on a Linux or WSL2 host. Each case is a function named in the final
+# (sbx) sandbox per GitHub issue on a Linux, macOS or WSL2 host. Each case is a function named in the final
 # cases=( ... ) array; add a case by writing a function and listing it. The script runs with PATH
 # holding only stub sbx, sbx.exe, git, git.exe and code (plus /usr/bin and /bin), against a scratch
 # directory whose calls file logs every stub call and whose sandboxes file is what the stub `sbx ls`
@@ -87,7 +87,17 @@ exit 0
 STUB
         chmod +x "$sb_dir/bin/$n"
     done
+    echo Linux >"$sb_dir/os"
+    cat >"$sb_dir/bin/uname" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+if [[ "$1" == -s ]]; then cat "$d/os"; else exec /usr/bin/uname "$@"; fi
+STUB
+    chmod +x "$sb_dir/bin/uname"
 }
+
+# sb_macos: make the stub uname print Darwin for the current sb_dir.
+sb_macos() { echo Darwin >"$sb_dir/os"; }
 
 # The Windows trust path carries the distro name; a case that needs it absent sets SB_NODISTRO.
 export WSL_DISTRO_NAME=${WSL_DISTRO_NAME:-Ubuntu}
@@ -142,6 +152,48 @@ no_sbx_is_one_line() {
     ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
     [[ "$sb_err" == "codeo-sandbox: sbx is not installed"* ]] || fail "stderr was: $sb_err"
     [[ "$sb_err" != *$'\n'* ]] || fail "stderr is more than one line"
+}
+
+no_sbx_on_macos_names_the_brew_install() {
+    sb_setup nosbxmac
+    sb_macos
+    rm "$sb_dir/bin/sbx" "$sb_dir/bin/sbx.exe"
+    sb_run open 1
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$sb_err" != *$'\n'* ]] || fail "stderr is more than one line"
+    [[ "$sb_err" == "codeo-sandbox: sbx is not installed"* ]] || fail "stderr was: $sb_err"
+    local want
+    for want in 'brew install docker/tap/sbx' 'macOS 14' 'Apple silicon' 'codeo issue <N> --container'; do
+        [[ "$sb_err" == *"$want"* ]] || fail "stderr lacks $want: $sb_err"
+    done
+    [[ "$sb_err" != *WSL2* && "$sb_err" != *sbx.exe* ]] || fail "stderr names WSL2 or sbx.exe: $sb_err"
+}
+
+no_sbx_off_macos_keeps_the_wsl2_message() {
+    sb_setup nosbxlinux
+    rm "$sb_dir/bin/sbx" "$sb_dir/bin/sbx.exe"
+    sb_run open 1
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$sb_err" == *"from WSL2 make sbx.exe reachable on PATH"* ]] || fail "stderr was: $sb_err"
+}
+
+codeo_sbx_on_macos_skips_the_message() {
+    sb_setup sbxmacoverride
+    sb_macos
+    mv "$sb_dir/bin/sbx" "$sb_dir/mysbx"
+    rm "$sb_dir/bin/sbx.exe"
+    SB_SBX="$sb_dir/mysbx" sb_run open 1
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$sb_err" == *"codeo-1 does not exist"* ]] || fail "stderr was: $sb_err"
+    [[ "$sb_err" != *"sbx is not installed"* ]] || fail "named the install: $sb_err"
+}
+
+a_failing_uname_is_not_macos() {
+    sb_setup unamefail
+    printf '#!/bin/bash\nexit 1\n' >"$sb_dir/bin/uname"
+    rm "$sb_dir/bin/sbx" "$sb_dir/bin/sbx.exe"
+    sb_run open 1
+    [[ "$sb_err" == *"from WSL2 make sbx.exe"* ]] || fail "stderr was: $sb_err"
 }
 
 # sb_pick: source the script and print the program pick_sbx chose and the windows flag.
@@ -1048,6 +1100,74 @@ issue_takes_the_identity_from_the_host_gitconfig() {
     [[ "$(sb_calls)" == *'env CODEO_CMD_MODE=1 GIT_AUTHOR_NAME=Cfg Dev GIT_AUTHOR_EMAIL=cfg@x.test bash .devcontainer'* ]] || fail "calls: $(sb_calls)"
 }
 
+# sb_gitcfg_macos <xcode-select exit code|none>: a macOS issue run with a gitconfig holding Cfg Dev and the
+# environment holding Env Dev.
+sb_gitcfg_macos() {
+    mkdir -p "$sb_dir/home" "$sb_dir/work/codeo-113/.git"
+    printf '[user]\n\tname = Cfg Dev\n\temail = cfg@x.test\n' >"$sb_dir/home/.gitconfig"
+    sb_macos
+    # "none" still installs a stub, exiting 127 as a missing command would, so a real /usr/bin/xcode-select is never reached
+    local xs=$1
+    [[ $xs == none ]] && xs=127
+    printf '#!/bin/bash\nexit %s\n' "$xs" >"$sb_dir/bin/xcode-select"
+    chmod +x "$sb_dir/bin/xcode-select"
+    GIT_AUTHOR_NAME='Env Dev' GIT_AUTHOR_EMAIL=env@x.test HOME="$sb_dir/home" GIT_CONFIG_GLOBAL="$sb_dir/home/.gitconfig" SB_REAL_GIT="$real_git" sb_run issue 113 fix/x
+}
+
+issue_on_macos_without_command_line_tools_takes_the_identity_from_the_environment() {
+    sb_setup macnoclt
+    sb_gitcfg_macos 1
+    [[ "$(sb_calls)" == *'GIT_AUTHOR_NAME=Env Dev GIT_AUTHOR_EMAIL=env@x.test bash .devcontainer'* && "$(sb_calls)" != *'Cfg Dev'* ]] || fail "calls: $(sb_calls)"
+}
+
+issue_on_macos_with_command_line_tools_takes_the_identity_from_gitconfig() {
+    sb_setup macclt
+    sb_gitcfg_macos 0
+    [[ "$(sb_calls)" == *'GIT_AUTHOR_NAME=Cfg Dev GIT_AUTHOR_EMAIL=cfg@x.test bash .devcontainer'* ]] || fail "calls: $(sb_calls)"
+}
+
+a_missing_xcode_select_on_macos_counts_as_no_git() {
+    sb_setup macnoxs
+    sb_gitcfg_macos none
+    [[ "$(sb_calls)" == *'GIT_AUTHOR_NAME=Env Dev GIT_AUTHOR_EMAIL=env@x.test bash .devcontainer'* && "$(sb_calls)" != *'Cfg Dev'* ]] || fail "calls: $(sb_calls)"
+}
+
+open_on_macos_without_code_is_one_line() {
+    # A VS Code package may install a real code in these directories, which the PATH here keeps.
+    [[ -x /usr/bin/code || -x /bin/code ]] && return 0
+    sb_setup macnocode
+    echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
+    sb_macos
+    rm "$sb_dir/bin/code"
+    sb_run open 113
+    ((sb_rc == 1)) || fail "exited $sb_rc: $sb_err"
+    [[ "$sb_err" == "codeo-sandbox: code is not on PATH"* && "$sb_err" != *$'\n'* ]] || fail "stderr was: $sb_err"
+    [[ "$sb_err" == *"Install 'code' command in PATH"* && "$sb_err" == *CODEO_CODE* ]] || fail "stderr was: $sb_err"
+    [[ "$(sb_calls)" != *$'\ncode '* && "$(sb_calls)" != code* ]] || fail "calls: $(sb_calls)"
+}
+
+open_on_macos_with_codeo_code_skips_the_code_check() {
+    sb_setup maccodeocode
+    echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
+    sb_macos
+    rm "$sb_dir/bin/code"
+    printf '#!/bin/bash\necho "mycode $*" >>"%s/calls"\n' "$sb_dir" >"$sb_dir/bin/mycode"
+    chmod +x "$sb_dir/bin/mycode"
+    CODEO_CODE=mycode sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls | tail -n 1)" == 'mycode --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone' ]] || fail "calls: $(sb_calls)"
+    [[ "$sb_err" != *"code is not on PATH"* ]] || fail "stderr was: $sb_err"
+}
+
+open_on_macos_with_code_launches_it() {
+    sb_setup maccode
+    echo 'codeo-113 claude running (detached)' >"$sb_dir/sandboxes"
+    sb_macos
+    sb_run open 113
+    ((sb_rc == 0)) || fail "exited $sb_rc: $sb_err"
+    [[ "$(sb_calls | tail -n 1)" == 'code --folder-uri vscode-remote://ssh-remote+codeo-113.sbx/sandbox/clone' ]] || fail "calls: $(sb_calls)"
+}
+
 shell_execs_bash_in_the_clone() {
     sb_setup shell
     echo 'codeo-113 claude running' >"$sb_dir/sandboxes"
@@ -1160,6 +1280,36 @@ docs_changelog_names_the_sandbox_lock() {
 docs_the_hand_off_names_the_third_route() {
     grep -Fq 'bash codeo-sandbox.sh issue <N> <branch>' "$repo/.codeo/overlays/init.md" || fail "init overlay lacks the sandbox route"
     grep -Fq '.sbx/README.md' "$repo/.devcontainer/README.md" || fail "the dev container README does not point at .sbx/README.md"
+}
+
+docs_nothing_says_never_macos() {
+    local hits
+    hits=$(grep -rIn 'never macOS' "$repo/README.md" "$repo/.sbx" "$repo/.devcontainer" "$repo"/docs/*.md || true)
+    [[ -z "$hits" ]] || fail "a page still says never macOS: $hits"
+}
+
+docs_nothing_says_a_sandbox_needs_linux_or_wsl2_only() {
+    ! grep -Fq 'a sandbox needs Linux or WSL2' "$repo/.devcontainer/README.md" || fail "the dev container README still says a sandbox needs Linux or WSL2"
+}
+
+docs_sbx_readme_says_what_macos_needs() {
+    local f="$repo/.sbx/README.md" s
+    for s in 'brew install docker/tap/sbx' 'Apple silicon' 'macOS 14' 'brew install bash'; do
+        grep -Fq -- "$s" "$f" || fail "the sbx README lacks '$s'"
+    done
+    grep -Fxq '## On macOS' "$f" || fail "the sbx README lacks the '## On macOS' heading"
+}
+
+docs_changelog_names_the_macos_sandbox() {
+    grep -Eq '^- .*macOS.*sandbox.*\(#176' "$repo/CHANGELOG.md" || fail "no CHANGELOG bullet for the macOS sandbox"
+}
+
+docs_evaluation_page_records_the_macos_check() {
+    local f="$repo/docs/dev-environment-sbx-evaluation.md" s
+    grep -Fxq -- "**T14: sbx on macOS.**" "$f" || fail "the evaluation page lacks the T14 line"
+    for s in "brew install docker/tap/sbx" "sw_vers" "Apple silicon" "macOS Keychain denied access"; do
+        grep -Fq -- "$s" "$f" || fail "the evaluation page lacks '$s'"
+    done
 }
 
 issue_confirms_then_creates_then_adds_the_sandbox_row() {
@@ -1296,6 +1446,10 @@ cases=(
     usage_without_arguments_exits_2
     bad_numbers_and_branches_exit_2_before_any_call
     no_sbx_is_one_line
+    no_sbx_on_macos_names_the_brew_install
+    no_sbx_off_macos_keeps_the_wsl2_message
+    codeo_sbx_on_macos_skips_the_message
+    a_failing_uname_is_not_macos
     sbx_is_preferred_over_sbx_exe
     codeo_sbx_overrides_both
     sandbox_state_reads_the_ls_rows
@@ -1342,6 +1496,12 @@ cases=(
     open_percent_encodes_the_folder_path
     issue_with_no_lock_says_to_start_the_workflow
     issue_takes_the_identity_from_the_host_gitconfig
+    issue_on_macos_without_command_line_tools_takes_the_identity_from_the_environment
+    issue_on_macos_with_command_line_tools_takes_the_identity_from_gitconfig
+    a_missing_xcode_select_on_macos_counts_as_no_git
+    open_on_macos_without_code_is_one_line
+    open_on_macos_with_codeo_code_skips_the_code_check
+    open_on_macos_with_code_launches_it
     shell_execs_bash_in_the_clone
     end_with_nothing_to_lose_removes_the_sandbox
     end_with_an_unpushed_commit_removes_nothing
@@ -1389,6 +1549,11 @@ cases=(
     docs_changelog_names_the_sandbox_route
     docs_changelog_names_the_sandbox_lock
     docs_the_hand_off_names_the_third_route
+    docs_nothing_says_never_macos
+    docs_nothing_says_a_sandbox_needs_linux_or_wsl2_only
+    docs_sbx_readme_says_what_macos_needs
+    docs_changelog_names_the_macos_sandbox
+    docs_evaluation_page_records_the_macos_check
     issue_confirms_then_creates_then_adds_the_sandbox_row
     issue_passes_yes_to_confirm
     refusal_leaves_no_clone
