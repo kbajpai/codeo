@@ -10,8 +10,11 @@
 
 Round 1. Tasks 2, 3 and 4 are built, reviewed and pushed (`537af9d`, `4b60010`, `86fc0bf`); each passed its
 review, `bash tests/run.sh` exits 0 at `86fc0bf`, and the suite's build command (`true`) exits 0.
-Task 5 is the engineer's: the full route on the Mac, recorded as trial T14. It waits on Q2, and the
-whole-branch review follows it, because Task 5 still edits `.sbx/README.md` and the evaluation page.
+Task 5 is the engineer's: the full route on the Mac, recorded as trial T14. Q2 is answered and
+showed that the sandbox starts, takes the lock and lists; the rest (`open`, `shell`, `rm`, the
+tracking row, the git identity) did not run as the plan wrote the commands, so Q3 asks for them with
+the corrections. T14 and the README are written once Q3 is answered, and the whole-branch review
+follows, because Task 5 edits `.sbx/README.md` and the evaluation page.
 
 ## Questions
 
@@ -97,6 +100,97 @@ Mac's screen. Before `codeo rm 176`, run `codeo shell 176` once at the Mac, chec
 in the sandbox, and exit it.
 
 **Answer:**
+Pasted by the engineer in conversation, 2026-11-25, trimmed to the lines that matter (the sandbox
+banner and the clone's progress lines are left out):
+
+```
+$ env CODEO_RAW_URL=…/feat/176-support-sbx-issue-sandbox-macos codeo update
+updated codeo and its three scripts
+$ sbx secret set github --command "gh auth token"
+  ✓ command resolved successfully
+  Saved command secret github (global)
+$ sbx setup ssh
+    Status:  ● enabled · signed in as kbajpai
+    Access:  *.sbx -> sandboxd.sock (no port · login-gated)
+  warning: Could not pre-trust host key yet (open …/sandboxd/docker_sandboxes_ssh_ed25519: no such file or directory); first connect will trust on use.
+$ sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"
+  error: allow network rule: request failed: 412 Precondition Failed: global network policy has not been initialized; run: sbx policy init <allow-all|balanced|deny-all>
+$ codeo issue 176 --sandbox --yes
+Issue #176 already has containers on record:
+  - container `codeo-176` on host mac-studio.lan, created 2026-11-25T18:55:41Z, status active
+  - a container codeo-176 exists on this host
+A row on another host is not proof the container still exists.
+Cloning into 'codeo-176'...
+  Choose the network policy for sandboxes … Choice [1-3, default 2]: 2
+  Set network policy Balanced
+    ✓ Created sandbox codeo-176
+plugins: installed superpowers
+plugins: installed codeo v1.0.9
+lock: took the lock for #176 on feat/176-support-sbx-issue-sandbox-macos
+devcontainer-start: TODO — the GitHub token lacks the project scope: run gh auth refresh -s project
+devcontainer-start: TODO — git identity is not set (missing: user.name, user.email; tried ~/.gitconfig, then GIT_AUTHOR_NAME / GIT_AUTHOR_EMAIL): run git config --global user.name 'Your Name' and git config --global user.email you@example.com
+devcontainer-start: TODO — Claude Code is not logged in: run claude auth login
+    ✓ sandbox codeo-176 — running detached
+$ sbx exec codeo-176 cat .codeo/active
+issue:   176
+branch:  feat/176-support-sbx-issue-sandbox-macos
+started: 2026-11-25
+host:    container
+sandbox: codeo-176
+$ gh issue view 176 --comments
+failed to run git: fatal: not a git repository (or any of the parent directories): .git
+$ codeo list
+#170  container  running  docs/docs-say-codeo-host-command
+#173  container  running  docs/173-close-161-leftovers-release-checklist
+#176  container  running  feat/176-support-sbx-issue-sandbox-macos
+#176  sandbox  detached  feat/176-support-sbx-issue-sandbox-macos
+$ codeo open 176
+codeo: both a container and a sandbox codeo-176 exist; add --container or --sandbox to pick one
+$ codeo rm 176
+codeo: both a container and a sandbox codeo-176 exist; add --container or --sandbox to pick one
+$ gh issue view 176 --comments
+failed to run git: fatal: not a git repository (or any of the parent directories): .git
+```
+
+### Q3 — What do the steps that did not run, and the git identity, print on the Mac?
+
+**Why it matters:** Q2 settled that the sandbox starts, takes the lock (the sandbox's own
+`.codeo/active` holds `sandbox: codeo-176`) and shows in `codeo list`. It did not settle the rest of
+the acceptance criteria, for reasons that are the plan's command errors, not Mac failures: `codeo
+open` and `codeo rm` stopped because #176 also has its dev container, so they need `--sandbox`
+(Q3's choice of #176 in `plan.md` made the clash); and `gh issue view` ran outside a checkout, so it
+could not name the repository, which leaves the tracking comment's `sandbox` row unseen. The
+network-policy rule failed because the Mac had no policy yet (`sbx policy init` comes first; the
+create step then asked and `2` was chosen), so the VS Code extension rule has to be run again before
+`open`. The identity TODO decides whether `codeo-sandbox.sh` has a macOS defect: `git config
+--global user.name` on the Mac says whether the host had an identity to pass, and `xcode-select -p`
+says whether `git_is_usable` counted its git as usable. If the host has an identity and the
+sandbox still lacks it, that is a defect and goes back to `/codeo:plan`; if it has none, it is not.
+These commands are corrections to the plan's Task 5 command list, which is not edited; the outcome
+records the deviation.
+**Options:** the pasted output below · a step failed, say which and what it printed.
+
+Over SSH on the Mac, one command at a time, paste what each prints (the sandbox from Q2 is still
+there; `codeo shell` is interactive, so type `exit` in it):
+
+```
+git config --global user.name
+git config --global user.email
+xcode-select -p
+sbx policy allow network "*.gallery.vsassets.io,*.gallerycdn.vsassets.io"
+gh issue view 176 --repo kbajpai/codeo --comments
+codeo shell 176 --sandbox
+codeo open 176 --sandbox
+codeo rm 176 --sandbox
+gh issue view 176 --repo kbajpai/codeo --comments
+```
+
+`codeo open 176 --sandbox` starts VS Code on the Mac itself: say whether a window opened there (run
+it at the Mac's screen if it did not over SSH). If `codeo rm` refuses over unpushed or uncommitted
+work, paste what it printed and stop there; do not add `--force`. Afterwards, plain `codeo update`
+puts `main`'s scripts back.
+
+**Answer:**
 
 ## Notes
 
@@ -119,3 +213,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-25 — Q1 raised, waiting on Task 1's output from the Mac · cost: 2m · sonnet-5-5 12k in + 610k cached / 1k out
 - 2026-11-25 — Task 1 gate passed (Q1 answered); Tasks 2-4 built, each reviewed clean and pushed; Q2 raised for Task 5 on the Mac · cost: 27m · sonnet-5-5 262k in + 8.2M cached / 40k out
+- 2026-11-25 — Q2 answered: sandbox starts, takes the lock, lists on the Mac; open, rm and the tracking row did not run as planned, Q3 raised with corrected commands · cost: 74m · sonnet-5-5 310k in + 9.3M cached / 44k out
