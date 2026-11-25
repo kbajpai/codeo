@@ -36,6 +36,22 @@ Each skill asks `.devcontainer/scripts/role.sh --check <skill>` first, and the a
 
 `/codeo:doctor` and `/codeo:setup` are outside the guard. A host checkout is `home`, `issue:<N>` or `stray`; only a hosted web session and a container in an unrelated folder are `unguarded`.
 
+## Adopting the guard in your project
+
+The guard is the project's own: `/codeo:setup` writes none, and a project without one is never refused.
+
+To add one, give each of the eight guarded skills (`issue`, `init`, `triage`, `cleanup`, `plan`, `implement`, `qc`, `close`) a `## role-guard` section in `.codeo/overlays/<skill>.md`. The section is plain text that tells the skill to run the project's check first and what each exit means:
+
+- 0: go on.
+- 1: print the one line and stop; nothing the engineer says lifts it.
+- Anything else: report what was printed and go on.
+
+The check is any script the project writes. The skill never reads its output beyond the exit and the one line. `/codeo:doctor`'s `overlays` check confirms each section name is a registered point and used once.
+
+codeo's own guard is the worked example: `.codeo/overlays/plan.md` (a one-paragraph section) and `.devcontainer/scripts/role.sh`, whose roles are the table above. The script reads the clone's folder, the lock and the branch, calls `container-name.sh` beside it, and assumes the folder names `<codename>-home` and `<codename>-<N>`. It is not shipped for other projects, so a project writes its own check for its own layout.
+
+For the point's contract and its generic example, see [`extension-points.md`](extension-points.md#issuerole-guard).
+
 ## The tracking comment
 
 An issue's branch, containers, images, volumes and sandboxes are recorded in one comment on the issue, found by its hidden marker `<!-- codeo:tracking -->` anywhere in a comment body:
