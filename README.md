@@ -404,6 +404,44 @@ A fuller file adds a codename, a shell suite, a board, priorities and models:
 
 ## Troubleshooting
 
+The entries are in two groups. *During a workflow* covers what stops a step while you work an issue: a refused skill, a lock that is not yours, a step that stopped half way, and a card that is not Ready. *Checks from /codeo:doctor* covers the lines `/codeo:doctor` prints when codeo is not ready in a project. Each entry gives the symptom, the cause and the fix.
+
+### During a workflow
+
+**A role-guard refusal.** The guard is the project's own, not the plugin's: it is this project's role check, run at the start of each skill, and a project set up with `/codeo:setup` has none and is never refused. If you meet a refusal, you are in a project that has added the guard; [docs/home-checkout.md](docs/home-checkout.md) and [.devcontainer/README.md](.devcontainer/README.md#roles-and-the-guard) describe it.
+
+- **Symptom.** The skill stops with one line that starts `/codeo:<skill> can't run here:` or says where the skill runs.
+- **Cause.** The skill belongs in another checkout. `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` run in a home checkout; `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:close` run in the issue's own checkout.
+- **Fix.** Run the skill in the checkout the line names. Nothing you say in the session lifts a refusal. A line with `role stale:<N>` says what became of the workflow: finished (`/codeo:cleanup` in a home checkout prints how to remove the container), stashed (`/codeo:init #<N>` in a home checkout is the way back) or lost its lock (re-run `bash .devcontainer/scripts/devcontainer-start.sh`). A clone named `<codename>-home` that reads as `stray` needs `jq` installed; see [docs/home-checkout.md](docs/home-checkout.md).
+
+```
+/codeo:plan runs in an issue's checkout, but this checkout's role is home.
+```
+
+**A lock that is stuck or not yours.** Every step after `/codeo:init` checks the workflow lock file first. The file belongs to one checkout (it is not committed), and only `/codeo:close` removes it, when the workflow ends, is stashed or is abandoned.
+
+- **Symptom.** A skill stops and says there is no lock; or says the lock's `branch` differs from the branch you are on; or says the lock names a different issue from the one you asked for; or `/codeo:init` refuses because a lock already exists; or a `lock: TODO …` line appears.
+- **Cause.** No lock means the step before was skipped, or you are in another checkout. A branch mismatch means someone switched branches or the lock is stale. The other two mean this checkout already holds a workflow.
+- **Fix.** For no lock, run `/codeo:init #<N>`. For a branch mismatch, switch back to the lock's branch yourself, or finish the workflow there with `/codeo:close` or `/codeo:close --stash`; never edit the lock to match the branch. For another issue, finish or stash that one first, in its own checkout. When `/codeo:init` refuses, run it in another checkout (a second clone or a `git worktree`), or finish this workflow with `/codeo:close`. For a `lock: TODO …` line, fix what it says, then take the lock again as the closing block of that step tells you.
+
+```
+lock: TODO — #12 is stashed or abandoned: no lock taken
+```
+
+**A step that was interrupted.** Every step resumes from its dossier file in `.codeo/<N>/` and from GitHub, not from the conversation.
+
+- **Symptom.** A session ended part way, a push failed, or a step is waiting on an answer.
+- **Cause.** The step stopped before it finished its dossier turn, or an open question has no answer yet.
+- **Fix.** Run the same command again. An unanswered question is a `### Q<n>` heading in `.codeo/<N>/<step>.md` with an empty `**Answer:**`: write your answer under it and run the command again. A failed push is loud; the commit stays on your machine until the push lands, so push again before you continue elsewhere. `/codeo:close` is safe to repeat at any point. If `/codeo:init` stops half way, the next run reports a leftover local branch and the `git worktree remove --force <scratch>` and `git branch -D <branch>` commands that remove it; run them, then run `/codeo:init #<N>` again. Contributors to codeo can check a dossier's shape with `bash scripts/dossier-check.sh .codeo/<N>` (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+
+**A card that is not Ready.** This applies when the project has a board.
+
+- **Symptom.** `/codeo:init` stops and names what the board script printed for the issue: `none`, `unset` or a column before Ready.
+- **Cause.** `/codeo:init` starts only an issue whose card is in the Ready column of the board named by `board.gateProject`. `none` means the issue is not on the board; `unset` means it has no status; an earlier column means nobody has said it is workable yet.
+- **Fix.** Run `/codeo:triage` and choose *mark Ready* for the issue, or move the card to Ready by hand, then run `/codeo:init #<N>` again. If the script fails because the token is refused, run `gh auth refresh -s project`. If the board has no column called Ready, set `board.statuses.ready` to the column you use. In a hosted session the check may print `unavailable`; `/codeo:init` notes that and goes on.
+
+### Checks from /codeo:doctor
+
 `/codeo:doctor` prints one `ok` or `fail` line per check and reports every failure. Each entry below is one check and the fix its own message gives. Paths in the messages below are your project's own.
 
 **config.** `config.json not found at …/.codeo/config.json` means the project has no codeo state: run `/codeo:setup`. An `invalid JSON` message means the file does not parse; fix the file with `jq . .codeo/config.json`, which points at the error. A `schema … is newer than this plugin supports (1); update the plugin` message means the project was set up by a newer codeo: run the install command to get the latest release.
