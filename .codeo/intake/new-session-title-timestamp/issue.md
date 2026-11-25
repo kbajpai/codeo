@@ -7,7 +7,7 @@
 
 ## Where this stands
 
-Q&A pass, Q1-Q4 open.
+Draft at the review gate; Q1-Q7 answered.
 
 ## Questions
 
@@ -24,3 +24,20 @@ UTC (containers usually run in UTC), or the container's local time zone?
 
 ### Q4. Exact format?
 `YYYYMMDDHHMM` as asked (`202611251842`), or a readable form such as `2026-11-25 18:42`?
+
+**Answers (2026-11-25):** Q1: keep the session id, prefixed with a 2-digit hex number. Q2-Q4 (moment, UTC, `YYYYMMDDHHMM`) were answered, then superseded by Q5.
+
+### Q5. What does the hex number count?
+**Answer:** it replaces the timestamp, so the title is `codeo [home] · 1A-2cb71525`.
+
+### Q6. What scope does the counter cover?
+**Answer:** per container.
+
+### Q7. Which sessions get a new number, and what happens after FF?
+**Answer:** every new session id gets a new number (fresh start, /clear, fork); a resume keeps its number; after FF it wraps to 00.
+
+## Draft
+
+Title: Session title: prefix the session id with a per-container hex sequence number (`codeo [home] · 1A-2cb71525`)
+Type: none (user-owned repository has no Issue Types). Labels: `enhancement`, `priority: low` (rubric "low": polish nobody is waiting on).
+Body: see `body.md`.
