@@ -233,6 +233,7 @@ step_contains "step 17 prints one delete per branch it read" 17 'one `git push o
 step_contains "step 17 says when no live-signal branch is on origin" 17 'no live-signal branch is on `origin`'
 step_contains "step 17 falls back to the saved machine label" 17 'codeo-live-machine'
 step_contains "step 17 says the branch stays only when a beat pushed one" 17 'only when a beat pushed'
+step_contains "step 17 skips a printed name outside the allowlist" 17 'print no command for it and say it was skipped'
 step_contains "step 17 names /codeo:cleanup for the exact command" 17 'prints it with the branch'"'"'s exact name'
 step_order "the web branch paragraph follows the host-workflow bullets" 17 'on exit 1, 2 or 4' 'git push origin --delete codeo-live/<issue>/<machine>'
 step_order "the web branch paragraph comes before the finished-exit text" 17 'git push origin --delete codeo-live/<issue>/<machine>' 'On the finished exit only'

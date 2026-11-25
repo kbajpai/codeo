@@ -550,7 +550,9 @@ is the container the message names.
     `git ls-remote --heads origin 'codeo-live/<issue>/*'`. For each branch it prints whose name is
     `codeo-live/<issue>/` followed only by letters, digits, `.`, `_` or `-`, say it stays on `origin` and print
     one `git push origin --delete <branch>` per branch it printed, with that exact name, run outside the hosted session. When it prints
-    none, say no live-signal branch is on `origin`. When the read fails, say so and give the fallback: the
+    none, say no live-signal branch is on `origin`; for a printed name that is outside that set,
+    print no command for it and say it was skipped, and if every printed name was skipped say a live-signal branch
+    with an unexpected name is on `origin` and to look at it by hand. When the read fails, say so and give the fallback: the
     machine label is saved in `<git dir>/codeo-live-machine` (`git rev-parse --git-path codeo-live-machine`;
     `CODEO_MACHINE` wins when set), and the command is `git push origin --delete codeo-live/<issue>/<machine>`.
     `/codeo:cleanup` prints it with the branch's exact name once the issue is finished.
