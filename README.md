@@ -35,7 +35,7 @@ codeo is an agent-workflow plugin for Claude Code. It is for engineers who work 
 - `gh`, the GitHub CLI; board use also needs `gh project`, which reads GraphQL, so the token must be allowed to use it
 - `claude`, Claude Code
 
-The installer checks for all five in one run and names every one that is missing or too old. It installs none of them: use your system's package manager, then run it again. `/codeo:doctor` checks them again once a project is set up.
+`install.sh` and `/codeo:doctor` both check all five tools. The installer checks them in one run and names every one that is missing or too old. It installs none of them: use your system's package manager, then run it again.
 
 ## Installing
 
@@ -84,18 +84,19 @@ install: nothing changed - codeo v1.0.9, user scope, superpowers 7.0.2
 Installed plugins:
 
   ❯ codeo@codeo
-### Options
+    Version: 1.0.9
+    Scope: user
+    Status: ✔ enabled
 
-`--version` installs a release other than the latest (`v1.0.8`, or `1.0.8`). The installer checks the tag exists before it changes anything. Asking for a different version than the one installed replaces it; [docs/updating.md](docs/updating.md) shows what that prints, including a downgrade:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.8
-```
-
+  ❯ superpowers@superpowers-marketplace
+    Version: 7.0.2
+    Scope: user
     Status: ✔ enabled
 ```
 
-Two options follow `bash -s --`. `--version` picks a release other than the latest (`v1.0.8`, or `1.0.8`); the installer checks the tag exists before it changes anything, and a run that asks for a different version than the one installed replaces it (its output is in [docs/updating.md](docs/updating.md)):
+### Options
+
+`--version` installs a release other than the latest (`v1.0.8`, or `1.0.8`). The installer checks the tag exists before it changes anything. Asking for a different version than the one installed replaces it; [docs/updating.md](docs/updating.md) shows what that prints, including a downgrade:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.8
