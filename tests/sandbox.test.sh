@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guards .sbx/codeo-sandbox.sh, the host-side script that starts, opens and ends one Docker Sandboxes
-# (sbx) sandbox per GitHub issue on a Linux or WSL2 host. Each case is a function named in the final
+# (sbx) sandbox per GitHub issue on a Linux, macOS or WSL2 host. Each case is a function named in the final
 # cases=( ... ) array; add a case by writing a function and listing it. The script runs with PATH
 # holding only stub sbx, sbx.exe, git, git.exe and code (plus /usr/bin and /bin), against a scratch
 # directory whose calls file logs every stub call and whose sandboxes file is what the stub `sbx ls`
@@ -1266,6 +1266,28 @@ docs_the_hand_off_names_the_third_route() {
     grep -Fq '.sbx/README.md' "$repo/.devcontainer/README.md" || fail "the dev container README does not point at .sbx/README.md"
 }
 
+docs_nothing_says_never_macos() {
+    local hits
+    hits=$(grep -rIn 'never macOS' "$repo/README.md" "$repo/.sbx" "$repo/.devcontainer" "$repo"/docs/*.md || true)
+    [[ -z "$hits" ]] || fail "a page still says never macOS: $hits"
+}
+
+docs_nothing_says_a_sandbox_needs_linux_or_wsl2_only() {
+    ! grep -Fq 'a sandbox needs Linux or WSL2' "$repo/.devcontainer/README.md" || fail "the dev container README still says a sandbox needs Linux or WSL2"
+}
+
+docs_sbx_readme_says_what_macos_needs() {
+    local f="$repo/.sbx/README.md" s
+    for s in 'brew install docker/tap/sbx' 'Apple silicon' 'macOS 14' 'brew install bash'; do
+        grep -Fq -- "$s" "$f" || fail "the sbx README lacks '$s'"
+    done
+    grep -Fxq '## On macOS' "$f" || fail "the sbx README lacks the '## On macOS' heading"
+}
+
+docs_changelog_names_the_macos_sandbox() {
+    grep -Eq '^- .*macOS.*sandbox.*\(#176' "$repo/CHANGELOG.md" || fail "no CHANGELOG bullet for the macOS sandbox"
+}
+
 issue_confirms_then_creates_then_adds_the_sandbox_row() {
     sb_setup trk_create
     sb_run issue 152 fix/x
@@ -1502,6 +1524,10 @@ cases=(
     docs_changelog_names_the_sandbox_route
     docs_changelog_names_the_sandbox_lock
     docs_the_hand_off_names_the_third_route
+    docs_nothing_says_never_macos
+    docs_nothing_says_a_sandbox_needs_linux_or_wsl2_only
+    docs_sbx_readme_says_what_macos_needs
+    docs_changelog_names_the_macos_sandbox
     issue_confirms_then_creates_then_adds_the_sandbox_row
     issue_passes_yes_to_confirm
     refusal_leaves_no_clone

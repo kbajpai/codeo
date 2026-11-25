@@ -6,6 +6,7 @@ Config schema: 1 (unchanged)
 Shared state: none
 Safe to bump mid-workflow: yes
 
+- The sbx issue sandbox runs on macOS 14 or later on Apple silicon: `.sbx/codeo-sandbox.sh` checks for `sbx`, `git` and `code` there and names the Homebrew command for each that is missing, and the READMEs say what a sandbox needs on macOS and no longer say "never macOS" (#176).
 - The README is restructured: Start here, a step-by-step first workflow, a Configuration table of every key, and troubleshooting for a role-guard refusal, a stuck or foreign lock, an interrupted step and a card that is not Ready. The update, replace and restore walk-throughs moved to `docs/updating.md`, and the home-checkout, guard and tracking-comment text to `docs/home-checkout.md`. `tests/readme.test.sh` checks the commands, paths and config keys the README names. Nothing the plugin does changes (#171).
 
 ## v1.0.9 — 2026-11-25

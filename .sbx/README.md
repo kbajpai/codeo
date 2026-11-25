@@ -4,9 +4,9 @@ An issue's work can run in a Docker Sandboxes (sbx) sandbox instead of a dev con
 
 ## Prerequisites
 
-The host is Linux or WSL2 (never macOS) with bash 4.3 or later, `git` and `curl`.
+The host is Linux, macOS or WSL2 with bash 4.3 or later, `git` and `curl`.
 
-- `sbx` v0.53.0, or `sbx.exe` reachable on `PATH` from WSL2. The script uses `sbx`, else `sbx.exe`; `CODEO_SBX` names the program instead.
+- `sbx` v0.53.0, or `sbx.exe` reachable on `PATH` from WSL2. The script uses `sbx`, else `sbx.exe`; `CODEO_SBX` names the program instead. On macOS, `sbx` needs macOS 14 (Sonoma) or later on Apple silicon (Intel Macs are not on Docker's list), and no Docker Desktop: `brew trust docker/tap`, then `brew install docker/tap/sbx` (Homebrew installed v0.54.1 on the checked Mac).
 - `sbx login`.
 - `sbx secret set github --command 'gh auth token'`. The sandbox's `gh` holds a placeholder token; inside the sandbox `gh auth token` and `GH_TOKEN` print it and a push works with no login; where the real token is held was not shown.
 - `sbx setup ssh` (experimental). It makes the `*.sbx` hosts resolve, which `open` needs.
@@ -37,6 +37,18 @@ The `codeo` command runs this script for you: `codeo issue <N> [<branch>] --sand
 
 Run the commands from the directory that holds the downloaded file. The clone `codeo-<N>` is made in that directory. When `CODEO_SBX_IMAGE` is set, the script reads the image pin from the file it names, and refuses when that file is missing. Otherwise it reads `codeo-<N>/.sbx/claude-image` in the clone, then `.sbx/claude-image` on `origin/HEAD` of the clone (`git -C codeo-<N> show origin/HEAD:.sbx/claude-image`). No file beside the script is read. `CODEO_REPO_URL` names another repository to clone (default `https://github.com/kbajpai/codeo.git`), and `CODEO_CODE` names the VS Code program `open` runs, in place of `code`.
 
+## On macOS
+
+The script runs on a Mac with these additions to the prerequisites above:
+
+- The stock bash is 3.2. Run `brew install bash` and make it the first `bash` on `PATH`.
+- `codeo` also needs `flock`: `brew install flock` (see *Installing the `codeo` command* in `.devcontainer/README.md`).
+- `code` must be on `PATH` for `open`: in VS Code, run *Shell Command: Install 'code' command in PATH*, or set `CODEO_CODE` to the program.
+- Over SSH, `sbx login` does not open a browser from the SSH shell. It prints a one-time code and the URL `https://login.docker.com/activate`; open the URL on any machine and enter the code. It first stopped with `macOS Keychain denied access` until the login keychain was unlocked with `security -v unlock-keychain ~/Library/Keychains/login.keychain-db` (see *The keychain over SSH on macOS* in `.devcontainer/README.md`, `#the-keychain-over-ssh-on-macos`). It then signed in and printed the warning `schedule credential exchange failed`, the same warning as on Windows, which did not block.
+- `sbx secret set github --command 'gh auth token'` reading `gh`'s token from the keychain is untried.
+- `sbx setup ssh` on a Mac is untried.
+- `codeo open` starting VS Code on the Mac itself, rather than on the machine you SSH from, is untried.
+
 ## Commands
 
 | Command | `codeo` form | What it does |
@@ -50,7 +62,7 @@ Run the commands from the directory that holds the downloaded file. The clone `c
 
 ```mermaid
 sequenceDiagram
-    participant E as Engineer (Linux or WSL2 bash)
+    participant E as Engineer (Linux, macOS or WSL2 bash)
     participant S as codeo-sandbox.sh
     participant G as host git / git.exe
     participant X as sbx or sbx.exe

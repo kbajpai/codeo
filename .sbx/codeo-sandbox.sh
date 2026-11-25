@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Starts, opens and ends one Docker Sandboxes (sbx) sandbox per GitHub issue. It runs on a Linux or
-# WSL2 host (never macOS) under bash 4.3 or later, and drives sbx, or sbx.exe from WSL2.
+# Starts, opens and ends one Docker Sandboxes (sbx) sandbox per GitHub issue. It runs on a Linux, macOS
+# or WSL2 host under bash 4.3 or later, and drives sbx, or sbx.exe from WSL2.
 #
 #   codeo-sandbox.sh issue <N> <branch> [--yes]
 #   codeo-sandbox.sh open <N>
