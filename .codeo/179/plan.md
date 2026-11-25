@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored, not drafted: Q1-Q4 are open. Each has my pick; the draft waits for the answers.
+Q1-Q4 are answered. The draft is at `.codeo/179/plan-draft.md`, awaiting your approval at the review gate; nothing is written under `docs/plans/` yet.
 
 What I found (read at `92bbe45`):
 
@@ -43,6 +43,7 @@ My calls, stated so they can be corrected (not questions):
 - **C — a new page `docs/role-guard.md`.** Cleanest to link to, but it splits the guard across four pages and adds a row to *More documentation*.
 
 **Answer:**
+A — a new section in `docs/home-checkout.md`, after *The guard*. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q2 — How much does the adoption text promise?
 
@@ -52,6 +53,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — A, plus a copy recipe.** It lists the files to copy (`role.sh`, `container-name.sh`, the eight overlay sections), what to set (`codename`, `baseBranch`) and the folder names it then expects. More useful on day one, but it documents a path no test runs outside this repository.
 
 **Answer:**
+A — the contract, with codeo's own guard as the worked example. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q3 — "Setting a project up": how are the three steps repaired?
 
@@ -61,6 +63,7 @@ My calls, stated so they can be corrected (not questions):
 - **B — keep the numbered list and indent each fence and continuation paragraph three spaces under its item.** This is the standard form and keeps the look. But `tests/readme.test.sh` (`prose`) and four `awk` filters in `tests/install.test.sh` detect a fence only at column 0 (`/^```/`), so an indented fence's contents would be read as prose; both tests would need their fence detection widened in the same change.
 
 **Answer:**
+A — `###` headings for the three steps. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ### Q4 — The two entries that are not doctor checks: where do they go?
 
@@ -70,10 +73,11 @@ My calls, stated so they can be corrected (not questions):
 - **B — leave them where they are, and reword the doctor intro** to say the last two entries are not doctor checks, labelling each. One heading fewer, but the group's name stays wrong for two of its entries.
 
 **Answer:**
+A — a third group with its own heading, `### Installing and the pin`. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
 ## Notes
 
-None yet.
+None.
 
 ## Outcome
 
@@ -82,3 +86,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-25 — explored at `92bbe45`; Q1-Q4 raised · cost: 2m · fable-5-2 103k in + 728k cached / 12k out
+- 2026-11-25 — Q1-Q4 answered (the picks); draft written to .codeo/179/plan-draft.md, awaiting approval · cost: 13m · fable-5-2 108k in + 990k cached / 13k out · sonnet-5-5 109k in + 156k cached / 9k out
