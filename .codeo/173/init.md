@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Drafted, awaiting the engineer's approval at the review gate. Branch to be cut off `origin/main` at d097737; not pushed yet.
+Branch `docs/173-close-161-leftovers-release-checklist` cut off `main` at d097737 and pushed. Next step: `/codeo:plan` in the issue's container.
 
 ## Questions
 
