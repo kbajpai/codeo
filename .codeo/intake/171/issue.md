@@ -1,14 +1,14 @@
-# Issue: README as a complete guide to installing, setting up, using and troubleshooting codeo — issue
+# Issue #171 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/171 |
 | Branch | none |
 | Updated | 2026-11-25 |
 
 ## Where this stands
 
-Round 1 answered; draft below awaits approval.
+Filed as #171.
 
 ## Problem as restated
 
