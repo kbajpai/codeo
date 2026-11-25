@@ -160,18 +160,15 @@ Updating, replacing and restoring are in [Updating](#updating).
 
 ## Setting a project up
 
-Two slash commands, run once in the project's repository, in Claude Code:
+Run these once, in the project's git repository, inside Claude Code, after installing the plugin. Each skill runs a script, and the script's own output is what the skill reports.
 
-1. `/codeo:setup` creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name.
-2. `/codeo:doctor` checks that everything the workflow needs is in place and reports every failure, not only the first. Fix what it reports (see *Troubleshooting*) and run it again until it ends clean.
-
-Both skills run a script, and the script's own output is what the skill reports. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
+1. **Run `/codeo:setup`.** It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
 
 ```
 codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doctor next
 ```
 
-That file reads:
+   That file reads:
 
 ```json
 {
@@ -186,7 +183,19 @@ That file reads:
 }
 ```
 
-and `doctor` with a logged-in `gh` and superpowers installed prints:
+2. **Edit `.codeo/config.json`.** Every key is in [Configuration](#configuration). The one thing most projects set first is `suites`, the build and test commands `/codeo:implement` and `/codeo:qc` run. A suite names itself and gives its commands:
+
+```json
+{
+  "suites": [
+    { "name": "app", "build": "npm run build", "test": "npm test" }
+  ]
+}
+```
+
+   `board`, `codename`, `plugin`, `models` and everything else optional are written by hand; setup leaves them out.
+
+3. **Run `/codeo:doctor`.** It checks that everything the workflow needs is in place and reports every failure, not only the first. Fix what it reports (see [Troubleshooting](#troubleshooting)) and run it again until it ends clean. With a logged-in `gh` and superpowers installed it prints:
 
 ```
 ok config: config.json is valid
@@ -202,11 +211,11 @@ ok overlays: none
 ok superpowers: installed
 ```
 
-Commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works on the project. The `suites` array holds the build and test commands `/codeo:implement` and `/codeo:qc` run; `/codeo:doctor` fails a suite whose command does not resolve.
+Then commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works on the project.
 
 ### Running on the host
 
-The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` in a clone named `<codename>-home`. A project with its own role guard refuses a skill outside its checkout.
+The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` in a clone named `<codename>-home`. A project with its own role guard refuses a skill outside its checkout. The project needs a GitHub repository whose `origin` remote points at it; a project board is optional.
 
 See [docs/home-checkout.md](docs/home-checkout.md) for the home checkout, the guard and the tracking comment, and [.devcontainer/README.md](.devcontainer/README.md) for the dev container.
 
