@@ -87,7 +87,17 @@ exit 0
 STUB
         chmod +x "$sb_dir/bin/$n"
     done
+    echo Linux >"$sb_dir/os"
+    cat >"$sb_dir/bin/uname" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+if [[ "$1" == -s ]]; then cat "$d/os"; else exec /usr/bin/uname "$@"; fi
+STUB
+    chmod +x "$sb_dir/bin/uname"
 }
+
+# sb_macos: make the stub uname print Darwin for the current sb_dir.
+sb_macos() { echo Darwin >"$sb_dir/os"; }
 
 # The Windows trust path carries the distro name; a case that needs it absent sets SB_NODISTRO.
 export WSL_DISTRO_NAME=${WSL_DISTRO_NAME:-Ubuntu}
@@ -142,6 +152,48 @@ no_sbx_is_one_line() {
     ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
     [[ "$sb_err" == "codeo-sandbox: sbx is not installed"* ]] || fail "stderr was: $sb_err"
     [[ "$sb_err" != *$'\n'* ]] || fail "stderr is more than one line"
+}
+
+no_sbx_on_macos_names_the_brew_install() {
+    sb_setup nosbxmac
+    sb_macos
+    rm "$sb_dir/bin/sbx" "$sb_dir/bin/sbx.exe"
+    sb_run open 1
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$sb_err" != *$'\n'* ]] || fail "stderr is more than one line"
+    [[ "$sb_err" == "codeo-sandbox: sbx is not installed"* ]] || fail "stderr was: $sb_err"
+    local want
+    for want in 'brew install docker/tap/sbx' 'macOS 14' 'Apple silicon' 'codeo issue <N> --container'; do
+        [[ "$sb_err" == *"$want"* ]] || fail "stderr lacks $want: $sb_err"
+    done
+    [[ "$sb_err" != *WSL2* && "$sb_err" != *sbx.exe* ]] || fail "stderr names WSL2 or sbx.exe: $sb_err"
+}
+
+no_sbx_off_macos_keeps_the_wsl2_message() {
+    sb_setup nosbxlinux
+    rm "$sb_dir/bin/sbx" "$sb_dir/bin/sbx.exe"
+    sb_run open 1
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$sb_err" == *"from WSL2 make sbx.exe reachable on PATH"* ]] || fail "stderr was: $sb_err"
+}
+
+codeo_sbx_on_macos_skips_the_message() {
+    sb_setup sbxmacoverride
+    sb_macos
+    mv "$sb_dir/bin/sbx" "$sb_dir/mysbx"
+    rm "$sb_dir/bin/sbx.exe"
+    SB_SBX="$sb_dir/mysbx" sb_run open 1
+    ((sb_rc == 1)) || fail "exited $sb_rc, not 1"
+    [[ "$sb_err" == *"codeo-1 does not exist"* ]] || fail "stderr was: $sb_err"
+    [[ "$sb_err" != *"sbx is not installed"* ]] || fail "named the install: $sb_err"
+}
+
+a_failing_uname_is_not_macos() {
+    sb_setup unamefail
+    printf '#!/bin/bash\nexit 1\n' >"$sb_dir/bin/uname"
+    rm "$sb_dir/bin/sbx" "$sb_dir/bin/sbx.exe"
+    sb_run open 1
+    [[ "$sb_err" == *"from WSL2 make sbx.exe"* ]] || fail "stderr was: $sb_err"
 }
 
 # sb_pick: source the script and print the program pick_sbx chose and the windows flag.
@@ -1296,6 +1348,10 @@ cases=(
     usage_without_arguments_exits_2
     bad_numbers_and_branches_exit_2_before_any_call
     no_sbx_is_one_line
+    no_sbx_on_macos_names_the_brew_install
+    no_sbx_off_macos_keeps_the_wsl2_message
+    codeo_sbx_on_macos_skips_the_message
+    a_failing_uname_is_not_macos
     sbx_is_preferred_over_sbx_exe
     codeo_sbx_overrides_both
     sandbox_state_reads_the_ls_rows

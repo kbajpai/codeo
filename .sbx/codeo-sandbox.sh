@@ -63,8 +63,12 @@ usage() {
     exit 2
 }
 
+# host_is_macos: succeed when uname -s prints Darwin; a missing or failing uname is not macOS.
+host_is_macos() { [[ "$(uname -s 2>/dev/null || true)" == Darwin ]]; }
+
 # pick_sbx: set sbx to the program to run (CODEO_SBX, else sbx, else sbx.exe) and windows to 1 when
-# its name ends in .exe, else 0.
+# its name ends in .exe, else 0. With none of them, die naming where to get sbx: brew on macOS, else
+# the WSL2 hint.
 pick_sbx() {
     if [[ -n "${CODEO_SBX:-}" ]]; then
         sbx=$CODEO_SBX
@@ -73,6 +77,9 @@ pick_sbx() {
     elif command -v sbx.exe >/dev/null 2>&1; then
         sbx=sbx.exe
     else
+        if host_is_macos; then
+            die "sbx is not installed: on macOS 14 or later with Apple silicon, run \"brew trust docker/tap\" and \"brew install docker/tap/sbx\", then \"sbx login\"; or work the issue in a dev container with \"codeo issue <N> --container\""
+        fi
         die "sbx is not installed: install Docker Sandboxes (sbx), or from WSL2 make sbx.exe reachable on PATH"
     fi
     if [[ "${sbx##*/}" == *.exe ]]; then windows=1; else windows=0; fi
