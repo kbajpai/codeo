@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1. Nothing is built yet: Q6 ('177 also changes
+Round 2, after a send-back from `/codeo:qc` round 1. Nothing is built yet: Q6 (#177 also changes
 `CHANGELOG.md`) and Q7 (prove `codeo open` with VS Code, or accept it as shown to stop cleanly) are
 open. Once they are answered this round fixes qc findings F2-F8 (README wording, the Command Line
 Tools note, one non-hermetic test, the T14 count, the CHANGELOG bullet, the policy-init step order)
