@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The code and text the issue names are read (line numbers below are today's; the README restructure of #171 moved the issue's). Three choices change what the plan's tasks are, Q1-Q3; nothing is drafted until they are answered. No other workflow is in flight (`inflight.sh --except 173`), so there is no overlap to ask about yet.
+Planned. Q1-Q3 answered; the plan is at `docs/plans/2026-11-25-close-161-leftovers-173.md`, awaiting the engineer's commit, then `/codeo:implement`.
 
 ## Questions
 
@@ -62,6 +62,23 @@ Not known; word it without the claim. Given in the session's question dialog on 
 - **README flowchart and paragraph** (`.devcontainer/README.md:197, 214-216`): "was running" becomes "not started by `codeo` as far as it knows (running, or `docker ps -a` failed)", and "A container that `codeo` started itself is read once" becomes "knows it started", since with no listing `started` stays 0 and the container is restarted and read twice.
 - **Proof of done** for every task is the `shell` suite (`bash tests/run.sh`; it has no single-test filter).
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-25-close-161-leftovers-173.md` (unstaged, awaiting the engineer's commit) |
+| Shape | A plan under `docs/plans/`, six tasks, one pull request; no reference doc, since nothing here is a standing decision. Follows `docs/plans/2026-11-24-documentation-leftovers-154-146-161.md`. |
+
+**Decisions.**
+- **Q1 — report a failed stop.** `stop_started` prints `codeo: could not stop codeo-<N> again; it is left running` on stderr; exit statuses and refusal lines unchanged. Rejected: document the silence only (misses "without saying so"); change the exit status or message (out of scope: redesigning the check).
+- **Q2 — matcher `startup|resume|fork`** on the install hook's `SessionStart` group, the value the session-title group beside it carries. Rejected: `startup` only; leave it and document it. The skip check is rewritten to read `claude plugin list --json` as `install.sh` does: skip only when `codeo@codeo` and some `superpowers@*` are installed and enabled at user scope; any read failure runs `install.sh`.
+- **Q3 — no claim on when `/codeo:*` commands load** in a hosted session; the hook comment says what the hook does and `CONTRIBUTING.md` says to start a new session if the commands are not listed. Rejected: asserting same-session or next-session loading (neither verified); a hosted-session verification task.
+- **Without a question.** The released v1.0.9 #154 bullet and the v1.0.8 `Shared state:` line are corrected in place, named under `## Unreleased`; release notes and tags untouched. The hook is described in `CONTRIBUTING.md`, not the adopter README.
+
+**Documentation pages the plan changes:** `.devcontainer/README.md` (removal flowchart, two paragraphs), `CONTRIBUTING.md` (new `## Hosted sessions`), `CHANGELOG.md`, `docs/release-checklist.md` (step 6).
+
+**Intake questions resolved here:** init's open item F8 (whether `/codeo:*` commands load in the same session) is not verified and is worded around, per Q3; `issue.md` Q2 (documentation-only fix acceptable?) is answered by Q1 above: the code reports.
+
 ### Footprint
 
 ```
@@ -71,10 +88,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-25 — Q1-Q3 raised · cost: 1m · fable-5-2 72k in + 382k cached / 4k out
+- 2026-11-25 — planned: docs/plans/2026-11-25-close-161-leftovers-173.md · cost: 12m · fable-5-2 53k in + 925k cached / 18k out · sonnet-5-5 135k in + 185k cached / 1k out
