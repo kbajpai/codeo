@@ -155,6 +155,15 @@ files, raised as Q4. No exclusive resource is configured, so none can overlap.
   decision. Rejected: a bash-version guard in the script, a refusal on Intel Macs when `sbx` is
   present, an `open -a` fallback for VS Code (each is untried or already covered by documentation).
 
+### Footprint
+
+```
+files:      .sbx/codeo-sandbox.sh, .sbx/README.md, .devcontainer/codeo, .devcontainer/README.md, tests/sandbox.test.sh, docs/dev-environment-sbx-evaluation.md, CHANGELOG.md, docs/plans/2026-11-25-sbx-sandbox-macos-176.md, .codeo/176/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
