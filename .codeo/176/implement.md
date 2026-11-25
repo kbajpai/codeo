@@ -301,6 +301,7 @@ would hold the reword until it merges, and re-scoping would leave the overstated
 CHANGELOG bullet unchanged and fix the rest.
 
 **Answer:**
+Proceed and coordinate (the engineer, in conversation, 2026-11-25).
 
 ### Q7 — Prove `codeo open` with VS Code on the Mac, or accept it as shown to stop cleanly?
 
@@ -321,6 +322,9 @@ criterion 3 with it.
 `codeo rm 176 --sandbox` so its output is on record · no preference, you pick.
 
 **Answer:**
+Yes, I was able to open code. I had to install "code" command for VS Code (the engineer, in conversation, 2026-11-25).
+
+My reading, labelled as mine: with VS Code's `code` command on `PATH`, `codeo open 176 --sandbox` opened VS Code on the Mac, so the `open` clause of criterion 3 is shown. The engineer did not say whether the window connected to `codeo-176.sbx` or where it opened (at the Mac's screen or from the SSH session), and `codeo rm`'s own output was still not pasted; T14 and the README state exactly that and no more.
 
 ## Notes
 
