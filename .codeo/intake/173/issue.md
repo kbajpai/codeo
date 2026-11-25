@@ -1,6 +1,6 @@
-# Issue new-close-161-leftovers — issue
+# Issue #173 — issue
 
-Filed from `/codeo:triage` 2026-11-25 Q1 (`qc:161:F4-F7-preexisting`) and Q2 (`qc:161:F5-F6-F8`), consolidated into one issue at the engineer's request. Duplicate search for `stop_started` finds only closed #154; #163, #166, #168 do not cover these. Claims re-checked against `main`: the `stop_started` comment and body (`.devcontainer/codeo:474-479`, "a failing stop is ignored"), README `:187` and flowchart `:205-206`, the CHANGELOG `## Unreleased` bullet at `:18`, and `docs/release-checklist.md:74-76` are all still as quoted.
+Filed as #173 (https://github.com/kbajpai/codeo/issues/173). Filed from `/codeo:triage` 2026-11-25 Q1 (`qc:161:F4-F7-preexisting`) and Q2 (`qc:161:F5-F6-F8`), consolidated into one issue at the engineer's request. Duplicate search for `stop_started` finds only closed #154; #163, #166, #168 do not cover these. Claims re-checked against `main`: the `stop_started` comment and body (`.devcontainer/codeo:474-479`, "a failing stop is ignored"), README `:187` and flowchart `:205-206`, the CHANGELOG `## Unreleased` bullet at `:18`, and `docs/release-checklist.md:74-76` are all still as quoted.
 
 ## Questions
 
