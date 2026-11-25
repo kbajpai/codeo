@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q4 are answered. The draft is at `.codeo/179/plan-draft.md`, awaiting your approval at the review gate; nothing is written under `docs/plans/` yet.
+Q1-Q4 are answered and the plan is approved and saved at `docs/plans/2026-11-25-close-171-leftovers-179.md` (unstaged). `overlap.sh` found #177 listing three of the same files (`docs/handoff.md`, `docs/home-checkout.md`, `tests/readme.test.sh`), so Q5-Q7 are open; `## Outcome` stays pending until they are answered. I recommend proceeding on all three: the edits are in different passages.
 
 What I found (read at `92bbe45`):
 
@@ -75,6 +75,36 @@ A — `###` headings for the three steps. (Engineer: "go with your picks", 2026-
 **Answer:**
 A — a third group with its own heading, `### Installing and the pin`. (Engineer: "go with your picks", 2026-11-25; given in the conversation, recorded here.)
 
+### Q5 — Overlap with #177 on `glob:docs/handoff.md`: proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh` reads this plan's footprint against every other pushed branch. #177 (`docs/177-close-163-166-168-leftovers`, assignee kbajpai, step `plan`, waiting for `/codeo:implement`) lists `glob:docs/handoff.md` in its footprint, and a second branch editing the same file merges with conflicts or silently reverts a line. #177 edits `docs/handoff.md` only "where it states the old behaviour" (its plan's *Documentation pages the plan changes*); this plan changes line 3 alone.
+**Options:**
+- **A — proceed and coordinate (my pick).** Different passages: this plan edits line 3 ("Six pipeline skills"); #177 edits the passages about close and cleanup behaviour. Git merges both without a conflict.
+- **B — sequence after #177.** This plan waits until #177 merges, then is rebased; `sequenced:` in the footprint then reads `177`.
+- **C — re-scope.** Drop the one-line skill-count fix from this plan and hand it to #177's author. That leaves criterion 6 of #179 unmet here.
+
+**Answer:**
+
+### Q6 — Overlap with #177 on `glob:docs/home-checkout.md`: proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh` reads this plan's footprint against every other pushed branch. #177 (`docs/177-close-163-166-168-leftovers`, assignee kbajpai, step `plan`, waiting for `/codeo:implement`) lists `glob:docs/home-checkout.md` in its footprint, and a second branch editing the same file merges with conflicts or silently reverts a line. #177 edits `docs/home-checkout.md` lines 9 and 66 (the `jq` and `live-signal.sh` sentence, and the sandbox-versus-container sentence); this plan adds a new section after *The guard*, below both.
+**Options:**
+- **A — proceed and coordinate (my pick).** Different regions: #177 edits *The home checkout*; this plan adds `## Adopting the guard in your project` after *The guard*. Whichever merges second rebases without touching the other's lines.
+- **B — sequence after #177.** This plan waits until #177 merges, then is rebased; `sequenced:` in the footprint then reads `177`.
+- **C — re-scope.** Move the adoption section to `docs/extension-points.md` (Q1 option B), which #177 does not touch. That moves it out of the page `tests/readme.test.sh` already checks.
+
+**Answer:**
+
+### Q7 — Overlap with #177 on `glob:tests/readme.test.sh`: proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh` reads this plan's footprint against every other pushed branch. #177 (`docs/177-close-163-166-168-leftovers`, assignee kbajpai, step `plan`, waiting for `/codeo:implement`) lists `glob:tests/readme.test.sh` in its footprint, and a second branch editing the same file merges with conflicts or silently reverts a line. #177 adds pins to `tests/readme.test.sh` for its home-checkout wording (its plan: "Each wording fix gets a pin written first"); this plan adds seven checks and changes `slugs()` and the header.
+**Options:**
+- **A — proceed and coordinate (my pick).** Different hunks: this plan changes `slugs()`, the header comment and appends checks after `host-command`; #177's pins land in the same block, so the second to merge has a trivial conflict at the end of the file, resolved by keeping both.
+- **B — sequence after #177.** This plan waits until #177 merges, then is rebased; `sequenced:` in the footprint then reads `177`.
+- **C — re-scope.** Split this plan's test changes out of the file, which loses the tests-first order Task 1 relies on.
+
+**Answer:**
+
 ## Notes
 
 ### Footprint
@@ -91,3 +121,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-25 — explored at `92bbe45`; Q1-Q4 raised · cost: 2m · fable-5-2 103k in + 728k cached / 12k out
 - 2026-11-25 — Q1-Q4 answered (the picks); draft written to .codeo/179/plan-draft.md, awaiting approval · cost: 13m · fable-5-2 108k in + 990k cached / 13k out · sonnet-5-5 109k in + 156k cached / 9k out
+- 2026-11-25 — plan approved and written; footprint committed; overlap with #177 raised as Q5-Q7 · cost: 34m · fable-5-2 108k in + 990k cached / 13k out · sonnet-5-5 122k in + 1.2M cached / 14k out
