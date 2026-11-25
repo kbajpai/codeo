@@ -2,15 +2,28 @@
 # Guards README.md, docs/updating.md and docs/home-checkout.md as the complete guide:
 #   commands         every /codeo:<name> is a directory under skills/
 #   paths            every path-shaped word in a backticked span (.codeo/ docs/ scripts/ tests/ hooks/ lib/ skills/ .devcontainer/)
-#                    resolves to a file or directory; .codeo/active and .codeo/intake are allowed by name (gitignored)
+#                    resolves to a file or directory; .codeo/active and .codeo/intake are allowed by name (gitignored).
+#                    docs/plans/ and .codeo/config.json, which the README names for a user's project, resolve only
+#                    because codeo uses itself, so this check cannot catch a path a new project lacks
 #   links            every relative link resolves, and its #anchor is a GitHub slug of a heading in the target
+#   slugs            a self-check: repeated headings get -1, -2 as GitHub does (so a link to the second one resolves)
 #   config-keys      the Configuration table lists exactly the keys in known_keys below (a hand-kept list: a key the
 #                    code starts reading is added there by hand), and each key's last segment (its parent, for name,
 #                    paths, build and test) appears somewhere in the code, a weak check ("stacks" only in scripts/setup.sh, "read by nothing")
 #   sections         the "##" headings are the thirteen expected ones, in order; Contents links to all the others
-#   start-here       Start here links #installing, #setting-a-project-up and #your-first-workflow
+#   start-here       Start here links #installing, #setting-a-project-up and #your-first-workflow; its step 6 names
+#                    /codeo:close and says "again"
 #   walkthrough      Your first workflow has six "###" steps: issue, init, plan, implement, qc, close
 #   troubleshooting  the four new entries sit beside the existing doctor entries
+#   lock-entry       the stuck-lock entry names both groups: /codeo:init #<N> and "reconcile by hand" (with diverged)
+#   setup-steps      Setting a project up has ### 1. 2. 3. then Running on the host; no prose line starts with a space
+#   troubleshooting-groups
+#                    Troubleshooting has three ### groups in order; the doctor group's bold leads are the twelve
+#                    check names; the Installing and the pin group opens with its two entries; the intro says three groups
+#   adopting-guard   docs/home-checkout.md has "Adopting the guard in your project" (role-guard, .codeo/overlays/,
+#                    /codeo:doctor); the README role-guard entry and docs/extension-points.md link to it
+#   updating         docs/updating.md's Updating superpowers section says restart
+#   skill-count      docs/handoff.md line 3 starts "Six pipeline skills", docs/skills.md line 5 starts "Six skills"
 #   host-command     Installing points at the codeo command's section of .devcontainer/README.md; home-checkout.md and
 #                    .devcontainer/README.md carry the macOS notes (flock, the keychain over SSH)
 # Headings and backticked tokens inside a ``` fence do not count; commands inside a fence do.
@@ -54,8 +67,16 @@ section() {
 # slugs <file>: GitHub slugs of every heading of the file outside fences.
 slugs() {
     prose "$1" | sed -n 's/^#\{1,6\} \(.*\)$/\1/p' |
-        tr 'A-Z' 'a-z' | sed 's/[^a-z0-9 _-]//g; s/ /-/g'
+        tr 'A-Z' 'a-z' | sed 's/[^a-z0-9 _-]//g; s/ /-/g' |
+        awk '{ n = seen[$0]++; print (n ? $0 "-" n : $0) }'
 }
+
+# slugs self-check: a repeated heading gets -1, then -2, as on GitHub.
+slug_tmp=$(mktemp -d)
+printf '# x\n\n## x\n\n## x\n\n## y\n' >"$slug_tmp/h.md"
+slug_got=$(slugs "$slug_tmp/h.md" | tr '\n' ' ')
+rm -rf "$slug_tmp"
+[[ "$slug_got" == "x x-1 x-2 y " ]] || fail slugs "repeated headings give \"$slug_got\", want \"x x-1 x-2 y \""
 
 pages=("$readme" docs/updating.md docs/home-checkout.md)
 for p in "${pages[@]:1}"; do [[ -f $p ]] || fail pages "$p is missing"; done
@@ -155,6 +176,9 @@ start=$(section "$readme" "Start here")
 for a in installing setting-a-project-up your-first-workflow; do
     grep -qF "](#$a)" <<<"$start" || fail start-here "Start here does not link #$a"
 done
+step6=$(grep '^6\. ' <<<"$start" || true)
+[[ "$step6" == *'/codeo:close'* ]] || fail start-here "step 6 does not name /codeo:close"
+[[ "$step6" == *again* ]] || fail start-here "step 6 does not say \"again\""
 
 # walkthrough: six ### steps, in order.
 steps=$(section "$readme" "Your first workflow" | sed -n 's/^### \(.*\)$/\1/p')
@@ -177,6 +201,88 @@ for lead in "A role-guard refusal" "A lock that is stuck or not yours" "A step t
     board. priority-labels. ruleset. suites. deps. overlays. superpowers.; do
     grep -qF -- "**$lead" <<<"$trouble" || fail troubleshooting "no entry starting **$lead"
 done
+
+# entry <text> <lead>: the entry of a section that starts with **<lead>, up to the next bold-led line or ### heading.
+entry() {
+    awk -v l="**$2" 'index($0, l) == 1 { on = 1; print; next } /^\*\*/ || /^### / { on = 0 } on' <<<"$1"
+}
+
+# lock-entry: the stuck-lock entry names both groups.
+lock=$(entry "$trouble" "A lock that is stuck or not yours")
+if [[ -z "$lock" ]]; then
+    fail lock-entry "Troubleshooting has no entry **A lock that is stuck or not yours"
+else
+    grep -qF '/codeo:init #<N>' <<<"$lock" || fail lock-entry "the lock entry does not contain /codeo:init #<N>"
+    grep -qF 'reconcile by hand' <<<"$lock" || fail lock-entry "the lock entry does not contain reconcile by hand"
+    tr '\n' ' ' <<<"$lock" | sed 's/\. /.\n/g' | grep -F 'reconcile by hand' | grep -qF diverged ||
+        fail lock-entry "no sentence of the lock entry names both reconcile by hand and diverged"
+fi
+
+# setup-steps: three numbered ### steps, then Running on the host; no prose line starts with a space.
+setup=$(section "$readme" "Setting a project up")
+setup_heads=$(sed -n 's/^### \(.*\)$/\1/p' <<<"$setup")
+for i in 1 2 3; do
+    [[ "$(sed -n "${i}p" <<<"$setup_heads")" == "$i. "* ]] ||
+        fail setup-steps "Setting a project up: ### heading $i does not start \"$i. \""
+done
+[[ "$(sed -n 4p <<<"$setup_heads")" == "Running on the host" ]] ||
+    fail setup-steps "Setting a project up: the ### heading after step 3 is not \"Running on the host\""
+indented=$(grep -c '^ ' <<<"$setup" || true)
+[[ "$indented" -eq 0 ]] || fail setup-steps "Setting a project up has $indented prose lines starting with a space"
+
+# troubleshooting-groups: three ### groups, the doctor group's leads, the pin group's first entries.
+t_heads=$(sed -n 's/^### \(.*\)$/\1/p' <<<"$trouble")
+[[ "$t_heads" == "During a workflow
+Checks from /codeo:doctor
+Installing and the pin" ]] ||
+    fail troubleshooting-groups "Troubleshooting ### headings are: $(tr '\n' ',' <<<"$t_heads"); want During a workflow, Checks from /codeo:doctor, Installing and the pin"
+# subsection <text> <title>: the body of a ### subsection, up to the next ###.
+subsection() { awk -v t="### $2" '/^### / { on = ($0 == t); next } on' <<<"$1"; }
+if ! grep -qxF '### Checks from /codeo:doctor' <<<"$trouble"; then
+    fail troubleshooting-groups "Troubleshooting has no ### Checks from /codeo:doctor"
+else
+    doctor_checks="config schema codename gh-auth gh-scopes board priority-labels ruleset suites deps overlays superpowers"
+    while IFS= read -r line; do
+        lead=$(sed -n 's/^\*\*\([^*]*\)\*\*.*$/\1/p' <<<"$line")
+        lead=${lead%.}
+        grep -qxF -- "$lead" < <(printf '%s\n' $doctor_checks) ||
+            fail troubleshooting-groups "an entry under Checks from /codeo:doctor starts \"${line:0:60}\", not one of the twelve checks"
+    done < <(subsection "$trouble" "Checks from /codeo:doctor" | grep '^\*\*' || true)
+fi
+if ! grep -qxF '### Installing and the pin' <<<"$trouble"; then
+    fail troubleshooting-groups "Troubleshooting has no ### Installing and the pin"
+else
+    pin_leads=$(subsection "$trouble" "Installing and the pin" | grep '^\*\*' || true)
+    [[ "$(sed -n 1p <<<"$pin_leads")" == "**\`its source doesn't match its extraKnownMarketplaces entry\`.**"* ]] ||
+        fail troubleshooting-groups "Installing and the pin does not open with **\`its source doesn't match its extraKnownMarketplaces entry\`.**"
+    [[ "$(sed -n 2p <<<"$pin_leads")" == '**A hand-edited `ref` does not take effect.**'* ]] ||
+        fail troubleshooting-groups "Installing and the pin's second entry is not **A hand-edited \`ref\` does not take effect.**"
+fi
+sed '/^### /,$d' <<<"$trouble" | grep -qi 'three groups' ||
+    fail troubleshooting-groups "the Troubleshooting intro does not say three groups"
+
+# adopting-guard: the home-checkout section and the two links to it.
+anchor='home-checkout.md#adopting-the-guard-in-your-project)'
+prose docs/home-checkout.md | grep -qxF '## Adopting the guard in your project' ||
+    fail adopting-guard "docs/home-checkout.md has no line \"## Adopting the guard in your project\""
+adopt=$(section docs/home-checkout.md "Adopting the guard in your project")
+for w in role-guard .codeo/overlays/ /codeo:doctor; do
+    grep -qF -- "$w" <<<"$adopt" || fail adopting-guard "the Adopting the guard section does not mention $w"
+done
+entry "$trouble" "A role-guard refusal" | grep -qF "](docs/$anchor" ||
+    fail adopting-guard "README.md's role-guard entry does not link ](docs/$anchor"
+grep -qF "]($anchor" <(prose docs/extension-points.md 2>/dev/null) ||
+    fail adopting-guard "docs/extension-points.md does not link ]($anchor"
+
+# updating: the superpowers update says to restart.
+section docs/updating.md "Updating superpowers" | grep -qF restart ||
+    fail updating "docs/updating.md's Updating superpowers section does not say restart"
+
+# skill-count: the page ledes say six.
+[[ "$(sed -n 3p docs/handoff.md)" == "Six pipeline skills"* ]] ||
+    fail skill-count "docs/handoff.md line 3 does not start \"Six pipeline skills\""
+[[ "$(sed -n 5p docs/skills.md)" == "Six skills"* ]] ||
+    fail skill-count "docs/skills.md line 5 does not start \"Six skills\""
 
 # host-command: the codeo command's install pointer and the macOS notes. Each assertion fails on its own.
 grep -qF '](.devcontainer/README.md#installing-the-codeo-command)' <(section "$readme" Installing) ||
