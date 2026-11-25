@@ -18,7 +18,7 @@ out=$(bash scripts/overlay.sh close host-workflow 2>/dev/null) || rc=$?
 [[ "$rc" -eq 0 ]] || fail "overlay.sh close host-workflow exited $rc"
 for needle in 'codeo rm <N>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
     'not inside this container' 'git status' 'bash shell on the host (Linux, macOS, or WSL2 on Windows)' 'docker rm -f codeo-<N>' 'docker volume rm codeo-<N>' 'does not check for unpushed work' \
-    'When the lock'"'"'s `host` is `container`' 'nothing to remove' '/codeo:triage' '/codeo:cleanup' 'home checkout' 'the host clone named `codeo-home`' \
+    'When the lock'"'"'s `host` is `container`' 'no checkout to remove' '/codeo:triage' '/codeo:cleanup' 'home checkout' 'the host clone named `codeo-home`' \
     'After a finished close' 'After a stash:' 'After an abandon:' \
     'its number is the lock'"'"'s `issue`' '/codeo:init #<N>' '.devcontainer/README.md' \
     'When the lock has a `sandbox:` line' 'codeo-sandbox.sh issue <N> <branch>' \

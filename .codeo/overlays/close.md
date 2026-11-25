@@ -22,6 +22,6 @@ After a stash: print no removal command. The sandbox may stay. To resume, run `/
 
 After an abandon: print no removal command. `/codeo:triage` runs in a home checkout (the host clone named `codeo-home`, or the `codeo-home` container), and that is the closing block's first step. When the branch was kept, `codeo rm <N>` is safe on the host. When the branch was deleted, the sandbox holds the only copy of the work, and the removal refuses without `--force`: say so.
 
-For a `container` lock with neither a `volume:` nor a `sandbox:` line, print no command and say to find the container with `docker ps` on the host. For any other host there is nothing to remove: say so.
+For a `container` lock with neither a `volume:` nor a `sandbox:` line, print no command and say to find the container with `docker ps` on the host. For any other host there is no checkout to remove: say so.
 
 For every lock host, not only a container or a sandbox: when the branch was deleted at step 14 (the engineer said yes and the push succeeded), run `bash .devcontainer/codeo-track.sh mark <N> branch <branch> deleted` from the project root, with `<N>` the lock's `issue` and `<branch>` the lock's `branch:` line. Relay any `track:` line it prints and carry on whatever its exit status. When the branch was kept, run nothing.

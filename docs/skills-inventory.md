@@ -121,7 +121,7 @@ in prose exist (only the script's existence is checked).
 ## cleanup
 
 - [cleanup-01] A refusal from the role check ends the step; no override.
-- [cleanup-02] A removal command is printed only for an issue the script proved.
+- [cleanup-02] A removal command is printed only for an issue the script proved; an issue that failed only `name` can still get the `leftover` branch delete.
 - [cleanup-03] Never run a container command, and never mount or ask for the container engine's socket.
 - [cleanup-04] Print only what the script printed; never build a name or a command in the skill.
 
