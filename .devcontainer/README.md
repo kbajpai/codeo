@@ -93,7 +93,7 @@ Two variables change where the script reads from, and `CODEO_SBX` picks the sbx 
 
 ## Installing the `codeo` command
 
-`codeo` is a host command that wraps `codeo-container.sh` and `codeo-sandbox.sh`, so `codeo issue 133` replaces `bash codeo-container.sh issue 133 <branch>` and finds the branch itself. It is one bash script, `.devcontainer/codeo`. The host is Linux with bash 4.3 or later, `curl`, `git` and `flock` (util-linux); `docker` and `sbx` are each optional, and a missing one counts as none of that kind.
+`codeo` is a host command that wraps `codeo-container.sh` and `codeo-sandbox.sh`, so `codeo issue 133` replaces `bash codeo-container.sh issue 133 <branch>` and finds the branch itself. It is one bash script, `.devcontainer/codeo`. The host is Linux or macOS with bash 4.3 or later, `curl`, `git` and `flock` (util-linux on Linux, `brew install flock` on macOS); a sandbox needs Linux or WSL2 (`.sbx/README.md`). `docker` and `sbx` are each optional, and a missing one counts as none of that kind.
 
 Install it once:
 
@@ -132,6 +132,16 @@ With no `<branch>`, `codeo issue <N>` looks for the branch that holds `.codeo/<N
 `codeo list` prints one row per issue container or sandbox, containers first, each kind by number: `#<N>  <kind>  <state>  <branch>`. The state of a container is `running`, `paused`, `restarting` or `stopped`, and of a sandbox `running`, `detached` or `stopped`. The branch is read from the running container or from the sandbox's clone in `~/codeo`, and is `-` for a stopped container or a sandbox with no clone. `list` starts nothing. When an installed program fails to list, `codeo list` prints a warning on stderr, still prints what the other program shows, withholds `no issue containers or sandboxes` and exits 1. With nothing to list it prints `no issue containers or sandboxes`; with neither `docker` nor `sbx` installed it says so and exits 1.
 
 A bad or missing argument, or an unknown command, prints the usage on stderr and exits 2 without running `docker`, `sbx`, `git`, `curl` or a script. Otherwise, for the commands that run a script (`home`, `issue`, `shell`, `open`, and `rm` of a sandbox), the exit status is the called script's.
+
+### The keychain over SSH on macOS
+
+In an SSH session on a Mac the login keychain is locked, and Docker's credential helper `docker-credential-desktop` cannot read it. The image build of `codeo home` then stops with `error getting credentials` followed by `keychain cannot be accessed because the current session does not allow user interaction`. Unlock the keychain in that session, then run the command again:
+
+```bash
+security -v unlock-keychain ~/Library/Keychains/login.keychain-db
+```
+
+It asks for the login password. This is what `codeo home` showed over SSH; other commands were not tried.
 
 ## What the start script does
 
