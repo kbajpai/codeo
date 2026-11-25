@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q5 are answered, all as recommended. The plan is drafted at `.codeo/171/plan-draft.md` and awaits the engineer's approval; nothing under `docs/plans/` is written before it. Next step: approve, change or reject the draft.
+Planned: the plan is approved and saved at `docs/plans/2026-11-25-readme-complete-guide-171.md` (unstaged). Q1-Q5 are answered, `overlap.sh` prints nothing and no lock is needed. Next step: review and commit the plan, then `/codeo:implement`.
 
 What I found (read at `d93369c`):
 
@@ -90,6 +90,29 @@ A — only the documented recovery, plus a diagnosis that deletes nothing. (Engi
 - **Out of scope, to file once the plan is approved:** `docs/handoff.md:3` says "Seven pipeline skills" where `docs/skills.md:5` says six. The README will say six. (Promised, no issue number yet.)
 - **Out of scope, to file once the plan is approved:** how another project adopts the role guard (Q4, option A).
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-25-readme-complete-guide-171.md` (approved 2026-11-25, unstaged) |
+| Shape | an executable plan under `docs/plans/`, eight tasks; no reference doc (nothing here is a standing decision) |
+
+**Decisions** (Q1-Q5, all the recommended option, "go with your picks"):
+
+- **Q1:** the update, replace and restore walk-throughs and their captured installer output move to `docs/updating.md`; the README keeps the common install. `tests/install.test.sh` pins read both files.
+- **Q2:** the home checkout, the guard and the tracking comment move to `docs/home-checkout.md`, word for word; the README keeps a two-sentence summary and a link.
+- **Q3:** the README carries the full *Configuration* table of every key the plugin reads (about 45), a starter example and a fuller one. `stacks` is labelled as written by `/codeo:setup --stack` and read by nothing.
+- **Q4:** the role-guard troubleshooting entry opens by saying the guard is the project's own; how another project adopts it is a separate issue, promised under `## Notes`.
+- **Q5:** the lock entry recommends only documented recovery and never says to delete `.codeo/active`.
+
+**Rejected:** keeping every installer sample in the README or folding it into `<details>` (Q1); keeping the host and guard text in the README (Q2); a short README section with the table in `docs/configuration.md` (Q3); an "adopting the guard" paragraph, or none (Q4); "delete `.codeo/active` if you are sure" (Q5).
+
+**Documentation pages the plan changes:** `README.md`, `docs/updating.md` (new), `docs/home-checkout.md` (new), `CHANGELOG.md` `## Unreleased`; a new guard test, `tests/readme.test.sh`, checks the commands, paths and config keys the README names. Nothing links into a README section by anchor, so no other page moves.
+
+**Intake questions resolved:** none; `init.md` left none open.
+
+**Overlap:** `overlap.sh 171` printed nothing. #170 (`docs/docs-say-codeo-host-command`, step `init`) had no footprint and no changed paths when checked, and the issue says it also edits `README.md`: whoever merges second rebases the README. No exclusive resource, so no lock was taken.
+
 ### Footprint
 
 ```
@@ -99,10 +122,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-25 — Q1-Q5 raised · cost: 5m · fable-5-2 81k in + 593k cached / 5k out · sonnet-5-5 411k in + 5.4M cached / 47k out
+- 2026-11-25 — planned: docs/plans/2026-11-25-readme-complete-guide-171.md · cost: 11m · fable-5-2 81k in + 593k cached / 5k out · sonnet-5-5 466k in + 7.4M cached / 73k out
