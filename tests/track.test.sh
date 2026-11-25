@@ -262,13 +262,15 @@ assert_not post POST "$(calls)"
 case_desc=no_temp_file_left
 reset; fixture 77 '| container | `c1` | box1 | active | 2026-11-01T00:00:00Z | |'
 tdir=$work/tmp; rm -rf "$tdir"; mkdir -p "$tdir"
+saved_tmpdir=${TMPDIR-unset}
 export TMPDIR=$tdir
 run add 152 container codeo-152; assert_eq add_edit_rc 0 "$rc"
 run mark 152 container c1 removed; assert_eq mark_rc 0 "$rc"
 reset; run add 152 container codeo-152; assert_eq add_create_rc 0 "$rc"
 reset; fixture 77 '| container | `c1` | box1 | active | 2026-11-01T00:00:00Z | |'; touch "$state/fail"
 run add 152 container codeo-152; assert_eq failed_save_rc 3 "$rc"
-unset TMPDIR
+if [[ $saved_tmpdir == unset ]]; then unset TMPDIR; else export TMPDIR=$saved_tmpdir; fi
+assert_eq "TMPDIR restored" "${saved_tmpdir-unset}" "${TMPDIR-unset}"
 assert_eq "files left in TMPDIR" "0" "$(find "$tdir" -name 'codeo-track.*' | wc -l | tr -d ' ')"
 
 if ((failures)); then echo "$failures failure(s)"; exit 1; fi
