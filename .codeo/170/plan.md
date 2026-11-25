@@ -20,6 +20,7 @@ What is settled without a question: one pull request; documentation only, no cha
 **Options:** (a) the full note in `.devcontainer/README.md`, beside *Installing the `codeo` command*, and one sentence in the README's macOS paragraph that points to it — my recommendation, because that is the page a Mac user is on when the build fails · (b) the full note in the README's macOS paragraph only · (c) the full note in both.
 
 **Answer:**
+(a) Full note in `.devcontainer/README.md`, one pointer sentence in the README's macOS paragraph. The engineer said "go with your picks" in the conversation.
 
 ### Q2 — What is the error text to quote?
 
@@ -27,6 +28,7 @@ What is settled without a question: one pull request; documentation only, no cha
 **Options:** (a) quote only the stable part, `keychain cannot be accessed because the current session does not allow user interaction`, and say it follows `error getting credentials` — my recommendation · (b) quote the whole line: paste it here as your terminal printed it.
 
 **Answer:**
+(a) Quote only the stable part and say it follows `error getting credentials`. The engineer said "go with your picks" in the conversation.
 
 ### Q3 — Does the note also offer dropping `credsStore` from `~/.docker/config.json`?
 
@@ -34,6 +36,7 @@ What is settled without a question: one pull request; documentation only, no cha
 **Options:** (a) include it — say so only if you ran it and the build then passed · (b) leave it out; the unlock command is the one documented remedy — my recommendation unless you verified it.
 
 **Answer:**
+(b) Leave `credsStore` out; the unlock command is the one documented remedy. The engineer said "go with your picks" in the conversation.
 
 ### Q4 — Is the "host is Linux" sentence in `.devcontainer/README.md` corrected here?
 
@@ -41,6 +44,7 @@ What is settled without a question: one pull request; documentation only, no cha
 **Options:** (a) correct it in this issue — my recommendation · (b) leave it; I record it under `## Notes` for `/codeo:triage` to file.
 
 **Answer:**
+(a) Correct the "host is Linux" sentence in this issue. The engineer said "go with your picks" in the conversation.
 
 ### Q5 — Are the new sentences pinned by a test?
 
@@ -48,6 +52,7 @@ What is settled without a question: one pull request; documentation only, no cha
 **Options:** (a) add the pin case — my recommendation; it is how this repository keeps a README claim from drifting, and it checks the link's anchor · (b) no new test.
 
 **Answer:**
+(a) Add the pin case in `tests/install.test.sh`. The engineer said "go with your picks" in the conversation.
 
 ## Notes
 
