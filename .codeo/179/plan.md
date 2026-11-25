@@ -77,7 +77,11 @@ A — a third group with its own heading, `### Installing and the pin`. (Enginee
 
 ## Notes
 
-None.
+### Footprint
+files: tests/readme.test.sh, README.md, docs/home-checkout.md, docs/extension-points.md, docs/updating.md, docs/handoff.md, docs/plans/2026-11-25-close-171-leftovers-179.md, .codeo/179/**
+wiki: none
+exclusive: none
+sequenced: none
 
 ## Outcome
 
