@@ -473,9 +473,11 @@ cmd_default() {
 }
 
 # stop_started <name> <started>: stop the container again when container_check started it, so a refusal
-# leaves it as found; a failing stop is ignored.
+# leaves it as found; a failing stop is reported on stderr and changes nothing else.
 stop_started() {
-    [[ "$2" -eq 0 ]] || docker stop "$1" >/dev/null 2>&1 </dev/null || true
+    if [[ "$2" -ne 0 ]] && ! docker stop "$1" >/dev/null 2>&1 </dev/null; then
+        printf 'codeo: could not stop %s again; it is left running\n' "$1" >&2
+    fi
     return 0
 }
 
@@ -515,8 +517,8 @@ container_read() {
 # already running restarts it and reads again, so a write that landed between the first read and the removal is
 # caught. Prints one heading per kind found (up to 10 lines each) and returns 0 when clean, 1 when something
 # would be lost, 2 when the check could not run (cannot start, fetch, restart or exec failed), 3 when there is no
-# such container. When it returns non-zero it stops again a container it knows it started (not after a failed
-# restart: the state is then unknown).
+# such container. When it returns non-zero it stops again a container it knows it started (a stop that fails is
+# reported) (not after a failed restart: the state is then unknown).
 # With --no-restart the container is read once and never restarted. With --no-restart the caller is about to
 # refuse whatever the read finds, so a container it started is stopped again on a clean read too.
 container_check() {
