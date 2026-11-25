@@ -90,6 +90,15 @@ A — only the documented recovery, plus a diagnosis that deletes nothing. (Engi
 - **Out of scope, to file once the plan is approved:** `docs/handoff.md:3` says "Seven pipeline skills" where `docs/skills.md:5` says six. The README will say six. (Promised, no issue number yet.)
 - **Out of scope, to file once the plan is approved:** how another project adopts the role guard (Q4, option A).
 
+### Footprint
+
+```
+files:      README.md, docs/updating.md, docs/home-checkout.md, tests/install.test.sh, tests/readme.test.sh, CHANGELOG.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
