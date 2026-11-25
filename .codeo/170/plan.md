@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Planned and approved. The plan is `docs/plans/2026-11-25-codeo-host-command-docs-170.md`, unstaged for the engineer to commit. Next step: `/codeo:implement`.
+Round 2. `/codeo:implement` stopped before any task: its base merge brought in #171, which moved the macOS paragraph to `docs/home-checkout.md` and added `tests/readme.test.sh`, so round 1's Tasks 1-2 no longer fit. Q6 is answered; the reworked draft awaits approval.
 
 ## Questions
 
@@ -51,6 +51,14 @@ Planned and approved. The plan is `docs/plans/2026-11-25-codeo-host-command-docs
 
 **Answer:**
 (a) Add the pin case in `tests/install.test.sh`. The engineer said "go with your picks" in the conversation.
+
+### Q6 — #171 moved the macOS paragraph out of `README.md`; where does `brew install flock` go?
+
+**Why it matters:** criterion 2 says "the README's macOS paragraph", and that paragraph is at `docs/home-checkout.md:22` since #171 merged. It decides whether Task 2 edits `docs/home-checkout.md`, `README.md`'s *Requirements*, or both.
+**Options:** `docs/home-checkout.md` only, reading criterion 2 as that paragraph (recommended) · both pages · `README.md` *Requirements* only.
+
+**Answer:**
+`docs/home-checkout.md` only. The engineer chose it with the question tool in the conversation.
 
 ## Notes
 
