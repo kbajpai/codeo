@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are answered (the picks). The plan is drafted at `.codeo/166/plan-draft.md` and awaits approval.
+Q1-Q3 are answered and the plan is approved and saved at `docs/plans/2026-11-25-close-157-leftovers-166.md` (unstaged). `overlap.sh` then printed four overlaps with #163, now Q4; `## Outcome` stays pending until it is answered. Next step: answer Q4, then run `/codeo:plan` again.
 
 What I found (read at `5207e1e`):
 
@@ -59,6 +59,13 @@ A — reword the second sentence of rule `cleanup-02`; the inventory line and ch
 **Answer:**
 Proceed and coordinate: whoever merges second rebases `CHANGELOG.md` and keeps both sides. (Engineer: "go with your picks", 2026-11-24; given in the conversation, recorded here.)
 
+### Q4 — #163 changes four of the files this plan edits: proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh` found #163 (branch `fix/close-152-leftovers-cleanup-overlay`, assignee kbajpai, step `plan`, working, waits on `/codeo:plan`; nothing on its branch beyond its dossier) overlapping this footprint on `glob:CHANGELOG.md`, `glob:docs/skills.md`, `glob:tests/cleanup-skill.test.sh` and `glob:tests/close-removal.test.sh`; its footprint also lists `.codeo/overlays/close.md`, which this plan edits. What each side edits: #163 fixes the cleanup overlay's `{N}` and by-hand fallback (`.codeo/overlays/cleanup.md` and `close.md`'s fallback paragraph, `docs/skills.md`'s `cleanup` section naming the overlay's fourth field and the `fallback:` line, a CHANGELOG entry, and pins in the two test files). This plan edits `close.md`'s last sentence, `docs/skills.md`'s `cleanup` purpose and reads lines and its `close` purpose line, one CHANGELOG bullet and adds one, and adds pins to `tests/cleanup-skill.test.sh` and `tests/close-removal.test.sh` (the latter replaces the `'nothing to remove'` string at `:21`). The edits are in different paragraphs and different pins, but the second to merge rebases over the first in all five files.
+**Options:** *proceed and coordinate* (my pick: both changes are single sentences and pins in different places; whoever merges second rebases and keeps both sides, as with #161 in Q3) · *sequence after #163* (this plan waits for #163 to merge, then is rebased onto its code) · *re-scope* (say which of the five files to leave out; the close overlay sentence and `tests/close-removal.test.sh` are what Task 3 cannot do without).
+
+**Answer:**
+
 ## Notes
 
 ### Footprint
@@ -69,7 +76,6 @@ wiki:       none
 exclusive:  none
 sequenced:  none
 ```
-None.
 
 ## Outcome
 
@@ -78,3 +84,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-24 — Q1-Q3 raised · cost: 1m · fable-5-2 82k in + 533k cached / 5k out
+- 2026-11-25 — plan approved and saved; Q4 raised (overlap with #163) · cost: 103m · fable-5-2 96k in + 866k cached / 11k out · sonnet-5-5 224k in + 899k cached / 16k out
