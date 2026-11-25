@@ -69,6 +69,8 @@ install: done - codeo v1.0.9, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
+`install.sh` installs the two plugins and not the `codeo` host command, which opens the containers from a terminal and is installed separately; see [Installing the `codeo` command](.devcontainer/README.md#installing-the-codeo-command).
+
 Run it again and nothing changes:
 
 ```

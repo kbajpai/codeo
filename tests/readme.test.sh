@@ -11,6 +11,8 @@
 #   start-here       Start here links #installing, #setting-a-project-up and #your-first-workflow
 #   walkthrough      Your first workflow has six "###" steps: issue, init, plan, implement, qc, close
 #   troubleshooting  the four new entries sit beside the existing doctor entries
+#   host-command     Installing points at the codeo command's section of .devcontainer/README.md; home-checkout.md and
+#                    .devcontainer/README.md carry the macOS notes (flock, the keychain over SSH)
 # Headings and backticked tokens inside a ``` fence do not count; commands inside a fence do.
 #
 #   bash tests/readme.test.sh
@@ -175,6 +177,24 @@ for lead in "A role-guard refusal" "A lock that is stuck or not yours" "A step t
     board. priority-labels. ruleset. suites. deps. overlays. superpowers.; do
     grep -qF -- "**$lead" <<<"$trouble" || fail troubleshooting "no entry starting **$lead"
 done
+
+# host-command: the codeo command's install pointer and the macOS notes. Each assertion fails on its own.
+grep -qF '](.devcontainer/README.md#installing-the-codeo-command)' <(section "$readme" Installing) ||
+    fail host-command "Installing does not link .devcontainer/README.md#installing-the-codeo-command"
+home=$(prose docs/home-checkout.md)
+grep -qF 'brew install flock' <<<"$home" ||
+    fail host-command "docs/home-checkout.md does not mention brew install flock"
+grep -qF '](../.devcontainer/README.md#the-keychain-over-ssh-on-macos)' <<<"$home" ||
+    fail host-command "docs/home-checkout.md does not link ../.devcontainer/README.md#the-keychain-over-ssh-on-macos"
+dc=.devcontainer/README.md
+grep -qxF '### The keychain over SSH on macOS' "$dc" ||
+    fail host-command "$dc has no line \"### The keychain over SSH on macOS\""
+grep -qF 'brew install flock' "$dc" ||
+    fail host-command "$dc does not mention brew install flock"
+grep -qF 'security -v unlock-keychain ~/Library/Keychains/login.keychain-db' "$dc" ||
+    fail host-command "$dc does not mention security -v unlock-keychain ~/Library/Keychains/login.keychain-db"
+grep -qF 'keychain cannot be accessed because the current session does not allow user interaction' "$dc" ||
+    fail host-command "$dc does not quote the keychain-cannot-be-accessed error"
 
 if [[ $failed -ne 0 ]]; then
     exit 1
