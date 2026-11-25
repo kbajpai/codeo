@@ -263,6 +263,7 @@ for e in UserPromptSubmit PostToolUse; do
     assert_eq "$e beat" yes "$ok"
 done
 assert_eq "SessionStart groups" 2 "$(jq -r '.hooks.SessionStart | length' "$s")"
+assert_eq "install hook matcher" 'startup|resume|fork' "$(jq -r '.hooks.SessionStart[1].matcher' "$s")"
 for e in SessionStart UserPromptSubmit; do
     [[ $(scmd $e) == *'session-title.sh'* ]] && ok=yes || ok=no
     assert_eq "$e session-title kept" yes "$ok"
