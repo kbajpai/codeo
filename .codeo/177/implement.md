@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is done: all nine plan tasks are built, reviewed and committed on the branch (`docs/plans/2026-11-25-close-163-166-168-leftovers-177.md`), the build and the whole `shell` suite pass, and Q1 is answered. Nothing is open. Next step: `/codeo:qc`.
+Round 2 is done: `origin/main` moved (#173, `7d753fc`) and conflicted with this branch in `CHANGELOG.md` and `docs/release-checklist.md`; both are resolved in the merge commit `bf71167`, keeping both sides, the build and the whole `shell` suite pass, and the overlap checks print nothing. Nothing is open. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -55,7 +55,23 @@ Round 1.
 
 **Deferred minors** (none blocks): `skills/cleanup/SKILL.md` step 4's first sentence is one long line; `docs/release-checklist.md` step 6 has a short wrapped line; the `(#177)` bullet and one overlay line are long.
 
+### Round 2 — 2026-11-25
+
+(send-back from qc.md round 1)
+
+qc round 1 stopped at its sync: `sync-main.sh --abort-on-conflict` found `CHANGELOG.md` and `docs/release-checklist.md` conflicting with `origin/main` after #173 merged (F1). F1 holds: `sync-main.sh` here reproduced the same two conflicts. No product code changed this round.
+
+**Resolved** (merge commit `bf71167`, no rebase):
+- `CHANGELOG.md`, `## Unreleased`: #173's three bullets (the `codeo rm` stop line, the hosted-session hook, the corrections to text) kept as `origin/main` has them, followed by this branch's `(#177)` bullet.
+- `CHANGELOG.md`, `## v1.0.9`: #173's reworded `#154` bullet and its `#163` bullet kept; this branch's correction of the `#163` bullet ("an example comment that no longer reuses #152's number" in place of "an invented example issue") applied on top of #173's text, because #173 left that phrase unchanged. The auto-merged `--yes` and `(#157)`/`(#166)` corrections are intact.
+- `docs/release-checklist.md` step 6: #173's restructured step (the move / move-before / do-not-move lists and the "Also retitle" sentence) kept whole; this branch's sentence naming the UTC date inserted after "through a pull request like any other change.", so the date rule reads with the retitle instruction it qualifies.
+
+**Build.** Suite `shell` build command `true`: exit 0. `bash tests/run.sh` ends `all cases passed` on the merged tree. `sync-main.sh` now prints `the branch already contains origin/main`; `overlap.sh 177` and `overlap.sh --outside 177` print nothing.
+
+**Documentation pages changed this round:** none beyond the two conflict files above.
+
 ## Log
 
 - 2026-11-25 — Q1 raised (#179 overlap) · cost: 0m · sonnet-5-5 12k in + 552k cached / 993 out
 - 2026-11-25 — Q1 answered; built the plan's nine tasks, the suite passes · cost: 71m · sonnet-5-5 520k in + 19.2M cached / 77k out
+- 2026-11-25 — round 2 (send-back from qc.md round 1): resolved the #173 merge conflicts in CHANGELOG.md and docs/release-checklist.md; build and suite pass · cost: 5m · sonnet-5-5 41k in + 3.4M cached / 5k out
