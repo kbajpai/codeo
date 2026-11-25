@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is done: the findings of `qc.md` round 1 are fixed in `ca7f2f3` and the build ran. Next step: `/codeo:qc`.
+Round 3 is done: the findings of `qc.md` round 2 are fixed in `078331a` and the build ran. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -68,7 +68,24 @@ I read each finding against the code before acting (F1-F3 were checked against `
 
 No deployment: no shared environment is configured.
 
+
+### Round 3 — 2026-11-25
+(send-back from qc.md round 2)
+
+I read each finding against the code before acting. G1 I reproduced in a clean worktree before the fix (`FAIL paths: README.md: \`.codeo/active\` does not exist`, exit 1) and again after (exit 0). The edits were small, so I made them directly, all in `078331a`.
+
+- **G1:** `tests/readme.test.sh` allows `.codeo/active` and `.codeo/intake` by name, as gitignored runtime paths, instead of looking them up. A clean worktree of the new tree passes.
+- **G2:** the `paths` check now reads every path-shaped word inside a backticked span, so `bash scripts/dossier-check.sh …`, `bash .devcontainer/scripts/devcontainer-start.sh` and `.devcontainer/scripts/role.sh --check <skill>` are checked. Renaming `dossier-check.sh` in a copy of the README now fails with `FAIL paths: … scripts/dosier-check.sh does not exist`. The header comment says what it checks.
+- **G3:** the `resources[].paths` row also says `/codeo:plan` uses them for a footprint's `exclusive:` line.
+- **G4:** README.md:38 reads "The installer installs none of them".
+- **G5:** Setting a project up says `/codeo:setup --stack <name>` also writes `stacks`.
+
+**Build:** `true` (suite `shell`): exit 0. `bash tests/run.sh` also ran and ended `all cases passed`; grading it is `/codeo:qc`'s.
+
+No deployment: no shared environment is configured.
+
 ## Log
 
 - 2026-11-25 — implemented: plan docs/plans/2026-11-25-readme-complete-guide-171.md, tasks 1-8, build exit 0 · cost: 35m · sonnet-5-5 945k in + 25.9M cached / 150k out
 - 2026-11-25 — implemented round 2 (send-back from qc round 1): F1-F10 fixed in ca7f2f3, build exit 0 · cost: 5m · sonnet-5-5 24k in + 1.5M cached / 6k out
+- 2026-11-25 — implemented round 3 (send-back from qc round 2): G1-G5 fixed in 078331a, build exit 0 · cost: 4m · sonnet-5-5 17k in + 1.4M cached / 4k out
