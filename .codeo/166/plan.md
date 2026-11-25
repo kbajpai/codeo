@@ -61,6 +61,14 @@ Proceed and coordinate: whoever merges second rebases `CHANGELOG.md` and keeps b
 
 ## Notes
 
+### Footprint
+
+```
+files:      scripts/cleanup.sh, skills/cleanup/SKILL.md, skills/close/SKILL.md, docs/skills.md, docs/skills-inventory.md, .codeo/overlays/close.md, CHANGELOG.md, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, tests/close-skill.test.sh, tests/close-removal.test.sh, tests/fixtures/skills-inventory.rules.sha256, docs/plans/2026-11-25-close-157-leftovers-166.md, .codeo/166/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 None.
 
 ## Outcome
