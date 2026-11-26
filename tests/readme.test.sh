@@ -25,6 +25,7 @@
 #                    /codeo:doctor); the README role-guard entry and docs/extension-points.md link to it
 #   updating         docs/updating.md's Updating superpowers section says restart
 #   skill-count      docs/handoff.md has a line starting "Six pipeline skills" (and none "Seven"), docs/skills.md one starting "Six skills form the pipeline"
+#   home-checkout    docs/home-checkout.md says what a missing jq and an existing container do
 #   host-command     Installing points at the codeo command's section of .devcontainer/README.md; home-checkout.md and
 #                    .devcontainer/README.md carry the macOS notes (flock, the keychain over SSH)
 # Headings and backticked tokens inside a ``` fence do not count; commands inside a fence do.
@@ -300,6 +301,12 @@ grep -qF 'brew install flock' <<<"$home" ||
     fail host-command "docs/home-checkout.md does not mention brew install flock"
 grep -qF '](../.devcontainer/README.md#the-keychain-over-ssh-on-macos)' <<<"$home" ||
     fail host-command "docs/home-checkout.md does not link ../.devcontainer/README.md#the-keychain-over-ssh-on-macos"
+grep -qF 'deps: missing: jq' <<<"$home" ||
+    fail home-checkout "docs/home-checkout.md does not say /codeo:doctor reaches deps: missing: jq"
+grep -qF 'live.sh` publishes the signal without `jq`' <<<"$home" ||
+    fail home-checkout "docs/home-checkout.md does not say live.sh publishes the signal without jq"
+grep -qF 'asks about it even with no active row' <<<"$home" ||
+    fail home-checkout "docs/home-checkout.md does not say the tracker asks about an existing container even with no active row"
 dc=.devcontainer/README.md
 grep -qxF '### The keychain over SSH on macOS' "$dc" ||
     fail host-command "$dc has no line \"### The keychain over SSH on macOS\""
