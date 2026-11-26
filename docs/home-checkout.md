@@ -36,6 +36,49 @@ Each skill asks `.devcontainer/scripts/role.sh --check <skill>` first, and the a
 
 `/codeo:doctor` and `/codeo:setup` are outside the guard. A host checkout is `home`, `issue:<N>` or `stray`; only a hosted web session and a container in an unrelated folder are `unguarded`.
 
+## The edit guard
+
+A plugin hook, `hooks/home-guard.sh` (registered in `hooks/hooks.json`), refuses a change to the project in a checkout whose role is `home`, `stale:?` or `stray`, so the work goes through an issue: `/codeo:issue`, then `codeo issue <N>`, then the work in that issue's checkout. It asks the checkout's own `.devcontainer/scripts/role.sh` for the role and keeps no copy of its rules. A refusal is one line naming the role and the way out.
+
+Refused in such a checkout:
+
+- `Edit`, `Write` and `NotebookEdit` of any file in the project, including a new file in a directory that does not exist yet.
+- These git writes run through Bash: `commit`, `push`, `merge`, `rebase`, `cherry-pick`, `revert`, `am`, `apply`, `reset`, `stash` and `tag` (even when it only lists tags), `add`, `rm`, `mv` and `restore`, `checkout -b`, `-B` or `--orphan`, and `switch -c`, `-C`, `--create`, `--force-create` or `--orphan`.
+
+Allowed:
+
+- Any path under `.codeo/`, which is how `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` keep their notes, drafts and ledgers; a `..` that climbs out of `.codeo/` is not under it. `git add`, `rm`, `mv` and `restore` pass only when every pathspec is under `.codeo/`, and `git commit` passes only when everything it would commit is under `.codeo/` and it names no pathspec outside it; `--amend`, `-i`, `--include`, `-o`, `--only` and ` -- ` are always refused.
+- Plain `git checkout` and `git switch`, `worktree`, `fetch`, `pull`, `branch` and every script, so `/codeo:init`'s scratch worktree and the `codeo` command work.
+- Every other role, a hosted web session, a project without `.devcontainer/scripts/role.sh`, and a path outside any repository.
+
+A Bash command is split at `;`, `&&`, `||`, `|` and `&`, and each `git` segment is judged by the checkout it addresses: `cd` and `git -C` targets are followed, quoted ones too, so `git -C <issue clone> commit` run from home is allowed and `git -C <home> commit` run from an issue's checkout is refused. Quoted text is never read as a command.
+
+To switch the guard off, start Claude Code with `CODEO_HOME_EDITS=allow` in the environment, or put it in the project's `.claude/settings.local.json` `env`. It lasts for the session started with it, the session cannot set it for itself, and only the exact value `allow` counts.
+
+What it does not see:
+
+- A file changed through the shell: `sed -i`, redirection, `rm`, `cp`.
+- A nested shell (`bash -c`), a subshell `( … )`, a `$(…)` substitution, and a script's contents; the body of a heredoc is read as commands.
+- A failure of its own: when the hook cannot find out the role, it allows the call.
+
+A clone of a project that has the role check, in a folder not named `<codename>-home`, reads as `stray` and is guarded. The guard comes with the plugin version that carries the hook, so a project has it after it updates and re-pins.
+
+```mermaid
+flowchart TD
+    A[PreToolUse: Edit, Write, NotebookEdit, Bash] --> B{CODEO_HOME_EDITS=allow?}
+    B -- yes --> Z[allow]
+    B -- no --> C{file tool or Bash?}
+    C -- file tool --> D{path under .codeo/ or outside any repo?}
+    D -- yes --> Z
+    D -- no --> G
+    C -- Bash --> E[split into segments, track cd and git -C]
+    E --> F{git write that the exemptions do not cover?}
+    F -- no --> Z
+    F -- yes --> G{role.sh role of that checkout}
+    G -- "home, stale:?, stray" --> X[deny with one line]
+    G -- "anything else, or no role.sh, or an error" --> Z
+```
+
 ## Adopting the guard in your project
 
 The guard is the project's own: `/codeo:setup` writes none, and a project without one is never refused.

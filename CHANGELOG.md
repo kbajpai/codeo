@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1 (unchanged)
+Shared state: none
+Safe to bump mid-workflow: yes
+
+- A `home`, `stale:?` or `stray` checkout refuses Edit, Write, NotebookEdit and git writes run through Bash with one line, unless the session was started with `CODEO_HOME_EDITS=allow`. The home skills' `.codeo/` writes are unaffected, and so are hosted sessions and projects without `.devcontainer/scripts/role.sh`. `docs/home-checkout.md` has the section. The guard comes with the next release (#192).
+
 ## v1.0.10 — 2026-11-26
 
 Config schema: 1 (unchanged)
