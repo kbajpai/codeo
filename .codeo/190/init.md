@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Draft for the review gate. Branch `docs/190-make-container-sandbox-setup-reusable` to be cut off `main` at 7b7cc0f. Next step: `/codeo:plan` in the issue's container.
+Branch `docs/190-make-container-sandbox-setup-reusable` cut off `main` at 7b7cc0f and pushed. Next step: `/codeo:plan` in the issue's container.
 
 ## Questions
 
