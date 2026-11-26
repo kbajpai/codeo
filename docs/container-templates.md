@@ -33,8 +33,6 @@ This page is the reference for the dev container and sbx sandbox files codeo wri
 | `.devcontainer/scripts/codeo-root.sh` | the lookup of the installed plugin | Intentionally codeo's |
 | The `CODEO_*` environment variables and the `.codeo/` directory | the plugin's settings and state | Intentionally codeo's |
 | `kbajpai/codeo` in `scripts/codeo-init.sh` (`CODEO_PLUGIN_REPO`) and the `codeo-init.sh` usage text | the plugin's own source repository | Intentionally codeo's |
-| `stable main` in the Dockerfile's `gh` apt source | an apt suite name, not a branch | Intentionally left: it is not a branch name |
-| `lib/` | nothing of the above | No hits |
 
 A project that is not codeo therefore carries its own name, its repository and its base branch in every shipped file, and codeo's own name only where the plugin's own scripts and settings are meant.
 
@@ -117,10 +115,11 @@ If a build needs more than the image holds, such as a different pinned sandbox i
 
 The example has not been built by this repository's tests: its suite never runs .NET, Node or Docker, and it uses stub commands in their place. To use it in a project that adopted the templates:
 
-1. Copy the toolchain section of `examples/csharp-angular/.devcontainer/Dockerfile` into the same section of your `.devcontainer/Dockerfile`.
-2. Merge the suites in `examples/csharp-angular/codeo-suites.json` into `suites` in `.codeo/config.json`.
-3. Run `bash examples/csharp-angular/scripts/generate-web.sh` once, with Node available, to generate the Angular app into `web/`, and commit it.
-4. Inside the container, run `bash examples/csharp-angular/scripts/run-suites.sh` to run every suite's build and test.
+1. Copy the toolchain section of `examples/csharp-angular/.devcontainer/Dockerfile` into the section between the markers of your `.devcontainer/Dockerfile`.
+2. Merge the suites in `examples/csharp-angular/codeo-suites.json` into the `suites` array of your `.codeo/config.json`.
+3. On a host with Node, in a checkout of codeo or the installed plugin's directory, run `bash examples/csharp-angular/scripts/generate-web.sh` once. It generates the Angular app into that directory's `examples/csharp-angular/web`.
+4. Copy `api/`, `web/` and `k8s/` from `examples/csharp-angular/` into your project's root, put `examples/csharp-angular/scripts/run-suites.sh` in a folder named `scripts` there, and commit them. The suites use project-root paths (`api`, `web`, `k8s`), and `run-suites.sh` takes the folder above its own folder as the project root.
+5. In the issue's container, run `bash ./scripts/run-suites.sh` from the project root to run every suite's build and test.
 
 ## Adopting the templates
 
