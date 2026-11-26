@@ -175,6 +175,43 @@ Each guarded skill (`/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:clea
 
 A container whose clone lacks the role script and the guard overlays, such as one created from a branch cut before the guard existed, is not guarded: it runs every skill as before until it is removed.
 
+## Using this in another project
+
+Everything above names codeo's own containers (`codeo-home`, `codeo-<N>`, `kbajpai/codeo`). Another project gets its own copy of these files, rendered from the plugin's `templates/containers/` with the project's names.
+
+**Where the files come from.** `/codeo:setup --containers`, or `scripts/codeo-init.sh --env containers` from outside Claude Code, writes `.codeo/config.json` and then the container files into the project. The top-level README's [Adopting codeo with containers](../README.md#adopting-codeo-with-containers) describes both ways, and [docs/container-templates.md](../docs/container-templates.md) is the reference for the files, the names and the placeholders.
+
+**Managed and seed files.** The scripts (`.devcontainer/codeo`, `codeo-container.sh`, `codeo-track.sh`, `.sbx/codeo-sandbox.sh` and `.devcontainer/scripts/`) are managed: codeo rewrites them on request and checks them. The Dockerfile, `devcontainer.json`, `.sbx/claude-image` and the `.codeo/overlays/` files are seeds: written once, never overwritten, yours to edit. [docs/container-templates.md](../docs/container-templates.md#managed-and-seed-files) lists each.
+
+**Checking and refreshing.** Run `bash <plugin>/scripts/containers.sh` from inside the project, where `<plugin>` is the installed plugin's directory:
+
+- With no flag, it writes each file that is absent and leaves a file that exists alone.
+- `--check` writes nothing and exits 1 when a managed file differs from its template or is missing. `/codeo:doctor` runs it.
+- `--force` rewrites the managed files from the templates; the seeds stay. `--check` and `--force` do not go together.
+
+Each file gets one line, `containers: wrote <path>`, `containers: skip <path>`, `containers: ok <path>` (with `--check`, equal to the template) or `containers: differs <path>` (with `--check`, different or missing). The status is 0 on success, 1 when `--check` finds a difference or the config is unusable, and 2 on a usage error.
+
+**Your toolchain.** The Dockerfile has no language runtime. Add your compilers and SDKs only between its two toolchain marker comments, so a later comparison with a newer template stays a small diff.
+
+**Names.** With the config's `codename` (default: the repository's name), the project's containers are named:
+
+| What | Name |
+|---|---|
+| Home container, its clone and its volume | `<codename>-home` |
+| Issue container, its clone and its volume | `<codename>-<N>` |
+| Volumes shared by every container | `<codename>-gh` and `<codename>-git` |
+| Image of an issue container | `<codename>-dev:<codename>-<N>` |
+
+**Where the `codeo` command downloads from.** The `codeo` command, and the scripts it downloads, come from the project's own repository on its base branch: `https://raw.githubusercontent.com/<owner>/<repo>/<base>`, where `<base>` is `baseBranch` in the config (default `main`). Commit `.devcontainer/`, `.sbx/` and `.codeo/` to that branch first, then install the command from the project's own copy:
+
+```bash
+mkdir -p ~/.local/bin && curl -fsSL -o ~/.local/bin/codeo https://raw.githubusercontent.com/<owner>/<repo>/<base>/.devcontainer/codeo && chmod +x ~/.local/bin/codeo
+```
+
+`CODEO_RAW_URL` names another base URL to download from, and `CODEO_REPO_URL` another repository to clone; in a rendered script their defaults are the project's own.
+
+**An example.** `examples/csharp-angular/` shows a Dockerfile toolchain section (`examples/csharp-angular/.devcontainer/Dockerfile`) and suites (`examples/csharp-angular/codeo-suites.json`) for a C# API, an Angular web app and Kubernetes manifests, with `api/`, `k8s/`, `examples/csharp-angular/scripts/generate-web.sh` and `examples/csharp-angular/scripts/run-suites.sh` beside them. [docs/container-templates.md](../docs/container-templates.md#the-c--angular-example) lists the files and the steps to use them. The example has not been built by this repository's tests, which use stub commands in place of .NET, Node and Docker.
+
 ## Removing a finished container
 
 Nothing inside a container removes a container. After a finished close, `/codeo:close` prints `codeo rm <N>`, which removes the issue's container, its volume and its image, and only when the lock's `volume:` is the container of the lock's own issue; the command is one line that runs in a bash shell on the host (Linux, macOS, or WSL2 on Windows). Both commands also print a sentence with the `docker` commands to run by hand when `codeo` is not installed. `/codeo:cleanup`, which runs in a home checkout, lists the other finished issues' containers the same way: it proves five things for each issue (the issue is closed, its pull request is merged, its branch is gone from origin, no branch still carries its dossier, and the issue holds no lease and waits for none on the intake branch) and prints `codeo rm <N>` only for an issue that passes all five, built from this project's overlay; a pull request whose head branch name is missing fails the branch proof. Origin cannot show whether a clone holds unpushed work or whether the workflow ended in that container, so a lease the issue still holds is the one trace of an unfinished close, and it lists the issue as not proven.
