@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The code and docs are read; nothing is drafted. Q1-Q4 are open, and the plan is drafted once they are answered. `## Notes` holds what was found and the calls made without asking, so they can be corrected in the same pass.
+Round 1. Q1-Q4 are answered and the plan is approved: `docs/plans/2026-11-26-home-checkout-edit-guard-192.md`, left unstaged. Q5 is open: it is Q4 again in the tokens `overlap.sh` reads (`#190`, `glob:CHANGELOG.md`, `glob:docs/home-checkout.md`). The outcome is written once it is answered. `## Notes` holds what was found and the calls made without asking.
 
 ## Questions
 
@@ -70,6 +70,17 @@ Git writes only, as recommended. Given in the conversation: "go with your picks"
 
 **Answer:**
 Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
+
+### Q5 — The footprint check names #190's overlap in its own tokens: proceed and coordinate?
+
+**Why it matters:** Q4 already put this to you in prose, and you chose *proceed and coordinate*, but `overlap.sh` only counts a pair as raised when a question quotes `#M` and its printed token, and Q4 wrote the paths bare. It now prints two lines for #190 (branch `docs/190-make-container-sandbox-setup-reusable`, assignee kbajpai, step qc, round 3 sent back to `/codeo:implement`): `glob:CHANGELOG.md` and `glob:docs/home-checkout.md`. Both are files this plan edits (a new `## Unreleased` bullet, a new `## The edit guard` section) and #190 has changed them too. Your answer decides whether the plan stays as drafted (proceed), is built after #190 merges (the footprint then says `sequenced: after #190`), or drops those two files (re-scope).
+
+- #190 `glob:CHANGELOG.md`
+- #190 `glob:docs/home-checkout.md`
+
+**Options:** proceed and coordinate (recommended: Q4's answer, and the edits are in different places) · sequence after #190 · re-scope.
+
+**Answer:**
 
 ## Notes
 
