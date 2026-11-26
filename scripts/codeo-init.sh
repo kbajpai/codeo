@@ -20,7 +20,9 @@
 # scope = user, version = newest release, env = none, no suites (add them to .codeo/config.json later).
 # --skip-install leaves the plugin install to you (it is the one step that touches Claude's own settings).
 # Output: one "init: ok|skip|fail <step>" line per step, doctor's lines after them. Exit 0 when every step and
-# doctor passed, 1 otherwise, 2 on a usage error. Rerunning is safe: an existing config is kept.
+# doctor passed, 1 otherwise, 2 on a usage error. Rerunning is safe: an existing config is kept, apart from
+# the --suite entries and the plugin pin the flags add to it (a codename that differs from the config's is ignored
+# and said so); the container files are written only where absent.
 set -uo pipefail
 plugin_url=${CODEO_PLUGIN_URL:-https://github.com/${CODEO_PLUGIN_REPO:-kbajpai/codeo}.git}
 
@@ -132,17 +134,22 @@ if ((skip_install)); then
     say skip "install: --skip-install"
 else
     args=(--scope "$scope"); [[ -z $version ]] || args+=(--version "$version")
-    if bash "$here/install.sh" "${args[@]}" >/dev/null 2>"${TMPDIR:-/tmp}/codeo-init.err.$$"; then
+    install_err=$(mktemp "${TMPDIR:-/tmp}/codeo-init.err.XXXXXX") || stop "install: cannot create a temporary file"
+    if bash "$here/install.sh" "${args[@]}" >/dev/null 2>"$install_err"; then
         say ok "install: plugins ($scope)"
     else
-        say fail "install: $(tail -n 1 "${TMPDIR:-/tmp}/codeo-init.err.$$")"
+        say fail "install: $(tail -n 1 "$install_err")"
     fi
-    rm -f "${TMPDIR:-/tmp}/codeo-init.err.$$"
+    rm -f "$install_err"
 fi
 
 # 4. The config.
 if [[ -e .codeo/config.json ]]; then
     say skip "config: .codeo/config.json exists and is kept"
+    kept_codename=$(jq -r '.codename // empty' .codeo/config.json 2>/dev/null || true)
+    if [[ -n $kept_codename && $kept_codename != "$codename" ]]; then
+        say skip "codename: .codeo/config.json already names '$kept_codename'; the answer '$codename' is ignored"
+    fi
 elif setup_err=$(bash "$here/scripts/setup.sh" --codename "$codename" 2>&1 >/dev/null); then
     if [[ $(jq -r .baseBranch .codeo/config.json 2>/dev/null) == TODO-set-me ]]; then
         say fail "config: baseBranch is TODO-set-me (the clone has no origin/HEAD: set baseBranch in .codeo/config.json)"
@@ -180,7 +187,17 @@ fi
 
 # 6. Containers.
 if [[ $env == containers && -f .codeo/config.json && $base_unset == 0 ]]; then
-    if bash "$here/scripts/containers.sh" >/dev/null; then say ok "containers: .devcontainer/ and .sbx/ written"; else say fail "containers: scripts/containers.sh failed"; fi
+    if cont_out=$(bash "$here/scripts/containers.sh"); then
+        n_wrote=$(printf '%s\n' "$cont_out" | grep -c '^containers: wrote ' || true)
+        n_kept=$(printf '%s\n' "$cont_out" | grep -c '^containers: skip ' || true)
+        if ((n_wrote == 0)); then
+            say skip "containers: $n_kept kept, none written"
+        else
+            say ok "containers: $n_wrote written, $n_kept kept"
+        fi
+    else
+        say fail "containers: scripts/containers.sh failed"
+    fi
 elif [[ $base_unset == 1 ]]; then
     say skip "containers: baseBranch is not set"
 else

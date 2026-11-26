@@ -63,12 +63,19 @@ refuses_when_gh_is_not_logged_in() {
 
 an_unattended_run_adopts_another_project() {
     local d; d=$(new_clone shop git@github.com:acme-co/shop.git)
-    (cd "$d" && bash "$init" --yes --skip-install --codename acme --env containers --version v9.9.9 \
+    # doctor looks for the suite's tool; a stub stands in for dotnet so the ruleset (the stub gh's) is the one failure.
+    mkdir -p "$work/stubbin" && printf '#!/bin/sh\nexit 0\n' >"$work/stubbin/dotnet" && chmod +x "$work/stubbin/dotnet"
+    (cd "$d" && PATH="$work/stubbin:$PATH" bash "$init" --yes --skip-install --codename acme --env containers --version v9.9.9 \
         --suite 'api:src/**,tests/**:dotnet build:dotnet test --no-build' >"$work/out" 2>&1) || true
     grep -q '^init: ok config' "$work/out" || fail "config step: $(cat "$work/out")"
     [[ $(jq -r '"\(.codename) \(.repo.owner)/\(.repo.name) \(.plugin.ref) \(.suites[0].name) \(.suites[0].test) \(.suites[0].paths|length)"' "$d/.codeo/config.json") == 'acme acme-co/shop v9.9.9 api dotnet test --no-build 2'* ]] || fail "config content: $(cat "$d/.codeo/config.json")"
     grep -q 'source=acme-gh' "$d/.devcontainer/devcontainer.json" || fail "containers not from the config"
-    grep -rIq 'kbajpai' "$d/.devcontainer" "$d/.sbx" && fail "codeo's repository named in the project's files" || true
+    grep -rIq 'kbajpai' "$d/.devcontainer" "$d/.sbx" "$d/.codeo/overlays" && fail "codeo's repository named in the project's files" || true
+    grep -rIEq 'codeo-([0-9]+|<N>|home)' "$d/.devcontainer" "$d/.sbx" "$d/.codeo/overlays" && fail "codeo's container names in the project's files: $(grep -rIEn 'codeo-([0-9]+|<N>|home)' "$d/.devcontainer" "$d/.sbx" "$d/.codeo/overlays" | head -3)"
+    grep -q '^init: ok containers: [0-9][0-9]* written, 0 kept$' "$work/out" || fail "containers line: $(grep '^init: .*containers' "$work/out")"
+    [[ $(grep -c '^fail ' "$work/out") == 1 ]] && grep -q '^fail ruleset' "$work/out" || fail "doctor's fail lines are not just ruleset: $(grep '^fail ' "$work/out")"
+    ! grep -q '^init: fail' "$work/out" || fail "a wizard step failed: $(grep '^init: fail' "$work/out")"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == acme ]] || fail "the config lacks the project's codename"
 }
 
 a_rerun_keeps_the_config() {
@@ -77,6 +84,15 @@ a_rerun_keeps_the_config() {
     (cd "$d" && bash "$init" --yes --skip-install >"$work/out" 2>&1) || true
     grep -q '^init: skip config' "$work/out" || fail "did not keep the config"
     [[ $(jq -r .touched "$d/.codeo/config.json") == true ]] || fail "config was rewritten"
+    grep -q "^init: skip codename: .codeo/config.json already names 'acme'; the answer 'shop' is ignored\$" "$work/out" || fail "no codename line: $(cat "$work/out")"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == acme ]] || fail "the codename changed"
+    # A rerun with containers over a seed the project edited keeps the edit.
+    (cd "$d" && bash "$init" --yes --skip-install --env containers >/dev/null 2>&1) || true
+    echo '# project edit' >>"$d/.devcontainer/Dockerfile"; echo 'project overlay line' >>"$d/.codeo/overlays/plan.md"
+    (cd "$d" && bash "$init" --yes --skip-install --env containers >"$work/out" 2>&1) || true
+    grep -q '^# project edit$' "$d/.devcontainer/Dockerfile" || fail "the Dockerfile edit was overwritten"
+    grep -q '^project overlay line$' "$d/.codeo/overlays/plan.md" || fail "the overlay edit was overwritten"
+    grep -q '^init: skip containers: [0-9][0-9]* kept, none written$' "$work/out" || fail "containers line on a rerun: $(grep '^init: .*containers' "$work/out")"
 }
 
 questions_are_asked_only_for_what_flags_left() {

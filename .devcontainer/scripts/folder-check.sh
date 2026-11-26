@@ -42,13 +42,13 @@ fi
 
 if [[ -n $locked ]]; then
     [[ $have == "$want" ]] \
-        || echo "todo: this container's folder is '$have' but its lock says '$want', so 'docker ps' names it wrongly: remove it and open it again with the folder '$want' (.devcontainer/README.md)"
+        || echo "todo: this container's folder is '$have' but its lock says '$want', so 'docker ps' names it wrongly: remove it and open it again with the folder '$want'"
 elif [[ $branch == "$base" ]]; then
     [[ $have == "$codename-home" ]] \
-        || echo "todo: this container's folder is '$have' but its clone is on $base with no lock, so it is the home container and 'docker ps' names it wrongly: remove it and open it again with the folder '$codename-home' (.devcontainer/README.md)"
+        || echo "todo: this container's folder is '$have' but its clone is on $base with no lock, so it is the home container and 'docker ps' names it wrongly: remove it and open it again with the folder '$codename-home'"
 else
     suffix=${have#"$codename-"}
     if [[ $have != "$codename-home" && ( $suffix == "$have" || ! $suffix =~ ^[0-9]+$ ) ]]; then
-        echo "todo: this container's folder is '$have', so 'docker ps' names it wrongly: remove it and open it again with the folder '$codename-<N>' (or '$codename-home' for the home container) (.devcontainer/README.md)"
+        echo "todo: this container's folder is '$have', so 'docker ps' names it wrongly: remove it and open it again with the folder '$codename-<N>' (or '$codename-home' for the home container)"
     fi
 fi

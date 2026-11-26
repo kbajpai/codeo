@@ -22,6 +22,7 @@ This page is the reference for the dev container and sbx sandbox files codeo wri
 |---|---|---|
 | `.devcontainer/codeo`, the raw download URL of the `codeo` command | the branch `main` | Placeholder: `@BASE_BRANCH@` |
 | `.devcontainer/codeo-container.sh`, the base ref of a new issue's checkout | the branch `main` | Placeholder: `@BASE_BRANCH@` |
+| `.codeo/overlays/init.md`, the branch the home checkout is on | the branch `main` | Placeholder: `@BASE_BRANCH@` |
 | `.devcontainer/codeo`, the repository in the raw download URL | the repository's slug | Placeholder: `@REPO_SLUG@` |
 | `.devcontainer/codeo-container.sh`, `.devcontainer/codeo-track.sh` and `.sbx/codeo-sandbox.sh`, the repository they clone | the repository's slug | Placeholder: `@REPO_SLUG@` |
 | `.sbx/codeo-sandbox.sh`, the name of a sandbox for issue N | `<codename>-N` | Placeholder: `@CODENAME@` |

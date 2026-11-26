@@ -68,6 +68,13 @@ a_base_branch_other_than_main_is_followed() {
     ! grep -rq '@BASE_BRANCH@' "$d/.devcontainer" "$d/.sbx" || fail "placeholder left unfilled"
 }
 
+overlays_name_the_base_branch() {
+    local d; d=$(new_project ovdev '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"develop"}')
+    (cd "$d" && bash "$script" >/dev/null) || fail "render failed"
+    grep -q 'the clone on `develop`' "$d/.codeo/overlays/init.md" || fail "the init overlay does not name the base branch"
+    ! grep -rwn 'main' "$d/.codeo/overlays" >"$work/mainhits" || fail "an overlay names main as a branch: $(cat "$work/mainhits")"
+}
+
 a_bad_base_branch_is_refused() {
     local d; d=$(new_project badbase '{"schema":1,"codename":"acme","repo":{"owner":"o","name":"r"},"baseBranch":"x;rm -rf"}')
     if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "bad base branch accepted"; fi
@@ -268,7 +275,7 @@ for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section cod
     the_codename_is_required a_todo_marker_is_refused a_bad_codename_is_refused \
     setup_containers_writes_the_normalised_codename setup_containers_alone_adds_the_codename_to_an_existing_config \
     an_underivable_repo_name_fails_before_any_write setup_containers_writes_the_plugin_pin the_plugin_pin_fails_soft_without_a_release \
-    a_base_branch_other_than_main_is_followed a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
+    a_base_branch_other_than_main_is_followed overlays_name_the_base_branch a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
     no_shipped_file_names_codeo_where_the_project_belongs; do
     "$c"
 done
