@@ -65,8 +65,11 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
 RUN npx --yes playwright install --with-deps chromium \
     && chmod -R a+rX "${PLAYWRIGHT_BROWSERS_PATH}" \
     && ln -s "$(find "${PLAYWRIGHT_BROWSERS_PATH}" -type f -path '*chromium-*' \( -name chrome -o -name headless_shell \) | head -n 1)" /usr/local/bin/chromium \
+    && printf '#!/bin/sh\nexec /usr/local/bin/chromium --no-sandbox "$@"\n' >/usr/local/bin/chromium-nosandbox \
+    && chmod 0755 /usr/local/bin/chromium-nosandbox \
     && rm -rf /var/lib/apt/lists/* /root/.npm
-ENV CHROME_BIN=/usr/local/bin/chromium
+# The wrapper adds --no-sandbox, which Chromium needs in a container; Karma's stock ChromeHeadless uses it.
+ENV CHROME_BIN=/usr/local/bin/chromium-nosandbox
 
 # The Docker CLI only, from Docker's apt repository: no engine, and no socket is mounted.
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \

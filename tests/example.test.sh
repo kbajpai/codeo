@@ -139,15 +139,26 @@ generate_web_names_a_pinned_cli_and_refuses_an_existing_app() {
     [[ ! -s $log ]] || fail "npx ran despite the refusal: $(cat "$log")"
     # Without npx it stops with one line.
     rm "$d/examples/csharp-angular/web/angular.json"
-    if PATH="$work/none" "$BASH" "$d/examples/csharp-angular/scripts/generate-web.sh" >"$work/out" 2>&1; then fail "missing npx exited 0"; fi
+    # A normal PATH, minus every directory that holds an npx.
+    local p="" dir IFS=:
+    for dir in $PATH; do [[ -x $dir/npx ]] || p="$p:$dir"; done
+    if PATH="${p#:}" "$BASH" "$d/examples/csharp-angular/scripts/generate-web.sh" >"$work/out" 2>&1; then fail "missing npx exited 0"; fi
     grep -q '^generate-web: npx not found' "$work/out" || fail "no npx message: $(cat "$work/out")"
+}
+
+the_dockerfile_points_chrome_bin_at_a_no_sandbox_wrapper() {
+    local df="$ex/.devcontainer/Dockerfile" bin
+    bin=$(sed -n 's/^ENV CHROME_BIN=//p' "$df")
+    [[ -n $bin ]] || fail "no ENV CHROME_BIN"
+    grep -q "$bin" <(grep -v '^ENV CHROME_BIN=' "$df") || fail "the Dockerfile never creates $bin"
+    grep -E "$bin" "$df" | grep -v '^ENV' | grep -q -- '--no-sandbox' || fail "the wrapper $bin does not pass --no-sandbox"
 }
 
 for c in suites_merge_into_a_config_and_doctor_resolves_them the_dockerfile_extends_the_template_only_inside_its_section \
     run_suites_stops_at_the_first_failure api_directory_resolves_to_exactly_one_solution_that_lists_the_test_project \
     run_suites_does_not_let_a_suite_swallow_the_rest run_suites_fails_when_a_test_phase_fails run_suites_passes_arguments_through_bash_c \
     run_suites_fails_on_invalid_config the_manifests_name_no_codeo_project \
-    generate_web_names_a_pinned_cli_and_refuses_an_existing_app; do
+    generate_web_names_a_pinned_cli_and_refuses_an_existing_app the_dockerfile_points_chrome_bin_at_a_no_sandbox_wrapper; do
     "$c"
 done
 echo "all cases passed"

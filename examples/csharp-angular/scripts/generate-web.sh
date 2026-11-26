@@ -36,11 +36,8 @@ keep=
 cd "$repo"
 if ! npx --yes "@angular/cli@$ANGULAR_CLI_MAJOR" new web --defaults --skip-git --skip-install --directory "$rel"; then
     [[ -z $keep ]] || { mkdir -p "$web"; : >"$web/.gitkeep"; }
-    echo "generate-web: ng new failed" >&2
+    echo "generate-web: ng new failed; partial output may remain in $rel and must be deleted before running again" >&2
     exit 1
 fi
 
 echo "generated: $rel"
-echo "note: the web suite runs headless Chromium (CHROME_BIN) as root in a container, which needs --no-sandbox."
-echo "note: after npm install, add to $rel/karma.conf.js (create it with 'npx ng generate config karma') a customLauncher"
-echo "note: { ChromeHeadlessNoSandbox: { base: 'ChromeHeadless', flags: ['--no-sandbox'] } } and run the suite with --browsers=ChromeHeadlessNoSandbox."
