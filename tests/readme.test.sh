@@ -28,6 +28,8 @@
 #   home-checkout    docs/home-checkout.md says what a missing jq and an existing container do
 #   host-command     Installing points at the codeo command's section of .devcontainer/README.md; home-checkout.md and
 #                    .devcontainer/README.md carry the macOS notes (flock, the keychain over SSH)
+#   pipefail-safe    no code line in this file ends a pipeline in grep -q: a producer still writing when grep -q exits
+#                    dies of SIGPIPE and pipefail reports a false failure, so it reads grep -q... <(producer) instead
 # Headings and backticked tokens inside a ``` fence do not count; commands inside a fence do.
 #
 #   bash tests/readme.test.sh
@@ -124,7 +126,7 @@ for page in "${pages[@]}"; do
             fi
         fi
         if [[ -n "$anchor" && -f "$file" && "$file" == *.md ]]; then
-            slugs "$file" | grep -qxF -- "$anchor" || fail links "$page: $link has no heading $anchor in $file"
+            grep -qxF -- "$anchor" <(slugs "$file") || fail links "$page: $link has no heading $anchor in $file"
         fi
     done < <(prose "$page" | grep -o ']([^)]*)' | sed 's/^](//; s/)$//' | sort -u || true)
 done
@@ -146,7 +148,7 @@ else
     for key in $known_keys; do
         if [[ "$key" == stacks ]]; then
             grep -qF stacks scripts/setup.sh || fail config-keys "stacks is not written by scripts/setup.sh"
-            section "$readme" Configuration | grep '^| *`stacks`' | grep -qF 'read by nothing' ||
+            grep -qF 'read by nothing' <(section "$readme" Configuration | grep '^| *`stacks`') ||
                 fail config-keys "the stacks row is not labelled \"read by nothing\""
             continue
         fi
@@ -216,7 +218,7 @@ if [[ -z "$lock" ]]; then
 else
     grep -qF '/codeo:init #<N>' <<<"$lock" || fail lock-entry "the lock entry does not contain /codeo:init #<N>"
     grep -qF 'reconcile by hand' <<<"$lock" || fail lock-entry "the lock entry does not contain reconcile by hand"
-    tr '\n' ' ' <<<"$lock" | sed 's/\. /.\n/g' | grep -F 'reconcile by hand' | grep -qF diverged ||
+    grep -qF diverged <(tr '\n' ' ' <<<"$lock" | sed 's/\. /.\n/g' | grep -F 'reconcile by hand') ||
         fail lock-entry "no sentence of the lock entry names both reconcile by hand and diverged"
 fi
 
@@ -265,24 +267,24 @@ else
     [[ "$(sed -n 2p <<<"$pin_leads")" == '**A hand-edited `ref` does not take effect.**'* ]] ||
         fail troubleshooting-groups "Installing and the pin's second entry is not **A hand-edited \`ref\` does not take effect.**"
 fi
-sed '/^### /,$d' <<<"$trouble" | grep -qi 'three groups' ||
+grep -qi 'three groups' <(sed '/^### /,$d' <<<"$trouble") ||
     fail troubleshooting-groups "the Troubleshooting intro does not say three groups"
 
 # adopting-guard: the home-checkout section and the two links to it.
 anchor='home-checkout.md#adopting-the-guard-in-your-project)'
-prose docs/home-checkout.md | grep -qxF '## Adopting the guard in your project' ||
+grep -qxF '## Adopting the guard in your project' <(prose docs/home-checkout.md) ||
     fail adopting-guard "docs/home-checkout.md has no line \"## Adopting the guard in your project\""
 adopt=$(section docs/home-checkout.md "Adopting the guard in your project")
 for w in role-guard .codeo/overlays/ /codeo:doctor; do
     grep -qF -- "$w" <<<"$adopt" || fail adopting-guard "the Adopting the guard section does not mention $w"
 done
-entry "$trouble" "A role-guard refusal" | grep -qF "](docs/$anchor" ||
+grep -qF "](docs/$anchor" <(entry "$trouble" "A role-guard refusal") ||
     fail adopting-guard "README.md's role-guard entry does not link ](docs/$anchor"
 grep -qF "]($anchor" <(prose docs/extension-points.md 2>/dev/null) ||
     fail adopting-guard "docs/extension-points.md does not link ]($anchor"
 
 # updating: the superpowers update says to restart.
-section docs/updating.md "Updating superpowers" | grep -qF restart ||
+grep -qF restart <(section docs/updating.md "Updating superpowers") ||
     fail updating "docs/updating.md's Updating superpowers section does not say restart"
 
 # skill-count: the page ledes say six.
@@ -316,6 +318,14 @@ grep -qF 'security -v unlock-keychain ~/Library/Keychains/login.keychain-db' "$d
     fail host-command "$dc does not mention security -v unlock-keychain ~/Library/Keychains/login.keychain-db"
 grep -qF 'keychain cannot be accessed because the current session does not allow user interaction' "$dc" ||
     fail host-command "$dc does not quote the keychain-cannot-be-accessed error"
+
+# A pipeline whose consumer is grep -q: grep exits at its first match, a producer still writing is killed
+# by SIGPIPE (141), and pipefail fails the whole pipeline although the line was found. The race is lost
+# on a slow runner and won on a fast machine, so this reads the source instead of waiting for it to flake.
+while IFS=: read -r n text; do
+    [[ $text =~ ^[[:space:]]*# ]] && continue
+    fail pipefail-safe "${BASH_SOURCE[0]##*/}:$n: a producer still writing when grep -q exits dies of SIGPIPE and pipefail reports a false failure; use grep -q... <(producer) instead"
+done < <(grep -nE '[|] *grep -[a-zA-Z]*q' "${BASH_SOURCE[0]}" || true)
 
 if [[ $failed -ne 0 ]]; then
     exit 1
