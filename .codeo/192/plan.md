@@ -24,6 +24,7 @@ I recommend the environment variable.
 **Options:** environment variable (recommended) · marker file · no preference, you pick.
 
 **Answer:**
+Environment variable, as recommended. Given in the conversation: "go with your picks".
 
 ### Q2 — How does the plugin's hook find the project's role check?
 
@@ -38,6 +39,7 @@ I recommend the fixed path; a key can be added later without breaking it.
 **Options:** fixed path (recommended) · config key · both · no preference, you pick.
 
 **Answer:**
+Fixed path, as recommended. Given in the conversation: "go with your picks".
 
 ### Q3 — Which Bash commands are refused: git writes only, or shell file writes too?
 
@@ -53,6 +55,7 @@ I recommend git writes only.
 **Options:** git writes only (recommended) · git writes and shell file writes · no preference, you pick.
 
 **Answer:**
+Git writes only, as recommended. Given in the conversation: "go with your picks".
 
 ### Q4 — #190 is in flight and touches files this plan will change. Proceed, sequence, or re-scope?
 
@@ -66,6 +69,7 @@ I recommend git writes only.
 **Options:** proceed and coordinate (recommended: the code and tests do not overlap, and the docs differ by paragraph) · sequence after #190 · re-scope (leave the docs #190 touches to a follow-up issue).
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
