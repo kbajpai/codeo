@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written: round 1's blocking finding is fixed; one new blocking finding (G1, the README sends an abandoned issue to a fix that does not clear init's stop), three non-blocking. The verdict sends the change back to `/codeo:implement`. Next step: `/codeo:implement`.
+Round 3 is written: round 2's blocking finding (G1) is fixed, no blocking finding is left, three non-blocking notes (H1-H3). The verdict is clear. Next step: `/codeo:close`.
 
 ## Questions
 
@@ -98,7 +98,46 @@ Issues filed by this pass: none.
 
 **Verdict: back to `/codeo:implement`.** Fix G1; G2 and G3 are non-blocking and cheap in the same round.
 
+### Round 3 — 2026-11-26
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`, so no `also changed on main:` lines. `overlap.sh 179`: nothing, exit 0. `overlap.sh --outside 179`: nothing, exit 0. `scope.sh origin/main HEAD`: `suite shell needed for unclassified paths: .codeo/179/implement.md, .codeo/179/init.md, .codeo/179/issue.md, .codeo/179/plan.md, .codeo/179/qc.md, README.md`, `suite.shell=true`, exit 0. No shared environment is configured, so no `deploy=` line and no environment step.
+
+**Build.** `true` (suite `shell`): exit 0.
+
+**Tests.** `bash tests/run.sh` (whole suite, this tree): `all cases passed`, exit 0. The same in a clean worktree (`git worktree add ../codeo-179-qc HEAD`, removed afterwards): `all cases passed`, exit 0.
+
+**Criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | The doctor-checks intro describes only what `scripts/doctor.sh` checks; the two non-doctor entries sit under their own heading | met — the twelve leads under `### Checks from /codeo:doctor` equal the twelve names `scripts/doctor.sh` reports (checked both ways); the two entries sit under `### Installing and the pin` | `troubleshooting-groups` check; reviewer read `doctor.sh` |
+| 2 | "Start here" step 6 says the workflow finishes on the second `/codeo:close` | met — README.md:27 | `start-here` check; `skills/close/SKILL.md` step 8 |
+| 3 | The lock entry separates the TODOs a fresh `/codeo:init` fixes from the reconcile-by-hand ones | met — README.md:437: `/codeo:init #<N>` fixes "found 0" and resumes a stashed issue; an abandoned one stops with `claim: #<N> was abandoned …` with two ways on; "found more than one" and the local-branch and divergence TODOs are fixed by hand. Each clause was read against `scripts/lock.sh:80,101,111,121,163`, `skills/init/SKILL.md:119-127,178-195` and `skills/close/SKILL.md:684-711` | `lock-entry` check; reviewer read the three files |
+| 4 | A repeated heading's link resolves in `tests/readme.test.sh`, and the header names which path checks hold only because codeo uses itself | met — `slugs` self-check gives `x`, `x-1`, `x-2`; the header names `.codeo/`, `.codeo/.gitignore`, `.codeo/config.json` and `docs/plans/`, the only such paths in the three pages | `slugs` self-check; header at `tests/readme.test.sh:5-8` |
+| 5 | `docs/updating.md` "Updating superpowers" says to restart open sessions | met — docs/updating.md:124 | `updating` check |
+| 6 | `docs/handoff.md` and `docs/skills.md` give the same skill count | met — "Six pipeline skills" / "Six skills form the pipeline"; no "Seven" left | `skill-count` check |
+| 7 | A page tells another project how to adopt the role guard | met — `docs/home-checkout.md` "Adopting the guard in your project", linked from README.md and `docs/extension-points.md`; its exit contract matches `.codeo/overlays/plan.md` and `role.sh` | `adopting-guard` check; reviewer read the overlays and `role.sh` |
+| 8 | "Setting a project up" renders as intended in a strict Markdown renderer | met — three `###` steps, unindented paragraphs, column-0 fences, no list item broken by a fence; no renderer is installed here, the structure was read in CommonMark terms and the reviewer agrees | `setup-steps` check; reading |
+| 9 | `bash tests/run.sh` passes, in a clean worktree too | met | the two runs above |
+
+**Documentation check.** Five pages changed and no others: `README.md`, `docs/home-checkout.md`, `docs/extension-points.md`, `docs/updating.md`, `docs/handoff.md`. The new prose is present tense with no issue number and no "now"; every statement the lock entry and the guard page make was read against the code they describe.
+
+**Independent review (opus).** Quoted, not bold: no Critical; no Important; three Minor; assessment "With fixes" for Minor 1 only. It verified the lock entry clause by clause, the twelve doctor names, the guard page, the skill count, the CommonMark structure, the anchors, the slug function and that the new checks have no `pipefail` hazard.
+
+**Findings.**
+
+- **G1 (blocking in round 2) — fixed by `50a2d52`.** The abandoned-issue advice now matches `skills/init/SKILL.md`. **G2** and **G3** (non-blocking in round 2) are fixed by the same commit; **G4** stands as a note.
+- **H1 — non-blocking, `/codeo:implement`'s.** README.md:437 says "or that the branch and `origin/<branch>` have diverged"; `scripts/lock.sh:121` prints `$current and origin/$dossier_branch have diverged`, where `$current` is the branch HEAD is on, not the issue's branch. "the branch" can read as the issue's local branch, which is the separate `stale_local` TODO. One word: "the current branch (HEAD) and `origin/<branch>`".
+- **H2 — non-blocking.** README.md:27: "the workflow finishes on that second run" is the criterion's own wording; it is incomplete when the engineer accepts `/codeo:close`'s background watch (`skills/close/SKILL.md:307-317`), where the same session continues without a second command.
+- **H3 — non-blocking, `/codeo:implement`'s.** `tests/readme.test.sh:213`: the `lock-entry` assertion `grep -qF '/codeo:init #<N>'` already held before this change (the entry's first clause carries it), so it cannot fail on the new "init fixes it" group; the `reconcile by hand` and `diverged` sentence check does guard the other group.
+- **G4 (round 2) — non-blocking.** `setup-steps` does not catch tab-indented or lazy-continuation lines; the section is correct today.
+
+Issues filed by this pass: none.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-25 — qc round 1: build and suite pass here and in a clean worktree; one blocking finding (F1), five non-blocking; back to implement · cost: 9m · opus-5-5 293k in + 2.1M cached / 12k out · sonnet-5-5 223k in + 779k cached / 3k out
 - 2026-11-25 — qc round 2: build and suite pass here and in a clean worktree; one blocking finding (G1), three non-blocking; back to implement · cost: 8m · opus-5-5 355k in + 2M cached / 13k out · sonnet-5-5 24k in + 589k cached / 865 out
+- 2026-11-26 — qc round 3: build and suite pass here and in a clean worktree; no blocking finding, three non-blocking (H1-H3); clear · cost: 8m · opus-5-5 380k in + 1.8M cached / 12k out · sonnet-5-5 22k in + 330k cached / 415 out
