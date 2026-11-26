@@ -217,3 +217,6 @@
 | `qc:176:F9-F18` | #176 F9-F18 (.sbx/README.md, T14, sandbox test gaps, CHANGELOG, CLT hint, codeo open check) | filed #185 | 2026-11-26 |
 | `issue:181` | Session title hex sequence number; board Status Backlog | backlog | 2026-11-26 |
 | `issue:182` | Release v1.0.10 gated on #177 and #179; board Status Backlog | backlog | 2026-11-26 |
+| `qc:177:F2-F6` | #177 QC round 2 F2-F6 (UTC-date wording, `ls-remote` allowlist, tracker condition, assignee lookup, cleanup `leftover` line, CHANGELOG comma) | filed #188 | 2026-11-26 |
+| `issue:185` | Close the #173, #176 and #170 QC leftovers; board Status Backlog | backlog | 2026-11-26 |
+| `issue:188` | Close the #177 QC leftovers; board Status Backlog | backlog | 2026-11-26 |
