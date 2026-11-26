@@ -134,3 +134,4 @@ _Pending — written at the hand-off._
 
 ## Log
 - 2026-11-26 — Q1-Q7 raised · cost: 5m · fable-5-2 100k in + 851k cached / 9k out
+- 2026-11-26 — planned: docs/plans/2026-11-26-container-setup-reusable-190.md · cost: 27m · fable-5-2 108k in + 1.1M cached / 14k out · sonnet-5-5 137k in + 757k cached / 24k out
