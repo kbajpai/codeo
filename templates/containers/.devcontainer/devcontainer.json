@@ -1,0 +1,32 @@
+{
+  "name": "@CODENAME@",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "dev",
+  "runArgs": ["--name=${containerWorkspaceFolderBasename}", "--memory=4g"],
+  "mounts": [
+    "source=@CODENAME@-gh,target=/home/dev/.config/gh,type=volume",
+    "source=@CODENAME@-git,target=/home/dev/.config/git,type=volume"
+  ],
+  "containerEnv": {
+    "GIT_CONFIG_GLOBAL": "/home/dev/.config/git/config"
+  },
+  "postCreateCommand": "bash .devcontainer/scripts/devcontainer-start.sh",
+  "postStartCommand": "bash .devcontainer/scripts/window-title.sh || true",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "bierner.markdown-mermaid"
+      ],
+      "settings": {
+        "files.insertFinalNewline": true,
+        "files.trimTrailingWhitespace": true,
+        "[markdown]": {
+          "files.trimTrailingWhitespace": false
+        }
+      }
+    }
+  }
+}

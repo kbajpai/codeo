@@ -4,7 +4,7 @@
 #
 #   doctor.sh
 #
-# Checks: config, schema, codename, gh-auth, gh-scopes, board, priority-labels (only when issue.priority is true), ruleset, suites, deps, overlays, superpowers.
+# Checks: config, schema, codename, gh-auth, gh-scopes, board, priority-labels (only when issue.priority is true), ruleset, suites, deps, overlays, superpowers, containers (only when the project has .devcontainer/ or .sbx/ scripts).
 # Every GitHub read is `gh api` except the board check's `gh project view`, which is GraphQL-backed; nothing uses the
 # GraphQL-backed `gh issue|pr|run`.
 # The ruleset check reads the effective rules for the base branch from
@@ -268,6 +268,23 @@ if [[ -r "$plugins_file" ]] && jq -e '.plugins | type == "object"' "$plugins_fil
     fi
 else
     report ok superpowers "cannot verify"
+fi
+
+# containers: only for a project that has them. The managed scripts must still match the plugin's templates
+# (scripts/containers.sh --check); the files a project edits (Dockerfile, devcontainer.json) are its own.
+if [[ -e $CODEO_PROJECT_ROOT/.devcontainer/codeo-container.sh || -e $CODEO_PROJECT_ROOT/.sbx/codeo-sandbox.sh ]]; then
+    if [[ $config_ok -eq 0 ]]; then
+        report fail containers "skipped: config is unusable"
+    elif cont_out=$(bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh" --check 2>&1); then
+        report ok containers "managed scripts match the templates"
+    else
+        cont_bad=$(sed -n 's/^containers: differs //p' <<<"$cont_out" | tr '\n' ' ' | sed 's/ $//')
+        if [[ -n $cont_bad ]]; then
+            report fail containers "differ from the templates: $cont_bad; refresh with: bash <plugin>/scripts/containers.sh --force"
+        else
+            report fail containers "$(head -n 1 <<<"$cont_out")"
+        fi
+    fi
 fi
 
 exit "$failed"
