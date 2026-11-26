@@ -23,6 +23,8 @@ echo "$*" >>"$GH_LOG"
 case ${GH_MODE:-ok}:$1 in
     noauth:auth) exit 1 ;;
     norepo:api) exit 1 ;;
+    private:api) echo "true private"; exit 0 ;;
+    public:api) echo "false public"; exit 0 ;;
 esac
 exit 0
 STUB
@@ -84,7 +86,7 @@ a_rerun_keeps_the_config() {
     (cd "$d" && bash "$init" --yes --skip-install >"$work/out" 2>&1) || true
     grep -q '^init: skip config' "$work/out" || fail "did not keep the config"
     [[ $(jq -r .touched "$d/.codeo/config.json") == true ]] || fail "config was rewritten"
-    grep -q "^init: skip codename: .codeo/config.json already names 'acme'; the answer 'shop' is ignored\$" "$work/out" || fail "no codename line: $(cat "$work/out")"
+    grep -q "^init: skip codename: .codeo/config.json already names 'acme'; the derived codename 'shop' is ignored\$" "$work/out" || fail "no codename line: $(cat "$work/out")"
     [[ $(jq -r .codename "$d/.codeo/config.json") == acme ]] || fail "the codename changed"
     # A rerun with containers over a seed the project edited keeps the edit.
     (cd "$d" && bash "$init" --yes --skip-install --env containers >/dev/null 2>&1) || true
@@ -289,7 +291,7 @@ the_wizard_notes_kept_seeds_once() {
     ! grep -q 'kept files are yours' "$work/out" || fail "note on a fresh project"
     (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
     [[ $(grep -c 'kept files are yours' "$work/out") == 1 ]] || fail "note count: $(cat "$work/out")"
-    grep -qxF 'init: note: kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs its role-guard and host-workflow sections): see docs/container-templates.md, Managed and seed files' "$work/out" || fail "note text"
+    grep -qxF 'init: note: kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs the sections its template has (role-guard in every overlay; host-workflow in init and close; removal-command in cleanup)): see the codeo plugin'"'"'s docs/container-templates.md, Managed and seed files' "$work/out" || fail "note text"
 }
 
 the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json() {
@@ -303,12 +305,13 @@ the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json() {
     (cd "$d" && env -u CODEO_PLUGIN_URL CODEO_PLUGIN_BASE="$b" bash "$init" --yes --skip-install --env containers >"$work/out" 2>&1) || true
     [[ $(jq -c .plugin "$d/.codeo/config.json") == '{"repo":"fork/codeo","ref":"v2.0.0"}' ]] || fail "fork ref: $(jq -c .plugin "$d/.codeo/config.json")"
     local bad
-    for bad in 'not json' 'null' '[]'; do
+    for bad in 'not json' 'null' '[]' '"str"'; do
+        local want='is not a JSON object'; [[ $bad != "not json" ]] || want='is not valid JSON'
         nbad=$((nbad + 1)); d=$(new_clone "wizbad$nbad" git@github.com:acme-co/shop.git)
         mkdir "$d/.codeo"; printf '%s\n' "$bad" >"$d/.codeo/config.json"; cp "$d/.codeo/config.json" "$work/bad.orig"
         if (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 --suite 'x:a:true:true' >"$work/out" 2>&1); then fail "wizard accepted '$bad'"; fi
         [[ $(grep -c 'fail config' "$work/out") == 1 ]] || fail "'$bad': not exactly one fail config line: $(cat "$work/out")"
-        grep -qxF 'init: fail config: .codeo/config.json is not valid JSON' "$work/out" || fail "'$bad' message: $(cat "$work/out")"
+        grep -qxF "init: fail config: .codeo/config.json $want" "$work/out" || fail "'$bad' message: $(cat "$work/out")"
         ! grep -q 'jq:' "$work/out" || fail "'$bad': jq noise: $(cat "$work/out")"
         ! grep -q 'containers:' "$work/out" || fail "'$bad': containers ran"
         cmp -s "$work/bad.orig" "$d/.codeo/config.json" && [[ ! -e $d/.codeo/config.json.new && ! -e $d/.devcontainer ]] || fail "'$bad': something was written"
@@ -320,6 +323,49 @@ the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json() {
     cmp -s "$work/bad.orig" "$d/.codeo/config.json" && [[ ! -e $d/.devcontainer ]] || fail "wrote with a bad plugin.repo"
 }
 
+a_flag_codename_that_the_config_overrules_is_called_the_answer() {
+    local d="$work/shop"
+    (cd "$d" && bash "$init" --yes --skip-install --codename other >"$work/out" 2>&1) || true
+    grep -qF "the answer 'other' is ignored" "$work/out" || fail "flag codename: $(cat "$work/out")"
+}
+
+a_version_that_is_not_a_release_tag_is_a_usage_error() {
+    local d v
+    d=$(new_clone badver git@github.com:acme-co/shop.git)
+    for v in 1.2.3 v1.2 main v1.2.3-rc1 'v1.2.3 '; do
+        (cd "$d" && bash "$init" --yes --skip-install --version "$v" >"$work/out" 2>&1) && fail "accepted --version '$v'"
+        [[ $(cat "$work/out") == 'init: --version must look like v1.2.3' ]] || fail "'$v': $(cat "$work/out")"
+        # the lone-script pre-parse: a copy outside the plugin has no lib/prompt.sh
+        cp "$init" "$work/lone.sh"
+        (cd "$d" && bash "$work/lone.sh" --yes --version "$v" >"$work/out" 2>&1) && fail "lone accepted '$v'"
+        [[ $(cat "$work/out") == 'init: --version must look like v1.2.3' ]] || fail "lone '$v': $(cat "$work/out")"
+    done
+    (cd "$d" && bash "$init" --yes --skip-install --version 1.2.3 >/dev/null 2>&1) || [[ $? -eq 2 ]] || fail "exit is not 2"
+    [[ ! -e $d/.codeo ]] || fail "wrote files"
+}
+
+a_private_repository_gets_a_note_and_the_wizard_goes_on() {
+    local d
+    d=$(new_clone privrepo git@github.com:acme-co/shop.git)
+    (cd "$d" && GH_MODE=private bash "$init" --yes --skip-install >"$work/out" 2>&1) || true
+    grep -qxF 'init: note: acme-co/shop is private; the container route and the codeo command fetch GitHub URLs without credentials and fail for a private repository (docs/container-templates.md in the codeo plugin, Adopting the templates)' "$work/out" || fail "no note: $(cat "$work/out")"
+    [[ $(grep -c 'init: note: acme-co/shop is private' "$work/out") == 1 && -e $d/.codeo/config.json ]] || fail "one note, and the wizard goes on"
+    d=$(new_clone pubrepo git@github.com:acme-co/shop.git)
+    (cd "$d" && GH_MODE=public bash "$init" --yes --skip-install >"$work/out" 2>&1) || true
+    ! grep -q 'is private' "$work/out" || fail "note on a public repository"
+    (cd "$d" && bash "$init" --yes --skip-install >"$work/out" 2>&1) || true
+    ! grep -q 'is private' "$work/out" || fail "note when gh says nothing"
+}
+
+the_wizard_stops_on_a_todo_base_branch_before_any_write() {
+    local d
+    d=$(new_clone wizbase git@github.com:acme-co/shop.git)
+    mkdir "$d/.codeo"; echo '{"schema":1,"repo":{"owner":"acme-co","name":"shop"},"baseBranch":"TODO-set-me"}' >"$d/.codeo/config.json"; cp "$d/.codeo/config.json" "$work/bad.orig"
+    if (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1); then fail "accepted a TODO baseBranch"; fi
+    [[ $(grep -c 'fail config' "$work/out") == 1 ]] && grep -q 'baseBranch is TODO-set-me' "$work/out" || fail "message: $(cat "$work/out")"
+    cmp -s "$work/bad.orig" "$d/.codeo/config.json" && [[ ! -e $d/.devcontainer ]] || fail "something was written"
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
     questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
@@ -329,7 +375,8 @@ for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_create
     a_clone_without_origin_head_does_not_say_ok_and_skips_the_containers a_mixed_case_repo_name_gets_a_derived_codename a_repo_name_that_cannot_yield_a_codename_fails_before_writing \
     an_invalid_explicit_codename_states_the_rule a_flag_without_a_value_is_a_usage_error a_setup_failure_names_its_reason \
     a_kept_config_without_a_codename_gets_the_answer_written_into_it a_kept_config_without_a_codename_and_an_underivable_name_fails_before_writing \
-    a_failed_suite_write_is_reported_and_the_next_suite_is_tried the_wizard_fills_only_the_missing_plugin_key the_wizard_notes_kept_seeds_once the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json; do
+    a_failed_suite_write_is_reported_and_the_next_suite_is_tried the_wizard_fills_only_the_missing_plugin_key the_wizard_notes_kept_seeds_once the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json \
+    a_flag_codename_that_the_config_overrules_is_called_the_answer a_version_that_is_not_a_release_tag_is_a_usage_error a_private_repository_gets_a_note_and_the_wizard_goes_on the_wizard_stops_on_a_todo_base_branch_before_any_write; do
     "$c"
 done
 echo "all cases passed"

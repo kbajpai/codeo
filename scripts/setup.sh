@@ -50,7 +50,7 @@ done
 # or overlay a project already had), because the managed scripts rely on what the seeds provide.
 run_containers() {
     local out
-    out=$(bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh") || { printf '%s\n' "$out"; return 1; }
+    out=$(bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh") || { [[ -z $out ]] || printf '%s\n' "$out"; return 1; }
     printf '%s\n' "$out"
     (($(codeo_kept_seeds "$out") == 0)) || echo "codeo: note: $(codeo_kept_seeds_note)"
 }
@@ -59,7 +59,7 @@ run_containers() {
 # stays. The ref fails soft: no release, no pin, files still written.
 write_pin() {
     local cfg="$CODEO_STATE_DIR/config.json" missing pin="" repo=${CODEO_PLUGIN_REPO:-kbajpai/codeo} r=""
-    codeo_config_is_object "$cfg" || codeo_die "config.json is not valid JSON"
+    msg=$(codeo_config_shape_error "$cfg") || codeo_die "config.json $msg"
     msg=$(codeo_pin_repo_error "$cfg") || codeo_die "$msg"
     missing=$(codeo_pin_missing "$cfg")
     [[ -n $missing ]] || return 0
@@ -80,8 +80,9 @@ write_pin() {
 [[ -z $codename || ($codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#codename} -ge 2 && ${#codename} -le 30) ]] ||
     codeo_die "codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter, 2-30 characters"
 if [[ -e "$CODEO_STATE_DIR/config.json" && $containers == 1 && ${#stacks[@]} == 0 ]]; then
-    codeo_config_is_object "$CODEO_STATE_DIR/config.json" || codeo_die "config.json is not valid JSON"
+    msg=$(codeo_config_shape_error "$CODEO_STATE_DIR/config.json") || codeo_die "config.json $msg"
     msg=$(codeo_pin_repo_error "$CODEO_STATE_DIR/config.json") || codeo_die "$msg"
+    msg=$(codeo_base_error "$CODEO_STATE_DIR/config.json") || codeo_die "$msg"
     existing_cn=$(jq -r '.codename // empty' "$CODEO_STATE_DIR/config.json" 2>/dev/null || true)
     if [[ -n $codename && -n $existing_cn && $codename != "$existing_cn" ]]; then
         codeo_die "$CODEO_STATE_DIR/config.json already names '$existing_cn'; setup does not overwrite it"

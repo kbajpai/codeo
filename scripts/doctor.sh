@@ -284,7 +284,7 @@ if [[ -e $CODEO_PROJECT_ROOT/.devcontainer/codeo-container.sh || -e $CODEO_PROJE
         else
             cont_bad=$(sed -n 's/^containers: differs //p' <<<"$cont_out" | tr '\n' ' ' | sed 's/ $//')
             if [[ -n $cont_bad ]]; then
-                cont_msg="differ from the templates: $cont_bad; refresh with: bash <plugin>/scripts/containers.sh --force"
+                cont_msg="differ from the templates: $cont_bad; refresh with: bash $CODEO_PLUGIN_ROOT/scripts/containers.sh --force"
             else
                 cont_msg=$(head -n 1 <<<"$cont_out")
             fi
@@ -292,7 +292,7 @@ if [[ -e $CODEO_PROJECT_ROOT/.devcontainer/codeo-container.sh || -e $CODEO_PROJE
         pin_gap=$(codeo_pin_missing "$CODEO_STATE_DIR/config.json")
         if [[ -n $pin_gap ]]; then
             pin_gap=${pin_gap//repo/plugin.repo}; pin_gap=${pin_gap//ref/plugin.ref}; pin_gap=${pin_gap// / and }
-            cont_msg="${cont_msg:+$cont_msg; }.devcontainer/ is present but .codeo/config.json has no $pin_gap, so the container cannot install codeo; set them (see docs/container-templates.md)"
+            cont_msg="${cont_msg:+$cont_msg; }.devcontainer/ is present but .codeo/config.json has no $pin_gap, so the container cannot install codeo; set them (see docs/container-templates.md in the codeo plugin ($CODEO_PLUGIN_ROOT/docs/container-templates.md))"
         fi
         if [[ -n $cont_msg ]]; then
             report fail containers "$cont_msg"

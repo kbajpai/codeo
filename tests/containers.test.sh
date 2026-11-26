@@ -131,7 +131,7 @@ check_reports_a_drifted_script() {
 the_codename_is_required() {
     local d; d=$(new_project plain '{"schema":1,"repo":{"owner":"o","name":"widgets"},"baseBranch":"main"}')
     if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "rendered without a codename"; fi
-    grep -qxF 'codeo: config.json has no codename: run setup.sh --containers (it adds one), or set codename in .codeo/config.json' "$work/err" || fail "hint: $(cat "$work/err")"
+    grep -qxF 'codeo: config.json has no codename: run /codeo:setup --containers (it adds one), or set codename in .codeo/config.json' "$work/err" || fail "hint: $(cat "$work/err")"
     [[ ! -e $d/.devcontainer ]] || fail "files written despite refusal"
 }
 
@@ -226,7 +226,7 @@ setup_reports_a_failed_pin_write() {
 }
 
 setup_notes_kept_seeds_once() {
-    local note='codeo: note: kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs its role-guard and host-workflow sections): see docs/container-templates.md, Managed and seed files'
+    local note='codeo: note: kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs the sections its template has (role-guard in every overlay; host-workflow in init and close; removal-command in cleanup)): see the codeo plugin'"'"'s docs/container-templates.md, Managed and seed files'
     pin_project seedfresh '{"repo":"a/b","ref":"v1"}'; run_setup seedfresh || fail "setup failed"
     ! grep -q 'kept files are yours' "$work/out" || fail "note on a fresh project"
     run_setup seedfresh || fail "rerun failed"
@@ -257,13 +257,35 @@ the_ref_comes_from_the_repository_the_config_names() {
 
 setup_refuses_an_invalid_config_before_the_pin() {
     local d
-    for c in 'not json' '[]'; do
+    for c in 'not json' '[]' '"str"' null; do
+        local want='is not a JSON object'; [[ $c != "not json" ]] || want='is not valid JSON'
         pin_project badcfg '{}'; d="$work/badcfg"; printf '%s\n' "$c" >"$d/.codeo/config.json"
         if run_setup badcfg; then fail "setup accepted '$c'"; fi
-        [[ $(grep -c . "$work/out") == 1 ]] && grep -q 'config.json is not valid JSON' "$work/out" || fail "message for '$c': $(cat "$work/out")"
+        [[ $(grep -c . "$work/out") == 1 ]] && grep -qxF "codeo: config.json $want" "$work/out" || fail "message for '$c': $(cat "$work/out")"
         [[ $(cat "$d/.codeo/config.json") == "$c" && ! -e $d/.codeo/config.json.new && ! -e $d/.devcontainer ]] || fail "wrote something for '$c'"
         rm -rf "$d"
     done
+}
+
+setup_refuses_a_todo_base_branch_before_any_write() {
+    local d
+    pin_project todobase null; d="$work/todobase"
+    jq 'del(.codename) | .baseBranch = "TODO-set-me"' "$d/.codeo/config.json" >"$d/c.new" && mv "$d/c.new" "$d/.codeo/config.json"
+    cp "$d/.codeo/config.json" "$work/orig.json"
+    if run_setup todobase; then fail "setup accepted a TODO baseBranch"; fi
+    [[ $(cat "$work/out") == "codeo: config.json: baseBranch is TODO-set-me; set baseBranch in .codeo/config.json to the repository's base branch" ]] || fail "message: $(cat "$work/out")"
+    cmp -s "$work/orig.json" "$d/.codeo/config.json" && [[ ! -e $d/.devcontainer ]] || fail "something was written"
+}
+
+pin_fill_says_when_it_replaces_a_plugin_that_is_not_an_object() {
+    local d
+    pin_project pinstr '"x"'; d="$work/pinstr"
+    (source "$plugin_root/lib/codename.sh"; codeo_pin_fill "$d/.codeo/config.json" a/b v1.0.0) 2>"$work/err" || fail "fill failed"
+    [[ $(cat "$work/err") == 'codeo: .codeo/config.json plugin was not an object; replaced' ]] || fail "stderr: $(cat "$work/err")"
+    [[ $(plugin_of pinstr) == '{"repo":"a/b","ref":"v1.0.0"}' ]] || fail "not replaced: $(plugin_of pinstr)"
+    pin_project pinabs null
+    (source "$plugin_root/lib/codename.sh"; codeo_pin_fill "$work/pinabs/.codeo/config.json" a/b v1.0.0) 2>"$work/err" || fail "fill failed"
+    [[ ! -s $work/err ]] || fail "said something for an absent plugin: $(cat "$work/err")"
 }
 
 setup_refuses_a_plugin_repo_that_is_not_an_owner_and_name() {
@@ -410,7 +432,7 @@ for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section cod
     setup_codename_with_containers_writes_it_into_a_codenameless_config setup_refuses_another_codename_on_a_config_that_has_one setup_refuses_a_todo_repository_before_deriving_a_codename setup_says_where_the_home_checkout_lives \
     an_underivable_repo_name_fails_before_any_write setup_containers_writes_the_plugin_pin the_plugin_pin_fails_soft_without_a_release \
     a_base_branch_other_than_main_is_followed overlays_name_the_base_branch a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
-    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once the_ref_comes_from_the_repository_the_config_names setup_refuses_an_invalid_config_before_the_pin setup_refuses_a_plugin_repo_that_is_not_an_owner_and_name; do
+    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once the_ref_comes_from_the_repository_the_config_names setup_refuses_an_invalid_config_before_the_pin setup_refuses_a_plugin_repo_that_is_not_an_owner_and_name setup_refuses_a_todo_base_branch_before_any_write pin_fill_says_when_it_replaces_a_plugin_that_is_not_an_object; do
     "$c"
 done
 echo "all cases passed"

@@ -13,6 +13,8 @@
 #                                       CODEO_PLUGIN_REPO; CODEO_PLUGIN_BASE stands in for https://github.com).
 #   codeo_pin_repo_error <config>       prints a line and exits 1 when plugin.repo is set but not owner/name.
 #   codeo_config_is_object <config>     succeeds when the config parses and is a JSON object.
+#   codeo_config_shape_error <config>   prints "is not valid JSON" or "is not a JSON object" (exit 1) when it is not one.
+#   codeo_base_error <config>           prints the baseBranch message and exits 1 when baseBranch is TODO-set-me.
 #   codeo_kept_seeds <output>, codeo_kept_seeds_note   count the seed files containers.sh kept; the one-line note about them.
 codeo_derive_codename() {
     local c
@@ -50,6 +52,8 @@ codeo_pin_missing() {
 # config is untouched (exit 1).
 codeo_pin_fill() {
     local cfg=$1
+    jq -e '(has("plugin") | not) or .plugin == null or (.plugin | type) == "object"' "$cfg" >/dev/null 2>&1 ||
+        echo "codeo: .codeo/config.json plugin was not an object; replaced" >&2
     if jq --arg r "$2" --arg f "$3" '
         .plugin = ((.plugin | objects) // {})
         | if $r != "" and ((.plugin.repo // "") == "") then .plugin.repo = $r else . end
@@ -68,7 +72,7 @@ codeo_kept_seeds() {
 }
 
 codeo_kept_seeds_note() {
-    printf '%s\n' 'kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs its role-guard and host-workflow sections): see docs/container-templates.md, Managed and seed files'
+    printf '%s\n' "kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs the sections its template has (role-guard in every overlay; host-workflow in init and close; removal-command in cleanup)): see the codeo plugin's docs/container-templates.md, Managed and seed files"
 }
 
 # codeo_pin_url <config>: the repository to look the newest release up in. CODEO_PLUGIN_URL when set; else the
@@ -87,6 +91,20 @@ codeo_pin_url() {
 # codeo_config_is_object <config>: the config parses and is a JSON object.
 codeo_config_is_object() {
     jq -e 'type == "object"' "$1" >/dev/null 2>&1
+}
+
+codeo_config_shape_error() {
+    codeo_config_is_object "$1" && return 0
+    if jq empty "$1" >/dev/null 2>&1; then echo "is not a JSON object"; else echo "is not valid JSON"; fi
+    return 1
+}
+
+# codeo_base_error <config>: the message containers.sh gives, and exit 1, when baseBranch is TODO-set-me.
+codeo_base_error() {
+    [[ $(jq -r '.baseBranch // empty' "$1" 2>/dev/null || true) != TODO-set-me ]] || {
+        echo "config.json: baseBranch is TODO-set-me; set baseBranch in .codeo/config.json to the repository's base branch"
+        return 1
+    }
 }
 
 # codeo_pin_repo_error <config>: prints "config.json: plugin.repo '<x>' is not an owner/name" and returns 1 when the

@@ -355,7 +355,7 @@ doctor_fails_containers_without_the_plugin_pin() {
     bash "$plugin_root/scripts/containers.sh" >/dev/null || fail "render failed"
     run
     [[ $rc -ne 0 ]] || fail "expected non-zero"
-    grep -qxF 'fail containers: .devcontainer/ is present but .codeo/config.json has no plugin.repo and plugin.ref, so the container cannot install codeo; set them (see docs/container-templates.md)' <<<"$out" || fail "no pin failure"
+    grep -qxF 'fail containers: .devcontainer/ is present but .codeo/config.json has no plugin.repo and plugin.ref, so the container cannot install codeo; set them (see docs/container-templates.md in the codeo plugin ('"$plugin_root"'/docs/container-templates.md))' <<<"$out" || fail "no pin failure"
     jq '.plugin = {repo: "o/codeo", ref: "v1.0.0"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
     run
     grep -q '^ok containers' <<<"$out" || fail "pinned project not ok"
@@ -371,6 +371,7 @@ doctor_fails_containers_without_the_plugin_pin() {
     jq 'del(.plugin)' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
     run
     grep -q '^fail containers: differ from the templates: .*; .devcontainer/ is present but' <<<"$out" || fail "both problems not reported"
+    grep -qF "refresh with: bash $plugin_root/scripts/containers.sh --force" <<<"$out" || fail "refresh path: $out"
     rm -rf .devcontainer .sbx .codeo/overlays
 }
 

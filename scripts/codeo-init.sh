@@ -41,7 +41,7 @@ if [[ -z $here || ! -f $here/lib/prompt.sh ]]; then
         case ${args[i]} in
             --codename | --scope | --version | --env | --suite)
                 [[ -n ${args[i + 1]:-} ]] || { echo "usage: codeo-init.sh [--yes] [--codename <name>] [--scope user|project] [--version vX.Y.Z] [--env none|containers] [--suite name:paths:build:test]... [--skip-install]" >&2; exit 2; }
-                [[ ${args[i]} != --version ]] || tag=${args[i + 1]}
+                [[ ${args[i]} != --version ]] || { tag=${args[i + 1]}; [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "init: --version must look like v1.2.3" >&2; exit 2; }; }
                 i=$((i + 1))
                 ;;
         esac
@@ -77,7 +77,7 @@ while [[ $# -gt 0 ]]; do
             case $1 in
                 --codename) codename=$2 ;;
                 --scope) scope=$2 ;;
-                --version) version=$2 ;;
+                --version) [[ $2 =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "init: --version must look like v1.2.3" >&2; exit 2; }; version=$2 ;;
                 --env) env=$2 ;;
                 --suite) suites+=("$2") ;;
             esac
@@ -105,10 +105,13 @@ repo=${path##*[/:]}; rest=${path%[/:]*}; owner=${rest##*[/:]}
 command -v jq >/dev/null || stop "preflight: jq is required"
 command -v gh >/dev/null || stop "preflight: gh is required (https://cli.github.com)"
 gh auth status >/dev/null 2>&1 || stop "preflight: gh is not logged in; run gh auth login"
-gh api "repos/$owner/$repo" --jq .full_name >/dev/null 2>&1 || stop "preflight: gh cannot see $owner/$repo; it must already exist and you need access (codeo does not create it)"
+repo_info=$(gh api "repos/$owner/$repo" --jq '"\(.private) \(.visibility // "")"' 2>/dev/null) || stop "preflight: gh cannot see $owner/$repo; it must already exist and you need access (codeo does not create it)"
 say ok "preflight: $owner/$repo exists and gh can see it"
+if [[ $repo_info == true* || $repo_info == *" private" ]]; then
+    echo "init: note: $owner/$repo is private; the container route and the codeo command fetch GitHub URLs without credentials and fail for a private repository (docs/container-templates.md in the codeo plugin, Adopting the templates)"
+fi
 if [[ -e .codeo/config.json ]]; then
-    codeo_config_is_object .codeo/config.json || stop "config: .codeo/config.json is not valid JSON"
+    cfg_err=$(codeo_config_shape_error .codeo/config.json) || stop "config: .codeo/config.json $cfg_err"
     cfg_err=$(codeo_pin_repo_error .codeo/config.json) || stop "config: $cfg_err"
 fi
 
@@ -116,11 +119,16 @@ fi
 # The default codename is the repository name made to fit the codename rule (lower case, . _ and spaces as
 # hyphens, no repeated or edge hyphens, a letter first, at most 30 characters); empty when nothing valid is left.
 default_codename=$(codeo_derive_codename "$repo" || true)
+codename_word=answer
+[[ -n $codename ]] || codeo_interactive || codename_word=derived
 codeo_ask codename "Codename (names containers, images and volumes)" "$default_codename"
 codeo_ask scope "Install the plugins for the user or just this project (user|project)" user
 codeo_ask env "Dev container and sbx sandbox files (none|containers)" none
 [[ $scope == user || $scope == project ]] || stop "answer: scope must be user or project"
 [[ $env == none || $env == containers ]] || stop "answer: env must be none or containers"
+if [[ $env == containers && -e .codeo/config.json ]]; then
+    cfg_err=$(codeo_base_error .codeo/config.json) || stop "config: $cfg_err"
+fi
 [[ -n $codename ]] || stop "answer: cannot derive a codename from '$repo'; pass --codename <name>"
 [[ $codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#codename} -ge 2 && ${#codename} -le 30 ]] ||
     stop "answer: codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter, 2-30 characters"
@@ -152,7 +160,7 @@ if [[ -e .codeo/config.json ]]; then
     say skip "config: .codeo/config.json exists and is kept"
     kept_codename=$(jq -r '.codename // empty' .codeo/config.json 2>/dev/null || true)
     if [[ -n $kept_codename && $kept_codename != "$codename" ]]; then
-        say skip "codename: .codeo/config.json already names '$kept_codename'; the answer '$codename' is ignored"
+        say skip "codename: .codeo/config.json already names '$kept_codename'; $([[ $codename_word == derived ]] && echo "the derived codename" || echo "the answer") '$codename' is ignored"
     fi
     if [[ -z $kept_codename ]]; then
         if jq --arg c "$codename" '.codename = $c' .codeo/config.json >.codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json; then
