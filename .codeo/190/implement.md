@@ -8,6 +8,8 @@
 
 ## Where this stands
 
+Round 3 (send-back from `qc.md` round 2) is done: the four blocking findings G1-G4 and the cheap non-blocking ones (G6, G8-G11) are fixed (see `### Round 3` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed: the round changed wizard and setup behaviour, shipped text and pages, not the example's image.
+
 Round 2 (send-back from `qc.md` round 1) is done: the six blocking findings and four non-blocking ones are fixed (see `### Round 2` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. The engineer's clean `host-run.sh` re-run on a fresh empty repository passed (under *Outcome*, round 2).
 
 Round 1. Tasks 1-11 are done and reviewed, and so is the in-checkout half of Task 12 (the `host-run.sh` script and its refusal test). The branch builds (`shell` suite `build` is `true`) and `bash tests/run.sh` ended `all cases passed` on the branch before the last fix wave (the wave's own suite run also ended `all cases passed`). Nothing in this dossier is open.
@@ -107,8 +109,36 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 
 **Host re-run (the engineer, 2026-11-26, after round 2):** `bash examples/csharp-angular/scripts/host-run.sh kbajpai/rodeo2` on a new empty public repository, with `CODEO_CONTEXT` still exported: `host-run: note: ignoring CODEO_CONTEXT`; `ok neutral image builds`; the wizard (`init: ok containers: 22 written, 1 kept`, doctor with only `fail ruleset`); `ok committed and pushed main and host-run/1`; the issue image built from the Git URL (11 of 11 steps); `ok issue container toolchain`; `suite: api ok` (1 test), `suite: web ok` (2 of 2 SUCCESS), `suite: k8s ok`; `host-run: ok issue container shopdemo-1 ran the suites api web k8s`. Everything it created was removed. This is evidence for `/codeo:qc` that round 2's changes still pass the example end to end.
 
+### Round 3 — 2026-11-26
+(send-back from qc.md round 2)
+
+**What was built** (three commits on top of round 2: `04ff584`, `46ab55b`, `c41b6cd`; each reviewed, the docs one needed a fix round):
+- **G1** — `scripts/codeo-init.sh` writes the derived or given codename into a kept config that has none (atomic temp file and `mv`; a failed write prints no success line), with the same derivation and failure lines as for a new config; `containers.sh`'s hint is `run setup.sh --containers (it adds one), or set codename in .codeo/config.json`; `setup.sh --codename <name> --containers` on an existing codename-less config writes the codename, is a no-op when it already names the same one, and refuses `config.json already names '<x>'` for a different one.
+- **G3** — `setup.sh --containers` and the wizard print where the home checkout lives: the helper `codeo_home_lines` (in `lib/codename.sh`) says a home checkout is a clone whose folder is named `<codename>-home`, and, only when the folder differs, to rename or re-clone it; the adoption pages say the same, and what `role.sh` decides (on the host a clone is home with that folder name, no lock and the base branch; no lock in another folder reads `stray`; `<codename>-home` off the base branch reads `stale:?`; a container in another folder is unguarded).
+- **G2** — the README adoption section, `docs/container-templates.md` and `.devcontainer/README.md` state that the repository must be public (the image build's Git URL, the container's clone and the `codeo` command's raw downloads use no credentials; the `codeo issue` branch lookup uses the host's `git`), name the workarounds the code gives (`CODEO_CONTEXT` for the image build only, `CODEO_RAW_URL`, `CODEO_REPO_URL`, scripts pre-placed in `CODEO_HOME`) and say that a private repository's container still fails and that codeo has no authenticated fetch.
+- **G4** — every command a project runs reads `bash <plugin>/scripts/containers.sh`, with `<plugin>` explained once per page.
+- **G6** — `setup.sh --containers` on an existing config refuses `repo.owner` or `repo.name` of `TODO-set-me` before deriving a codename, writing nothing.
+- **G8, G9** — the close overlay's stash and abandon pointers say `codeo help` lists `codeo rm`; the init overlay leads with `codeo issue <N> <branch> --container` and `codeo shell <N>`, with `bash .devcontainer/codeo-container.sh …` as the fallback from a host clone; codeo's own overlays are re-rendered and equal.
+- **G10** — `CODEO_HOME` is named in the three adoption pages.
+- **G11** — `no_shipped_file_names_codeo_where_the_project_belongs` renders its own project, asserts a non-empty file list, and scans for a leaked `~/codeo` and the titles `codeo [home]` / `codeo [#N]`.
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. For information, `bash scripts/containers.sh --check` prints no `differs` and `bash scripts/doctor.sh` prints no `fail`; the implementers' own full runs of `bash tests/run.sh` ended `all cases passed` for the first two commits; grading is `/codeo:qc`'s.
+
+**Documentation pages changed this round:** `README.md`, `docs/container-templates.md`, `.devcontainer/README.md`, and the overlay templates under `templates/containers/.codeo/overlays/` with codeo's own copies.
+
+**Deviations and rulings (each with what it costs if wrong):**
+1. The public-repository requirement is stated in prose on the three pages, not as a row of the audit table, because the table's two kinds (Placeholder, Intentionally codeo's) do not describe repository visibility; the table gained a Placeholder row for the `<codename>-home` folder name. Costs: the audit table alone does not list visibility.
+2. G11 turned up a real leak the earlier audit missed: the `codeo-container.sh` template hardcoded the window titles `codeo [home]` and `codeo [#N]`; they are now `@CODENAME@ [home]` and `@CODENAME@ [#$1]` (codeo's own checked-in file renders to the same text). One allowed exception is documented in the test: the header comment of `.devcontainer/scripts/session-title.sh`.
+3. The wizard also writes a missing codename for `--env none` (a plain rerun over a codename-less config edits it); the header says so. Costs: a rerun without containers still changes the config.
+4. G5 (one `codeo` command per machine), G7 (pin the rendering plugin's own version) and G12 (the footprint gap) are not fixed here; they are `/codeo:plan`'s or a follow-up issue (`qc.md` `## Notes`).
+
+**Footprint gap still open (`/codeo:plan`'s):** `overlap.sh --outside 190` prints `lib/codename.sh`, `tests/close-removal.test.sh`, `tests/doctor.test.sh`, `tests/folder-check.test.sh`, `tests/init-overlay.test.sh` and `tests/role.test.sh`; `plan.md`'s footprint, which this skill does not edit, omits them.
+
+**Deferred Minor findings from this round's reviews (not fixed):** with an invalid-JSON config the wizard's plugin-pin step can leave `.codeo/config.json.new` behind (no data loss, the original stays intact); the jq/`mv` failure branches of the wizard and `setup.sh` are not exercised by a test; the G11 leak scan's `~/codeo` pattern does not catch `$HOME/codeo` or an absolute `/home/x/codeo`; `codeo_home_lines` prints an empty folder name for a project at `/`; four rewritten sentences start with a capital "On" after a colon; `docs/container-templates.md:36` says "only when its folder has this name", which is loose but not false; the README's adoption bullets and the reference page repeat the same long paragraph in several places (a maintenance risk).
+
 ## Log
 
 - 2026-11-26 — implemented: Tasks 1-11 and the in-checkout half of Task 12 through subagent rounds on sonnet (every implementer, reviewer and fix round), 21 commits; host steps pending · cost: 68m · sonnet-5-5 1.7M in + 58M cached / 322k out
 - 2026-11-26 — host results recorded; host-run hardening and sandbox documentation added after the engineer's run · cost: 124m · sonnet-5-5 1.9M in + 75.8M cached / 386k out
 - 2026-11-26 — round 2 (send-back from qc round 1): F1-F10 fixed in four commits, each task reviewed on sonnet · cost: 34m · sonnet-5-5 563k in + 23.8M cached / 96k out
+- 2026-11-26 — round 3 (send-back from qc round 2): G1-G4 and G6, G8-G11 fixed in three commits, each task reviewed on sonnet · cost: 20m · sonnet-5-5 417k in + 33.6M cached / 82k out
