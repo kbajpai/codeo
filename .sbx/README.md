@@ -131,6 +131,10 @@ When `end` cannot start the sandbox or fetch from it, it also removes nothing, w
 
 `.sbx/claude-image` is one line, the Claude image as `docker.io/sbx/claude@sha256:<64 hex digits>`. `issue` creates the sandbox from it, reading it from the file `CODEO_SBX_IMAGE` names when that is set, else from `codeo-<N>/.sbx/claude-image`, else from `origin/HEAD:.sbx/claude-image` in the clone, and refuses when none is found or the line holds anything else. Moving the pin is an edit to `.sbx/claude-image`, with a line in `CHANGELOG.md`. A sandbox that exists keeps the image it was created from. In another project `.sbx/claude-image` is a seed file: codeo writes it once, never overwrites it, and it is yours to change.
 
+## What the sandbox contains
+
+The sandbox runs Docker's pinned image, which holds the agent's tools but not a project's language toolchain. The pin has to stay a `docker.io/sbx/claude@sha256:` digest, so the project's `.devcontainer/Dockerfile` does not apply to the sandbox. A project whose build needs a toolchain runs its suites in the dev container (`codeo issue <N> --container`), or installs the toolchain inside the sandbox itself. sbx can save a template (`sbx template save`, cited in `docs/dev-environment-sbx-evaluation.md` as U16's workaround); that was not tried here and is not verified.
+
 ## Stopped sandboxes
 
 A sandbox that only `sbx create` and `sbx exec` have started stops by itself about a minute after the last `exec` ends, with nothing attached to it. A sandbox left idle that way is soon `stopped`, and an open VS Code window loses its host. One started with `sbx run -d --name codeo-<N>` stays `running (detached)` while idle: two sandboxes started that way stayed up through four idle minutes, and ten stop-and-start cycles of one left the other running. `issue` and `open` both start the sandbox with `sbx run -d --name codeo-<N>`, so it stays up while idle. `shell` and `end` start a stopped sandbox through `exec`, so after them the sandbox stops again when idle; `open <N>` brings it back.

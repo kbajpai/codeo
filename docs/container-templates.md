@@ -101,6 +101,8 @@ Put every `RUN` for your compilers, SDKs and CLIs inside it and nowhere else, so
 
 Then tell codeo how to build and test, in `suites` in `.codeo/config.json`: each suite has a `name`, the `paths` that make it run, a `build` command and a `test` command, and optionally `filter` and `parallel`. The fields are in the README's [Configuration](../README.md#configuration) section, and `/codeo:doctor` checks that each suite's commands are found.
 
+The toolchain section configures the dev container image only. The sandbox runs Docker's pinned image and does not get it; [the sandbox's README](../.sbx/README.md#what-the-sandbox-contains) says what that means for a build. The example's suites were run in the dev container.
+
 If a build needs more than the image holds, such as a different pinned sandbox image, edit the seeds `.sbx/claude-image` and `.devcontainer/devcontainer.json` the same way.
 
 ## The C# + Angular example
