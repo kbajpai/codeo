@@ -1278,7 +1278,7 @@ docs_changelog_names_the_sandbox_lock() {
 }
 
 docs_the_hand_off_names_the_third_route() {
-    grep -Fq 'bash .sbx/codeo-sandbox.sh issue <N> <branch>' "$repo/.codeo/overlays/init.md" || fail "init overlay lacks the sandbox route"
+    grep -Fq 'bash codeo-sandbox.sh issue <N> <branch>' "$repo/.codeo/overlays/init.md" || fail "init overlay lacks the sandbox route"
     grep -Fq '.sbx/README.md' "$repo/.devcontainer/README.md" || fail "the dev container README does not point at .sbx/README.md"
 }
 
