@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q7 are raised and none is answered. No plan is drafted yet; the draft waits for the answers.
+Q1-Q7 are answered (engineer, "go with your picks", in the conversation, 2026-11-26: every recommendation). The draft is at the review gate in `.codeo/190/plan-draft.md` (13 tasks); nothing is written under `docs/plans/` until it is approved. One call of mine is flagged in the draft: the host run accepts `fail ruleset` as the only doctor failure (a new repository has no ruleset and codeo never creates one).
 
 What exploration found:
 - **The first slice is on this branch.** `74b3afe` was cherry-picked as `c361707` (same patch) and goes to origin with this dossier's push. It adds `templates/containers/`, `scripts/containers.sh`, `setup.sh --codename/--containers`, the doctor `containers` check, `scripts/codeo-init.sh`, `lib/prompt.sh`, `tests/containers.test.sh` and `tests/init.test.sh`. `bash tests/run.sh` on this branch ends `all cases passed`.
@@ -35,6 +35,7 @@ What exploration found:
 *Recommendation:* the sample plus a throwaway repository. Every adopter can repeat it, and the result does not depend on a private codebase.
 
 **Answer:**
+A sample in codeo, pushed to a throwaway repository you create (the repository name is supplied at the host run, Task 9) (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ### Q2 — What must Docker and Kubernetes do inside an issue container or sandbox for the example?
 
@@ -48,6 +49,7 @@ What exploration found:
 *Recommendation:* tools only. It meets the criterion, and mounting the host's socket gives every issue container control of the host's Docker, which is a security decision for an issue of its own.
 
 **Answer:**
+Tools only (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ### Q3 — Does `/codeo:setup --containers` also write the project's overlays (role guard and host workflow)?
 
@@ -61,6 +63,7 @@ What exploration found:
 *Recommendation:* all of them. A setup that writes containers nobody is directed into is not the "full" path the issue asks for.
 
 **Answer:**
+All of them, as seed files (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ### Q4 — Is the one-sentence edit to `skills/setup/SKILL.md` in scope?
 
@@ -71,6 +74,7 @@ What exploration found:
 *Recommendation:* in scope, limited to that sentence and the description.
 
 **Answer:**
+In scope, limited to the description and the one pass-through sentence (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ### Q5 — For criterion 10, what must codeo's own seed files equal?
 
@@ -83,6 +87,7 @@ What exploration found:
 *Recommendation:* the first. It makes codeo the first project using its own template and catches a template change that codeo's own files miss.
 
 **Answer:**
+Seeds equal outside the project's own parts (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ### Q6 — How does a project that has nothing installed yet start `codeo-init.sh`?
 
@@ -96,6 +101,7 @@ What exploration found:
 *Recommendation:* the first. One line, and the installer and its tests stay as they are. Prompts read from `/dev/tty` when stdin is the pipe.
 
 **Answer:**
+codeo-init.sh fetches its own release (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ### Q7 — One pull request, or two?
 
@@ -106,6 +112,7 @@ What exploration found:
 *Recommendation:* one. Criterion 5 requires every documented command to have been run, and the host runs are what find the faults in the templates. The branch prefix `docs/` stays as it is.
 
 **Answer:**
+One pull request (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ## Notes
 
