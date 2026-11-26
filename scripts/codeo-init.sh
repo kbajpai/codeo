@@ -9,7 +9,10 @@
 #
 # Prerequisite, never created here: the GitHub repository must already exist, the clone must have an `origin`
 # remote pointing at it, and gh must be logged in with access to it. codeo-init creates no repository.
-# Questions are asked only at a terminal and only for what a flag did not answer; without a terminal (or with
+# Run alone (curl | bash), it clones its own release (--version, else the newest vX.Y.Z tag of CODEO_PLUGIN_URL,
+# default https://github.com/kbajpai/codeo.git) and runs again from the clone; a failed fetch is one
+# "init: fail fetch: <reason>" line, exit 1, nothing written. Questions are asked only at a terminal (when piped,
+# read from /dev/tty) and only for what a flag did not answer; without a terminal (or with
 # --yes) every question takes its default, so CI and scripts run it unattended. Defaults: codename = the
 # repository name, scope = user, version = newest release, env = none, no suites (add them to
 # .codeo/config.json later).
@@ -18,7 +21,31 @@
 # doctor passed, 1 otherwise, 2 on a usage error. Rerunning is safe: an existing config is kept.
 set -uo pipefail
 
-here=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+# Run alone (curl | bash, or the file copied out of the plugin), the script has none of the files it calls: fetch
+# the release, then run the same command again from the clone. CODEO_INIT_FETCHED stops a second fetch.
+src=${BASH_SOURCE[0]:-}
+here=""
+[[ -f $src && -r $src ]] && here=$(cd "$(dirname "$src")/.." 2>/dev/null && pwd)
+if [[ -z $here || ! -f $here/lib/prompt.sh ]]; then
+    fetch_fail() { printf 'init: fail fetch: %s\n' "$1"; exit 1; }
+    [[ ${CODEO_INIT_FETCHED:-0} != 1 ]] || fetch_fail "the fetched release has no lib/prompt.sh"
+    command -v git >/dev/null || fetch_fail "git is required"
+    plugin_url=${CODEO_PLUGIN_URL:-https://github.com/${CODEO_PLUGIN_REPO:-kbajpai/codeo}.git}
+    tag=""
+    args=("$@")
+    for ((i = 0; i < ${#args[@]}; i++)); do
+        [[ ${args[i]} != --version ]] || tag=${args[i + 1]:-}
+    done
+    if [[ -z $tag ]]; then
+        tag=$(git ls-remote --tags --refs "$plugin_url" 'v*' 2>/dev/null | sed 's|.*refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+        [[ -n $tag ]] || fetch_fail "no release (vX.Y.Z tag) found at $plugin_url"
+    fi
+    tmp=$(mktemp -d 2>/dev/null) || fetch_fail "cannot create a temporary directory"
+    git clone -q --depth 1 --branch "$tag" "$plugin_url" "$tmp" >/dev/null 2>&1 || { rm -rf "$tmp"; fetch_fail "cannot clone $tag from $plugin_url"; }
+    [[ -f $tmp/scripts/codeo-init.sh ]] || { rm -rf "$tmp"; fetch_fail "$tag has no scripts/codeo-init.sh"; }
+    export CODEO_INIT_FETCHED=1
+    exec bash "$tmp/scripts/codeo-init.sh" "$@"
+fi
 source "$here/lib/prompt.sh"
 
 usage() {

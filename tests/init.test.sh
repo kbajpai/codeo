@@ -95,9 +95,55 @@ an_unattended_run_never_asks() {
     [[ $(jq -r .codename "$d/.codeo/config.json") == quiet ]] || fail "default codename is not the repo name"
 }
 
+# A local stand-in for the plugin's repository: this checkout's files (working tree), committed and tagged v9.9.9.
+release_repo() { # <name> -> bare repository path
+    local src="$work/$1-src" bare="$work/$1.git"
+    mkdir -p "$src"
+    (cd "$plugin_root" && git ls-files -z | tar --null -T - -cf -) | tar -xf - -C "$src"
+    git -C "$src" init -q -b main
+    git -C "$src" add -A
+    git -C "$src" -c user.name=t -c user.email=t@t commit -q -m release
+    git -C "$src" tag v9.9.9
+    git init -q --bare "$bare"
+    git -C "$src" push -q "$bare" main v9.9.9
+    echo "$bare"
+}
+
+a_lone_script_fetches_its_release() {
+    local bare lone d; bare=$(release_repo rel); lone="$work/lone"
+    mkdir -p "$lone"; cp "$init" "$lone/codeo-init.sh"
+    d=$(new_clone fetched git@github.com:acme-co/fetched.git)
+    (cd "$d" && CODEO_PLUGIN_URL="$bare" bash "$lone/codeo-init.sh" --yes --skip-install >"$work/out" 2>&1) || true
+    grep -q '^init: ok preflight' "$work/out" || fail "no preflight: $(cat "$work/out")"
+    grep -q '^init: ok config' "$work/out" || fail "no config: $(cat "$work/out")"
+}
+
+a_lone_script_with_no_release_fails_in_one_line() {
+    local empty="$work/empty.git" lone="$work/lone2" d
+    git init -q --bare "$empty"
+    mkdir -p "$lone"; cp "$init" "$lone/codeo-init.sh"
+    d=$(new_clone norelease git@github.com:acme-co/norelease.git)
+    if (cd "$d" && CODEO_PLUGIN_URL="$empty" bash "$lone/codeo-init.sh" --yes --skip-install >"$work/out" 2>&1); then fail "ran with no release"; fi
+    [[ $(wc -l <"$work/out") == 1 ]] || fail "not one line: $(cat "$work/out")"
+    grep -q '^init: fail fetch: ' "$work/out" || fail "wrong line: $(cat "$work/out")"
+    [[ ! -e $d/.codeo ]] || fail "wrote into the project"
+}
+
+a_pipe_without_a_terminal_takes_the_defaults() {
+    command -v setsid >/dev/null || { echo "SKIP a_pipe_without_a_terminal_takes_the_defaults: no setsid" >&2; return 0; }
+    local bare d; bare=$(release_repo rel2)
+    d=$(new_clone piped git@github.com:acme-co/piped.git)
+    (cd "$d" && cat "$init" | CODEO_PLUGIN_URL="$bare" setsid bash -s -- --skip-install >"$work/out" 2>"$work/err") || true
+    [[ ! -s $work/err ]] || fail "question text on a pipe: $(cat "$work/err")"
+    grep -q '^init: ok config' "$work/out" || fail "no config: $(cat "$work/out")"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == piped ]] || fail "default codename is not the repo name"
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
-    questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks; do
+    questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
+    a_lone_script_fetches_its_release a_lone_script_with_no_release_fails_in_one_line \
+    a_pipe_without_a_terminal_takes_the_defaults; do
     "$c"
 done
 echo "all cases passed"
