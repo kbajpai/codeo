@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 is done: the conflict with `origin/main` found by `close.md` round 1 is resolved in `29b3df5` and the build ran. Next step: `/codeo:qc`.
+Round 5 is done: the CI failure found by `close.md` round 3 is fixed in `638c20d` and the build ran. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -88,9 +88,25 @@ None.
 
 **Deviations from the plan:** none. The resolution is a merge of two header-comment lists; no subagent was dispatched and none was needed.
 
+### Round 5 — 2026-11-26
+(send-back from close.md round 3)
+
+`sync-main.sh`: the branch already contained `origin/main`; `overlap.sh 179` printed nothing. `/codeo:close` sent the pull request back because its `tests` check failed in CI, twice (the run, then a re-run of the failed job): `FAIL adopting-guard: docs/home-checkout.md has no line "## Adopting the guard in your project"`. `superpowers:receiving-code-review` and `superpowers:systematic-debugging` (Phase 1) applied before any edit.
+
+**Root cause.** The heading is in the file CI tested (`refs/pull/187/merge:docs/home-checkout.md:39`), and the next lines of the check, which read the same section through `section()`, passed, so the same producer output satisfied one consumer and not the other. The consumer that failed is the one that stops early: `tests/readme.test.sh:273` was `prose docs/home-checkout.md | grep -qxF '…' || fail …` under `set -euo pipefail`. `grep -q` exits at its first match (line 39 of about 70); a producer still writing is killed by SIGPIPE (141), and `pipefail` fails the pipeline although the line was found. Shown on this machine with a slow producer: `{ head -n 45 f; sleep 0.3; tail -n +46 f; } | grep -qxF "<heading>"` gives 141, and `grep -qxF "<heading>" <({ …; })` gives 0. The race is not lost here (0 of 3000 plain runs, 0 of 3000 under CPU load, 0 of 40 runs of the test) and is lost in CI both times, which is why the earlier QC rounds, which ran only here, recorded this hazard as non-blocking and theoretical (I3 of round 4, and round 1's note). Not proven: that SIGPIPE is the very event in CI; it is the only reading that fits a same-bytes pass and fail, and CI on this pull request is the proof.
+
+**Fix, in `638c20d` (one sonnet implementer; I read the diff).** Test first: a new `pipefail-safe` check in `tests/readme.test.sh` fails for every non-comment line that ends a pipeline in `grep -q…`; it flagged exactly the seven offenders and nothing else. Then each was rewritten as `grep -q… PATTERN <(producer)` with its flags, patterns, handlers and messages unchanged: the link-anchor slug check, the `stacks` row check, the `reconcile by hand` / `diverged` sentence check, the "three groups" intro check, the `Adopting the guard` heading check (the one CI failed on), the role-guard link check and the `restart` check. A scan found no other early-exit consumer (`head`, `sed -n …q`, `awk … exit`). `bash tests/run.sh readme` prints `all cases passed` (20 runs in a row, no failure) and `bash tests/run.sh install` too; a copy of the test with `true || x | grep -q y` added failed with `pipefail-safe`, and the real file was not touched.
+
+**Documentation pages changed:** none; `tests/readme.test.sh` only.
+
+**Build:** the `shell` suite's `build` is `true`: exit 0. No shared environment.
+
+**Deviations from the plan:** one more check than the plan's Task 1 listed (`pipefail-safe`), added because the failure it guards against reached CI. Not covered here: other test files may use the same pattern; this fix touches only the file this branch owns.
+
 ## Log
 
 - 2026-11-25 — implemented: plan docs/plans/2026-11-25-close-171-leftovers-179.md, tasks 1-4, build exit 0 · cost: 21m · sonnet-5-5 338k in + 9.1M cached / 59k out
 - 2026-11-25 — implemented round 2 (send-back from qc round 1): F1, F2, F3, F5, F6 fixed in 6b5de95, build exit 0 · cost: 2m · sonnet-5-5 49k in + 1.7M cached / 8k out
 - 2026-11-25 — implemented round 3 (send-back from qc round 2): G1-G3 fixed in 50a2d52, build exit 0 · cost: 1m · sonnet-5-5 57k in + 1.1M cached / 5k out
 - 2026-11-26 — implemented round 4 (send-back from close round 1): merged origin/main after #177, one conflict in tests/readme.test.sh resolved in 29b3df5, build exit 0 · cost: 0m · sonnet-5-5 11k in + 1.2M cached / 931 out
+- 2026-11-26 — implemented round 5 (send-back from close round 3): pipelines ending in grep -q rewritten and guarded in 638c20d, root cause SIGPIPE under pipefail, build exit 0 · cost: 3m · sonnet-5-5 78k in + 4.8M cached / 16k out
