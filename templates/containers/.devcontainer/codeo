@@ -98,7 +98,7 @@ HELP
 
 # raw_base: print the base URL the three files are downloaded from.
 raw_base() {
-    printf '%s\n' "${CODEO_RAW_URL:-https://raw.githubusercontent.com/@REPO_SLUG@/main}"
+    printf '%s\n' "${CODEO_RAW_URL:-https://raw.githubusercontent.com/@REPO_SLUG@/@BASE_BRANCH@}"
 }
 
 # ensure_home: create the home directory and download any missing script into it. Each download goes to

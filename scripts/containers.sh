@@ -7,7 +7,7 @@
 #
 # Names come from config: the codename (`codename`, else the repo name) prefixes every container,
 # sandbox, image and volume (<codename>-home, <codename>-<N>, <codename>-dev, <codename>-gh), and
-# repo.owner/repo.name give the repository URL. Nothing defaults to codeo's own values.
+# repo.owner/repo.name give the repository URL, and baseBranch (default main) is the branch the raw URL and the clones follow. Nothing defaults to codeo's own values.
 #
 # Two kinds of file:
 #   managed  the scripts (.devcontainer/scripts/*, copied as they are, and codeo, codeo-container.sh, codeo-track.sh, codeo-sandbox.sh): rewritten from
@@ -42,10 +42,13 @@ done
 owner=$(codeo_cfg_required .repo.owner)
 repo=$(codeo_cfg_required .repo.name)
 codename=$(codeo_cfg .codename || printf '%s\n' "$repo")
+base=$(codeo_cfg .baseBranch || echo main)
 
 # These land in file names, container names and URLs, so only the characters those allow get through.
 [[ $codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]] ||
     codeo_die "config.json: codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter"
+[[ $base =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] ||
+    codeo_die "config.json: baseBranch '$base' is not a branch name (letters, digits, dot, underscore, slash and hyphen, starting with a letter or digit)"
 [[ $owner =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ && $repo =~ ^[A-Za-z0-9_.-]+$ ]] ||
     codeo_die "config.json: repo.owner/repo.name are not a GitHub owner and repository name"
 
@@ -61,7 +64,7 @@ is_seed() {
 
 # render <template> <destination>: the template with the project's names filled in.
 render() {
-    CODENAME=$codename REPO_SLUG="$owner/$repo" perl -pe 's/\@CODENAME\@/$ENV{CODENAME}/g; s/\@REPO_SLUG\@/$ENV{REPO_SLUG}/g' "$1" >"$2"
+    CODENAME=$codename REPO_SLUG="$owner/$repo" BASE_BRANCH=$base perl -pe 's/\@CODENAME\@/$ENV{CODENAME}/g; s/\@REPO_SLUG\@/$ENV{REPO_SLUG}/g; s/\@BASE_BRANCH\@/$ENV{BASE_BRANCH}/g' "$1" >"$2"
 }
 
 differs=0

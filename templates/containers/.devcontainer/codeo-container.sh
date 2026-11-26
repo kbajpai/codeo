@@ -16,7 +16,7 @@
 set -euo pipefail
 
 repo_url=${CODEO_REPO_URL:-https://github.com/@REPO_SLUG@.git}
-base_ref=main
+base_ref=@BASE_BRANCH@
 context=${CODEO_CONTEXT:-}
 
 # die <message> [exit-code]: print the message as one line on stderr and exit (1 by default).

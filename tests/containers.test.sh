@@ -41,9 +41,41 @@ another_project_gets_its_own_names() {
 }
 
 no_shipped_file_names_codeo_where_the_project_belongs() {
-    local d hits; d="$work/acme"
-    hits=$(grep -rInE 'kbajpai|codeo-(home|gh|git|dev|live|[0-9]|<N>)|codeo-\$(\{?[1nN]|num|target)' "$d" --exclude-dir=.git || true)
-    [[ -z $hits ]] || fail "codeo's names remain: $hits"
+    local d hits
+    for d in "$work"/*/; do
+        [[ -d $d/.devcontainer ]] || continue
+        hits=$(grep -rInE 'kbajpai|codeo-(home|gh|git|dev|live|[0-9]|<N>)|codeo-\$(\{?[1nN]|num|target)' "$d" --exclude-dir=.git || true)
+        [[ -z $hits ]] || fail "codeo's names remain: $hits"
+    done
+}
+
+a_base_branch_other_than_main_is_followed() {
+    local d; d=$(new_project dev '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"develop"}')
+    (cd "$d" && bash "$script" >/dev/null) || fail "render failed"
+    grep -q 'raw.githubusercontent.com/acme-co/shop/develop' "$d/.devcontainer/codeo" || fail "raw URL not on the base branch"
+    grep -q '^base_ref=develop$' "$d/.devcontainer/codeo-container.sh" || fail "base_ref not the base branch"
+    ! grep -q '/main' "$d/.devcontainer/codeo" "$d/.devcontainer/codeo-container.sh" || fail "main remains"
+    ! grep -rq '@BASE_BRANCH@' "$d/.devcontainer" "$d/.sbx" || fail "placeholder left unfilled"
+}
+
+a_bad_base_branch_is_refused() {
+    local d; d=$(new_project badbase '{"schema":1,"repo":{"owner":"o","name":"r"},"baseBranch":"x;rm -rf"}')
+    if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "bad base branch accepted"; fi
+    [[ ! -e $d/.devcontainer ]] || fail "files written despite refusal"
+    grep -q baseBranch "$work/err" || fail "refusal does not name baseBranch"
+}
+
+a_prefix_codename_does_not_leak() {
+    local d; d=$(new_project prefix '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop-api"},"baseBranch":"main"}')
+    (cd "$d" && bash "$script" >/dev/null) || fail "render failed"
+    grep -q 'acme-co/shop-api' "$d/.devcontainer/codeo-container.sh" || fail "slug not intact"
+    ! grep -rq 'shop-api-api' "$d/.devcontainer" "$d/.sbx" || fail "codename leaked into the repo name"
+}
+
+dots_in_owner_and_repo_survive() {
+    local d; d=$(new_project dots '{"schema":1,"codename":"cd","repo":{"owner":"a.b","name":"c_d"},"baseBranch":"main"}')
+    (cd "$d" && bash "$script" >/dev/null) || fail "render failed"
+    grep -q 'a\.b/c_d' "$d/.devcontainer/codeo-container.sh" || fail "owner/repo mangled"
 }
 
 the_toolchain_section_is_the_one_place_to_extend() {
@@ -109,7 +141,9 @@ doctor_reports_a_drifted_container_script() {
 for c in setup_writes_codename_and_containers_in_one_go doctor_reports_a_drifted_container_script codeos_own_files_match_their_templates another_project_gets_its_own_names \
     no_shipped_file_names_codeo_where_the_project_belongs the_toolchain_section_is_the_one_place_to_extend \
     a_second_run_skips_and_never_overwrites_seeds check_reports_a_drifted_script \
-    the_codename_defaults_to_the_repo_name a_bad_codename_is_refused; do
+    the_codename_defaults_to_the_repo_name a_bad_codename_is_refused \
+    a_base_branch_other_than_main_is_followed a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
+    no_shipped_file_names_codeo_where_the_project_belongs; do
     "$c"
 done
 echo "all cases passed"
