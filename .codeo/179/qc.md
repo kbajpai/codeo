@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 is written: the merged tree (after #177) builds, passes the suite here and in a clean worktree, and has no blocking finding; three new non-blocking notes (I1-I3). The verdict is clear. Next step: `/codeo:close`.
+Round 5 is written: the CI failure is fixed (the `tests` job of the pull request passes on `add2f7d`), no blocking finding is left, three new non-blocking notes (J1-J3). The verdict is clear. Next step: `/codeo:close`.
 
 ## Questions
 
@@ -16,7 +16,7 @@ None.
 
 ## Notes
 
-None.
+- The same `cmd | grep -q` pattern, which can fail or pass falsely under `set -o pipefail` when the producer is still writing, is in other test files outside this change: `tests/cmd-mode.test.sh` (lines 195-629), `tests/install.test.sh:1686` and `tests/sync-main.test.sh:136`; the `if … | grep -q` negatives would pass falsely on a SIGPIPE. Out of scope here; `/codeo:issue` is refused in this checkout, so it is promised, not filed: to file with `/codeo:issue` in a home checkout.
 
 ## Outcome
 
@@ -173,9 +173,47 @@ Issues filed by this pass: none.
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+### Round 5 — 2026-11-26
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main`, so no `also changed on main:` lines. `overlap.sh 179`: nothing, exit 0. `overlap.sh --outside 179`: nothing, exit 0. `scope.sh origin/main HEAD`: `suite.shell=true` (the paths it listed are the dossier files and `README.md`, as in earlier rounds), exit 0. No shared environment is configured, so no `deploy=` line and no environment step.
+
+**Build.** `true` (suite `shell`): exit 0.
+
+**Tests.** `bash tests/run.sh` (whole suite, this tree): `all cases passed`, exit 0. The same in a clean worktree (`git worktree add ../codeo-179-qc HEAD`, removed afterwards): `all cases passed`, exit 0. **CI on the pull request, head `add2f7d`:** job `tests` of https://github.com/kbajpai/codeo/actions/runs/45736751193 — `completed`, `success`. The same job failed twice on the previous head (`33b90a4`) with `FAIL adopting-guard: … has no line "## Adopting the guard in your project"`; it now passes, which is the evidence that the `grep -q` rewrite (`638c20d`) was the cause. The `qc-verdict` check of that run is `failure`, as it is for any head whose dossier is live under `.codeo/179/`: `/codeo:close` archives it again before the merge.
+
+**Criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | The doctor-checks intro describes only what `scripts/doctor.sh` checks; the two non-doctor entries sit under their own heading | met — twelve leads equal the twelve names `scripts/doctor.sh` reports; the two entries sit under `### Installing and the pin` | `troubleshooting-groups` check; reviewer read `doctor.sh` |
+| 2 | "Start here" step 6 says the workflow finishes on the second `/codeo:close` | met — README.md:27 | `start-here` check |
+| 3 | The lock entry separates the TODOs a fresh `/codeo:init` fixes from the reconcile-by-hand ones | met — README.md:437 against `scripts/lock.sh`, `skills/init/SKILL.md` and `skills/close/SKILL.md` | `lock-entry` check; reviewer read the three files |
+| 4 | A repeated heading's link resolves in `tests/readme.test.sh`, and the header names which path checks hold only because codeo uses itself | met — `slugs` self-check gives `x`, `x-1`, `x-2`; the header names `.codeo/`, `.codeo/.gitignore`, `.codeo/config.json` and `docs/plans/` | `slugs` self-check; header |
+| 5 | `docs/updating.md` "Updating superpowers" says to restart open sessions | met — docs/updating.md:124 | `updating` check |
+| 6 | `docs/handoff.md` and `docs/skills.md` give the same skill count | met — "Six pipeline skills" / "Six skills form the pipeline" | `skill-count` check |
+| 7 | A page tells another project how to adopt the role guard | met — `docs/home-checkout.md` "Adopting the guard in your project", linked from README.md and `docs/extension-points.md` | `adopting-guard` check |
+| 8 | "Setting a project up" renders as intended in a strict Markdown renderer | met — three `###` steps, unindented paragraphs, column-0 fences; no renderer is installed here, the structure was read in CommonMark terms and the reviewer agrees | `setup-steps` check |
+| 9 | `bash tests/run.sh` passes, in a clean worktree too | met — here, in a clean worktree, and now in CI | the three runs above |
+
+**Documentation check.** Only `tests/readme.test.sh` changed since round 4 (and the dossier). The pages the plan names are unchanged since then; the prose findings below were read against the code. No issue number and no "now" in the changed pages.
+
+**Independent review (opus).** Quoted, not bold: no Critical; one Important; five Minor; assessment "With fixes". It judged the rewrite of the seven pipelines correct (same patterns, flags and handlers, no `producer | grep -q` left in the file) and the SIGPIPE explanation consistent with the CI symptom; the Important finding is about the new guard, not about the fix.
+
+**Findings.**
+
+- **J1 — non-blocking, `/codeo:implement`'s.** `tests/readme.test.sh:328`: the `pipefail-safe` guard is narrower than its header ("no code line in this file ends a pipeline in grep -q") and than the failure it guards against. Its regex `[|] *grep -[a-zA-Z]*q` does not flag a pipeline split as `producer |` with `grep -q x` on the next line (the file already splits pipelines that way, at lines 73-74 and 106-107), `| grep -F -q x`, `| grep --quiet x`, or other early-exit consumers such as `| head -1` and `| grep -m1`; and it flags correct code: `a || grep -q x f` (the second `|` of `||`), and `| grep -q` inside a quoted string or a trailing comment. The file is clean today, which is what CI confirms; the guard is an addition beyond the criteria, so this is a false assurance for a later edit and not a defect in what is delivered. Either widen it (join continuation lines first, accept `-q` anywhere in the options and `--quiet`, require `[^|]|[^|]`) or narrow the header to what it checks.
+- **J2 — non-blocking, `/codeo:implement`'s.** `docs/home-checkout.md:49`: "The skill reads the exit and, on exit 1, the one line the check prints; on any other exit it reports what the check printed." Read with the exit-1 clause before it, "any other exit" includes 0, where the check prints nothing and the skill goes on; the list just above says 0: go on, and so does `.codeo/overlays/plan.md`. Say "on any exit other than 0 and 1".
+- **J3 — non-blocking, `/codeo:implement`'s.** `tests/readme.test.sh:221`: `sed 's/\. /.\n/g'` relies on GNU sed to turn `\n` in the replacement into a newline; BSD sed on macOS does not, so the whole lock entry stays one "sentence" and the `reconcile by hand` / `diverged` check can pass vacuously there. CI runs on Linux; the pages document macOS hosts.
+- Carried, still non-blocking: the README lock entry's "the branch and `origin/<branch>` have diverged" and "two issues' dossiers" (H1, I2: `scripts/lock.sh` names `$current` and counts any number of matches); the `lock-entry` assertion for `/codeo:init #<N>` already held before this change (H3); `setup-steps` misses tab-indented and lazy-continuation lines (G4); the README's superpowers sentence in *Updating* has no restart line (I1).
+
+Issues filed by this pass: none (see `## Notes`).
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-25 — qc round 1: build and suite pass here and in a clean worktree; one blocking finding (F1), five non-blocking; back to implement · cost: 9m · opus-5-5 293k in + 2.1M cached / 12k out · sonnet-5-5 223k in + 779k cached / 3k out
 - 2026-11-25 — qc round 2: build and suite pass here and in a clean worktree; one blocking finding (G1), three non-blocking; back to implement · cost: 8m · opus-5-5 355k in + 2M cached / 13k out · sonnet-5-5 24k in + 589k cached / 865 out
 - 2026-11-26 — qc round 3: build and suite pass here and in a clean worktree; no blocking finding, three non-blocking (H1-H3); clear · cost: 8m · opus-5-5 380k in + 1.8M cached / 12k out · sonnet-5-5 22k in + 330k cached / 415 out
 - 2026-11-26 — qc round 4 (after the conflict with main): build and suite pass here and in a clean worktree; no blocking finding, three non-blocking (I1-I3); clear · cost: 8m · opus-5-5 479k in + 2M cached / 14k out · sonnet-5-5 21k in + 401k cached / 301 out
+- 2026-11-26 — qc round 5 (after the CI fix): build and suite pass here, in a clean worktree and in CI; no blocking finding, three non-blocking (J1-J3); clear · cost: 8m · opus-5-5 580k in + 2.6M cached / 18k out · sonnet-5-5 23k in + 499k cached / 1k out
