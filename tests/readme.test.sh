@@ -356,6 +356,17 @@ awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } 
 awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on && /^```/ { f = !f; next } on && f && /curl -fsSL -o ~\/.local\/bin\/codeo https:\/\/raw.githubusercontent.com\/<owner>\/<repo>\/<base>\/.devcontainer\/codeo && chmod \+x ~\/.local\/bin\/codeo/ { found = 1 } END { exit !found }' "$readme" ||
     fail adopting-install-line "Adopting codeo with containers has no code-fenced project install line for the codeo command"
 
+# adopting-notes: the adoption section names the wizard's `init: note:` lines (the kept-seed and home-checkout notes, and the private-repository note).
+sec=$(awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on' "$readme")
+for w in '`init: note:`' 'init: note: kept files are yours' 'init: note: the home checkout is a clone whose folder is named' 'init: note: rename or re-clone it as' 'is private;'; do
+    [[ $sec == *"$w"* ]] || fail adopting-notes "Adopting codeo with containers does not mention $w"
+done
+
+# setup-containers-over-config: docs/skills.md's setup section says --containers works over an existing config.
+setup_sec=$(sed -n '/^## setup$/,/^## doctor$/p' docs/skills.md)
+[[ $setup_sec == *'`--containers` alone, or with `--codename <name>`, works over an existing config'* ]] ||
+    fail setup-containers-over-config "docs/skills.md setup section does not say --containers works over an existing config"
+
 # A pipeline whose consumer is grep -q: grep exits at its first match, a producer still writing is killed
 # by SIGPIPE (141), and pipefail fails the whole pipeline although the line was found. The race is lost
 # on a slow runner and won on a fast machine, so this reads the source instead of waiting for it to flake.

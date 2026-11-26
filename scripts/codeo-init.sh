@@ -19,7 +19,8 @@
 # repository name lower-cased with . _ and spaces as hyphens (pass --codename when nothing valid is left),
 # scope = user, version = newest release, env = none, no suites (add them to .codeo/config.json later).
 # --skip-install leaves the plugin install to you (it is the one step that touches Claude's own settings).
-# Output: one "init: ok|skip|fail <step>" line per step, doctor's lines after them. Exit 0 when every step and
+# Output: one "init: ok|skip|fail <step>" line per step, "init: note: <text>" lines (a private repository, a kept
+# seed file, the home checkout's folder name; notes are not steps and do not change the exit status), doctor's lines after them. Exit 0 when every step and
 # doctor passed, 1 otherwise, 2 on a usage error. Rerunning is safe: an existing config is kept, apart from
 # the --suite entries and the plugin pin the flags add to it (a codename that differs from the config's is ignored
 # and said so; a kept config with no codename gets the answer written into it); the container files are written only where absent.

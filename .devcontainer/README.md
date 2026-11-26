@@ -185,7 +185,7 @@ Everything above names codeo's own containers (`codeo-home`, `codeo-<N>`, `kbajp
 
 **Managed and seed files.** The scripts (`.devcontainer/codeo`, `codeo-container.sh`, `codeo-track.sh`, `.sbx/codeo-sandbox.sh` and `.devcontainer/scripts/`) are managed: codeo rewrites them on request and checks them. The Dockerfile, `devcontainer.json`, `.sbx/claude-image` and the `.codeo/overlays/` files are seeds: written once, never overwritten, yours to edit. [docs/container-templates.md](../docs/container-templates.md#managed-and-seed-files) lists each.
 
-**Checking and refreshing.** Run `bash <plugin>/scripts/containers.sh` from inside the project, where `<plugin>` is the installed plugin's directory:
+**Checking and refreshing.** Run `bash <plugin>/scripts/containers.sh` from inside the project, where `<plugin>` is the installed plugin's directory. `bash .devcontainer/scripts/codeo-root.sh` run inside a project that has the container scripts prints it and exits 0, or exits 1 with one `codeo-root:` line when it finds no installed codeo (`CODEO_ROOT` overrides the lookup; one set to a directory without `scripts/lock.sh` fails). Without a container clone, it is the `installPath` recorded for `codeo@codeo` in `~/.claude/plugins/installed_plugins.json`, a directory under `~/.claude/plugins/cache/` in a default install (`CLAUDE_CONFIG_DIR` replaces `~/.claude`). The command:
 
 - With no flag, it writes each file that is absent and leaves a file that exists alone.
 - `--check` writes nothing and exits 1 when a managed file differs from its template or is missing. `/codeo:doctor` runs it.
