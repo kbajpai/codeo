@@ -77,6 +77,8 @@ extension points.
 4. Run `/codeo:doctor` to confirm the section name is registered and unique.
 5. Commit the file.
 
+For the role guard, see [Adopting the guard in your project](home-checkout.md#adopting-the-guard-in-your-project).
+
 ## The points
 
 ### issue/role-guard
