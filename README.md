@@ -284,9 +284,9 @@ Details: [docs/skills.md#plan](docs/skills.md#plan).
 ### 4. /codeo:implement
 
 - **Run:** `/codeo:implement [optional: plan path or slug]`. With no argument it uses the plan `plan.md` names.
-- **It asks:** only in the dossier, `.codeo/<N>/implement.md`, and only when the plan looks wrong or unclear. A design question goes back to `/codeo:plan`.
-- **It writes:** [.codeo/<N>/implement.md](.codeo/done/143/implement.md), with an `## Outcome` of what was built and the commit for each task. The code is built task by task through the plan's superpowers skill. It builds each configured suite but does not run its tests.
-- **It commits:** one commit per task, then `docs(codeo): implement dossier for #<N>`.
+- **It asks:** in the dossier, `.codeo/<N>/implement.md`, when the plan looks wrong or unclear or when another workflow overlaps this one (`overlap.sh`); and in the conversation when the plan is uncommitted or only staged, where it offers to commit it. A design question goes back to `/codeo:plan`.
+- **It writes:** [.codeo/<N>/implement.md](.codeo/done/143/implement.md), with an `## Outcome` of what was built, the documentation pages changed, the build result and any deviations from the plan. The code is built task by task through the plan's superpowers skill. It builds each configured suite but does not run its tests.
+- **It commits:** a round starts by merging `origin/<base>` into the branch (`sync-main.sh`; a merge commit when the base branch has moved, nothing when the branch already contains it), then one commit per task, then `docs(codeo): implement dossier for #<N>`.
 - **Next:** `/codeo:qc`.
 
 Details: [docs/skills.md#implement](docs/skills.md#implement).
@@ -294,9 +294,9 @@ Details: [docs/skills.md#implement](docs/skills.md#implement).
 ### 5. /codeo:qc
 
 - **Run:** `/codeo:qc`. It checks the workflow that holds the lock.
-- **It asks:** nothing in the conversation, unless a question must be answered in the dossier, `.codeo/<N>/qc.md`. It fixes nothing.
+- **It asks:** nothing in the conversation, unless a question must be answered in the dossier, `.codeo/<N>/qc.md`; overlap with another workflow (`overlap.sh`) is one such question. It fixes nothing.
 - **It writes:** [.codeo/<N>/qc.md](.codeo/done/143/qc.md): one `### Round` per pass, a table of the acceptance criteria, findings marked blocking or not, and a bold verdict with where to go next.
-- **It commits:** `docs(codeo): qc dossier for #<N>` (`— round <n>` for a later pass).
+- **It commits:** a round starts by merging `origin/<base>` into the branch (`sync-main.sh --abort-on-conflict`; a merge commit when the base branch has moved, and a conflict aborts the merge and sends the branch back to `/codeo:implement`), then `docs(codeo): qc dossier for #<N>` (`— round <n>` for a later pass).
 - **Next:** `/codeo:close` when the verdict is clear. Otherwise `/codeo:implement` or `/codeo:plan`.
 
 Details: [docs/skills.md#qc](docs/skills.md#qc).
