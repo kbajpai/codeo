@@ -230,13 +230,13 @@ cmd_shell() {
     case "$1" in
         home)
             name=@CODENAME@-home
-            title='codeo [home]'
+            title='@CODENAME@ [home]'
             create="bash codeo-container.sh home"
             ;;
         '' | 0* | *[!0-9]*) usage ;;
         *)
             name="@CODENAME@-$1"
-            title="codeo [#$1]"
+            title="@CODENAME@ [#$1]"
             create="bash codeo-container.sh issue $1 <branch>"
             ;;
     esac

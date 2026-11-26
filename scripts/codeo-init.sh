@@ -22,7 +22,7 @@
 # Output: one "init: ok|skip|fail <step>" line per step, doctor's lines after them. Exit 0 when every step and
 # doctor passed, 1 otherwise, 2 on a usage error. Rerunning is safe: an existing config is kept, apart from
 # the --suite entries and the plugin pin the flags add to it (a codename that differs from the config's is ignored
-# and said so); the container files are written only where absent.
+# and said so; a kept config with no codename gets the answer written into it); the container files are written only where absent.
 set -uo pipefail
 plugin_url=${CODEO_PLUGIN_URL:-https://github.com/${CODEO_PLUGIN_REPO:-kbajpai/codeo}.git}
 
@@ -150,6 +150,14 @@ if [[ -e .codeo/config.json ]]; then
     if [[ -n $kept_codename && $kept_codename != "$codename" ]]; then
         say skip "codename: .codeo/config.json already names '$kept_codename'; the answer '$codename' is ignored"
     fi
+    if [[ -z $kept_codename ]]; then
+        if jq --arg c "$codename" '.codename = $c' .codeo/config.json >.codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json; then
+            say ok "config: wrote codename '$codename' into the kept .codeo/config.json"
+        else
+            rm -f .codeo/config.json.new
+            say fail "config: cannot write codename '$codename' into the kept .codeo/config.json"
+        fi
+    fi
 elif setup_err=$(bash "$here/scripts/setup.sh" --codename "$codename" 2>&1 >/dev/null); then
     if [[ $(jq -r .baseBranch .codeo/config.json 2>/dev/null) == TODO-set-me ]]; then
         say fail "config: baseBranch is TODO-set-me (the clone has no origin/HEAD: set baseBranch in .codeo/config.json)"
@@ -195,6 +203,8 @@ if [[ $env == containers && -f .codeo/config.json && $base_unset == 0 ]]; then
         else
             say ok "containers: $n_wrote written, $n_kept kept"
         fi
+        home_cn=$(jq -r '.codename // empty' .codeo/config.json 2>/dev/null || true)
+        [[ -z $home_cn ]] || codeo_home_lines "$home_cn" "$root" | sed 's/^/init: note: /'
     else
         say fail "containers: scripts/containers.sh failed"
     fi

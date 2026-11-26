@@ -11,9 +11,12 @@
 # --codename <name> writes `codename` into the starter config (it names the project's containers, sandboxes,
 # images and volumes; /codeo:doctor holds it to lower-case letters, digits and hyphens).
 # --containers then writes the dev container and sbx sandbox files (scripts/containers.sh), named from the
-# config. On its own, with a config already present, it writes only those files.
+# config. On its own, with a config already present, it adds a missing codename (the repository name made to fit,
+# or the --codename given; it refuses another one when the config already names one) and the plugin pin, and writes
+# those files. It ends by saying the home checkout is the clone whose folder is named <codename>-home, and whether
+# this folder is.
 # The repository must already exist on GitHub with an origin remote: setup never creates one.
-# Refuses (exit 1) when .codeo/config.json already exists, unless --containers is the only option.
+# Refuses (exit 1) when .codeo/config.json already exists, unless --containers is the only option besides --codename.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
@@ -57,19 +60,40 @@ write_pin() {
         echo "codeo: no codeo release found to pin; set plugin.repo and plugin.ref in .codeo/config.json"
     fi
 }
-if [[ -e "$CODEO_STATE_DIR/config.json" && $containers == 1 && ${#stacks[@]} == 0 && -z $codename ]]; then
-    if ! jq -e 'has("codename")' "$CODEO_STATE_DIR/config.json" >/dev/null 2>&1; then
-        existing_name=$(codeo_cfg .repo.name || true)
-        cn=$(codeo_derive_codename "$existing_name") || codeo_die "cannot derive a codename from '$existing_name'; pass --codename <name>"
-        jq --arg c "$cn" '.codename = $c' "$CODEO_STATE_DIR/config.json" >"$CODEO_STATE_DIR/config.json.new" &&
-            mv "$CODEO_STATE_DIR/config.json.new" "$CODEO_STATE_DIR/config.json"
-        echo "codeo: wrote codename $cn to .codeo/config.json (the repository name)"
-    fi
-    write_pin
-    exec bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh"
-fi
 [[ -z $codename || ($codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#codename} -ge 2 && ${#codename} -le 30) ]] ||
     codeo_die "codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter, 2-30 characters"
+if [[ -e "$CODEO_STATE_DIR/config.json" && $containers == 1 && ${#stacks[@]} == 0 ]]; then
+    existing_cn=$(jq -r '.codename // empty' "$CODEO_STATE_DIR/config.json" 2>/dev/null || true)
+    if [[ -n $codename && -n $existing_cn && $codename != "$existing_cn" ]]; then
+        codeo_die "$CODEO_STATE_DIR/config.json already names '$existing_cn'; setup does not overwrite it"
+    fi
+    if [[ -z $existing_cn ]]; then
+        existing_name=$(codeo_cfg .repo.name || true)
+        existing_owner=$(codeo_cfg .repo.owner || true)
+        if [[ $existing_name == TODO-set-me || $existing_owner == TODO-set-me ]]; then
+            codeo_die "repo.owner/repo.name is TODO-set-me in .codeo/config.json: set them, then run setup.sh --containers"
+        fi
+        cn=$codename
+        if [[ -z $cn ]]; then
+            cn=$(codeo_derive_codename "$existing_name") || codeo_die "cannot derive a codename from '$existing_name'; pass --codename <name>"
+        fi
+        if ! jq --arg c "$cn" '.codename = $c' "$CODEO_STATE_DIR/config.json" >"$CODEO_STATE_DIR/config.json.new" ||
+            ! mv "$CODEO_STATE_DIR/config.json.new" "$CODEO_STATE_DIR/config.json"; then
+            rm -f "$CODEO_STATE_DIR/config.json.new"
+            codeo_die "cannot write the codename into .codeo/config.json"
+        fi
+        if [[ -n $codename ]]; then
+            echo "codeo: wrote codename $cn to .codeo/config.json"
+        else
+            echo "codeo: wrote codename $cn to .codeo/config.json (the repository name)"
+        fi
+        existing_cn=$cn
+    fi
+    write_pin
+    bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh"
+    codeo_home_lines "$existing_cn" "$CODEO_PROJECT_ROOT" | sed 's/^/codeo: /'
+    exit 0
+fi
 [[ ! -e "$CODEO_STATE_DIR/config.json" ]] || codeo_die "$CODEO_STATE_DIR/config.json already exists; setup does not overwrite it"
 
 owner=TODO-set-me
@@ -118,4 +142,5 @@ echo "codeo: created .codeo/config.json for $owner/$name (base $base); run /code
 if ((containers)); then
     write_pin
     bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh"
+    codeo_home_lines "$codename" "$CODEO_PROJECT_ROOT" | sed 's/^/codeo: /'
 fi

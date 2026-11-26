@@ -51,12 +51,20 @@ another_project_gets_its_own_names() {
 }
 
 no_shipped_file_names_codeo_where_the_project_belongs() {
-    local d hits
-    for d in "$work"/*/; do
-        [[ -d $d/.devcontainer ]] || continue
-        hits=$(grep -rInE 'kbajpai|codeo-(home|gh|git|dev|live|[0-9]|<N>)|codeo-\$(\{?[1nN]|num|target)' "$d" --exclude-dir=.git --exclude=config.json || true)
-        [[ -z $hits ]] || fail "codeo's names remain: $hits"
-    done
+    # Renders its own project, so the scan does not depend on which cases ran before it.
+    local d hits files
+    d=$(new_project leakscan '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"main"}')
+    (cd "$d" && bash "$script" >/dev/null) || fail "render failed"
+    files=$(find "$d" -type f -not -path '*/.git/*' -not -name config.json)
+    [[ $(printf '%s\n' "$files" | grep -c .) -ge 10 ]] || fail "the scan found too few files to mean anything: $files"
+    [[ -d $d/.codeo/overlays && -d $d/.devcontainer && -d $d/.sbx ]] || fail "the render lacks overlays, .devcontainer or .sbx"
+    # The `codeo` command name and the codeo-track.sh style file names are codeo's on purpose; what must not leak
+    # is the repository, the container, volume and sandbox names, a ~/codeo home directory and the window titles.
+    # One allowed exception: the header comment of .devcontainer/scripts/session-title.sh, a script codeo ships as it is,
+    # quotes the window titles of codeo's own window-title.sh. It is a comment, not a name the project sees run.
+    hits=$(grep -rInE 'kbajpai|codeo-(home|gh|git|dev|live|[0-9]|<N>)|codeo-\$(\{?[1nN]|num|target)|~/codeo([^-.a-zA-Z]|$)|codeo \[(home|#)' "$d" --exclude-dir=.git --exclude=config.json || true)
+    hits=$(grep -v "/[.]devcontainer/scripts/session-title[.]sh:[0-9]*:#" <<<"$hits" || true)
+    [[ -z $hits ]] || fail "codeo's names remain: $hits"
 }
 
 a_base_branch_other_than_main_is_followed() {
@@ -123,7 +131,7 @@ check_reports_a_drifted_script() {
 the_codename_is_required() {
     local d; d=$(new_project plain '{"schema":1,"repo":{"owner":"o","name":"widgets"},"baseBranch":"main"}')
     if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "rendered without a codename"; fi
-    grep -q 'setup.sh --codename' "$work/err" || fail "refusal does not say how to set the codename"
+    grep -qxF 'codeo: config.json has no codename: run setup.sh --containers (it adds one), or set codename in .codeo/config.json' "$work/err" || fail "hint: $(cat "$work/err")"
     [[ ! -e $d/.devcontainer ]] || fail "files written despite refusal"
 }
 
@@ -262,6 +270,49 @@ a_seed_overlay_is_never_overwritten() {
     grep -q 'skip .codeo/overlays/plan.md' "$work/out" || fail "seed overlay not reported as skipped"
 }
 
+setup_codename_with_containers_writes_it_into_a_codenameless_config() {
+    local d; d=$(new_project cnless '{"schema":1,"repo":{"owner":"acme-co","name":"Shop"},"baseBranch":"main","suites":[]}')
+    (cd "$d" && bash "$plugin_root/scripts/setup.sh" --codename foo --containers >"$work/out" 2>&1) || fail "setup --codename --containers failed: $(cat "$work/out")"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == foo ]] || fail "the given codename was not written"
+    grep -q 'wrote codename foo' "$work/out" || fail "no line saying so: $(cat "$work/out")"
+    grep -q 'foo-gh' "$d/.devcontainer/devcontainer.json" || fail "files not rendered with foo"
+    d=$(new_project cnbad '{"schema":1,"repo":{"owner":"acme-co","name":"Shop"},"baseBranch":"main"}')
+    if (cd "$d" && bash "$plugin_root/scripts/setup.sh" --codename 'Bad Name' --containers >/dev/null 2>&1); then fail "bad codename accepted on an existing config"; fi
+    ! jq -e 'has("codename")' "$d/.codeo/config.json" >/dev/null || fail "a bad codename was written"
+}
+
+setup_refuses_another_codename_on_a_config_that_has_one() {
+    local d; d=$(new_project cnhas "$acme")
+    if (cd "$d" && bash "$plugin_root/scripts/setup.sh" --codename other --containers >/dev/null 2>"$work/err"); then fail "overrode the config's codename"; fi
+    grep -q "config.json already names 'acme'" "$work/err" || fail "message: $(cat "$work/err")"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == acme ]] || fail "the codename changed"
+    [[ ! -e $d/.devcontainer ]] || fail "files written despite the refusal"
+}
+
+setup_refuses_a_todo_repository_before_deriving_a_codename() {
+    local d; d=$(new_project todocn '{"schema":1,"repo":{"owner":"TODO-set-me","name":"TODO-set-me"},"baseBranch":"main"}')
+    if (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >/dev/null 2>"$work/err"); then fail "accepted a TODO repository"; fi
+    grep -qxF 'codeo: repo.owner/repo.name is TODO-set-me in .codeo/config.json: set them, then run setup.sh --containers' "$work/err" || fail "message: $(cat "$work/err")"
+    ! jq -e 'has("codename")' "$d/.codeo/config.json" >/dev/null || fail "a codename was written"
+    [[ ! -e $d/.devcontainer && ! -e $d/.codeo/config.json.new ]] || fail "something was written"
+}
+
+setup_says_where_the_home_checkout_lives() {
+    local d="$work/homechk" out
+    mkdir -p "$d"; git init -q "$d/shop"; d=$d/shop
+    git -C "$d" remote add origin git@github.com:acme-co/shop.git; git -C "$d" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+    (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "setup --containers failed"
+    grep -qxF "codeo: the home checkout is a clone whose folder is named shop-home; this folder is 'shop'" "$work/out" || fail "home line: $(cat "$work/out")"
+    grep -qxF 'codeo: rename or re-clone it as shop-home to run /codeo:issue and /codeo:init here' "$work/out" || fail "rename line missing"
+    mkdir -p "$work/homeok"; git init -q "$work/homeok/shop-home"; d=$work/homeok/shop-home
+    git -C "$d" remote add origin git@github.com:acme-co/shop.git; git -C "$d" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+    (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "setup --containers failed"
+    grep -qxF "codeo: the home checkout is a clone whose folder is named shop-home; this folder is 'shop-home'" "$work/out" || fail "home line: $(cat "$work/out")"
+    ! grep -q 'rename or re-clone' "$work/out" || fail "rename line on the home folder"
+    (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "rerun failed"
+    grep -q 'the home checkout is' "$work/out" || fail "no home line on a rerun over an existing config"
+}
+
 doctor_passes_overlays_in_the_rendered_project() {
     local d="$work/acmeov" doc
     doc=$(cd "$d" && bash "$plugin_root/scripts/doctor.sh" 2>/dev/null || true)
@@ -274,6 +325,7 @@ for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section cod
     a_second_run_skips_and_never_overwrites_seeds check_reports_a_drifted_script \
     the_codename_is_required a_todo_marker_is_refused a_bad_codename_is_refused \
     setup_containers_writes_the_normalised_codename setup_containers_alone_adds_the_codename_to_an_existing_config \
+    setup_codename_with_containers_writes_it_into_a_codenameless_config setup_refuses_another_codename_on_a_config_that_has_one setup_refuses_a_todo_repository_before_deriving_a_codename setup_says_where_the_home_checkout_lives \
     an_underivable_repo_name_fails_before_any_write setup_containers_writes_the_plugin_pin the_plugin_pin_fails_soft_without_a_release \
     a_base_branch_other_than_main_is_followed overlays_name_the_base_branch a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
     no_shipped_file_names_codeo_where_the_project_belongs; do

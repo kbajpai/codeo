@@ -231,6 +231,34 @@ a_clone_without_origin_head_does_not_say_ok_and_skips_the_containers() {
     [[ ! -e $d/.devcontainer ]] || fail "containers rendered with baseBranch TODO-set-me"
 }
 
+a_kept_config_without_a_codename_gets_the_answer_written_into_it() {
+    local d; d=$(new_clone plainsetup git@github.com:acme-co/plainsetup.git)
+    mkdir "$d/.codeo"; echo '{"schema":1,"repo":{"owner":"acme-co","name":"plainsetup"},"baseBranch":"main","suites":[],"keep":1}' >"$d/.codeo/config.json"
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
+    grep -qxF "init: ok config: wrote codename 'plainsetup' into the kept .codeo/config.json" "$work/out" || fail "no codename line: $(cat "$work/out")"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == plainsetup && $(jq -r .keep "$d/.codeo/config.json") == 1 ]] || fail "config not as expected"
+    [[ ! -e $d/.codeo/config.json.new ]] || fail "temp file left"
+    grep -q '^init: ok containers' "$work/out" || fail "containers step: $(cat "$work/out")"
+    ! grep -q '^init: fail containers' "$work/out" || fail "containers failed"
+    grep -qxF "init: note: the home checkout is a clone whose folder is named plainsetup-home; this folder is 'plainsetup'" "$work/out" || fail "home line: $(cat "$work/out")"
+    grep -qxF 'init: note: rename or re-clone it as plainsetup-home to run /codeo:issue and /codeo:init here' "$work/out" || fail "rename line"
+    # A clone already in its home folder gets the first line only.
+    mkdir "$work/homes"; git init -q "$work/homes/goodname-home"; d=$work/homes/goodname-home
+    git -C "$d" remote add origin git@github.com:acme-co/goodname.git; git -C "$d" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
+    grep -qxF "init: note: the home checkout is a clone whose folder is named goodname-home; this folder is 'goodname-home'" "$work/out" || fail "home line (home folder): $(cat "$work/out")"
+    ! grep -q 'rename or re-clone' "$work/out" || fail "rename line in the home folder"
+}
+
+a_kept_config_without_a_codename_and_an_underivable_name_fails_before_writing() {
+    local d; d=$(new_clone plainnoname git@github.com:acme-co/1.git)
+    mkdir "$d/.codeo"; echo '{"schema":1,"repo":{"owner":"acme-co","name":"1"},"baseBranch":"main"}' >"$d/.codeo/config.json"
+    if (cd "$d" && bash "$init" --yes --skip-install --env containers >"$work/out" 2>&1); then fail "ran with no codename"; fi
+    grep -qxF "init: fail answer: cannot derive a codename from '1'; pass --codename <name>" "$work/out" || fail "message: $(cat "$work/out")"
+    ! jq -e 'has("codename")' "$d/.codeo/config.json" >/dev/null || fail "a codename was written"
+    [[ ! -e $d/.devcontainer ]] || fail "containers written"
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
     questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
@@ -238,7 +266,8 @@ for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_create
     a_pipe_without_a_terminal_takes_the_defaults a_closed_stdin_under_a_terminal_takes_the_defaults \
     a_suite_test_command_may_hold_colons a_suite_build_command_cannot_hold_a_colon \
     a_clone_without_origin_head_does_not_say_ok_and_skips_the_containers a_mixed_case_repo_name_gets_a_derived_codename a_repo_name_that_cannot_yield_a_codename_fails_before_writing \
-    an_invalid_explicit_codename_states_the_rule a_flag_without_a_value_is_a_usage_error a_setup_failure_names_its_reason; do
+    an_invalid_explicit_codename_states_the_rule a_flag_without_a_value_is_a_usage_error a_setup_failure_names_its_reason \
+    a_kept_config_without_a_codename_gets_the_answer_written_into_it a_kept_config_without_a_codename_and_an_underivable_name_fails_before_writing; do
     "$c"
 done
 echo "all cases passed"

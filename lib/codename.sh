@@ -19,3 +19,12 @@ codeo_latest_release() {
     [[ -n $t ]] || return 1
     printf '%s\n' "$t"
 }
+
+# codeo_home_lines <codename> <project-root>: where the home checkout lives (the role guard reads the folder name).
+# Prints the line saying so and, only when this folder is named otherwise, the line saying to rename or re-clone it.
+codeo_home_lines() {
+    local dir=${2##*/}
+    printf "the home checkout is a clone whose folder is named %s-home; this folder is '%s'\n" "$1" "$dir"
+    [[ $dir == "$1-home" ]] ||
+        printf 'rename or re-clone it as %s-home to run /codeo:issue and /codeo:init here\n' "$1"
+}

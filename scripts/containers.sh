@@ -41,7 +41,7 @@ done
 [[ -n "$CODEO_PROJECT_ROOT" ]] || codeo_die "not inside a git repository"
 owner=$(codeo_cfg_required .repo.owner)
 repo=$(codeo_cfg_required .repo.name)
-codename=$(codeo_cfg .codename) || codeo_die "config.json has no codename: run setup.sh --codename <name> --containers (or set codename in .codeo/config.json); it names the containers, sandboxes, images and volumes"
+codename=$(codeo_cfg .codename) || codeo_die "config.json has no codename: run setup.sh --containers (it adds one), or set codename in .codeo/config.json"
 base=$(codeo_cfg .baseBranch || echo main)
 
 # setup.sh writes TODO-set-me for what it could not read; that must never be rendered into a file or a URL.
