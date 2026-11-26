@@ -10,7 +10,7 @@
 
 Round 1. Tasks 1-11 are done and reviewed, and so is the in-checkout half of Task 12 (the `host-run.sh` script and its refusal test). The branch builds (`shell` suite `build` is `true`) and `bash tests/run.sh` ended `all cases passed` on the branch before the last fix wave (the wave's own suite run also ended `all cases passed`). Nothing in this dossier is open.
 
-Not done, because this container has no Docker, `sbx`, .NET, Node or `kubectl`: the plan's host steps. They are the engineer's to run (commands below), and `/codeo:qc` cannot settle criteria 4, 5 and 7's real-run part until their output is pasted here.
+The engineer ran the host steps on a Linux host on 2026-11-26 (results under *Notes*). Done there: the example image builds (11 of 11 steps on Ubuntu 26.04); in an issue container the api (1 test), web (2 tests) and k8s suites all pass; the sandbox starts and clones the branch; the wizard asks its questions on the terminal when its stdin is a pipe. Found there and fixed: `host-run.sh` built the wrong image because the engineer's shell exports `CODEO_CONTEXT` (it now unsets the `CODEO_*` overrides and checks the toolchain before the suites). Found and documented: a sandbox runs Docker's pinned image, not the project's Dockerfile, so it has no .NET, Node or `kubectl`. Still open: one clean end-to-end run of the fixed `host-run.sh` on a fresh empty repository, which is the engineer's to run, and a follow-up issue for a sandbox toolchain (below).
 
 ## Questions
 
@@ -18,7 +18,18 @@ None.
 
 ## Notes
 
-**Host steps still to run (the engineer, on their own host).** Prerequisites: Docker, `gh` logged in, `jq`, bash 4.3 or newer for doctor's `deps` check, and an empty **public** throwaway GitHub repository (`<owner>/<repo>`):
+**Host results (the engineer's host, Linux, Docker, `sbx`; 2026-11-26; throwaway repository `kbajpai/rodeo`, codename `shopdemo`).**
+- `host-run.sh` first run: the neutral image built, the wizard step, commit and push of `main` and `host-run/1` passed; the issue container started but its image held no toolchain (same image ID as codeo's own dev image), so `dotnet: command not found` failed the api suite. Cause: the engineer's shell exports `CODEO_CONTEXT=/home/kbajpai/Source/codeo/.devcontainer`, which makes `codeo-container.sh` build from that local folder instead of the Git URL. The GitHub copy of `.devcontainer/Dockerfile` at `host-run/1` was the example's. Fixed by `87b5c8a` and `20bed17`.
+- `docker build` of `https://github.com/kbajpai/rodeo.git#host-run/1:.devcontainer`: 11 of 11 steps passed (.NET 10, Node 22, Playwright Chromium, Docker CLI, `kubectl`, Claude Code).
+- In the issue container `shopdemo-1` (started from the work clone): `suite: api ok` (1 test passed, .NET 10), `suite: web ok` (`npm install`, `ng build`, `ng test`: 2 of 2 SUCCESS in Chrome Headless 159 through the no-sandbox wrapper), `suite: k8s ok` (`kubectl kustomize` rendered two Services and two Deployments). Run by hand, not by the script's own final step.
+- Sandbox (`bash .sbx/codeo-sandbox.sh issue 1 host-run/1`): created from Docker's pinned image, cloned the branch, ran the start script; `bash scripts/run-suites.sh` inside it failed `dotnet: command not found` because the sandbox has no project toolchain. `bash .sbx/codeo-sandbox.sh end 1` removed it. Documented in `.sbx/README.md` (`a2c20da`).
+- Wizard from a pipe: `printf '' | bash scripts/codeo-init.sh --skip-install` in a clone of `rodeo` asked its three questions and `Add a test suite` on the terminal, kept the config, and doctor ended with every check `ok` except `fail ruleset: main does not require: tests qc-verdict` (a new repository has no ruleset). Note: with an existing config the wizard still asks the codename, install-scope and environment questions (the config's codename was `shopdemo`; the question offered `rodeo`).
+- A stray `codeo-1` container run by mistake from the codeo checkout was removed; the tracker found no active `codeo-1` rows on issue #1.
+- Unverified still: a clean end-to-end pass of the fixed `host-run.sh`, and `curl | bash` (needs a release).
+
+**Promised later work (no issue number yet):** let a project put its own toolchain into the sbx sandbox (the sandbox runs only Docker's pinned `docker.io/sbx/claude` image; `.sbx/claude-image` must be a digest of it). To be filed with `/codeo:issue` in the home checkout.
+
+**Host steps as planned (the engineer, on their own host; steps 2-4 were run as the results above show, a clean re-run of step 2 is still wanted).** Prerequisites: Docker, `gh` logged in, `jq`, bash 4.3 or newer for doctor's `deps` check, and an empty **public** throwaway GitHub repository (`<owner>/<repo>`):
 1. From a checkout of this branch with Node installed: `bash examples/csharp-angular/scripts/generate-web.sh`, then commit the generated `examples/csharp-angular/web/` (Task 7's host half).
 2. `bash examples/csharp-angular/scripts/host-run.sh <owner>/<repo>` (Task 12 step 2-3). Expected: its last lines are `host-run: ok issue container shopdemo-1 ran the suites api web k8s` and doctor's output with no `fail` line except the host-dependent ones the script lists. Paste the output below.
 3. In a fresh clone of that repository, in a terminal, run `bash <path to this checkout>/scripts/codeo-init.sh --env containers` and check it asks its questions on the terminal and ends with `init: ok` lines. The `curl | bash` form fetches the newest release tag, which predates this change, so it can only be exercised after this work is released; until then this run stands in for it. Paste the `init:` lines; the README transcript block is added from them.
@@ -49,6 +60,7 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 - Task 12: the web suite's build installs its dependencies first (`ng new --skip-install` writes no lockfile, so `npm install`, not `npm ci`); the wizard step of `host-run.sh` accepts `ruleset`, `deps`, `superpowers` and `suites: not installed or unset` as host-dependent doctor failures and prints which occurred. The plan named only `ruleset`.
 - Task 9: the README's *Adopting codeo with containers* carries no `init:` transcript yet; it is added from the host run (open item above). Task 12's host steps and Task 13's sandbox run are pending, as described under *Where this stands*.
 - `docs/container-templates.md`'s example section and `.devcontainer/README.md` name `host-run.sh` (a follow-up `cc5b7b4`, not a plan task).
+- After the engineer's host run: `host-run.sh` unsets the `CODEO_*` overrides and checks the toolchain in the container before the suites (`87b5c8a`, `20bed17`), and `.sbx/README.md`, `docs/container-templates.md`, `README.md` and `CHANGELOG.md` say the sandbox runs Docker's pinned image without the project's toolchain (`a2c20da`). Neither was a plan task.
 
 **Rulings I made** (each with what it costs if wrong):
 1. Task 9's transcript waits for the host run; costs one follow-up round.
@@ -63,3 +75,4 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 ## Log
 
 - 2026-11-26 — implemented: Tasks 1-11 and the in-checkout half of Task 12 through subagent rounds on sonnet (every implementer, reviewer and fix round), 21 commits; host steps pending · cost: 68m · sonnet-5-5 1.7M in + 58M cached / 322k out
+- 2026-11-26 — host results recorded; host-run hardening and sandbox documentation added after the engineer's run · cost: 124m · sonnet-5-5 1.9M in + 75.8M cached / 386k out
