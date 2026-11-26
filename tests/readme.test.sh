@@ -342,6 +342,10 @@ grep -qF 'security -v unlock-keychain ~/Library/Keychains/login.keychain-db' "$d
 grep -qF 'keychain cannot be accessed because the current session does not allow user interaction' "$dc" ||
     fail host-command "$dc does not quote the keychain-cannot-be-accessed error"
 
+# containers-transcript: the adoption section shows the wizard's init lines inside a code fence.
+awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on && /^```/ { f = !f; next } on && f && /^init: ok containers:/ { found = 1 } END { exit !found }' "$readme" ||
+    fail containers-transcript "Adopting codeo with containers has no code-fenced line starting init: ok containers:"
+
 # A pipeline whose consumer is grep -q: grep exits at its first match, a producer still writing is killed
 # by SIGPIPE (141), and pipefail fails the whole pipeline although the line was found. The race is lost
 # on a slow runner and won on a fast machine, so this reads the source instead of waiting for it to flake.

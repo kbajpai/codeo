@@ -247,6 +247,31 @@ curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/scripts/codeo-in
 
 `scripts/codeo-init.sh` fetches its own release when it runs alone like this, installs the plugins, writes `.codeo/config.json`, writes the container files and then runs the `/codeo:doctor` checks. It asks a few questions (codename, scope, whether to add a suite) only at a terminal, and only for what a flag did not answer; `--yes` takes every default. Its other flags are `--codename <name>`, `--scope user|project`, `--version vX.Y.Z`, `--suite <name>:<paths>:<build>:<test>` (repeatable; the build command cannot contain a colon, only the test command may) and `--skip-install`, which leaves the plugin install to you. Each step prints one line, `init: ok <step>`, `init: skip <step>` (nothing to do, for example a config that already exists and is kept) or `init: fail <step>: <reason>`, and the doctor's lines follow. The steps run in this order: `preflight` (the repository exists and `gh` can see it), `install`, `config`, `suite` (one per `--suite`), `config` again for the plugin pin the container installs, and `containers`. The exit status is 0 when every step and every doctor check passed, 1 otherwise and 2 for a usage error. Running it again is safe.
 
+This is the output of `--yes --skip-install --env containers --codename shopdemo` with one `--suite` per suite (`api`, `web` and `k8s`) in a clone of a new, empty repository. `--skip-install` is why the install step prints `init: skip`, and `fail ruleset` is the expected failure on a new repository (see below):
+
+```
+init: ok preflight: kbajpai/rodeo exists and gh can see it
+init: skip install: --skip-install
+init: ok config: .codeo/config.json written
+init: ok suite: api
+init: ok suite: web
+init: ok suite: k8s
+init: ok config: plugin pin v1.0.10 (the container installs it)
+init: ok containers: .devcontainer/ and .sbx/ written
+ok config: config.json is valid
+ok schema: supported (plugin understands up to 1)
+ok codename: shopdemo
+ok gh-auth: gh api user succeeded
+ok gh-scopes: no board configured; the project scope is not needed
+ok board: no board configured
+fail ruleset: main does not require: tests qc-verdict
+ok suites: 3 suite(s), every build and test command resolves
+ok deps: jq, git, bash 5.3.9(1)-release
+ok overlays: 11 section(s) in 8 file(s)
+ok superpowers: installed
+ok containers: managed scripts match the templates
+```
+
 **Inside Claude Code.** With the plugin installed, run `/codeo:setup --containers`; add `--codename <name>` to choose the codename. It writes `.codeo/config.json` as [step 1](#1-run-codeosetup) describes, then the container files. In a project that already has a config, `/codeo:setup --containers` alone leaves the config as it is and writes only the container files.
 
 Either way, the files written are the managed scripts and the seeds. The managed files are `.devcontainer/codeo`, `.devcontainer/codeo-container.sh`, `.devcontainer/codeo-track.sh`, `.sbx/codeo-sandbox.sh` and the scripts under `.devcontainer/scripts/`; `bash scripts/containers.sh --force` rewrites them and `/codeo:doctor` checks that they match. The seeds are yours to edit and are never overwritten: `.devcontainer/Dockerfile`, `.devcontainer/devcontainer.json`, `.sbx/claude-image` and one for each of the eight workflow skills in `.codeo/overlays/`. [docs/container-templates.md](docs/container-templates.md) lists each file, where its names come from and where your own toolchain goes. The sandbox uses Docker's pinned image and does not get the project's toolchain, which the dev container does (see [docs/container-templates.md](docs/container-templates.md)).
