@@ -8,6 +8,8 @@
 
 ## Where this stands
 
+Round 4 (send-back from `qc.md` round 3) is built and reviewed: H1-H8 are fixed in five commits (`5c475e8`, `011974d`, `b8d523b`, `d5d4c21`, and the earlier round 3 ones stand), and the `shell` build passes. The round's outcome is not written: at the start of this check `overlap.sh 190` printed #192's overlaps on `CHANGELOG.md` and `docs/home-checkout.md`, which stop the step until Q1 and Q2 are answered (see *Questions*).
+
 Round 3 (send-back from `qc.md` round 2) is done: the four blocking findings G1-G4 and the cheap non-blocking ones (G6, G8-G11) are fixed (see `### Round 3` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed: the round changed wizard and setup behaviour, shipped text and pages, not the example's image.
 
 Round 2 (send-back from `qc.md` round 1) is done: the six blocking findings and four non-blocking ones are fixed (see `### Round 2` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. The engineer's clean `host-run.sh` re-run on a fresh empty repository passed (under *Outcome*, round 2).
@@ -18,7 +20,25 @@ The engineer ran the host steps on a Linux host on 2026-11-26 (results under *No
 
 ## Questions
 
-None.
+### Q1 — #192 overlaps this branch on `CHANGELOG.md`. Proceed, sequence or re-scope?
+
+`overlap.sh 190` printed, at this round's start, `192	CHANGELOG.md` and `192	glob:CHANGELOG.md`. #192 is on branch `feat/192-guard-home-checkout-no-project`, assigned to `kbajpai`, at the step `plan (working)` (it is waiting on `/codeo:implement`; its container `codeo-192` was live 11 minutes ago). Its footprint names `CHANGELOG.md`; this branch changes `CHANGELOG.md` too (the `## Unreleased` bullet for the container setup, written in round 1 and unchanged since).
+
+**Why it matters:** both branches add to `## Unreleased`, so whichever merges second takes a textual conflict on that section. "Sequence after #192" holds this round's hand-off to `/codeo:qc` and the merge until #192 is merged; "proceed and coordinate" carries on and leaves the second merge to resolve two bullets side by side; "re-scope" would take this branch's changelog bullet out (the plan names `CHANGELOG.md` among the pages it moves, so that costs a plan change).
+**Options:** proceed and coordinate · sequence after #192 · re-scope.
+*Recommendation:* proceed and coordinate. #192 has not started implementing, this branch is much further along, and the conflict is two bullets under one heading that the later merge resolves in a minute; sequencing would hold a finished change for work that has not begun.
+
+**Answer:**
+
+### Q2 — #192 overlaps this branch on `docs/home-checkout.md`. Proceed, sequence or re-scope?
+
+`overlap.sh 190` printed `192	docs/home-checkout.md` and `192	glob:docs/home-checkout.md`; #192 is on branch `feat/192-guard-home-checkout-no-project`, assigned to `kbajpai`, at the step `plan (working)`. Its footprint names `docs/home-checkout.md` (it adds a hook, `hooks/home-guard.sh`, and documents it there); this branch rewrote the page's *Adopting the guard in your project* section (round 1).
+
+**Why it matters:** the two edits are in different sections today, but #192 will describe a guard against edits in the home checkout, which is the same "home checkout" this branch's section says is named `<codename>-home`; a later merge may need the two descriptions reconciled, not just textually merged.
+**Options:** proceed and coordinate · sequence after #192 · re-scope.
+*Recommendation:* proceed and coordinate, and let #192's plan read this branch's *Adopting the guard in your project* section before it describes the guard.
+
+**Answer:**
 
 ## Notes
 
