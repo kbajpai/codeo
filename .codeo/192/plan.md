@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q4 are answered and the plan is approved: `docs/plans/2026-11-26-home-checkout-edit-guard-192.md`, left unstaged. Q5 is open: it is Q4 again in the tokens `overlap.sh` reads (`#190`, `glob:CHANGELOG.md`, `glob:docs/home-checkout.md`). The outcome is written once it is answered. `## Notes` holds what was found and the calls made without asking.
+Round 1, done. Q1-Q5 are answered and the plan is approved: `docs/plans/2026-11-26-home-checkout-edit-guard-192.md`, left unstaged for review. Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -81,6 +81,7 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with your
 **Options:** proceed and coordinate (recommended: Q4's answer, and the edits are in different places) · sequence after #190 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your pick".
 
 ## Notes
 
@@ -100,6 +101,27 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with your
 - The guard takes effect in a project when its pinned plugin version carries the hook, so in this repository's own home checkout that is after the next release and pin bump, not at the merge. The plan says so in the changelog entry.
 - Output shape: a plan under `docs/plans/`, with a new section in the existing reference doc `docs/home-checkout.md` as its documentation task. No separate reference doc.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-26-home-checkout-edit-guard-192.md` (unstaged, awaiting review and commit) |
+| Shape | an executable plan under `docs/plans/`, four tasks; the documentation change is a new `## The edit guard` section of the existing `docs/home-checkout.md`, no separate reference doc |
+
+**Decisions** (Q1-Q5 answered "go with your picks"):
+- Override is `CODEO_HOME_EDITS=allow` in Claude Code's own environment (Q1). Rejected: a git-ignored `.codeo/` marker, which outlives the session, cannot be protected against the agent's own Bash writes, and needs a third line in every project's `.codeo/.gitignore`.
+- The hook runs the checkout's own `.devcontainer/scripts/role.sh`, found at that fixed path; no such file means no guard (Q2). Rejected for now: a `.codeo/config.json` key, which can be added later without breaking this.
+- Bash is guarded for git writes only, matched on segments that start with `git` (Q3). Rejected: pattern-matching shell file writes (`sed -i`, redirection), which never closes the gap and refuses harmless commands.
+- #190 overlaps on `CHANGELOG.md` and `docs/home-checkout.md`: proceed and coordinate (Q4, Q5). Rejected: sequencing after #190, re-scoping.
+- Guarded roles are `home`, `stale:?`, `stray`; the hook fails open on any error; `role.sh` and the skills are unchanged.
+- `/codeo:init` runs in home by cutting its branch in a scratch worktree (role `stray`) and committing `.codeo/` there, so `.codeo/` paths, `git worktree`, `fetch`, `pull`, `branch`, plain `checkout`/`switch` and all scripts stay allowed, and `git add`/`commit` pass when every path is under `.codeo/`.
+
+**Documentation pages the plan changes:** `docs/home-checkout.md` (new section with a Mermaid flowchart) and `CHANGELOG.md` (a new `## Unreleased` bullet). No wiki module.
+
+**Intake questions resolved:** the override mechanism left open at intake (Q1).
+
+**Reach:** the guard applies to a project once its pinned plugin carries the hook, so this repository's home checkout has it after the next release and pin bump.
+
 ### Footprint
 
 ```
@@ -109,10 +131,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-26 — Q1-Q4 raised · cost: 2m · fable-5-2 95k in + 1.1M cached / 7k out
+- 2026-11-26 — Q5 raised (overlap with #190, in the tokens `overlap.sh` reads) · cost: 31m · fable-5-2 104k in + 1.5M cached / 13k out · sonnet-5-5 139k in + 2M cached / 27k out
+- 2026-11-26 — planned: docs/plans/2026-11-26-home-checkout-edit-guard-192.md · cost: 31m · fable-5-2 104k in + 1.5M cached / 13k out · sonnet-5-5 139k in + 2M cached / 27k out · the optional `engineering:system-design` and `engineering:architecture` skills were not listed, so their structure was applied directly
