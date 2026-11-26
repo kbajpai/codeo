@@ -231,6 +231,17 @@ bcheck allow "$h" "git commit -m x"
 bcheck allow "$h" 'git commit -m "a; git push"'
 bcheck allow "$h" "git commit .codeo/192/init.md -m x"
 
+case_desc=hooks_json_registers_the_guard
+hj="$plugin_root/hooks/hooks.json"
+reg=$(jq -r '[.hooks.PreToolUse[] | select(.matcher == "Edit|Write|NotebookEdit|Bash") | .hooks | select(length == 1) | .[0].command] | join("|")' "$hj")
+assert_eq "guard entry command" 'bash "${CLAUDE_PLUGIN_ROOT}/hooks/home-guard.sh"' "$reg"
+assert_eq "Agent|Task entry kept" 1 "$(jq '[.hooks.PreToolUse[] | select(.matcher == "Agent|Task")] | length' "$hj")"
+h=$(clone hj1 codeo-home main)
+out=$(file_json Edit "$h" "$h/src/a.txt" | (cd "$scratch_root" && env -u CLAUDE_CODE_REMOTE -u CODEO_HOME_EDITS \
+    CODEO_DOCKERENV="$scratch_root/no-dockerenv" CODEO_CONTAINERENV="$scratch_root/no-containerenv" \
+    CLAUDE_PLUGIN_ROOT="$plugin_root" bash -c "$reg") 2>/dev/null) || true
+assert_eq "registered command denies a home edit" deny "$(decision "$out")"
+
 if [[ $failures -gt 0 ]]; then
     echo "$failures assertion(s) failed" >&2
     exit 1
