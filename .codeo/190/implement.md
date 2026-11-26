@@ -8,6 +8,8 @@
 
 ## Where this stands
 
+Round 2 (send-back from `qc.md` round 1) is done: the six blocking findings and four non-blocking ones are fixed (see `### Round 2` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. A clean `host-run.sh` re-run on a fresh empty repository is still wanted from the engineer.
+
 Round 1. Tasks 1-11 are done and reviewed, and so is the in-checkout half of Task 12 (the `host-run.sh` script and its refusal test). The branch builds (`shell` suite `build` is `true`) and `bash tests/run.sh` ended `all cases passed` on the branch before the last fix wave (the wave's own suite run also ended `all cases passed`). Nothing in this dossier is open.
 
 The engineer ran the host steps on a Linux host on 2026-11-26 (results under *Notes*). Done there: the example image builds (11 of 11 steps on Ubuntu 26.04); in an issue container the api (1 test), web (2 tests) and k8s suites all pass; the sandbox starts and clones the branch; the wizard asks its questions on the terminal when its stdin is a pipe. Found there and fixed: `host-run.sh` built the wrong image because the engineer's shell exports `CODEO_CONTEXT` (it now unsets the `CODEO_*` overrides and checks the toolchain before the suites). Found and documented: a sandbox runs Docker's pinned image, not the project's Dockerfile, so it has no .NET, Node or `kubectl`. The clean end-to-end run of the fixed `host-run.sh` on a fresh empty repository passed (below). The README's `init:` transcript block is added from that run (`215ff29`). Still open: `curl | bash` after a release, and a follow-up issue for a sandbox toolchain (below).
@@ -73,7 +75,40 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 
 **Plan call to check (`/codeo:qc`):** the plan's own call that a fresh repository shows `fail ruleset` in doctor is stated in the README for hosts that have the project's toolchain and the plugins installed; the host run is where it is recorded.
 
+### Round 2 — 2026-11-26
+(send-back from qc.md round 1)
+
+**What was built** (four commits on top of round 1: `7925696`, `f5debad`, `7073173`, `e86257f`; each task was reviewed, three needed a fix round):
+- **F1** — `tests/example.test.sh`: `generate_web_names_a_pinned_cli_and_refuses_an_existing_app` starts from an emptied copy of `web/` (dotfiles included), so it again covers a run on an empty `web/` and the refusal on an existing `angular.json`.
+- **F2** — `docs/container-templates.md`, `.devcontainer/README.md`, `examples/csharp-angular/scripts/host-run.sh` (header and guard) and `generate-web.sh` (comment) say the example ships its generated Angular app and that `generate-web.sh` regenerates it; the numbered steps are renumbered.
+- **F3** — `scripts/setup.sh` writes `codename` whenever `--containers` is given and none is in the config (the repository name normalised by one shared function, `lib/codename.sh`, also used by `codeo-init.sh`), fails before writing when none can be derived, and adds a missing codename to an existing config; `scripts/containers.sh` refuses a config without one and no longer defaults to the repository name. The README's `codename` row states one rule.
+- **F4** — `setup.sh --containers` writes `plugin.repo` and `plugin.ref` (newest `vX.Y.Z` release; soft failure with one line when none is found); `/codeo:doctor`'s `containers` check fails when the container scripts exist and the pin is absent.
+- **F5** — the shipped overlays and managed scripts no longer name `.devcontainer/README.md` or `.sbx/README.md` (a project does not receive them): they name the scripts a project has (`bash .devcontainer/codeo-container.sh …`) and, for the sandbox, the folder the script runs from (`codeo issue <N> <branch> --sandbox`, or `codeo-sandbox.sh` in a folder outside the project clone).
+- **F6** — `templates/containers/.codeo/overlays/init.md` uses `@BASE_BRANCH@`; the audit table in `docs/container-templates.md` lists it; a test renders an overlay for `develop`.
+- **F7** — the install step's stderr goes to a `mktemp` file.
+- **F8** — `containers.sh` refuses `TODO-set-me` for `baseBranch`, `repo.owner` and `repo.name`; the wizard prints `init: fail config: baseBranch is TODO-set-me (…)` and skips containers.
+- **F9** — the wizard prints `init: ok containers: <n> written, <m> kept` from `containers.sh`'s own lines, prints `init: skip codename: …` when a rerun's answer differs from the kept config, and the README and the script header say a rerun adds only `--suite` entries and the plugin pin to a kept config.
+- **F10** — `tests/init.test.sh`: the unattended run asserts doctor's only `fail` is `ruleset`, no `kbajpai` or `codeo-<N>` in the project's container and overlay files, and the codename in the config; the rerun case keeps an edited Dockerfile and overlay under `--env containers`.
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. For information, `bash tests/run.sh` ended `all cases passed` on this tree, `bash scripts/containers.sh --check` prints no `differs`, and `bash scripts/doctor.sh` prints no `fail`; grading is `/codeo:qc`'s.
+
+**Documentation pages changed this round:** `README.md` (the `codename` row, the Adopting section: rerun behaviour and the transcript lead-in), `docs/container-templates.md`, `.devcontainer/README.md`, `docs/skills.md`, `CHANGELOG.md` is unchanged.
+
+**Deviations and rulings (each with what it costs if wrong):**
+1. F3 was classified implement's although the plan specified "codename, else the repository name"; the plan's goal (criterion 2) requires matching names, and the fix stays in the plan's files. `containers.sh` now refuses a config with no codename instead of defaulting; a project that relied on the old default must run `setup.sh --containers` once. Costs: one extra step for a hand-written config.
+2. F4: the pin is written by `setup.sh` (soft failure offline) and enforced by doctor, rather than only one of the two. Costs: `setup.sh --containers` does a `git ls-remote` against the plugin repository.
+3. F5: READMEs are not shipped; the text was reworded. Costs: no per-project README for the container commands.
+4. The README transcript's `init: ok containers:` line was edited by hand to `23 written, 0 kept` (15 template files and 8 scripts, counted by running `containers.sh` in a fresh project); the lead-in now says so. It has not been re-observed on a host.
+5. The 'Linux host' in that lead-in comes from the engineer's prompts and tracker rows.
+
+**Footprint gap, for `/codeo:qc` and the engineer:** `overlap.sh --outside 190` now prints `lib/codename.sh`, `tests/close-removal.test.sh`, `tests/doctor.test.sh`, `tests/folder-check.test.sh`, `tests/init-overlay.test.sh` and `tests/role.test.sh`. They are needed by the change (the shared derivation library and the tests that pin the reworded messages), and `plan.md`'s footprint, which this skill does not edit, left them out. On a first-round plan this is not blocking; a send-back to `/codeo:plan` would add them.
+
+**Deferred Minor findings from this round's reviews (not fixed):** `generate-web.sh`'s header comment wraps unevenly; `docs/container-templates.md` says "To regenerate `web/` first" after the copy instruction; `codeo_derive_codename` and the `[a-z]` patterns are locale-dependent (non-ASCII names pass under a UTF-8 glibc locale); `setup.sh` prints "pinned the plugin"/"wrote codename" without checking that `jq` and `mv` succeeded and can leave `config.json.new` behind; `--containers` alone on invalid JSON says `cannot derive a codename from ''`; `write_pin` treats an empty-string `plugin` as present while doctor treats it as absent; the wizard's `skip containers: baseBranch is not set` prints even when env is none; the wizard's fetch preamble keeps its own copy of the release lookup (the library is not on disk before the clone); the init overlay's fallback names `codeo-sandbox.sh` without saying `codeo-track.sh` must sit beside it; the wizard's `skip codename` line prints on every rerun without `--codename` where the derived default differs; `overlays_name_the_base_branch` was not seen failing on its own.
+
+**Still wanted from the engineer:** one clean `bash examples/csharp-angular/scripts/host-run.sh <owner>/<repo>` on a fresh empty public repository. Round 2 changed `setup.sh`, `containers.sh`, `doctor.sh`, the shipped overlays and the wizard, which the example's image build and wizard step use, and the README transcript's `containers` line is unobserved. Paste its last lines here.
+
 ## Log
 
 - 2026-11-26 — implemented: Tasks 1-11 and the in-checkout half of Task 12 through subagent rounds on sonnet (every implementer, reviewer and fix round), 21 commits; host steps pending · cost: 68m · sonnet-5-5 1.7M in + 58M cached / 322k out
 - 2026-11-26 — host results recorded; host-run hardening and sandbox documentation added after the engineer's run · cost: 124m · sonnet-5-5 1.9M in + 75.8M cached / 386k out
+- 2026-11-26 — round 2 (send-back from qc round 1): F1-F10 fixed in four commits, each task reviewed on sonnet · cost: 34m · sonnet-5-5 563k in + 23.8M cached / 96k out
