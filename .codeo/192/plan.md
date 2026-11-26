@@ -89,6 +89,15 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with your
 - The guard takes effect in a project when its pinned plugin version carries the hook, so in this repository's own home checkout that is after the next release and pin bump, not at the merge. The plan says so in the changelog entry.
 - Output shape: a plan under `docs/plans/`, with a new section in the existing reference doc `docs/home-checkout.md` as its documentation task. No separate reference doc.
 
+### Footprint
+
+```
+files:      hooks/home-guard.sh, hooks/hooks.json, tests/home-guard.test.sh, docs/home-checkout.md, CHANGELOG.md, docs/plans/2026-11-26-home-checkout-edit-guard-192.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
