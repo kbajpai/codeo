@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-No pull request is open yet. The branch conflicts with `origin/main` in `tests/readme.test.sh` after #177 merged, so the workflow goes back to `/codeo:implement`, then `/codeo:qc`, then `/codeo:close`.
+Pull request #187 is open and waiting for review. The workflow stays open until it merges; run `/codeo:close` again after the merge.
 
 ## Questions
 
@@ -30,6 +30,15 @@ None.
 
 qc round at review: 3
 
+### Round 2 — pull request opened
+
+2026-11-26
+
+#187 https://github.com/kbajpai/codeo/pull/187
+
+Went out on `qc.md` round 4: **Verdict: clear — forward to `/codeo:close`.** The `qc round at review` of round 1 was 3, so round 4 is newer. No override.
+
 ## Log
 
 - 2026-11-26 — conflicts with main: `tests/readme.test.sh` after #177; sent back to implement · cost: 0m · sonnet-5-5 25k in + 1.1M cached / 1k out
+- 2026-11-26 — opened PR #187 on qc round 4 (clear), archived the dossier · board.sh: #179 In review → In review on #3 Codeo · cost: 0m · sonnet-5-5 23k in + 877k cached / 3k out
