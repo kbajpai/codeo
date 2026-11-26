@@ -59,6 +59,7 @@ slug=$1
 
 # The CODEO_* overrides would point the clone, the image build or the container at another repository or directory.
 ignored=
+# ${ignored:+ } adds the separating space only once the list is non-empty.
 for v in CODEO_CONTEXT CODEO_REPO_URL CODEO_RAW_URL CODEO_TRACK CODEO_HOME; do
     if [[ -n ${!v+x} ]]; then ignored="$ignored${ignored:+ }$v"; fi
     unset "$v"
@@ -178,7 +179,7 @@ step 'issue container' bash .devcontainer/codeo-container.sh issue 1 "$branch" -
 if ! docker exec "$name-1" bash -c 'dotnet --version && node --version && kubectl version --client' >"$work/toolchain.log" 2>&1; then
     cat "$work/toolchain.log"
     echo 'host-run: FAIL issue container toolchain'
-    echo "host-run: note: the image lacks the example's toolchain; it was built from https://github.com/$slug.git#$branch (a CODEO_CONTEXT or a stale image is the usual cause); image id $(docker image inspect --format '{{.Id}}' "$name-dev:$name-1" 2>&1); compare with: docker history $name-dev:$name-1"
+    echo "host-run: note: the image lacks the example's toolchain; it should have been built from the build context https://github.com/$slug.git#$branch:.devcontainer, but an image of this name that already existed is reused, not rebuilt; image id $(docker image inspect --format '{{.Id}}' "$name-dev:$name-1" 2>/dev/null || echo unknown), compare with: docker history $name-dev:$name-1; a CODEO_CONTEXT in the environment or a stale image is the usual cause (this script ignores CODEO_* itself, so a stale image is the more likely one)"
     exit 1
 fi
 ok 'issue container toolchain'

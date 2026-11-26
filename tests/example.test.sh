@@ -198,25 +198,47 @@ export -p >"$work/docker-env"
 exit 1
 STUB
     chmod +x "$tools/docker"
-    PATH="$tools" CODEO_CONTEXT=/x CODEO_REPO_URL=https://example.invalid/r "$BASH" "$script" owner/repo >"$work/out" 2>&1 || rc=$?
+    # Each run starts from a clean slate: the caller's own CODEO_* exports must not leak in (subshell, shell unset
+    # because the scratch PATH has no env binary).
+    (
+        unset CODEO_CONTEXT CODEO_REPO_URL CODEO_RAW_URL CODEO_TRACK CODEO_HOME
+        export CODEO_CONTEXT=/x CODEO_REPO_URL=https://example.invalid/r
+        PATH="$tools" "$BASH" "$script" owner/repo >"$work/out" 2>&1
+    ) || rc=$?
     [[ $rc -eq 1 ]] || fail "stubbed run exited $rc, not 1: $(cat "$work/out")"
     [[ $(grep -c '^host-run: note: ignoring ' "$work/out") -eq 1 ]] || fail "not exactly one ignoring line: $(cat "$work/out")"
     grep -qx 'host-run: note: ignoring CODEO_CONTEXT CODEO_REPO_URL' "$work/out" || fail "the note does not list both: $(cat "$work/out")"
     [[ -f $work/docker-env ]] || fail "the stub docker never ran its build"
     ! grep -Eq "CODEO_(CONTEXT|REPO_URL|RAW_URL|TRACK|HOME)=" "$work/docker-env" || fail "docker still sees an override: $(cat "$work/docker-env")"
+    # Only CODEO_HOME set: the note lists exactly it.
+    rc=0
+    (
+        unset CODEO_CONTEXT CODEO_REPO_URL CODEO_RAW_URL CODEO_TRACK CODEO_HOME
+        export CODEO_HOME=/h
+        PATH="$tools" "$BASH" "$script" owner/repo >"$work/out" 2>&1
+    ) || rc=$?
+    grep -qx 'host-run: note: ignoring CODEO_HOME' "$work/out" || fail "the note is not exactly CODEO_HOME: $(cat "$work/out")"
     # Nothing set: no note.
     rc=0
-    PATH="$tools" "$BASH" "$script" owner/repo >"$work/out" 2>&1 || rc=$?
+    (
+        unset CODEO_CONTEXT CODEO_REPO_URL CODEO_RAW_URL CODEO_TRACK CODEO_HOME
+        PATH="$tools" "$BASH" "$script" owner/repo >"$work/out" 2>&1
+    ) || rc=$?
     ! grep -q 'ignoring' "$work/out" || fail "a note was printed with nothing set: $(cat "$work/out")"
 }
 
 host_run_checks_the_toolchain_before_the_suites() {
-    local script="$ex/scripts/host-run.sh" a b
-    # A full stubbed run is not feasible here (clone, wizard, pushes), so assert the order in the script.
-    a=$(grep -n 'FAIL issue container toolchain' "$script" | head -1 | cut -d: -f1)
-    b=$(grep -n 'docker exec -w .* bash scripts/run-suites.sh' "$script" | head -1 | cut -d: -f1)
-    [[ -n $a && -n $b && $a -lt $b ]] || fail "the toolchain check does not precede run-suites.sh ($a, $b)"
-    grep -q 'dotnet --version && node --version && kubectl version --client' "$script" || fail "the toolchain check lacks a tool"
+    local script="$ex/scripts/host-run.sh" c i f x s
+    # A full stubbed run is not feasible (clone, wizard, pushes) and the check is inline in the main flow, so this
+    # asserts by line number that the container start, then the check, its FAIL line and its exit 1, then the suites
+    # run come in that order. No test runs the failure path itself.
+    c=$(grep -n 'codeo-container.sh issue' "$script" | grep -v '^[0-9]*:#' | head -1 | cut -d: -f1)
+    i=$(grep -n '^if ! docker exec .*dotnet --version && node --version && kubectl version --client' "$script" | head -1 | cut -d: -f1)
+    f=$(grep -n "^    echo 'host-run: FAIL issue container toolchain'" "$script" | head -1 | cut -d: -f1)
+    x=$(awk -v s="${f:-0}" 'NR>s && /^    exit 1$/ {print NR; exit}' "$script")
+    s=$(grep -n '^docker exec -w .* bash scripts/run-suites.sh' "$script" | head -1 | cut -d: -f1)
+    [[ -n $c && -n $i && -n $f && -n $x && -n $s ]] || fail "a toolchain-check line is missing ($c $i $f $x $s)"
+    [[ $c -lt $i && $i -lt $f && $f -lt $x && $x -lt $s ]] || fail "the toolchain check is out of order ($c $i $f $x $s)"
 }
 
 the_web_suite_installs_its_dependencies_before_it_builds() {
