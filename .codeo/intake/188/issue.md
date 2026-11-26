@@ -1,6 +1,6 @@
-# Issue new-177-qc-leftovers — issue
+# Issue #188 — issue
 
-Delegated from /codeo:triage run 5; engineer chose *file it* for #177 F2-F6. Draft proposed: no Issue Type (none defined), labels documentation, priority: low (rubric: polish, a follow-up nobody is waiting on).
+Filed as #188: Close the #177 QC leftovers (documentation, priority: low). Approved by the engineer.
 
 ### Description
 
