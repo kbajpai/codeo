@@ -18,9 +18,17 @@ mkdir -p "$HOME" "$work/bin"
 fail() { echo "FAIL: $1" >&2; exit 1; }
 
 # Stubs: gh always fails (only the suites line is asserted); the toolchain binaries log their arguments.
+# STUB_<tool>_EXIT sets the exit status, STUB_<tool>_FAILON fails only when the tool's first argument matches
+# (kubectl and dotnet take the phase second, npm names it in the arguments), STUB_<tool>_SWALLOW drains stdin.
 printf '#!/usr/bin/env bash\nexit 1\n' >"$work/bin/gh"
 for t in dotnet npm kubectl; do
-    printf '#!/usr/bin/env bash\necho "%s $*" >>"${STUB_LOG:-/dev/null}"\nexit "${%s_EXIT:-0}"\n' "$t" "STUB_$t" >"$work/bin/$t"
+    cat >"$work/bin/$t" <<STUB
+#!/usr/bin/env bash
+echo "$t \$*" >>"\${STUB_LOG:-/dev/null}"
+[[ -z \${STUB_${t}_SWALLOW:-} ]] || cat >/dev/null
+[[ -z \${STUB_${t}_FAILON:-} || " \$* " != *" \$STUB_${t}_FAILON "* ]] || exit 1
+exit "\${STUB_${t}_EXIT:-0}"
+STUB
 done
 chmod +x "$work/bin"/*
 export PATH="$work/bin:$PATH"
@@ -60,6 +68,49 @@ run_suites_stops_at_the_first_failure() {
     ! grep -q 'suite: web' <<<"$out" || fail "ran past the failure: $out"
 }
 
+api_directory_resolves_to_exactly_one_solution_that_lists_the_test_project() {
+    local files p
+    files=$(find "$ex/api" -maxdepth 1 -type f \( -name '*.sln' -o -name '*.slnx' -o -name '*.csproj' \))
+    [[ $(wc -l <<<"$files") -eq 1 && $files == *.slnx ]] || fail "api/ must hold exactly one solution file, found: $files"
+    for p in Api/Api.csproj Api.Tests/Api.Tests.csproj; do
+        grep -q "Path=\"$p\"" "$files" || fail "solution does not list $p"
+        [[ -f $ex/api/$p ]] || fail "$p does not exist"
+    done
+}
+
+run_suites_does_not_let_a_suite_swallow_the_rest() {
+    local d out
+    d=$(new_project swallow)
+    out=$(cd "$d" && STUB_dotnet_SWALLOW=1 bash "$ex/scripts/run-suites.sh" 2>&1) || fail "run failed: $out"
+    grep -q 'suite: web ok' <<<"$out" && grep -q 'suite: k8s ok' <<<"$out" || fail "later suites skipped: $out"
+}
+
+run_suites_fails_when_a_test_phase_fails() {
+    local d out
+    d=$(new_project testfail)
+    if out=$(cd "$d" && STUB_LOG="$work/log" STUB_dotnet_FAILON=test bash "$ex/scripts/run-suites.sh" 2>&1); then fail "failing test phase exited 0"; fi
+    grep -q 'suite: api FAIL' <<<"$out" || fail "failure not named: $out"
+    grep -q 'dotnet build api' "$work/log" || fail "build did not run first"
+}
+
+run_suites_passes_arguments_through_bash_c() {
+    local d
+    d=$(new_project args)
+    : >"$work/log"
+    (cd "$d" && STUB_LOG="$work/log" bash "$ex/scripts/run-suites.sh" >/dev/null 2>&1) || fail "run failed"
+    grep -qx 'npm web test -- --watch=false --browsers=ChromeHeadless' <(sed 's/--prefix //' "$work/log") || fail "arguments not intact: $(cat "$work/log")"
+}
+
+run_suites_fails_on_invalid_config() {
+    local d
+    d=$(new_project bad)
+    echo '{not json' >"$d/.codeo/config.json"
+    if (cd "$d" && bash "$ex/scripts/run-suites.sh" >"$work/out" 2>&1); then fail "invalid JSON exited 0"; fi
+    grep -q 'run-suites:' "$work/out" || fail "no reason given"
+    echo '{"schema":1,"suites":[]}' >"$d/.codeo/config.json"
+    if (cd "$d" && bash "$ex/scripts/run-suites.sh" >"$work/out" 2>&1); then fail "zero suites exited 0"; fi
+}
+
 the_manifests_name_no_codeo_project() {
     local hits
     hits=$(grep -rInE 'kbajpai|codeo-([0-9]|<N>)' "$ex" || true)
@@ -67,7 +118,9 @@ the_manifests_name_no_codeo_project() {
 }
 
 for c in suites_merge_into_a_config_and_doctor_resolves_them the_dockerfile_extends_the_template_only_inside_its_section \
-    run_suites_stops_at_the_first_failure the_manifests_name_no_codeo_project; do
+    run_suites_stops_at_the_first_failure api_directory_resolves_to_exactly_one_solution_that_lists_the_test_project \
+    run_suites_does_not_let_a_suite_swallow_the_rest run_suites_fails_when_a_test_phase_fails run_suites_passes_arguments_through_bash_c \
+    run_suites_fails_on_invalid_config the_manifests_name_no_codeo_project; do
     "$c"
 done
 echo "all cases passed"
