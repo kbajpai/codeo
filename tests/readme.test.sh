@@ -25,6 +25,8 @@
 #                    check names; the Installing and the pin group opens with its two entries; the intro says three groups
 #   adopting-guard   docs/home-checkout.md has "Adopting the guard in your project" (role-guard, .codeo/overlays/,
 #                    /codeo:doctor); the README role-guard entry and docs/extension-points.md link to it
+#   adopting-guard-ships  the Adopting the guard section no longer says role.sh "is not shipped" and says
+#                    `/codeo:setup --containers` writes it
 #   updating         docs/updating.md's Updating superpowers section says restart
 #   skill-count      docs/handoff.md has a line starting "Six pipeline skills" (and none "Seven"), docs/skills.md one starting "Six skills form the pipeline"
 #   home-checkout    docs/home-checkout.md says what a missing jq and an existing container do
@@ -297,6 +299,12 @@ grep -qF "](docs/$anchor" <(entry "$trouble" "A role-guard refusal") ||
     fail adopting-guard "README.md's role-guard entry does not link ](docs/$anchor"
 grep -qF "]($anchor" <(prose docs/extension-points.md 2>/dev/null) ||
     fail adopting-guard "docs/extension-points.md does not link ]($anchor"
+
+# adopting-guard-ships: the section says the containers setup writes role.sh, not that it is withheld.
+! grep -qF 'is not shipped' <<<"$adopt" ||
+    fail adopting-guard-ships "the Adopting the guard section still says role.sh is not shipped"
+grep -qF '`/codeo:setup --containers` writes `.devcontainer/scripts/role.sh`' <<<"$adopt" ||
+    fail adopting-guard-ships "the Adopting the guard section does not say /codeo:setup --containers writes role.sh"
 
 # updating: the superpowers update says to restart.
 grep -qF restart <(section docs/updating.md "Updating superpowers") ||

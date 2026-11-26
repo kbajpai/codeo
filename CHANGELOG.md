@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1 (unchanged)
+Shared state: none
+Safe to bump mid-workflow: yes
+
+- The container and sandbox setup is reusable by another project: `/codeo:setup --codename <name> --containers` and `scripts/codeo-init.sh` (one command, which fetches its own release when run alone) write a dev container, an sbx sandbox setup, the host command and the role-guard and host-workflow overlays, named from `.codeo/config.json` (`codename`, `repo.owner`, `repo.name`, `baseBranch`), from templates under `templates/containers/`. `/codeo:doctor` gains a `containers` check. `docs/container-templates.md` lists what is codeo's and what is yours. A C# + Angular + Kubernetes example is under `examples/csharp-angular/`. codeo's own container files are rendered from the same templates (#190).
+
 ## v1.0.10 — 2026-11-26
 
 Config schema: 1 (unchanged)
