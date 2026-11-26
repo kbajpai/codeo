@@ -67,6 +67,14 @@ Two PRs (engineer, in the conversation, 2026-11-26; recorded here by the skill).
 
 Calls I made without a question: the release date is the UTC date the release PR opens; the `Config schema: 1 (unchanged)` line holds (no config key changed since v1.0.9); the `Shared state:` and `Safe to bump mid-workflow:` lines are re-read against the diff since `v1.0.9` of `scripts/` when the PR is cut, not assumed; `tests/replay.test.sh` is not run (no golden directory).
 
+### Footprint
+```
+files:      .claude-plugin/plugin.json, CHANGELOG.md, README.md, docs/updating.md, tests/install.test.sh, .codeo/config.json, docs/plans/2026-11-26-release-v1-0-10.md, .codeo/182/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
