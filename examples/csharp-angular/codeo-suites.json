@@ -1,0 +1,23 @@
+[
+  {
+    "name": "api",
+    "paths": ["api/**"],
+    "build": "dotnet build api",
+    "test": "dotnet test api",
+    "parallel": false
+  },
+  {
+    "name": "web",
+    "paths": ["web/**"],
+    "build": "npm --prefix web run build",
+    "test": "npm --prefix web test -- --watch=false --browsers=ChromeHeadless",
+    "parallel": false
+  },
+  {
+    "name": "k8s",
+    "paths": ["k8s/**"],
+    "build": "kubectl kustomize k8s",
+    "test": "kubectl kustomize k8s",
+    "parallel": false
+  }
+]
