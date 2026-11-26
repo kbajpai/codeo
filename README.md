@@ -160,6 +160,8 @@ Commit the file it wrote. This is its content (`jq -S . .claude/settings.json`),
 
 `ref` pins the codeo release the project uses; write the newest release tag, which `git ls-remote --tags --refs https://github.com/kbajpai/codeo 'v*'` lists. A teammate who opens the folder in Claude Code and trusts it is offered both plugins. A later run that replaces codeo on your machine drops this project's install (see [Updating](#updating)). To move the project to another release, change `ref` ([Moving a project's pin](docs/updating.md#moving-a-projects-pin)).
 
+`-h` or `--help` prints the usage line, `install: usage: install.sh [--version vX.Y.Z] [--scope user|project]`, and exits 0. `--scope` takes `user` (the default) or `project`. A wrong argument (an unknown option, a missing or malformed value) prints the reason and the usage line on stderr and exits 2, before any command runs. A missing tool exits 1 after the installer has named every missing tool, and installs nothing.
+
 Updating, replacing and restoring are in [Updating](#updating).
 
 ## Setting a project up
@@ -168,7 +170,7 @@ Run these once, in the project's git repository, inside Claude Code, after insta
 
 ### 1. Run /codeo:setup
 
-It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
+It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. Until you replace it, `/codeo:doctor` fails `config` (`config.json: repo.owner is still TODO-set-me`, and likewise `repo.name` or `baseBranch`) and `ruleset` is skipped. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
 
 ```
 codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doctor next
@@ -222,6 +224,8 @@ ok superpowers: installed
 ```
 
 That is what a project sees when its base branch has the ruleset. A new repository has no branch ruleset yet, so `ruleset` fails (`fail ruleset: main does not require: tests qc-verdict`, or `could not read rules`) until the base branch requires the checks `tests` and `qc-verdict`, or you list your own under `ci.requiredChecks` (see [Configuration](#configuration)); see **ruleset.** in [Checks from /codeo:doctor](#checks-from-codeodoctor).
+
+A twelfth check, `priority-labels`, prints only when `issue.priority` is `true`; see **priority-labels.** in [Checks from /codeo:doctor](#checks-from-codeodoctor).
 
 Then commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works on the project.
 
