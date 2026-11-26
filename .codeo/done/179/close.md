@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Pull request #187 is open but its `tests` check fails in CI (`readme.test.sh`, the `adopting-guard` check). The workflow goes back to `/codeo:implement`, then `/codeo:qc`, then `/codeo:close`.
+Pull request #187 is open and waiting for review. The workflow stays open until it merges; run `/codeo:close` again after the merge.
 
 ## Questions
 
@@ -58,8 +58,18 @@ Likely cause, for `/codeo:implement` to confirm, not proven here: `tests/readme.
 
 qc round at review: 4
 
+### Round 4 — pull request updated
+
+2026-11-26
+(send-back from close.md round 3)
+
+#187 https://github.com/kbajpai/codeo/pull/187
+
+Updated on `qc.md` round 5: **Verdict: clear — forward to `/codeo:close`.** Round 3 recorded `qc round at review: 4`, so round 5 is newer. The `tests` check of the pull request passed on the fixed head `add2f7d` (https://github.com/kbajpai/codeo/actions/runs/45736751193); the `qc-verdict` check fails while the dossier is live and is run again by this round's push. No override.
+
 ## Log
 
 - 2026-11-26 — conflicts with main: `tests/readme.test.sh` after #177; sent back to implement · cost: 0m · sonnet-5-5 25k in + 1.1M cached / 1k out
 - 2026-11-26 — opened PR #187 on qc round 4 (clear), archived the dossier · board.sh: #179 In review → In review on #3 Codeo · cost: 0m · sonnet-5-5 23k in + 877k cached / 3k out
 - 2026-11-26 — CI failure on PR #187 sent back to implement: tests/readme.test.sh adopting-guard, likely SIGPIPE under pipefail · board.sh: #179 In review → In progress on #3 Codeo · cost: 19m · sonnet-5-5 36k in + 6.8M cached / 10k out
+- 2026-11-26 — PR #187 updated on qc round 5 (clear) after the CI fix, dossier archived again · board.sh: #179 In progress → In review on #3 Codeo · cost: 0m · sonnet-5-5 22k in + 530k cached / 532 out
