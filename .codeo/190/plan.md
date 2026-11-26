@@ -116,6 +116,15 @@ One pull request (engineer, "go with your picks", in the conversation, 2026-11-2
 
 ## Notes
 
+### Footprint
+
+```
+files:      docs/plans/2026-11-26-container-setup-reusable-190.md, docs/container-templates.md, docs/home-checkout.md, docs/skills.md, README.md, CHANGELOG.md, .devcontainer/**, .sbx/**, .codeo/overlays/**, templates/containers/**, scripts/containers.sh, scripts/codeo-init.sh, scripts/setup.sh, scripts/doctor.sh, lib/prompt.sh, skills/setup/SKILL.md, examples/csharp-angular/**, tests/containers.test.sh, tests/init.test.sh, tests/example.test.sh, tests/readme.test.sh, tests/setup.test.sh, tests/devcontainer.test.sh
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 - Plan shape (step 5), stated before drafting: an implementation plan at `docs/plans/2026-11-26-container-setup-reusable-190.md`, with a `**Spec:**` line pointing at a new reference page, `docs/container-templates.md`, that holds the audit list, the managed and seed file kinds and how each name is derived from the config. The audit is a standing reference, so it does not go under `docs/plans/`.
 - Host tasks are given as `bash <script in the repository>`: the host already runs bash for `codeo-container.sh`, so no shell question is needed.
 
