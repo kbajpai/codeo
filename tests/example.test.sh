@@ -139,11 +139,16 @@ generate_web_names_a_pinned_cli_and_refuses_an_existing_app() {
     [[ ! -s $log ]] || fail "npx ran despite the refusal: $(cat "$log")"
     # Without npx it stops with one line.
     rm "$d/examples/csharp-angular/web/angular.json"
-    # A normal PATH, minus every directory that holds an npx.
-    local p="" dir IFS=:
-    for dir in $PATH; do [[ -x $dir/npx ]] || p="$p:$dir"; done
-    if PATH="${p#:}" "$BASH" "$d/examples/csharp-angular/scripts/generate-web.sh" >"$work/out" 2>&1; then fail "missing npx exited 0"; fi
+    # PATH holds only the tools the script uses before its npx check (dirname), so npx is absent wherever a host installs it.
+    mkdir -p "$work/tools"
+    ln -sf "$(command -v dirname)" "$work/tools/dirname"
+    if PATH="$work/tools" "$BASH" "$d/examples/csharp-angular/scripts/generate-web.sh" >"$work/out" 2>&1; then fail "missing npx exited 0"; fi
     grep -q '^generate-web: npx not found' "$work/out" || fail "no npx message: $(cat "$work/out")"
+    # The same minimal PATH with a stub npx passes the npx check (here it then refuses on the existing app).
+    : >"$d/examples/csharp-angular/web/angular.json"
+    ln -sf "$d/bin/npx" "$work/tools/npx"
+    if PATH="$work/tools" "$BASH" "$d/examples/csharp-angular/scripts/generate-web.sh" >"$work/out" 2>&1; then fail "an existing app exited 0 with npx present"; fi
+    grep -q 'already exists; nothing was run' "$work/out" || fail "npx present but the script stopped elsewhere: $(cat "$work/out")"
 }
 
 the_dockerfile_points_chrome_bin_at_a_no_sandbox_wrapper() {
