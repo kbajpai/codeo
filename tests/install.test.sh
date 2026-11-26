@@ -43,7 +43,7 @@ closing='install: nothing was installed. Install the tools above with your syste
 # CLAUDE_CONFIG_DIR. The stub claude keeps list.json (`plugin list --json`) and
 # $CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json as the real CLI would: `plugin marketplace add
 # <repo>[@<ref>] [--scope s]` records the marketplace (codeo for kbajpai/codeo, superpowers-marketplace
-# for obra/superpowers-marketplace); `plugin install <id> --scope s` appends an entry (version 1.0.9 for
+# for obra/superpowers-marketplace); `plugin install <id> --scope s` appends an entry (version 1.0.10 for
 # codeo@codeo or the tag the marketplace was added at without its v, 7.0.2 for superpowers);
 # `plugin install` of an installed id prints "already installed" and changes nothing; a file
 # $STUB_DIR/list-fail makes `plugin list` exit 1; a file $STUB_DIR/drain makes every call read stdin
@@ -182,7 +182,7 @@ case "${1:-} ${2:-} ${3:-}" in
             codeo@codeo)
                 ref=$(jq -r '.codeo.source.ref // ""' "$market")
                 version=${ref#v}
-                [[ -n $version ]] || version=1.0.9 ;;
+                [[ -n $version ]] || version=1.0.10 ;;
             *) version=7.0.2 ;;
         esac
         jq --arg id "$id" --arg v "$version" --arg s "$scope" --arg p "$PWD" \
@@ -233,34 +233,34 @@ expect_no_pkg_calls() {
 
 t_latest_is_highest_release() {
     in_setup latest
-    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.10\nc\trefs/tags/v1.0.8\nd\trefs/tags/v2.0.0-rc1\ne\trefs/tags/nightly\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.11\nc\trefs/tags/v1.0.8\nd\trefs/tags/v2.0.0-rc1\ne\trefs/tags/nightly\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == 'install: release v1.0.10'* ]] || fail "stdout: $in_out"
+    [[ $in_out == 'install: release v1.0.11'* ]] || fail "stdout: $in_out"
     grep -q 'ls-remote --tags --refs https://github.com/kbajpai/codeo v\*' "$STUB_DIR/git-calls" \
         || fail "ls-remote call: $(cat "$STUB_DIR/git-calls")"
 }
 
 t_given_tag_checked() {
     in_setup given
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
-    in_run --version v1.0.9
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
+    in_run --version v1.0.10
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    grep -q 'ls-remote --exit-code --tags https://github.com/kbajpai/codeo refs/tags/v1.0.9$' "$STUB_DIR/git-calls" \
+    grep -q 'ls-remote --exit-code --tags https://github.com/kbajpai/codeo refs/tags/v1.0.10$' "$STUB_DIR/git-calls" \
         || fail "ls-remote call: $(cat "$STUB_DIR/git-calls")"
 }
 
 t_bare_version_gets_v() {
     in_setup bare
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
-    in_run --version 1.0.9
-    [[ $in_out == 'install: release v1.0.9'* ]] || fail "stdout: $in_out"
-    grep -q 'refs/tags/v1.0.9$' "$STUB_DIR/git-calls" || fail "call: $(cat "$STUB_DIR/git-calls")"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
+    in_run --version 1.0.10
+    [[ $in_out == 'install: release v1.0.10'* ]] || fail "stdout: $in_out"
+    grep -q 'refs/tags/v1.0.10$' "$STUB_DIR/git-calls" || fail "call: $(cat "$STUB_DIR/git-calls")"
 }
 
 t_missing_tag_stops() {
     in_setup missing_tag
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     in_run --version v9.9.9
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == 'install: release v9.9.9 not found in kbajpai/codeo' ]] || fail "stderr: $in_err"
@@ -274,7 +274,7 @@ t_offline_stops() {
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == 'install: cannot read the latest release: check the network and try again' ]] || fail "stderr: $in_err"
     [[ ! -s $STUB_DIR/calls ]] || fail "claude was called"
-    in_run --version v1.0.9
+    in_run --version v1.0.10
     [[ $in_rc -eq 1 ]] || fail "given tag offline: exit $in_rc, want 1"
     [[ $in_err == 'install: cannot read the releases: check the network and try again' ]] || fail "stderr: $in_err"
 }
@@ -289,14 +289,14 @@ t_no_tags_stops() {
 
 t_no_args_ok_up_to_prereqs() {
     in_setup no_args
-    printf 'a1\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a1\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc, want 0 (stderr: $in_err)"
-    [[ $in_out == 'install: release v1.0.9'* && -z $in_err ]] || fail "out=$in_out err=$in_err"
+    [[ $in_out == 'install: release v1.0.10'* && -z $in_err ]] || fail "out=$in_out err=$in_err"
     "$real_git" -C "$in_dir/work" init -q
-    in_run --version v1.0.9 --scope project
+    in_run --version v1.0.10 --scope project
     [[ $in_rc -eq 0 ]] || fail "valid args: exit $in_rc, want 0 (stderr: $in_err)"
-    in_run --version 1.0.9
+    in_run --version 1.0.10
     [[ $in_rc -eq 0 ]] || fail "bare version: exit $in_rc, want 0 (stderr: $in_err)"
     expect_no_pkg_calls
 }
@@ -346,7 +346,7 @@ t_bad_scope_usage() {
 
 t_old_bash() {
     in_setup old_bash
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     CODEO_TEST_BASH_VERSION=3.2 in_run
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == *'install: bash 4.3 or later is required (found 3.2)'* ]] || fail "stderr: $in_err"
@@ -471,36 +471,36 @@ call_pwds() {
 
 t_fresh_user_install() {
     in_setup fresh
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     [[ $(sort -u "$STUB_DIR/pwds") == "$in_dir/home" ]] || fail "user scope ran in: $(sort -u "$STUB_DIR/pwds")"
     expect_calls 'plugin marketplace add obra/superpowers-marketplace' \
         'plugin install superpowers@superpowers-marketplace --scope user' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10' \
         'plugin install codeo@codeo --scope user'
     [[ $in_out == *'install: superpowers installed (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: codeo v1.0.9 installed (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: done - codeo v1.0.9, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.10 installed (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
 }
 
 t_rerun_changes_nothing() {
     in_setup rerun
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.9
+    seed_codeo 1.0.10
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     [[ -s $STUB_DIR/calls ]] || fail "claude was never asked"
     [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
     [[ $in_out == *'install: superpowers already installed (user scope), left alone'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: codeo v1.0.9 already installed (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: nothing changed - codeo v1.0.9, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.10 already installed (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.10, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
 }
 
 t_default_scope_is_user() {
     in_setup default_scope
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_out == *'user scope'* ]] || fail "stdout: $in_out"
     [[ $(jq -r '.[].scope' "$STUB_DIR/list.json" | sort -u) == user ]] || fail "list: $(cat "$STUB_DIR/list.json")"
@@ -508,11 +508,11 @@ t_default_scope_is_user() {
 
 t_given_tag_installed() {
     in_setup given_installed
-    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.8\n' >"$STUB_DIR/tags"
-    in_run --version v1.0.8
+    printf 'a\trefs/tags/v1.0.10\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    in_run --version v1.0.9
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.8' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
-    [[ $in_out == *'install: done - codeo v1.0.8, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.9' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+    [[ $in_out == *'install: done - codeo v1.0.9, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
 }
 
 t_latest_installed_without_version() {
@@ -525,27 +525,27 @@ t_latest_installed_without_version() {
 
 t_superpowers_from_other_marketplace_left_alone() {
     in_setup sp_other
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers superpowers@elsewhere
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    expect_calls 'plugin marketplace add kbajpai/codeo@v1.0.9' 'plugin install codeo@codeo --scope user'
+    expect_calls 'plugin marketplace add kbajpai/codeo@v1.0.10' 'plugin install codeo@codeo --scope user'
     [[ $in_out == *'install: superpowers already installed (user scope), left alone'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: done - codeo v1.0.9, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
 }
 
 t_missing_known_marketplaces_file_is_fresh() {
     in_setup no_market_file
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     rm -f "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.9' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.10' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
 }
 
 t_plugin_list_failure_stops() {
     in_setup list_fail
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     : >"$STUB_DIR/list-fail"
     in_run
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
@@ -557,56 +557,56 @@ t_plugin_list_failure_stops() {
 # array on one line; list-nojson prints no JSON at all.
 t_list_with_a_notice_before_the_json() {
     in_setup list_notice_before
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.9
+    seed_codeo 1.0.10
     echo 'Notice: a new claude version is available' >"$STUB_DIR/list-pre"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'install: nothing changed - codeo v1.0.9, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.10, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
 }
 
 t_list_with_a_notice_after_the_json() {
     in_setup list_notice_after
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.9
+    seed_codeo 1.0.10
     echo 'Notice: update available [x]' >"$STUB_DIR/list-post"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'install: nothing changed - codeo v1.0.9, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.10, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
 }
 
 t_list_compact_json_with_a_notice() {
     in_setup list_notice_compact
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.9
+    seed_codeo 1.0.10
     echo 'Notice: before' >"$STUB_DIR/list-pre"
     echo 'Notice: after' >"$STUB_DIR/list-post"
     : >"$STUB_DIR/list-compact"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'install: nothing changed - codeo v1.0.9, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.10, user scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
 }
 
 t_list_notice_does_not_hide_dropped_installs() {
     in_setup list_notice_dropped
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
-    seed_local 1.0.8 /some/local
+    seed_codeo 1.0.9
+    seed_local 1.0.9 /some/local
     echo 'Notice: before' >"$STUB_DIR/list-pre"
     echo 'Notice: after' >"$STUB_DIR/list-post"
     : >"$STUB_DIR/list-compact"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *"$(dropped_line /some/local local 1.0.8)"* ]] || fail "stdout: $in_out"
+    [[ $in_out == *"$(dropped_line /some/local local 1.0.9)"* ]] || fail "stdout: $in_out"
 }
 
 t_list_with_no_json_dies_cleanly() {
     in_setup list_no_json
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     echo 'Notice: nothing to see' >"$STUB_DIR/list-pre"
     : >"$STUB_DIR/list-nojson"
     in_run
@@ -617,7 +617,7 @@ t_list_with_no_json_dies_cleanly() {
 
 t_runs_from_a_pipe() {
     in_setup pipe
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     : >"$STUB_DIR/drain"
     in_rc=0
     # A line after the script: bash would run it once the script is done, unless a call ate the pipe.
@@ -628,15 +628,15 @@ t_runs_from_a_pipe() {
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace add obra/superpowers-marketplace' \
         'plugin install superpowers@superpowers-marketplace --scope user' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10' \
         'plugin install codeo@codeo --scope user'
-    [[ $in_out == *'install: done - codeo v1.0.9, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
     [[ $in_out == *pipe-intact ]] || fail "a call read the script from the pipe: $in_out"
 }
 
 t_restart_hint_only_when_changed() {
     in_setup restart
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_out == *'install: done'*$'\n'*'restart'* ]] || fail "no restart line after a change: $in_out"
     in_run
@@ -653,24 +653,24 @@ seed_pin() {
 
 t_replace_older() {
     in_setup replace_older
-    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.8\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
+    seed_codeo 1.0.9
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10' \
         'plugin install codeo@codeo --scope user'
-    [[ $in_out == *'install: codeo v1.0.8 -> v1.0.9 (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: done - codeo v1.0.9, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.10 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
     [[ $in_out == *restart* ]] || fail "no restart line: $in_out"
     [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
 }
 
 t_replace_checks_tag_first() {
     in_setup replace_tag_first
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
-    seed_codeo 1.0.8
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
+    seed_codeo 1.0.9
     in_run --version v9.9.9
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     ! grep -q 'marketplace remove' "$STUB_DIR/calls" || fail "removed before the tag check: $(cat "$STUB_DIR/calls")"
@@ -685,39 +685,39 @@ project_json() {
 t_user_replace_leaves_the_project_file() {
     local top
     in_setup user_replace_project
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     mkdir -p "$in_dir/work/a/b" "$top/.claude"
     seed_superpowers
-    seed_codeo 1.0.8
-    seed_project codeo@codeo 1.0.8 "$top"
-    project_json v1.0.8 >"$top/.claude/settings.json"
+    seed_codeo 1.0.9
+    seed_project codeo@codeo 1.0.9 "$top"
+    project_json v1.0.9 >"$top/.claude/settings.json"
     cp "$top/.claude/settings.json" "$in_dir/before"
     in_cwd="$in_dir/work/a/b" in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10' \
         'plugin install codeo@codeo --scope user'
     ! grep -q -- '--scope project' "$STUB_DIR/calls" || fail "a project-scope call ran: $(cat "$STUB_DIR/calls")"
     cmp -s "$in_dir/before" "$top/.claude/settings.json" || fail "the project file changed: $(cat "$top/.claude/settings.json")"
-    [[ $in_out == *"$(dropped_line "$top" project 1.0.8)"* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: codeo v1.0.8 -> v1.0.9 (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $(jq -r '[.[] | select(.id == "codeo@codeo" and .scope == "user")] | .[0].version' "$STUB_DIR/list.json") == 1.0.9 ]] \
+    [[ $in_out == *"$(dropped_line "$top" project 1.0.9)"* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.10 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $(jq -r '[.[] | select(.id == "codeo@codeo" and .scope == "user")] | .[0].version' "$STUB_DIR/list.json") == 1.0.10 ]] \
         || fail "list: $(cat "$STUB_DIR/list.json")"
 }
 
 t_user_replace_names_another_project_only() {
     local top
     in_setup user_replace_alone
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_superpowers
-    seed_codeo 1.0.8
-    seed_project codeo@codeo 1.0.8 /somewhere/else
+    seed_codeo 1.0.9
+    seed_project codeo@codeo 1.0.9 /somewhere/else
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'install: codeo v1.0.8 -> v1.0.9 (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: codeo is no longer installed for /somewhere/else (project scope, v1.0.8)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.10 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo is no longer installed for /somewhere/else (project scope, v1.0.9)'* ]] || fail "stdout: $in_out"
     [[ $in_out != *"for $top "* ]] || fail "stdout: $in_out"
     [[ $in_out != *"moved to"* ]] || fail "stdout: $in_out"
 }
@@ -735,18 +735,18 @@ seed_local() {
         "$STUB_DIR/list.json" >"$STUB_DIR/list.new" && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
 }
 
-# two_projects: a user copy plus project installs A and B at v1.0.8, each with a committed settings file.
+# two_projects: a user copy plus project installs A and B at v1.0.9, each with a committed settings file.
 # Sets the caller's locals pa and pb (pa is kept when the caller preset it).
 two_projects() {
     pa=${pa:-$in_dir/pa}
     pb="$in_dir/pb"
     mkdir -p "$pa/.claude" "$pb/.claude"
     seed_superpowers
-    seed_codeo 1.0.8
-    seed_project codeo@codeo 1.0.8 "$pa"
-    seed_project codeo@codeo 1.0.8 "$pb"
-    project_json v1.0.8 >"$pa/.claude/settings.json"
-    project_json v1.0.8 >"$pb/.claude/settings.json"
+    seed_codeo 1.0.9
+    seed_project codeo@codeo 1.0.9 "$pa"
+    seed_project codeo@codeo 1.0.9 "$pb"
+    project_json v1.0.9 >"$pa/.claude/settings.json"
+    project_json v1.0.9 >"$pb/.claude/settings.json"
     cp "$pa/.claude/settings.json" "$in_dir/before-a"
     cp "$pb/.claude/settings.json" "$in_dir/before-b"
 }
@@ -754,7 +754,7 @@ two_projects() {
 t_restore_line_is_not_a_replace() {
     local pa="" pb line
     in_setup restore_not_replace
-    printf 'a\trefs/tags/v1.0.5\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.5\nb\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     two_projects
     in_cwd="$in_dir/home" in_run --version v1.0.5
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
@@ -766,12 +766,12 @@ t_restore_line_is_not_a_replace() {
 t_user_replace_names_every_dropped_project() {
     local pa="" pb want
     in_setup dropped_every
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     two_projects
     in_cwd="$in_dir/home" in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    want=$(printf '%s\n%s' "$(dropped_line "$pa" project 1.0.8)" "$(dropped_line "$pb" project 1.0.8)")
-    [[ $in_out == *'install: codeo v1.0.8 -> v1.0.9 (user scope)'$'\n'"$want"* ]] || fail "stdout: $in_out"
+    want=$(printf '%s\n%s' "$(dropped_line "$pa" project 1.0.9)" "$(dropped_line "$pb" project 1.0.9)")
+    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.10 (user scope)'$'\n'"$want"* ]] || fail "stdout: $in_out"
     [[ $(grep -c 'no longer installed for' <<<"$in_out") -eq 2 ]] || fail "want exactly 2 dropped lines, the two projects (the user entry is not named): $in_out"
     ! grep -q -- '--scope project' "$STUB_DIR/calls" || fail "a project-scope call ran: $(cat "$STUB_DIR/calls")"
     cmp -s "$in_dir/before-a" "$pa/.claude/settings.json" || fail "A's file changed"
@@ -782,57 +782,57 @@ t_user_replace_names_the_current_project_too() {
     local pa="" pb
     in_setup dropped_current
     pa="$in_dir/pa"
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     mkdir -p "$pa"
     "$real_git" -C "$pa" init -q
     pa=$("$real_git" -C "$pa" rev-parse --show-toplevel)
     two_projects
     in_cwd="$pa" in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *"$(dropped_line "$pa" project 1.0.8)"* ]] || fail "A not named: $in_out"
-    [[ $in_out == *"$(dropped_line "$pb" project 1.0.8)"* ]] || fail "B not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pa" project 1.0.9)"* ]] || fail "A not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pb" project 1.0.9)"* ]] || fail "B not named: $in_out"
 }
 
 t_project_replace_names_the_other_projects() {
     local pa pb top
     in_setup dropped_project_run
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     pa=$top
     two_projects
     seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'your user-scope codeo moved to v1.0.9 too: one machine holds one codeo version'$'\n'"$(dropped_line "$pb" project 1.0.8)"* ]] \
+    [[ $in_out == *'your user-scope codeo moved to v1.0.10 too: one machine holds one codeo version'$'\n'"$(dropped_line "$pb" project 1.0.9)"* ]] \
         || fail "stdout: $in_out"
     [[ $in_out != *"for $pa "* ]] || fail "own project named: $in_out"
 }
 
 t_dropped_local_entry_is_named_with_its_command() {
     in_setup dropped_local
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
-    seed_local 1.0.8 /some/local
+    seed_codeo 1.0.9
+    seed_local 1.0.9 /some/local
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *"$(dropped_line /some/local local 1.0.8)"* ]] || fail "stdout: $in_out"
+    [[ $in_out == *"$(dropped_line /some/local local 1.0.9)"* ]] || fail "stdout: $in_out"
 }
 
 t_dropped_project_that_no_longer_exists_is_named() {
     in_setup dropped_gone
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
-    seed_project codeo@codeo 1.0.8 /no/such/dir
+    seed_codeo 1.0.9
+    seed_project codeo@codeo 1.0.9 /no/such/dir
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *"$(dropped_line /no/such/dir project 1.0.8)"* ]] || fail "stdout: $in_out"
+    [[ $in_out == *"$(dropped_line /no/such/dir project 1.0.9)"* ]] || fail "stdout: $in_out"
 }
 
 t_no_replace_no_dropped_lines() {
     in_setup dropped_none
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_out != *"no longer installed for"* ]] || fail "fresh install: $in_out"
     in_run
@@ -842,49 +842,49 @@ t_no_replace_no_dropped_lines() {
 t_project_replace_says_the_disabled_user_copy_is_enabled() {
     local top
     in_setup project_replace_user_on
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_superpowers
-    seed_codeo 1.0.8
-    seed_project codeo@codeo 1.0.8 "$top"
+    seed_codeo 1.0.9
+    seed_project codeo@codeo 1.0.9 "$top"
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     [[ $in_out == *'one machine holds one codeo version'* ]] || fail "stdout: $in_out"
     [[ $in_out != *'it was disabled'* ]] || fail "enabled copy called disabled: $in_out"
     in_setup project_replace_user_off
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_superpowers
-    seed_codeo 1.0.8
+    seed_codeo 1.0.9
     jq 'map(if .id == "codeo@codeo" then .enabled = false else . end)' "$STUB_DIR/list.json" >"$STUB_DIR/list.new" \
         && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
-    seed_project codeo@codeo 1.0.8 "$top"
+    seed_project codeo@codeo 1.0.9 "$top"
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *"install: your user-scope codeo moved to v1.0.9 too: one machine holds one codeo version (it was disabled; it is enabled now)"* ]] \
+    [[ $in_out == *"install: your user-scope codeo moved to v1.0.10 too: one machine holds one codeo version (it was disabled; it is enabled now)"* ]] \
         || fail "stdout: $in_out"
 }
 
 t_user_replace_says_the_disabled_copy_is_enabled() {
     in_setup user_replace_off
-    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.8\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
+    seed_codeo 1.0.9
     jq 'map(if .id == "codeo@codeo" then .enabled = false else . end)' "$STUB_DIR/list.json" >"$STUB_DIR/list.new" \
         && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'install: codeo v1.0.8 -> v1.0.9 (user scope) (it was disabled; it is enabled now)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.10 (user scope) (it was disabled; it is enabled now)'* ]] || fail "stdout: $in_out"
 }
 
 t_user_replace_of_an_enabled_copy_says_nothing_more() {
     in_setup user_replace_on
-    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.8\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
+    seed_codeo 1.0.9
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'install: codeo v1.0.8 -> v1.0.9 (user scope)'$'\n'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.10 (user scope)'$'\n'* ]] || fail "stdout: $in_out"
     [[ $in_out != *'it was disabled'* ]] || fail "enabled copy called disabled: $in_out"
 }
 
@@ -892,7 +892,7 @@ t_nonnumeric_test_bash_version_is_ignored() {
     local v
     for v in abc 4.x x.3 4.3.1 .3 4. " 4.3" " 4.2" ""; do
         in_setup nonnumeric_bash
-        printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+        printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
         CODEO_TEST_BASH_VERSION=$v in_run
         [[ $in_rc -eq 0 ]] || fail "'$v': exit $in_rc (stderr: $in_err)"
         [[ -z $in_err ]] || fail "'$v': stderr: $in_err"
@@ -912,41 +912,41 @@ t_head_uses_no_bash4_syntax() {
 t_project_replace_moves_the_user_copy() {
     local top
     in_setup project_replace_user
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-    seed_codeo 1.0.8
-    seed_project codeo@codeo 1.0.8 "$top"
+    seed_codeo 1.0.9
+    seed_project codeo@codeo 1.0.9 "$top"
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9 --scope project' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10 --scope project' \
         'plugin install codeo@codeo --scope project' \
         'plugin install codeo@codeo --scope user'
     [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
-    [[ $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.9') == "$in_dir/home" ]] || fail "user add ran in: $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.9')"
-    [[ $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.9 --scope project') == "$top" ]] || fail "project add ran in: $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.9 --scope project')"
+    [[ $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.10') == "$in_dir/home" ]] || fail "user add ran in: $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.10')"
+    [[ $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.10 --scope project') == "$top" ]] || fail "project add ran in: $(call_pwds 'plugin marketplace add kbajpai/codeo@v1.0.10 --scope project')"
     [[ $(call_pwds 'plugin install codeo@codeo --scope project') == "$top" ]] || fail "project install ran in: $(call_pwds 'plugin install codeo@codeo --scope project')"
     [[ $(call_pwds 'plugin install codeo@codeo --scope user') == "$in_dir/home" ]] || fail "user install ran in: $(call_pwds 'plugin install codeo@codeo --scope user')"
-    [[ $in_out == *'install: codeo v1.0.8 -> v1.0.9 (project scope)'$'\n'*'install: your user-scope codeo moved to v1.0.9 too: one machine holds one codeo version'* ]] \
+    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.10 (project scope)'$'\n'*'install: your user-scope codeo moved to v1.0.10 too: one machine holds one codeo version'* ]] \
         || fail "stdout: $in_out"
-    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.9 ]] \
+    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.10 ]] \
         || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json" 2>&1)"
 }
 
 t_project_replace_without_user_copy() {
     local top
     in_setup project_replace_alone
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-    seed_pin kbajpai/codeo v1.0.8
-    seed_project codeo@codeo 1.0.8 "$top"
+    seed_pin kbajpai/codeo v1.0.9
+    seed_project codeo@codeo 1.0.9 "$top"
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9 --scope project' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10 --scope project' \
         'plugin install codeo@codeo --scope project'
     [[ $in_out != *"moved to"* ]] || fail "stdout: $in_out"
     [[ ! -f $CLAUDE_CONFIG_DIR/settings.json ]] || fail "user settings were written: $(cat "$CLAUDE_CONFIG_DIR/settings.json")"
@@ -955,18 +955,18 @@ t_project_replace_without_user_copy() {
 t_project_replace_from_subdirectory() {
     local top p
     in_setup project_replace_subdir
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     mkdir -p "$in_dir/work/a/b"
     seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-    seed_pin kbajpai/codeo v1.0.8
-    seed_project codeo@codeo 1.0.8 "$top"
+    seed_pin kbajpai/codeo v1.0.9
+    seed_project codeo@codeo 1.0.9 "$top"
     in_cwd="$in_dir/work/a/b" in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9 --scope project' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10 --scope project' \
         'plugin install codeo@codeo --scope project'
-    for p in 'plugin marketplace add kbajpai/codeo@v1.0.9 --scope project' 'plugin install codeo@codeo --scope project'; do
+    for p in 'plugin marketplace add kbajpai/codeo@v1.0.10 --scope project' 'plugin install codeo@codeo --scope project'; do
         [[ $(call_pwds "$p") == "$top" ]] || fail "'$p' ran in: $(call_pwds "$p"), want $top"
     done
     [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
@@ -974,85 +974,85 @@ t_project_replace_from_subdirectory() {
 
 t_installed_check_goes_by_the_pin() {
     in_setup pin_check
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
     seed_codeo 1.0.0
-    seed_pin kbajpai/codeo v1.0.9
+    seed_pin kbajpai/codeo v1.0.10
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     [[ -s $STUB_DIR/calls ]] || fail "claude was never asked"
     [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
-    [[ $in_out == *'install: codeo v1.0.9 already installed (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.10 already installed (user scope)'* ]] || fail "stdout: $in_out"
     [[ $in_out == *'install: nothing changed'* ]] || fail "stdout: $in_out"
 }
 
 t_user_install_declares_the_marketplace_when_only_a_project_declared_it() {
     local top
     in_setup user_declares
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_superpowers
-    seed_pin kbajpai/codeo v1.0.9
-    seed_project codeo@codeo 1.0.9 "$top"
+    seed_pin kbajpai/codeo v1.0.10
+    seed_project codeo@codeo 1.0.10 "$top"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    expect_calls 'plugin marketplace add kbajpai/codeo@v1.0.9' 'plugin install codeo@codeo --scope user'
-    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.9 ]] \
+    expect_calls 'plugin marketplace add kbajpai/codeo@v1.0.10' 'plugin install codeo@codeo --scope user'
+    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.10 ]] \
         || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json" 2>&1)"
 }
 
 t_replace_project_scope() {
     local top
     in_setup replace_project
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-    seed_pin kbajpai/codeo v1.0.8
-    seed_project codeo@codeo 1.0.8 "$top"
+    seed_pin kbajpai/codeo v1.0.9
+    seed_project codeo@codeo 1.0.9 "$top"
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9 --scope project' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10 --scope project' \
         'plugin install codeo@codeo --scope project'
-    [[ $in_out == *'install: codeo v1.0.8 -> v1.0.9 (project scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.10 (project scope)'* ]] || fail "stdout: $in_out"
     [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
     [[ $(call_pwds 'plugin install codeo@codeo --scope project') == "$top" ]] || fail "install ran in: $(call_pwds 'plugin install codeo@codeo --scope project')"
 }
 
 t_replace_fork_marketplace() {
     in_setup replace_fork
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.9
-    seed_pin someone/codeo v1.0.9
+    seed_codeo 1.0.10
+    seed_pin someone/codeo v1.0.10
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.9' \
+        'plugin marketplace add kbajpai/codeo@v1.0.10' \
         'plugin install codeo@codeo --scope user'
     [[ $(jq -r '.codeo.source.repo' "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json") == kbajpai/codeo ]] \
         || fail "marketplace: $(cat "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json")"
-    [[ $in_out == *'install: codeo someone/codeo@v1.0.9 -> v1.0.9 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo someone/codeo@v1.0.10 -> v1.0.10 (user scope)'* ]] || fail "stdout: $in_out"
 }
 
 t_replace_source_without_repo() {
     in_setup replace_norepo
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
     jq '.codeo = {source: {source: "url", url: "https://example.com/codeo.git"}}' \
         "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json" >"$STUB_DIR/m.new" \
         && mv "$STUB_DIR/m.new" "$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'install: codeo unknown source -> v1.0.9 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo unknown source -> v1.0.10 (user scope)'* ]] || fail "stdout: $in_out"
     [[ $in_out != *'@ '* ]] || fail "stdout: $in_out"
 }
 
 t_replace_failure_reported() {
     in_setup replace_failure
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
+    seed_codeo 1.0.9
     : >"$STUB_DIR/add-fail"
     in_run
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
@@ -1062,54 +1062,54 @@ t_replace_failure_reported() {
 
 t_replace_install_failure_after_add() {
     in_setup replace_install_failure
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
+    seed_codeo 1.0.9
     : >"$STUB_DIR/install-fail-codeo"
     in_run
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == 'install: codeo is no longer installed: stub claude: install failed; run this again' ]] || fail "stderr: $in_err"
-    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.9' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.10' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
 }
 
 t_replace_second_scope_failure_names_both() {
     local top
     in_setup replace_second_scope
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_superpowers
     seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-    seed_codeo 1.0.8
-    seed_project codeo@codeo 1.0.8 "$top"
+    seed_codeo 1.0.9
+    seed_project codeo@codeo 1.0.9 "$top"
     : >"$STUB_DIR/install-fail-codeo-user"
     in_run --scope project
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
-    [[ $in_err == 'install: codeo v1.0.9 is installed at project scope but not at user scope: stub claude: install failed; run this again with --scope user' ]] || fail "stderr: $in_err"
+    [[ $in_err == 'install: codeo v1.0.10 is installed at project scope but not at user scope: stub claude: install failed; run this again with --scope user' ]] || fail "stderr: $in_err"
     [[ $in_err != *'no longer installed'* ]] || fail "stderr: $in_err"
 }
 
 t_replace_first_failure_keeps_no_longer_installed() {
     in_setup replace_first_failure
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
+    seed_codeo 1.0.9
     : >"$STUB_DIR/install-fail-codeo"
     in_run
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == 'install: codeo is no longer installed: stub claude: install failed; run this again' ]] || fail "stderr: $in_err"
-    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.9' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
+    grep -qx 'plugin marketplace add kbajpai/codeo@v1.0.10' "$STUB_DIR/calls" || fail "calls: $(cat "$STUB_DIR/calls")"
 }
 
 t_replace_project_failure_names_the_wiped_user_copy() {
     local top sw
     for sw in add-fail install-fail-codeo-project; do
         in_setup "replace_project_failure_$sw"
-        printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+        printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
         project_repo
         seed_superpowers
         seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-        seed_codeo 1.0.8
-        seed_project codeo@codeo 1.0.8 "$top"
+        seed_codeo 1.0.9
+        seed_project codeo@codeo 1.0.9 "$top"
         : >"$STUB_DIR/$sw"
         in_run --scope project
         [[ $in_rc -eq 1 ]] || fail "$sw: exit $in_rc, want 1"
@@ -1120,20 +1120,20 @@ t_replace_project_failure_names_the_wiped_user_copy() {
 t_replace_failure_names_the_dropped_installs() {
     local pa="" pb
     in_setup failure_dropped
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     two_projects
     : >"$STUB_DIR/add-fail"
     in_cwd="$in_dir/home" in_run
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
-    [[ $in_out == *"$(dropped_line "$pa" project 1.0.8)"* ]] || fail "A not named: $in_out"
-    [[ $in_out == *"$(dropped_line "$pb" project 1.0.8)"* ]] || fail "B not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pa" project 1.0.9)"* ]] || fail "A not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pb" project 1.0.9)"* ]] || fail "B not named: $in_out"
     [[ $in_err == 'install: codeo is no longer installed: stub claude: add failed; run this again' ]] || fail "stderr: $in_err"
 }
 
 t_project_replace_failure_names_the_current_project_too() {
     local pa pb top
     in_setup failure_project_current
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     pa=$top
     two_projects
@@ -1141,14 +1141,14 @@ t_project_replace_failure_names_the_current_project_too() {
     : >"$STUB_DIR/add-fail"
     in_run --scope project
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
-    [[ $in_out == *"$(dropped_line "$pa" project 1.0.8)"* ]] || fail "A not named: $in_out"
-    [[ $in_out == *"$(dropped_line "$pb" project 1.0.8)"* ]] || fail "B not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pa" project 1.0.9)"* ]] || fail "A not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pb" project 1.0.9)"* ]] || fail "B not named: $in_out"
 }
 
 t_project_replace_failure_after_the_project_names_only_the_others() {
     local pa pb top
     in_setup failure_after_project
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     pa=$top
     two_projects
@@ -1156,7 +1156,7 @@ t_project_replace_failure_after_the_project_names_only_the_others() {
     : >"$STUB_DIR/install-fail-codeo-user"
     in_run --scope project
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
-    [[ $in_out == *"$(dropped_line "$pb" project 1.0.8)"* ]] || fail "B not named: $in_out"
+    [[ $in_out == *"$(dropped_line "$pb" project 1.0.9)"* ]] || fail "B not named: $in_out"
     [[ $in_out != *"for $pa "* ]] || fail "own project named: $in_out"
     [[ $in_err == *'installed at project scope but not at user scope'* ]] || fail "stderr: $in_err"
 }
@@ -1164,7 +1164,7 @@ t_project_replace_failure_after_the_project_names_only_the_others() {
 t_failure_before_the_remove_names_nothing() {
     local pa="" pb
     in_setup failure_before_remove
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     two_projects
     : >"$STUB_DIR/list-fail"
     in_cwd="$in_dir/home" in_run
@@ -1174,22 +1174,22 @@ t_failure_before_the_remove_names_nothing() {
 
 t_given_tag_other_git_failure_is_cannot_read() {
     in_setup given_tag_git_failure
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     echo 1 >"$STUB_DIR/ls-fail"
-    in_run --version v1.0.9
+    in_run --version v1.0.10
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == 'install: cannot read the releases: check the network and try again' ]] || fail "stderr: $in_err"
     echo 2 >"$STUB_DIR/ls-fail"
-    in_run --version v1.0.9
+    in_run --version v1.0.10
     [[ $in_rc -eq 1 ]] || fail "exit 2: exit $in_rc, want 1"
-    [[ $in_err == 'install: release v1.0.9 not found in kbajpai/codeo' ]] || fail "exit 2: stderr: $in_err"
+    [[ $in_err == 'install: release v1.0.10 not found in kbajpai/codeo' ]] || fail "exit 2: stderr: $in_err"
 }
 
 t_remove_failure_reported() {
     in_setup remove_failure
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.8
+    seed_codeo 1.0.9
     : >"$STUB_DIR/remove-fail"
     in_run
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
@@ -1199,7 +1199,7 @@ t_remove_failure_reported() {
 
 t_corrupt_marketplaces_file() {
     in_setup corrupt_market
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
     echo 'not json {' >"$CLAUDE_CONFIG_DIR/plugins/known_marketplaces.json"
     in_run
@@ -1211,7 +1211,7 @@ t_superpowers_failures_reported() {
     local sw
     for sw in add-fail-superpowers install-fail-superpowers; do
         in_setup "sp_fail_$sw"
-        printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+        printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
         : >"$STUB_DIR/$sw"
         in_run
         [[ $in_rc -eq 1 ]] || fail "$sw: exit $in_rc, want 1"
@@ -1224,7 +1224,7 @@ t_codeo_failures_reported() {
     local sw
     for sw in add-fail install-fail-codeo; do
         in_setup "codeo_fail_$sw"
-        printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+        printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
         seed_superpowers
         : >"$STUB_DIR/$sw"
         in_run
@@ -1235,46 +1235,46 @@ t_codeo_failures_reported() {
 
 t_disabled_superpowers_is_enabled() {
     in_setup disabled_sp
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.9
+    seed_codeo 1.0.10
     jq 'map(if .id | startswith("superpowers@") then .enabled = false else . end)' "$STUB_DIR/list.json" >"$STUB_DIR/list.new" \
         && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin enable superpowers@superpowers-marketplace --scope user'
     [[ $in_out == *'install: superpowers enabled (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: done - codeo v1.0.9, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
     [[ $(jq '[.[] | select(.enabled == false)] | length' "$STUB_DIR/list.json") -eq 0 ]] || fail "list: $(cat "$STUB_DIR/list.json")"
 }
 
 t_disabled_codeo_is_enabled() {
     in_setup disabled_codeo
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.9
+    seed_codeo 1.0.10
     jq 'map(if .id == "codeo@codeo" then .enabled = false else . end)' "$STUB_DIR/list.json" >"$STUB_DIR/list.new" \
         && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin enable codeo@codeo --scope user'
-    [[ $in_out == *'install: codeo v1.0.9 enabled (user scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: done - codeo v1.0.9, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.10 enabled (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, user scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
     [[ $in_out == *restart* ]] || fail "no restart line: $in_out"
     [[ $(jq '[.[] | select(.enabled == false)] | length' "$STUB_DIR/list.json") -eq 0 ]] || fail "list: $(cat "$STUB_DIR/list.json")"
 }
 
 t_downgrade_with_given_tag() {
     in_setup downgrade
-    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.8\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
     seed_superpowers
-    seed_codeo 1.0.9
-    in_run --version v1.0.8
+    seed_codeo 1.0.10
+    in_run --version v1.0.9
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls 'plugin marketplace remove codeo' \
-        'plugin marketplace add kbajpai/codeo@v1.0.8' \
+        'plugin marketplace add kbajpai/codeo@v1.0.9' \
         'plugin install codeo@codeo --scope user'
-    [[ $in_out == *'install: codeo v1.0.9 -> v1.0.8 (user scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.10 -> v1.0.9 (user scope)'* ]] || fail "stdout: $in_out"
 }
 
 # project_repo: the work directory becomes a git repository; sets top (the caller's local) to its top level.
@@ -1292,27 +1292,27 @@ seed_project() {
 project_calls=(
     'plugin marketplace add obra/superpowers-marketplace --scope project'
     'plugin install superpowers@superpowers-marketplace --scope project'
-    'plugin marketplace add kbajpai/codeo@v1.0.9 --scope project'
+    'plugin marketplace add kbajpai/codeo@v1.0.10 --scope project'
     'plugin install codeo@codeo --scope project'
 )
 
 t_project_scope_installs_both() {
     local top
     in_setup project_both
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls "${project_calls[@]}"
     [[ $in_out == *'install: superpowers installed (project scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: codeo v1.0.9 installed (project scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: done - codeo v1.0.9, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.10 installed (project scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
     [[ $(jq -r '.[].projectPath' "$STUB_DIR/list.json" | sort -u) == "$top" ]] || fail "list: $(cat "$STUB_DIR/list.json")"
 }
 
 t_project_scope_outside_repo() {
     in_setup project_outside
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     in_run --scope project
     [[ $in_rc -eq 1 ]] || fail "exit $in_rc, want 1"
     [[ $in_err == "install: project scope must run inside the project's git repository" ]] || fail "stderr: $in_err"
@@ -1322,7 +1322,7 @@ t_project_scope_outside_repo() {
 t_project_scope_from_subdirectory() {
     local top
     in_setup project_subdir
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     mkdir -p "$in_dir/work/a/b"
     in_rc=0
@@ -1331,7 +1331,7 @@ t_project_scope_from_subdirectory() {
     in_out=$(cat "$in_dir/out")
     in_err=$(cat "$in_dir/err")
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $in_out == *'install: done - codeo v1.0.9, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
     [[ $(sort -u "$STUB_DIR/pwds") == "$top" ]] || fail "claude ran in: $(sort -u "$STUB_DIR/pwds")"
     [[ $(jq -r '.[].projectPath' "$STUB_DIR/list.json" | sort -u) == "$top" ]] || fail "list: $(cat "$STUB_DIR/list.json")"
 }
@@ -1339,7 +1339,7 @@ t_project_scope_from_subdirectory() {
 t_project_rerun_changes_nothing() {
     local top
     in_setup project_rerun
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "first run: exit $in_rc (stderr: $in_err)"
@@ -1349,22 +1349,22 @@ t_project_rerun_changes_nothing() {
     [[ -s $STUB_DIR/calls ]] || fail "claude was never asked"
     [[ -z $(grep -v '^plugin list' "$STUB_DIR/calls") ]] || fail "calls: $(cat "$STUB_DIR/calls")"
     [[ $in_out == *'install: superpowers already installed (project scope), left alone'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: codeo v1.0.9 already installed (project scope)'* ]] || fail "stdout: $in_out"
-    [[ $in_out == *'install: nothing changed - codeo v1.0.9, project scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: codeo v1.0.10 already installed (project scope)'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: nothing changed - codeo v1.0.10, project scope, superpowers 7.0.2' ]] || fail "stdout: $in_out"
 }
 
 t_project_after_user_install() {
     local top
     in_setup project_after_user
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_superpowers
-    seed_codeo 1.0.9
+    seed_codeo 1.0.10
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls "${project_calls[@]}"
     [[ $in_out == *"codeo already on disk"* ]] || fail "claude output was hidden: $in_out"
-    [[ $in_out == *'install: done - codeo v1.0.9, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
+    [[ $in_out == *'install: done - codeo v1.0.10, project scope, superpowers 7.0.2'* ]] || fail "stdout: $in_out"
     [[ $(jq '[.[] | select(.scope == "user")] | length' "$STUB_DIR/list.json") -eq 2 ]] || fail "user entries changed: $(cat "$STUB_DIR/list.json")"
     [[ $(jq --arg t "$top" '[.[] | select(.scope == "project" and .projectPath == $t)] | length' "$STUB_DIR/list.json") -eq 2 ]] \
         || fail "list: $(cat "$STUB_DIR/list.json")"
@@ -1373,11 +1373,11 @@ t_project_after_user_install() {
 t_other_projects_install_not_counted() {
     local top
     in_setup project_other
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_project superpowers@superpowers-marketplace 7.0.2 /somewhere/else
-    seed_project codeo@codeo 1.0.9 /somewhere/else
-    seed_pin kbajpai/codeo v1.0.9
+    seed_project codeo@codeo 1.0.10 /somewhere/else
+    seed_pin kbajpai/codeo v1.0.10
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
     expect_calls "${project_calls[@]}"
@@ -1397,7 +1397,7 @@ readme_snippet() {
 t_project_scope_writes_the_readme_snippet() {
     local top
     in_setup project_snippet
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     in_run --scope project
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
@@ -1408,10 +1408,10 @@ t_project_scope_writes_the_readme_snippet() {
 
 t_user_scope_declares_in_user_settings() {
     in_setup user_settings
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     in_run
     [[ $in_rc -eq 0 ]] || fail "exit $in_rc (stderr: $in_err)"
-    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.9 ]] \
+    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$CLAUDE_CONFIG_DIR/settings.json") == v1.0.10 ]] \
         || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json" 2>&1)"
     [[ $(jq -r '.enabledPlugins["codeo@codeo"]' "$CLAUDE_CONFIG_DIR/settings.json") == true ]] \
         || fail "user settings: $(cat "$CLAUDE_CONFIG_DIR/settings.json")"
@@ -1422,13 +1422,13 @@ t_user_scope_declares_in_user_settings() {
 t_remove_from_home_leaves_project_settings() {
     local top
     in_setup remove_home
-    printf 'a\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
     project_repo
     seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-    seed_pin kbajpai/codeo v1.0.8
-    seed_project codeo@codeo 1.0.8 "$top"
+    seed_pin kbajpai/codeo v1.0.9
+    seed_project codeo@codeo 1.0.9 "$top"
     mkdir -p "$top/.claude"
-    printf '%s\n' '{"enabledPlugins":{"codeo@codeo":true},"extraKnownMarketplaces":{"codeo":{"source":{"source":"github","repo":"kbajpai/codeo","ref":"v1.0.8"}}}}' \
+    printf '%s\n' '{"enabledPlugins":{"codeo@codeo":true},"extraKnownMarketplaces":{"codeo":{"source":{"source":"github","repo":"kbajpai/codeo","ref":"v1.0.9"}}}}' \
         >"$top/.claude/settings.json"
     cp "$top/.claude/settings.json" "$in_dir/before"
     printf '%s' "$top/.claude/settings.json" >"$STUB_DIR/watch-settings"
@@ -1437,7 +1437,7 @@ t_remove_from_home_leaves_project_settings() {
     [[ -f $STUB_DIR/settings-at-remove ]] || fail "the stub saw no remove call with a project file"
     cmp -s "$in_dir/before" "$STUB_DIR/settings-at-remove" || fail "the remove changed the project file: $(cat "$STUB_DIR/settings-at-remove")"
     [[ $(call_pwds 'plugin marketplace remove codeo') == "$in_dir/home" ]] || fail "remove ran in: $(call_pwds 'plugin marketplace remove codeo')"
-    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$top/.claude/settings.json") == v1.0.9 ]] \
+    [[ $(jq -r '.extraKnownMarketplaces.codeo.source.ref' "$top/.claude/settings.json") == v1.0.10 ]] \
         || fail "project settings: $(cat "$top/.claude/settings.json")"
 }
 
@@ -1482,7 +1482,7 @@ t_readme_install_command_runs() {
     while IFS= read -r line; do
         n=$((n + 1))
         in_setup "readme_$n"
-        printf 'a\trefs/tags/v1.0.8\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
+        printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.10\n' >"$STUB_DIR/tags"
         cat >"$in_dir/bin/curl" <<STUB
 #!/usr/bin/env bash
 for a in "\$@"; do
@@ -1544,37 +1544,37 @@ readme_install_prose() {
 scenario_lines() {
     local top n=$1
     in_setup "scenario_$n"
-    printf 'a\trefs/tags/v1.0.9\nb\trefs/tags/v1.0.8\n' >"$STUB_DIR/tags"
+    printf 'a\trefs/tags/v1.0.10\nb\trefs/tags/v1.0.9\n' >"$STUB_DIR/tags"
     case $n in
         fresh-user) in_run ;;
-        rerun-user) seed_superpowers; seed_codeo 1.0.9; in_run ;;
-        user-replace-down) seed_superpowers; seed_codeo 1.0.9; in_run --version v1.0.8 ;;
-        user-replace-up) seed_superpowers; seed_codeo 1.0.8; in_run ;;
+        rerun-user) seed_superpowers; seed_codeo 1.0.10; in_run ;;
+        user-replace-down) seed_superpowers; seed_codeo 1.0.10; in_run --version v1.0.9 ;;
+        user-replace-up) seed_superpowers; seed_codeo 1.0.9; in_run ;;
         fresh-project) project_repo; in_run --scope project ;;
         rerun-project)
             project_repo
             seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-            seed_pin kbajpai/codeo v1.0.9
-            seed_project codeo@codeo 1.0.9 "$top"
+            seed_pin kbajpai/codeo v1.0.10
+            seed_project codeo@codeo 1.0.10 "$top"
             in_run --scope project ;;
         user-replace-in-pinned-project)
             project_repo
             seed_superpowers
-            seed_codeo 1.0.8
-            seed_project codeo@codeo 1.0.8 "$top"
+            seed_codeo 1.0.9
+            seed_project codeo@codeo 1.0.9 "$top"
             in_run ;;
         project-replace-with-user-copy | project-replace-user-install-fails | project-replace-project-install-fails)
             project_repo
             seed_project superpowers@superpowers-marketplace 7.0.2 "$top"
-            seed_codeo 1.0.8
-            seed_project codeo@codeo 1.0.8 "$top"
+            seed_codeo 1.0.9
+            seed_project codeo@codeo 1.0.9 "$top"
             [[ $n != project-replace-user-install-fails ]] || : >"$STUB_DIR/install-fail-codeo-user"
             [[ $n != project-replace-project-install-fails ]] || : >"$STUB_DIR/install-fail-codeo-project"
             in_run --scope project ;;
         user-replace-two-projects | user-replace-local)
             local pa pb
             two_projects
-            [[ $n != user-replace-local ]] || seed_local 1.0.8 "$in_dir/pc"
+            [[ $n != user-replace-local ]] || seed_local 1.0.9 "$in_dir/pc"
             in_cwd="$in_dir/home" in_run ;;
         restore-project)
             project_repo
@@ -1589,19 +1589,19 @@ scenario_lines() {
             in_run --scope project ;;
         user-replace-disabled)
             seed_superpowers
-            seed_codeo 1.0.8
+            seed_codeo 1.0.9
             jq 'map(if .id == "codeo@codeo" then .enabled = false else . end)' "$STUB_DIR/list.json" >"$STUB_DIR/list.new" \
                 && mv "$STUB_DIR/list.new" "$STUB_DIR/list.json"
             in_run ;;
         replace-add-fails-with-drops)
             local pa pb
             two_projects
-            seed_local 1.0.8 "$in_dir/pc"
+            seed_local 1.0.9 "$in_dir/pc"
             : >"$STUB_DIR/add-fail"
             in_cwd="$in_dir/home" in_run ;;
         replace-add-fails)
             seed_superpowers
-            seed_codeo 1.0.8
+            seed_codeo 1.0.9
             : >"$STUB_DIR/add-fail"
             in_run ;;
         *) fail "unknown scenario $n" ;;
