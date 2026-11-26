@@ -235,6 +235,26 @@ The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cl
 
 See [docs/home-checkout.md](docs/home-checkout.md) for the home checkout, the guard and the tracking comment, and [.devcontainer/README.md](.devcontainer/README.md) for the dev container.
 
+### Adopting codeo with containers
+
+A project that wants codeo's dev container and sbx sandbox files has two ways to adopt them. Both need the same things first: the repository exists on GitHub, the clone's `origin` remote points at it, and `gh` is logged in with access to it. codeo never creates a repository. The one-command way checks all three and stops with `init: fail preflight` when one is missing.
+
+**One command.** From inside the project's clone, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/scripts/codeo-init.sh | bash -s -- --env containers
+```
+
+`scripts/codeo-init.sh` fetches its own release when it runs alone like this, installs the plugins, writes `.codeo/config.json`, writes the container files and then runs the `/codeo:doctor` checks. It asks a few questions (codename, scope, whether to add a suite) only at a terminal, and only for what a flag did not answer; `--yes` takes every default. Its other flags are `--codename <name>`, `--scope user|project`, `--version vX.Y.Z`, `--suite <name>:<paths>:<build>:<test>` (repeatable) and `--skip-install`, which leaves the plugin install to you. Each step prints one line, `init: ok <step>`, `init: skip <step>` (nothing to do, for example a config that already exists and is kept) or `init: fail <step>: <reason>`, and the doctor's lines follow. The steps run in this order: `preflight` (the repository exists and `gh` can see it), `install`, `config`, `suite` (one per `--suite`), `config` again for the plugin pin the container installs, and `containers`. The exit status is 0 when every step and every doctor check passed, 1 otherwise and 2 for a usage error. Running it again is safe.
+
+**Inside Claude Code.** With the plugin installed, run `/codeo:setup --containers`; add `--codename <name>` to choose the codename. It writes `.codeo/config.json` as [step 1](#1-run-codeosetup) describes, then the container files. In a project that already has a config, `/codeo:setup --containers` alone leaves the config as it is and writes only the container files.
+
+Either way, the files written are the managed scripts and the seeds. The managed files are `.devcontainer/codeo`, `.devcontainer/codeo-container.sh`, `.devcontainer/codeo-track.sh`, `.sbx/codeo-sandbox.sh` and the scripts under `.devcontainer/scripts/`; `bash scripts/containers.sh --force` rewrites them and `/codeo:doctor` checks that they match. The seeds are yours to edit and are never overwritten: `.devcontainer/Dockerfile`, `.devcontainer/devcontainer.json`, `.sbx/claude-image` and one starter file per skill in `.codeo/overlays/`. [docs/container-templates.md](docs/container-templates.md) lists each file, where its names come from and where your own toolchain goes.
+
+Commit `.devcontainer/`, `.sbx/` and `.codeo/` to your base branch: `codeo issue <N>` downloads its scripts from there.
+
+A new repository has no branch ruleset, so `/codeo:doctor` reports `fail ruleset` until the base branch requires the checks `tests` and `qc-verdict` (or `ci.requiredChecks` lists your own). It is the one failure a fresh adoption is expected to show.
+
 ## Your first workflow
 
 A piece of work goes through six slash commands, one after the other. Each step owns one file under `.codeo/<N>/`, where `<N>` is the GitHub issue number. That file is the step's *dossier*: it records what the step decided, so the next step (and you, later) can read it. When `/codeo:close` opens the pull request, the folder moves to `.codeo/done/<N>/` inside the pull request itself, so it lands on the base branch when the pull request merges.
@@ -343,7 +363,7 @@ The table runs in five groups, in this order: required keys, project and suites,
 | `repo.owner` | yes | none | The GitHub owner of the repository. |
 | `repo.name` | yes | none | The GitHub name of the repository. |
 | `baseBranch` | yes | none | The branch workflows start from and pull requests target, such as `main`. |
-| `codename` | no | the clone's folder name | A short name for the project, used to name its clones and dev containers (`<codename>-home`, `<codename>-<N>`). Lower-case letters, digits and single hyphens, starting with a letter, 2 to 30 characters. |
+| `codename` | no | the repository name (`repo.name`) when `scripts/containers.sh` writes the container files; the clone's folder name when `.devcontainer/scripts/container-name.sh` names a container or session | A short name for the project, used to name its clones and dev containers (`<codename>-home`, `<codename>-<N>`). Lower-case letters, digits and single hyphens, starting with a letter. `/codeo:setup --codename` and `/codeo:doctor` require 2 to 30 characters; `scripts/containers.sh` checks only the characters. |
 | `plugin.repo` | no | none | The codeo plugin repository the dev container installs, as `owner/name`. Set it together with `plugin.ref`. |
 | `plugin.ref` | no | none | The tag or branch of the codeo plugin the dev container installs. Needed together with `plugin.repo`. |
 | `suites[].name` | yes, per suite | none | The suite's name. |
@@ -636,6 +656,7 @@ in `docs/dossier.md` and `docs/handoff.md`.
 - [`docs/dossier.md`](docs/dossier.md): the dossier files under `.codeo/<issue>/` and their protocol
 - [`docs/handoff.md`](docs/handoff.md): how a workflow moves between steps, sessions and machines
 - [`docs/home-checkout.md`](docs/home-checkout.md): the home checkout, the role guard and the tracking comment
+- [`docs/container-templates.md`](docs/container-templates.md): the dev container and sbx sandbox files codeo writes, managed or seed, and where each name comes from
 - [`docs/updating.md`](docs/updating.md): updating, replacing, restoring and moving a project's pin
 - [`.devcontainer/README.md`](.devcontainer/README.md): the dev container, roles and the `codeo` host command
 - [`CHANGELOG.md`](CHANGELOG.md): every release, with its config schema, shared state and mid-workflow safety

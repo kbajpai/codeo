@@ -17,7 +17,9 @@
 #   walkthrough      Your first workflow has six "###" steps: issue, init, plan, implement, qc, close
 #   troubleshooting  the four new entries sit beside the existing doctor entries
 #   lock-entry       the stuck-lock entry names both groups: /codeo:init #<N> and "reconcile by hand" (with diverged)
-#   setup-steps      Setting a project up has ### 1. 2. 3. then Running on the host; no prose line starts with a space
+#   setup-steps      Setting a project up has ### 1. 2. 3., Running on the host, then Adopting codeo with containers; no prose line starts with a space
+#   adopting-paths   Setting a project up has an "Adopting codeo with containers" section naming scripts/codeo-init.sh and
+#                    /codeo:setup --containers and linking docs/container-templates.md
 #   troubleshooting-groups
 #                    Troubleshooting has three ### groups in order; the doctor group's bold leads are the twelve
 #                    check names; the Installing and the pin group opens with its two entries; the intro says three groups
@@ -222,7 +224,10 @@ else
         fail lock-entry "no sentence of the lock entry names both reconcile by hand and diverged"
 fi
 
-# setup-steps: three numbered ### steps, then Running on the host; no prose line starts with a space.
+# subsection <text> <title>: the body of a ### subsection, up to the next ###.
+subsection() { awk -v t="### $2" '/^### / { on = ($0 == t); next } on' <<<"$1"; }
+
+# setup-steps: three numbered ### steps, then Running on the host and Adopting codeo with containers; no prose line starts with a space.
 setup=$(section "$readme" "Setting a project up")
 setup_heads=$(sed -n 's/^### \(.*\)$/\1/p' <<<"$setup")
 for i in 1 2 3; do
@@ -231,8 +236,20 @@ for i in 1 2 3; do
 done
 [[ "$(sed -n 4p <<<"$setup_heads")" == "Running on the host" ]] ||
     fail setup-steps "Setting a project up: the ### heading after step 3 is not \"Running on the host\""
+[[ "$(sed -n 5p <<<"$setup_heads")" == "Adopting codeo with containers" ]] ||
+    fail setup-steps "Setting a project up: the ### heading after Running on the host is not \"Adopting codeo with containers\""
 indented=$(grep -c '^ ' <<<"$setup" || true)
 [[ "$indented" -eq 0 ]] || fail setup-steps "Setting a project up has $indented prose lines starting with a space"
+
+# adopting-paths: the section names both ways to adopt the containers and links the reference page.
+adopting=$(subsection "$setup" "Adopting codeo with containers")
+if [[ -z $adopting ]]; then
+    fail adopting-paths "Setting a project up has no ### Adopting codeo with containers"
+else
+    grep -qF 'scripts/codeo-init.sh' <<<"$adopting" || fail adopting-paths "the Adopting section does not name scripts/codeo-init.sh"
+    grep -qF '/codeo:setup --containers' <<<"$adopting" || fail adopting-paths "the Adopting section does not name /codeo:setup --containers"
+    grep -qF '](docs/container-templates.md' <<<"$adopting" || fail adopting-paths "the Adopting section does not link docs/container-templates.md"
+fi
 
 # troubleshooting-groups: three ### groups, the doctor group's leads, the pin group's first entries.
 t_heads=$(sed -n 's/^### \(.*\)$/\1/p' <<<"$trouble")
@@ -240,8 +257,6 @@ t_heads=$(sed -n 's/^### \(.*\)$/\1/p' <<<"$trouble")
 Checks from /codeo:doctor
 Installing and the pin" ]] ||
     fail troubleshooting-groups "Troubleshooting ### headings are: $(tr '\n' ',' <<<"$t_heads"); want During a workflow, Checks from /codeo:doctor, Installing and the pin"
-# subsection <text> <title>: the body of a ### subsection, up to the next ###.
-subsection() { awk -v t="### $2" '/^### / { on = ($0 == t); next } on' <<<"$1"; }
 if ! grep -qxF '### Checks from /codeo:doctor' <<<"$trouble"; then
     fail troubleshooting-groups "Troubleshooting has no ### Checks from /codeo:doctor"
 else
