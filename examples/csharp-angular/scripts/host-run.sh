@@ -11,8 +11,9 @@
 #   - <owner>/<repo> is an existing, PUBLIC, otherwise empty throwaway GitHub repository you can push to. It must
 #     be public because the container route builds the image from, and clones, the repository's GitHub URL
 #     without credentials.
-#   - web/ was generated beforehand with examples/csharp-angular/scripts/generate-web.sh (needs Node); without
-#     examples/csharp-angular/web/angular.json the web suite cannot run and this script stops.
+#   - web/ ships with the example; without examples/csharp-angular/web/angular.json (a deleted web/) the web suite
+#     cannot run and this script stops. Restore it with git checkout -- examples/csharp-angular/web, or regenerate
+#     it with examples/csharp-angular/scripts/generate-web.sh (needs Node).
 #   - This script itself runs under bash 3.2, but doctor (which the wizard runs here) needs bash 4.3 for its deps check,
 #     so a bash 3.2 host sees "fail deps", which this script accepts and prints. For a clean doctor run it with a newer
 #     bash, e.g. Homebrew's: /opt/homebrew/bin/bash examples/...
@@ -124,7 +125,7 @@ copy_clean() {
 
 # 3. The example, before the wizard so its Dockerfile seed is kept.
 if [[ ! -f $ex/web/angular.json ]]; then
-    echo 'host-run: note: web/ not generated; run examples/csharp-angular/scripts/generate-web.sh first'
+    echo 'host-run: note: web/ is missing; run git checkout -- examples/csharp-angular/web, or regenerate it with examples/csharp-angular/scripts/generate-web.sh'
     fail 'example copied'
 fi
 mkdir -p .devcontainer scripts

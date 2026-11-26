@@ -121,6 +121,8 @@ generate_web_names_a_pinned_cli_and_refuses_an_existing_app() {
     local d="$work/gw" log="$work/gw.log" line
     mkdir -p "$d/examples" "$d/bin"
     cp -R "$ex" "$d/examples/csharp-angular"
+    # The example ships its generated app; start from an empty web/ as on a fresh generation.
+    rm -rf "$d/examples/csharp-angular/web"
     mkdir -p "$d/examples/csharp-angular/web"
     : >"$d/examples/csharp-angular/web/.gitkeep"
     printf '#!/usr/bin/env bash\necho "npx $*" >>"%s"\n' "$log" >"$d/bin/npx"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Generates the example's Angular app into examples/csharp-angular/web. Run it once, on a host with Node;
-# commit the result. Works from any directory: paths are resolved from this script's own location.
+# Generates the example's Angular app into examples/csharp-angular/web. The example ships
+# its generated app; run this on a host with Node to regenerate it after deleting web/. Works from any directory: paths are resolved from this script's own location.
 # Refuses (exit 1, nothing run) when web/angular.json already exists or web holds anything but .gitkeep.
 #
 #   generate-web.sh
