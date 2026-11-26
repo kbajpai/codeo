@@ -277,13 +277,13 @@ Sets up codeo in a project. It runs `scripts/setup.sh` from the project root, wh
 
 The script reads the repository owner and name from the `origin` remote and the base branch from `origin/HEAD`; when one does not resolve, the value is the marker `TODO-set-me` and a line on stderr says so, so a guessed value never passes for a real one. It refuses, exiting non-zero, when `.codeo/config.json` already exists. Any `--stack <name>` the engineer gives is passed through and recorded under the top-level `stacks` array, and does nothing else.
 
-The repository and its `origin` remote must already exist: setup never creates a repository. `--codename <name>` records `codename` in the config, the name that prefixes the project's containers, sandboxes, images and volumes. `--containers` also writes the dev container, the sbx sandbox files and the `.codeo/overlays/` role-guard and host-workflow overlays, through `scripts/containers.sh`, named from the config; given alone, with a config already present, it writes only those files. [`container-templates.md`](container-templates.md) lists what is codeo's and what is the project's.
+The repository and its `origin` remote must already exist: setup never creates a repository. `--codename <name>` records `codename` in the config, the name that prefixes the project's containers, sandboxes, images and volumes. `--containers` also writes the dev container, the sbx sandbox files and the `.codeo/overlays/` role-guard and host-workflow overlays, through `scripts/containers.sh`, named from the config; it also writes `codename` (the repository's name made to fit the rule, when `--codename` is not given) and the plugin pin `plugin.repo` and `plugin.ref` into the config, the pin failing soft with one line when no release is found; given alone, with a config already present, it adds a missing `codename` and pin to it and writes those files. [`container-templates.md`](container-templates.md) lists what is codeo's and what is the project's.
 
 ### Reads and writes
 
 - Reads the `origin` remote and `origin/HEAD` of the project's git repository.
 - Creates `.codeo/`, `.codeo/.gitignore`, a starter `.codeo/config.json`, and `docs/plans/`. It never overwrites an existing `config.json`.
-- With `--containers`, also writes the files under `.devcontainer/`, `.sbx/` and `.codeo/overlays/` that `scripts/containers.sh` renders; the overlays and the other seed files are written only when absent.
+- With `--containers`, also writes `codename` and the plugin pin into the config when absent, and the files under `.devcontainer/`, `.sbx/` and `.codeo/overlays/` that `scripts/containers.sh` renders; the overlays and the other seed files are written only when absent.
 
 ### Hand-offs and non-goals
 

@@ -56,6 +56,7 @@ if [[ -z $here || ! -f $here/lib/prompt.sh ]]; then
     exec bash "$tmp/scripts/codeo-init.sh" "$@"
 fi
 source "$here/lib/prompt.sh"
+source "$here/lib/codename.sh"
 
 usage() {
     echo "usage: codeo-init.sh [--yes] [--codename <name>] [--scope user|project] [--version vX.Y.Z] [--env none|containers] [--suite name:paths:build:test]... [--skip-install]" >&2
@@ -88,6 +89,7 @@ done
 [[ -z $env || $env == none || $env == containers ]] || usage
 
 failed=0
+base_unset=0
 say() { printf 'init: %s %s\n' "$1" "$2"; [[ $1 != fail ]] || failed=1; }
 stop() { say fail "$1"; exit 1; }
 
@@ -107,8 +109,7 @@ say ok "preflight: $owner/$repo exists and gh can see it"
 # 2. Questions.
 # The default codename is the repository name made to fit the codename rule (lower case, . _ and spaces as
 # hyphens, no repeated or edge hyphens, a letter first, at most 30 characters); empty when nothing valid is left.
-default_codename=$(printf '%s' "$repo" | tr '[:upper:]' '[:lower:]' | tr '._ ' '---' | tr -s '-' | sed 's/^[^a-z]*//' | cut -c1-30 | sed 's/-*$//')
-[[ $default_codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#default_codename} -ge 2 ]] || default_codename=""
+default_codename=$(codeo_derive_codename "$repo" || true)
 codeo_ask codename "Codename (names containers, images and volumes)" "$default_codename"
 codeo_ask scope "Install the plugins for the user or just this project (user|project)" user
 codeo_ask env "Dev container and sbx sandbox files (none|containers)" none
@@ -143,7 +144,12 @@ fi
 if [[ -e .codeo/config.json ]]; then
     say skip "config: .codeo/config.json exists and is kept"
 elif setup_err=$(bash "$here/scripts/setup.sh" --codename "$codename" 2>&1 >/dev/null); then
-    say ok "config: .codeo/config.json written"
+    if [[ $(jq -r .baseBranch .codeo/config.json 2>/dev/null) == TODO-set-me ]]; then
+        say fail "config: baseBranch is TODO-set-me (the clone has no origin/HEAD: set baseBranch in .codeo/config.json)"
+        base_unset=1
+    else
+        say ok "config: .codeo/config.json written"
+    fi
 else
     say fail "config: scripts/setup.sh failed: $(printf '%s' "$setup_err" | tail -n 1); run it directly to see more"
 fi
@@ -162,7 +168,7 @@ if [[ -f .codeo/config.json ]]; then
     done
     if [[ $env == containers ]] && ! jq -e '.plugin.ref' .codeo/config.json >/dev/null 2>&1; then
         pin=$version
-        [[ -n $pin ]] || pin=$(git ls-remote --tags --refs "$plugin_url" 'v*' 2>/dev/null | sed 's|.*refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+        [[ -n $pin ]] || pin=$(codeo_latest_release "$plugin_url" || true)
         if [[ -n $pin ]]; then
             jq --arg r "$pin" --arg pr "${CODEO_PLUGIN_REPO:-kbajpai/codeo}" '.plugin = {repo: $pr, ref: $r}' .codeo/config.json >.codeo/config.json.new \
                 && mv .codeo/config.json.new .codeo/config.json && say ok "config: plugin pin $pin (the container installs it)"
@@ -173,8 +179,10 @@ if [[ -f .codeo/config.json ]]; then
 fi
 
 # 6. Containers.
-if [[ $env == containers && -f .codeo/config.json ]]; then
+if [[ $env == containers && -f .codeo/config.json && $base_unset == 0 ]]; then
     if bash "$here/scripts/containers.sh" >/dev/null; then say ok "containers: .devcontainer/ and .sbx/ written"; else say fail "containers: scripts/containers.sh failed"; fi
+elif [[ $base_unset == 1 ]]; then
+    say skip "containers: baseBranch is not set"
 else
     say skip "containers: env is none"
 fi

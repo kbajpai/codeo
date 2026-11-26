@@ -273,16 +273,28 @@ fi
 # containers: only for a project that has them. The managed scripts must still match the plugin's templates
 # (scripts/containers.sh --check); the files a project edits (Dockerfile, devcontainer.json) are its own.
 if [[ -e $CODEO_PROJECT_ROOT/.devcontainer/codeo-container.sh || -e $CODEO_PROJECT_ROOT/.sbx/codeo-sandbox.sh ]]; then
+    # Without plugin.repo and plugin.ref the container cannot install codeo (plugins.sh, devcontainer-start.sh).
+    cont_msg=""
     if [[ $config_ok -eq 0 ]]; then
         report fail containers "skipped: config is unusable"
-    elif cont_out=$(bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh" --check 2>&1); then
-        report ok containers "managed scripts match the templates"
     else
-        cont_bad=$(sed -n 's/^containers: differs //p' <<<"$cont_out" | tr '\n' ' ' | sed 's/ $//')
-        if [[ -n $cont_bad ]]; then
-            report fail containers "differ from the templates: $cont_bad; refresh with: bash <plugin>/scripts/containers.sh --force"
+        if cont_out=$(bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh" --check 2>&1); then
+            :
         else
-            report fail containers "$(head -n 1 <<<"$cont_out")"
+            cont_bad=$(sed -n 's/^containers: differs //p' <<<"$cont_out" | tr '\n' ' ' | sed 's/ $//')
+            if [[ -n $cont_bad ]]; then
+                cont_msg="differ from the templates: $cont_bad; refresh with: bash <plugin>/scripts/containers.sh --force"
+            else
+                cont_msg=$(head -n 1 <<<"$cont_out")
+            fi
+        fi
+        if [[ $(cfg '(.plugin.repo // "") != "" and (.plugin.ref // "") != ""') != true ]]; then
+            cont_msg="${cont_msg:+$cont_msg; }.devcontainer/ is present but .codeo/config.json has no plugin.repo and plugin.ref, so the container cannot install codeo; set them (see docs/container-templates.md)"
+        fi
+        if [[ -n $cont_msg ]]; then
+            report fail containers "$cont_msg"
+        else
+            report ok containers "managed scripts match the templates"
         fi
     fi
 fi

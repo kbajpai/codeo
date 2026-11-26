@@ -28,6 +28,16 @@ new_project() {
 
 acme='{"schema":1,"codename":"acme","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"main"}'
 
+# A local stand-in for the codeo repository: one with a v9.9.9 release, one with none. No test reaches the network.
+mkdir -p "$work/rel"
+git init -q --bare "$work/rel/released.git"
+git init -q --bare "$work/rel/empty.git"
+git init -q "$work/rel/seed"
+git -C "$work/rel/seed" -c user.name=t -c user.email=t@t commit -q --allow-empty -m seed
+git -C "$work/rel/seed" tag v9.9.9
+git -C "$work/rel/seed" push -q "$work/rel/released.git" HEAD:refs/heads/main v9.9.9
+export CODEO_PLUGIN_URL="$work/rel/released.git"
+
 codeos_own_files_match_their_templates() {
     (cd "$plugin_root" && bash "$script" --check >"$work/out") || { cat "$work/out" >&2; fail "codeo's checked-in files drifted from the templates"; }
 }
@@ -44,7 +54,7 @@ no_shipped_file_names_codeo_where_the_project_belongs() {
     local d hits
     for d in "$work"/*/; do
         [[ -d $d/.devcontainer ]] || continue
-        hits=$(grep -rInE 'kbajpai|codeo-(home|gh|git|dev|live|[0-9]|<N>)|codeo-\$(\{?[1nN]|num|target)' "$d" --exclude-dir=.git || true)
+        hits=$(grep -rInE 'kbajpai|codeo-(home|gh|git|dev|live|[0-9]|<N>)|codeo-\$(\{?[1nN]|num|target)' "$d" --exclude-dir=.git --exclude=config.json || true)
         [[ -z $hits ]] || fail "codeo's names remain: $hits"
     done
 }
@@ -59,7 +69,7 @@ a_base_branch_other_than_main_is_followed() {
 }
 
 a_bad_base_branch_is_refused() {
-    local d; d=$(new_project badbase '{"schema":1,"repo":{"owner":"o","name":"r"},"baseBranch":"x;rm -rf"}')
+    local d; d=$(new_project badbase '{"schema":1,"codename":"acme","repo":{"owner":"o","name":"r"},"baseBranch":"x;rm -rf"}')
     if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "bad base branch accepted"; fi
     [[ ! -e $d/.devcontainer ]] || fail "files written despite refusal"
     grep -q baseBranch "$work/err" || fail "refusal does not name baseBranch"
@@ -103,10 +113,71 @@ check_reports_a_drifted_script() {
     (cd "$d" && bash "$script" --check >/dev/null) || fail "--force did not refresh"
 }
 
-the_codename_defaults_to_the_repo_name() {
+the_codename_is_required() {
     local d; d=$(new_project plain '{"schema":1,"repo":{"owner":"o","name":"widgets"},"baseBranch":"main"}')
-    (cd "$d" && bash "$script" >/dev/null)
-    grep -q 'source=widgets-gh' "$d/.devcontainer/devcontainer.json" || fail "default codename"
+    if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "rendered without a codename"; fi
+    grep -q 'setup.sh --codename' "$work/err" || fail "refusal does not say how to set the codename"
+    [[ ! -e $d/.devcontainer ]] || fail "files written despite refusal"
+}
+
+a_todo_marker_is_refused() {
+    local d k
+    d=$(new_project todobase '{"schema":1,"codename":"acme","repo":{"owner":"o","name":"r"},"baseBranch":"TODO-set-me"}')
+    if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "rendered with baseBranch TODO-set-me"; fi
+    grep -q 'baseBranch' "$work/err" || fail "refusal does not name baseBranch: $(cat "$work/err")"
+    [[ ! -e $d/.devcontainer ]] || fail "files written despite refusal"
+    d=$(new_project todorepo '{"schema":1,"codename":"acme","repo":{"owner":"TODO-set-me","name":"TODO-set-me"},"baseBranch":"main"}')
+    if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "rendered with repo TODO-set-me"; fi
+    grep -q 'repo.owner' "$work/err" || fail "refusal does not name repo.owner"
+}
+
+# A clone of owner/<repo> with origin/HEAD set.
+new_clone() {
+    local d="$work/$1"
+    git init -q "$d"; git -C "$d" remote add origin "git@github.com:acme-co/$2.git"
+    git -C "$d" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+}
+
+setup_containers_writes_the_normalised_codename() {
+    new_clone normname My_Shop.App >/dev/null; local d="$work/normname"
+    (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >/dev/null 2>&1) || fail "setup --containers failed"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == my-shop-app ]] || fail "codename not the normalised repository name"
+    grep -q 'source=my-shop-app-gh' "$d/.devcontainer/devcontainer.json" || fail "files not rendered with the config's codename"
+    [[ $(cd "$d" && bash .devcontainer/scripts/container-name.sh --docker 2>/dev/null) == my-shop-app-home ]] || fail "container-name.sh disagrees with the config"
+}
+
+setup_containers_alone_adds_the_codename_to_an_existing_config() {
+    local d; d=$(new_project nocn '{"schema":1,"repo":{"owner":"acme-co","name":"Shop"},"baseBranch":"main","suites":[]}')
+    (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "setup --containers failed"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == shop ]] || fail "codename not written into the existing config"
+    grep -q 'wrote codename shop' "$work/out" || fail "no line saying the codename was written"
+    [[ $(jq -c .suites "$d/.codeo/config.json") == '[]' ]] || fail "config changed beyond the codename and the pin"
+    [[ ! -e $d/.codeo/config.json.new ]] || fail "temp file left behind"
+}
+
+an_underivable_repo_name_fails_before_any_write() {
+    new_clone nocodename __ >/dev/null; local d="$work/nocodename"
+    if (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >/dev/null 2>"$work/err"); then fail "setup derived a codename from '__'"; fi
+    grep -qx "codeo: cannot derive a codename from '__'; pass --codename <name>" "$work/err" || fail "unexpected message: $(cat "$work/err")"
+    [[ ! -e $d/.codeo && ! -e $d/.devcontainer ]] || fail "something was written before the failure"
+}
+
+setup_containers_writes_the_plugin_pin() {
+    new_clone pinned shop >/dev/null; local d="$work/pinned"
+    (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >/dev/null 2>&1) || fail "setup --containers failed"
+    [[ $(jq -r .plugin.ref "$d/.codeo/config.json") == v9.9.9 && $(jq -r .plugin.repo "$d/.codeo/config.json") == kbajpai/codeo ]] || fail "pin not written"
+    local doc; doc=$(cd "$d" && bash "$plugin_root/scripts/doctor.sh" 2>/dev/null || true)
+    grep -q '^ok containers' <<<"$doc" || fail "doctor does not pass a project with the pin: $doc"
+}
+
+the_plugin_pin_fails_soft_without_a_release() {
+    new_clone nopin shop >/dev/null; local d="$work/nopin"
+    (cd "$d" && CODEO_PLUGIN_URL="$work/rel/empty.git" bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "setup --containers failed without a release"
+    grep -qx 'codeo: no codeo release found to pin; set plugin.repo and plugin.ref in .codeo/config.json' "$work/out" || fail "soft failure line missing: $(cat "$work/out")"
+    [[ -f $d/.devcontainer/codeo-container.sh ]] || fail "files not written after the soft failure"
+    jq -e '.plugin' "$d/.codeo/config.json" >/dev/null 2>&1 && fail "a pin was written"
+    local doc; doc=$(cd "$d" && bash "$plugin_root/scripts/doctor.sh" 2>/dev/null || true)
+    grep -q '^fail containers: .*plugin.repo and plugin.ref' <<<"$doc" || fail "doctor does not report the missing pin"
 }
 
 a_bad_codename_is_refused() {
@@ -194,7 +265,9 @@ for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section cod
     setup_writes_codename_and_containers_in_one_go doctor_reports_a_drifted_container_script codeos_own_files_match_their_templates another_project_gets_its_own_names \
     no_shipped_file_names_codeo_where_the_project_belongs the_toolchain_section_is_the_one_place_to_extend \
     a_second_run_skips_and_never_overwrites_seeds check_reports_a_drifted_script \
-    the_codename_defaults_to_the_repo_name a_bad_codename_is_refused \
+    the_codename_is_required a_todo_marker_is_refused a_bad_codename_is_refused \
+    setup_containers_writes_the_normalised_codename setup_containers_alone_adds_the_codename_to_an_existing_config \
+    an_underivable_repo_name_fails_before_any_write setup_containers_writes_the_plugin_pin the_plugin_pin_fails_soft_without_a_release \
     a_base_branch_other_than_main_is_followed a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
     no_shipped_file_names_codeo_where_the_project_belongs; do
     "$c"

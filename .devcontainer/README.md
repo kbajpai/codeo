@@ -193,7 +193,7 @@ Each file gets one line, `containers: wrote <path>`, `containers: skip <path>`, 
 
 **Your toolchain.** The Dockerfile has no language runtime. Add your compilers and SDKs only between its two toolchain marker comments, so a later comparison with a newer template stays a small diff.
 
-**Names.** With the config's `codename` (default: the repository's name), the project's containers are named:
+**Names.** With the config's `codename`, the project's containers are named:
 
 | What | Name |
 |---|---|

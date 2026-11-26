@@ -73,7 +73,7 @@ Running it twice writes nothing the second time, and a seed you edited stays as 
 
 | Placeholder | Config key | Default | Example |
 |---|---|---|---|
-| `@CODENAME@` | `codename` | the repository name (`repo.name`) | `shop` gives the containers `shop-home` and `shop-<N>`, the volumes `shop-gh` and `shop-git` |
+| `@CODENAME@` | `codename` | none: it is required, and the script stops saying how to set it (`/codeo:setup --containers` writes it from the repository name) | `shop` gives the containers `shop-home` and `shop-<N>`, the volumes `shop-gh` and `shop-git` |
 | `@REPO_SLUG@` | `repo.owner` and `repo.name`, joined with a slash | none: both are required, and the script stops naming the missing key | `acme-co/shop` |
 | `@BASE_BRANCH@` | `baseBranch` | `main` | `develop` makes the `codeo` command download from, and the checkouts start from, `develop` |
 
@@ -82,6 +82,9 @@ The script checks each value before it writes anything, and stops with exit stat
 - `codename`: lower-case letters, digits and single hyphens, starting with a letter (`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`).
 - `repo.owner` and `repo.name`: a GitHub owner and repository name. The owner starts with a letter or digit and holds letters, digits, dots, underscores and hyphens; the name holds the same characters and may start with any of them. A dot or underscore comes through unchanged.
 - `baseBranch`: starts with a letter or digit and holds letters, digits, dots, underscores, slashes and hyphens.
+- `baseBranch`, `repo.owner` and `repo.name` may not be `TODO-set-me`, the marker `/codeo:setup` writes for a value it could not read.
+
+The container also needs `plugin.repo` and `plugin.ref` in the config to install codeo; `/codeo:setup --containers` writes them from the newest release, and `/codeo:doctor` fails the `containers` check while they are absent.
 
 A codename that is a prefix of another name, for example `shop` beside the repository `shop-api`, does not change the longer name: only the placeholder is replaced.
 

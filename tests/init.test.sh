@@ -206,13 +206,22 @@ a_setup_failure_names_its_reason() {
     grep -q '^init: fail config: scripts/setup.sh failed: .' "$work/out" || fail "no reason: $(cat "$work/out")"
 }
 
+a_clone_without_origin_head_does_not_say_ok_and_skips_the_containers() {
+    local d; d=$(new_clone emptyrepo git@github.com:acme-co/emptyrepo.git)
+    git -C "$d" symbolic-ref --delete refs/remotes/origin/HEAD
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
+    grep -qxF 'init: fail config: baseBranch is TODO-set-me (the clone has no origin/HEAD: set baseBranch in .codeo/config.json)' "$work/out" || fail "config line: $(cat "$work/out")"
+    ! grep -q '^init: ok config: .codeo/config.json written' "$work/out" || fail "config said ok"
+    [[ ! -e $d/.devcontainer ]] || fail "containers rendered with baseBranch TODO-set-me"
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
     questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
     a_lone_script_fetches_its_release a_lone_script_with_no_release_fails_in_one_line \
     a_pipe_without_a_terminal_takes_the_defaults a_closed_stdin_under_a_terminal_takes_the_defaults \
     a_suite_test_command_may_hold_colons a_suite_build_command_cannot_hold_a_colon \
-    a_mixed_case_repo_name_gets_a_derived_codename a_repo_name_that_cannot_yield_a_codename_fails_before_writing \
+    a_clone_without_origin_head_does_not_say_ok_and_skips_the_containers a_mixed_case_repo_name_gets_a_derived_codename a_repo_name_that_cannot_yield_a_codename_fails_before_writing \
     an_invalid_explicit_codename_states_the_rule a_flag_without_a_value_is_a_usage_error a_setup_failure_names_its_reason; do
     "$c"
 done

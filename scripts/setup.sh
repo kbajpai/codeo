@@ -17,6 +17,7 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/codename.sh"
 
 stacks=()
 codename=""
@@ -43,7 +44,28 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$CODEO_PROJECT_ROOT" ]] || codeo_die "not inside a git repository"
+# --containers writes the codename and the plugin pin into the config when they are absent, so the config and the
+# rendered files agree and the container can install codeo. The pin fails soft: no release, no pin, files still written.
+write_pin() {
+    local pin
+    jq -e '.plugin.ref and .plugin.repo' "$CODEO_STATE_DIR/config.json" >/dev/null 2>&1 && return 0
+    if pin=$(codeo_latest_release "${CODEO_PLUGIN_URL:-https://github.com/${CODEO_PLUGIN_REPO:-kbajpai/codeo}.git}"); then
+        jq --arg r "$pin" --arg pr "${CODEO_PLUGIN_REPO:-kbajpai/codeo}" '.plugin = {repo: $pr, ref: $r}' "$CODEO_STATE_DIR/config.json" >"$CODEO_STATE_DIR/config.json.new" &&
+            mv "$CODEO_STATE_DIR/config.json.new" "$CODEO_STATE_DIR/config.json"
+        echo "codeo: pinned the plugin to $pin in .codeo/config.json"
+    else
+        echo "codeo: no codeo release found to pin; set plugin.repo and plugin.ref in .codeo/config.json"
+    fi
+}
 if [[ -e "$CODEO_STATE_DIR/config.json" && $containers == 1 && ${#stacks[@]} == 0 && -z $codename ]]; then
+    if ! jq -e 'has("codename")' "$CODEO_STATE_DIR/config.json" >/dev/null 2>&1; then
+        existing_name=$(codeo_cfg .repo.name || true)
+        cn=$(codeo_derive_codename "$existing_name") || codeo_die "cannot derive a codename from '$existing_name'; pass --codename <name>"
+        jq --arg c "$cn" '.codename = $c' "$CODEO_STATE_DIR/config.json" >"$CODEO_STATE_DIR/config.json.new" &&
+            mv "$CODEO_STATE_DIR/config.json.new" "$CODEO_STATE_DIR/config.json"
+        echo "codeo: wrote codename $cn to .codeo/config.json (the repository name)"
+    fi
+    write_pin
     exec bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh"
 fi
 [[ -z $codename || ($codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#codename} -ge 2 && ${#codename} -le 30) ]] ||
@@ -68,6 +90,13 @@ if [[ "$owner" == TODO-set-me ]]; then
     echo "codeo: could not read owner/name from the origin remote; set repo in .codeo/config.json" >&2
 fi
 
+if ((containers)); then
+    [[ $owner != TODO-set-me ]] || codeo_die "--containers needs the repository's owner and name: add the origin remote, then run setup.sh --containers"
+    if [[ -z $codename ]]; then
+        codename=$(codeo_derive_codename "$name") || codeo_die "cannot derive a codename from '$name'; pass --codename <name>"
+    fi
+fi
+
 base=TODO-set-me
 if ref=$(git -C "$CODEO_PROJECT_ROOT" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null) && [[ -n "$ref" ]]; then
     base=${ref#refs/remotes/origin/}
@@ -87,6 +116,6 @@ jq -n --arg owner "$owner" --arg name "$name" --arg base "$base" --argjson stack
 echo "codeo: created .codeo/config.json for $owner/$name (base $base); run /codeo:doctor next"
 
 if ((containers)); then
-    [[ $owner != TODO-set-me ]] || codeo_die "--containers needs the repository's owner and name: add the origin remote, then run setup.sh --containers"
+    write_pin
     bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh"
 fi
