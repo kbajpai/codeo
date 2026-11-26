@@ -266,6 +266,17 @@ setup_refuses_an_invalid_config_before_the_pin() {
     done
 }
 
+setup_refuses_a_plugin_repo_that_is_not_an_owner_and_name() {
+    local r d
+    for r in 'https://evil/x' 'a/b/c' '../x' 'noslash' '-a/b'; do
+        pin_project badrepo "$(jq -n --arg r "$r" '{repo:$r}')"; d="$work/badrepo"; cp "$d/.codeo/config.json" "$work/orig"
+        if run_setup badrepo; then fail "setup accepted plugin.repo '$r'"; fi
+        [[ $(grep -c . "$work/out") == 1 ]] && grep -qF "config.json: plugin.repo '$r' is not an owner/name" "$work/out" || fail "message for '$r': $(cat "$work/out")"
+        cmp -s "$work/orig" "$d/.codeo/config.json" && [[ ! -e $d/.devcontainer ]] || fail "wrote for '$r'"
+        rm -rf "$d"
+    done
+}
+
 a_bad_codename_is_refused() {
     local d; d=$(new_project bad '{"schema":1,"codename":"Bad Name;","repo":{"owner":"o","name":"r"},"baseBranch":"main"}')
     if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "bad codename accepted"; fi
@@ -399,7 +410,7 @@ for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section cod
     setup_codename_with_containers_writes_it_into_a_codenameless_config setup_refuses_another_codename_on_a_config_that_has_one setup_refuses_a_todo_repository_before_deriving_a_codename setup_says_where_the_home_checkout_lives \
     an_underivable_repo_name_fails_before_any_write setup_containers_writes_the_plugin_pin the_plugin_pin_fails_soft_without_a_release \
     a_base_branch_other_than_main_is_followed overlays_name_the_base_branch a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
-    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once the_ref_comes_from_the_repository_the_config_names setup_refuses_an_invalid_config_before_the_pin; do
+    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once the_ref_comes_from_the_repository_the_config_names setup_refuses_an_invalid_config_before_the_pin setup_refuses_a_plugin_repo_that_is_not_an_owner_and_name; do
     "$c"
 done
 echo "all cases passed"

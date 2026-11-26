@@ -107,6 +107,10 @@ command -v gh >/dev/null || stop "preflight: gh is required (https://cli.github.
 gh auth status >/dev/null 2>&1 || stop "preflight: gh is not logged in; run gh auth login"
 gh api "repos/$owner/$repo" --jq .full_name >/dev/null 2>&1 || stop "preflight: gh cannot see $owner/$repo; it must already exist and you need access (codeo does not create it)"
 say ok "preflight: $owner/$repo exists and gh can see it"
+if [[ -e .codeo/config.json ]]; then
+    codeo_config_is_object .codeo/config.json || stop "config: .codeo/config.json is not valid JSON"
+    cfg_err=$(codeo_pin_repo_error .codeo/config.json) || stop "config: $cfg_err"
+fi
 
 # 2. Questions.
 # The default codename is the repository name made to fit the codename rule (lower case, . _ and spaces as
@@ -172,9 +176,7 @@ fi
 # 5. Suites and the plugin pin, into the config. A suite is name:paths:build:test (the build command
 #    cannot hold a colon, the test command may: name, paths and build are one colon-separated field each and the
 #    test command is the remainder).
-if [[ -f .codeo/config.json ]] && ! codeo_config_is_object .codeo/config.json; then
-    say fail "config: config.json is not valid JSON"
-elif [[ -f .codeo/config.json ]]; then
+if [[ -f .codeo/config.json ]]; then
     for s in ${suites[@]+"${suites[@]}"}; do
         IFS=: read -r n p b t <<<"$s"
         if [[ -z $n || -z $t ]]; then say fail "suite: '$s' is not name:paths:build:test"; continue; fi

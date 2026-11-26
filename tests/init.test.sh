@@ -293,6 +293,7 @@ the_wizard_notes_kept_seeds_once() {
 }
 
 the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json() {
+    local nbad=0
     local b="$work/wbase" d
     mkdir -p "$b/fork"; git init -q --bare "$b/fork/codeo.git"
     git init -q "$work/wseed"; git -C "$work/wseed" -c user.name=t -c user.email=t@t commit -q --allow-empty -m s
@@ -301,11 +302,22 @@ the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json() {
     mkdir "$d/.codeo"; echo '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"main","plugin":{"repo":"fork/codeo"}}' >"$d/.codeo/config.json"
     (cd "$d" && env -u CODEO_PLUGIN_URL CODEO_PLUGIN_BASE="$b" bash "$init" --yes --skip-install --env containers >"$work/out" 2>&1) || true
     [[ $(jq -c .plugin "$d/.codeo/config.json") == '{"repo":"fork/codeo","ref":"v2.0.0"}' ]] || fail "fork ref: $(jq -c .plugin "$d/.codeo/config.json")"
-    d=$(new_clone wizbad git@github.com:acme-co/shop.git)
-    mkdir "$d/.codeo"; echo 'not json' >"$d/.codeo/config.json"
-    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 --suite 'x:a:true:true' >"$work/out" 2>&1) && fail "wizard accepted invalid JSON"
-    grep -qxF 'init: fail config: config.json is not valid JSON' "$work/out" || fail "message: $(cat "$work/out")"
-    [[ $(cat "$d/.codeo/config.json") == 'not json' && ! -e $d/.codeo/config.json.new ]] || fail "wrote to an invalid config"
+    local bad
+    for bad in 'not json' 'null' '[]'; do
+        nbad=$((nbad + 1)); d=$(new_clone "wizbad$nbad" git@github.com:acme-co/shop.git)
+        mkdir "$d/.codeo"; printf '%s\n' "$bad" >"$d/.codeo/config.json"; cp "$d/.codeo/config.json" "$work/bad.orig"
+        if (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 --suite 'x:a:true:true' >"$work/out" 2>&1); then fail "wizard accepted '$bad'"; fi
+        [[ $(grep -c 'fail config' "$work/out") == 1 ]] || fail "'$bad': not exactly one fail config line: $(cat "$work/out")"
+        grep -qxF 'init: fail config: .codeo/config.json is not valid JSON' "$work/out" || fail "'$bad' message: $(cat "$work/out")"
+        ! grep -q 'jq:' "$work/out" || fail "'$bad': jq noise: $(cat "$work/out")"
+        ! grep -q 'containers:' "$work/out" || fail "'$bad': containers ran"
+        cmp -s "$work/bad.orig" "$d/.codeo/config.json" && [[ ! -e $d/.codeo/config.json.new && ! -e $d/.devcontainer ]] || fail "'$bad': something was written"
+    done
+    d=$(new_clone wizrepo git@github.com:acme-co/shop.git)
+    mkdir "$d/.codeo"; echo '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"main","plugin":{"repo":"https://evil/x"}}' >"$d/.codeo/config.json"; cp "$d/.codeo/config.json" "$work/bad.orig"
+    if (cd "$d" && bash "$init" --yes --skip-install --env containers --suite 'x:a:true:true' >"$work/out" 2>&1); then fail "wizard accepted a bad plugin.repo"; fi
+    grep -qxF "init: fail config: config.json: plugin.repo 'https://evil/x' is not an owner/name" "$work/out" || fail "repo message: $(cat "$work/out")"
+    cmp -s "$work/bad.orig" "$d/.codeo/config.json" && [[ ! -e $d/.devcontainer ]] || fail "wrote with a bad plugin.repo"
 }
 
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \

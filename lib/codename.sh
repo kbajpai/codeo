@@ -6,6 +6,14 @@
 #                                       stripped, at most 30 characters. Prints nothing (exit 1) when what is left is
 #                                       not a valid codename (2-30 characters of lower-case letters, digits, single hyphens).
 #   codeo_latest_release <git-url>      prints the newest vX.Y.Z release tag of the repository; nothing (exit 1) when none.
+#   codeo_home_lines <codename> <root>  prints where the home checkout lives (and, when the folder is named otherwise, how to rename it).
+#   codeo_pin_missing <config>          prints which of plugin.repo, plugin.ref the config lacks ("repo", "ref", "repo ref"), or nothing.
+#   codeo_pin_fill <config> <repo> <ref>  writes only the absent or empty pin keys, atomically; exit 1 (config untouched) on failure.
+#   codeo_pin_url <config>              prints the git URL to look the newest release up in (CODEO_PLUGIN_URL, the config's plugin.repo,
+#                                       CODEO_PLUGIN_REPO; CODEO_PLUGIN_BASE stands in for https://github.com).
+#   codeo_pin_repo_error <config>       prints a line and exits 1 when plugin.repo is set but not owner/name.
+#   codeo_config_is_object <config>     succeeds when the config parses and is a JSON object.
+#   codeo_kept_seeds <output>, codeo_kept_seeds_note   count the seed files containers.sh kept; the one-line note about them.
 codeo_derive_codename() {
     local c
     c=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr '._ ' '---' | tr -s '-' | sed 's/^[^a-z]*//' | cut -c1-30 | sed 's/-*$//')
@@ -79,4 +87,15 @@ codeo_pin_url() {
 # codeo_config_is_object <config>: the config parses and is a JSON object.
 codeo_config_is_object() {
     jq -e 'type == "object"' "$1" >/dev/null 2>&1
+}
+
+# codeo_pin_repo_error <config>: prints "config.json: plugin.repo '<x>' is not an owner/name" and returns 1 when the
+# config's plugin.repo is set but is not owner/name; returns 0 (printing nothing) otherwise. Callers stop on it before
+# they write anything, so a hand-edited value never reaches a URL.
+codeo_pin_repo_error() {
+    local repo
+    repo=$(jq -r '(.plugin | objects | .repo) // "" | tostring' "$1" 2>/dev/null || true)
+    [[ -z $repo || $repo =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_.-]+$ ]] && return 0
+    printf "config.json: plugin.repo '%s' is not an owner/name\n" "$repo"
+    return 1
 }

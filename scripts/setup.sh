@@ -60,6 +60,7 @@ run_containers() {
 write_pin() {
     local cfg="$CODEO_STATE_DIR/config.json" missing pin="" repo=${CODEO_PLUGIN_REPO:-kbajpai/codeo} r=""
     codeo_config_is_object "$cfg" || codeo_die "config.json is not valid JSON"
+    msg=$(codeo_pin_repo_error "$cfg") || codeo_die "$msg"
     missing=$(codeo_pin_missing "$cfg")
     [[ -n $missing ]] || return 0
     if [[ $missing == *ref* ]]; then
@@ -80,6 +81,7 @@ write_pin() {
     codeo_die "codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter, 2-30 characters"
 if [[ -e "$CODEO_STATE_DIR/config.json" && $containers == 1 && ${#stacks[@]} == 0 ]]; then
     codeo_config_is_object "$CODEO_STATE_DIR/config.json" || codeo_die "config.json is not valid JSON"
+    msg=$(codeo_pin_repo_error "$CODEO_STATE_DIR/config.json") || codeo_die "$msg"
     existing_cn=$(jq -r '.codename // empty' "$CODEO_STATE_DIR/config.json" 2>/dev/null || true)
     if [[ -n $codename && -n $existing_cn && $codename != "$existing_cn" ]]; then
         codeo_die "$CODEO_STATE_DIR/config.json already names '$existing_cn'; setup does not overwrite it"
