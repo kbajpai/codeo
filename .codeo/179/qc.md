@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 is written: round 2's blocking finding (G1) is fixed, no blocking finding is left, three non-blocking notes (H1-H3). The verdict is clear. Next step: `/codeo:close`.
+Round 4 is written: the merged tree (after #177) builds, passes the suite here and in a clean worktree, and has no blocking finding; three new non-blocking notes (I1-I3). The verdict is clear. Next step: `/codeo:close`.
 
 ## Questions
 
@@ -136,8 +136,46 @@ Issues filed by this pass: none.
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+### Round 4 — 2026-11-26
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `the branch already contains origin/main` (the merge `29b3df5` that `/codeo:implement` made after #177 is on the branch), so no `also changed on main:` lines. `overlap.sh 179`: nothing, exit 0. `overlap.sh --outside 179`: nothing, exit 0. `scope.sh origin/main HEAD`: `suite shell needed for unclassified paths: .codeo/179/close.md, .codeo/179/implement.md, .codeo/179/init.md, .codeo/179/issue.md, .codeo/179/plan.md, .codeo/179/qc.md, README.md`, `suite.shell=true`, exit 0. No shared environment is configured, so no `deploy=` line and no environment step.
+
+**Build.** `true` (suite `shell`): exit 0.
+
+**Tests.** `bash tests/run.sh` (whole suite, this tree): `all cases passed`, exit 0. The same in a clean worktree (`git worktree add ../codeo-179-qc HEAD`, removed afterwards): `all cases passed`, exit 0.
+
+**Criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | The doctor-checks intro describes only what `scripts/doctor.sh` checks; the two non-doctor entries sit under their own heading | met — the twelve leads equal the twelve names `scripts/doctor.sh` reports; the two entries sit under `### Installing and the pin` | `troubleshooting-groups` check; reviewer read `doctor.sh` |
+| 2 | "Start here" step 6 says the workflow finishes on the second `/codeo:close` | met — README.md:27 | `start-here` check; `skills/close/SKILL.md` step 8 |
+| 3 | The lock entry separates the TODOs a fresh `/codeo:init` fixes from the reconcile-by-hand ones | met — README.md:437 against `scripts/lock.sh`, `skills/init/SKILL.md:120-126,176-193` and `skills/close/SKILL.md`; every split matches a `lock: TODO` line | `lock-entry` check; reviewer read the three files |
+| 4 | A repeated heading's link resolves in `tests/readme.test.sh`, and the header names which path checks hold only because codeo uses itself | met — `slugs` self-check gives `x`, `x-1`, `x-2`; the header names `.codeo/`, `.codeo/.gitignore`, `.codeo/config.json` and `docs/plans/` | `slugs` self-check; header |
+| 5 | `docs/updating.md` "Updating superpowers" says to restart open sessions | met — docs/updating.md:124 | `updating` check |
+| 6 | `docs/handoff.md` and `docs/skills.md` give the same skill count | met — "Six pipeline skills" / "Six skills form the pipeline" | `skill-count` check |
+| 7 | A page tells another project how to adopt the role guard | met — `docs/home-checkout.md` "Adopting the guard in your project", between *The guard* and *The tracking comment*, linked from README.md and `docs/extension-points.md` | `adopting-guard` check; reviewer read the overlays and `role.sh` |
+| 8 | "Setting a project up" renders as intended in a strict Markdown renderer | met — three `###` steps, unindented paragraphs, column-0 fences; no renderer is installed here, the structure was read in CommonMark terms and the reviewer agrees | `setup-steps` check; reading |
+| 9 | `bash tests/run.sh` passes, in a clean worktree too | met | the two runs above, on the tree that merges #177 |
+
+**Documentation check.** The pages the plan names changed and no others (the files #177 changed came in with the merge, not from this branch). The merge left no conflict marker anywhere, `docs/home-checkout.md` reads as one page with #177's wording and this branch's new section, and `tests/readme.test.sh` holds both sides' checks once each, all named in its header. The new prose is present tense with no issue number and no "now".
+
+**Independent review (opus).** Quoted, not bold: no Critical; no Important; three Minor; assessment "Ready to merge: yes". It verified the lock entry against `scripts/lock.sh`, `skills/init/SKILL.md` and `skills/close/SKILL.md`, the doctor names, the guard page, the skill counts, the CommonMark structure, the slug function, that the new checks cannot pass vacuously, and that the merged files are coherent.
+
+**Findings.** None blocking.
+
+- **I1 — non-blocking.** README.md:549, *Updating*: the superpowers sentence ("Update it with `claude plugin update superpowers@superpowers-marketplace`.") does not say to restart open sessions, while `docs/updating.md` does; a reader of the README alone may skip the restart. The criterion names only `docs/updating.md`.
+- **I2 — non-blocking.** README.md:437: "two issues' dossiers name the same branch" understates it; `find_issue` (`scripts/lock.sh:43-52`) counts any number of `init.md` files naming the branch, archives included. The advice that follows is correct.
+- **I3 — non-blocking.** `tests/readme.test.sh:279,285`: `entry … | grep -qF` and `section … | grep -qF restart` run `grep -q` at the end of a pipe under `pipefail`; the outputs are a few lines, so the SIGPIPE risk is theoretical, and the file already does the same elsewhere.
+- Carried from rounds 2-3, still non-blocking: H1 (the "the branch and `origin/<branch>` have diverged" wording against `lock.sh:121`'s `$current`), H2 ("finishes on that second run" is incomplete when the engineer accepts `/codeo:close`'s background watch), H3 (the `lock-entry` assertion for `/codeo:init #<N>` already held before this change), G4 (`setup-steps` misses tab-indented and lazy-continuation lines).
+
+Issues filed by this pass: none.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-25 — qc round 1: build and suite pass here and in a clean worktree; one blocking finding (F1), five non-blocking; back to implement · cost: 9m · opus-5-5 293k in + 2.1M cached / 12k out · sonnet-5-5 223k in + 779k cached / 3k out
 - 2026-11-25 — qc round 2: build and suite pass here and in a clean worktree; one blocking finding (G1), three non-blocking; back to implement · cost: 8m · opus-5-5 355k in + 2M cached / 13k out · sonnet-5-5 24k in + 589k cached / 865 out
 - 2026-11-26 — qc round 3: build and suite pass here and in a clean worktree; no blocking finding, three non-blocking (H1-H3); clear · cost: 8m · opus-5-5 380k in + 1.8M cached / 12k out · sonnet-5-5 22k in + 330k cached / 415 out
+- 2026-11-26 — qc round 4 (after the conflict with main): build and suite pass here and in a clean worktree; no blocking finding, three non-blocking (I1-I3); clear · cost: 8m · opus-5-5 479k in + 2M cached / 14k out · sonnet-5-5 21k in + 401k cached / 301 out
