@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are open; no plan is drafted. Answer them in this file and re-run `/codeo:plan`.
+Q1-Q3 are answered. The plan is drafted at `.codeo/182/plan-draft.md` and waits at the review gate; nothing is open in this file.
 
 What exploration found:
 - **The gate is met.** `origin/main` is at `89789dd`, 8 commits past `v1.0.9` (`6e66283`): #175 (pin), #178 (#171), #180 (#170), #184 (#173), #183 (#176), #186 (#177), #187 (#179). `inflight.sh --except 182` prints `no other workflow in flight`.
@@ -37,6 +37,7 @@ What exploration found:
 *Recommendation:* mismatches only, and file the omissions as one new issue. The criterion is about mismatches; `README.md` is the one page every adopter reads, and each omission edit is a claim the next audit must re-check. The new issue ships in a later release.
 
 **Answer:**
+Mismatches plus every omission (engineer, in the conversation, 2026-11-26; recorded here by the skill). The two mismatches and every omission listed above are fixed in the release PR; nothing is filed for later.
 
 ### Q2 — Which entries does the `## v1.0.10` changelog section get beyond the four bullets already under `## Unreleased`?
 
@@ -47,6 +48,7 @@ What exploration found:
 *Recommendation:* both. #179 is required; #170 changed what the README and `.devcontainer/README.md` tell a Mac user, so a release note that omits it is wrong for the reader. Each bullet is one sentence and ends `Nothing the plugin does changes (#N).` where that is true. The README fix from Q1 gets one line of its own, so the notes name it.
 
 **Answer:**
+Go with the recommendation: bullets for #179 and #170, and one line for the README corrections (engineer, in the conversation, 2026-11-26; recorded here by the skill).
 
 ### Q3 — Does the release go out as two pull requests, as v1.0.9 did?
 
@@ -57,6 +59,7 @@ What exploration found:
 *Recommendation:* two PRs, as before. Your own steps are the merges, the tag push (`git tag v1.0.10 <SHA>`, lightweight, as `v1.0.5`–`v1.0.9`) and the container rebuild; the agent runs the clean-clone test and publishes the Release on your say-so.
 
 **Answer:**
+Two PRs (engineer, in the conversation, 2026-11-26; recorded here by the skill).
 
 ## Notes
 
@@ -71,3 +74,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-26 — Q1-Q3 raised · cost: unavailable
+- 2026-11-26 — Q1-Q3 answered; draft written to plan-draft.md for review · cost: unavailable
