@@ -143,6 +143,78 @@ out=$(printf 'not json' | bash "$hook" 2>/dev/null) || rc=$?
 assert_eq "bad json output" "" "$out"
 assert_eq "bad json status" 0 "$rc"
 
+# bcheck <want> <cwd> <command> [env…]: the decision for a Bash call.
+bcheck() {
+    local want=$1 cwd=$2 cmd=$3 out
+    shift 3
+    out=$(hook "$(bash_json "$cwd" "$cmd")" "$@")
+    assert_eq "[$cmd]" "$want" "$(decision "$out")"
+}
+# bhome <name> [staged]: a home clone with src/a.txt modified, and src/b.txt or .codeo/192/init.md staged.
+bhome() {
+    local d
+    d=$(clone "$1" codeo-home main)
+    echo m >>"$d/src/a.txt"
+    mkdir -p "$d/.codeo/192"
+    case ${2:-} in
+        src) echo b >"$d/src/b.txt"; git -C "$d" add src/b.txt ;;
+        codeo) echo i >"$d/.codeo/192/init.md"; git -C "$d" add .codeo/192/init.md ;;
+    esac
+    printf '%s\n' "$d"
+}
+
+case_desc=bash_git_writes_refused_in_home
+h=$(bhome bw1 src)
+for cmd in "git commit -m x" "git push" "git push origin main" "git checkout -b feat/x" "git switch -c feat/x" \
+    "git add src/a.txt" "git add -A" "git add ." "git stash" "git reset --hard" "git commit --amend -m x" \
+    "git commit -m x -- src/a.txt" "git -C $h commit -m x" "cd $h && git push" "echo hi && git push" \
+    "ls | git push" "CODEO_HOME_EDITS=allow git push" "git tag v1" "git merge x" "git rebase main"; do
+    bcheck deny "$h" "$cmd"
+done
+h=$(bhome bw2)
+bcheck deny "$h" "git commit -a -m x"
+bcheck deny "$h" "git commit -am x"
+
+case_desc=bash_allowed_in_home
+h=$(bhome ba1 codeo)
+mkdir -p "$scratch_root/wt"
+for cmd in "git status" "git log --oneline" "git diff" "git fetch origin" "git pull --ff-only" \
+    "git worktree add $scratch_root/wt/w1 -b b origin/main" "git worktree remove $scratch_root/wt/w1" \
+    "git branch -D b" "git checkout main" "git switch main" "git add .codeo/192/init.md" \
+    "git add ./.codeo/192/init.md .codeo/.gitignore" "git commit -m x" "bash scripts/claim.sh 1 b w" \
+    'echo "git push"' "git status && echo done" 'git commit -m "a; git push"'; do
+    bcheck allow "$h" "$cmd"
+done
+
+case_desc=bash_judged_by_the_checkout_it_addresses
+h=$(bhome bj1 src)
+i=$(clone bj2 codeo-192 feat/192-x 192)
+bcheck allow "$h" "git -C $i commit -m x"
+bcheck allow "$h" "cd $i && git push"
+bcheck deny "$i" "git -C $h commit -m x"
+bcheck deny "$i" "cd $h && git push"
+bcheck deny "$i" "cd $i && git -C $h push"
+mkdir -p "$h/.codeo/192"
+git -C "$h" -c user.name=t -c user.email=t@t commit -q -m s
+git -C "$h" worktree add -q "$scratch_root/bj-wt" -b scratch
+echo i >"$scratch_root/bj-wt/.codeo/n.md"
+git -C "$scratch_root/bj-wt" add .codeo/n.md
+bcheck allow "$h" "git -C $scratch_root/bj-wt commit -m x"
+echo c >"$scratch_root/bj-wt/src/c.txt"
+git -C "$scratch_root/bj-wt" add src/c.txt
+bcheck deny "$h" "git -C $scratch_root/bj-wt commit -m x"
+bcheck deny "$h" "cd $scratch_root/bj-wt && git commit -m x"
+bcheck deny "$scratch_root" "git -C bj-wt commit -m x"
+
+case_desc=bash_unguarded_roles
+h=$(bhome bu1 src)
+for cmd in "git commit -m x" "git push" "git add -A" "git checkout -b x" "git stash"; do
+    bcheck allow "$i" "$cmd"
+    bcheck allow "$h" "$cmd" CLAUDE_CODE_REMOTE=true
+    bcheck allow "$scratch_root/norepo" "$cmd"
+    bcheck allow "$h" "$cmd" CODEO_HOME_EDITS=allow
+done
+
 if [[ $failures -gt 0 ]]; then
     echo "$failures assertion(s) failed" >&2
     exit 1
