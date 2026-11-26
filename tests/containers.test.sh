@@ -195,6 +195,48 @@ the_plugin_pin_fails_soft_without_a_release() {
     grep -q '^fail containers: .*plugin.repo and plugin.ref' <<<"$doc" || fail "doctor does not report the missing pin"
 }
 
+pin_project() { # <name> <plugin json>: a clone with a codename config and the given .plugin
+    new_clone "$1" shop >/dev/null; local d="$work/$1"; mkdir -p "$d/.codeo"
+    jq -n --argjson p "${2:-null}" '{schema:1,codename:"shop",repo:{owner:"acme-co",name:"shop"},baseBranch:"main"} + (if $p == null then {} else {plugin:$p} end)' >"$d/.codeo/config.json"
+}
+run_setup() { (cd "$work/$1" && bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1); }
+plugin_of() { jq -c .plugin "$work/$1/.codeo/config.json"; }
+
+setup_fills_only_the_missing_plugin_key() {
+    pin_project pinref '{"ref":"v1.0.0"}'; run_setup pinref || fail "setup failed"
+    [[ $(plugin_of pinref) == '{"ref":"v1.0.0","repo":"kbajpai/codeo"}' ]] || fail "ref-only: $(plugin_of pinref)"
+    pin_project pinrepo '{"repo":"fork/codeo"}'; run_setup pinrepo || fail "setup failed"
+    [[ $(plugin_of pinrepo) == '{"repo":"fork/codeo","ref":"v9.9.9"}' ]] || fail "repo-only: $(plugin_of pinrepo)"
+    pin_project pinfull '{"repo":"fork/codeo","ref":"v1.2.3"}'; run_setup pinfull || fail "setup failed"
+    [[ $(plugin_of pinfull) == '{"repo":"fork/codeo","ref":"v1.2.3"}' ]] || fail "complete pin changed"
+    ! grep -q 'pinned the plugin\|wrote plugin.repo' "$work/out" || fail "a pin line for a complete pin: $(cat "$work/out")"
+    pin_project pinempty '{"repo":"","ref":""}'; run_setup pinempty || fail "setup failed"
+    [[ $(plugin_of pinempty) == '{"repo":"kbajpai/codeo","ref":"v9.9.9"}' ]] || fail "empty strings: $(plugin_of pinempty)"
+    local doc; doc=$(cd "$work/pinempty" && bash "$plugin_root/scripts/doctor.sh" 2>/dev/null || true)
+    grep -q '^ok containers' <<<"$doc" || fail "doctor disagrees: $doc"
+}
+
+setup_reports_a_failed_pin_write() {
+    pin_project pinfail '{"repo":"fork/codeo"}'
+    mkdir -p "$work/mvbin"; printf '#!/bin/sh\nexit 1\n' >"$work/mvbin/mv"; chmod +x "$work/mvbin/mv"
+    if (cd "$work/pinfail" && PATH="$work/mvbin:$PATH" bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1); then fail "setup succeeded with a failing write"; fi
+    ! grep -q 'pinned the plugin' "$work/out" || fail "success line after a failed write"
+    [[ ! -e $work/pinfail/.codeo/config.json.new ]] || fail "temp file left"
+    [[ $(plugin_of pinfail) == '{"repo":"fork/codeo"}' ]] || fail "config changed"
+}
+
+setup_notes_kept_seeds_once() {
+    local note='codeo: note: kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs its role-guard and host-workflow sections): see docs/container-templates.md, Managed and seed files'
+    pin_project seedfresh '{"repo":"a/b","ref":"v1"}'; run_setup seedfresh || fail "setup failed"
+    ! grep -q 'kept files are yours' "$work/out" || fail "note on a fresh project"
+    run_setup seedfresh || fail "rerun failed"
+    [[ $(grep -c 'kept files are yours' "$work/out") == 1 ]] || fail "note count: $(cat "$work/out")"
+    grep -qxF "$note" "$work/out" || fail "note text: $(cat "$work/out")"
+    pin_project seedmgd '{"repo":"a/b","ref":"v1"}'; mkdir -p "$work/seedmgd/.devcontainer"; echo x >"$work/seedmgd/.devcontainer/codeo-container.sh"
+    run_setup seedmgd || fail "setup failed"
+    ! grep -q 'kept files are yours' "$work/out" || fail "note for a kept managed script"
+}
+
 a_bad_codename_is_refused() {
     local d; d=$(new_project bad '{"schema":1,"codename":"Bad Name;","repo":{"owner":"o","name":"r"},"baseBranch":"main"}')
     if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "bad codename accepted"; fi
@@ -328,7 +370,7 @@ for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section cod
     setup_codename_with_containers_writes_it_into_a_codenameless_config setup_refuses_another_codename_on_a_config_that_has_one setup_refuses_a_todo_repository_before_deriving_a_codename setup_says_where_the_home_checkout_lives \
     an_underivable_repo_name_fails_before_any_write setup_containers_writes_the_plugin_pin the_plugin_pin_fails_soft_without_a_release \
     a_base_branch_other_than_main_is_followed overlays_name_the_base_branch a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
-    no_shipped_file_names_codeo_where_the_project_belongs; do
+    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once; do
     "$c"
 done
 echo "all cases passed"

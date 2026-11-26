@@ -259,6 +259,39 @@ a_kept_config_without_a_codename_and_an_underivable_name_fails_before_writing() 
     [[ ! -e $d/.devcontainer ]] || fail "containers written"
 }
 
+a_failed_suite_write_is_reported_and_the_next_suite_is_tried() {
+    local d; d=$(new_clone suitefail git@github.com:acme-co/shop.git)
+    mkdir "$d/.codeo"; echo '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"main","suites":[]}' >"$d/.codeo/config.json"
+    mkdir -p "$work/mvbin"; printf '#!/bin/sh\nexit 1\n' >"$work/mvbin/mv"; chmod +x "$work/mvbin/mv"
+    if (cd "$d" && PATH="$work/mvbin:$PATH" bash "$init" --yes --skip-install --env none --suite 'one:a:true:true' --suite 'two:b:true:true' >"$work/out" 2>&1); then fail "exit 0 after failed writes"; fi
+    grep -qxF 'init: fail suite: one: could not write .codeo/config.json' "$work/out" || fail "no failure line: $(cat "$work/out")"
+    grep -qxF 'init: fail suite: two: could not write .codeo/config.json' "$work/out" || fail "the next suite was not tried: $(cat "$work/out")"
+    ! grep -q 'init: ok suite' "$work/out" || fail "an ok line after a failed write"
+    [[ ! -e $d/.codeo/config.json.new ]] || fail "temp file left"
+}
+
+the_wizard_fills_only_the_missing_plugin_key() {
+    local d; d=$(new_clone wizpin git@github.com:acme-co/shop.git)
+    mkdir "$d/.codeo"; echo '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"main","plugin":{"ref":"v1.0.0"}}' >"$d/.codeo/config.json"
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
+    [[ $(jq -c .plugin "$d/.codeo/config.json") == '{"ref":"v1.0.0","repo":"kbajpai/codeo"}' ]] || fail "ref-only: $(jq -c .plugin "$d/.codeo/config.json")"
+    d=$(new_clone wizfork git@github.com:acme-co/shop.git)
+    mkdir "$d/.codeo"; echo '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"main","plugin":{"repo":"fork/codeo","ref":""}}' >"$d/.codeo/config.json"
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
+    [[ $(jq -c .plugin "$d/.codeo/config.json") == '{"repo":"fork/codeo","ref":"v9.9.9"}' ]] || fail "fork: $(jq -c .plugin "$d/.codeo/config.json")"
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
+    ! grep -q 'plugin pin' "$work/out" || fail "a pin line for a complete pin"
+}
+
+the_wizard_notes_kept_seeds_once() {
+    local d; d=$(new_clone wizseed git@github.com:acme-co/shop.git)
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
+    ! grep -q 'kept files are yours' "$work/out" || fail "note on a fresh project"
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1) || true
+    [[ $(grep -c 'kept files are yours' "$work/out") == 1 ]] || fail "note count: $(cat "$work/out")"
+    grep -qxF 'init: note: kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs its role-guard and host-workflow sections): see docs/container-templates.md, Managed and seed files' "$work/out" || fail "note text"
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
     questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
@@ -267,7 +300,8 @@ for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_create
     a_suite_test_command_may_hold_colons a_suite_build_command_cannot_hold_a_colon \
     a_clone_without_origin_head_does_not_say_ok_and_skips_the_containers a_mixed_case_repo_name_gets_a_derived_codename a_repo_name_that_cannot_yield_a_codename_fails_before_writing \
     an_invalid_explicit_codename_states_the_rule a_flag_without_a_value_is_a_usage_error a_setup_failure_names_its_reason \
-    a_kept_config_without_a_codename_gets_the_answer_written_into_it a_kept_config_without_a_codename_and_an_underivable_name_fails_before_writing; do
+    a_kept_config_without_a_codename_gets_the_answer_written_into_it a_kept_config_without_a_codename_and_an_underivable_name_fails_before_writing \
+    a_failed_suite_write_is_reported_and_the_next_suite_is_tried the_wizard_fills_only_the_missing_plugin_key the_wizard_notes_kept_seeds_once; do
     "$c"
 done
 echo "all cases passed"

@@ -177,18 +177,37 @@ if [[ -f .codeo/config.json ]]; then
         IFS=: read -r n p b t <<<"$s"
         if [[ -z $n || -z $t ]]; then say fail "suite: '$s' is not name:paths:build:test"; continue; fi
         if jq -e --arg n "$n" '.suites | any(.name == $n)' .codeo/config.json >/dev/null; then say skip "suite: $n exists"; continue; fi
-        jq --arg n "$n" --arg p "$p" --arg b "${b:-true}" --arg t "$t" \
+        if jq --arg n "$n" --arg p "$p" --arg b "${b:-true}" --arg t "$t" \
             '.suites += [{name:$n, paths:($p | split(",")), build:$b, test:$t, parallel:false}]' .codeo/config.json >.codeo/config.json.new \
-            && mv .codeo/config.json.new .codeo/config.json && say ok "suite: $n"
-    done
-    if [[ $env == containers ]] && ! jq -e '.plugin.ref' .codeo/config.json >/dev/null 2>&1; then
-        pin=$version
-        [[ -n $pin ]] || pin=$(codeo_latest_release "$plugin_url" || true)
-        if [[ -n $pin ]]; then
-            jq --arg r "$pin" --arg pr "${CODEO_PLUGIN_REPO:-kbajpai/codeo}" '.plugin = {repo: $pr, ref: $r}' .codeo/config.json >.codeo/config.json.new \
-                && mv .codeo/config.json.new .codeo/config.json && say ok "config: plugin pin $pin (the container installs it)"
+            && mv .codeo/config.json.new .codeo/config.json; then
+            say ok "suite: $n"
         else
+            rm -f .codeo/config.json.new
+            say fail "suite: $n: could not write .codeo/config.json"
+        fi
+    done
+    pin_missing=
+    [[ $env != containers ]] || pin_missing=$(codeo_pin_missing .codeo/config.json)
+    if [[ -n $pin_missing ]]; then
+        pin=
+        if [[ $pin_missing == *ref* ]]; then
+            pin=$version
+            [[ -n $pin ]] || pin=$(codeo_latest_release "$plugin_url" || true)
+        fi
+        if [[ $pin_missing == *ref* && -z $pin ]]; then
             say fail "config: no codeo release found to pin; set plugin.repo and plugin.ref in .codeo/config.json"
+        else
+            pin_repo=
+            [[ $pin_missing != *repo* ]] || pin_repo=${CODEO_PLUGIN_REPO:-kbajpai/codeo}
+            if codeo_pin_fill .codeo/config.json "$pin_repo" "$pin"; then
+                if [[ -n $pin ]]; then
+                    say ok "config: plugin pin $pin (the container installs it)"
+                else
+                    say ok "config: plugin.repo $pin_repo (the container installs it)"
+                fi
+            else
+                say fail "config: cannot write the plugin pin into .codeo/config.json"
+            fi
         fi
     fi
 fi
@@ -203,6 +222,7 @@ if [[ $env == containers && -f .codeo/config.json && $base_unset == 0 ]]; then
         else
             say ok "containers: $n_wrote written, $n_kept kept"
         fi
+        (( $(codeo_kept_seeds "$cont_out") == 0 )) || echo "init: note: $(codeo_kept_seeds_note)"
         home_cn=$(jq -r '.codename // empty' .codeo/config.json 2>/dev/null || true)
         [[ -z $home_cn ]] || codeo_home_lines "$home_cn" "$root" | sed 's/^/init: note: /'
     else

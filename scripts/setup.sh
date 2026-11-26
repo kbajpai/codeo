@@ -46,18 +46,33 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-[[ -n "$CODEO_PROJECT_ROOT" ]] || codeo_die "not inside a git repository"
-# --containers writes the codename and the plugin pin into the config when they are absent, so the config and the
-# rendered files agree and the container can install codeo. The pin fails soft: no release, no pin, files still written.
+# run_containers: containers.sh, then one note when it kept a seed file (a Dockerfile, devcontainer.json, sandbox image
+# or overlay a project already had), because the managed scripts rely on what the seeds provide.
+run_containers() {
+    local out
+    out=$(bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh") || { printf '%s\n' "$out"; return 1; }
+    printf '%s\n' "$out"
+    (($(codeo_kept_seeds "$out") == 0)) || echo "codeo: note: $(codeo_kept_seeds_note)"
+}
+# --containers fills the codename and the plugin pin into the config where a key is absent or empty, so the config and
+# the rendered files agree and the container can install codeo. Only the missing key is written: a fork's plugin.repo
+# stays. The ref fails soft: no release, no pin, files still written.
 write_pin() {
-    local pin
-    jq -e '.plugin.ref and .plugin.repo' "$CODEO_STATE_DIR/config.json" >/dev/null 2>&1 && return 0
-    if pin=$(codeo_latest_release "${CODEO_PLUGIN_URL:-https://github.com/${CODEO_PLUGIN_REPO:-kbajpai/codeo}.git}"); then
-        jq --arg r "$pin" --arg pr "${CODEO_PLUGIN_REPO:-kbajpai/codeo}" '.plugin = {repo: $pr, ref: $r}' "$CODEO_STATE_DIR/config.json" >"$CODEO_STATE_DIR/config.json.new" &&
-            mv "$CODEO_STATE_DIR/config.json.new" "$CODEO_STATE_DIR/config.json"
+    local cfg="$CODEO_STATE_DIR/config.json" missing pin="" repo=${CODEO_PLUGIN_REPO:-kbajpai/codeo} r=""
+    missing=$(codeo_pin_missing "$cfg")
+    [[ -n $missing ]] || return 0
+    if [[ $missing == *ref* ]]; then
+        if ! pin=$(codeo_latest_release "${CODEO_PLUGIN_URL:-https://github.com/$repo.git}"); then
+            echo "codeo: no codeo release found to pin; set plugin.repo and plugin.ref in .codeo/config.json"
+            return 0
+        fi
+    fi
+    [[ $missing == *repo* ]] && r=$repo
+    codeo_pin_fill "$cfg" "$r" "$pin" || codeo_die "cannot write the plugin pin into .codeo/config.json"
+    if [[ -n $pin ]]; then
         echo "codeo: pinned the plugin to $pin in .codeo/config.json"
     else
-        echo "codeo: no codeo release found to pin; set plugin.repo and plugin.ref in .codeo/config.json"
+        echo "codeo: wrote plugin.repo $r to .codeo/config.json"
     fi
 }
 [[ -z $codename || ($codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#codename} -ge 2 && ${#codename} -le 30) ]] ||
@@ -90,7 +105,7 @@ if [[ -e "$CODEO_STATE_DIR/config.json" && $containers == 1 && ${#stacks[@]} == 
         existing_cn=$cn
     fi
     write_pin
-    bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh"
+    run_containers
     codeo_home_lines "$existing_cn" "$CODEO_PROJECT_ROOT" | sed 's/^/codeo: /'
     exit 0
 fi
@@ -141,6 +156,6 @@ echo "codeo: created .codeo/config.json for $owner/$name (base $base); run /code
 
 if ((containers)); then
     write_pin
-    bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh"
+    run_containers
     codeo_home_lines "$codename" "$CODEO_PROJECT_ROOT" | sed 's/^/codeo: /'
 fi

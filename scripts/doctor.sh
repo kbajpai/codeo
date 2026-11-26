@@ -14,6 +14,7 @@
 set -uo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/codename.sh"
 
 failed=0
 report() { # status check detail
@@ -288,7 +289,7 @@ if [[ -e $CODEO_PROJECT_ROOT/.devcontainer/codeo-container.sh || -e $CODEO_PROJE
                 cont_msg=$(head -n 1 <<<"$cont_out")
             fi
         fi
-        if [[ $(cfg '(.plugin.repo // "") != "" and (.plugin.ref // "") != ""') != true ]]; then
+        if [[ -n $(codeo_pin_missing "$CODEO_STATE_DIR/config.json") ]]; then
             cont_msg="${cont_msg:+$cont_msg; }.devcontainer/ is present but .codeo/config.json has no plugin.repo and plugin.ref, so the container cannot install codeo; set them (see docs/container-templates.md)"
         fi
         if [[ -n $cont_msg ]]; then
