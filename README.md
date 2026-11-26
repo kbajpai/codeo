@@ -265,7 +265,7 @@ Details: [docs/skills.md#issue](docs/skills.md#issue).
 
 - **Run:** `/codeo:init <number>`. The number can be `42`, `#42` or the issue's URL.
 - **It asks:** almost nothing. It stops for one review of `init.md` (approve, change or reject), and for an override if you are taking over someone else's claim. Its own question list normally reads `None.`
-- **It writes:** [.codeo/<N>/init.md](.codeo/done/143/init.md): the issue, the branch, the state, and the acceptance criteria word for word. It also copies the approved draft to `.codeo/<N>/issue.md`. It cuts and pushes the branch (`<type>/<N>-<slug>`), moves the card to In progress and takes the workflow lock.
+- **It writes:** [.codeo/<N>/init.md](.codeo/done/143/init.md): the issue, the branch, the state, and the acceptance criteria word for word. It also copies the approved draft to `.codeo/<N>/issue.md`. It cuts and pushes the branch (`<type>/<N>-<slug>`), moves the card to In progress and takes the workflow lock. Once the push has claimed the branch, it assigns you to the issue; when `gh` has no login it skips that and notes the skip in a Claim line of `## Outcome`.
 - **It commits:** `docs(codeo): init dossier for #<N>`.
 - **Next:** `/codeo:plan`, usually in the same session.
 
@@ -275,7 +275,8 @@ Details: [docs/skills.md#init](docs/skills.md#init).
 
 - **Run:** `/codeo:plan [optional: which part of the locked issue to plan]`.
 - **It asks:** its questions go in the dossier, `.codeo/<N>/plan.md`, each with why it matters and the options. The run stops until you answer there; run the command again to continue. You then review the plan in the conversation.
-- **It writes:** [.codeo/<N>/plan.md](.codeo/done/143/plan.md), the decisions. The plan itself goes under `docs/plans/` only after you approve it, and is left uncommitted for you to review. It never writes application code.
+- **It writes:** [.codeo/<N>/plan.md](.codeo/done/143/plan.md), the decisions. The plan itself goes under `docs/plans/` only after you approve it, and is left uncommitted for you to review. The output can also be a reference doc under `docs/`, or both. While you review it, the draft is a preview file, `.codeo/<N>/plan-draft.md`, which is not committed and is deleted once the real file is written. It never writes application code.
+- **It compares:** the plan's footprint with every other workflow in flight. Each overlap becomes a numbered question in `plan.md`, and the run stops until you answer it. For an exclusive resource it takes the resource's lease and, when another workflow holds it, records the wait and stops until the lease is free.
 - **It commits:** only the dossier: `docs(codeo): plan dossier for #<N>`, or with a suffix such as `— Q1-Q9 raised` or `— footprint`.
 - **Next:** review and commit the plan, then `/codeo:implement`.
 
@@ -304,8 +305,8 @@ Details: [docs/skills.md#qc](docs/skills.md#qc).
 ### 6. /codeo:close
 
 - **Run:** `/codeo:close [--stash]`. `--stash` parks the workflow instead of finishing it.
-- **It asks:** whether to delete the remote branch, once, after the merge. It never merges: you merge the pull request on GitHub, then run the command again.
-- **It writes:** [.codeo/<N>/close.md](.codeo/done/143/close.md). It opens the pull request, and the dossier moves to `.codeo/done/<N>/` inside that pull request. After you merge and run it again, it proves the merge, asks about deleting the branch, and releases every lease and the lock. A stash sends the card back to Ready. A pull request closed unmerged can be abandoned, which sends the card to Backlog.
+- **It asks:** whether to delete the remote branch, once, after the merge. It never merges: you merge the pull request on GitHub, then run the command again. Overlap with another workflow (`overlap.sh`) is a numbered question in `close.md`, and so is what to do with a pull request closed unmerged: reopen it, stash the work or abandon it.
+- **It writes:** [.codeo/<N>/close.md](.codeo/done/143/close.md). It opens the pull request, and the dossier moves to `.codeo/done/<N>/` inside that pull request. With a board, the card goes to In review when the pull request opens, back to In progress on a send-back, and to Done once the merge is proved and the issue is closed. When the base branch has moved and the pull request is behind it, a clean `git merge --no-edit origin/<base>` is pushed for you; a conflict is a send-back. It comments on the pull request when it returns from review, listing what changed, and again after the merge, recording what it checked and released. After you merge and run it again, it proves the merge, asks about deleting the branch, deletes the issue's `codeo-live/<issue>/*` branches on origin (a hosted web session deletes none: it cannot delete a branch) and releases every lease and the lock. A stash sends the card back to Ready. A pull request closed unmerged can be abandoned, which sends the card to Backlog.
 - **It commits:** `docs(codeo): close dossier for #<N> — PR #<pr>`. Review feedback or a conflict with the base branch is another round (`— review feedback`) and goes back through `/codeo:implement` and `/codeo:qc`.
 - **Next:** the first run ends by telling you to review and merge the pull request, then run `/codeo:close` again. After the merge, `/codeo:triage`, which looks for loose ends the work left behind. A stash ends with `/codeo:init #<N>`, to start it again.
 
