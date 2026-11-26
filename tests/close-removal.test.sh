@@ -20,7 +20,7 @@ for needle in 'codeo rm <N>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
     'not inside this container' 'git status' 'bash shell on the host (Linux, macOS, or WSL2 on Windows)' 'docker rm -f codeo-<N>' 'docker volume rm codeo-<N>' 'does not check for unpushed work' \
     'When the lock'"'"'s `host` is `container`' 'no checkout to remove' '/codeo:triage' '/codeo:cleanup' 'home checkout' 'the host clone named `codeo-home`' \
     'After a finished close' 'After a stash:' 'After an abandon:' \
-    'its number is the lock'"'"'s `issue`' '/codeo:init #<N>' 'docs/container-templates.md' \
+    'its number is the lock'"'"'s `issue`' '/codeo:init #<N>' 'codeo help' \
     'When the lock has a `sandbox:` line' 'codeo-sandbox.sh issue <N> <branch>' \
     'bash .devcontainer/codeo-track.sh mark <N> branch <branch> deleted' 'track:' 'project root' 'step 14' \
     'docker rmi codeo-dev:codeo-<N>' 'on the host that created the container' 'bash codeo-sandbox.sh end <N>' 'does not end a sandbox'; do
@@ -60,7 +60,7 @@ check_overlay() {
         [[ "$part" == *'home checkout'* ]] \
             || { echo "check c: the $name paragraph lacks 'home checkout'"; return 1; }
     done
-    for needle in 'the only copy' 'docs/container-templates.md'; do
+    for needle in 'the only copy' '`codeo help` lists `codeo rm`'; do
         [[ "$aband" == *"$needle"* ]] || { echo "check d: the abandon paragraph lacks $needle"; return 1; }
     done
     sbx='When the lock has a `sandbox:` line'${text#*'When the lock has a `sandbox:` line'}

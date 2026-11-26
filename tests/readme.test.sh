@@ -251,6 +251,10 @@ else
     grep -qF 'scripts/codeo-init.sh' <<<"$adopting" || fail adopting-paths "the Adopting section does not name scripts/codeo-init.sh"
     grep -qF '/codeo:setup --containers' <<<"$adopting" || fail adopting-paths "the Adopting section does not name /codeo:setup --containers"
     grep -qF '](docs/container-templates.md' <<<"$adopting" || fail adopting-paths "the Adopting section does not link docs/container-templates.md"
+    grep -qiF "is public" <<<"$adopting" || fail adopting-paths "the Adopting section does not say the repository must be public"
+    grep -qF "<codename>-home" <<<"$adopting" || fail adopting-paths "the Adopting section does not name the <codename>-home folder"
+    grep -qF "CODEO_HOME" <<<"$adopting" || fail adopting-paths "the Adopting section does not name CODEO_HOME"
+    ! grep -qF "bash scripts/containers.sh" <<<"$adopting" || fail adopting-paths "the Adopting section shows bash scripts/containers.sh, which a project does not have"
 fi
 
 # troubleshooting-groups: three ### groups, the doctor group's leads, the pin group's first entries.

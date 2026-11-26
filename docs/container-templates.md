@@ -33,6 +33,7 @@ This page is the reference for the dev container and sbx sandbox files codeo wri
 | `~/.codeo-sandbox` and the `CODEO_SANDBOX_MARK` variable (`.devcontainer/scripts/session-title.sh`, `.sbx/codeo-sandbox.sh`) | the marker that says a shell is inside a sandbox | Intentionally codeo's |
 | `.devcontainer/scripts/codeo-root.sh` | the lookup of the installed plugin | Intentionally codeo's |
 | The `CODEO_*` environment variables and the `.codeo/` directory | the plugin's settings and state | Intentionally codeo's |
+| The home clone's folder name, which `.devcontainer/scripts/role.sh` reads | `<codename>-home` | Placeholder: `@CODENAME@`; the clone `setup --containers` ran in is a home checkout only when its folder has this name |
 | `kbajpai/codeo` in `scripts/codeo-init.sh` (`CODEO_PLUGIN_REPO`) and the `codeo-init.sh` usage text | the plugin's own source repository | Intentionally codeo's |
 
 A project that is not codeo therefore carries its own name, its repository and its base branch in every shipped file, and codeo's own name only where the plugin's own scripts and settings are meant.
@@ -56,10 +57,10 @@ A project that is not codeo therefore carries its own name, its repository and i
 - `.sbx/claude-image`
 - `.codeo/overlays/issue.md`, `init.md`, `triage.md`, `cleanup.md`, `plan.md`, `implement.md`, `qc.md` and `close.md`
 
-Run it from inside the project:
+Run it from inside the project, where `<plugin>` is the installed plugin's directory (the script is in the plugin, not in the project):
 
 ```bash
-bash scripts/containers.sh [--check] [--force]
+bash <plugin>/scripts/containers.sh [--check] [--force]
 ```
 
 - Without a flag, a file that is absent is written and a file that exists is left alone.
@@ -148,4 +149,8 @@ flowchart TD
     J --> K["codeo issue N -> container or sandbox"]
 ```
 
-Commit the files it wrote and push them to the base branch; after that, `codeo issue <N>` opens an issue in a container or a sandbox.
+Commit the files it wrote and push them to the base branch; after that, `codeo issue <N>` opens an issue in a container or a sandbox. Three conditions decide whether it works:
+
+- **The repository is public.** The image build (`https://github.com/<owner>/<repo>.git#<ref>:.devcontainer`), the container's clone, and the `codeo` command with its install line (`raw.githubusercontent.com`) fetch without credentials, so for a private repository the install line, `codeo issue <N>`, `codeo update` and the container's clone fail with no explanation. `CODEO_CONTEXT`, the `.devcontainer` directory of a local clone, builds the image without fetching it, but the container still clones from `CODEO_REPO_URL` with no credentials, so it does not make a private repository's container work. `CODEO_RAW_URL` names another base URL for the `codeo` command's three script downloads, and a script already present in `CODEO_HOME` is not downloaded again. The sandbox route's clone is made by the host's own `git`. codeo does not test a private repository and has no authenticated fetch. The audit table's two kinds (a placeholder, or codeo's own name) do not describe a requirement on the repository's visibility, so this section states it instead of a table row.
+- **The folder you ran it in is named `<codename>-home`.** That clone is a home checkout only under that name: the shipped role guard reads the folder name, and in any other folder `role.sh --check issue` reports `stray` and `/codeo:issue` is refused. `scripts/setup.sh` and the wizard end by printing `the home checkout is a clone whose folder is named <codename>-home` with the current folder's name, and one line more to rename or re-clone it when it differs.
+- **The clone is not at `~/<codename>`.** The `codeo` command's home directory (`CODEO_HOME`) defaults to `~/<codename>`, and the codename defaults to the repository's name, so a project cloned to `~/<repo>` makes every `codeo` command stop with "is a git checkout; set CODEO_HOME". Keep the project's clone elsewhere, or set `CODEO_HOME`.
