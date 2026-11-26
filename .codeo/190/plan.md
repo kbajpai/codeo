@@ -116,6 +116,23 @@ One pull request (engineer, "go with your picks", in the conversation, 2026-11-2
 
 ## Notes
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-26-container-setup-reusable-190.md` (unstaged until reviewed), with the reference page `docs/container-templates.md` it creates |
+| Shape | A plan under `docs/plans/` with a `**Spec:**` line pointing at a new reference page (the audit is a standing reference) |
+
+**Decisions (Q1-Q7, all the recommendations, engineer in the conversation 2026-11-26).** Real run on a sample app in a throwaway repository the engineer creates (rejected: only their own monorepo; both). Tools-only toolchain, no host Docker socket, no cluster (rejected: socket, `kind`). Setup writes the role guard and host-workflow overlays as seed files (rejected: guard only; neither). The one-sentence `skills/setup/SKILL.md` edit stays in scope. Codeo's own seeds equal the templates outside the project's own parts (rejected: managed scripts only). `codeo-init.sh` fetches its own release when run alone (rejected: `install.sh --init`; two commands). One pull request.
+
+**My call, for review:** the host run accepts `fail ruleset` as the only doctor failure; a new repository has no ruleset and codeo never creates one.
+
+**Found while planning:** the base branch is hardcoded as `main` in the `codeo` command's download URL and in `codeo-container.sh`; the overlays name `codeo-<N>` and the repository. Tasks 1-2 fix both.
+
+**Documentation the plan changes:** `README.md`, `.devcontainer/README.md`, `.sbx/README.md`, `docs/home-checkout.md`, `docs/skills.md`, `CHANGELOG.md`, and the new `docs/container-templates.md`.
+
+**Intake questions resolved:** the `skills/setup/SKILL.md` edit is in scope (Q4); the first slice is already on the branch (`c361707`).
+
 ### Footprint
 
 ```
@@ -124,13 +141,6 @@ wiki:       none
 exclusive:  none
 sequenced:  none
 ```
-
-- Plan shape (step 5), stated before drafting: an implementation plan at `docs/plans/2026-11-26-container-setup-reusable-190.md`, with a `**Spec:**` line pointing at a new reference page, `docs/container-templates.md`, that holds the audit list, the managed and seed file kinds and how each name is derived from the config. The audit is a standing reference, so it does not go under `docs/plans/`.
-- Host tasks are given as `bash <script in the repository>`: the host already runs bash for `codeo-container.sh`, so no shell question is needed.
-
-## Outcome
-
-_Pending — written at the hand-off._
 
 ## Log
 - 2026-11-26 — Q1-Q7 raised · cost: 5m · fable-5-2 100k in + 851k cached / 9k out
