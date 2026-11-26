@@ -14,8 +14,8 @@
 # CODEO_ASSUME_YES=1 (the wizard's --yes) turns every question into its default.
 # Prompts go to stderr so stdout stays for results.
 
-codeo_tty_answers() { # succeed when answers come from /dev/tty: stdin is not a terminal, nothing stands in for one, and /dev/tty opens
-    [[ ${CODEO_ASSUME_YES:-0} != 1 && ${CODEO_PROMPT_TTY:-0} != 1 && ! -t 0 ]] && { : </dev/tty; } 2>/dev/null
+codeo_tty_answers() { # succeed when answers come from /dev/tty: stdin is a pipe (not a terminal, /dev/null or a file), nothing stands in for a terminal, and /dev/tty opens
+    [[ ${CODEO_ASSUME_YES:-0} != 1 && ${CODEO_PROMPT_TTY:-0} != 1 && ! -t 0 && -p /dev/stdin ]] && { : </dev/tty; } 2>/dev/null
 }
 
 codeo_interactive() {

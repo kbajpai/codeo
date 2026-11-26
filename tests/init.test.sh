@@ -139,11 +139,20 @@ a_pipe_without_a_terminal_takes_the_defaults() {
     [[ $(jq -r .codename "$d/.codeo/config.json") == piped ]] || fail "default codename is not the repo name"
 }
 
+a_closed_stdin_under_a_terminal_takes_the_defaults() {
+    command -v script >/dev/null && script -qec true /dev/null >/dev/null 2>&1 || { echo "SKIP a_closed_stdin_under_a_terminal_takes_the_defaults: no util-linux script" >&2; return 0; }
+    local d; d=$(new_clone devnull git@github.com:acme-co/devnull.git)
+    (cd "$d" && timeout 20 script -qec "bash '$init' --skip-install </dev/null" /dev/null >"$work/out" 2>&1 </dev/null) || true
+    grep -q '^init: ok config' "$work/out" || fail "hung or failed under a terminal: $(cat "$work/out")"
+    ! grep -q 'Codename' "$work/out" || fail "asked on the terminal despite </dev/null"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == devnull ]] || fail "default codename is not the repo name"
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
     questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
     a_lone_script_fetches_its_release a_lone_script_with_no_release_fails_in_one_line \
-    a_pipe_without_a_terminal_takes_the_defaults; do
+    a_pipe_without_a_terminal_takes_the_defaults a_closed_stdin_under_a_terminal_takes_the_defaults; do
     "$c"
 done
 echo "all cases passed"

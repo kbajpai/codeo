@@ -43,6 +43,7 @@ if [[ -z $here || ! -f $here/lib/prompt.sh ]]; then
     tmp=$(mktemp -d 2>/dev/null) || fetch_fail "cannot create a temporary directory"
     git clone -q --depth 1 --branch "$tag" "$plugin_url" "$tmp" >/dev/null 2>&1 || { rm -rf "$tmp"; fetch_fail "cannot clone $tag from $plugin_url"; }
     [[ -f $tmp/scripts/codeo-init.sh ]] || { rm -rf "$tmp"; fetch_fail "$tag has no scripts/codeo-init.sh"; }
+    # The clone in $tmp is left in place on purpose: the script runs from it, and the OS cleans the temp directory.
     export CODEO_INIT_FETCHED=1
     exec bash "$tmp/scripts/codeo-init.sh" "$@"
 fi
