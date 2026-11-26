@@ -210,7 +210,7 @@ mkdir -p ~/.local/bin && curl -fsSL -o ~/.local/bin/codeo https://raw.githubuser
 
 `CODEO_RAW_URL` names another base URL to download from, and `CODEO_REPO_URL` another repository to clone; in a rendered script their defaults are the project's own.
 
-**An example.** `examples/csharp-angular/` shows a Dockerfile toolchain section (`examples/csharp-angular/.devcontainer/Dockerfile`) and suites (`examples/csharp-angular/codeo-suites.json`) for a C# API, an Angular web app and Kubernetes manifests, with `api/`, `k8s/`, `examples/csharp-angular/scripts/generate-web.sh` and `examples/csharp-angular/scripts/run-suites.sh` beside them. [docs/container-templates.md](../docs/container-templates.md#the-c--angular-example) lists the files and the steps to use them. The example has not been built by this repository's tests, which use stub commands in place of .NET, Node and Docker.
+**An example.** `examples/csharp-angular/` shows a Dockerfile toolchain section (`examples/csharp-angular/.devcontainer/Dockerfile`) and suites (`examples/csharp-angular/codeo-suites.json`) for a C# API, an Angular web app and Kubernetes manifests, with `api/`, `k8s/`, `examples/csharp-angular/scripts/generate-web.sh` and `examples/csharp-angular/scripts/run-suites.sh` beside them. [docs/container-templates.md](../docs/container-templates.md#the-c--angular-example) lists the files and the steps to use them. The example has not been built by this repository's tests, which use stub commands in place of .NET, Node and Docker. `examples/csharp-angular/scripts/host-run.sh` checks it end to end on a host with Docker; [docs/container-templates.md](../docs/container-templates.md#the-c--angular-example) has the details.
 
 ## Removing a finished container
 
