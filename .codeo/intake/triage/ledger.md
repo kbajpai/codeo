@@ -223,3 +223,4 @@
 | `issue:190` | One-command setup / reusable containers; filed, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-26 |
 | `branch:feat/190-one-command-setup` | Pushed 2026-11-26, no PR, no dossier; same workflow as #190 | ready | 2026-11-26 |
 | `issue:192` | Guard the home checkout; filed 2026-11-26, not on the board → `Ready` on the engineer's say-so | ready | 2026-11-26 |
+| `qc:182:F1-F3` | #182 QC round 1 F1-F3 (README doctor-skip wording, install test still uses v1.0.9 as latest, changelog bullet omits qc/doctor changes) | deferred | 2026-11-26 |
