@@ -159,11 +159,35 @@ the_dockerfile_points_chrome_bin_at_a_no_sandbox_wrapper() {
     grep -E "$bin" "$df" | grep -v '^ENV' | grep -q -- '--no-sandbox' || fail "the wrapper $bin does not pass --no-sandbox"
 }
 
+host_run_refuses_without_docker_and_arguments() {
+    local script="$ex/scripts/host-run.sh" tools="$work/host-run-tools" rc=0 bad
+    # No argument: usage, exit 2 (checked before anything else).
+    "$BASH" "$script" >"$work/out" 2>&1 || rc=$?
+    [[ $rc -eq 2 ]] || fail "no argument exited $rc, not 2: $(cat "$work/out")"
+    # PATH holds nothing: the script checks its argument and docker with builtins only, so docker is absent
+    # wherever a host installs it.
+    mkdir -p "$tools"
+    rc=0
+    PATH="$tools" "$BASH" "$script" owner/repo >"$work/out" 2>&1 || rc=$?
+    [[ $rc -eq 1 ]] || fail "missing docker exited $rc, not 1: $(cat "$work/out")"
+    [[ $(grep -c '^host-run: fail docker' "$work/out") -eq 1 ]] || fail "not exactly one docker line: $(cat "$work/out")"
+    # An argument that is not owner/repo is refused before the tools are looked for.
+    for bad in justarepo owner/repo/extra -owner/repo 'owner/re po' ''; do
+        rc=0
+        PATH="$tools" "$BASH" "$script" "$bad" >"$work/out" 2>&1 || rc=$?
+        [[ $rc -eq 2 ]] || fail "argument '$bad' exited $rc, not 2: $(cat "$work/out")"
+    done
+    rc=0
+    PATH="$tools" "$BASH" "$script" owner/repo extra >"$work/out" 2>&1 || rc=$?
+    [[ $rc -eq 2 ]] || fail "two arguments exited $rc, not 2: $(cat "$work/out")"
+}
+
 for c in suites_merge_into_a_config_and_doctor_resolves_them the_dockerfile_extends_the_template_only_inside_its_section \
     run_suites_stops_at_the_first_failure api_directory_resolves_to_exactly_one_solution_that_lists_the_test_project \
     run_suites_does_not_let_a_suite_swallow_the_rest run_suites_fails_when_a_test_phase_fails run_suites_passes_arguments_through_bash_c \
     run_suites_fails_on_invalid_config the_manifests_name_no_codeo_project \
-    generate_web_names_a_pinned_cli_and_refuses_an_existing_app the_dockerfile_points_chrome_bin_at_a_no_sandbox_wrapper; do
+    generate_web_names_a_pinned_cli_and_refuses_an_existing_app the_dockerfile_points_chrome_bin_at_a_no_sandbox_wrapper \
+    host_run_refuses_without_docker_and_arguments; do
     "$c"
 done
 echo "all cases passed"
