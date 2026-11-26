@@ -200,7 +200,7 @@
 | `issue:166` | Close the #157 leftovers; filed 2026-11-24, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-24 |
 | `qc:161:F4-F7-preexisting` | #161 F4, F7 and four pre-existing README/CHANGELOG/`stop_started` gaps | already #173 | 2026-11-25 |
 | `qc:161:F5-F6-F8` | #161 `SessionStart` hook: skip check, undocumented, restart wording | already #173 | 2026-11-25 |
-| `unclosed:161` | `origin/claude/ecstatic-mendel-n3qyzl` still on origin though #161 merged | fix named — `/codeo:close` in #161's checkout; the branch delete is by hand | 2026-11-25 |
+| `unclosed:161` | `origin/claude/ecstatic-mendel-n3qyzl` and `origin/docs/documentation-leftovers-154-146-removal` still on origin though #161 merged (PR #167) | fix named — `/codeo:close` in #161's checkout; the branch delete is by hand | 2026-11-26 |
 | `issue:168` | Release v1.0.9; filed 2026-11-25 or earlier, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
 | `issue:170` | Docs: host command installs separately, macOS flock and keychain; board Status `Backlog` → `Ready` | ready | 2026-11-25 |
 | `issue:171` | README complete guide; board Status `Backlog` → `Ready` | ready | 2026-11-25 |
@@ -223,4 +223,6 @@
 | `issue:190` | One-command setup / reusable containers; filed, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-26 |
 | `branch:feat/190-one-command-setup` | Pushed 2026-11-26, no PR, no dossier; same workflow as #190 | ready | 2026-11-26 |
 | `issue:192` | Guard the home checkout; filed 2026-11-26, not on the board → `Ready` on the engineer's say-so | ready | 2026-11-26 |
-| `qc:182:F1-F3` | #182 QC round 1 F1-F3 (README doctor-skip wording, install test still uses v1.0.9 as latest, changelog bullet omits qc/doctor changes) | deferred | 2026-11-26 |
+| `qc:182:F1-F3` | #182 QC round 1 F1-F3 (README doctor-skip wording, install test still uses v1.0.9 as latest, changelog bullet omits qc/doctor changes) | filed #193 | 2026-11-26 |
+| `qc:179:G4-H1-H3-I1-I2-J1-J3` | #179 QC rounds 2-5 non-blocking notes (lock-entry wording, README:27, test guards, Updating restart line, home-checkout:49) | filed #193 | 2026-11-26 |
+| `issue:193` | Close the #179 and #182 QC leftovers; filed 2026-11-26, board Status Backlog | backlog | 2026-11-26 |
