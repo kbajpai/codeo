@@ -69,7 +69,6 @@ tools=(Edit Write NotebookEdit)
 case_desc=file_tools_refused_in_guarded_roles
 for spec in "home:codeo-home:main:home" "stale:codeo-home:other:stale:?" "stray:elsewhere:main:stray"; do
     IFS=: read -r name folder branch role <<<"$spec"
-    [[ $name == stale ]] && role='stale:?'
     c=$(clone "$name" "$folder" "$branch")
     for t in "${tools[@]}"; do
         out=$(hook "$(file_json "$t" "$c" "$c/src/a.txt")")
@@ -79,7 +78,7 @@ for spec in "home:codeo-home:main:home" "stale:codeo-home:other:stale:?" "stray:
         assert_contains "$name issue skill" "/codeo:issue" "$reason"
         assert_contains "$name codeo issue" "codeo issue <N>" "$reason"
         assert_contains "$name override" "CODEO_HOME_EDITS=allow" "$reason"
-        assert_eq "$name one line" 1 "$(printf '%s' "$reason" | wc -l | awk '{print $1+1}')"
+        [[ $reason != *$'\n'* ]] || assert_eq "$name one line" "no newline" "newline"
     done
 done
 
@@ -117,6 +116,12 @@ out=$(hook "$(file_json Edit "$scratch_root/norepo" "$scratch_root/link/src/a.tx
 assert_eq "symlink" deny "$(decision "$out")"
 out=$(hook "$(file_json Edit "$h" "$iss/src/a.txt")")
 assert_eq "issue file with home cwd" allow "$(decision "$out")"
+out=$(hook "$(file_json Write "$h" "$h/.codeo/nope/../../src/x.txt")")
+assert_eq ".codeo dot-dot escape" deny "$(decision "$out")"
+out=$(hook "$(file_json Write "$h" "$h/.codeo/new/dir/f.md")")
+assert_eq ".codeo new nested file" allow "$(decision "$out")"
+out=$(hook "$(file_json Write "$h" "$h/.codeo-x/f.txt")")
+assert_eq ".codeo-x sibling" deny "$(decision "$out")"
 
 case_desc=override_and_fail_open
 h=$(clone override codeo-home main)

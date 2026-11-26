@@ -52,7 +52,9 @@ main() {
     real=$(cd "$dir" 2>/dev/null && pwd -P) || return 0
     root=$(git -C "$real" rev-parse --show-toplevel 2>/dev/null) || return 0
     [[ -n $root ]] || return 0
-    [[ "${real%/}$rest" == "$root"/.codeo/* ]] && return 0
+    # Known limit: a symlink inside .codeo/ pointing at a project file is exempt. A ".." in the tail
+    # that does not exist yet could climb out of .codeo/, so it is never exempt.
+    [[ "/$rest/" != */../* && "${real%/}$rest" == "$root"/.codeo/* ]] && return 0
     role=$(guarded_role "$root") || return 0
     deny "$role"
 }
