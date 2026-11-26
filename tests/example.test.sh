@@ -182,6 +182,43 @@ host_run_refuses_without_docker_and_arguments() {
     [[ $rc -eq 2 ]] || fail "two arguments exited $rc, not 2: $(cat "$work/out")"
 }
 
+host_run_ignores_codeo_overrides() {
+    local script="$ex/scripts/host-run.sh" tools="$work/host-run-ovr" rc=0 t
+    mkdir -p "$tools"
+    # Scratch bin of symlinks and stubs: docker answers info, then records its environment and fails the build.
+    ln -sf "$(command -v jq)" "$tools/jq"
+    for t in git gh; do
+        printf "#!%s\nexit 0\n" "$BASH" >"$tools/$t"
+        chmod +x "$tools/$t"
+    done
+    cat >"$tools/docker" <<STUB
+#!$BASH
+[[ \$1 == info ]] && exit 0
+export -p >"$work/docker-env"
+exit 1
+STUB
+    chmod +x "$tools/docker"
+    PATH="$tools" CODEO_CONTEXT=/x CODEO_REPO_URL=https://example.invalid/r "$BASH" "$script" owner/repo >"$work/out" 2>&1 || rc=$?
+    [[ $rc -eq 1 ]] || fail "stubbed run exited $rc, not 1: $(cat "$work/out")"
+    [[ $(grep -c '^host-run: note: ignoring ' "$work/out") -eq 1 ]] || fail "not exactly one ignoring line: $(cat "$work/out")"
+    grep -qx 'host-run: note: ignoring CODEO_CONTEXT CODEO_REPO_URL' "$work/out" || fail "the note does not list both: $(cat "$work/out")"
+    [[ -f $work/docker-env ]] || fail "the stub docker never ran its build"
+    ! grep -Eq "CODEO_(CONTEXT|REPO_URL|RAW_URL|TRACK|HOME)=" "$work/docker-env" || fail "docker still sees an override: $(cat "$work/docker-env")"
+    # Nothing set: no note.
+    rc=0
+    PATH="$tools" "$BASH" "$script" owner/repo >"$work/out" 2>&1 || rc=$?
+    ! grep -q 'ignoring' "$work/out" || fail "a note was printed with nothing set: $(cat "$work/out")"
+}
+
+host_run_checks_the_toolchain_before_the_suites() {
+    local script="$ex/scripts/host-run.sh" a b
+    # A full stubbed run is not feasible here (clone, wizard, pushes), so assert the order in the script.
+    a=$(grep -n 'FAIL issue container toolchain' "$script" | head -1 | cut -d: -f1)
+    b=$(grep -n 'docker exec -w .* bash scripts/run-suites.sh' "$script" | head -1 | cut -d: -f1)
+    [[ -n $a && -n $b && $a -lt $b ]] || fail "the toolchain check does not precede run-suites.sh ($a, $b)"
+    grep -q 'dotnet --version && node --version && kubectl version --client' "$script" || fail "the toolchain check lacks a tool"
+}
+
 the_web_suite_installs_its_dependencies_before_it_builds() {
     local build
     build=$(jq -r '.[] | select(.name == "web") | .build' "$ex/codeo-suites.json")
@@ -194,7 +231,7 @@ for c in suites_merge_into_a_config_and_doctor_resolves_them the_dockerfile_exte
     run_suites_does_not_let_a_suite_swallow_the_rest run_suites_fails_when_a_test_phase_fails run_suites_passes_arguments_through_bash_c \
     run_suites_fails_on_invalid_config the_manifests_name_no_codeo_project \
     generate_web_names_a_pinned_cli_and_refuses_an_existing_app the_dockerfile_points_chrome_bin_at_a_no_sandbox_wrapper \
-    host_run_refuses_without_docker_and_arguments the_web_suite_installs_its_dependencies_before_it_builds; do
+    host_run_refuses_without_docker_and_arguments host_run_ignores_codeo_overrides host_run_checks_the_toolchain_before_the_suites the_web_suite_installs_its_dependencies_before_it_builds; do
     "$c"
 done
 echo "all cases passed"

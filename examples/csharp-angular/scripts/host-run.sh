@@ -23,6 +23,9 @@
 #   - A re-run needs a fresh empty repository, and the container shopdemo-1 removed first (the removal commands this
 #     script prints at the end), because codeo-container.sh refuses an existing container.
 #
+# The script ignores CODEO_CONTEXT, CODEO_REPO_URL, CODEO_RAW_URL, CODEO_TRACK and CODEO_HOME: it unsets them,
+# printing which were set, because they would redirect the throwaway run to another repository or directory.
+#
 # Steps (each prints "host-run: ok <step>" or "host-run: FAIL <step>"; the first FAIL stops the run with exit 1)
 #   neutral image builds       docker build of templates/containers/.devcontainer (tag codeo-host-run-neutral)
 #   work clone                 gh repo clone into a temporary directory; an empty repository gets a README.md on
@@ -34,7 +37,8 @@
 #                              only when its fail lines are among the expected host-dependent ones listed above
 #                              (any other fail stops the run)
 #   committed and pushed       git add -A, commit, push main, push the branch host-run/1
-#   issue container ...        .devcontainer/codeo-container.sh issue 1 host-run/1 --yes, then
+#   issue container ...        .devcontainer/codeo-container.sh issue 1 host-run/1 --yes (from the work clone), then a
+#                              toolchain check (dotnet, node, kubectl) in the container, then
 #                              docker exec shopdemo-1 bash scripts/run-suites.sh; ok only when it exits 0 and
 #                              printed "suite: api ok", "suite: web ok" and "suite: k8s ok"
 # It ends with doctor's output for the work clone (expected fails: those listed above), then prints the
@@ -52,6 +56,14 @@ usage() {
 [[ $# -eq 1 ]] || usage
 [[ $1 =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_.-]+$ ]] || usage
 slug=$1
+
+# The CODEO_* overrides would point the clone, the image build or the container at another repository or directory.
+ignored=
+for v in CODEO_CONTEXT CODEO_REPO_URL CODEO_RAW_URL CODEO_TRACK CODEO_HOME; do
+    if [[ -n ${!v+x} ]]; then ignored="$ignored${ignored:+ }$v"; fi
+    unset "$v"
+done
+[[ -z $ignored ]] || echo "host-run: note: ignoring $ignored"
 
 preflight_fail() {
     echo "host-run: fail $1: $2"
@@ -163,6 +175,13 @@ ok 'committed and pushed main and host-run/1'
 
 # 6. The issue container builds from the repository on GitHub, then runs the suites.
 step 'issue container' bash .devcontainer/codeo-container.sh issue 1 "$branch" --yes
+if ! docker exec "$name-1" bash -c 'dotnet --version && node --version && kubectl version --client' >"$work/toolchain.log" 2>&1; then
+    cat "$work/toolchain.log"
+    echo 'host-run: FAIL issue container toolchain'
+    echo "host-run: note: the image lacks the example's toolchain; it was built from https://github.com/$slug.git#$branch (a CODEO_CONTEXT or a stale image is the usual cause); image id $(docker image inspect --format '{{.Id}}' "$name-dev:$name-1" 2>&1); compare with: docker history $name-dev:$name-1"
+    exit 1
+fi
+ok 'issue container toolchain'
 rc=0
 docker exec -w "/workspaces/$name-1" "$name-1" bash scripts/run-suites.sh >"$work/suites.log" 2>&1 || rc=$?
 cat "$work/suites.log"
@@ -175,7 +194,8 @@ ok "issue container $name-1 ran the suites api web k8s"
 # 7. Doctor, then what to remove. Nothing is removed here.
 bash "$root/scripts/doctor.sh" || true
 echo
-echo 'host-run: nothing was removed. To remove what this run created:'
+echo "host-run: nothing was removed. To remove what this run created, first cd to the work clone, then run:"
+echo "  cd $repo"
 echo "  docker rm -f $name-1"
 echo "  docker volume rm $name-1 $name-gh $name-git"
 echo "  docker image rm $name-dev:$name-1 codeo-host-run-neutral"
