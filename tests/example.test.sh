@@ -182,12 +182,19 @@ host_run_refuses_without_docker_and_arguments() {
     [[ $rc -eq 2 ]] || fail "two arguments exited $rc, not 2: $(cat "$work/out")"
 }
 
+the_web_suite_installs_its_dependencies_before_it_builds() {
+    local build
+    build=$(jq -r '.[] | select(.name == "web") | .build' "$ex/codeo-suites.json")
+    [[ $build == 'npm --prefix web install '*' && npm --prefix web run build' ]] || fail "the web build does not install before it builds: $build"
+    [[ $build != *:* ]] || fail "the web build holds a colon, which codeo-init.sh's --suite split would break: $build"
+}
+
 for c in suites_merge_into_a_config_and_doctor_resolves_them the_dockerfile_extends_the_template_only_inside_its_section \
     run_suites_stops_at_the_first_failure api_directory_resolves_to_exactly_one_solution_that_lists_the_test_project \
     run_suites_does_not_let_a_suite_swallow_the_rest run_suites_fails_when_a_test_phase_fails run_suites_passes_arguments_through_bash_c \
     run_suites_fails_on_invalid_config the_manifests_name_no_codeo_project \
     generate_web_names_a_pinned_cli_and_refuses_an_existing_app the_dockerfile_points_chrome_bin_at_a_no_sandbox_wrapper \
-    host_run_refuses_without_docker_and_arguments; do
+    host_run_refuses_without_docker_and_arguments the_web_suite_installs_its_dependencies_before_it_builds; do
     "$c"
 done
 echo "all cases passed"

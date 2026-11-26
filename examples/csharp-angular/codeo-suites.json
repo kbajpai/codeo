@@ -9,7 +9,7 @@
   {
     "name": "web",
     "paths": ["web/**"],
-    "build": "npm --prefix web run build",
+    "build": "npm --prefix web install --no-audit --no-fund && npm --prefix web run build",
     "test": "npm --prefix web test -- --watch=false --browsers=ChromeHeadless",
     "parallel": false
   },
