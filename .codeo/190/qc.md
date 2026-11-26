@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is written and routed back to `/codeo:implement`: the suite, the build and the six round 1 blockers are fine, but four blocking findings remain, all on the path of an engineer adopting containers in an existing project (G1-G4). Nothing is open; the routing needs no answer from the engineer.
+Round 3 is written and routed back to `/codeo:implement`: the build and the full suite pass and the round 2 blockers are fixed, but two documentation findings remain (H1, H2). Nothing is open; the routing needs no answer from the engineer.
 
 ## Questions
 
@@ -21,6 +21,7 @@ None.
 - Let a project put its own toolchain into the sbx sandbox (already promised in `implement.md`).
 - `sort -V` in `scripts/codeo-init.sh` is missing on macOS before 13 (the release lookup fails there with "no release found").
 - Private repositories: the container route and the `codeo` command fetch GitHub URLs without credentials, so they work only for public repositories; supporting a private repository (authenticated fetches) is a design change for `/codeo:plan` or its own issue.
+- A project-specific `codeo` command name or install path, or a refusal when the current repository does not match the command's baked-in slug (H1 in round 3); what a seed must contain and a doctor check of the kept seeds (H3).
 - Pin the rendering plugin's own version instead of the newest release, and take `plugin.repo` from `CODEO_PLUGIN_URL` when set (G7).
 
 ## Outcome
@@ -127,7 +128,53 @@ It is the only failing file of 60. Re-run alone: `bash tests/run.sh example` fai
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-26
+
+**Pass.** Round 2's findings are recapped below as history; this pass started again from step 0 on the tree at `9b464a5` (`7b7cc0f` is the merge base). `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`. `overlap.sh 190`: nothing printed (exit 0). `scope.sh origin/main HEAD` (85 files changed, 5880 insertions, 47 deletions): every changed path unclassified, `suite.shell=true`; no `deploy=` line (no environment configured). `overlap.sh --outside 190` printed the same six paths as in round 2 (`lib/codename.sh` and five test files): the footprint in `plan.md` still omits them.
+
+**Build.** The `shell` suite's `build` is `true`: exit 0.
+
+**Tests.** `bash tests/run.sh` (227 s): `all cases passed`, exit 0. Run alone this pass: `containers`, `init`, `setup`, `doctor`, `example`, `readme`, `role`, `folder-check`, `init-overlay` and `close-removal` each end `all cases passed`; `bash scripts/containers.sh --check` prints no `differs`; `bash scripts/doctor.sh` in this checkout prints no `fail` line.
+
+**Acceptance criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | The audit list is recorded and none of the assumptions remains hardcoded in a script or default the template ships | not met — the hardcoded names are gone and the audit lists them, but it does not record that the rendered `codeo` command installs under the same name and path (`~/.local/bin/codeo`) as codeo's own, so one machine holds one project's command (H1) | `docs/container-templates.md` (audit table); reviewer |
+| 2 | `/codeo:setup --containers` in another project writes a working dev container and sbx sandbox setup with the project's URL and names | met | reviewer's scratch runs: `acme-co/Shop_App.web` with base branch `develop` and no `--codename` gives codename `shop-app-web`, the pin, 23 rendered files naming the project, `container-name.sh --docker` `shop-app-web-home`, doctor's only failure `ruleset`; `setup.sh --codename zed --containers` over a codename-less config; a clone in a folder named `shop-home` gets `role.sh` `home`; `tests/containers.test.sh`, `tests/setup.test.sh` |
+| 3 | A test sets up a throwaway project with another owner and codename and asserts no shipped script or default still names `kbajpai/codeo` or `codeo-<N>` | met | `tests/containers.test.sh`: `another_project_gets_its_own_names`, `no_shipped_file_names_codeo_where_the_project_belongs` (passed) |
+| 4 | The C# + Angular example builds its image, and an issue container or sandbox starts and runs the project's build and test commands | untestable here — no Docker or `sbx` in this container; the engineer's two clean `host-run.sh` runs are recorded in `implement.md` and are not evidence from this pass | `implement.md` (the engineer's host output) |
+| 5 | README and `.devcontainer/README.md` describe both adoption paths, and every command in them was run | not met — the README's adoption section points at "the install line below" for the project's `codeo` command and has none (H2), and the headline `curl … \| bash` line fetches the newest release tag, which has no `scripts/codeo-init.sh` until a release ships it, so it was never run (H4: not yet checkable before a release) | `README.md:244`; `scripts/codeo-init.sh:36-52`; reviewer |
+| 6 | `bash tests/run.sh` passes and codeo's own containers behave as before | met | `bash tests/run.sh` output above; `containers.sh --check` and `doctor.sh` clean; reviewer: the four host scripts are byte-identical to the base revision apart from the window-title placeholders that render to the same text |
+| 7 | `scripts/codeo-init.sh --yes` in a non-codeo clone with another codename produces a config, the container and sandbox files with the project's names and a passing doctor | met — with the plan's stated exception that doctor's `ruleset` check fails on a new repository | `tests/init.test.sh`: `an_unattended_run_adopts_another_project` (passed); reviewer: `other-org/widget` gives 23 files, the pin, doctor only `fail ruleset`; also over a config that has no codename |
+| 8 | The wizard fails with a stated reason, creating nothing, when there is no `origin`, `gh` is logged out or `gh` cannot see the repository, and no create call is ever made | met | `tests/init.test.sh`: `refuses_without_an_origin`, `refuses_when_gh_is_not_logged_in`, `refuses_a_repository_gh_cannot_see_and_creates_nothing` |
+| 9 | Rerunning the wizard keeps an existing config and never overwrites a seed file | met | `tests/init.test.sh`: `a_rerun_keeps_the_config`; `tests/containers.test.sh`: `a_second_run_skips_and_never_overwrites_seeds`; reviewer: a rerun keeps all 23 files and says the answer is ignored |
+| 10 | codeo's own checked-in container files equal what the templates render for codeo's config, checked by a test | met | `tests/containers.test.sh`: `codeos_own_files_match_their_templates`, `codeos_own_overlays_equal_the_render`, `codeos_dockerfile_equals_the_template_outside_the_toolchain_section`, `codeos_devcontainer_json_equals_the_template_but_the_extensions` |
+
+**Documentation.** The shipped text points at no README (`grep README templates/ .devcontainer/scripts/` is empty), no page shows `bash scripts/containers.sh` as a command a project runs, the public-repository, `<codename>-home` and `CODEO_HOME` conditions are on the three adoption pages and agree with `role.sh`, and a scan of the added lines for "now", "no longer" and issue numbers found only an existing flow sentence in `init.md` ("it is on origin now"). Findings below: H1, H2, H4.
+
+**Independent review** (`QC review:`, opus, given the criteria and the diff only). Its verdict, in plain text: Ready to merge? With fixes — the rendering, validation, the codeo-equals-render guarantee and the four scratch adoption paths are consistent; what remains is the one shared `codeo` command per machine, a pre-existing seed silently breaking the setup, and the headline `curl | bash` command failing until a release and never run.
+
+**Round 2 findings, recapped.** G1 (blocking in round 2) — fixed by `04ff584`. G2 (blocking in round 2) — fixed by `46ab55b`. G3 (blocking in round 2) — fixed by `04ff584`, `46ab55b` and `c41b6cd`. G4 (blocking in round 2) — fixed by `46ab55b`. G6, G8, G9, G10 and G11 were taken in the same commits; G5, G7 and G12 stand as routed (`## Notes`).
+
+**Findings** (this round's findings are numbered H1-H10; each answers *blocking or not* and *whose it is*):
+- **H1 — blocking, `/codeo:implement`'s (the design change stays `/codeo:plan`'s, see `## Notes`).** Every adopted project installs its rendered `codeo` command under the same name and path (`.devcontainer/README.md:210`, `~/.local/bin/codeo`) as codeo's own, and the commands carry the project's codename and repository, so a second install or a `codeo update` from another project silently replaces the first, and an engineer who already has codeo's own `codeo` installed and adopts a project then runs `codeo issue 5` against `kbajpai/codeo` (`codeo-5`), or `codeo rm 5` against the wrong `codeo-5` (its unpushed-work check limits the damage). No user page says so, and the audit table's "Intentionally codeo's" rows cover the script file names but not the command name and its install path. Fix the documentation now: an audit row and one sentence in the README's adoption section, `docs/container-templates.md` and `.devcontainer/README.md` ("one `codeo` command per machine; installing another project's replaces it; use `CODEO_HOME` and a separate path or name for each"), without changing the command.
+- **H2 — blocking, `/codeo:implement`'s.** `README.md:244` says the `codeo` command, its scripts "and the install line below" download from `raw.githubusercontent.com`, but the README's adoption section shows no project install line (its only command is the `codeo-init.sh` curl from `kbajpai/codeo`); the project's install line is only in `.devcontainer/README.md:210`, and neither the section nor `docs/container-templates.md` links to it. Verified in the three pages. Put the project install line in the section or link to `.devcontainer/README.md#using-this-in-another-project`, and correct "below" (it also affects H1's reader).
+- **H3 — non-blocking, `/codeo:implement`'s (what a seed must contain is `/codeo:plan`'s).** A project that already has `.devcontainer/Dockerfile`, `devcontainer.json` or `.codeo/overlays/*.md` keeps them (seeds are never overwritten), and the wizard reports `ok containers: N written, M kept` and doctor `ok containers`, but the managed scripts rely on what the template seeds provide (a `dev` user, gh and Claude Code in the image, the `runArgs`/volumes, the `## role-guard` and `## host-workflow` overlay sections), so a kept seed can leave a container that fails at `chown` or has no guard. Print a warning that names each kept seed, document what a seed must contain; a doctor check of them is a design choice.
+- **H4 — non-blocking, `/codeo:plan`'s/the release's.** The README's `curl -fsSL …/main/scripts/codeo-init.sh | bash` fetches the newest `vX.Y.Z` tag (`scripts/codeo-init.sh:36-52`); the newest today (v1.0.10) has no `scripts/codeo-init.sh`, so the run ends `init: fail fetch: v1.0.10 has no scripts/codeo-init.sh`. It works once a release ships the script; say on the page that the command needs that release and run it after the release (criterion 5's *every command was run*, not yet checkable before then).
+- **H5 — non-blocking, `/codeo:implement`'s.** The two pin writers (`scripts/setup.sh:52-60`, `scripts/codeo-init.sh:176-185`) can overwrite a fork's `plugin.repo`: `write_pin` replaces the whole `.plugin` object when either key is missing, and the wizard checks only `.plugin.ref`, so a config with `ref` but no `repo` is left and doctor then fails `containers`. Fill only the missing key and use one test in both.
+- **H6 — non-blocking, `/codeo:implement`'s.** The wizard drops a failed suite write without saying so (`scripts/codeo-init.sh:170-172`): the chain only runs `&& say ok`.
+- **H7 — non-blocking, `/codeo:implement`'s.** The README's "One command" paragraph lists the questions as "codename, scope, whether to add a suite" but the wizard also asks the environment question (`none|containers`) when `--env` is not given.
+- **H8 — non-blocking, `/codeo:implement`'s.** `no_shipped_file_names_codeo_where_the_project_belongs` is in the runner loop of `tests/containers.test.sh` twice (:321-330); the second run prints `mkdir: …/leakscan/.codeo: File exists`. Drop the duplicate (predates this round).
+- **H9 — non-blocking, `/codeo:implement`'s.** The example's `k8s` suite runs `kubectl kustomize k8s` as both its build and its test, so its test checks nothing beyond the build; a validation step (`kubectl apply --dry-run=client -k k8s` or kubeconform) would make it a test.
+- **H10 — non-blocking, pre-existing in design.** Doctor's `containers` check compares against the plugin templates installed (the pinned release in a container), so a codeo change to a managed script and its template shows `fail containers` in codeo's own container until the next release and re-pin; worth a line for contributors.
+
+**Routing.** Back to `/codeo:implement` for H1 and H2 (documentation only), and H5-H8 in the same round where cheap; H3 and H9 are cheap too. H1's design change (a per-project command name) and H3's doctor check are for `/codeo:plan` or a follow-up issue; H4 is settled by releasing and running the command. A full pass starts again from step 0 of this skill on the new diff.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-26 — round 1: build passed, suite failed (`example.test.sh`), six blocking findings, routed back to implement · cost: 13m · opus-5-5 659k in + 8.7M cached / 29k out
 - 2026-11-26 — round 2: build and full suite passed, four blocking findings (G1-G4), routed back to implement · cost: 7m · opus-5-5 781k in + 5.2M cached / 26k out · sonnet-5-5 34k in + 3.3M cached / 7k out
+- 2026-11-26 — round 3: build and full suite passed, two documentation blockers (H1, H2), routed back to implement · cost: 11m · opus-5-5 173k in + 4.9M cached / 28k out · sonnet-5-5 18k in + 5.9M cached / 6k out
