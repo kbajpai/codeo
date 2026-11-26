@@ -160,6 +160,22 @@ codeos_own_overlays_equal_the_render() {
     done
 }
 
+codeos_dockerfile_equals_the_template_outside_the_toolchain_section() {
+    local strip='/^# ---- Project toolchain/,/^# ---- End project toolchain/d'
+    diff <(sed "$strip" "$plugin_root/templates/containers/.devcontainer/Dockerfile") <(sed "$strip" "$plugin_root/.devcontainer/Dockerfile") >"$work/dfdiff" ||
+        fail "codeo's Dockerfile differs from the template outside the toolchain section: $(cat "$work/dfdiff")"
+}
+
+codeos_devcontainer_json_equals_the_template_but_the_extensions() {
+    local t="$plugin_root/templates/containers/.devcontainer/devcontainer.json" o="$plugin_root/.devcontainer/devcontainer.json"
+    local tj oj
+    tj=$(perl -pe 's/\@CODENAME\@/codeo/g' "$t" | jq -S 'del(.customizations.vscode.extensions)')
+    oj=$(jq -S 'del(.customizations.vscode.extensions)' "$o")
+    [ "$tj" = "$oj" ] || fail "codeo's devcontainer.json differs from the template beyond its extensions"
+    [ "$(perl -pe 's/\@CODENAME\@/codeo/g' "$t" | jq -c '(.customizations.vscode.extensions + ["timonwong.shellcheck"]) | sort')" = \
+        "$(jq -c '.customizations.vscode.extensions | sort' "$o")" ] || fail "codeo's extensions are not the template's plus timonwong.shellcheck"
+}
+
 a_seed_overlay_is_never_overwritten() {
     local d="$work/acmeov"
     echo '# mine' >>"$d/.codeo/overlays/plan.md"
@@ -174,7 +190,7 @@ doctor_passes_overlays_in_the_rendered_project() {
     grep -q "^ok overlays" <<<"$doc" || fail "overlays not ok: $(grep overlays <<<"$doc")"
 }
 
-for c in overlays_are_written_with_the_projects_names codeos_own_overlays_equal_the_render a_seed_overlay_is_never_overwritten doctor_passes_overlays_in_the_rendered_project \
+for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section codeos_devcontainer_json_equals_the_template_but_the_extensions overlays_are_written_with_the_projects_names codeos_own_overlays_equal_the_render a_seed_overlay_is_never_overwritten doctor_passes_overlays_in_the_rendered_project \
     setup_writes_codename_and_containers_in_one_go doctor_reports_a_drifted_container_script codeos_own_files_match_their_templates another_project_gets_its_own_names \
     no_shipped_file_names_codeo_where_the_project_belongs the_toolchain_section_is_the_one_place_to_extend \
     a_second_run_skips_and_never_overwrites_seeds check_reports_a_drifted_script \

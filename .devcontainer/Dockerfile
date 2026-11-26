@@ -1,8 +1,6 @@
-# Development image for codeo itself: Ubuntu 26.04 with the tools codeo's shell suites and its own
-# workflow need (bash, git, jq, shellcheck, gh) plus Claude Code, running as the non-root user dev.
-#
-# Left out on purpose: language runtimes and SDKs, cloud CLIs, database clients, Kubernetes tooling and
-# a container engine. codeo is plain bash; nothing here builds or deploys anything beyond it.
+# Development image: Ubuntu with git, jq, gh and Claude Code, running as the non-root user dev. It is
+# stack-neutral on purpose: no language runtimes, SDKs or cloud CLIs. Add yours in the "Project toolchain"
+# section below, and nowhere else, so an update of this template stays a small diff.
 FROM ubuntu:26.04
 
 ARG USERNAME=dev
@@ -12,7 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates curl git gnupg jq less locales shellcheck sudo \
+        ca-certificates curl git gnupg jq less locales sudo \
     && locale-gen en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -36,6 +34,14 @@ RUN userdel -r ubuntu \
     && install -d -o "${USERNAME}" -g "${USERNAME}" /home/${USERNAME}/.config /home/${USERNAME}/.config/gh /home/${USERNAME}/.config/git /home/${USERNAME}/.claude \
     && echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
     && chmod 0440 /etc/sudoers.d/${USERNAME}
+
+# ---- Project toolchain (yours) -------------------------------------------------------------------
+# codeo is plain bash; its one extra tool is shellcheck, which its shell suites lint with.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        shellcheck \
+    && rm -rf /var/lib/apt/lists/*
+# ---- End project toolchain -----------------------------------------------------------------------
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
