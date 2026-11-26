@@ -215,6 +215,22 @@ for cmd in "git commit -m x" "git push" "git add -A" "git checkout -b x" "git st
     bcheck allow "$h" "$cmd" CODEO_HOME_EDITS=allow
 done
 
+case_desc=bash_fix_round_1
+h=$(bhome fx1)
+i=$(clone fx2 codeo-192 feat/192-x 192)
+for cmd in "git commit src/a.txt -m x" "git commit -i src/a.txt -m x" "git commit --include src/a.txt -m x" \
+    "git checkout -qb x" "git switch -qc x" "git commit -m x src/a.txt" "git commit -m x -- .codeo/x"; do
+    bcheck deny "$h" "$cmd"
+done
+bcheck deny "$i" "git -C \"$h\" push"
+bcheck allow "$h" "cd \"$i\" && git push"
+bcheck deny "$i" "cd \"$h\" && git push"
+bcheck deny "$h" "git commit -m \"a; git push\" src/a.txt"
+h=$(bhome fx3 codeo)
+bcheck allow "$h" "git commit -m x"
+bcheck allow "$h" 'git commit -m "a; git push"'
+bcheck allow "$h" "git commit .codeo/192/init.md -m x"
+
 if [[ $failures -gt 0 ]]; then
     echo "$failures assertion(s) failed" >&2
     exit 1

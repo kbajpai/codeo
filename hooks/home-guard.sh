@@ -39,11 +39,13 @@ git_write_p() {
     case $sub in
         push | merge | rebase | cherry-pick | revert | am | apply | reset | stash | tag) return 0 ;;
         checkout)
-            for a in "$@"; do [[ $a == -b || $a == -B || $a == --orphan ]] && return 0; done
+            for a in "$@"; do
+                [[ $a == --orphan || $a =~ ^-[A-Za-z]*[bB][A-Za-z]*$ ]] && return 0
+            done
             return 1 ;;
         switch)
             for a in "$@"; do
-                case $a in -c | -C | --create | --force-create | --orphan) return 0 ;; esac
+                [[ $a == --create || $a == --force-create || $a == --orphan || $a =~ ^-[A-Za-z]*[cC][A-Za-z]*$ ]] && return 0
             done
             return 1 ;;
         add | rm | mv | restore)
@@ -56,11 +58,18 @@ git_write_p() {
             [[ $n -gt 0 && $all_codeo == 1 ]] && return 1
             return 0 ;;
         commit)
+            local skip=0
             for a in "$@"; do
+                if [[ $skip == 1 ]]; then skip=0; continue; fi
                 case $a in
-                    --amend | --only | -o | --) return 0 ;;
+                    --amend | --only | -o | -i | --include | --) return 0 ;;
                     --all) cluster_a=1 ;;
-                    -[A-Za-z]*) [[ $a != --* && $a == *a* ]] && cluster_a=1 ;;
+                    --message | --file | --author | --reuse-message | --reedit-message) skip=1 ;;
+                    --*) ;;
+                    -?*)
+                        [[ $a == *a* ]] && cluster_a=1
+                        [[ $a =~ [mFCc]$ ]] && skip=1 ;;
+                    *) under_codeo_p "$a" || return 0 ;;
                 esac
             done
             changed=$(git -C "$dir" diff --cached --name-only 2>/dev/null)
@@ -80,7 +89,7 @@ git_write_p() {
 bash_guard() {
     local cur=${1:-.} cmd=$2 seg w i d sub root role
     local -a words args
-    cmd=$(printf '%s' "$cmd" | sed -z -E "s/(\"([^\"\\\\]|\\\\.)*\"|'[^']*')/Q/g; s/&&|\|\||[;|&]/\n/g")
+    cmd=$(printf '%s' "$cmd" | sed -z -E "s/((^|[[:space:];&|(])cd[[:space:]]+|-C[[:space:]]+)\"([^\"]*)\"/\\1\\3/g; s/((^|[[:space:];&|(])cd[[:space:]]+|-C[[:space:]]+)'([^']*)'/\\1\\3/g; s/(\"([^\"\\\\]|\\\\.)*\"|'[^']*')/Q/g; s/&&|\|\||[;|&]/\n/g")
     while IFS= read -r seg; do
         read -ra words <<<"$seg"
         while [[ ${#words[@]} -gt 0 && ${words[0]} =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; do words=("${words[@]:1}"); done
