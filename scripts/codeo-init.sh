@@ -6,6 +6,8 @@
 #   codeo-init.sh [--yes] [--codename <name>] [--scope user|project] [--version vX.Y.Z]
 #                 [--env none|containers] [--suite <name>:<paths,comma-separated>:<build>:<test>]…
 #                 [--skip-install]
+#   A suite is name:paths:build:test: name, paths and the build command are one colon-separated field each, so the
+#   build command cannot contain a colon; only the test command (the remainder) may hold colons.
 #
 # Prerequisite, never created here: the GitHub repository must already exist, the clone must have an `origin`
 # remote pointing at it, and gh must be logged in with access to it. codeo-init creates no repository.
@@ -14,12 +16,13 @@
 # "init: fail fetch: <reason>" line, exit 1, nothing written. Questions are asked only at a terminal (when piped,
 # read from /dev/tty) and only for what a flag did not answer; without a terminal (or with
 # --yes) every question takes its default, so CI and scripts run it unattended. Defaults: codename = the
-# repository name, scope = user, version = newest release, env = none, no suites (add them to
-# .codeo/config.json later).
+# repository name lower-cased with . _ and spaces as hyphens (pass --codename when nothing valid is left),
+# scope = user, version = newest release, env = none, no suites (add them to .codeo/config.json later).
 # --skip-install leaves the plugin install to you (it is the one step that touches Claude's own settings).
 # Output: one "init: ok|skip|fail <step>" line per step, doctor's lines after them. Exit 0 when every step and
 # doctor passed, 1 otherwise, 2 on a usage error. Rerunning is safe: an existing config is kept.
 set -uo pipefail
+plugin_url=${CODEO_PLUGIN_URL:-https://github.com/${CODEO_PLUGIN_REPO:-kbajpai/codeo}.git}
 
 # Run alone (curl | bash, or the file copied out of the plugin), the script has none of the files it calls: fetch
 # the release, then run the same command again from the clone. CODEO_INIT_FETCHED stops a second fetch.
@@ -30,11 +33,16 @@ if [[ -z $here || ! -f $here/lib/prompt.sh ]]; then
     fetch_fail() { printf 'init: fail fetch: %s\n' "$1"; exit 1; }
     [[ ${CODEO_INIT_FETCHED:-0} != 1 ]] || fetch_fail "the fetched release has no lib/prompt.sh"
     command -v git >/dev/null || fetch_fail "git is required"
-    plugin_url=${CODEO_PLUGIN_URL:-https://github.com/${CODEO_PLUGIN_REPO:-kbajpai/codeo}.git}
     tag=""
     args=("$@")
     for ((i = 0; i < ${#args[@]}; i++)); do
-        [[ ${args[i]} != --version ]] || tag=${args[i + 1]:-}
+        case ${args[i]} in
+            --codename | --scope | --version | --env | --suite)
+                [[ -n ${args[i + 1]:-} ]] || { echo "usage: codeo-init.sh [--yes] [--codename <name>] [--scope user|project] [--version vX.Y.Z] [--env none|containers] [--suite name:paths:build:test]... [--skip-install]" >&2; exit 2; }
+                [[ ${args[i]} != --version ]] || tag=${args[i + 1]}
+                i=$((i + 1))
+                ;;
+        esac
     done
     if [[ -z $tag ]]; then
         tag=$(git ls-remote --tags --refs "$plugin_url" 'v*' 2>/dev/null | sed 's|.*refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
@@ -51,6 +59,7 @@ source "$here/lib/prompt.sh"
 
 usage() {
     echo "usage: codeo-init.sh [--yes] [--codename <name>] [--scope user|project] [--version vX.Y.Z] [--env none|containers] [--suite name:paths:build:test]... [--skip-install]" >&2
+    echo "a suite is name:paths:build:test; the build command cannot contain a colon (only the test command may)" >&2
     exit 2
 }
 
@@ -96,11 +105,18 @@ gh api "repos/$owner/$repo" --jq .full_name >/dev/null 2>&1 || stop "preflight: 
 say ok "preflight: $owner/$repo exists and gh can see it"
 
 # 2. Questions.
-codeo_ask codename "Codename (names containers, images and volumes)" "$repo"
+# The default codename is the repository name made to fit the codename rule (lower case, . _ and spaces as
+# hyphens, no repeated or edge hyphens, a letter first, at most 30 characters); empty when nothing valid is left.
+default_codename=$(printf '%s' "$repo" | tr '[:upper:]' '[:lower:]' | tr '._ ' '---' | tr -s '-' | sed 's/^[^a-z]*//' | cut -c1-30 | sed 's/-*$//')
+[[ $default_codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#default_codename} -ge 2 ]] || default_codename=""
+codeo_ask codename "Codename (names containers, images and volumes)" "$default_codename"
 codeo_ask scope "Install the plugins for the user or just this project (user|project)" user
 codeo_ask env "Dev container and sbx sandbox files (none|containers)" none
 [[ $scope == user || $scope == project ]] || stop "answer: scope must be user or project"
 [[ $env == none || $env == containers ]] || stop "answer: env must be none or containers"
+[[ -n $codename ]] || stop "answer: cannot derive a codename from '$repo'; pass --codename <name>"
+[[ $codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#codename} -ge 2 && ${#codename} -le 30 ]] ||
+    stop "answer: codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter, 2-30 characters"
 if [[ ${#suites[@]} == 0 ]] && codeo_interactive; then
     while codeo_confirm "Add a test suite" n; do
         s_name="" s_paths="" s_build="" s_test=""
@@ -126,14 +142,15 @@ fi
 # 4. The config.
 if [[ -e .codeo/config.json ]]; then
     say skip "config: .codeo/config.json exists and is kept"
-elif bash "$here/scripts/setup.sh" --codename "$codename" >/dev/null 2>&1; then
+elif setup_err=$(bash "$here/scripts/setup.sh" --codename "$codename" 2>&1 >/dev/null); then
     say ok "config: .codeo/config.json written"
 else
-    say fail "config: scripts/setup.sh failed; run it directly to see why"
+    say fail "config: scripts/setup.sh failed: $(printf '%s' "$setup_err" | tail -n 1); run it directly to see more"
 fi
 
-# 5. Suites and the plugin pin, into the config. A suite is name:paths:build:test (the build and test commands
-#    may hold colons; only the first three colons split).
+# 5. Suites and the plugin pin, into the config. A suite is name:paths:build:test (the build command
+#    cannot hold a colon, the test command may: name, paths and build are one colon-separated field each and the
+#    test command is the remainder).
 if [[ -f .codeo/config.json ]]; then
     for s in ${suites[@]+"${suites[@]}"}; do
         IFS=: read -r n p b t <<<"$s"
@@ -145,7 +162,7 @@ if [[ -f .codeo/config.json ]]; then
     done
     if [[ $env == containers ]] && ! jq -e '.plugin.ref' .codeo/config.json >/dev/null 2>&1; then
         pin=$version
-        [[ -n $pin ]] || pin=$(git ls-remote --tags --refs "https://github.com/${CODEO_PLUGIN_REPO:-kbajpai/codeo}.git" 'v*' 2>/dev/null | sed 's|.*refs/tags/||' | sort -V | tail -n 1)
+        [[ -n $pin ]] || pin=$(git ls-remote --tags --refs "$plugin_url" 'v*' 2>/dev/null | sed 's|.*refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
         if [[ -n $pin ]]; then
             jq --arg r "$pin" --arg pr "${CODEO_PLUGIN_REPO:-kbajpai/codeo}" '.plugin = {repo: $pr, ref: $r}' .codeo/config.json >.codeo/config.json.new \
                 && mv .codeo/config.json.new .codeo/config.json && say ok "config: plugin pin $pin (the container installs it)"

@@ -46,7 +46,7 @@ base=$(codeo_cfg .baseBranch || echo main)
 
 # These land in file names, container names and URLs, so only the characters those allow get through.
 [[ $codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]] ||
-    codeo_die "config.json: codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter"
+    codeo_die "config.json: codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter (the codename is config.json's codename, or the repository name when that is absent)"
 [[ $base =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] ||
     codeo_die "config.json: baseBranch '$base' is not a branch name (letters, digits, dot, underscore, slash and hyphen, starting with a letter or digit)"
 [[ $owner =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ && $repo =~ ^[A-Za-z0-9_.-]+$ ]] ||

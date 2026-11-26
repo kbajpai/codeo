@@ -6,8 +6,8 @@
 #   generate-web.sh
 set -euo pipefail
 
-# The Angular major to generate. 20 is the newest major I know generates a Karma + Jasmine project by
-# default, which is what the web suite (ng test --watch=false --browsers=ChromeHeadless) runs. Later
+# The Angular major to generate. 20 is pinned as the newest major that defaults to a Karma + Jasmine project
+# (unverified offline), which is what the web suite (ng test --watch=false --browsers=ChromeHeadless) runs. Later
 # majors may default to another runner; check `ng new` before raising this.
 ANGULAR_CLI_MAJOR=20
 

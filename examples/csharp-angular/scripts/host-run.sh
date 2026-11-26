@@ -13,8 +13,9 @@
 #     without credentials.
 #   - web/ was generated beforehand with examples/csharp-angular/scripts/generate-web.sh (needs Node); without
 #     examples/csharp-angular/web/angular.json the web suite cannot run and this script stops.
-#   - bash 4.3 or newer runs this script (doctor, which the wizard runs here, fails its deps check on older bash; a
-#     macOS host should run it with a newer bash, e.g. Homebrew's: /opt/homebrew/bin/bash examples/...).
+#   - This script itself runs under bash 3.2, but doctor (which the wizard runs here) needs bash 4.3 for its deps check,
+#     so a bash 3.2 host sees "fail deps", which this script accepts and prints. For a clean doctor run it with a newer
+#     bash, e.g. Homebrew's: /opt/homebrew/bin/bash examples/...
 #   - Doctor runs on THIS host, and these of its failures are accepted as expected: ruleset (a fresh repository has
 #     no branch ruleset), suites "not installed or unset" (dotnet, npm or kubectl not on this host; the container
 #     run proves them), deps and superpowers (not installed on this host). Any other fail stops the run; the ones
@@ -121,8 +122,9 @@ step 'example copied' cp "$ex/scripts/run-suites.sh" scripts/run-suites.sh
 step 'example copied' copy_clean web
 ok 'example copied'
 
-# 4. The wizard. A suite is name:paths:build:test; the wizard splits on the first three colons only, and the
-#    example's commands hold none. Built with set -- so a command's spaces survive.
+# 4. The wizard. A suite is name:paths:build:test; name, paths and build are one colon-separated
+#    field each (the build command cannot contain a colon; only the test command may), and the example's
+#    commands hold none. Built with set -- so a command's spaces survive.
 set -- --yes --skip-install --env containers --codename "$name"
 suites=$(jq -r '.[] | [.name, (.paths | join(",")), .build, .test] | join(":")' "$ex/codeo-suites.json") || fail 'wizard: read codeo-suites.json'
 [[ -n $suites ]] || fail 'wizard: codeo-suites.json has no suites'

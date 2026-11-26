@@ -148,11 +148,72 @@ a_closed_stdin_under_a_terminal_takes_the_defaults() {
     [[ $(jq -r .codename "$d/.codeo/config.json") == devnull ]] || fail "default codename is not the repo name"
 }
 
+a_suite_test_command_may_hold_colons() {
+    local d; d=$(new_clone colontest git@github.com:acme-co/colontest.git)
+    (cd "$d" && bash "$init" --yes --skip-install --suite 'api:src/**:true:echo a:b' >"$work/out" 2>&1) || true
+    [[ $(jq -r '.suites[0].test' "$d/.codeo/config.json") == 'echo a:b' ]] || fail "test command with a colon not kept: $(cat "$d/.codeo/config.json")"
+    [[ $(jq -r '.suites[0].build' "$d/.codeo/config.json") == true ]] || fail "build changed"
+}
+
+a_suite_build_command_cannot_hold_a_colon() {
+    local d; d=$(new_clone colonbuild git@github.com:acme-co/colonbuild.git)
+    (cd "$d" && bash "$init" --yes --skip-install --suite 'api:src/**:echo a:b:echo t' >"$work/out" 2>&1) || true
+    [[ $(jq -r '.suites[0].build' "$d/.codeo/config.json") == 'echo a' ]] || fail "documented split changed: $(cat "$d/.codeo/config.json")"
+    bash "$init" --bogus >"$work/usage" 2>&1 || true
+    grep -q 'build command cannot contain a colon' "$work/usage" || fail "usage does not state the build limit"
+    grep -q 'build command cannot contain a colon' "$plugin_root/README.md" || fail "README does not state the build limit"
+    grep -q 'build command cannot contain a colon' "$init" || fail "header does not state the build limit"
+}
+
+a_mixed_case_repo_name_gets_a_derived_codename() {
+    local d; d=$(new_clone mixed git@github.com:acme-co/Shop.Web_App.git)
+    (cd "$d" && bash "$init" --yes --skip-install >"$work/out" 2>&1) || true
+    grep -q '^init: ok config' "$work/out" || fail "config step: $(cat "$work/out")"
+    [[ $(jq -r .codename "$d/.codeo/config.json") == shop-web-app ]] || fail "codename: $(cat "$d/.codeo/config.json")"
+}
+
+a_repo_name_that_cannot_yield_a_codename_fails_before_writing() {
+    local d; d=$(new_clone nocodename git@github.com:acme-co/1.git)
+    if (cd "$d" && bash "$init" --yes --skip-install >"$work/out" 2>&1); then fail "ran with no codename"; fi
+    grep -qxF "init: fail answer: cannot derive a codename from '1'; pass --codename <name>" "$work/out" || fail "message: $(cat "$work/out")"
+    [[ ! -e $d/.codeo ]] || fail "wrote files"
+}
+
+an_invalid_explicit_codename_states_the_rule() {
+    local d; d=$(new_clone badname git@github.com:acme-co/badname.git)
+    if (cd "$d" && bash "$init" --yes --skip-install --codename Bad_Name >"$work/out" 2>&1); then fail "accepted a bad codename"; fi
+    grep -qxF "init: fail answer: codename 'Bad_Name' must be lower-case letters, digits and single hyphens, starting with a letter, 2-30 characters" "$work/out" || fail "message: $(cat "$work/out")"
+    [[ ! -e $d/.codeo ]] || fail "wrote files"
+}
+
+a_flag_without_a_value_is_a_usage_error() {
+    local d lone="$work/lone3" f rc; d=$(new_clone novalue git@github.com:acme-co/novalue.git)
+    mkdir -p "$lone"; cp "$init" "$lone/codeo-init.sh"
+    for f in --version --codename --scope --env --suite; do
+        rc=0
+        (cd "$d" && bash "$init" --yes --skip-install "$f" >"$work/out" 2>&1) || rc=$?
+        [[ $rc == 2 ]] || fail "main parser: $f without a value exited $rc"
+        rc=0
+        (cd "$d" && CODEO_PLUGIN_URL="$work/none.git" bash "$lone/codeo-init.sh" --yes --skip-install "$f" >"$work/out" 2>&1) || rc=$?
+        [[ $rc == 2 ]] || fail "lone script: $f without a value exited $rc: $(cat "$work/out")"
+    done
+}
+
+a_setup_failure_names_its_reason() {
+    local d; d=$(new_clone setupfail git@github.com:acme-co/setupfail.git)
+    : >"$d/.codeo"   # a file where setup.sh needs a directory
+    (cd "$d" && bash "$init" --yes --skip-install >"$work/out" 2>&1) || true
+    grep -q '^init: fail config: scripts/setup.sh failed: .' "$work/out" || fail "no reason: $(cat "$work/out")"
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
     questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
     a_lone_script_fetches_its_release a_lone_script_with_no_release_fails_in_one_line \
-    a_pipe_without_a_terminal_takes_the_defaults a_closed_stdin_under_a_terminal_takes_the_defaults; do
+    a_pipe_without_a_terminal_takes_the_defaults a_closed_stdin_under_a_terminal_takes_the_defaults \
+    a_suite_test_command_may_hold_colons a_suite_build_command_cannot_hold_a_colon \
+    a_mixed_case_repo_name_gets_a_derived_codename a_repo_name_that_cannot_yield_a_codename_fails_before_writing \
+    an_invalid_explicit_codename_states_the_rule a_flag_without_a_value_is_a_usage_error a_setup_failure_names_its_reason; do
     "$c"
 done
 echo "all cases passed"
