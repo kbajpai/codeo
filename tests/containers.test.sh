@@ -237,6 +237,35 @@ setup_notes_kept_seeds_once() {
     ! grep -q 'kept files are yours' "$work/out" || fail "note for a kept managed script"
 }
 
+the_ref_comes_from_the_repository_the_config_names() {
+    local b="$work/base"
+    mkdir -p "$b/fork" "$b/kbajpai"
+    local r t
+    for r in fork/codeo:v2.0.0 kbajpai/codeo:v9.0.0; do
+        git init -q --bare "$b/${r%%:*}.git"
+        git -C "$work/rel/seed" tag -f "${r##*:}" >/dev/null
+        git -C "$work/rel/seed" push -q "$b/${r%%:*}.git" "${r##*:}"
+    done
+    pin_project forkref '{"repo":"fork/codeo"}'
+    (cd "$work/forkref" && env -u CODEO_PLUGIN_URL CODEO_PLUGIN_BASE="$b" bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "setup failed: $(cat "$work/out")"
+    [[ $(plugin_of forkref) == '{"repo":"fork/codeo","ref":"v2.0.0"}' ]] || fail "ref not from the fork: $(plugin_of forkref)"
+    pin_project noforkref '{}'
+    (cd "$work/noforkref" && env -u CODEO_PLUGIN_URL CODEO_PLUGIN_BASE="$b" bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "setup failed"
+    [[ $(plugin_of noforkref) == '{"repo":"kbajpai/codeo","ref":"v9.0.0"}' ]] || fail "default lookup: $(plugin_of noforkref)"
+    git -C "$work/rel/seed" tag -d v2.0.0 v9.0.0 >/dev/null
+}
+
+setup_refuses_an_invalid_config_before_the_pin() {
+    local d
+    for c in 'not json' '[]'; do
+        pin_project badcfg '{}'; d="$work/badcfg"; printf '%s\n' "$c" >"$d/.codeo/config.json"
+        if run_setup badcfg; then fail "setup accepted '$c'"; fi
+        [[ $(grep -c . "$work/out") == 1 ]] && grep -q 'config.json is not valid JSON' "$work/out" || fail "message for '$c': $(cat "$work/out")"
+        [[ $(cat "$d/.codeo/config.json") == "$c" && ! -e $d/.codeo/config.json.new && ! -e $d/.devcontainer ]] || fail "wrote something for '$c'"
+        rm -rf "$d"
+    done
+}
+
 a_bad_codename_is_refused() {
     local d; d=$(new_project bad '{"schema":1,"codename":"Bad Name;","repo":{"owner":"o","name":"r"},"baseBranch":"main"}')
     if (cd "$d" && bash "$script" >/dev/null 2>"$work/err"); then fail "bad codename accepted"; fi
@@ -370,7 +399,7 @@ for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section cod
     setup_codename_with_containers_writes_it_into_a_codenameless_config setup_refuses_another_codename_on_a_config_that_has_one setup_refuses_a_todo_repository_before_deriving_a_codename setup_says_where_the_home_checkout_lives \
     an_underivable_repo_name_fails_before_any_write setup_containers_writes_the_plugin_pin the_plugin_pin_fails_soft_without_a_release \
     a_base_branch_other_than_main_is_followed overlays_name_the_base_branch a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
-    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once; do
+    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once the_ref_comes_from_the_repository_the_config_names setup_refuses_an_invalid_config_before_the_pin; do
     "$c"
 done
 echo "all cases passed"

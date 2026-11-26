@@ -59,10 +59,11 @@ run_containers() {
 # stays. The ref fails soft: no release, no pin, files still written.
 write_pin() {
     local cfg="$CODEO_STATE_DIR/config.json" missing pin="" repo=${CODEO_PLUGIN_REPO:-kbajpai/codeo} r=""
+    codeo_config_is_object "$cfg" || codeo_die "config.json is not valid JSON"
     missing=$(codeo_pin_missing "$cfg")
     [[ -n $missing ]] || return 0
     if [[ $missing == *ref* ]]; then
-        if ! pin=$(codeo_latest_release "${CODEO_PLUGIN_URL:-https://github.com/$repo.git}"); then
+        if ! pin=$(codeo_latest_release "$(codeo_pin_url "$cfg")"); then
             echo "codeo: no codeo release found to pin; set plugin.repo and plugin.ref in .codeo/config.json"
             return 0
         fi
@@ -78,6 +79,7 @@ write_pin() {
 [[ -z $codename || ($codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ && ${#codename} -ge 2 && ${#codename} -le 30) ]] ||
     codeo_die "codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter, 2-30 characters"
 if [[ -e "$CODEO_STATE_DIR/config.json" && $containers == 1 && ${#stacks[@]} == 0 ]]; then
+    codeo_config_is_object "$CODEO_STATE_DIR/config.json" || codeo_die "config.json is not valid JSON"
     existing_cn=$(jq -r '.codename // empty' "$CODEO_STATE_DIR/config.json" 2>/dev/null || true)
     if [[ -n $codename && -n $existing_cn && $codename != "$existing_cn" ]]; then
         codeo_die "$CODEO_STATE_DIR/config.json already names '$existing_cn'; setup does not overwrite it"

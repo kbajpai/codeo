@@ -292,6 +292,22 @@ the_wizard_notes_kept_seeds_once() {
     grep -qxF 'init: note: kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs its role-guard and host-workflow sections): see docs/container-templates.md, Managed and seed files' "$work/out" || fail "note text"
 }
 
+the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json() {
+    local b="$work/wbase" d
+    mkdir -p "$b/fork"; git init -q --bare "$b/fork/codeo.git"
+    git init -q "$work/wseed"; git -C "$work/wseed" -c user.name=t -c user.email=t@t commit -q --allow-empty -m s
+    git -C "$work/wseed" tag v2.0.0; git -C "$work/wseed" push -q "$b/fork/codeo.git" v2.0.0
+    d=$(new_clone wizfork2 git@github.com:acme-co/shop.git)
+    mkdir "$d/.codeo"; echo '{"schema":1,"codename":"shop","repo":{"owner":"acme-co","name":"shop"},"baseBranch":"main","plugin":{"repo":"fork/codeo"}}' >"$d/.codeo/config.json"
+    (cd "$d" && env -u CODEO_PLUGIN_URL CODEO_PLUGIN_BASE="$b" bash "$init" --yes --skip-install --env containers >"$work/out" 2>&1) || true
+    [[ $(jq -c .plugin "$d/.codeo/config.json") == '{"repo":"fork/codeo","ref":"v2.0.0"}' ]] || fail "fork ref: $(jq -c .plugin "$d/.codeo/config.json")"
+    d=$(new_clone wizbad git@github.com:acme-co/shop.git)
+    mkdir "$d/.codeo"; echo 'not json' >"$d/.codeo/config.json"
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 --suite 'x:a:true:true' >"$work/out" 2>&1) && fail "wizard accepted invalid JSON"
+    grep -qxF 'init: fail config: config.json is not valid JSON' "$work/out" || fail "message: $(cat "$work/out")"
+    [[ $(cat "$d/.codeo/config.json") == 'not json' && ! -e $d/.codeo/config.json.new ]] || fail "wrote to an invalid config"
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
     questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
@@ -301,7 +317,7 @@ for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_create
     a_clone_without_origin_head_does_not_say_ok_and_skips_the_containers a_mixed_case_repo_name_gets_a_derived_codename a_repo_name_that_cannot_yield_a_codename_fails_before_writing \
     an_invalid_explicit_codename_states_the_rule a_flag_without_a_value_is_a_usage_error a_setup_failure_names_its_reason \
     a_kept_config_without_a_codename_gets_the_answer_written_into_it a_kept_config_without_a_codename_and_an_underivable_name_fails_before_writing \
-    a_failed_suite_write_is_reported_and_the_next_suite_is_tried the_wizard_fills_only_the_missing_plugin_key the_wizard_notes_kept_seeds_once; do
+    a_failed_suite_write_is_reported_and_the_next_suite_is_tried the_wizard_fills_only_the_missing_plugin_key the_wizard_notes_kept_seeds_once the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json; do
     "$c"
 done
 echo "all cases passed"

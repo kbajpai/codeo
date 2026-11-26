@@ -172,7 +172,9 @@ fi
 # 5. Suites and the plugin pin, into the config. A suite is name:paths:build:test (the build command
 #    cannot hold a colon, the test command may: name, paths and build are one colon-separated field each and the
 #    test command is the remainder).
-if [[ -f .codeo/config.json ]]; then
+if [[ -f .codeo/config.json ]] && ! codeo_config_is_object .codeo/config.json; then
+    say fail "config: config.json is not valid JSON"
+elif [[ -f .codeo/config.json ]]; then
     for s in ${suites[@]+"${suites[@]}"}; do
         IFS=: read -r n p b t <<<"$s"
         if [[ -z $n || -z $t ]]; then say fail "suite: '$s' is not name:paths:build:test"; continue; fi
@@ -192,7 +194,7 @@ if [[ -f .codeo/config.json ]]; then
         pin=
         if [[ $pin_missing == *ref* ]]; then
             pin=$version
-            [[ -n $pin ]] || pin=$(codeo_latest_release "$plugin_url" || true)
+            [[ -n $pin ]] || pin=$(codeo_latest_release "$(codeo_pin_url .codeo/config.json)" || true)
         fi
         if [[ $pin_missing == *ref* && -z $pin ]]; then
             say fail "config: no codeo release found to pin; set plugin.repo and plugin.ref in .codeo/config.json"

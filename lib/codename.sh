@@ -62,3 +62,21 @@ codeo_kept_seeds() {
 codeo_kept_seeds_note() {
     printf '%s\n' 'kept files are yours and are not checked against the templates (a Dockerfile needs the dev user, gh and Claude Code; an overlay needs its role-guard and host-workflow sections): see docs/container-templates.md, Managed and seed files'
 }
+
+# codeo_pin_url <config>: the repository to look the newest release up in. CODEO_PLUGIN_URL when set; else the
+# config's own plugin.repo (a fork's tags are the fork's); else CODEO_PLUGIN_REPO (default kbajpai/codeo). The
+# repository is joined to CODEO_PLUGIN_BASE (default https://github.com; tests point it at local bare repositories).
+# The lone-script fetch at the top of scripts/codeo-init.sh cannot source this file; it fetches the release the script
+# itself is cloned from and keeps its own lookup.
+codeo_pin_url() {
+    local repo
+    [[ -z ${CODEO_PLUGIN_URL:-} ]] || { printf '%s\n' "$CODEO_PLUGIN_URL"; return 0; }
+    repo=$(jq -r '(.plugin | objects | .repo) // ""' "$1" 2>/dev/null || true)
+    [[ -n $repo ]] || repo=${CODEO_PLUGIN_REPO:-kbajpai/codeo}
+    printf '%s/%s.git\n' "${CODEO_PLUGIN_BASE:-https://github.com}" "$repo"
+}
+
+# codeo_config_is_object <config>: the config parses and is a JSON object.
+codeo_config_is_object() {
+    jq -e 'type == "object"' "$1" >/dev/null 2>&1
+}

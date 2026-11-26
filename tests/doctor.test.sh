@@ -359,6 +359,14 @@ doctor_fails_containers_without_the_plugin_pin() {
     jq '.plugin = {repo: "o/codeo", ref: "v1.0.0"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
     run
     grep -q '^ok containers' <<<"$out" || fail "pinned project not ok"
+    jq '.plugin = {repo: "o/codeo"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
+    run
+    grep -qF "has no plugin.ref, so the container" <<<"$out" || fail "half pin (ref missing): $out"
+    ! grep -qF "plugin.repo" <<<"$out" || fail "names the present key: $out"
+    jq '.plugin = {ref: "v1"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
+    run
+    grep -qF "has no plugin.repo, so the container" <<<"$out" || fail "half pin (repo missing): $out"
+    jq '.plugin = {repo: "o/codeo", ref: "v1.0.0"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
     echo "# x" >> .devcontainer/codeo
     jq 'del(.plugin)' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
     run
