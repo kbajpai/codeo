@@ -13,16 +13,15 @@ This page is the reference for the dev container and sbx sandbox files codeo wri
 
 ## What is codeo's and what is yours
 
-`scripts/containers.sh` renders the templates under `templates/containers/`, and the generic scripts under `.devcontainer/scripts/`, into the project from its `.codeo/config.json`. Every place where a shipped file named codeo's own project was classified once, with a search for `kbajpai`, `codeo-`, `main` and `master` over the templates, the scripts and the libraries. Each hit is one of three kinds:
+`scripts/containers.sh` renders the templates under `templates/containers/`, and the generic scripts under `.devcontainer/scripts/`, into the project from its `.codeo/config.json`. The table lists every place where a shipped file names a project, a branch or codeo itself (found by searching the templates, the scripts and the libraries for `kbajpai`, `codeo-`, `main` and `master`), and says what it is:
 
-- **Placeholder**: the file names the project, so it carries a placeholder that the render fills in.
+- **Placeholder**: the file names the project or its base branch, so it carries a placeholder (`@CODENAME@`, `@REPO_SLUG@` or `@BASE_BRANCH@`) that the render fills in.
 - **Intentionally codeo's**: the name is the plugin's own (a product name, a marker, an environment variable), and every project keeps it.
-- **Fixed**: the file named codeo's own value where the project's belongs, and carries a placeholder instead.
 
 | File or setting | What it held | What it is |
 |---|---|---|
-| `.devcontainer/codeo`, the raw download URL of the `codeo` command | the branch `main` | Fixed: `@BASE_BRANCH@` |
-| `.devcontainer/codeo-container.sh`, the base ref of a new issue's checkout | the branch `main` | Fixed: `@BASE_BRANCH@` |
+| `.devcontainer/codeo`, the raw download URL of the `codeo` command | the branch `main` | Placeholder: `@BASE_BRANCH@` |
+| `.devcontainer/codeo-container.sh`, the base ref of a new issue's checkout | the branch `main` | Placeholder: `@BASE_BRANCH@` |
 | `.devcontainer/codeo`, the repository in the raw download URL | the repository's slug | Placeholder: `@REPO_SLUG@` |
 | `.devcontainer/codeo-container.sh`, `.devcontainer/codeo-track.sh` and `.sbx/codeo-sandbox.sh`, the repository they clone | the repository's slug | Placeholder: `@REPO_SLUG@` |
 | `.sbx/codeo-sandbox.sh`, the name of a sandbox for issue N | `<codename>-N` | Placeholder: `@CODENAME@` |
@@ -110,17 +109,22 @@ If a build needs more than the image holds, such as a different pinned sandbox i
 
 `examples/csharp-angular/` is a worked adoption for a C# API, an Angular web app and Kubernetes manifests. It holds:
 
-- a Dockerfile whose toolchain section installs the .NET SDK, Node, a headless Chromium for the Angular tests, the Docker CLI and `kubectl`
+- `examples/csharp-angular/.devcontainer/Dockerfile`, whose toolchain section installs the .NET SDK, Node, a headless Chromium for the Angular tests, the Docker CLI and `kubectl`
 - `codeo-suites.json`, the three suites (`api`, `web`, `k8s`) as they would sit in `suites`
 - `api/`, a small .NET API with a test project
 - `k8s/`, the Kubernetes manifests for the API and the web app
 - `examples/csharp-angular/scripts/generate-web.sh`, which generates the Angular app into `web/`, and `examples/csharp-angular/scripts/run-suites.sh`, which runs every suite in `.codeo/config.json`, build then test
 
-The example has not been built by this repository's tests: its suite never runs .NET, Node or Docker, and it uses stub commands in their place. To run it on a host, follow the example's own README, where one is present.
+The example has not been built by this repository's tests: its suite never runs .NET, Node or Docker, and it uses stub commands in their place. To use it in a project that adopted the templates:
+
+1. Copy the toolchain section of `examples/csharp-angular/.devcontainer/Dockerfile` into the same section of your `.devcontainer/Dockerfile`.
+2. Merge the suites in `examples/csharp-angular/codeo-suites.json` into `suites` in `.codeo/config.json`.
+3. Run `bash examples/csharp-angular/scripts/generate-web.sh` once, with Node available, to generate the Angular app into `web/`, and commit it.
+4. Inside the container, run `bash examples/csharp-angular/scripts/run-suites.sh` to run every suite's build and test.
 
 ## Adopting the templates
 
-One command adopts the whole setup in a project that has a GitHub repository and a clone with an `origin`: `codeo-init.sh --env containers`, or `/codeo:setup --containers` where codeo is already installed. Either writes `.codeo/config.json` and then runs `scripts/containers.sh`; the commands are described in [Setting a project up](../README.md#setting-a-project-up).
+One command adopts the whole setup in a project that has a GitHub repository and a clone with an `origin`: `scripts/codeo-init.sh --env containers`, or `/codeo:setup --containers` where codeo is already installed. Either writes `.codeo/config.json` and then runs `scripts/containers.sh`. The README's [Setting a project up](../README.md#setting-a-project-up) describes these two ways to adopt.
 
 ```mermaid
 flowchart TD
