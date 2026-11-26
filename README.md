@@ -445,6 +445,8 @@ The entries are in three groups. *During a workflow* covers what stops a step wh
 lock: TODO — could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)
 ```
 
+The other `lock: TODO` line a container lock can print is `--sandbox needs a name of letters, digits, ., _ and -: the lock records a volume instead`. The sandbox name the dev container start script passes (the first line of the sandbox marker, else the clone folder's name) is not made of letters, digits, `.`, `_` and `-`, or does not start with a letter or digit, so the lock carries a `volume:` line instead of a `sandbox:` line. Give the sandbox a name made of those characters (`/codeo:close` removes the lock when the workflow ends, and the next lock records the sandbox).
+
 **A step that was interrupted.** Every step resumes from its dossier file in `.codeo/<N>/` and from GitHub, not from the conversation.
 
 - **Symptom.** A session ended part way, a push failed, or a step is waiting on an answer.
@@ -461,7 +463,7 @@ lock: TODO — could not read the workspace volume's name from /proc/self/mounti
 
 `/codeo:doctor` prints one `ok` or `fail` line per check and reports every failure. Each entry below is one check and the fix its own message gives. Paths in the messages below are your project's own.
 
-**config.** `config.json not found at …/.codeo/config.json` means the project has no codeo state: run `/codeo:setup`. An `invalid JSON` message means the file does not parse; fix the file with `jq . .codeo/config.json`, which points at the error. A `schema … is newer than this plugin supports (1); update the plugin` message means the project was set up by a newer codeo: run the install command to get the latest release.
+**config.** `config.json not found at …/.codeo/config.json` means the project has no codeo state: run `/codeo:setup`. An `invalid JSON` message means the file does not parse; fix the file with `jq . .codeo/config.json`, which points at the error. A `schema … is newer than this plugin supports (1); update the plugin` message means the project was set up by a newer codeo: run the install command to get the latest release. A `config.json: missing <key>` message (`.schema`, `.repo.owner`, `.repo.name` or `.baseBranch`) means a required key is absent, and `config.json: repo.owner is still TODO-set-me` (or `repo.name`, or `baseBranch`) means `/codeo:setup` could not read it and wrote the marker: set the value in `.codeo/config.json`. Until you do, `ruleset` is skipped (`fail ruleset: skipped: baseBranch is not set` when it is the base branch, otherwise `skipped: config is unusable`).
 
 ```
 fail config: config.json not found at /home/you/app/.codeo/config.json
@@ -511,7 +513,7 @@ fail suites: not installed or unset: api:make api:pytest
 
 **deps.** `missing: …` names a tool `codeo` needs that is not installed (`jq`, `git`, or `bash>=4.3` with the version found): install it with your package manager.
 
-**overlays.** Each `## <name>` heading in `.codeo/overlays/<skill>.md` must be an extension point of that skill, spelled `## <point>` with one space after the hashes, and used once. The message names the file, the heading and the points the skill has; rename or delete the section. `docs/extension-points.md` lists them.
+**overlays.** Each `## <name>` heading in `.codeo/overlays/<skill>.md` must be an extension point of that skill, spelled `## <point>` with one space after the hashes, and used once. The message names the file, the heading and the points the skill has; rename or delete the section. `docs/extension-points.md` lists them. Two more failures: `<file>: no extension points for skill <skill>` means the file is named for a skill that has none (`setup` and `doctor` have none, as does any name that is not a skill): rename the file to a skill that has them, or delete it. `extension-point registry not readable: <path>` means the plugin's own list of extension points cannot be read: install the plugin again with the install command.
 
 **superpowers.** `not installed; install it with: claude plugin install superpowers@superpowers-marketplace`: run that command (or the install command, which installs it). A `cannot verify` result is `ok`: the file `claude` keeps of installed plugins was not readable.
 
@@ -620,7 +622,7 @@ The six pipeline skills run in order inside one workflow, each owning one dossie
 | [`/codeo:cleanup`](docs/skills.md#cleanup) | Print the commands that remove finished issues' containers; it proves each one first and runs nothing |
 
 [`/codeo:setup`](docs/skills.md#setup) writes `.codeo/` with a starter `config.json` and creates `docs/plans/`;
-[`/codeo:doctor`](docs/skills.md#doctor) checks the whole set-up — config, GitHub login and scopes, board, branch ruleset, suites, dependencies, overlays and superpowers — and reports every failure.
+[`/codeo:doctor`](docs/skills.md#doctor) checks the whole set-up — config, schema, codename, GitHub login and scopes, board, priority labels, branch ruleset, suites, dependencies, overlays and superpowers (twelve checks, `priority-labels` only when `issue.priority` is `true`) — and reports every failure.
 
 A project shapes a skill without editing it through overlay files, `.codeo/overlays/<skill>.md`.
 Each skill's extension points are listed in `docs/skills.md` and documented in
