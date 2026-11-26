@@ -29,6 +29,7 @@ The engineer ran the host steps on a Linux host on 2026-11-26 (results under *No
 *Recommendation:* proceed and coordinate. #192 has not started implementing, this branch is much further along, and the conflict is two bullets under one heading that the later merge resolves in a minute; sequencing would hold a finished change for work that has not begun.
 
 **Answer:**
+Proceed and coordinate (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ### Q2 — #192 overlaps this branch on `docs/home-checkout.md`. Proceed, sequence or re-scope?
 
@@ -39,6 +40,7 @@ The engineer ran the host steps on a Linux host on 2026-11-26 (results under *No
 *Recommendation:* proceed and coordinate, and let #192's plan read this branch's *Adopting the guard in your project* section before it describes the guard.
 
 **Answer:**
+Proceed and coordinate (engineer, "go with your picks", in the conversation, 2026-11-26; recorded here by the skill).
 
 ## Notes
 
@@ -156,9 +158,40 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 
 **Deferred Minor findings from this round's reviews (not fixed):** with an invalid-JSON config the wizard's plugin-pin step can leave `.codeo/config.json.new` behind (no data loss, the original stays intact); the jq/`mv` failure branches of the wizard and `setup.sh` are not exercised by a test; the G11 leak scan's `~/codeo` pattern does not catch `$HOME/codeo` or an absolute `/home/x/codeo`; `codeo_home_lines` prints an empty folder name for a project at `/`; four rewritten sentences start with a capital "On" after a colon; `docs/container-templates.md:36` says "only when its folder has this name", which is loose but not false; the README's adoption bullets and the reference page repeat the same long paragraph in several places (a maintenance risk).
 
+### Round 4 — 2026-11-26
+(send-back from qc.md round 3)
+
+**What was built** (four commits on top of round 3: `5c475e8`, `011974d`, `b8d523b`, `d5d4c21`; each reviewed, two needed a fix round):
+- **H1** — the pages say one `codeo` command serves one project per machine: an audit-table row in `docs/container-templates.md`, a condition in the README's adoption section and a paragraph next to the install line in `.devcontainer/README.md`; renaming the installed file to `~/.local/bin/<codename>` is the documented way to keep two projects (checked against `cmd_update` and `home_dir` in the command: `update` replaces the file it runs as, the home comes from `CODEO_HOME` or `~/<codename>`).
+- **H2** — the README's adoption section carries the project's `codeo` install line and links `.devcontainer/README.md#using-this-in-another-project`; "the install line below" is true.
+- **H3** — a project that already has `.devcontainer/Dockerfile`, `devcontainer.json` or `.codeo/overlays/*.md` keeps them; `setup.sh` and the wizard print one note when a seed was kept (counted from `containers: skip` lines for the seed paths), and `docs/container-templates.md` lists what a kept seed must keep (the `dev` user, gh and Claude Code, `runArgs --name=${containerWorkspaceFolderBasename}` and the volumes, the `## role-guard` and `## host-workflow` overlay sections).
+- **H4** — the README says the `curl … | bash` command fetches the newest release and works from the first release that ships `scripts/codeo-init.sh`; until then run `bash <plugin>/scripts/codeo-init.sh --env containers`.
+- **H5** — the pin writers fill only the missing key (`lib/codename.sh`: `codeo_pin_missing`, `codeo_pin_fill`, `codeo_pin_url`), used by `setup.sh`, the wizard and doctor; the release for a missing ref is looked up in the repository the config names (`CODEO_PLUGIN_URL` wins when set; `CODEO_PLUGIN_BASE` is the testable prefix); doctor names only the missing key; a `plugin.repo` that is not `owner/name` is refused.
+- **H6** — the wizard prints `init: fail suite: <name>: could not write .codeo/config.json` and goes on to the next suite.
+- **H7** — the README lists every question the wizard asks.
+- **H8** — `no_shipped_file_names_codeo_where_the_project_belongs` is registered once.
+- Also: `setup.sh` and the wizard stop with one line when `.codeo/config.json` is not a JSON object (the wizard before it writes or installs anything, nothing printed by jq, the file byte-identical).
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. For information, `bash scripts/containers.sh --check` prints no `differs` and `bash scripts/doctor.sh` prints no `fail`; the implementers' own full runs of `bash tests/run.sh` ended `all cases passed`; grading is `/codeo:qc`'s.
+
+**Documentation pages changed this round:** `README.md`, `docs/container-templates.md`, `.devcontainer/README.md`.
+
+**Overlap with #192** (`feat/192-guard-home-checkout-no-project`, plan step): `overlap.sh 190` printed `192	CHANGELOG.md` and `192	docs/home-checkout.md` at the end of this round; Q1 and Q2 were answered *proceed and coordinate* (engineer, 2026-11-26). Nothing of #192's was touched; this round did not change `CHANGELOG.md` or `docs/home-checkout.md`.
+
+**Deviations and rulings (each with what it costs if wrong):**
+1. H9 (the example's `k8s` suite runs `kubectl kustomize k8s` as both build and test) was not taken: the two commands were verified on the engineer's host, and changing them without a host re-run would break that evidence. Costs: the `k8s` suite's test only proves the manifests render.
+2. When the newest release cannot be found, neither pin key is written even if `plugin.repo` is also missing; doctor still fails the incomplete pin. Costs: `setup.sh --containers` offline leaves the pin to the engineer.
+3. The wizard stops right after the preflight line on a bad config, so it prints one line and no doctor output. Costs: less output on a broken config.
+4. H1 is documentation only: the launcher keeps its fixed name; a per-project command name or a refusal on a repository mismatch is `/codeo:plan`'s (`qc.md` `## Notes`).
+
+**Footprint gap still open (`/codeo:plan`'s):** `overlap.sh --outside 190` prints `lib/codename.sh`, `tests/close-removal.test.sh`, `tests/doctor.test.sh`, `tests/folder-check.test.sh`, `tests/init-overlay.test.sh` and `tests/role.test.sh`.
+
+**Deferred Minor findings from this round's reviews (not fixed):** `docs/container-templates.md` says a seed needs "a dev user with UID 1000" though only the Dockerfile's `ARG USER_UID=1000` fixes the number (conservative); `codeo_pin_url`'s dot-only segments such as `a/..` pass the `plugin.repo` pattern and just fail the lookup; the wizard's guard uses `-e` where later steps use `-f`; `codeo_pin_missing` prints nothing on an invalid config in the code paths that do not check validity first; a `CODEO_PLUGIN_BASE` with a trailing slash yields `base//owner/name.git`; the seed note prints on every rerun of an unmodified project; `.devcontainer/README.md`'s "`codeo update` from it" does not say it means `codeo update` run through the other project's command.
+
 ## Log
 
 - 2026-11-26 — implemented: Tasks 1-11 and the in-checkout half of Task 12 through subagent rounds on sonnet (every implementer, reviewer and fix round), 21 commits; host steps pending · cost: 68m · sonnet-5-5 1.7M in + 58M cached / 322k out
 - 2026-11-26 — host results recorded; host-run hardening and sandbox documentation added after the engineer's run · cost: 124m · sonnet-5-5 1.9M in + 75.8M cached / 386k out
 - 2026-11-26 — round 2 (send-back from qc round 1): F1-F10 fixed in four commits, each task reviewed on sonnet · cost: 34m · sonnet-5-5 563k in + 23.8M cached / 96k out
 - 2026-11-26 — round 3 (send-back from qc round 2): G1-G4 and G6, G8-G11 fixed in three commits, each task reviewed on sonnet · cost: 20m · sonnet-5-5 417k in + 33.6M cached / 82k out
+- 2026-11-26 — round 4 (send-back from qc round 3): H1-H8 fixed in four commits, each task reviewed on sonnet; overlap questions Q1-Q2 answered · cost: 73m · sonnet-5-5 499k in + 27.4M cached / 90k out
