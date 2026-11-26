@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q3 are answered. The plan is drafted at `.codeo/182/plan-draft.md` and waits at the review gate; nothing is open in this file.
+Q1-Q3 are answered and the plan is approved and written to `docs/plans/2026-11-26-release-v1-0-10.md` (unstaged). Nothing is open; `overlap.sh 182` printed nothing. The next step is `/codeo:implement`, once the plan is reviewed and committed.
 
 What exploration found:
 - **The gate is met.** `origin/main` is at `89789dd`, 8 commits past `v1.0.9` (`6e66283`): #175 (pin), #178 (#171), #180 (#170), #184 (#173), #183 (#176), #186 (#177), #187 (#179). `inflight.sh --except 182` prints `no other workflow in flight`.
@@ -67,6 +67,21 @@ Two PRs (engineer, in the conversation, 2026-11-26; recorded here by the skill).
 
 Calls I made without a question: the release date is the UTC date the release PR opens; the `Config schema: 1 (unchanged)` line holds (no config key changed since v1.0.9); the `Shared state:` and `Safe to bump mid-workflow:` lines are re-read against the diff since `v1.0.9` of `scripts/` when the PR is cut, not assumed; `tests/replay.test.sh` is not run (no golden directory).
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-26-release-v1-0-10.md` (approved 2026-11-26, unstaged) |
+| Shape | Plan under `docs/plans/`, 14 tasks; no reference doc, since nothing is a standing decision |
+
+**Decisions.** Q1: the release PR fixes the two README mismatches (`/codeo:implement`'s "It asks" and "It writes") and every omission the audit found (installer `--help` and exit statuses, `TODO-set-me`, `priority-labels`, the config, overlays and lock failures, init's assignee, plan's preview file and leases, close's board moves and behind-merge, `sync-main.sh` rounds, resource paths and the `start` hook), each written from the code. Q2: changelog bullets for #179, #170 and the README corrections. Q3: two PRs, the release PR from `release/v1.0.10` cut from `origin/main` in a worktree (five files: `plugin.json`, `CHANGELOG.md`, `README.md`, `docs/updating.md`, `tests/install.test.sh`), this branch carrying the pin, plan and dossier. You merge both PRs and tag (lightweight, `git tag v1.0.10 <SHA>`); the agent runs the clean-clone test and publishes the Release on your say-so. Version stubs: `v1.0.9`→`v1.0.10`, `v1.0.8`→`v1.0.9`, the three ordering or refused stubs skipped, the `v1.0.10` ordering stub taken to `v1.0.11`.
+
+**Rejected.** Fixing mismatches only, or only the omissions in three places (Q1); no #170 bullet (Q2); one PR from this branch, which `qc-verdict` fails, and pinning before the tag exists (Q3). The `labelTypes: {}` edge case was left out as unconfirmed.
+
+**Documentation pages the plan changes:** `README.md` (Tasks 2-6) and `docs/updating.md` (version numbers only). No wiki module. No intake question was resolved by this skill; no issue was filed; the `engineering` skills were not used.
+
+**Risk for `/codeo:qc`.** Criteria 6-9 depend on your merge, tag and rebuild; criterion 8 is met when `/codeo:close`'s PR merges. README edits must be checked against the cited code, not the plan's summary. `main` may move before Task 1: re-read `## Unreleased` and the README comparison for files it touched.
+
 ### Footprint
 ```
 files:      .claude-plugin/plugin.json, CHANGELOG.md, README.md, docs/updating.md, tests/install.test.sh, .codeo/config.json, docs/plans/2026-11-26-release-v1-0-10.md, .codeo/182/**
@@ -75,11 +90,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-26 — Q1-Q3 raised · cost: unavailable
 - 2026-11-26 — Q1-Q3 answered; draft written to plan-draft.md for review · cost: unavailable
+- 2026-11-26 — planned: docs/plans/2026-11-26-release-v1-0-10.md · cost: 18m · fable-5-2 96k in + 1M cached / 10k out · sonnet-5-5 512k in + 8.3M cached / 66k out
