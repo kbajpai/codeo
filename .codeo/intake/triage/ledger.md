@@ -211,5 +211,9 @@
 | `qc:171:H1-H6` | #171 non-blocking findings H1-H6 plus the plan's promised items (handoff skill count, role-guard adoption docs, README indentation) | filed #179 | 2026-11-25 |
 | `issue:173` | Close the #161 leftovers; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
 | `issue:176` | Support the sbx issue sandbox on macOS; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
-| `qc:170:F1` | #170 F1: `docs/home-checkout.md:22` says `install.sh` needs `flock`; only `codeo` does | deferred | 2026-11-25 |
+| `qc:170:F1` | #170 F1: `docs/home-checkout.md:22` says `install.sh` needs `flock`; only `codeo` does | filed #185 | 2026-11-26 |
 | `issue:179` | Close the #171 leftovers; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
+| `qc:173:R2-F1-F5` | #173 R2-F1 to R2-F5 (hook skip check, stop-failure sentence, release-checklist step 6, hook comment, hosted-session claim) | filed #185 | 2026-11-26 |
+| `qc:176:F9-F18` | #176 F9-F18 (.sbx/README.md, T14, sandbox test gaps, CHANGELOG, CLT hint, codeo open check) | filed #185 | 2026-11-26 |
+| `issue:181` | Session title hex sequence number; board Status Backlog | backlog | 2026-11-26 |
+| `issue:182` | Release v1.0.10 gated on #177 and #179; board Status Backlog | backlog | 2026-11-26 |
