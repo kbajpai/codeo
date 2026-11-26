@@ -14,6 +14,10 @@ Initialized: branch `feat/release-v1-0-9-once` cut off `origin/main` at `24577ac
 
 None.
 
+## Notes
+
+2026-11-25 (added by #177): #161 had no bullet under ## Unreleased when the Outcome's Problem paragraph says it sat there; plan.md Q2 and its Intake note record the correction.
+
 ## Outcome
 
 | | |

@@ -27,6 +27,12 @@ for needle in 'codeo rm <N>' '^codeo-[0-9]+$' 'unknown' 'docker ps' \
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 
+seg=${out#*'Add one sentence'}
+[[ "${seg%%'docker rm -f'*}" == *'git status'* ]] || fail "the without-codeo sentence does not put git status before docker rm -f"
+for needle in 'go on only when it shows nothing unpushed' 'from the folder that holds the script' 'when codeo-track.sh sits beside'; do
+    [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
+done
+
 # Structural checks on the overlay text, in one function so a scratch copy can be fed to it.
 check_overlay() {
     local text=$1 fin rest stash aband part name needle cmd='codeo rm <N>'

@@ -32,6 +32,9 @@ row=$(grep -F '| `cleanup` |' "$repo/docs/handoff.md")
 [[ $row == *'#<M>'* && $row != *'#<N>'* ]] || check_fail "the handoff cleanup row does not name /codeo:init #<M>: $row"
 ! grep -qiw 'docker' "$skill" || check_fail "the skill names the container engine"
 ! grep -qF 'codeo-home' "$skill" || check_fail "the skill names the home container"
+step4=$(awk '/^4\. \*\*Close/{f=1; next} /^## /{f=0} f' "$skill")
+grep -qF 'or a `leftover` line was printed' <<<"$step4" || check_fail "step 4 does not send a leftover-only run to the printed commands"
+grep -qF '/codeo:triage' <<<"$step4" || check_fail "step 4 no longer names /codeo:triage"
 
 # Generic text names no container, and the list's reach is stated.
 ! grep -qF 'Home-container' "$skill" || check_fail "the skill still says Home-container"
@@ -100,6 +103,13 @@ fb=${out#$'70\tproven\tcodeo rm 70\t'}
 [[ $fb == *'docker rm -f codeo-70'* && $fb == *'docker volume rm codeo-70'* && $fb == *'codeo-track.sh mark 70 container codeo-70 removed'* && $fb == *'unpushed'* && $fb != *'{'* ]] || check_fail "the overlay's fallback does not expand: $fb"
 for needle in 'docker rmi codeo-dev:codeo-70' 'codeo-sandbox.sh end 70' 'docker rm does not end a sandbox' 'on the host that created the container' 'not inside a container' 'mark 70 image codeo-dev:codeo-70 removed'; do
     [[ $fb == *"$needle"* ]] || check_fail "the overlay's fallback lacks: $needle"
+done
+
+# The by-hand fallback: git status before any docker command, the sandbox script's own marking, marks after removal.
+fbline=$(grep -E '^fallback: ' "$repo/.codeo/overlays/cleanup.md")
+[[ ${fbline%%docker rm -f*} == *'git status'* ]] || check_fail "the overlay's fallback does not put git status before the first docker rm -f"
+for needle in 'from the folder that holds the script' 'when codeo-track.sh sits beside' 'records nothing' 'once the removal succeeds'; do
+    [[ $fbline == *"$needle"* ]] || check_fail "the overlay's fallback line lacks: $needle"
 done
 
 [[ $fail -eq 0 ]] || exit 1
