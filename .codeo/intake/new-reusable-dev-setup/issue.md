@@ -6,7 +6,7 @@
 
 ## Where this stands
 
-Draft stopped on open questions Q1–Q4. Nothing is filed.
+Q1–Q4 answered; the draft is at the review gate in body.md; nothing is filed.
 
 ## Problem as restated
 
@@ -14,13 +14,13 @@ codeo's plugin and workflow are project-agnostic, but the container and sandbox 
 
 ## Questions
 
-1. **How should a project adopt the full setup?** (a) Copy `.devcontainer/` and `.sbx/` into the project and edit them (the files stay codeo's, made parameterized so the edits are small); (b) the plugin ships a template and a command (for example `/codeo:setup --containers`) that writes the files into the project; (c) the scripts run from the plugin and read only a small project-owned file (Dockerfile plus config keys). Recommendation: (b), with the container and sandbox scripts reading everything project-specific from `.codeo/config.json`. Answer:
+1. **How should a project adopt the full setup?** (a) Copy `.devcontainer/` and `.sbx/` into the project and edit them (the files stay codeo's, made parameterized so the edits are small); (b) the plugin ships a template and a command (for example `/codeo:setup --containers`) that writes the files into the project; (c) the scripts run from the plugin and read only a small project-owned file (Dockerfile plus config keys). Recommendation: (b), with the container and sandbox scripts reading everything project-specific from `.codeo/config.json`. Answer: (b)
 
-2. **Which parts are in scope?** Dev container (VS Code and `codeo-container.sh`), sbx sandbox, the `codeo` host command, the tracking comment, the role guard. Recommendation: all of them, since "full" means the whole thing; the sbx image (`.sbx/claude-image`) included. Answer:
+2. **Which parts are in scope?** Dev container (VS Code and `codeo-container.sh`), sbx sandbox, the `codeo` host command, the tracking comment, the role guard. Recommendation: all of them, since "full" means the whole thing; the sbx image (`.sbx/claude-image`) included. Answer: everything
 
-3. **What counts as done for the other stack?** Recommendation: the issue does not write Dockerfiles for particular stacks; it ships a stack-neutral base image plus a documented place to add the project's toolchain, and one worked example (name the stack: Node, Python, other). Which example, if any? Answer:
+3. **What counts as done for the other stack?** Recommendation: the issue does not write Dockerfiles for particular stacks; it ships a stack-neutral base image plus a documented place to add the project's toolchain, and one worked example (name the stack: Node, Python, other). Which example, if any? Answer: my recommendation; the worked example is the monorepo from Q4
 
-4. **Verification.** Recommendation: a test that sets up a throwaway project (not named codeo, different owner) and asserts that no script or default still names `kbajpai/codeo` or `codeo-<N>` where the project's codename should appear. Is that enough, or do you want a real second project run through the full flow before release? Answer:
+4. **Verification.** Recommendation: a test that sets up a throwaway project (not named codeo, different owner) and asserts that no script or default still names `kbajpai/codeo` or `codeo-<N>` where the project's codename should appear. Is that enough, or do you want a real second project run through the full flow before release? Answer: a real run: a monorepo app with a C# backend, an Angular frontend, Kubernetes and dockerized containers.
 
 ## Notes
 
