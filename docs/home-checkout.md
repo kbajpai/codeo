@@ -47,7 +47,7 @@ Refused in such a checkout:
 
 Allowed:
 
-- Any path under `.codeo/`, which is how `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` keep their notes, drafts and ledgers; a `..` that climbs out of `.codeo/` is not under it. `git add`, `rm`, `mv` and `restore` pass only when every pathspec is under `.codeo/`, and `git commit` passes only when everything it would commit is under `.codeo/` and it names no pathspec outside it; `--amend`, `-i`, `--include`, `-o`, `--only` and ` -- ` are always refused.
+- Any path under `.codeo/`, which is how `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` keep their notes, drafts and ledgers; a `..` that climbs out of `.codeo/` is not under it. `git add`, `rm`, `mv` and `restore` pass only when every pathspec is under `.codeo/`, and `git commit` passes only when everything it would commit is under `.codeo/` and it names no pathspec outside it; `--amend`, `-i`, `--include`, `-o`, `--only` and a bare `--` are always refused.
 - Plain `git checkout` and `git switch`, `worktree`, `fetch`, `pull`, `branch` and every script, so `/codeo:init`'s scratch worktree and the `codeo` command work.
 - Every other role, a hosted web session, a project without `.devcontainer/scripts/role.sh`, and a path outside any repository.
 
