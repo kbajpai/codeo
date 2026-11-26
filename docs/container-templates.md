@@ -34,6 +34,7 @@ This page is the reference for the dev container and sbx sandbox files codeo wri
 | `.devcontainer/scripts/codeo-root.sh` | the lookup of the installed plugin | Intentionally codeo's |
 | The `CODEO_*` environment variables and the `.codeo/` directory | the plugin's settings and state | Intentionally codeo's |
 | The home clone's folder name, which `.devcontainer/scripts/role.sh` reads | `<codename>-home` | Placeholder: `@CODENAME@`; the clone `setup --containers` ran in is a home checkout only when its folder has this name |
+| The command name `codeo` and its install path `~/.local/bin/codeo` (the install line in `.devcontainer/README.md`) | the host command: every adopted project, and codeo's own, installs its rendered command there, so one machine holds one `codeo` command; installing another project's, or `codeo update` from it, replaces it, and `codeo` on `PATH` is the project's whose command was installed last. Another file name, for example `~/.local/bin/<codename>`, keeps two projects side by side (the command reads its home from `~/<codename>` and `codeo update` replaces the file it runs as; its messages and the `codeo rm <N>` a workflow prints still say `codeo`) | Intentionally codeo's |
 | `kbajpai/codeo` in `scripts/codeo-init.sh` (`CODEO_PLUGIN_REPO`) and the `codeo-init.sh` usage text | the plugin's own source repository | Intentionally codeo's |
 
 A project that is not codeo therefore carries its own name, its repository and its base branch in every shipped file, and codeo's own name only where the plugin's own scripts and settings are meant.
@@ -70,6 +71,12 @@ bash <plugin>/scripts/containers.sh [--check] [--force]
 Each file gets one output line, `containers: wrote <path>`, `containers: skip <path>` (it exists and was left alone), `containers: ok <path>` (`--check`, equal to the template) or `containers: differs <path>` (`--check`, different or missing). The exit status is 0 on success, 1 when `--check` finds a difference or the config is unusable (a missing key or a name that fails the rules below), and 2 on a usage error.
 
 Running it twice writes nothing the second time, and a seed you edited stays as you left it.
+
+**What a seed must keep.** The managed scripts rely on parts of the seeds, and a seed that is kept is not checked against the templates, so `--check` and `/codeo:doctor` do not notice when a part is gone (setup and the wizard print one note saying so). Keep:
+
+- In `.devcontainer/Dockerfile`: the `dev` user with UID 1000 (`codeo-container.sh` runs `docker exec -u root` to `chown dev:dev /workspaces` and mounts the volumes under `/home/dev/.config/gh` and `/home/dev/.config/git`), `gh`, and Claude Code (`claude`).
+- In `.devcontainer/devcontainer.json`: `"runArgs": ["--name=${containerWorkspaceFolderBasename}", ...]`, which names the container after its folder (`<codename>-home`, `<codename>-<N>`), and the two `mounts` volumes `<codename>-gh` and `<codename>-git` at `/home/dev/.config/gh` and `/home/dev/.config/git`.
+- In each `.codeo/overlays/*.md`: the `## role-guard` section, which the skills fetch by name to run the role check (without it the guard does not run), and, in `init.md` and `close.md`, the `## host-workflow` section; `cleanup.md` also keeps its `## removal-command` section.
 
 ## Where each name comes from
 
@@ -132,7 +139,7 @@ To check the whole example in one command, run `bash examples/csharp-angular/scr
 
 ## Adopting the templates
 
-One command adopts the whole setup in a project that has a GitHub repository and a clone with an `origin`: `scripts/codeo-init.sh --env containers`, or `/codeo:setup --containers` where codeo is already installed. Either writes `.codeo/config.json` and then runs `scripts/containers.sh`. The README's [Setting a project up](../README.md#setting-a-project-up) describes these two ways to adopt.
+One command adopts the whole setup in a project that has a GitHub repository and a clone with an `origin`: `scripts/codeo-init.sh --env containers`, or `/codeo:setup --containers` where codeo is already installed. Either writes `.codeo/config.json` and then runs `scripts/containers.sh`. Once the files are on the base branch, the project's `codeo` command is installed with the line in [.devcontainer/README.md](../.devcontainer/README.md#using-this-in-another-project). The README's [Setting a project up](../README.md#setting-a-project-up) describes these two ways to adopt.
 
 ```mermaid
 flowchart TD
@@ -149,8 +156,9 @@ flowchart TD
     J --> K["codeo issue N -> container or sandbox"]
 ```
 
-Commit the files it wrote and push them to the base branch; after that, `codeo issue <N>` opens an issue in a container or a sandbox. Three conditions decide whether it works:
+Commit the files it wrote and push them to the base branch; after that, `codeo issue <N>` opens an issue in a container or a sandbox. Four conditions decide whether it works:
 
 - **The repository is public.** The image build (`https://github.com/<owner>/<repo>.git#<ref>:.devcontainer`), the container's clone, and the `codeo` command with its install line (`raw.githubusercontent.com`) fetch without credentials, so for a private repository the install line, `codeo issue <N>`, `codeo update` and the container's clone fail with no explanation. `CODEO_CONTEXT`, the `.devcontainer` directory of a local clone, builds the image without fetching it, but the container still clones from `CODEO_REPO_URL` with no credentials, so it does not make a private repository's container work. `CODEO_RAW_URL` names another base URL for the `codeo` command's three script downloads, and a script already present in `CODEO_HOME` is not downloaded again. The sandbox route's clone is made by the host's own `git`. codeo does not test a private repository and has no authenticated fetch. The audit table's two kinds (a placeholder, or codeo's own name) do not describe a requirement on the repository's visibility, so this section states it instead of a table row.
 - **The folder you ran it in is named `<codename>-home`.** That clone is a home checkout only under that name. The shipped role guard (`role.sh`) decides it: On the host, a clone is a home checkout when its folder is named `<codename>-home`, it holds no lock and it is on the base branch; a host clone with no lock in a differently named folder reads as `stray`, and the home skills (`/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup`) are refused there. `scripts/setup.sh` and the wizard end by printing `the home checkout is a clone whose folder is named <codename>-home` with the current folder's name, and one line more to rename or re-clone it when it differs.
 - **The clone is not at `~/<codename>`.** The `codeo` command's home directory (`CODEO_HOME`) defaults to `~/<codename>`, and the codename defaults to the repository's name, so a project cloned to `~/<repo>` makes every `codeo` command stop with "is a git checkout; set CODEO_HOME". Keep the project's clone elsewhere, or set `CODEO_HOME`.
+- **One `codeo` command serves one project per machine.** Every adopted project installs its rendered command as `~/.local/bin/codeo`, and installing another project's, or running `codeo update` from it, replaces the first (see the audit table). Install each project's command under its own file name to keep two.

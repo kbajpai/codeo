@@ -254,6 +254,8 @@ else
     grep -qiF "is public" <<<"$adopting" || fail adopting-paths "the Adopting section does not say the repository must be public"
     grep -qF "<codename>-home" <<<"$adopting" || fail adopting-paths "the Adopting section does not name the <codename>-home folder"
     grep -qF "CODEO_HOME" <<<"$adopting" || fail adopting-paths "the Adopting section does not name CODEO_HOME"
+    grep -qiF 'one `codeo` command serves one project per machine' <<<"$adopting" || fail adopting-paths "the Adopting section does not state the one codeo command per machine condition"
+    grep -qF "](.devcontainer/README.md#using-this-in-another-project)" <<<"$adopting" || fail adopting-paths "the Adopting section does not link the project install line in .devcontainer/README.md"
     ! grep -qF "bash scripts/containers.sh" <<<"$adopting" || fail adopting-paths "the Adopting section shows bash scripts/containers.sh, which a project does not have"
 fi
 
@@ -349,6 +351,10 @@ grep -qF 'keychain cannot be accessed because the current session does not allow
 # containers-transcript: the adoption section shows the wizard's init lines inside a code fence.
 awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on && /^```/ { f = !f; next } on && f && /^init: ok containers:/ { found = 1 } END { exit !found }' "$readme" ||
     fail containers-transcript "Adopting codeo with containers has no code-fenced line starting init: ok containers:"
+
+# adopting-install-line: the adoption section shows the project's own codeo install line inside a code fence.
+awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on && /^```/ { f = !f; next } on && f && /curl -fsSL -o ~\/.local\/bin\/codeo https:\/\/raw.githubusercontent.com\/<owner>\/<repo>\/<base>\/.devcontainer\/codeo && chmod \+x ~\/.local\/bin\/codeo/ { found = 1 } END { exit !found }' "$readme" ||
+    fail adopting-install-line "Adopting codeo with containers has no code-fenced project install line for the codeo command"
 
 # A pipeline whose consumer is grep -q: grep exits at its first match, a producer still writing is killed
 # by SIGPIPE (141), and pipefail fails the whole pipeline although the line was found. The race is lost
