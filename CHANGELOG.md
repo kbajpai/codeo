@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.10 — 2026-11-26
 
 Config schema: 1 (unchanged)
 Shared state: none
@@ -12,6 +12,9 @@ Safe to bump mid-workflow: yes
 - This repository's hosted-session hook: `.claude/hooks/session-start.sh` runs `install.sh` at `SessionStart` in a hosted session when `codeo@codeo` or a `superpowers` plugin from any marketplace is missing or disabled at user scope. It was added with #161 without an entry. It now runs only on `startup`, `resume` and `fork`, and `CONTRIBUTING.md` describes it. Adopters' projects are not affected (#173).
 - Corrections to text: the v1.0.9 #154 bullet and the v1.0.8 `Shared state:` line below were corrected, the `.devcontainer/README.md` removal flowchart and paragraphs hold when `docker ps -a` fails, and release checklist step 6 says which examples and stubs move (#173).
 - Documentation leftovers from #163, #166 and #168. `docs/home-checkout.md` says `doctor` reports `config` before `deps: missing: jq`, that `live.sh` still publishes without `jq` (it reads the base branch as empty and skips the assignee lookup), and that a sandbox asks about a local container of the issue's name where the container script refuses. The `/codeo:cleanup` and `/codeo:close` overlays check `git status` first and say when the row is marked. `/codeo:cleanup`'s closing block counts a leftover branch delete. `/codeo:close` step 17 reads the `codeo-live/<issue>/*` branches from origin, also in a hosted session. `docs/release-checklist.md` names the timezone of the release date (UTC). The v1.0.9 lines are corrected: the `--yes` bullet says the sandbox script asks and the container script refuses, the `(#157)` bullet no longer claims the `name`-proof leftover that the `(#166)` bullet carries, and the `(#163)` bullet no longer calls the README's example invented. Nothing the plugin does changes (#177).
+- The README, `docs/home-checkout.md` and the handoff and role-guard docs close the #171 leftovers: the README's wording is corrected, `tests/readme.test.sh` gains two guards, `docs/home-checkout.md` has a new *Adopting the guard in your project* (the `## role-guard` section a guarded skill reads, the three exits, `/codeo:doctor`'s `overlays` check, with codeo's own overlay and `role.sh` as the example; `role.sh` is not shipped for other projects), and `docs/handoff.md`, `docs/extension-points.md` and `docs/updating.md` link to it or match it. Nothing the plugin does changes (#179).
+- The README says the `codeo` host command installs separately from the plugin; `.devcontainer/README.md` and `docs/home-checkout.md` cover `flock` on macOS (`brew install flock`) and the keychain over SSH; `tests/readme.test.sh` pins it. Nothing the plugin does changes (#170).
+- README corrections. The `/codeo:implement` step says it asks in the conversation when the plan is uncommitted or only staged, and its `## Outcome` records the documentation pages changed, the build result and the deviations, not a commit per task; a round starts with a merge of the base branch. The README also says what the installer's `--help` and exit statuses are, what `/codeo:doctor` reports for a `TODO-set-me` value, an unusable config, an overlay file with no extension points and the `priority-labels` check, the `lock: TODO` line for a sandbox name, what `/codeo:close` does for the card, the pull request and the base-branch merge, what `/codeo:plan` and `/codeo:init` also do, and how the Configuration table's `resources[].paths` and `environment.hooks.start` behave. Nothing the plugin does changes (#182).
 
 ## v1.0.9 — 2026-11-25
 
