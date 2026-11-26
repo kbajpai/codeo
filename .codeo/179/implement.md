@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 is done: the findings of `qc.md` round 2 are fixed in `50a2d52` and the build ran. Next step: `/codeo:qc`.
+Round 4 is done: the conflict with `origin/main` found by `close.md` round 1 is resolved in `29b3df5` and the build ran. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -73,8 +73,24 @@ None.
 
 **Deviations from the plan:** none beyond the earlier rounds'. The fix commit was reviewed by the controller reading its diff, not by a separate reviewer.
 
+### Round 4 — 2026-11-26
+(send-back from close.md round 1)
+
+`/codeo:close` found a conflict with `origin/main` after #177 (`3a36e47`, PR #186) merged. `superpowers:receiving-code-review` applied: the finding holds (`git merge-tree` exit 1 on `tests/readme.test.sh`; reproduced by `sync-main.sh`, exit 2).
+
+**Resolved by hand, in `29b3df5`.** `sync-main.sh` merged `origin/main`; the only conflict was `tests/readme.test.sh`, one hunk in the header comment's list of checks. This branch added seven entries (`lock-entry` … `skill-count`) and #177 added one (`home-checkout`) at the same place; both sides' lines are kept, this branch's first, so the header names every check the file runs. The rest of the file merged without conflict: #177's `home-checkout` check and this branch's six new checks and two extended ones sit side by side. `docs/home-checkout.md` also merged without a conflict (#177 edited *The home checkout*; this branch's *Adopting the guard in your project* is its own section). `bash -n tests/readme.test.sh` is clean and `bash tests/run.sh readme` prints `all cases passed` on the merged tree.
+
+`also changed on main:` — #177's change touched `.codeo/overlays/cleanup.md`, `.codeo/overlays/close.md`, `docs/handoff.md`, `docs/home-checkout.md`, `docs/skills.md`, `skills/cleanup/SKILL.md`, `skills/close/SKILL.md`, `docs/release-checklist.md`, `CHANGELOG.md`, `tests/readme.test.sh` and several tests. Re-checked against this branch's work: `docs/handoff.md` and `docs/skills.md` still say six pipeline skills (the `skill-count` check passes); the `lock-entry` and guard-page text reference no passage #177 changed.
+
+**Documentation pages changed:** none in this round beyond the merge.
+
+**Build:** the `shell` suite's `build` is `true`: exit 0. No shared environment.
+
+**Deviations from the plan:** none. The resolution is a merge of two header-comment lists; no subagent was dispatched and none was needed.
+
 ## Log
 
 - 2026-11-25 — implemented: plan docs/plans/2026-11-25-close-171-leftovers-179.md, tasks 1-4, build exit 0 · cost: 21m · sonnet-5-5 338k in + 9.1M cached / 59k out
 - 2026-11-25 — implemented round 2 (send-back from qc round 1): F1, F2, F3, F5, F6 fixed in 6b5de95, build exit 0 · cost: 2m · sonnet-5-5 49k in + 1.7M cached / 8k out
 - 2026-11-25 — implemented round 3 (send-back from qc round 2): G1-G3 fixed in 50a2d52, build exit 0 · cost: 1m · sonnet-5-5 57k in + 1.1M cached / 5k out
+- 2026-11-26 — implemented round 4 (send-back from close round 1): merged origin/main after #177, one conflict in tests/readme.test.sh resolved in 29b3df5, build exit 0 · cost: 0m · sonnet-5-5 11k in + 1.2M cached / 931 out
