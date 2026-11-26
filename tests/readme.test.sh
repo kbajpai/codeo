@@ -82,10 +82,10 @@ slug_got=$(slugs "$slug_tmp/h.md" | tr '\n' ' ')
 rm -rf "$slug_tmp"
 [[ "$slug_got" == "x x-1 x-2 y " ]] || fail slugs "repeated headings give \"$slug_got\", want \"x x-1 x-2 y \""
 
-pages=("$readme" docs/updating.md docs/home-checkout.md)
+pages=("$readme" docs/updating.md docs/home-checkout.md docs/container-templates.md)
 for p in "${pages[@]:1}"; do [[ -f $p ]] || fail pages "$p is missing"; done
 pages=("$readme")
-for p in docs/updating.md docs/home-checkout.md; do [[ -f $p ]] && pages+=("$p"); done
+for p in docs/updating.md docs/home-checkout.md docs/container-templates.md; do [[ -f $p ]] && pages+=("$p"); done
 
 # commands: every /codeo:<name> on every page, fences included.
 while IFS= read -r name; do
