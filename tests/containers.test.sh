@@ -138,7 +138,44 @@ doctor_reports_a_drifted_container_script() {
     ! grep -q containers <<<"$doc" || fail "doctor checked containers in a project without them"
 }
 
-for c in setup_writes_codename_and_containers_in_one_go doctor_reports_a_drifted_container_script codeos_own_files_match_their_templates another_project_gets_its_own_names \
+overlays_are_written_with_the_projects_names() {
+    local d f; d=$(new_project acmeov "$acme")
+    (cd "$d" && bash "$script" >/dev/null) || fail "render failed"
+    for f in issue init triage cleanup plan implement qc close; do
+        [[ -f $d/.codeo/overlays/$f.md ]] || fail "overlay $f.md not written"
+    done
+    grep -q 'acme-<N>' "$d/.codeo/overlays/init.md" || fail "init.md lacks acme-<N>"
+    grep -q 'https://github.com/acme-co/shop/tree/<branch>' "$d/.codeo/overlays/init.md" || fail "init.md lacks the project's repository"
+    grep -q 'acme-home' "$d/.codeo/overlays/init.md" || fail "init.md lacks acme-home"
+    grep -q 'name: acme-{N}' "$d/.codeo/overlays/cleanup.md" || fail "cleanup.md name"
+    grep -qF 'pattern: ^acme-[0-9]+$' "$d/.codeo/overlays/cleanup.md" || fail "cleanup.md pattern"
+    grep -q 'acme-dev:{name}' "$d/.codeo/overlays/cleanup.md" || fail "cleanup.md image"
+}
+
+codeos_own_overlays_equal_the_render() {
+    local f
+    for f in issue init triage cleanup plan implement qc close; do
+        perl -pe 's/\@CODENAME\@/codeo/g; s/\@REPO_SLUG\@/kbajpai\/codeo/g; s/\@BASE_BRANCH\@/main/g' "$plugin_root/templates/containers/.codeo/overlays/$f.md" |
+            cmp -s - "$plugin_root/.codeo/overlays/$f.md" || fail "codeo's overlay $f.md differs from its template"
+    done
+}
+
+a_seed_overlay_is_never_overwritten() {
+    local d="$work/acmeov"
+    echo '# mine' >>"$d/.codeo/overlays/plan.md"
+    (cd "$d" && bash "$script" --force >"$work/out")
+    grep -q '^# mine' "$d/.codeo/overlays/plan.md" || fail "a seed overlay was overwritten"
+    grep -q 'skip .codeo/overlays/plan.md' "$work/out" || fail "seed overlay not reported as skipped"
+}
+
+doctor_passes_overlays_in_the_rendered_project() {
+    local d="$work/acmeov" doc
+    doc=$(cd "$d" && bash "$plugin_root/scripts/doctor.sh" 2>/dev/null || true)
+    grep -q "^ok overlays" <<<"$doc" || fail "overlays not ok: $(grep overlays <<<"$doc")"
+}
+
+for c in overlays_are_written_with_the_projects_names codeos_own_overlays_equal_the_render a_seed_overlay_is_never_overwritten doctor_passes_overlays_in_the_rendered_project \
+    setup_writes_codename_and_containers_in_one_go doctor_reports_a_drifted_container_script codeos_own_files_match_their_templates another_project_gets_its_own_names \
     no_shipped_file_names_codeo_where_the_project_belongs the_toolchain_section_is_the_one_place_to_extend \
     a_second_run_skips_and_never_overwrites_seeds check_reports_a_drifted_script \
     the_codename_defaults_to_the_repo_name a_bad_codename_is_refused \

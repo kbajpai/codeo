@@ -13,7 +13,7 @@
 #   managed  the scripts (.devcontainer/scripts/*, copied as they are, and codeo, codeo-container.sh, codeo-track.sh, codeo-sandbox.sh): rewritten from
 #            the template whenever --force is given; --check fails when one differs from its template.
 #   seed     the files a project edits (the Dockerfile and its toolchain section, devcontainer.json,
-#            the sbx image pin): written only when absent, never checked, never overwritten.
+#            the sbx image pin, the skill overlays under .codeo/overlays/): written only when absent, never checked, never overwritten.
 # Without --force an existing file is left alone and reported as skipped. --check writes nothing.
 # Output is one "containers: wrote|skip|ok|differs <path>" line per file. Exit 0 on success, 1 when
 # --check finds a difference or the config is unusable, 2 on a usage error.
@@ -58,6 +58,7 @@ tpl_root="$CODEO_PLUGIN_ROOT/templates/containers"
 seeds=(.devcontainer/Dockerfile .devcontainer/devcontainer.json .sbx/claude-image)
 is_seed() {
     local s
+    [[ $1 == .codeo/overlays/* ]] && return 0
     for s in "${seeds[@]}"; do [[ $1 == "$s" ]] && return 0; done
     return 1
 }
