@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Exploration done; the plan is not drafted. Q1-Q8 are open and each one changes tasks, so
+Round 1. Q1-Q8 answered (recommendations accepted). Draft at .codeo/195/plan-draft.md awaits review; Q1-Q8 were open and each one changed tasks, so
 nothing is drafted until they are answered.
 
 What exploration found (the questions rest on it):
@@ -47,6 +47,7 @@ callers that relied on the leniency · (c) no preference, you pick.
 call; the lenient one stays for labels (live signal, lease `by:`) where a wrong name is harmless.
 
 **Answer:**
+(a) A new strict verb `github.sh user whoami` printing login and type; `user login` stays the lenient best-effort label. (Engineer: "go with your recommendations on all of them", 2026-11-27.)
 
 ### Q2 — In a hosted web session with only `$CODEO_GITHUB_LOGIN`, what may the session do?
 
@@ -61,6 +62,7 @@ note · (c) web verify refuses unless a real login resolves, which today means i
 someone else as the owner.
 
 **Answer:**
+(a) Web verify compares the variable only against the lock's own recorded `user:`, never against assignees, and says ownership was not independently verified. (Engineer: go with recommendations.)
 
 ### Q3 — How is "Bot" decided, and what is refused?
 
@@ -72,6 +74,7 @@ reports `User`; a GitHub App installation token cannot call `/user` at all and f
 **Recommendation:** (a), the stricter form; the whole point is one real person per login.
 
 **Answer:**
+(a) Refuse when `.type != User`. (Engineer: go with recommendations.)
 
 ### Q4 — Where and in what form is the login recorded?
 
@@ -87,6 +90,7 @@ need no change.
 **Options:** accept the proposal · change the row/line names · record somewhere else.
 
 **Answer:**
+Accept the proposal: `| Owner |` row in `init.md`, `user:` line in the lock, live signal fed from the strict resolver, a lock without `user:` is legacy. (Engineer: go with recommendations.)
 
 ### Q5 — What defines the owner that `lock.sh verify` compares against?
 
@@ -105,6 +109,7 @@ before the first push):** (a) fail closed with a line saying ownership could not
 offline behaviour.
 
 **Answer:**
+Accept the proposal. Fetch error fails closed; no `origin` ref at all falls back to local files and says so. (Engineer: go with recommendations.)
 
 ### Q6 — What is the override, how does it work "once", and where is it recorded?
 
@@ -123,6 +128,7 @@ the owner.
 ownership by writing a resume-style line itself · the override is an environment variable like #192.
 
 **Answer:**
+Accept: per-call `--override "<words>"` recorded under `## Notes`; a real takeover goes through `init`'s resume path. (Engineer: go with recommendations.)
 
 ### Q7 — Stash/abandon by a non-owner, and the `assignee-remove` default
 
@@ -136,6 +142,7 @@ caller. `tests/github.test.sh` and `tests/close-skill.test.sh` update accordingl
 **Options:** accept · keep the default but only change close's call (smaller, leaves the trap).
 
 **Answer:**
+Accept: stash/abandon verify first and remove the recorded owner explicitly; `assignee-remove` requires the login argument. (Engineer: go with recommendations.)
 
 ### Q8 — One pull request or two?
 
@@ -148,6 +155,7 @@ a second issue by `/codeo:issue` and sequenced after this one. **Recommendation:
 acceptance criteria are one list, and splitting buys little when the tasks already run in order.
 
 **Answer:**
+One pull request, identity tasks first. (Engineer: go with recommendations.)
 
 ## Notes
 
