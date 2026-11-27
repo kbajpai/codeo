@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done. The build and the suite pass and all four criteria are met on the main path; one blocking finding (G1: a first-open-resumed row that never records the pull request on an older-plugin path) sends the change back to `/codeo:implement`. G2-G8 are non-blocking.
+Round 3, stopped at step 2: the branch conflicts with `main` (#195 merged as `c7505a9`) in `CHANGELOG.md`, `docs/skills-inventory.md`, `tests/fixtures/skills-inventory.rules.sha256` and `tests/inventory.test.sh`. Back to `/codeo:implement` to merge and resolve.
 
 ## Questions
 
@@ -136,9 +136,39 @@ Declined to judge by the reviewer, accepted: a staged rename stranding the first
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-27
+
+**Sync.** `sync-main.sh --abort-on-conflict` (exit 2, merge aborted, tree as before):
+
+```
+sync-main: conflict: CHANGELOG.md
+sync-main: conflict: docs/skills-inventory.md
+sync-main: conflict: tests/fixtures/skills-inventory.rules.sha256
+sync-main: conflict: tests/inventory.test.sh
+```
+
+Each file was changed on `main` by `c7505a9 feat: identify the acting user strictly and verify ownership at every workflow step (#195) (#208)`, the overlap `plan.md` Q2 and `qc.md` Q2 settled as proceed and coordinate. `overlap.sh 204` printed nothing. The pass stops here: nothing was built, run or reviewed on a tree the merge would replace, and a suite run started alongside the sync was stopped unread.
+
+**Acceptance criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | The first CI run on a PR opened by `/codeo:close` passes qc-verdict | not yet checkable — pass stopped at step 2 | — |
+| 2 | `close.md` in `.codeo/done/<N>/` still records the PR number and URL | not yet checkable — pass stopped at step 2 | — |
+| 3 | A review send-back still makes qc-verdict fail until the dossier is archived again | not yet checkable — pass stopped at step 2 | — |
+| 4 | Close fixtures and tests and `docs/dossier.md` match the new order | not yet checkable — pass stopped at step 2 | — |
+
+**Findings.**
+
+- **H1 (blocking, `/codeo:implement`'s) — the branch conflicts with `main`** in the four files above. `/codeo:implement`'s round starts with `sync-main.sh`, which merges `main` and leaves the conflicts to resolve. Expected resolutions, from what each side changed: `CHANGELOG.md` keeps both `## Unreleased` bullets; `docs/skills-inventory.md` keeps #195's rules and this branch's `close-15`; `tests/inventory.test.sh` carries both sides' rule counts (`[close]` is #195's count plus one for `close-15`); `tests/fixtures/skills-inventory.rules.sha256` is regenerated with `bash tests/inventory.test.sh --update` after the inventory merge, never hand-merged.
+- Round 2's G1 (blocking in round 2) — fixed by `465e63c`, per `implement.md` round 3; not yet re-judged, since this pass stopped before the review.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-27 — Q1-Q2 raised (overlaps with #188 and #195) · cost: 1m · opus-5-5 255k in + 304k cached / 875 out
 - 2026-11-27 — Q1-Q2 answered; round 1: build true exit 0, `tests/run.sh` exit 0, 4 criteria (all met on the main path), reviewer on opus; 2 blocking findings (F1, F2), 5 non-blocking; back to /codeo:implement · cost: 43m · opus-5-5 357k in + 1.9M cached / 17k out · sonnet-5-5 110k in + 4.5M cached / 7k out
 - 2026-11-27 — round 2: Q3 raised (#195, tests/identity.test.sh) · cost: 0m · opus-5-5 333k in + 29k cached / 556 out
 - 2026-11-27 — round 2: Q3 answered; build true exit 0, tests/run.sh exit 0, 4 criteria (all met on the main path, criterion 2 not met on one older-plugin path), reviewer on opus; 1 blocking (G1), 7 non-blocking; back to /codeo:implement · cost: 9m · opus-5-5 416k in + 2.2M cached / 18k out · sonnet-5-5 24k in + 1.8M cached / 4k out
+- 2026-11-27 — round 3: sync with main conflicts (4 files, #195's c7505a9); stopped at step 2; back to /codeo:implement · cost: 0m · opus-5-5 394k in + 874k cached / 1k out · sonnet-5-5 30k in + 20k cached / 81 out
