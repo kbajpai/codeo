@@ -17,6 +17,23 @@ guarded_role() {
     return 1
 }
 
+# common_dir_of <dir>: prints the physical, absolute git common directory of the repository holding <dir>.
+common_dir_of() {
+    local c
+    c=$(git -C "$1" rev-parse --git-common-dir 2>/dev/null) || return 1
+    [[ $c == /* ]] || c="$1/$c"
+    (cd "$c" 2>/dev/null && pwd -P)
+}
+
+# in_project_p <root> <project dir>: succeeds when the repository at <root> is the repository holding
+# <project dir> or one of its worktrees (the same git common directory). Only those are judged.
+in_project_p() {
+    local a b
+    a=$(common_dir_of "$1") || return 1
+    b=$(common_dir_of "$2") || return 1
+    [[ -n $a && $a == "$b" ]]
+}
+
 # deny <role>: prints the one-line deny object.
 deny() {
     jq -n --arg r "codeo: this checkout's role is $1, so project changes are not made here. File the issue with /codeo:issue, start it with 'codeo issue <N>', and work in its checkout. To allow it for this session, start Claude Code with CODEO_HOME_EDITS=allow." \
@@ -145,11 +162,11 @@ normalize_cmd() {
     NORM=$out
 }
 
-# bash_guard <cwd> <command>: prints the deny object for the first refused git write and returns 0;
+# bash_guard <cwd> <command> <project dir>: prints the deny object for the first refused git write and returns 0;
 # prints nothing and returns 1 otherwise. Quoted text is blanked first, so it is never read as a
 # command; each segment is judged by the checkout it addresses. Scripts are not looked into.
 bash_guard() {
-    local cur=${1:-.} cmd=$2 seg w i d sub root role
+    local cur=${1:-.} cmd=$2 proj=${3:-.} seg w i d sub root role
     local -a words args
     normalize_cmd "$cmd"
     cmd=$NORM
@@ -186,6 +203,7 @@ bash_guard() {
         args=("${words[@]:i+1}")
         git_write_p "$sub" "$d" "${args[@]}" || continue
         root=$(git -C "$d" rev-parse --show-toplevel 2>/dev/null) || continue
+        in_project_p "$root" "$proj" || continue
         role=$(guarded_role "$root") || continue
         deny "$role"
         return 0
@@ -196,21 +214,22 @@ bash_guard() {
 main() {
     [[ ${CODEO_HOME_EDITS:-} == allow ]] && return 0
     command -v jq >/dev/null 2>&1 || return 0
-    local input tool cwd path key=file_path
+    local input tool cwd path key=file_path proj
     input=$(cat) || return 0
     tool=$(jq -r '.tool_name // empty' <<<"$input" 2>/dev/null) || return 0
+    cwd=$(jq -r '.cwd // empty' <<<"$input" 2>/dev/null) || return 0
+    proj=${CLAUDE_PROJECT_DIR:-}
+    [[ -d $proj ]] || proj=${cwd:-.}
     case $tool in
         Bash)
-            cwd=$(jq -r '.cwd // empty' <<<"$input" 2>/dev/null) || return 0
             path=$(jq -r '.tool_input.command // empty' <<<"$input" 2>/dev/null) || return 0
             [[ -n $path ]] || return 0
-            bash_guard "${cwd:-.}" "$path"
+            bash_guard "${cwd:-.}" "$path" "$proj"
             return 0 ;;
         Edit | Write) ;;
         NotebookEdit) key=notebook_path ;;
         *) return 0 ;;
     esac
-    cwd=$(jq -r '.cwd // empty' <<<"$input" 2>/dev/null) || return 0
     path=$(jq -r --arg k "$key" '.tool_input[$k] // empty' <<<"$input" 2>/dev/null) || return 0
     [[ -n $path ]] || return 0
     [[ $path == /* ]] || path="${cwd:-.}/$path"
@@ -230,6 +249,7 @@ main() {
     # Known limit: a symlink inside .codeo/ pointing at a project file is exempt. A ".." in the tail
     # that does not exist yet could climb out of .codeo/, so it is never exempt.
     [[ "/$rest/" != */../* && "${real%/}$rest" == "$root"/.codeo/* ]] && return 0
+    in_project_p "$root" "$proj" || return 0
     role=$(guarded_role "$root") || return 0
     deny "$role"
 }

@@ -52,7 +52,7 @@ clone() {
 hook() {
     local json=$1
     shift
-    printf '%s' "$json" | (cd "$scratch_root" && env -u CLAUDE_CODE_REMOTE -u CODEO_HOME_EDITS \
+    printf '%s' "$json" | (cd "$scratch_root" && env -u CLAUDE_CODE_REMOTE -u CODEO_HOME_EDITS -u CLAUDE_PROJECT_DIR \
         CODEO_DOCKERENV="$scratch_root/no-dockerenv" CODEO_CONTAINERENV="$scratch_root/no-containerenv" \
         "$@" bash "$hook") 2>/dev/null
 }
@@ -112,7 +112,7 @@ assert_eq "new file in missing dirs" deny "$(decision "$out")"
 out=$(hook "$(file_json Edit "$h" "src/a.txt")")
 assert_eq "relative path" deny "$(decision "$out")"
 ln -s "$h" "$scratch_root/link"
-out=$(hook "$(file_json Edit "$scratch_root/norepo" "$scratch_root/link/src/a.txt")")
+out=$(hook "$(file_json Edit "$scratch_root/norepo" "$scratch_root/link/src/a.txt")" CLAUDE_PROJECT_DIR="$h")
 assert_eq "symlink" deny "$(decision "$out")"
 out=$(hook "$(file_json Edit "$h" "$iss/src/a.txt")")
 assert_eq "issue file with home cwd" allow "$(decision "$out")"
@@ -191,9 +191,9 @@ h=$(bhome bj1 src)
 i=$(clone bj2 codeo-192 feat/192-x 192)
 bcheck allow "$h" "git -C $i commit -m x"
 bcheck allow "$h" "cd $i && git push"
-bcheck deny "$i" "git -C $h commit -m x"
-bcheck deny "$i" "cd $h && git push"
-bcheck deny "$i" "cd $i && git -C $h push"
+bcheck allow "$i" "git -C $h commit -m x"
+bcheck allow "$i" "cd $h && git push"
+bcheck allow "$i" "cd $i && git -C $h push"
 mkdir -p "$h/.codeo/192"
 git -C "$h" -c user.name=t -c user.email=t@t commit -q -m s
 git -C "$h" worktree add -q "$scratch_root/bj-wt" -b scratch
@@ -204,7 +204,7 @@ echo c >"$scratch_root/bj-wt/src/c.txt"
 git -C "$scratch_root/bj-wt" add src/c.txt
 bcheck deny "$h" "git -C $scratch_root/bj-wt commit -m x"
 bcheck deny "$h" "cd $scratch_root/bj-wt && git commit -m x"
-bcheck deny "$scratch_root" "git -C bj-wt commit -m x"
+bcheck deny "$scratch_root" "git -C bj-wt commit -m x" CLAUDE_PROJECT_DIR="$h"
 
 case_desc=bash_unguarded_roles
 h=$(bhome bu1 src)
@@ -222,9 +222,11 @@ for cmd in "git commit src/a.txt -m x" "git commit -i src/a.txt -m x" "git commi
     "git checkout -qb x" "git switch -qc x" "git commit -m x src/a.txt" "git commit -m x -- .codeo/x"; do
     bcheck deny "$h" "$cmd"
 done
-bcheck deny "$i" "git -C \"$h\" push"
+bcheck allow "$i" "git -C \"$h\" push"
+bcheck deny "$h" "git -C \"$h\" push"
 bcheck allow "$h" "cd \"$i\" && git push"
-bcheck deny "$i" "cd \"$h\" && git push"
+bcheck allow "$i" "cd \"$h\" && git push"
+bcheck deny "$h" "cd \"$h\" && git push"
 bcheck deny "$h" "git commit -m \"a; git push\" src/a.txt"
 h=$(bhome fx3 codeo)
 bcheck allow "$h" "git commit -m x"
@@ -243,7 +245,7 @@ bcheck deny "$h" "git push" PATH="$shim:$PATH"
 bcheck deny "$h" "git commit -m x" PATH="$shim:$PATH"
 bcheck allow "$h" "git -C $i commit -m x" PATH="$shim:$PATH"
 bcheck allow "$h" "git -C \"$i\" push" PATH="$shim:$PATH"
-bcheck deny "$i" "cd \"$h\" && git push" PATH="$shim:$PATH"
+bcheck deny "$h" "cd \"$h\" && git push" PATH="$shim:$PATH"
 
 case_desc=bash_codeo_commands_in_home
 h=$(bhome cc1 codeo)
@@ -273,6 +275,38 @@ bcheck deny "$h" "git add $scratch_root/other/.codeo/f"
 bcheck deny "$h" "git push 2>&1"
 bcheck deny "$h" "git push 2>&1 | tail -1"
 bcheck deny "$h" "cd $h/.codeo && git add ../src/a.txt"
+
+case_desc=role_sh_only_in_the_project
+proj=$(clone rp1 codeo-home main)
+other=$(clone rp2 codeo-home main)
+marker="$scratch_root/rp-marker"
+printf '#!/usr/bin/env bash\ntouch "%s"\necho home\n' "$marker" >"$other/.devcontainer/scripts/role.sh"
+chmod +x "$other/.devcontainer/scripts/role.sh"
+made() { if [[ -e $marker ]]; then rm -f "$marker"; echo yes; else echo no; fi; }
+out=$(hook "$(file_json Edit "$proj" "$other/src/a.txt")")
+assert_eq "edit in an unrelated repo" allow "$(decision "$out")"
+assert_eq "edit ran no foreign role.sh" no "$(made)"
+bcheck allow "$proj" "git -C $other commit -m x"
+assert_eq "git -C ran no foreign role.sh" no "$(made)"
+bcheck allow "$proj" "cd $other && git push"
+assert_eq "cd ran no foreign role.sh" no "$(made)"
+out=$(hook "$(file_json Edit "$other" "$other/src/a.txt")")
+assert_eq "control: the project's own role.sh runs" deny "$(decision "$out")"
+assert_eq "control: marker made" yes "$(made)"
+git -C "$proj" worktree add -q "$scratch_root/rp-wt" -b rp-scratch
+out=$(hook "$(file_json Edit "$proj" "$scratch_root/rp-wt/src/a.txt")")
+assert_eq "worktree of the project is judged" deny "$(decision "$out")"
+bcheck deny "$proj" "git -C $scratch_root/rp-wt push"
+out=$(hook "$(file_json Edit "$other" "$proj/src/a.txt")" CLAUDE_PROJECT_DIR="$proj")
+assert_eq "CLAUDE_PROJECT_DIR wins over cwd (project)" deny "$(decision "$out")"
+out=$(hook "$(file_json Edit "$proj" "$proj/src/a.txt")" CLAUDE_PROJECT_DIR="$other")
+assert_eq "CLAUDE_PROJECT_DIR wins over cwd (other)" allow "$(decision "$out")"
+out=$(hook "$(file_json Edit "$proj" "$proj/src/a.txt")" CLAUDE_PROJECT_DIR="$scratch_root/norepo")
+assert_eq "CLAUDE_PROJECT_DIR outside a repo judges nothing" allow "$(decision "$out")"
+out=$(hook "$(file_json Edit "$proj" "$proj/src/a.txt")" CLAUDE_PROJECT_DIR="$scratch_root/missing-dir")
+assert_eq "CLAUDE_PROJECT_DIR not a directory falls back to cwd" deny "$(decision "$out")"
+out=$(hook "$(file_json Edit "$scratch_root/norepo" "$proj/src/a.txt")")
+assert_eq "cwd outside a repo judges nothing" allow "$(decision "$out")"
 
 case_desc=hooks_json_registers_the_guard
 hj="$plugin_root/hooks/hooks.json"
