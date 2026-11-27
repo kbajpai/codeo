@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q4 are answered and the plan is approved and written (`docs/plans/2026-11-27-close-177-qc-leftovers-188.md`, unstaged). `overlap.sh` printed nine overlap lines for #195, #204 and #206, which Q2-Q4 had raised in prose only, so Q5-Q7 restate them with the printed tokens. Their recommended answer is the one already given at Q2-Q4. `## Outcome` waits for Q5-Q7.
+All seven questions are answered and the plan is approved and written (`docs/plans/2026-11-27-close-177-qc-leftovers-188.md`, unstaged). The outcome is written. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -91,6 +91,7 @@ Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "
 **Options:** proceed and coordinate (recommended, as answered at Q2) · sequence after #195 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "proceed and coordinate".)
 
 ### Q6 — #204: proceed and coordinate on `glob:CHANGELOG.md`, `glob:skills/close/SKILL.md` and `glob:tests/**`?
 
@@ -99,6 +100,7 @@ Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "
 **Options:** proceed and coordinate (recommended, as answered at Q3) · sequence after #204 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "proceed and coordinate".)
 
 ### Q7 — #206: proceed and coordinate on `glob:CHANGELOG.md`, `glob:skills/cleanup/SKILL.md` and `glob:tests/cleanup-skill.test.sh`?
 
@@ -107,6 +109,7 @@ Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "
 **Options:** proceed and coordinate (recommended, as answered at Q4) · sequence after #206 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "proceed and coordinate".)
 
 ## Notes
 
@@ -122,6 +125,23 @@ Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "
 - No invariants document is configured and no shared environment, so there is no invariant check and no
   lease task.
 
+## Outcome
+
+2026-11-27
+
+**Plan:** `docs/plans/2026-11-27-close-177-qc-leftovers-188.md`, approved by the engineer, left unstaged for them to commit. Shape: an executable plan under `docs/plans/`, six tasks, one commit each; no reference doc under `docs/`, since nothing here is a standing decision.
+
+**Decisions**
+- Wording only, one pull request. No script is edited; the `note:` text the scripts print stays.
+- F4's "nothing is asked without a tracker" goes into `docs/home-checkout.md` only (Q1). The overlays gain `CODEO_TRACK` and nothing about asking, because `codeo-sandbox.sh end` never asks. Rejected: adding the clause to all three lines.
+- Overlaps with #195, #204 and #206 are accepted: proceed and coordinate (Q2-Q7). Rejected: sequencing after any of them, and dropping F3, F5 or F6 from this pull request.
+- Found while planning, resolved in the plan and not a question: `docs/home-checkout.md` states no tracker condition at `:66` (the F4 citation), so Task 4 adds one at `:132`; `CHANGELOG.md:30` is `:40`; both overlays have `templates/containers/` copies that `tests/containers.test.sh` keeps identical, so they change with them.
+- Each task is proved by `bash tests/run.sh` ending `all cases passed`; the `shell` suite has no single-test filter. No shared environment, so no task takes a lease. No invariants document is configured.
+
+**Documentation the plan changes:** `docs/release-checklist.md`, `docs/home-checkout.md`, `skills/close/SKILL.md`, `skills/cleanup/SKILL.md`, `.codeo/overlays/{cleanup,close}.md` and their templates, `CHANGELOG.md`. No other page describes the five corrected sentences. No diagram changes.
+
+**Intake questions resolved:** none; `init.md` left none open.
+
 ### Footprint
 
 ```
@@ -131,12 +151,9 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-27 — Q1-Q4 raised · cost: 1m · fable-5-2 71k in + 555k cached / 5k out
 - 2026-11-27 — Q1-Q4 answered by the engineer in conversation ("Go with your picks": the recommended option for each); plan drafted at .codeo/188/plan-draft.md, awaiting review
 - 2026-11-27 — plan approved and written; footprint committed; Q5-Q7 raised (overlap.sh tokens for #195, #204, #206) · cost: unavailable, the hand-off line carries the total
+- 2026-11-27 — Q5-Q7 answered (proceed and coordinate); planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md · cost: 15m · fable-5-2 78k in + 848k cached / 10k out · sonnet-5-5 108k in + 2M cached / 20k out
