@@ -14,12 +14,14 @@
 #       (park_re) in <state>/<N>/close.md than resume lines (resume_re) in <state>/<N>/init.md, both
 #       trimmed of trailing whitespace, an absent file counting 0. Decided before any web checkout.
 #       Unset, or anything else, it behaves as above.
-#       Needs a verified login (lib/identity.sh codeo_whoami): without one, or when the issue's
-#       owner or assignees are someone else, it takes no lock and prints a TODO line. The lock
+#       Needs a login (lib/identity.sh codeo_whoami): without one, or when the issue's owner or
+#       assignees are someone else, it takes no lock and prints a TODO line. A hosted web session's
+#       unverified login ($CODEO_GITHUB_LOGIN) is compared exactly like a verified one. The lock
 #       records the login on a `user:` line after `host:`.
 #
 #   lock.sh verify [--override "<words>"]
-#       Exit 0 and "lock: verified #<N> as <login>" when the acting login owns the locked issue;
+#       Exit 0 and "lock: verified #<N> as <login>" when the acting login (verified, or a web
+#       session's unverified one, which passes with a note) owns the locked issue;
 #       exit 1 and one "codeo:" line on stderr otherwise. --override passes one ownership refusal
 #       and records an `override:` line under ## Notes of the local init.md.
 #
@@ -84,25 +86,29 @@ local_init() {
 
 # check_owner <issue> <branch> <login> <type>: exit 0 when <login> may act on the issue; 1 with one
 # "codeo:" line in $refusal (and $refused_owner) when it belongs to someone else; 2 when it could
-# not be checked (no override applies). $note collects what a pass should say. A hosted web
-# session's unverified login is never compared with the owner or the assignees (verify compares it
-# with the lock's own user: line). The pushed dossier is read from FETCH_HEAD after fetching <branch>; no such ref,
-# or no origin remote at all, means the local dossier; a branch on origin without a dossier, or
-# any other failure to reach origin, fails closed.
+# not be checked (no override applies). $note collects what a pass should say. Every login type is
+# compared the same way, with the owner and then the assignees; an unverified login (a hosted web
+# session's $CODEO_GITHUB_LOGIN) that passes carries the note "not independently verified: hosted
+# web session". The pushed dossier is read from the private ref refs/codeo/verify/<branch>, which
+# the fetch of <branch> writes (never from FETCH_HEAD, which another fetch can overwrite); no such
+# branch on origin, or no origin remote at all, means the local dossier; a branch on origin without
+# a dossier, or any other failure to reach origin, fails closed.
 check_owner() {
-    local n=$1 branch=$2 login=$3 type=$4 rc=0 src= p tmp owner date when assignees out
+    local n=$1 branch=$2 login=$3 type=$4 rc=0 src= p tmp owner date when assignees out ref nofh=
     refusal= refused_owner= note=
-    [[ $type != unverified ]] || return 0
+    [[ $type != unverified ]] || note="not independently verified: hosted web session"
+    ref="refs/codeo/verify/$branch"
+    if [[ $(git fetch -h 2>&1) == *--no-write-fetch-head* ]]; then nofh=--no-write-fetch-head; fi
     tmp=$(mktemp)
     if git remote get-url origin >/dev/null 2>&1; then
         GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null 2>&1 || rc=$?
         if ((rc == 0)); then
-            if ! GIT_TERMINAL_PROMPT=0 git fetch -q origin "$branch" 2>/dev/null; then
+            if ! GIT_TERMINAL_PROMPT=0 git fetch -q ${nofh:+"$nofh"} origin "+refs/heads/$branch:$ref" 2>/dev/null; then
                 refusal="codeo: could not check who owns #$n: cannot reach origin"
                 rm -f "$tmp"; return 2
             fi
             for p in "$state_rel/$n/init.md" "$state_rel/done/$n/init.md"; do
-                if git show "FETCH_HEAD:$p" > "$tmp" 2>/dev/null; then src=origin; break; fi
+                if git show "$ref:$p" > "$tmp" 2>/dev/null; then src=origin; break; fi
             done
             if [[ -z $src ]]; then
                 refusal="codeo: could not check who owns #$n: no dossier on origin's $branch"
@@ -116,10 +122,10 @@ check_owner() {
     if [[ -z $src ]]; then
         p=$(local_init "$n")
         if [[ -n $p ]]; then cp "$p" "$tmp"; fi
-        note="branch not on origin: read the local dossier"
+        note="${note:+$note; }branch not on origin: read the local dossier"
     fi
     owner=$(codeo_owner_of_init "$tmp")
-    date=$(sed -n 's/^- \([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\) — resumed: by .* after .*/\1/p' "$tmp" | tail -n1)
+    date=$(codeo_owner_date_of_init "$tmp")
     rm -f "$tmp"
     if [[ -n $owner ]] && ! same_login "$owner" "$login"; then
         refused_owner=$owner
@@ -135,7 +141,11 @@ check_owner() {
     fi
     if [[ -n $assignees ]] && ! jq -e --arg l "${login,,}" '.assignees | map(ascii_downcase) | index($l)' <<< "$out" >/dev/null; then
         refused_owner=${owner:-$assignees}
-        refusal="codeo: #$n is assigned to $assignees, not $login — ask them, or take it over with /codeo:init #$n"
+        if [[ -n $owner ]] && same_login "$owner" "$login"; then
+            refusal="codeo: #$n is assigned to $assignees, not $login, though you are its recorded owner — add yourself: github.sh issue assignee-add $n $login"
+        else
+            refusal="codeo: #$n is assigned to $assignees, not $login — ask them, or take it over with /codeo:init #$n"
+        fi
         return 1
     fi
     return 0
@@ -197,22 +207,14 @@ verify() {
     refusal=
     note=
     refused_owner=
-    if [[ $type == unverified ]]; then
-        note="not independently verified: hosted web session"
-        if [[ -n $locked_user ]] && ! same_login "$locked_user" "$login"; then
+    check_owner "$n" "$branch" "$login" "$type" || rc=$?
+    if ((rc == 2)); then echo "$refusal" >&2; return 1; fi
+    if ((rc == 0)); then
+        if [[ -z $locked_user ]]; then
+            note="${note:+$note; }legacy lock: no recorded user"
+        elif ! same_login "$locked_user" "$login"; then
             refused_owner=$locked_user
             refusal="codeo: this checkout was locked by $locked_user, you are $login — ask them, or take it over with /codeo:init #$n"
-        fi
-    else
-        check_owner "$n" "$branch" "$login" "$type" || rc=$?
-        if ((rc == 2)); then echo "$refusal" >&2; return 1; fi
-        if ((rc == 0)); then
-            if [[ -z $locked_user ]]; then
-                note="${note:+$note; }legacy lock: no recorded user"
-            elif ! same_login "$locked_user" "$login"; then
-                refused_owner=$locked_user
-                refusal="codeo: this checkout was locked by $locked_user, you are $login — ask them, or take it over with /codeo:init #$n"
-            fi
         fi
     fi
 

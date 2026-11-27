@@ -38,6 +38,11 @@ fi
 # $GIT_STUB_FAIL is a glob over the arguments, deliberately unquoted: a case sets it to make one
 # git subcommand fail while everything else still reaches the real git.
 if [[ -n ${GIT_STUB_FAIL:-} && "$*" == $GIT_STUB_FAIL ]]; then exit 1; fi
+if [[ ${1:-} == fetch && -n ${GIT_STUB_AFTER_FETCH:-} ]]; then
+    "$REAL_GIT" "$@" || exit $?
+    eval "$GIT_STUB_AFTER_FETCH"
+    exit 0
+fi
 exec "$REAL_GIT" "$@"
 STUB
 chmod +x "$stub_bin/git"
@@ -235,16 +240,67 @@ assert_eq "exit" 1 "$rc"
 assert_contains "msg" "locked by" "$err"
 
 case_desc="web, variable only, lock user equal"
-setup alice; write_lock carol
+setup carol; write_lock carol
 GH_STUB_USER=FAIL CLAUDE_CODE_REMOTE=true CODEO_GITHUB_LOGIN=carol run_verify
 assert_eq "exit" 0 "$rc"
 assert_contains "note" "not independently verified" "$out"
 
 case_desc="web, variable only, lock user differs"
-setup alice; write_lock dave
+setup carol; write_lock dave
 GH_STUB_USER=FAIL CLAUDE_CODE_REMOTE=true CODEO_GITHUB_LOGIN=carol run_verify
 assert_eq "exit" 1 "$rc"
 assert_contains "msg" "locked by" "$err"
+
+case_desc="web, variable names someone other than the pushed owner"
+setup alice; write_lock mallory
+GH_STUB_USER=FAIL CLAUDE_CODE_REMOTE=true CODEO_GITHUB_LOGIN=mallory run_verify
+assert_eq "exit" 1 "$rc"
+assert_contains "owner" "belongs to alice" "$err"
+assert_contains "you" "you are mallory" "$err"
+
+case_desc="web, owner matches but the issue is assigned to someone else"
+setup carol; write_lock carol
+GH_STUB_USER=FAIL CLAUDE_CODE_REMOTE=true CODEO_GITHUB_LOGIN=carol GH_STUB_ASSIGNEES='["dave"]' run_verify
+assert_eq "exit" 1 "$rc"
+assert_contains "msg" "is assigned to" "$err"
+
+case_desc="web, owner and assignee match"
+setup carol; write_lock carol
+GH_STUB_USER=FAIL CLAUDE_CODE_REMOTE=true CODEO_GITHUB_LOGIN=carol GH_STUB_ASSIGNEES='["carol"]' run_verify
+assert_eq "exit" 0 "$rc"
+assert_contains "note" "not independently verified" "$out"
+
+case_desc="web, mismatch with --override"
+setup alice; write_lock mallory
+GH_STUB_USER=FAIL CLAUDE_CODE_REMOTE=true CODEO_GITHUB_LOGIN=mallory run_verify --override "taking over"
+assert_eq "exit" 0 "$rc"
+assert_eq "one line" 1 "$(grep -c 'override: mallory over alice: "' "$repo/.codeo/38/init.md")"
+
+case_desc="recorded owner who is not an assignee"
+setup bob; write_lock bob
+GH_STUB_USER='{"login":"bob","type":"User"}' GH_STUB_ASSIGNEES='["alice"]' run_verify
+assert_eq "exit" 1 "$rc"
+assert_contains "msg" "though you are its recorded owner" "$err"
+assert_contains "hint" "assignee-add" "$err"
+
+case_desc="FETCH_HEAD clobbered after the fetch"
+setup alice; write_lock alice
+GIT_STUB_AFTER_FETCH='"$REAL_GIT" fetch -q origin main' run_verify
+assert_eq "exit" 0 "$rc"
+(cd "$repo" && git rev-parse --verify -q refs/codeo/verify/feat/x >/dev/null) || { echo "FAIL: $case_desc — private ref missing"; failures=$((failures + 1)); }
+setup alice; write_lock alice
+push_resume bob
+GIT_STUB_AFTER_FETCH='"$REAL_GIT" fetch -q origin main' run_verify
+assert_eq "stale exit" 1 "$rc"
+assert_contains "owner" "belongs to bob" "$err"
+
+case_desc="refusal date"
+setup alice '- 2026-01-02 — resumed: by no login after the stash of 2026-01-01
+'; write_lock alice
+GH_STUB_USER='{"login":"bob","type":"User"}' run_verify
+assert_eq "exit" 1 "$rc"
+assert_contains "owner" "belongs to alice (claimed)" "$err"
+assert_not_contains "no date" "last resumed" "$err"
 
 case_desc="origin unreachable"
 setup alice; write_lock alice

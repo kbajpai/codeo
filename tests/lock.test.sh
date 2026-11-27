@@ -680,6 +680,13 @@ repo=$(owned_clone alice)
 out=$(run_lock "$repo" "$(fresh_marker)" local)
 assert_eq "lock" yes "$(active_exists "$repo")"
 
+case_desc="take, web, pushed owner differs"
+repo=$(owned_clone alice)
+out=$(GH_STUB_USER=FAIL CLAUDE_CODE_REMOTE=true CODEO_GITHUB_LOGIN=mallory run_lock "$repo" "$(fresh_marker)" local)
+assert_eq "no lock" no "$(active_exists "$repo")"
+assert_contains "todo" "lock: TODO" "$out"
+assert_contains "owner" "belongs to" "$out"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
