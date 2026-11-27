@@ -88,7 +88,7 @@ constrain other people and accidents, not the owner.
 
    (`.claude-plugin/marketplace.json` carries no version.) Also retitle `CHANGELOG.md`'s
    `## Unreleased` as `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change. The date is the
-   UTC date the release pull request opens (`gh pr view --json createdAt`), which can be the day after the
+   UTC date the release pull request opens (`gh pr view --json createdAt`), which can differ by a day from the
    engineer's local date. Once that pull request merges, test the merged commit — the one the tag will name — from a clean clone:
 
    ```bash

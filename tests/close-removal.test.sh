@@ -29,7 +29,7 @@ done
 
 seg=${out#*'Add one sentence'}
 [[ "${seg%%'docker rm -f'*}" == *'git status'* ]] || fail "the without-codeo sentence does not put git status before docker rm -f"
-for needle in 'go on only when it shows nothing unpushed' 'from the folder that holds the script' 'when codeo-track.sh sits beside'; do
+for needle in 'go on only when it shows nothing unpushed' 'from the folder that holds the script' 'else codeo-track.sh sits beside' 'CODEO_TRACK names it'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done
 

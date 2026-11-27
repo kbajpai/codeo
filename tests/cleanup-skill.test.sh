@@ -35,6 +35,7 @@ row=$(grep -F '| `cleanup` |' "$repo/docs/handoff.md")
 step4=$(awk '/^4\. \*\*Close/{f=1; next} /^## /{f=0} f' "$skill")
 grep -qF 'or a `leftover` line was printed' <<<"$step4" || check_fail "step 4 does not send a leftover-only run to the printed commands"
 grep -qF '/codeo:triage' <<<"$step4" || check_fail "step 4 no longer names /codeo:triage"
+grep -qF 'while origin still holds a validly named' <<<"$step4" || check_fail "step 4 does not say a failed-name issue gets a leftover line only while origin holds a validly named branch"
 
 # Recording removals: the skill runs the record command, relays the note, and never removes or runs anything itself.
 grep -qF 'cleanup.sh" record' "$skill" || check_fail "the skill does not run cleanup.sh record"
@@ -127,7 +128,7 @@ done
 # The by-hand fallback: git status before any docker command, the sandbox script's own marking, marks after removal.
 fbline=$(grep -E '^fallback: ' "$repo/.codeo/overlays/cleanup.md")
 [[ ${fbline%%docker rm -f*} == *'git status'* ]] || check_fail "the overlay's fallback does not put git status before the first docker rm -f"
-for needle in 'from the folder that holds the script' 'when codeo-track.sh sits beside' 'records nothing' 'once the removal succeeds'; do
+for needle in 'from the folder that holds the script' 'else codeo-track.sh sits beside' 'CODEO_TRACK names it' 'records nothing' 'once the removal succeeds'; do
     [[ $fbline == *"$needle"* ]] || check_fail "the overlay's fallback line lacks: $needle"
 done
 

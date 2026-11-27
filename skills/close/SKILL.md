@@ -584,9 +584,10 @@ is the container the message names.
     `CLAUDE_CODE_REMOTE` is `true`, step 16's `sweep` did nothing, so a `codeo-live/<issue>/<machine>`
     live-signal branch stays on `origin` only when a beat pushed one. On the finished exit, whatever the
     host workflow printed, read `origin` with the lock's issue filled in:
-    `git ls-remote --heads origin 'codeo-live/<issue>/*'`. For each branch it prints whose name is
+    `git ls-remote --heads origin 'codeo-live/<issue>/*'`. Each line it prints is `<sha>`, a tab, then
+    `refs/heads/<branch>`; drop the `refs/heads/` prefix first. For each name that is
     `codeo-live/<issue>/` followed only by letters, digits, `.`, `_` or `-`, say it stays on `origin` and print
-    one `git push origin --delete <branch>` per branch it printed, with that exact name, run outside the hosted session. When it prints
+    one `git push origin --delete <branch>` per branch that passes, with that exact name, run outside the hosted session. When it prints
     none, say no live-signal branch is on `origin`; for a printed name that is outside that set,
     print no command for it and say it was skipped, and if every printed name was skipped say a live-signal branch
     with an unexpected name is on `origin` and to look at it by hand. When the read fails, say so and give the fallback: the
