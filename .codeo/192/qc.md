@@ -8,15 +8,37 @@
 
 ## Where this stands
 
-Round 1, done. Two blocking findings, both `/codeo:implement`'s; the verdict is back to `/codeo:implement`.
+Round 2 is mid-pass and stopped at a question: the build (`true`) and the full suite pass, round 1's two blockers (F1, F2) are fixed, and the independent review raised one design question (Q1) and one blocking performance finding (F7). No verdict is written until Q1 is answered; re-invoke `/codeo:qc` once it is.
 
 ## Questions
 
-None.
+### Q1 — Should the hook run `role.sh` from any repository an edit or `git -C` points at, or only from the session's own project?
+
+**Why it matters:** `hooks/home-guard.sh:12-13` runs `<repo root>/.devcontainer/scripts/role.sh` of whatever repository the target path is in, before Claude Code's permission prompt, and the plugin is active in every project at user scope. Reproduced this pass: a throwaway repo outside the session's project, holding an executable `role.sh` that runs `touch <dir>/pwned`, was handed an `Edit` of one of its files; the hook ran the script and the file appeared, whether or not the edit was then allowed. A skill runs `role.sh` only in the project the engineer invoked it in, so this is new exposure. The plan's Q2 answer says "`<project root>/.devcontainer/scripts/role.sh`" and the code reads the target's repository root instead, which is what lets `git -C <home> commit` from an issue checkout be judged (a round 1 test). If the answer is "keep it", the page says so and the finding closes; if "restrict it", `/codeo:implement` changes what is judged and the tests with it.
+
+- Only when the target's repository is the session's project (`$CLAUDE_PROJECT_DIR`, or the `cwd` the hook is given) or a worktree of it. Cost: `git -C <other clone>` and an edit by absolute path in another clone are not judged (fail-open), so the cross-checkout tests change.
+- As now, and say so on the page: the hook runs the `role.sh` of any repository Claude edits in. Cost: an untrusted clone's script runs on a proposed edit, before any prompt.
+- Only when the target's repository also has `.codeo/config.json` tracked by git. Cost: still repository-supplied code; it narrows which repositories, it does not make the script trusted.
+
+I recommend the first: the guard's purpose is the session's own checkout, and the cross-clone case is a convenience.
+
+**Options:** restrict to the session's project (recommended) · keep and document · require a tracked `.codeo/config.json` · no preference, you pick.
+
+**Answer:**
 
 ## Notes
 
-- Non-blocking, left for `/codeo:implement` to take or `/codeo:triage` to collect: F3–F6 below.
+Round 2 findings so far, to be written into the round with Q1's answer (classification, then in the round):
+
+- **F1, F2 (blocking in round 1) — fixed** by `3d0284a` (no `sed -z`; bash 3.2 and BSD tools) and `3f3188c` (`.codeo/`-only git commands with a redirection or an absolute path); the same commands re-run this pass: `git commit -m x 2>&1`, `git add .codeo/9/init.md 2>/dev/null`, `git add <absolute>/.codeo/9/init.md`, `git add .codeo` and `cd <home>/.codeo && git add 9/init.md` are allowed with only `.codeo/` staged; `git add a.txt 2>&1`, `git add .codeo/../a.txt` and `git commit -m x 2>&1` with `a.txt` staged are refused; with a `sed` that rejects `-z` first on `PATH`, `git push` in home is still refused.
+- **F7 — blocking, `/codeo:implement`'s.** `normalize_cmd` is quadratic in the command's length and runs on every Bash call in every project before the hook knows there is a `git` word. Measured here, a command of quoted lines and a heredoc, no `git` in it, `LC_ALL=C.UTF-8`: 7.7 KB 0.55 s, 15 KB 2.0 s, 31 KB 7.7 s; the reviewer measured 69 KB at 44 s against a 60 s hook timeout. Criterion 4 says projects the guard does not concern are unaffected, and a stall on a large `gh pr create --body "$(cat <<EOF …)"` is an effect. Needed: return early, before normalising, when the command has no `git` word, and keep the cost of the rest linear or small; a test that a long command with no `git` returns within a bound.
+- **F8 (non-blocking, `/codeo:implement`'s).** `git commit --amen`, `--inc` and `--onl` (abbreviations git accepts) are not matched, so the page's "always refused" is untrue for them.
+- **F9 (non-blocking, `/codeo:implement`'s).** `[[ -x role.sh ]]` is required but the skills run `bash .devcontainer/scripts/role.sh`; a copy that lost its exec bit leaves the skill refusals and silently no edit guard. Run it with `bash` and test `-f`.
+- **F10 (non-blocking, `/codeo:implement`'s).** An unresolvable `cd` target (`cd -`, a bare `cd`, `cd ~/…`, `cd $VAR/…`) leaves the tracked directory where it was: from an issue checkout `cd ~/codeo-home && git push` is allowed, and a subshell's `cd` leaks into later segments. Name these on the page or refuse after an unresolved `cd`.
+- **F11 (non-blocking, `/codeo:implement`'s).** The git word is matched literally: `/usr/bin/git push`, `git 'push'`, `"git" push`, `\git push`, a git alias, and a backslash-newline continuation are allowed and are not on the page's not-seen list.
+- **F12 (non-blocking, `/codeo:implement`'s).** The Bash `cwd` is not canonicalised while the repository root is, so a `cwd` reported through a symlink makes `git add .codeo/…` in home refuse; one line, `cur=$(cd "$cur" && pwd -P)`. Whether Claude Code reports such a `cwd` was not confirmed.
+- **F13 (non-blocking).** `git stash list`/`show`, `ls # note; git push` (comments are not stripped) and heredoc bodies are refused; `git clean -fdx` and `git branch -f` are allowed (F5 of round 1, still the engineer's call).
+- The reviewer's other points (`pull`, `branch`, `worktree` allowed; shell-level writes; `--git-dir`; `.codeo/` symlinks; no `MultiEdit` in the matcher; `-p`/`--interactive`) are documented limits or choices, not findings.
 
 ## Outcome
 
@@ -89,3 +111,4 @@ No issue was filed from this pass.
 ## Log
 
 - 2026-11-27 — qc round 1: back to implement, 2 blocking and 4 non-blocking findings · cost: 7m · opus-5-5 175k in + 2.5M cached / 28k out · sonnet-5-5 115k in + 303k cached / 1k out
+- 2026-11-27 — qc round 2 paused: Q1 raised, F7 blocking, build and suite pass · cost: 9m · opus-5-5 272k in + 1.9M cached / 25k out · sonnet-5-5 191k in + 660k cached / 4k out
