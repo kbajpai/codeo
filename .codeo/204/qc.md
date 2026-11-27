@@ -55,6 +55,7 @@ I recommend proceed and coordinate.
 **Options:** proceed and coordinate (recommended) · sequence after #195 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
