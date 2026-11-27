@@ -8,6 +8,8 @@
 
 ## Where this stands
 
+Round 7 (send-back from `qc.md` round 6) is done: the blocking finding L1 (the README's sample run named an empty repository) and the cheap L2-L7 are fixed (see `### Round 7` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed.
+
 Round 6 (send-back from `qc.md` round 5) is done: the blocking finding K1 (the doctor `containers` check missing from the README and `docs/skills.md`) and the cheap K4-K6 are fixed (see `### Round 6` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed.
 
 Round 5 (send-back from `qc.md` round 4) is done: the two blocking findings J1-J2 and the cheap ones J4-J13 (except J3) are fixed (see `### Round 5` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed.
@@ -241,6 +243,25 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 
 **Left for `/codeo:triage` or a later round (non-blocking, not taken):** K2 (the wizard and `setup --containers` derive the codename from different sources when the kept config's `repo.name` differs from origin), K3 (a few refusals still come after the pin is written), K7 (the wizard asks "Codename" at a terminal when the kept config already names one, then ignores the answer), K8 (`containers.sh --force` writes through a symlink at a managed path). The footprint gap in `plan.md` stays `/codeo:plan`'s. No host step is needed.
 
+### Round 7 — 2026-11-27
+(send-back from qc.md round 6)
+
+**What was built** (one commit on top of round 6: `10fae4b`; the implementer ran on sonnet and the diff was read against `scripts/codeo-init.sh` and `scripts/doctor.sh` before this outcome):
+- **L1** — the README's sample run is described as the output of a clone of a repository with one commit on `main` and `origin/HEAD` set; one added sentence says a repository with no commit yet has no `origin/HEAD`, quotes what the wizard prints then (`init: fail config: baseBranch is TODO-set-me (the clone has no origin/HEAD: …)` and `init: skip containers: baseBranch is not set`, both checked against `scripts/codeo-init.sh`) and gives the fix (`git remote set-head origin <base>` after the first push, or `baseBranch` in `.codeo/config.json`).
+- **L2, L4** — the README's **containers.** entry lists three causes (drift, a managed script that is missing, a missing pin, and a config the templates cannot be rendered from, with the form of its line), and `docs/skills.md`'s doctor section says the check also fails when the config cannot be rendered. The third cause's example line comes from the QC review's reproduction; it was not re-run in a scratch project here.
+- **L3** — doctor's pin message ends "set it" for one missing key and "set them" for two; `tests/doctor.test.sh` has a one-key assertion beside the two-key ones.
+- **L5** — the README's check list names the eleven always-run checks only.
+- **L6** — the `codename` row says `scripts/containers.sh` refuses a config without a codename and that `container-name.sh` and `role.sh` fall back to the clone's folder name.
+- **L7** — the three pages say `~/<codename>` (the repository's name made to fit the rule, unless it is set).
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. For information, the implementer ran `readme`, `doctor`, `containers`, `skills-doc`, `init` and `example`, each ending `all cases passed`, and `bash scripts/containers.sh --check` prints no `differs`; grading is `/codeo:qc`'s.
+
+**Documentation pages changed this round:** `README.md`, `docs/skills.md`, `docs/container-templates.md`, `.devcontainer/README.md`.
+
+**Overlap with #192:** `overlap.sh 190` printed nothing at the start of this round; nothing this round touches `CHANGELOG.md` or `docs/home-checkout.md`.
+
+**Left for `/codeo:triage` or a later round (non-blocking, not taken):** L8 (a fresh `setup.sh --containers` in a clone without `origin/HEAD` writes the config before `containers.sh` refuses; K3 again), L9 (an invalid `--codename` stops the wizard though the kept config names a codename, and the wizard asks for a codename it ignores; K7 again), and K2 and K8 from round 5. The footprint gap in `plan.md` stays `/codeo:plan`'s. No host step is needed; the README's sample block is still the engineer's host capture and was not re-run.
+
 ## Log
 
 - 2026-11-26 — implemented: Tasks 1-11 and the in-checkout half of Task 12 through subagent rounds on sonnet (every implementer, reviewer and fix round), 21 commits; host steps pending · cost: 68m · sonnet-5-5 1.7M in + 58M cached / 322k out
@@ -250,3 +271,4 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 - 2026-11-26 — round 4 (send-back from qc round 3): H1-H8 fixed in four commits, each task reviewed on sonnet; overlap questions Q1-Q2 answered · cost: 73m · sonnet-5-5 499k in + 27.4M cached / 90k out
 - 2026-11-27 — round 5 (send-back from qc round 4): J1-J2 and J4-J13 fixed in four commits, each task reviewed on sonnet · cost: 16m · sonnet-5-5 320k in + 18.7M cached / 61k out
 - 2026-11-27 — round 6 (send-back from qc round 5): K1 and K4-K6 fixed in one commit, reviewed by reading the diff · cost: 2m · sonnet-5-5 89k in + 1.4M cached / 11k out
+- 2026-11-27 — round 7 (send-back from qc round 6): L1-L7 fixed in one commit, reviewed by reading the diff against the code · cost: 2m · sonnet-5-5 74k in + 1.2M cached / 10k out
