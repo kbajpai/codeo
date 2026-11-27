@@ -1,5 +1,5 @@
 {
-  "description": "While a codeo workflow holds .codeo/active, subagents run on the configured models (the QC reviewer on its own) and the session publishes a short-lived live signal",
+  "description": "While a codeo workflow holds .codeo/active, subagents run on the configured models (the QC reviewer on its own) and the session publishes a short-lived live signal, and a home checkout's project edits are refused unless CODEO_HOME_EDITS=allow",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,15 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/subagent-model.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/home-guard.sh\""
           }
         ]
       }
