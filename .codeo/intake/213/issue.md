@@ -1,8 +1,8 @@
-# new-release-and-pin — issue
+# Issue #213 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/213 |
 | Updated | 2026-11-27 |
 
 ## Where this stands
@@ -70,3 +70,4 @@ The latest release is v1.0.10 (tagged 2026-11-26) and `.codeo/config.json` pins 
 ## Log
 
 - 2026-11-27 — dossier opened; questions 1-3 answered with the assistant's picks; draft recorded for review.
+- 2026-11-27 — approved and filed as #213.
