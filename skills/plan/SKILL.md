@@ -66,6 +66,12 @@ is the container the message names.
    `git branch --show-current`, or an argument naming a different issue, is a hard stop too.
    `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → The lock` has all three checks. `<N>` below is the
    lock's `issue`.
+   <!-- rule: plan-10 -->
+   Then run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" verify`: it proves the person acting
+   owns this workflow. On exit 0 carry on. On exit 1 print its one line and stop — nothing else is
+   done. Pass `--override "<the engineer's exact words>"` only when the engineer has said in so
+   many words to take the workflow over; it is never inferred, and a refusal that says it could
+   not check is not lifted by it. The override line the script writes under `## Notes` goes into this skill's next dossier commit. The role check's refusal above has no override.
 
 1. **Read what came before, then restate the request.** Read `.codeo/<N>/init.md` — its
    `## Outcome` carries the issue restated, the acceptance criteria verbatim, and what intake left

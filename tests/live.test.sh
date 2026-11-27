@@ -695,10 +695,12 @@ printf 'a b;c\n' > "$(git -C "$clone" rev-parse --path-format=absolute --git-pat
 run beat --force
 assert_eq "branch" refs/heads/codeo-live/104/web-abcdef01 "$(heads)"
 
-case_desc=user_env_login_wins
+case_desc=user_env_login_is_ignored_outside_a_web_session
 new_world; clone_with_lock 104 container codeo-104
 CODEO_GITHUB_LOGIN=bob run beat --force
-assert_contains "user" "user: bob" "$(web_msg refs/codeo/live/104/codeo-104)"
+msg=$(web_msg refs/codeo/live/104/codeo-104)
+assert_contains "resolver login" "user: alice" "$msg"
+[[ $msg != *"user: bob"* ]] || { echo "FAIL: $case_desc — the variable named the user"; failures=$((failures + 1)); }
 
 case_desc=web_user_falls_back_to_the_assignee
 new_world; clone_with_lock 104 web abcdef0123456789

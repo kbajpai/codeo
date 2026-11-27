@@ -531,9 +531,19 @@ a=$(clone_of "$rlo")
 run_dated --resume-line 42 feat/s "$a" a-login; assert_eq "exit" 0 "$status"
 assert_dated "line" "resumed: by a-login after the stash of 2026-09-30" "$out"
 
-case_desc="resume-line with no login says no login"
-run_claim --resume-line 42 feat/s "$a"; assert_contains "no login" "resumed: by no login after the stash of" "$out"
-run_claim --resume-line 42 feat/s "$a" ""; assert_contains "empty login" "resumed: by no login after the stash of" "$out"
+case_desc="resume-line with no login is refused"
+run_claim --resume-line 42 feat/s "$a"
+assert_eq "exit" 1 "$status"; assert_eq "stdout empty" "" "$out"
+assert_contains "stderr" "needs the acting login" "$err"
+
+case_desc="resume-line with an empty login is refused"
+run_claim --resume-line 42 feat/s "$a" ""
+assert_eq "exit" 1 "$status"; assert_eq "stdout empty" "" "$out"
+assert_contains "stderr" "needs the acting login" "$err"
+
+case_desc="resume-line with a login names it"
+run_claim --resume-line 42 feat/s "$a" alice
+assert_eq "exit" 0 "$status"; assert_contains "line" "resumed: by alice after" "$out"
 
 case_desc="the printed stash line spends the stash"
 run_claim --resume-line 42 feat/s "$a" a-login

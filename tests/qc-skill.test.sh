@@ -121,8 +121,20 @@ must_contain "the ancestor check" 'git merge-base --is-ancestor'
 must_contain "a later round reuses evidence only on deploy=false" 'environment evidence from round <n> stands'
 must_contain "qc never deploys" 'This skill never deploys'
 must_contain "a missing deploy is implement's" 'naming the missing deploy'
-if grep -qF -- '--override' "$skill"; then
-    fail "the skill takes a lease with --override — $(grep -nF -- '--override' "$skill" | head -1)"
+# --override belongs to lock.sh verify (qc-15) alone, never to a lease take.
+# A wrapped command carries it on a continuation line, so the take line and the next two are checked.
+override_on_lease_take() {
+    printf '%s\n' "$1" | awk '
+        /lease take/ { n = 3 }
+        n > 0 { if (index($0, "--override")) { print; found = 1 } n-- }
+        END { exit !found }'
+}
+if override_on_lease_take "$(cat "$skill")" >/dev/null; then
+    fail "the skill takes a lease with --override — $(override_on_lease_take "$(cat "$skill")" | head -1)"
+fi
+if ! override_on_lease_take 'lease take 38 \
+    --override "x"' >/dev/null; then
+    fail "the override pin misses a wrapped lease take"
 fi
 
 # The final review wave.
@@ -211,6 +223,13 @@ must_contain 'the Notes line carries no issue number' 'carries no issue number'
 must_contain 'a refused call is filed where the role check allows' 'in the checkout the project'\''s role check allows'
 must_lack 'no home-container claim in generic text' 'in the home container'
 must_lack 'no issue-container claim in generic text' 'issue container'
+
+# Step 0 verifies ownership (qc-15).
+must_contain 'qc step 0 runs verify' 'lock.sh" verify'
+must_contain 'qc verify carries its rule marker' '<!-- rule: qc-15 -->'
+must_contain 'qc a refused verify prints its line and stops' 'print its one line and stop — nothing else is'
+must_contain 'qc the override is named' '--override "<the engineer'\''s exact words>"'
+must_contain 'qc the override is never inferred' 'never inferred'
 
 if ((failures)); then
     echo "$failures case(s) failed"

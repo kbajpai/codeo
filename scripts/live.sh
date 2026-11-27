@@ -71,7 +71,8 @@
 #   CODEO_LIVE_REFRESH_SECONDS  minimum seconds between two unforced beats (default 300)
 #   CODEO_LIVE_TTL_SECONDS      how old a beat may be and still be listed (default 900)
 #   CODEO_MACHINE               the machine label, overriding the host's default
-#   CODEO_GITHUB_LOGIN          the user named in the signal, read before any lookup (all sessions)
+#   CODEO_GITHUB_LOGIN          read only by `github.sh user login`, and only in a web session, as the
+#                               fallback when GET /user is refused; never read here
 #   CLAUDE_CODE_REMOTE_SESSION_ID  a web session's id, which gives its machine label `web-<first 8>`
 #                               when the lock holds none
 #   CODEO_LIVE_PUSH_TIMEOUT     seconds each git push or fetch, the login lookup, the issue-assignee
@@ -155,8 +156,8 @@ assignee_label() {
 }
 
 user_label() {
-    local name=${CODEO_GITHUB_LOGIN:-}
-    [[ -n $name ]] || name=$(bounded bash "$github" user login 2> /dev/null) || name=
+    local name
+    name=$(bounded bash "$github" user login 2> /dev/null) || name=
     [[ -n $name || $host != web ]] || name=$(assignee_label)
     [[ -n $name || $host == web ]] || name=$(git config user.name 2> /dev/null) || name=
     name=$(clean "$name" 64)

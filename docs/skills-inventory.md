@@ -43,6 +43,7 @@ in prose exist (only the script's existence is checked).
 - [init-08] Acceptance criteria are copied verbatim.
 - [init-09] The state directory's `.gitignore` must be committed.
 - [init-10] A refusal from the role check ends the step; no override.
+- [init-11] `init` resolves the user with `user whoami` before any claim; exit 1 stops it, and the login (an `unverified` one included) is recorded as the Owner and compared with the assignees like any other.
 
 ## plan
 
@@ -56,6 +57,7 @@ in prose exist (only the script's existence is checked).
 - [plan-07] The draft file is not committed and the plan doc stays unstaged.
 - [plan-08] A missing optional plugin means apply its structure directly; a missing required skill is a stop.
 - [plan-09] A refusal from the role check ends the step; no override.
+- [plan-10] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words.
 
 ## implement
 
@@ -70,6 +72,7 @@ in prose exist (only the script's existence is checked).
 - [implement-08] Behaviour no documentation task covers is a plan gap, not an unplanned page.
 - [implement-09] Build only; never grade its own work.
 - [implement-10] A refusal from the role check ends the step; no override.
+- [implement-11] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words.
 
 ## qc
 
@@ -87,6 +90,7 @@ in prose exist (only the script's existence is checked).
 - [qc-12] A send-back return means a full re-run.
 - [qc-13] A missing lease or deploy identity means "not yet checkable"; an orphan is non-blocking.
 - [qc-14] A refusal from the role check ends the step; no override.
+- [qc-15] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words.
 
 ## close
 
@@ -104,6 +108,8 @@ in prose exist (only the script's existence is checked).
 - [close-12] Before an irreversible put-back, stop and show the engineer.
 - [close-13] Never use `finishing-a-development-branch`.
 - [close-14] A refusal from the role check ends the step; no override.
+- [close-15] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words, and its line is committed with close's dossier commit.
+- [close-16] A stash or abandon removes the recorded owner (`lock.sh owner`); with no owner it removes the verified caller (`user whoami`) only when `verify` passed without an override, else skips and says so; never a login that was not verified.
 
 ## triage
 
