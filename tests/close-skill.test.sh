@@ -163,7 +163,10 @@ if [[ $(step 4) == *'github.sh" pr create'* ]]; then fail "step 4 runs pr create
 grep -B1 -F '4. **Archive' "$skill" | head -n1 | grep -qF '<!-- rule: close-15 -->' || fail "close-15 is not directly above step 4"
 must_contain "whether a round records the pull request is read from HEAD" 'Whether a round in `close.md` records this pull request is read from `HEAD`'
 step_contains "the archive-push row runs steps 2, 3 and 5 onward" 1 'steps 2, 3 and 5 onward'
-step_contains "the pr-create row runs steps 2–3 then 6–7" 1 'steps 2–3, then 6–7'
+step_contains "the pr-create row runs steps 2–3, then 6–8" 1 'steps 2–3, then 6–8'
+step_contains "the first open resumed row runs 2 and 3, then 6, 4, 7 and 8, step 5 skipped" 1 'steps 2 and 3, then 6, 4, 7 and 8, in that order, step 5 skipped'
+step_contains "the un-archiving send-back at step 3 is for a dossier archived with no pull request" 1 'un-archives in its own send-back commit only when no pull request exists yet'
+step_contains "with a pull request open, step 3 sends nothing back and step 11 does" 1 'when a pull request is open, step 3 sends nothing back and step 11 does, from the next run'
 step_contains "step 3 names both resumed rows for the close.md exception" 3 'on either resumed row'
 step_contains "an open pull request's conflict is step 11's send-back" 3 "a conflict is"
 step_contains "step 3 sends nothing back on an open pull request" 3 "step 11's send-back instead: step 3 sends nothing back there"

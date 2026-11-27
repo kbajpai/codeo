@@ -108,9 +108,9 @@ is the container the message names.
    | `--stash`, or the engineer parking the work, or `HEAD`'s `close.md` ends in a `— stashed` round while the lock is held — on any pull request not merged | → **Stash** |
    | No pull request for the branch (`number` is null), dossier at `.codeo/<N>/` | → **Phase 1 — archive, then open** |
    | No pull request, dossier under `.codeo/done/<N>/` at `HEAD` | → **Phase 1, resumed after the archive push** — run steps 2, 3 and 5 onward (step 4 is skipped: the archive is pushed) |
-   | `state` is `open`, dossier under `.codeo/done/<N>/`, no round in `close.md` records this pull request | → **Phase 1, resumed after `pr create`** — run steps 2–3, then 6–7 (steps 4–5 are skipped): record it from this lookup (step 6) and commit and push it (step 7) |
+   | `state` is `open`, dossier under `.codeo/done/<N>/`, no round in `close.md` records this pull request | → **Phase 1, resumed after `pr create`** — run steps 2–3, then 6–8 (steps 4–5 are skipped): record it from this lookup (step 6) and commit and push it (step 7), then hand off (step 8) |
    | `state` is `open`, dossier under `.codeo/done/<N>/` | → **Phase 2 — waiting** |
-   | `state` is `open`, dossier at `.codeo/<N>/`, and either a round records this pull request and no `— review feedback` or `— conflicts with <base>` round comes after it, or no round records it, whatever other rounds exist (a `— conflicts with <base>` round with no record predates the pull request) | → **Phase 1, first open resumed** by an older plugin or a pull request opened by hand — step 5 skipped; steps 6, 4, 7 run in that order, archive and record in one commit |
+   | `state` is `open`, dossier at `.codeo/<N>/`, and either a round records this pull request and no `— review feedback` or `— conflicts with <base>` round comes after it, or no round records it, whatever other rounds exist (a `— conflicts with <base>` round with no record predates the pull request) | → **Phase 1, first open resumed** by an older plugin or a pull request opened by hand — step 5 skipped; steps 2 and 3, then 6, 4, 7 and 8, in that order, step 5 skipped (the verdict gate and the tree and conflict checks still run), archive and record in one commit |
    | `state` is `open`, dossier at `.codeo/<N>/`, a round records this pull request and a `— review feedback` or `— conflicts with <base>` round comes after it (the dossier is back from a send-back) | → **Phase 1 — return from review** |
    | `state` is `closed` and `merged_at` is set | → **Phase 3 — clean up** |
    | `state` is `closed` and `merged_at` is empty, or `HEAD`'s `close.md` ends in a `— abandoned` round while the lock is held | → **Closed unmerged** |
@@ -129,7 +129,7 @@ is the container the message names.
    in `close.md`, or a recording round with no `— review feedback` or `— conflicts with <base>` round after it;
    a conflict round from before the pull request existed does not make a return from review. That is the first open resumed, not a return from review: the pull
    request exists, so step 5 is skipped, and the archive rides in step 7's one commit with the record. A conflict found at step 3
-   after the archive push un-archives in its own send-back commit, as step 11 does. A merged pull request cannot be
+   un-archives in its own send-back commit only when no pull request exists yet (the "resumed after the archive push" row), as step 11 does; when a pull request is open, step 3 sends nothing back and step 11 does, from the next run. A merged pull request cannot be
    stashed or abandoned: on `--stash`, or a request to abandon, with `merged_at` set, say so, and
    Phase 3 runs instead. A `close.md` at `HEAD` whose last round is `— stashed` (or `— abandoned`)
    while the lock is held is an interrupted park, which this run finishes — with or without
