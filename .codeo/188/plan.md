@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-All seven questions are answered and the plan is approved and written (`docs/plans/2026-11-27-close-177-qc-leftovers-188.md`, unstaged). The outcome is written. Next: `/codeo:implement`.
+Round 2, after a send-back from `/codeo:qc` round 1 (F1: the F5 sentence says `gh` still runs without `jq`; it does not). Q8 is answered: F1, F2, F3 and F5 are in, F4 is out. Three new tasks (7-9) are drafted at `.codeo/188/plan-draft.md` and wait for approval.
 
 ## Questions
 
@@ -111,6 +111,14 @@ Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "
 **Answer:**
 Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "proceed and coordinate".)
 
+### Q8 — Round 2: which of QC round 1's non-blocking findings are fixed with F1?
+
+**Why it matters:** QC round 1 sent the plan back for F1 (`docs/home-checkout.md:9` says `gh` still runs without `jq`; it does not). F2-F5 are non-blocking. Each one folded in adds a task step and widens the diff; F4 (pins for the docs sentences) would add `tests/readme.test.sh` to the footprint. Left out, a finding stays in `qc.md` for `/codeo:triage`.
+**Options:** F2 + F3 wording (recommended) · F5 changelog suffix and pin scope (recommended) · F4 pins for the docs sentences · none, F1 only.
+
+**Answer:**
+F2 + F3 wording, and F5 changelog suffix and pin scope. Not F4. (The engineer, through the question tool, 2026-11-27.)
+
 ## Notes
 
 - Shape, unless an answer changes it: one plan under `docs/plans/`, one pull request, wording only. No
@@ -157,3 +165,4 @@ sequenced:  none
 - 2026-11-27 — Q1-Q4 answered by the engineer in conversation ("Go with your picks": the recommended option for each); plan drafted at .codeo/188/plan-draft.md, awaiting review · cost: unavailable, an answer turn with no separate usage
 - 2026-11-27 — plan approved and written; footprint committed; Q5-Q7 raised (overlap.sh tokens for #195, #204, #206) · cost: unavailable, the hand-off line carries the total
 - 2026-11-27 — Q5-Q7 answered (proceed and coordinate); planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md · cost: 15m · fable-5-2 78k in + 848k cached / 10k out · sonnet-5-5 108k in + 2M cached / 20k out
+- 2026-11-27 — round 2 opened (send-back from qc.md round 1); Q8 raised and answered through the question tool; round-2 tasks drafted at .codeo/188/plan-draft.md, awaiting review · cost: unavailable, the hand-off line carries the total
