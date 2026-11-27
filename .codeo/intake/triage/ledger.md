@@ -219,7 +219,7 @@
 | `issue:182` | Release v1.0.10, gate #173/#176/#177/#179 closed; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-26 |
 | `qc:177:F2-F6` | #177 QC round 2 F2-F6 (UTC-date wording, `ls-remote` allowlist, tracker condition, assignee lookup, cleanup `leftover` line, CHANGELOG comma) | filed #188 | 2026-11-26 |
 | `issue:185` | Close the #173, #176 and #170 QC leftovers; board Status Backlog | backlog | 2026-11-26 |
-| `issue:188` | Close the #177 QC leftovers; board Status Backlog | backlog | 2026-11-26 |
+| `issue:188` | #177 QC leftovers (wording); engineer asked for a low-hanging fruit; board Backlog → Ready | ready | 2026-11-27 |
 | `issue:190` | One-command setup / reusable containers; filed, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-26 |
 | `branch:feat/190-one-command-setup` | Pushed 2026-11-26, no PR, no dossier; same workflow as #190 | ready | 2026-11-26 |
 | `issue:192` | Guard the home checkout; filed 2026-11-26, not on the board → `Ready` on the engineer's say-so | ready | 2026-11-26 |
