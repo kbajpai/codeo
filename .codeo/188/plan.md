@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1-Q4 are answered. The plan is drafted at `.codeo/188/plan-draft.md` and waits for the engineer to approve it, ask for changes or reject it.
+Q1-Q4 are answered and the plan is approved and written (`docs/plans/2026-11-27-close-177-qc-leftovers-188.md`, unstaged). `overlap.sh` printed nine overlap lines for #195, #204 and #206, which Q2-Q4 had raised in prose only, so Q5-Q7 restate them with the printed tokens. Their recommended answer is the one already given at Q2-Q4. `## Outcome` waits for Q5-Q7.
 
 ## Questions
 
@@ -84,6 +84,30 @@ the comma in `CHANGELOG.md` stays.
 **Answer:**
 Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "Go with your picks", taking the recommended option.)
 
+### Q5 — #195: proceed and coordinate on `glob:CHANGELOG.md`, `glob:skills/close/**` and `glob:tests/**`?
+
+**Why it matters:** `overlap.sh 188` prints those three for #195 (branch `feat/195-identify-acting-user-strictly-verify`, assignee kbajpai, step plan). Q2 raised the same overlap in prose and was answered *proceed and coordinate*; this restates it with the printed tokens so the record and the script agree. If the answer stays *proceed and coordinate*, nothing in the plan changes; *sequence after #195* or *re-scope* would.
+
+**Options:** proceed and coordinate (recommended, as answered at Q2) · sequence after #195 · re-scope.
+
+**Answer:**
+
+### Q6 — #204: proceed and coordinate on `glob:CHANGELOG.md`, `glob:skills/close/SKILL.md` and `glob:tests/**`?
+
+**Why it matters:** `overlap.sh 188` prints those three for #204 (branch `chore/204-fix-codeo-close-opens-pr`, assignee kbajpai, step init). Q3 raised the same overlap in prose and was answered *proceed and coordinate*; this restates it with the printed tokens so the record and the script agree. If the answer stays *proceed and coordinate*, nothing in the plan changes; *sequence after #204* or *re-scope* would.
+
+**Options:** proceed and coordinate (recommended, as answered at Q3) · sequence after #204 · re-scope.
+
+**Answer:**
+
+### Q7 — #206: proceed and coordinate on `glob:CHANGELOG.md`, `glob:skills/cleanup/SKILL.md` and `glob:tests/cleanup-skill.test.sh`?
+
+**Why it matters:** `overlap.sh 188` prints those three for #206 (branch `fix/206-codeo-cleanup-prints-codeo-rm`, assignee kbajpai, step init). Q4 raised the same overlap in prose and was answered *proceed and coordinate*; this restates it with the printed tokens so the record and the script agree. If the answer stays *proceed and coordinate*, nothing in the plan changes; *sequence after #206* or *re-scope* would.
+
+**Options:** proceed and coordinate (recommended, as answered at Q4) · sequence after #206 · re-scope.
+
+**Answer:**
+
 ## Notes
 
 - Shape, unless an answer changes it: one plan under `docs/plans/`, one pull request, wording only. No
@@ -115,3 +139,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-27 — Q1-Q4 raised · cost: 1m · fable-5-2 71k in + 555k cached / 5k out
 - 2026-11-27 — Q1-Q4 answered by the engineer in conversation ("Go with your picks": the recommended option for each); plan drafted at .codeo/188/plan-draft.md, awaiting review
+- 2026-11-27 — plan approved and written; footprint committed; Q5-Q7 raised (overlap.sh tokens for #195, #204, #206) · cost: unavailable, the hand-off line carries the total
