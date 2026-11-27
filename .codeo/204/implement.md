@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, done, after the send-back from `qc.md` round 2. G1, G2, G3, G5 and G6 are fixed. Next step: `/codeo:qc`.
+Round 4, done, after the send-back from `qc.md` round 3 (a conflict with `main`). Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -86,9 +86,27 @@ Sync with `main` at the start of the round: the branch already contained it. `ov
 
 **Deviations from the plan.** None of scope. Open and left as deferred minors: step 3's sentence for the resumed-after-`pr create` row still says "the run goes on to steps 6-7" where step 1 says 6-8 (an existing pin fixes the string; no run is misdirected); whether a `— pull request updated` round counts as recording the pull request in the first-open-resumed row is not stated. G4, G7 and G8 from `qc.md` round 2 are recorded there as non-blocking and untouched. No shared environment: no lease, no deploy.
 
+### Round 4
+
+2026-11-27
+(send-back from qc.md round 3)
+
+`sync-main.sh` merged `origin/main` (`c7505a9`, the acting-user change that merged first) and stopped on four conflicts, resolved in the merge commit `1e5afbc`. Everything else on `main` merged cleanly, including `skills/close/SKILL.md`, `docs/dossier.md`, `docs/handoff.md` and `README.md`. `overlap.sh 204` and `overlap.sh --outside 204` print nothing.
+
+- **Rule id collision.** `main` took `close-15` (step 0's `lock.sh verify`) and `close-16` (the owner on a stash or abandon) for its own rules, the id this branch had used for "archive and push before the pull request opens". This branch's rule is now **`close-17`**: the marker above step 4 in `skills/close/SKILL.md`, the two pins in `tests/close-skill.test.sh` (the marker's placement and its adjacency to step 4), the inventory bullet and the changelog bullet. `main`'s `close-15` and `close-16` are untouched.
+- `CHANGELOG.md`: both `## Unreleased` bullets kept, this branch's before `main`'s.
+- `docs/skills-inventory.md`: `main`'s `close-15` and `close-16` kept, `close-17` added after them.
+- `tests/inventory.test.sh`: `main`'s rule counts, with `[close]=17`.
+- `tests/fixtures/skills-inventory.rules.sha256`: regenerated with `bash tests/inventory.test.sh --update`, not hand-merged.
+
+**Documentation pages changed:** none beyond the merge. **Build result:** the `shell` suite's `build` is `true`: exit 0. After the merge `inventory`, `skills`, `close-skill`, `skills-lint` and `skills-doc` tests each print `all cases passed`; the full suite is `/codeo:qc`'s.
+
+**Deviations from the plan.** The plan's text and its Task 3 name the rule `close-15`; the id is `close-17` because `main` took 15 and 16 first. The plan is not edited here (`/codeo:plan`'s file); `/codeo:qc` should read "close-15" in it as `close-17`. No shared environment: no lease, no deploy.
+
 ## Log
 
 - 2026-11-27 — implemented docs/plans/2026-11-27-close-archive-before-pr-204.md: 6 tasks, 9 commits, build true · cost: 37m · sonnet-5-5 607k in + 19.7M cached / 83k out
 - 2026-11-27 — round 2: fixed qc round 1's F1-F7 (4 commits), build true · cost: 3m · sonnet-5-5 123k in + 5M cached / 23k out
 - 2026-11-27 — round 3: Q1 raised (overlap with #206, tests/intake.test.sh) · cost: 0m · sonnet-5-5 10k in + 377k cached / 405 out
 - 2026-11-27 — round 3: fixed qc round 2's G1, G2, G3, G5, G6 (3 commits), build true · cost: 2m · sonnet-5-5 89k in + 3.6M cached / 16k out
+- 2026-11-27 — round 4: merged main (#195, 4 conflicts resolved, rule id close-15 renumbered to close-17), build true · cost: 1m · sonnet-5-5 38k in + 3M cached / 4k out
