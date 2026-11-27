@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 is done: `origin/main` (with #195) is merged into the branch and the `CHANGELOG.md` conflict is resolved. The build passes. Next: `/codeo:qc`.
+Round 4 is built: Tasks 10-11 of `docs/plans/2026-11-27-close-177-qc-leftovers-188.md` (after plan round 3), reviewed and committed; the branch also carries round 3's merge of `origin/main`. The build passes. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -87,8 +87,30 @@ Spot checks on the merged tree: `home-checkout.md` still carries "stops before i
 
 **Built:** nothing beyond the merge and the conflict resolution; no documentation page changed in this round. **Build result:** the `shell` suite's `build` is `true` and exits 0; the suite itself is `/codeo:qc`'s. **Deviations from the plan:** none; no `Deployed revision:`, no shared environment.
 
+
+### Round 4
+
+2026-11-27
+(after plan.md round 3)
+
+Round 4 starts from the base branch: `sync-main.sh` reported the branch already contains `origin/main`; `overlap.sh 188` printed nothing. It builds the two tasks `plan.md` round 3 added after QC round 3's send-back (its F8, blocking, and F9, non-blocking). The finding was weighed in the plan, which observed `live.sh`'s `user_label` without `jq` (`host=container` gave the `git config user.name` value, `host=web` gave `unknown`, `gh` was called 0 times) before writing the tasks; nothing was left to ask.
+
+**Built** — two tasks, one commit each, on top of `c5633fc`:
+
+| Task | Commit | What changed |
+|---|---|---|
+| 10 | `55eb82e` | `docs/home-checkout.md:9`: without `jq`, `live.sh` takes the signal's user from `git config user.name`; its `github.sh` calls stop at the `jq` read of `.codeo/config.json` before `gh`; only a hosted web session asks for the issue's assignee, and there, without `jq`, that lookup yields nothing and the user reads `unknown` (QC F8) |
+| 11 | `17fef72` | `.codeo/overlays/cleanup.md` and `templates/containers/.codeo/overlays/cleanup.md`: the tracker clause is one parenthesis, "sits beside it; otherwise it prints a note: …" (QC F9) |
+
+**Documentation pages changed:** `docs/home-checkout.md`, `.codeo/overlays/cleanup.md` and its template. No documentation gap; no script changed (`git diff --stat origin/main -- scripts lib hooks .sbx .devcontainer` prints nothing), and `overlap.sh --outside 188` prints nothing.
+
+**Build result:** the `shell` suite's `build` is `true` and exits 0. The implementer ran the whole `bash tests/run.sh` once with both edits in the tree, ending `all cases passed`, then committed the two tasks separately; grading the suite is `/codeo:qc`'s.
+
+**Deviations from the plan:** none beyond process: Task 10's proof greps were run with `grep -c -F` and double-quoted patterns because the apostrophes in "signal's" and "issue's" break the plan's single-quoted form. The two tasks went to one implementer, one commit per task, and were reviewed as one unit over `c5633fc..17fef72`: spec compliant on both, no Critical or Important finding, one Minor deferred (the phrase "from `git config user.name`" is unqualified in its own clause, and the next sentence covers the hosted case). No separate whole-branch review was run; `/codeo:qc` round 4 reviews the whole diff independently. No `Deployed revision:`: no shared environment.
+
 ## Log
 
 - 2026-11-27 — implemented docs/plans/2026-11-27-close-177-qc-leftovers-188.md: 6/6 tasks, build passes, review clean (2 minors deferred) · cost: 30m · sonnet-5-5 139k in + 3.9M cached / 22k out
 - 2026-11-27 — round 2 (send-back from qc.md round 1): implemented Tasks 7-9 of docs/plans/2026-11-27-close-177-qc-leftovers-188.md, 3/3, build passes, review clean · cost: 15m · sonnet-5-5 90k in + 4.1M cached / 16k out
 - 2026-11-27 — round 3 (send-back from close.md round 2): merged origin/main, resolved CHANGELOG.md (kept both bullets), re-checked the F1 and F3 sentences against #195's changes, build passes · cost: 1m · sonnet-5-5 15k in + 1.8M cached / 3k out
+- 2026-11-27 — round 4 (after plan.md round 3): implemented Tasks 10-11, 2/2, build passes, review clean (1 minor deferred) · cost: 8m · sonnet-5-5 112k in + 3.8M cached / 14k out
