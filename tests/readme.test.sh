@@ -370,6 +370,17 @@ setup_sec=$(sed -n '/^## setup$/,/^## doctor$/p' docs/skills.md)
 [[ $setup_sec == *'`--containers` alone, or with `--codename <name>`, works over an existing config'* ]] ||
     fail setup-containers-over-config "docs/skills.md setup section does not say --containers works over an existing config"
 
+# identity-docs: init's README entry names no Claim line (init stops when the login is unresolved); the lock entry
+# names all three refusal forms; the handoff flowchart does not give verify a branch check it does not make.
+grep -qF 'Claim line' README.md && fail identity-docs "README.md still mentions a Claim line"
+if [[ -n ${lock:-} ]]; then
+    grep -qF 'is assigned to' <<<"$lock" || fail identity-docs "the lock entry does not name the 'is assigned to' refusal"
+    grep -qF 'locked by' <<<"$lock" || fail identity-docs "the lock entry does not name the 'locked by' refusal"
+fi
+grep -qF 'branch matches' docs/handoff.md && fail identity-docs "docs/handoff.md's verify flowchart still says branch matches"
+grep -qF 'is assigned to' docs/handoff.md || fail identity-docs "docs/handoff.md does not name the 'is assigned to' refusal"
+grep -qF 'locked by' docs/handoff.md || fail identity-docs "docs/handoff.md does not name the 'locked by' refusal"
+
 # A pipeline whose consumer is grep -q: grep exits at its first match, a producer still writing is killed
 # by SIGPIPE (141), and pipefail fails the whole pipeline although the line was found. The race is lost
 # on a slow runner and won on a fast machine, so this reads the source instead of waiting for it to flake.

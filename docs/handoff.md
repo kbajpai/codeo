@@ -92,8 +92,10 @@ the checkout the session is in:
    account, never a bot), reads the owner from the pushed `init.md` (the login on its last
    `resumed: by <login> after` line, else its `| Owner |` row), and passes only when the login is
    the owner, is among the issue's assignees when it has any, and equals the lock's `user:` line
-   when the lock has one. Otherwise it exits 1 with one line, `codeo: #<N> belongs to <owner>
-   (last resumed <date>, or claimed <date>) — you are <login>; …`, and the skill stops. When the
+   when the lock has one. Otherwise it exits 1 with one `codeo:` line, and the skill stops. The line is
+   `codeo: #<N> belongs to <owner> (last resumed <date>, or claimed <date>) — you are <login>; …`,
+   `codeo: #<N> is assigned to <assignees>, not <login> — …` or
+   `codeo: this checkout was locked by <user>, you are <login> — …`. When the
    engineer says in so many words to take the workflow over, `verify --override "<words>"` passes
    that one call and appends `- <date> — override: <login> over <owner>: "<words>"` to the local
    `init.md`'s `## Notes`; the next step judges again. A takeover that should last is
@@ -103,8 +105,8 @@ the checkout the session is in:
 
 ```mermaid
 flowchart TD
-    A[lock.sh verify] --> B{lock present, branch matches?}
-    B -- no --> X1[refuse: checks 1-2]
+    A[lock.sh verify] --> B{lock file present?}
+    B -- no --> X1["refuse: lock: no workflow lock here"]
     B -- yes --> C[codeo_whoami]
     C -- exit 1 --> X2[refuse with its codeo: line]
     C -- unverified, web --> D{lock user equals the variable?}
@@ -113,12 +115,14 @@ flowchart TD
     C -- User --> E{origin ref reachable?}
     E -- error --> X4[refuse: could not check ownership]
     E -- no ref --> F[read the local init.md, say so]
-    E -- yes --> F2[read origin's init.md from FETCH_HEAD]
+    E -- yes --> E2{dossier on origin's branch?}
+    E2 -- no --> X6[refuse: could not check ownership]
+    E2 -- yes --> F2[read origin's init.md from FETCH_HEAD]
     F --> G
     F2 --> G{login equals owner, is an assignee, equals lock user?}
     G -- yes --> OK2[pass]
     G -- no, override given --> OK3[pass and record the override line]
-    G -- no --> X5["refuse: #N belongs to owner"]
+    G -- no --> X5["refuse: belongs to / is assigned to / locked by"]
 ```
 
 A lock with no `user:` line is legacy: `verify` falls back to the assignees and the pushed dossier
