@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Phase 1, before the pull request: `qc.md` round 2 is clear and the tree is clean and pushed, but step 3's overlap check printed one line not raised before (Q1), so the pull request is not opened until it is answered.
+Pull request #208 is open and the dossier is archived; the workflow stays open until the engineer merges it. Run `/codeo:close` again after the merge.
 
 ## Questions
 
@@ -20,6 +20,7 @@ Phase 1, before the pull request: `qc.md` round 2 is clear and the tree is clean
 **Recommendation:** proceed and coordinate — the same answer given to Q3 in `qc.md`; the shared pages are the only real contact, and #206 re-checks its own edits when it syncs.
 
 **Answer:**
+Proceed and coordinate. (Engineer: "go with your picks", 2026-11-27.)
 
 ## Notes
 
@@ -27,8 +28,15 @@ Step 3's checks, from this invocation: lock and branch agree; `lock.sh verify` i
 
 ## Outcome
 
-_Pending_
+### Round 1 — pull request opened
+
+2026-11-27
+
+#208 https://github.com/kbajpai/codeo/pull/208
+
+Went out on `qc.md` round 2: **Verdict: clear — forward to `/codeo:close`.** Q1 (overlap with #206) answered proceed and coordinate. No override.
 
 ## Log
 
 - 2026-11-27 — Q1 raised (new overlap with #206, tests/intake.test.sh) · cost: 0m · sonnet-5-5 27k in + 805k cached / 1k out
+- 2026-11-27 — opened #208 (Q1 answered: proceed and coordinate), dossier archived, card to In review · board: see report · cost: 1m · sonnet-5-5 33k in + 1.9M cached / 6k out
