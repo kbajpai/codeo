@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 complete: all 8 plan tasks built, reviewed and committed; build passes. Next: `/codeo:qc`.
+Round 2 complete: all 6 plan tasks built and reviewed; build passes. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -43,6 +43,34 @@ None.
 
 **Rulings I made.** (1) Task 1's minors folded into Task 2 — costs one small extra edit if wrong. (2) Claim line deleted — costs: a failed `assignee-add` leaves no dossier trace. (3) One final-review fix wave for the Important finding plus cheap minors, the rest deferred — costs: deferred minors ship. (4) No-origin-remote falls back to the local dossier — costs: a checkout with no remote can be judged on its own files. (5) Could-not-check refusals not overridable — costs: an engineer on an offline machine cannot override a check that could not run.
 
+### Round 2
+
+2026-11-27
+(send-back from qc.md round 1)
+
+**Built** (plan `docs/plans/2026-11-27-identify-acting-user-195-round-2.md`, 6 tasks, each reviewed by a fresh sonnet reviewer; a whole-round review followed; nothing deployed — no shared environment).
+
+1. `lib/identity.sh`: the Owner row accepts backticks and flexible spacing (F6); new `codeo_owner_date_of_init` so a refusal date never comes from a legacy `by no login` line (F4).
+2. `scripts/lock.sh` (F1, F4, F5, Q9, Q11): an `unverified` web login is compared with the pushed owner, the assignees and the lock user like a verified one; a mismatch refuses (overridable) in `verify` and gives no lock in `take`; a match passes with `not independently verified: hosted web session`. The pushed dossier is fetched into `refs/codeo/verify/<branch>` (`--no-write-fetch-head` when git lists it) and never read from `FETCH_HEAD`. The recorded owner who is not an assignee gets a refusal naming `github.sh issue assignee-add`.
+3. `skills/init/SKILL.md` (`init-11`, step 3, step 6, step 9): an `unverified` login is compared; a failed `assignee-add`, on a fresh init or a resume, is recorded under `## Notes` in its own commit (F3, Q11).
+4. `skills/close/SKILL.md` (`close-16`): a legacy stash with no recorded owner removes the verified caller, only when `verify` passed without an override (F2, Q10).
+5. Test pins (F8): the wrapped `lease take … --override` pin, and the variable set on the `take, unresolved login` case.
+6. Documentation: `docs/handoff.md` (never-satisfies passage, flowchart, refusal forms, private ref), `docs/dossier.md`, `docs/skills.md`, `README.md`, `CHANGELOG.md`; rule text of `init-11` and `close-16` and the inventory fixture.
+
+**Build result.** The `shell` suite's `build` command is `true`: exit 0. The full `bash tests/run.sh` passes on the committed state (all cases). `/codeo:qc` owns the grading run.
+
+**Deviations from the plan, and why.**
+- Task 2's `--no-write-fetch-head` detection matched a string git never prints (`--[no-]write-fetch-head`); fixed in a review round, with tests that log the fetch arguments.
+- The plan scoped the failed-`assignee-add` record to step 9; the resume path is where a takeover runs, so step 6 points to the same rule too.
+- `docs/skills.md`'s stale "never the caller" in the `close` entry was corrected in Task 6.
+- Task 5's 17-line test-only diff got no separate task review; the whole-round review covered it.
+- README's lock entry no longer says every refusal means someone else owns the issue.
+
+**Deferred minors** (reviewed, not fixed): a legacy dossier with no owner on an unassigned issue gives a web login nothing to be compared with, so it passes (inherent, noted); a stale `refs/codeo/verify/feat` can block a fetch into `feat/x` and fails closed with a misleading "cannot reach origin"; the `take` web-checkout path is not tested with an `unverified` login; the `verify` flowchart omits the no-owner pass and the could-not-check refusal in the assignees read; `ls-remote` tail matching; a failed `assignee-add` is not read by any later step, only by the refusal that names the fix.
+
+**Rulings I made.** (1) The unverified-login-with-nothing-to-compare pass accepted rather than refused — costs: a legacy unassigned workflow on web is unprotected until it has an owner. (2) Step 6's resume path made to record a failed `assignee-add` — costs: a slightly larger init change than the plan named. (3) No second fix wave for the final review's minors — costs: they ship.
+
 ## Log
 
 - 2026-11-27 — implemented plan docs/plans/2026-11-27-identify-acting-user-195.md, 8 tasks + review fix rounds · cost: 122m · sonnet-5-5 1.5M in + 42M cached / 247k out
+- 2026-11-27 — round 2 (send-back from qc.md round 1): implemented plan docs/plans/2026-11-27-identify-acting-user-195-round-2.md, 6 tasks + 2 fix rounds · cost: 30m · sonnet-5-5 598k in + 11.5M cached / 75k out
