@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1 and Q2 are answered. The plan is approved and written (`docs/plans/2026-11-27-close-archive-before-pr-204.md`, unstaged), but #206 has since declared an overlapping footprint: Q3 is open, and `## Outcome` stays pending until it is answered.
+Round 1, done. Q1-Q3 are answered and the plan is approved: `docs/plans/2026-11-27-close-archive-before-pr-204.md`. Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -58,6 +58,7 @@ I recommend proceed and coordinate, as for #195.
 **Options:** proceed and coordinate (recommended) · sequence after #206 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
@@ -71,7 +72,19 @@ I recommend proceed and coordinate, as for #195.
 - `scripts/qc-verdict.sh` and `scripts/dossier-check.sh` do not change: an archive without an opened round already passes both.
 - Reach: this repository runs the pinned plugin (v1.0.10), so the new order applies here after the next release and pin bump, both separate issues by this project's convention.
 
-`#206` (`fix/206-codeo-cleanup-prints-codeo-rm`) is at `init` and has no footprint yet; its branch has changed nothing, so there is nothing to compare.
+`#206` declared its footprint after Q2: it overlaps on CHANGELOG.md, README.md and docs/skills.md (Q3, proceed and coordinate).
+
+## Outcome
+
+**Plan file:** `docs/plans/2026-11-27-close-archive-before-pr-204.md` — shape: a plan under `docs/plans/` (checkbox tasks, `REQUIRED SUB-SKILL` banner), no reference doc, because the change is a reordering inside one skill.
+
+**Decisions.** Archive and push before `pr create`, then record `#<number> <url>` in `.codeo/done/<N>/close.md` in a second commit (two green CI runs). A failed archive push is a stop. Phase detection gains two rows for a close interrupted after the archive push and after `pr create`. A return from review stays one commit; the send-back's un-archive and the `qc-verdict` fail-closed check are unchanged, as are `scripts/qc-verdict.sh` and `scripts/dossier-check.sh`. A new rule `close-15` pins the order. Q1: tests prove the first criterion, no live run (the repository runs the pinned v1.0.10). Q2 and Q3: proceed and coordinate with #195 and #206; #204 merges first.
+
+**Rejected.** Recording the pull request inside the archive commit (the number does not exist before `pr create`); a `qc-verdict` change that tolerates a live dossier (it is the guard that keeps a send-back unmergeable); a live run of #204's own close before the merge (Q1); sequencing after #195 or #206 (open-ended waits, red first runs meanwhile).
+
+**Documentation pages the plan changes:** `docs/dossier.md`, `docs/handoff.md`, `docs/skills.md`, `README.md`, and the wording in `skills/triage/SKILL.md` and `skills/init/SKILL.md`; `CHANGELOG.md` gets an entry.
+
+**Intake questions resolved here:** none; `init.md` left none open.
 
 ### Footprint
 
@@ -82,12 +95,9 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-27 — Q1-Q2 raised · cost: 3m · fable-5-2 126k in + 1M cached / 14k out
 - 2026-11-27 — Q1-Q2 answered (picks); drafted .codeo/204/plan-draft.md, awaiting approval · cost: 7m · fable-5-2 131k in + 1.7M cached / 17k out · sonnet-5-5 133k in + 330k cached / 11k out
 - 2026-11-27 — plan approved and written: docs/plans/2026-11-27-close-archive-before-pr-204.md; Q3 raised (overlap with #206) · cost: 9m · fable-5-2 131k in + 1.7M cached / 17k out · sonnet-5-5 142k in + 987k cached / 13k out
+- 2026-11-27 — planned: docs/plans/2026-11-27-close-archive-before-pr-204.md; Q3 answered (pick) · cost: 10m · fable-5-2 131k in + 1.7M cached / 17k out · sonnet-5-5 157k in + 2M cached / 17k out
