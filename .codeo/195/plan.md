@@ -232,6 +232,15 @@ Round 2 — implement-owned findings from `qc.md` round 1 that this round's plan
   three `unverified` carve-outs.
 
 
+### Footprint
+
+```
+files:      lib/identity.sh, scripts/github.sh, scripts/claim.sh, scripts/lock.sh, scripts/live.sh, skills/init/**, skills/plan/**, skills/implement/**, skills/qc/**, skills/close/**, docs/handoff.md, docs/dossier.md, docs/skills.md, docs/skills-inventory.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-27-identify-acting-user-195.md, docs/plans/2026-11-27-identify-acting-user-195-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 | | |
@@ -250,15 +259,6 @@ Round 2 — implement-owned findings from `qc.md` round 1 that this round's plan
 **Documentation pages the plan will change.** `docs/handoff.md` (The lock, the user chain, a Mermaid `verify` flowchart), `docs/dossier.md` (Owner row, `override:` line), `docs/skills.md` (init, close), `docs/skills-inventory.md` (rules `init-11`, `plan-10`, `implement-11`, `qc-15`, `close-15`, `close-16`), `README.md`, `CHANGELOG.md`.
 
 **Optional skills.** `engineering:system-design` and `engineering:architecture` were not listed in this session; their structure was applied directly. No `/codeo:issue` filed.
-
-### Footprint
-
-```
-files:      lib/identity.sh, scripts/github.sh, scripts/claim.sh, scripts/lock.sh, scripts/live.sh, skills/init/**, skills/plan/**, skills/implement/**, skills/qc/**, skills/close/**, docs/handoff.md, docs/dossier.md, docs/skills.md, docs/skills-inventory.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-27-identify-acting-user-195.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
