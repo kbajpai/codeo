@@ -35,7 +35,7 @@ codeo is an agent-workflow plugin for Claude Code. It is for engineers who work 
 - `gh`, the GitHub CLI; board use also needs `gh project`, which reads GraphQL, so the token must be allowed to use it
 - `claude`, Claude Code
 
-`install.sh` checks all five tools in one run and names every one that is missing or too old; `/codeo:doctor` checks bash, `jq`, `git` and `gh`, and never runs `claude`. The installer installs none of them: use your system's package manager, then run it again.
+`install.sh` checks all five tools in one run and names every one that is missing or too old; `/codeo:doctor` checks bash, `jq` and `git`, its `gh-auth` check covers `gh`, and it never runs `claude`. The installer installs none of them: use your system's package manager, then run it again.
 
 ## Installing
 
@@ -170,7 +170,7 @@ Run these once, in the project's git repository, inside Claude Code, after insta
 
 ### 1. Run /codeo:setup
 
-It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. Until you replace it, `/codeo:doctor` fails `config` (`config.json: repo.owner is still TODO-set-me`, and likewise `repo.name` or `baseBranch`) and `ruleset` is skipped. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
+It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. Until you replace it, `/codeo:doctor` fails `config` (`config.json: repo.owner is still TODO-set-me`, and likewise `repo.name` or `baseBranch`) and `ruleset` also fails, reporting `skipped: baseBranch is not set` or `skipped: config is unusable`. It refuses to overwrite a `config.json` that exists, unless `--containers` is the only option besides `--codename`: that runs on an existing config and adds a missing `codename` and `plugin` pin (see [Adopting codeo with containers](#adopting-codeo-with-containers)). `--stack <name>` records a stack name; `--codename <name>` records the project's codename (2-30 characters of lower-case letters, digits and single hyphens, starting with a letter); `--containers` also writes the dev container and sandbox files. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
 
 ```
 codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doctor next
@@ -203,7 +203,7 @@ Every key is in [Configuration](#configuration). The one thing most projects set
 }
 ```
 
-`board`, `codename`, `plugin`, `models` and everything else optional are written by hand; setup leaves them out (`/codeo:setup --stack <name>` also writes `stacks`).
+`board`, `models` and everything else optional are written by hand; setup does not write them. `/codeo:setup --codename <name>` also writes `codename`, `--containers` writes `codename` and the `plugin` pin, and `--stack <name>` writes `stacks`.
 
 ### 3. Run /codeo:doctor
 
@@ -532,7 +532,7 @@ Another `lock: TODO` line, specific to a container lock, is `--sandbox needs a n
 
 `/codeo:doctor` prints one `ok` or `fail` line per check and reports every failure. Each entry below is one check and the fix its own message gives. Paths in the messages below are your project's own.
 
-**config.** `config.json not found at …/.codeo/config.json` means the project has no codeo state: run `/codeo:setup`. An `invalid JSON` message means the file does not parse; fix the file with `jq . .codeo/config.json`, which points at the error. A `schema … is newer than this plugin supports (1); update the plugin` message means the project was set up by a newer codeo: run the install command to get the latest release. A `config.json: missing <key>` message (`.schema`, `.repo.owner`, `.repo.name` or `.baseBranch`) means a required key is absent, and `config.json: repo.owner is still TODO-set-me` (or `repo.name`, or `baseBranch`) means `/codeo:setup` could not read it and wrote the marker: set the value in `.codeo/config.json`. Until you do, `ruleset` is skipped (`fail ruleset: skipped: baseBranch is not set` when it is the base branch, otherwise `skipped: config is unusable`).
+**config.** `config.json not found at …/.codeo/config.json` means the project has no codeo state: run `/codeo:setup`. An `invalid JSON` message means the file does not parse; fix the file with `jq . .codeo/config.json`, which points at the error. A `schema … is newer than this plugin supports (1); update the plugin` message means the project was set up by a newer codeo: run the install command to get the latest release. A `config.json: missing <key>` message (`.schema`, `.repo.owner`, `.repo.name` or `.baseBranch`) means a required key is absent, and `config.json: repo.owner is still TODO-set-me` (or `repo.name`, or `baseBranch`) means `/codeo:setup` could not read it and wrote the marker: set the value in `.codeo/config.json`. Until you do, `ruleset` also fails and reports `skipped: …` (`fail ruleset: skipped: baseBranch is not set` when it is the base branch, otherwise `fail ruleset: skipped: config is unusable`).
 
 ```
 fail config: config.json not found at /home/you/app/.codeo/config.json
