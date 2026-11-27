@@ -120,14 +120,16 @@ git_write_p() {
 # every segment break (&&, ||, ;, |, &) turned into a newline, except that a redirection N>&M or &>
 # loses its "&" and stays one word. Plain bash, no sed -z: a stock macOS has bash 3.2 and the BSD tools.
 normalize_cmd() {
-    local s=$1 n=${#1} i=0 c j q rest pre next prev out= keep
+    local LC_ALL=C   # byte-wise, so indexing a long command is cheap
+    local s=$1 n=${#1} tail i=0 c j q rest pre next prev out= keep
     local ctx_cd='(^|[[:space:];&|(])cd[[:space:]]+$' ctx_c='-C[[:space:]]+$'
     while [[ $i -lt $n ]]; do
         c=${s:i:1}
         case $c in
             '"' | "'")
                 keep=0
-                if [[ $out =~ $ctx_cd || $out =~ $ctx_c ]]; then keep=1; fi
+                tail=$out; [[ ${#out} -le 256 ]] || tail=${out: -256}
+                if [[ $tail =~ $ctx_cd || $tail =~ $ctx_c ]]; then keep=1; fi
                 rest=${s:i+1}
                 if [[ $c == "'" || $keep == 1 ]]; then
                     pre=${rest%%"$c"*}
@@ -168,6 +170,8 @@ normalize_cmd() {
 bash_guard() {
     local cur=${1:-.} cmd=$2 proj=${3:-.} seg w i d sub root role
     local -a words args
+    case $cmd in *git*) ;; *) return 1 ;; esac
+    [[ $(LC_ALL=C; echo ${#cmd}) -le 16384 ]] || return 1
     normalize_cmd "$cmd"
     cmd=$NORM
     while IFS= read -r seg; do

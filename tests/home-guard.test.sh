@@ -308,6 +308,27 @@ assert_eq "CLAUDE_PROJECT_DIR not a directory falls back to cwd" deny "$(decisio
 out=$(hook "$(file_json Edit "$scratch_root/norepo" "$proj/src/a.txt")")
 assert_eq "cwd outside a repo judges nothing" allow "$(decision "$out")"
 
+case_desc=bash_long_commands
+h=$(bhome lc1 src)
+line="echo \"line of text 'quoted' here\" 'and more'"$'\n'
+filler=
+while [[ ${#filler} -lt 30000 ]]; do filler+=$line; done
+timed() {
+    local want=$1 cmd=$2 t0 t1
+    t0=$(date +%s)
+    bcheck "$want" "$h" "$cmd" LC_ALL=C.UTF-8
+    t1=$(date +%s)
+    [[ $((t1 - t0)) -le 3 ]] || assert_eq "a 30 KB command is judged in 3 s" "<= 3" "$((t1 - t0))"
+}
+timed allow "$filler"
+timed allow "${filler}git push"
+short=
+while [[ ${#short} -lt 10000 ]]; do short+="echo hello world; "; done
+bcheck deny "$h" "${short}git push" LC_ALL=C.UTF-8
+bcheck deny "$h" "git push" LC_ALL=C.UTF-8
+bcheck allow "$h" "${filler:0:17000}; git push" LC_ALL=C.UTF-8
+timed deny "${filler:0:16000}; git push"
+
 case_desc=hooks_json_registers_the_guard
 hj="$plugin_root/hooks/hooks.json"
 reg=$(jq -r '[.hooks.PreToolUse[] | select(.matcher == "Edit|Write|NotebookEdit|Bash") | .hooks | select(length == 1) | .[0].command] | join("|")' "$hj")
