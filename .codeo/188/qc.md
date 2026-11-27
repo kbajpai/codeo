@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 is written: back to `/codeo:plan`. One blocking finding (F8): `docs/home-checkout.md:9` describes an assignee lookup that does not run on the host, where `live.sh` asks for the assignee only in a hosted web session. The plan wrote that sentence from the issue, so it is the plan's. The build and the whole `shell` suite pass, #195's merge is intact, and F2, F3, F4 and F6 are fine. Nothing is open.
+Round 4 is written: back to `/codeo:implement`. The pass stopped at step 2 because `main` moved again (#204, #206 and #211 merged) and the branch now conflicts with it in `CHANGELOG.md`. #204 and #206 also rewrote `skills/close/SKILL.md`, `skills/cleanup/SKILL.md` and their tests, where this branch's wording and pins must survive the merge. Nothing is open.
 
 ## Questions
 
@@ -135,8 +135,42 @@ This is the full pass again after `/codeo:close` round 2 sent the branch back: p
 
 **Verdict: back to `/codeo:plan`.** Correct the F5 sentence at `docs/home-checkout.md:9` in a new plan round (its Task 7 text) so it says what `live.sh` does on the host and in a hosted session as F8 describes, and fold in F9 if you want it; then `/codeo:implement` redoes that one task and `/codeo:close` brings the pull request up to date.
 
+
+### Round 4 — 2026-11-27
+
+This is the full pass after `/codeo:plan` round 3 and `/codeo:implement` round 4 (`55eb82e`, `17fef72`). It stopped at step 2.
+
+**Sync.** `sync-main.sh --abort-on-conflict` printed `sync-main: conflict: CHANGELOG.md` and exited 2; the merge was aborted and the tree is as it was (`git status --porcelain` prints nothing). `main` moved after round 3's merge: `9b11696 ci: run the test files in parallel and cancel superseded pull request runs (#211)`, `e8fb549 fix: archive the dossier before /codeo:close opens the pull request (#204) (#210)` and `3b1279b fix: print runnable cleanup commands, record removals, and stop intake commits deleting files (#206) (#212)`. `git merge-tree --write-tree --name-only origin/main HEAD` names one conflicting file:
+
+- `CHANGELOG.md` — changed on `main` by `e8fb549` (#204) and `3b1279b` (#206), which both add bullets under `## Unreleased` next to this branch's.
+
+`main` also changed four more files this branch edits. git merges them without a conflict, but the sentences and pins this branch changed in them must be re-read on the merged tree:
+
+- `skills/cleanup/SKILL.md` — `3b1279b` (#206) rewrote the cleanup skill. On `main`, step 4 still reads "(an issue that failed only `name` gets one)", at about line 96, where this branch's F6 wording ("gets one while origin still holds a validly named `codeo-live/<N>/*` branch") must survive.
+- `tests/cleanup-skill.test.sh` — on `main`, the `step4=` line is at line 35, and the tracker needles at line 130 still read `'when codeo-track.sh sits beside'`. This branch changes that needle to `'else codeo-track.sh sits beside'` and adds `'CODEO_TRACK names it'` and a `step4` pin.
+- `skills/close/SKILL.md` and `tests/close-skill.test.sh` — on `main`, `e8fb549` (#204) reordered the close skill. Step 17's pins sit at about line 266 on `main` and still name step 17. This branch's "drop the `refs/heads/` prefix first" and "per branch that passes", with their two pins, must land in the step that holds that paragraph after the merge.
+
+`overlap.sh 188` printed nothing: #204 and #206 are merged, not in flight. The rest of the pass did not run on a tree that a merge would replace. `scope.sh origin/main HEAD` printed `suite.shell=true`, and the `shell` suite's `build` (`true`) exited 0 on the unmerged tree, but the suite was not run.
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| Each of F2-F6 is corrected as the requirement states, or the pull request names it as dismissed with a reason | not yet checkable — pass stopped at step 2 | — |
+| `docs/release-checklist.md` no longer says the UTC date is "the day after" local date | not yet checkable — pass stopped at step 2 | — |
+| `skills/close/SKILL.md` allowlist wording works on the literal `ls-remote` output, and the "per branch" wording agrees with the skip clause | not yet checkable — pass stopped at step 2 | — |
+| The three tracker-condition lines (F4) name `CODEO_TRACK` as well as `codeo-track.sh`, and say nothing is asked without a tracker | not yet checkable — pass stopped at step 2 | — |
+| `docs/home-checkout.md:9` and `skills/cleanup/SKILL.md:84` match what `live.sh` and `scripts/cleanup.sh` do | not yet checkable — pass stopped at step 2 | — |
+| `bash tests/run.sh` ends `all cases passed` | not yet checkable — pass stopped at step 2 | — |
+
+**Findings**
+
+- F8 (blocking in round 3) — fixed by `55eb82e`, by the change's own account. It is not judged here: the pass stopped before step 5, and the next round judges it on the merged tree.
+- F10 — blocking, `/codeo:implement`'s: the branch conflicts with `main` in `CHANGELOG.md`. Merge `origin/main`, keep every side's `## Unreleased` bullet, and re-read the four files above on the merged tree.
+
+**Verdict: back to `/codeo:implement`.** Merge `origin/main` (with #204, #206 and #211), resolve `CHANGELOG.md` by keeping every `## Unreleased` entry, and confirm that this branch's F3 wording and pins in `skills/close/SKILL.md` and `tests/close-skill.test.sh`, and its F4 and F6 wording and pins in `skills/cleanup/SKILL.md` and `tests/cleanup-skill.test.sh`, survive the merge where #204 and #206 rewrote those files. Then run `/codeo:qc` again.
+
 ## Log
 
 - 2026-11-27 — Q1-Q2 raised and answered through the question tool; qc round 1: suite passed, build passed, 4 of 6 criteria met, F1 blocking (plan's), F2-F5 non-blocking; back to /codeo:plan · cost: 5m · opus-5-5 270k in + 2.4M cached / 14k out · sonnet-5-5 188k in + 244k cached / 1k out
 - 2026-11-27 — qc round 2: suite passed, build passed, 6 of 6 criteria met, F1 fixed, review no Critical or Important, F6-F7 non-blocking; clear, forward to /codeo:close · cost: 5m · opus-5-5 330k in + 2M cached / 11k out · sonnet-5-5 28k in + 1.5M cached / 1k out
 - 2026-11-27 — qc round 3 (full pass after close.md round 2's conflict send-back): suite passed, build passed, 4 of 6 criteria met, F1 fixed, F8 blocking (plan's), F9 non-blocking; back to /codeo:plan · cost: 5m · opus-5-5 446k in + 2.7M cached / 14k out · sonnet-5-5 32k in + 2.4M cached / 4k out
+- 2026-11-27 — qc round 4: stopped at step 2 (sync-main: conflict: CHANGELOG.md, after #204, #206 and #211 merged); criteria not yet checkable; back to /codeo:implement · cost: 1m · opus-5-5 457k in + 989k cached / 2k out
