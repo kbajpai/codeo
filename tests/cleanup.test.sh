@@ -466,7 +466,7 @@ for args in "12 99" "12 abc" "012" ""; do
     assert_eq "no file [$args]" "absent" "$([[ -e $rec/12.md ]] && echo present || echo absent)"
 done
 
-case_desc="record is idempotent"
+case_desc="record is idempotent; a record already on origin keeps origin's content"
 setup_repo "12:$body" "30:$body"
 rec=$REPO_WORK/.codeo/intake/cleanup/removed
 run_record 12 >/dev/null
@@ -475,7 +475,7 @@ assert_eq "second run" "12${tab}already recorded" "$(run_record 12)"
 assert_eq "file as it was" "$before" "$(cat "$rec/12.md")"
 push_removed 30
 assert_eq "recorded on origin" "30${tab}already recorded" "$(run_record 30)"
-assert_eq "no local file" "absent" "$([[ -e $rec/30.md ]] && echo present || echo absent)"
+assert_eq "content is origin's" "recorded: 2026-01-01" "$(sed -n 2p "$rec/30.md")"
 
 case_desc="record runs no container command and no proof"
 setup_repo "12:$body"
@@ -549,10 +549,9 @@ git clone -q "$origin_url" "$clone_b" 2>/dev/null
 mkdir -p "$clone_b/.codeo"
 cp "$REPO_WORK/.codeo/config.json" "$clone_b/.codeo/config.json"
 intake_script=$plugin_src/scripts/intake.sh
-# Neither clone has fetched the intake branch before it records and commits. `intake.sh commit` replaces the directory with the
-# clone's own, so B restores first, as the cleanup skill's step 0 does; without it B's commit would drop 12.md.
+# Neither clone has fetched the intake branch before it records and commits; record restores origin's files itself.
 (cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" record 12 >/dev/null 2>&1 && bash "$intake_script" commit cleanup "x" >/dev/null 2>&1) || true
-(cd "$clone_b" && bash "$intake_script" restore cleanup >/dev/null 2>&1 && PATH="$stub_bin:$PATH" bash "$script" record 30 >/dev/null 2>&1 && bash "$intake_script" commit cleanup "x" >/dev/null 2>&1) || true
+(cd "$clone_b" && PATH="$stub_bin:$PATH" bash "$script" record 30 >/dev/null 2>&1 && bash "$intake_script" commit cleanup "x" >/dev/null 2>&1) || true
 git -C "$REPO_WORK" fetch -q origin
 assert_eq "files" "12.md
 30.md" "$(git -C "$REPO_WORK" ls-tree -r --name-only origin/codeo/intake | sed -n 's|.*/removed/||p' | sort)"

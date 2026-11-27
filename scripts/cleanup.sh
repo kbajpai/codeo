@@ -32,6 +32,7 @@
 #       Writes .codeo/intake/cleanup/removed/<N>.md in the working tree for each issue the engineer has removed, and prints
 #           <N> TAB recorded            a record was written
 #           <N> TAB already recorded    the record is on origin's codeo/intake or already in the working tree
+#       It restores the intake branch's cleanup files first, because intake.sh commit replaces the directory.
 #       It runs no proof, never commits, and writes nothing unless every number is an issue with a .codeo/done/<N> on origin/<baseBranch>
 #       (otherwise exit 1 with a cleanup: line).
 #
@@ -78,6 +79,8 @@ if [[ $mode == record ]]; then
         [[ $n =~ ^[1-9][0-9]*$ ]] || die "not an issue number: $n; nothing recorded"
         git cat-file -e "$base_sha:$state_rel/done/$n" 2>/dev/null || die "#$n has no $state_rel/done/$n on origin/$base; nothing recorded"
     done
+    # commit replaces the directory, so bring in the intake branch's records first (never overwrites a local file; harmless when none exist).
+    bash "$CODEO_PLUGIN_ROOT/scripts/intake.sh" restore cleanup </dev/null >/dev/null 2>&1 || true
     mkdir -p "$removed_rel"
     for n; do
         if grep -qxF "$n" <<<"$recorded" || [[ -e $removed_rel/$n.md ]]; then
