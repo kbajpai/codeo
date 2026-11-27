@@ -24,7 +24,6 @@ grep -qF 'a second line, `leftover`' "$skill" || check_fail "step 1 does not say
 grep -qF 'a second line, `leftover`' "$repo/scripts/cleanup.sh" || check_fail "the script header does not say a proven issue can print two lines"
 grep -qF 'git push origin --delete' "$skill" || check_fail "step 1 does not show the leftover command as printed"
 grep -qF 'only when `name` is the proof that failed' "$skill" || check_fail "rule cleanup-02 does not say a name failure still gets the leftover line"
-grep -qF 'while origin still holds' "$skill" || check_fail "step 4 does not say a failed-name issue gets a leftover line only while origin holds its branches"
 grep -qF 'or an issue whose only failed proof is `name`' "$skill" || check_fail "step 1 does not say which issues get a leftover line"
 grep -qF 'an issue that fails a proof is listed with it and no container command' "$repo/docs/skills.md" || check_fail "docs/skills.md cleanup purpose still says a failed proof gets no command at all"
 grep -qF '/codeo:init #<M>' "$skill" || check_fail "the closing block does not name /codeo:init #<M>"
@@ -36,6 +35,7 @@ row=$(grep -F '| `cleanup` |' "$repo/docs/handoff.md")
 step4=$(awk '/^4\. \*\*Close/{f=1; next} /^## /{f=0} f' "$skill")
 grep -qF 'or a `leftover` line was printed' <<<"$step4" || check_fail "step 4 does not send a leftover-only run to the printed commands"
 grep -qF '/codeo:triage' <<<"$step4" || check_fail "step 4 no longer names /codeo:triage"
+grep -qF 'while origin still holds a validly named' <<<"$step4" || check_fail "step 4 does not say a failed-name issue gets a leftover line only while origin holds a validly named branch"
 
 # Generic text names no container, and the list's reach is stated.
 ! grep -qF 'Home-container' "$skill" || check_fail "the skill still says Home-container"
