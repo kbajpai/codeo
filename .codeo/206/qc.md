@@ -25,6 +25,7 @@ I recommend proceeding and coordinating.
 **Options:** proceed and coordinate (recommended) · sequence after #188 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ### Q2 — #195 overlaps on `tests/cleanup-skill.test.sh` and `tests/cleanup.test.sh`: proceed, sequence, or re-scope?
 
@@ -33,6 +34,7 @@ I recommend proceeding and coordinating.
 **Options:** proceed and coordinate (recommended) · sequence after #195 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
