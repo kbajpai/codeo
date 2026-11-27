@@ -247,6 +247,57 @@ fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: remove {N} {name}'
 assert_eq "line" "12${tab}proven${tab}remove 12 codeo-12${tab}-" "$(run_cleanup)"
 
+# Like run_cleanup, but a last line `rc=<exit status>` keeps the exit status.
+run_cleanup_rc() {
+    local rc=0 out
+    out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" 2>&1) || rc=$?
+    printf '%s\nrc=%s' "$out" "$rc"
+}
+
+case_desc="an unexpanded placeholder in the command stops the run"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: codeo rm {M}'
+assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {M}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="an unexpanded placeholder in the fallback stops the run"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: codeo rm {N}\nfallback: run {issue}'
+assert_eq "line" $'cleanup: the overlay\'s fallback: keeps a placeholder the script does not expand: {issue}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="a shell brace and a Go template are not placeholders"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: x {{.Names}}'
+assert_eq "line" "12${tab}proven${tab}x {{.Names}}${tab}-" "$(run_cleanup)"
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: x ${HOME}'
+assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {HOME}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="a doubled brace around {N} is refused"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: rm {{N}}'
+assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {1}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="a placeholder in the name template is refused when the command prints it"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: x-{M}\npattern: ^x-.*$\ncommand: rm {name}'
+assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {M}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="a name template that no printed text uses is not refused"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: x-{M}\npattern: ^x-.*$\ncommand: codeo rm {N}'
+assert_eq "line" "12${tab}proven${tab}codeo rm 12${tab}-" "$(run_cleanup)"
+
+case_desc="a brace expansion is not a placeholder"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: rm codeo-{1,2}'
+assert_eq "line" "12${tab}proven${tab}rm codeo-{1,2}${tab}-" "$(run_cleanup)"
+
 case_desc="dossier still on another branch"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
@@ -391,6 +442,172 @@ assert_eq "name failure" "7${tab}failed${tab}name" "$(run_cleanup)"
 fixture 7 open 41 2026-01-01T00:00:00Z feat/7
 set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: codeo rm {N}\nfallback: docker rm -f {name}'
 assert_eq "proof failure" "7${tab}failed${tab}issue" "$(run_cleanup)"
+
+# A removal record on origin's codeo/intake branch: push_removed <N>…
+push_removed() {
+    local t n
+    t=$(mktemp -d "$scratch_root/removed.XXXXXX")
+    git clone -q "$(git -C "$REPO_WORK" remote get-url origin)" "$t" 2>/dev/null
+    if git -C "$t" rev-parse -q --verify origin/codeo/intake >/dev/null; then
+        git -C "$t" checkout -q -B codeo/intake origin/codeo/intake
+    else
+        git -C "$t" checkout -q --orphan codeo/intake
+        git -C "$t" rm -rqf . 2>/dev/null || true
+    fi
+    mkdir -p "$t/.codeo/intake/cleanup/removed"
+    for n; do
+        printf 'issue:    #%s\nrecorded: 2026-01-01\n' "$n" > "$t/.codeo/intake/cleanup/removed/$n.md"
+    done
+    git -C "$t" add -A
+    git -C "$t" commit -q -m "removed"
+    git -C "$t" push -q origin codeo/intake
+}
+
+run_record() {
+    (cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" record "$@" 2>&1) || true
+}
+
+case_desc="record writes one file per issue"
+setup_repo "12:$body" "30:$body"
+rec=$REPO_WORK/.codeo/intake/cleanup/removed
+assert_eq "lines" "12${tab}recorded
+30${tab}recorded" "$(run_record 12 30)"
+assert_eq "issue line" "issue:    #12" "$(sed -n 1p "$rec/12.md")"
+assert_eq "date line" "recorded: $(date -u +%F)" "$(sed -n 2p "$rec/12.md")"
+assert_eq "30 file" "yes" "$([[ -f $rec/30.md ]] && echo yes || echo no)"
+assert_eq "tracked files unchanged" "" "$(git -C "$REPO_WORK" status --porcelain --untracked-files=no)"
+assert_eq "no commit" "init" "$(git -C "$REPO_WORK" log -1 --format=%s)"
+
+case_desc="record refuses before writing"
+setup_repo "12:$body"
+rec=$REPO_WORK/.codeo/intake/cleanup/removed
+for args in "12 99" "12 abc" "012" ""; do
+    rc=0
+    # shellcheck disable=SC2086
+    out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" record $args 2>&1) || rc=$?
+    assert_eq "exit 1 [$args]" "1" "$rc"
+    assert_eq "cleanup: line [$args]" "yes" "$([[ $out == cleanup:* ]] && echo yes || echo no)"
+    assert_eq "no file [$args]" "absent" "$([[ -e $rec/12.md ]] && echo present || echo absent)"
+done
+
+case_desc="record is idempotent"
+setup_repo "12:$body" "30:$body"
+rec=$REPO_WORK/.codeo/intake/cleanup/removed
+run_record 12 >/dev/null
+before=$(cat "$rec/12.md")
+assert_eq "second run" "12${tab}already recorded" "$(run_record 12)"
+assert_eq "file as it was" "$before" "$(cat "$rec/12.md")"
+push_removed 30
+assert_eq "recorded on origin" "30${tab}already recorded" "$(run_record 30)"
+assert_eq "no local file for a record on origin" "absent" "$([[ -e $rec/30.md ]] && echo present || echo absent)"
+
+case_desc="record runs no container command and no proof"
+setup_repo "12:$body"
+rm -f "$DOCKER_MARKER" "$GH_STUB_DIR"/GET_repos_o_n_issues_12.json
+assert_eq "line" "12${tab}recorded" "$(run_record 12)"
+assert_eq "marker" "absent" "$([[ -e $DOCKER_MARKER ]] && echo present || echo absent)"
+
+# stdout and stderr apart: run_cleanup_split sets cleanup_out and cleanup_err.
+run_cleanup_split() {
+    local errf=$scratch_root/split.err
+    cleanup_out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" 2>"$errf") || true
+    cleanup_err=$(cat "$errf")
+}
+hide_note="cleanup: note: 1 issue(s) with a recorded removal are not listed"
+
+# Issues 12 and 30, both proven, as in the ascending case.
+two_proven() {
+    setup_repo "12:$body" "30:$body"
+    fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+    fixture 30 closed 42 2026-01-01T00:00:00Z feat/30
+    set_overlay "$overlay"
+}
+
+case_desc="a recorded issue that passes is not listed"
+two_proven
+push_removed 12
+run_cleanup_split
+assert_eq "stdout" "30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "$hide_note" "$cleanup_err"
+
+case_desc="a recorded issue whose proof fails is listed as not proven"
+two_proven
+fixture 12 open 41 2026-01-01T00:00:00Z feat/12
+push_removed 12
+run_cleanup_split
+assert_eq "stdout" "12${tab}failed${tab}issue
+30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "" "$cleanup_err"
+
+case_desc="a recorded issue whose only failure is name is listed as not proven"
+two_proven
+set_overlay $'name: codeo-{N}\npattern: ^codeo-3[0-9]$\ncommand: docker rm -f {name}'
+push_removed 12
+run_cleanup_split
+assert_eq "stdout" "12${tab}failed${tab}name
+30${tab}proven${tab}docker rm -f codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "" "$cleanup_err"
+
+case_desc="a recorded issue keeps its leftover line"
+two_proven
+push_branch codeo-live/12/m
+push_removed 12
+run_cleanup_split
+assert_eq "stdout" "12${tab}leftover${tab}git push origin --delete codeo-live/12/m
+30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "$hide_note" "$cleanup_err"
+
+case_desc="a record for another issue hides nothing"
+two_proven
+push_removed 99
+run_cleanup_split
+assert_eq "stdout" "12${tab}proven${tab}$want_cmd${tab}-
+30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "" "$cleanup_err"
+
+# A clone of origin with the project's config, as an engineer's checkout: new_clone <var>
+new_clone() {
+    local d
+    d=$(mktemp -d "$scratch_root/engineer.XXXXXX")
+    git clone -q "$(git -C "$REPO_WORK" remote get-url origin)" "$d" 2>/dev/null
+    mkdir -p "$d/.codeo"
+    cp "$REPO_WORK/.codeo/config.json" "$d/.codeo/config.json"
+    printf -v "$1" '%s' "$d"
+}
+commit_in() {
+    (cd "$1" && PATH="$stub_bin:$PATH" bash "$plugin_src/scripts/intake.sh" commit cleanup "x" >/dev/null 2>&1) || true
+}
+record_in() {
+    (cd "$1" && PATH="$stub_bin:$PATH" bash "$script" record "$2" >/dev/null 2>&1) || true
+}
+
+case_desc="two engineers keep each other's records"
+two_proven
+new_clone clone_b
+# Both clones exist and have recorded before either commits: A commits first, then B.
+record_in "$REPO_WORK" 12
+record_in "$clone_b" 30
+commit_in "$REPO_WORK"
+commit_in "$clone_b"
+git -C "$REPO_WORK" fetch -q origin
+assert_eq "files" "12.md
+30.md" "$(git -C "$REPO_WORK" ls-tree -r --name-only origin/codeo/intake | sed -n 's|.*/removed/||p' | sort)"
+
+case_desc="a clone that never restored does not delete records"
+two_proven
+new_clone clone_b
+record_in "$REPO_WORK" 12
+record_in "$clone_b" 30
+commit_in "$REPO_WORK"
+commit_in "$clone_b"
+new_clone clone_c
+mkdir -p "$clone_c/.codeo/intake/cleanup"
+printf 'run\n' > "$clone_c/.codeo/intake/cleanup/2026-11-27.md"
+commit_in "$clone_c"
+git -C "$REPO_WORK" fetch -q origin
+assert_eq "files" "2026-11-27.md
+removed/12.md
+removed/30.md" "$(git -C "$REPO_WORK" ls-tree -r --name-only origin/codeo/intake | sed 's|.*/cleanup/||' | sort)"
 
 case_desc="no container-engine command is ever run"
 assert_eq "marker" "absent" "$([[ -e $DOCKER_MARKER ]] && echo present || echo absent)"

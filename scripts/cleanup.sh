@@ -7,13 +7,16 @@
 #       one tab-separated line per issue, in ascending N, and after a proven issue (or one whose only failed proof is
 #       `name`) with leftover branches a second line, `leftover`:
 #           <N> TAB proven TAB <command> TAB <fallback>
-#                                           every proof passed; <command> is `-` when the overlay gives none;
+#                                           every proof passed and no removal is recorded; <command> is `-` when the overlay gives none;
 #                                           <fallback> is the overlay's expanded fallback text, or `-` when it has none
 #           <N> TAB failed TAB <proof>      the first proof that failed
-#           <N> TAB leftover TAB <command>  right after a proven line, or a `failed name` line, when origin still holds codeo-live/<N>/<machine> branches
+#           <N> TAB leftover TAB <command>  right after a proven line or a `failed name` line, or alone when the issue's removal is recorded, when origin still holds codeo-live/<N>/<machine> branches
 #                                           (a hosted web session's live signal); <command> is one `git push origin --delete` naming
 #                                           each such branch whose name is only letters, digits, `.`, `_` and `-`. Read from the
 #                                           refs the fetch pruned; none, no line.
+#       An issue that passes every proof but has a removal record on origin's codeo/intake (see `record`) is not listed
+#       (its leftover line still is), and stderr says `cleanup: note: <k> issue(s) with a recorded removal are not listed`.
+#       A record never hides a failed proof: an issue that fails one is listed as failed, recorded or not.
 #       Proofs, in order:
 #           issue         the issue's state is closed
 #           pull-request  done/<N>/close.md has a `#<number> <url>` line and that PR has a merged_at
@@ -25,9 +28,16 @@
 #           name          the overlay's name template, pattern and command are all present, and the expanded
 #                         name matches the pattern.
 #
+#   cleanup.sh record <N>…
+#       Writes .codeo/intake/cleanup/removed/<N>.md in the working tree for each issue the engineer has removed, and prints
+#           <N> TAB recorded            a record was written
+#           <N> TAB already recorded    the record is on origin's codeo/intake or already in the working tree
+#       It runs no proof, never commits, and writes nothing unless every number is an issue with a .codeo/done/<N> on origin/<baseBranch>
+#       (otherwise exit 1 with a cleanup: line).
+#
 # The overlay's command is built in name_proof and the leftover delete in leftover_proof: the only two places a command is built.
 # The overlay body (cleanup/removal-command) is three lines, and an optional fourth: `name: <template with {N}>`,
-# `pattern: <extended regex>`, `command: <template with {N} and {name}>` and `fallback: <text with {N} and {name}>`; it comes from `overlay.sh cleanup removal-command`. No
+# `pattern: <extended regex>`, `command: <template with {N} and {name}>` and `fallback: <text with {N} and {name}>`; the script expands command: and fallback: once with a sample number and checks the expanded text, which is what it prints: any {word} left in it ends the run; it comes from `overlay.sh cleanup removal-command`. No
 # overlay (overlay.sh exit 3, or 2 while the point is unregistered) means `proven` with `-` and `-`; any other failure dies.
 #
 # Config keys read: baseBranch (see lib/env.sh).
@@ -35,6 +45,15 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 die() { echo "cleanup: $*" >&2; exit 1; }
+
+mode=list
+if [[ ${1:-} == record ]]; then
+    mode=record
+    shift
+    (($#)) || die "usage: cleanup.sh record <issue>…"
+elif (($#)); then
+    die "usage: cleanup.sh [record <issue>…]"
+fi
 
 cd "$(git rev-parse --show-toplevel)"
 base=$(codeo_base_branch)
@@ -46,6 +65,31 @@ git fetch -q --prune origin || die "fetch failed; nothing proven"
 git config --get-all remote.origin.fetch | grep -Eqx '\+?refs/heads/\*:refs/remotes/origin/\*' ||
     die "origin's fetch refspec does not cover every branch; nothing proven"
 base_sha=$(git rev-parse "origin/$base") || die "no origin/$base"
+# The intake branch's name is intake.sh's `branch`; its removal records are the files under removed_rel.
+intake_ref=refs/remotes/origin/codeo/intake
+removed_rel=$state_rel/intake/cleanup/removed
+recorded=
+if git rev-parse -q --verify "$intake_ref" >/dev/null; then
+    recorded=$(git ls-tree --name-only "$intake_ref" -- "$removed_rel/" | sed -n 's|.*/\([0-9][0-9]*\)\.md$|\1|p')
+fi
+
+if [[ $mode == record ]]; then
+    for n; do
+        [[ $n =~ ^[1-9][0-9]*$ ]] || die "not an issue number: $n; nothing recorded"
+        git cat-file -e "$base_sha:$state_rel/done/$n" 2>/dev/null || die "#$n has no $state_rel/done/$n on origin/$base; nothing recorded"
+    done
+    mkdir -p "$removed_rel"
+    for n; do
+        if grep -qxF "$n" <<<"$recorded" || [[ -e $removed_rel/$n.md ]]; then
+            printf '%s\talready recorded\n' "$n"
+            continue
+        fi
+        printf 'issue:    #%s\nrecorded: %s\n' "$n" "$(date -u +%F)" > "$removed_rel/$n.md"
+        printf '%s\trecorded\n' "$n"
+    done
+    exit 0
+fi
+
 # Every lease and wait on the intake branch, read once: held|waiting TAB resource TAB issue TAB by TAB since.
 leases=$(bash "$CODEO_PLUGIN_ROOT/scripts/intake.sh" lease list --tsv </dev/null 2>/dev/null) || die "could not read the leases"
 
@@ -63,6 +107,20 @@ esac
 overlay_value() {
     awk -v k="$1" 'index($0, k ":") == 1 { sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit }' <<<"$overlay"
 }
+
+# A placeholder the script does not expand would print as a command nobody can run. Expand the overlay once with a
+# sample issue number and look at the text that would print.
+if [[ -n $overlay ]]; then
+    unknown='\{[A-Za-z0-9_]+\}'
+    sample=$(overlay_value name)
+    sample=${sample//\{N\}/1}
+    for key in command fallback; do
+        text=$(overlay_value "$key")
+        text=${text//\{N\}/1}
+        text=${text//\{name\}/"$sample"}
+        [[ ! $text =~ $unknown ]] || die "the overlay's $key: keeps a placeholder the script does not expand: ${BASH_REMATCH[0]}"
+    done
+fi
 
 # The first failing proof for issue $1, or `ok`.
 first_failed_proof() {
@@ -122,18 +180,24 @@ leftover_proof() {
     printf '%s\tleftover\tgit push origin --delete %s\n' "$n" "${names[*]}"
 }
 
+hidden=0
 while IFS= read -r n; do
     proof=$(first_failed_proof "$n")
     if [[ $proof == ok ]]; then
         out=$(name_proof "$n")
-        case $out in
-            -) printf '%s\tproven\t-\t-\n' "$n" ;;
-            name) printf '%s\tfailed\tname\n' "$n" ;;
-            *) printf '%s\tproven\t%s\t%s\n' "$n" "$(head -n1 <<<"${out#cmd:}")" "$(tail -n1 <<<"$out")" ;;
-        esac
+        if [[ $out == name ]]; then
+            printf '%s\tfailed\tname\n' "$n"
+        elif grep -qxF "$n" <<<"$recorded"; then
+            hidden=$((hidden + 1))
+        elif [[ $out == - ]]; then
+            printf '%s\tproven\t-\t-\n' "$n"
+        else
+            printf '%s\tproven\t%s\t%s\n' "$n" "$(head -n1 <<<"${out#cmd:}")" "$(tail -n1 <<<"$out")"
+        fi
         leftover_proof "$n"
     else
         printf '%s\tfailed\t%s\n' "$n" "$proof"
     fi
 done < <(git ls-tree --name-only "$base_sha" -- "$state_rel/done/" 2>/dev/null |
     sed -n 's|.*/\([0-9][0-9]*\)$|\1|p' | sort -n)
+if ((hidden)); then echo "cleanup: note: $hidden issue(s) with a recorded removal are not listed" >&2; fi
