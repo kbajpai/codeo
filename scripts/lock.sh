@@ -95,9 +95,9 @@ check_owner() {
     [[ $type != unverified ]] || return 0
     tmp=$(mktemp)
     if git remote get-url origin >/dev/null 2>&1; then
-        git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null 2>&1 || rc=$?
+        GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null 2>&1 || rc=$?
         if ((rc == 0)); then
-            if ! git fetch -q origin "$branch" 2>/dev/null; then
+            if ! GIT_TERMINAL_PROMPT=0 git fetch -q origin "$branch" 2>/dev/null; then
                 refusal="codeo: could not check who owns #$n: cannot reach origin"
                 rm -f "$tmp"; return 2
             fi
@@ -119,7 +119,7 @@ check_owner() {
         note="branch not on origin: read the local dossier"
     fi
     owner=$(codeo_owner_of_init "$tmp")
-    date=$(sed -n 's/^- \([0-9-]\{1,\}\) — resumed: by .* after .*/\1/p' "$tmp" | tail -n1)
+    date=$(sed -n 's/^- \([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\) — resumed: by .* after .*/\1/p' "$tmp" | tail -n1)
     rm -f "$tmp"
     if [[ -n $owner ]] && ! same_login "$owner" "$login"; then
         refused_owner=$owner
@@ -226,6 +226,9 @@ verify() {
             echo "codeo: no local dossier for #$n to record the override in" >&2
             return 1
         fi
+        override=${override//$'\r\n'/ }
+        override=${override//$'\r'/ }
+        override=${override//$'\n'/ }
         line="- $(date -u +%Y-%m-%d) — override: $login over ${refused_owner:-unknown}: \"$override\""
         record_override "$file" "$line"
         echo "$line"

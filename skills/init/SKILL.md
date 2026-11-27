@@ -89,7 +89,7 @@ is the container the message names.
    When `user whoami` exits 1, print its one `codeo:` line and stop: an unresolved login or a Bot
    is never claimed for, and no assignee check is skipped anywhere below. The login is recorded as
    the `| Owner | <login> |` row of `init.md`'s header table (after `| Branch |`), on a fresh init
-   and on a resume, is the last argument of `claim.sh --resume-line`, and is what `assignee-add`
+   and on a resume (an older `init.md` with no Owner row gets one then), is the last argument of `claim.sh --resume-line`, and is what `assignee-add`
    adds. An `unverified` login (a web session) is recorded but never compared with an assignee.
 
    **Check nobody else has it.** An `assignees` entry other than the login `user whoami` printed
@@ -242,7 +242,7 @@ is the container the message names.
       Write nothing else on that line: the script chose its wording, `--stash-live` counts it, and
       an engineer's override goes under `## Notes`, never on that line. `<login>` is what step 3's
       `github.sh user whoami` printed. On a resume also set the `| Owner |` row of `init.md`'s
-      header table to it, in the same commit.
+      header table to it (adding the row after `| Branch |` when an older `init.md` has none), in the same commit.
    4. Commit that file alone, staged by name, with the subject
       `docs(codeo): init dossier for #<N> — resumed` — on an exit-4 takeover the same commit also
       carries the engineer's override line under `## Notes`. Its log line is also what spends the
@@ -295,8 +295,8 @@ is the container the message names.
    `.codeo/` that no feature branch sees. Fill in `## Where this stands` with the branch and base
    SHA, and append the first `## Log` line —
    `- <date> — initialized: branch <branch> off <base> at <sha> · cost: <output of bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" init>`
-   (or `cost: unavailable`). Write the login step 3's `user whoami` printed into the `| Owner | <login> |` row of the
-   header table now (below).
+   (or `cost: unavailable`). Add the `| Owner | <login> |` row, the login step 3's `user whoami` printed, to
+   the header table, after `| Branch |`, in the dossier it drafts.
    <!-- rule: init-09 -->
    Commit `.codeo/.gitignore`, `.codeo/<N>/init.md`, and any adopted `issue.md` there, staged by
    name (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability` has the convention), with the subject
@@ -388,7 +388,6 @@ judges against.
 | Issue | <html_url> — <title> |
 | State | open · labels `<label>` |
 | Branch | `<branch>` off `<base>` at `<sha>` |
-| Owner | <login> |
 | Board | <ready status> → <in-progress status> (or `not configured`, or `unavailable`) |
 
 **Problem.** Three to five lines, restated from the issue.

@@ -45,8 +45,8 @@ user:    alice
 `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" take <container|web|local> [session-id]` writes it,
 from the `init.md` that names the branch the checkout has checked out; it never comes from anything
 typed by hand, and it never fails its caller — what it could not do it prints as a `TODO` line. On
-the base branch it takes no lock. `user` is the login `github.sh user whoami` verified when it took
-the lock; without a verified login, or when the issue's recorded owner or assignees are someone
+the base branch it takes no lock. `user` is the login `github.sh user whoami` resolved when it took
+the lock; without a resolved login, or when the issue's recorded owner or assignees are someone
 else, it takes no lock and prints a `TODO`. `host` says what kind of checkout took it:
 
 - **`container`** — a dev container; a `volume:` line follows, identifying the container so it can

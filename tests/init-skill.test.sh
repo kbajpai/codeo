@@ -63,7 +63,9 @@ grep -qF -- 'When `user whoami` exits 1, print its one `codeo:` line and stop' "
 grep -qF -- 'is recorded but never compared with an assignee' "$skill" || fail "the skill does not exempt an unverified login from the assignee comparison"
 ! grep -qF -- 'no login to' "$skill" "$skill" || fail "the skill still has [no login to]"
 ! grep -qF -- 'user login' "$skill" || fail "the skill still has [user login]"
-grep -qF -- '| Owner | <login> |' "$skill" || fail "the skill's header table has no Owner row"
+grep -qF -- '| Owner | <login> |' "$skill" || fail "the skill names no Owner row"
+! sed -n '/^```markdown/,/^```/p' "$skill" | grep -qF -- '| Owner |' || fail "the Outcome template carries an Owner row — it lives in the header table"
+step_contains "step 9 puts the owner in the header table" 9 "the header table, after \`| Branch |\`"
 step_contains "the resume passes the whoami login to --resume-line" 6 'whoami` printed'
 grep -qF -- '<!-- rule: init-11 -->' "$skill" || fail "marker init-11 is missing"
 

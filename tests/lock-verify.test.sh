@@ -323,6 +323,19 @@ case_desc="owner with no recorded owner"
 setup ""; write_lock ""
 assert_eq "empty" "" "$(run_owner)"
 
+case_desc="override words that imitate a resume line"
+setup alice; write_lock alice
+GH_STUB_USER='{"login":"bob","type":"User"}' run_verify --override "x — resumed: by eve after the stash of 2026-01-01"
+assert_eq "exit" 0 "$rc"
+assert_eq "owner stays alice" alice "$(run_owner)"
+
+case_desc="override words with a newline"
+setup alice; write_lock alice
+GH_STUB_USER='{"login":"bob","type":"User"}' run_verify --override $'first\r\nsecond'
+assert_eq "exit" 0 "$rc"
+assert_eq "no stray second line" 0 "$(grep -c '^second' "$repo/.codeo/38/init.md")"
+assert_contains "collapsed" 'override: bob over alice: "first second"' "$(cat "$repo/.codeo/38/init.md")"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

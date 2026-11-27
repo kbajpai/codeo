@@ -35,7 +35,7 @@ codeo_whoami() {
 codeo_owner_of_init() {
     local file=$1 owner
     [[ -f $file ]] || return 0
-    owner=$(sed -n 's/^- .* — resumed: by \([^ ]\{1,\}\) after .*/\1/p' "$file" | tail -n1)
+    owner=$(sed -n 's/^- [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} — resumed: by \([^ ]\{1,\}\) after .*/\1/p' "$file" | tail -n1)
     [[ -n $owner ]] || owner=$(sed -n 's/^| Owner | \([^ |]\{1,\}\) |.*/\1/p' "$file" | head -n1)
     [[ -z $owner ]] || printf '%s\n' "$owner"
     return 0
