@@ -10,7 +10,7 @@
 #                                           every proof passed and no removal is recorded; <command> is `-` when the overlay gives none;
 #                                           <fallback> is the overlay's expanded fallback text, or `-` when it has none
 #           <N> TAB failed TAB <proof>      the first proof that failed
-#           <N> TAB leftover TAB <command>  right after a proven line, or a `failed name` line, when origin still holds codeo-live/<N>/<machine> branches
+#           <N> TAB leftover TAB <command>  right after a proven line or a `failed name` line, or alone when the issue's removal is recorded, when origin still holds codeo-live/<N>/<machine> branches
 #                                           (a hosted web session's live signal); <command> is one `git push origin --delete` naming
 #                                           each such branch whose name is only letters, digits, `.`, `_` and `-`. Read from the
 #                                           refs the fetch pruned; none, no line.

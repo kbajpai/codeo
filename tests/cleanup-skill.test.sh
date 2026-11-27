@@ -131,5 +131,20 @@ for needle in 'from the folder that holds the script' 'when codeo-track.sh sits 
     [[ $fbline == *"$needle"* ]] || check_fail "the overlay's fallback line lacks: $needle"
 done
 
+# Wording pins: a commit never deletes, record does not restore, the undo is by hand.
+step3=$(awk '/^3\. \*\*Record what was printed/{f=1} /^4\. \*\*Close/{f=0} f' "$skill")
+p1=$(printf '%s\n' "$step3" | awk 'NR>1 && /^$/{exit} {print}')
+p2=$(printf '%s\n' "$step3" | awk '/Record a removal the engineer says/{f=1} f&&/^$/{exit} f')
+[[ $p1 != *'Nothing else is written.' ]] || check_fail "step 3's first paragraph still ends Nothing else is written."
+[[ $p2 == *'Nothing else is written outside the run record and the removal records.' ]] || check_fail "step 3's record paragraph lacks its closing sentence"
+[[ $(<"$skill") != *"restores origin's"* ]] || check_fail "the skill still says record restores origin's records"
+[[ $(<"$skill") == *'right after its own, or alone when its removal is recorded'* ]] || check_fail "step 1's leftover sentence lacks the recorded case"
+reads=$(grep -E '^- \*\*Reads\*\*' -A1 "$skill")
+[[ $reads == *'on `origin/codeo/intake`'* ]] || check_fail "the Hand-off Reads does not name codeo/intake"
+cs=$(awk '/^## cleanup$/{f=1;next} /^## /{f=0} f' "$repo/docs/skills.md")
+[[ $cs != *"restores origin's records first"* ]] || check_fail "docs/skills.md cleanup still says record restores origin's records first"
+[[ $cs == *'adds it back'* ]] || check_fail "docs/skills.md cleanup does not say a clone adds it back"
+[[ $(<"$repo/README.md") == *'still listed'* ]] || check_fail "README.md does not say the issue is still listed"
+
 [[ $fail -eq 0 ]] || exit 1
 echo "all cases passed"
