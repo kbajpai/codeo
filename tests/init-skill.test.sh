@@ -55,6 +55,18 @@ step_contains "either TODO case ends the turn" 11 'Either way, end the turn with
 # Whole file, not step 3: step() stops at step 3's first rule comment (init-02), so it would pass vacuously.
 ! grep -qF -- 'restore the title' "$skill" || fail "step 3 no longer says restore the title — the skill still has [restore the title]"
 
+# Task 6 (#195): init resolves the user strictly and records the owner.
+# Whole file: step() would stop at step 3's first rule comment.
+grep -qF -- 'scripts/github.sh" user whoami' "$skill" || fail "the skill never runs user whoami"
+grep -qF -- 'When `user whoami` exits 1, print its one `codeo:` line and stop' "$skill" || fail "the skill does not stop on whoami's exit 1"
+! grep -qF -- 'say so and continue' "$skill" || fail "the skill still says [say so and continue]"
+grep -qF -- 'is recorded but never compared with an assignee' "$skill" || fail "the skill does not exempt an unverified login from the assignee comparison"
+! grep -qF -- 'no login to' "$skill" "$skill" || fail "the skill still has [no login to]"
+! grep -qF -- 'user login' "$skill" || fail "the skill still has [user login]"
+grep -qF -- '| Owner | <login> |' "$skill" || fail "the skill's header table has no Owner row"
+step_contains "the resume passes the whoami login to --resume-line" 6 'whoami` printed'
+grep -qF -- '<!-- rule: init-11 -->' "$skill" || fail "marker init-11 is missing"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

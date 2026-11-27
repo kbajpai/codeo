@@ -43,6 +43,7 @@ in prose exist (only the script's existence is checked).
 - [init-08] Acceptance criteria are copied verbatim.
 - [init-09] The state directory's `.gitignore` must be committed.
 - [init-10] A refusal from the role check ends the step; no override.
+- [init-11] `init` resolves the user with `user whoami` before any claim; exit 1 stops it, and the login is recorded as the Owner.
 
 ## plan
 
