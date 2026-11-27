@@ -473,7 +473,10 @@ must_contain 'close-16 rule marker' '<!-- rule: close-16 -->'
 section_contains "the owner comes from lock.sh owner" "$stash_section" 'lock.sh" owner <N>'
 section_contains "the owner is removed" "$stash_section" 'assignee-remove <N> <owner>'
 section_contains "no owner printed is a skip" "$stash_section" 'prints no owner'
-section_contains "the caller is never removed" "$stash_section" 'Never remove the caller'
+section_contains "a legacy stash removes the verified caller" "$stash_section" 'user whoami'
+section_contains "the caller is removed only without an override" "$stash_section" 'without an override'
+section_contains "an override with no owner is a skip" "$stash_section" 'With an override and no owner'
+section_contains "an unverified login is never removed" "$stash_section" 'Never remove a login that was not verified'
 
 if ((failures)); then
     echo "$failures case(s) failed"

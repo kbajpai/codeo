@@ -109,7 +109,7 @@ in prose exist (only the script's existence is checked).
 - [close-13] Never use `finishing-a-development-branch`.
 - [close-14] A refusal from the role check ends the step; no override.
 - [close-15] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words, and its line is committed with close's dossier commit.
-- [close-16] A stash or abandon removes the recorded owner (`lock.sh owner`), never the caller; no owner means skip and say so.
+- [close-16] A stash or abandon removes the recorded owner (`lock.sh owner`); with no owner it removes the verified caller (`user whoami`) only when `verify` passed without an override, else skips and says so; never a login that was not verified.
 
 ## triage
 

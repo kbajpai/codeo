@@ -651,8 +651,10 @@ resume on. Then let go of what a parked workflow must not hold, in this order:
 <!-- rule: close-16 -->
 - Take the owner from `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" owner <N>` and remove that
   login: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-remove <N> <owner>`, so the
-  team sees the issue is free. When it prints no owner there is no login to remove: skip the call
-  and say so rather than stopping. Never remove the caller.
+  team sees the issue is free. When it prints no owner (a legacy stash), remove the login
+  `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" user whoami` prints, the caller step 0 verified,
+  only when step 0's `verify` passed without an override. With an override and no owner, skip the
+  call and say so rather than stopping. Never remove a login that was not verified.
 - With a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$READY"`, so the board
   shows it free too, and so `/codeo:init`, which starts only a Ready issue, can start it again.
   Handled as the preamble says: a failure is written into `close.md`'s outcome with `#<N>` and the
