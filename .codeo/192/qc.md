@@ -24,6 +24,9 @@ I recommend the first: the guard's purpose is the session's own checkout, and th
 
 **Options:** restrict to the session's project (recommended) · keep and document · require a tracked `.codeo/config.json` · no preference, you pick.
 
+**Answer:**
+Restrict to the session's own project, as recommended. Given in the conversation: "Q1 - Your Pick".
+
 
 ## Notes
 
