@@ -154,7 +154,7 @@ is the container the message names.
      `N<TAB>branch<TAB>dir` row per workflow). One row whose `dir` is `.codeo/<N>` names `<branch>`,
      whatever it is called: it is a resume candidate, and the `--carries`, `--stash-live` and
      resume sub-steps below run on it, with the derivation and the `ls-remote` skipped. A row whose
-     `dir` is `.codeo/done/<N>` is step 3's `(PR open)` stop. When this issue has more than one row,
+     `dir` is `.codeo/done/<N>` is step 3's `(PR open)` stop, and it also covers an archive pushed with no pull request yet. When this issue has more than one row,
      stop and name every branch: one workflow is never started on two.
    - *No row: derive.* The name comes from
      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/branch-name.sh" <N>`, which prints

@@ -153,7 +153,7 @@ it.
   there is one (`verdict:`), and a `live:` line per live session. `waits:` names a live stash or an
   abandon first (`resume — …`), then open questions (`engineer — plan.md Q2`), then
   `review — dossier archived` once `close` has archived the dossier and
-  the archive is not on the base branch yet (a pull request is usually open; the line does not look for one), then the step the workflow
+  the archive is not on the base branch yet (a pull request is open unless `close` stopped between its two pushes; the line does not look for one), then the step the workflow
   owes next, read from the rounds' send-back markers, qc's verdict and the last finished step
   and stepping past any `close` outcome no earlier rule took, and `nothing known` when none applies. The `touched:`,
   `waits:` and `verdict:` lines are read from the

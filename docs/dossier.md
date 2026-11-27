@@ -65,8 +65,10 @@ binds each workflow — each issue checkout — to one issue: `.codeo/active` al
 directories is that lock, and `handoff.md` governs it. A skill that finds no lock has not found a
 dossier to degrade to; it has found that no workflow is running, and it stops.
 
-`/codeo:close` moves an issue's directory to `.codeo/done/<N>/` when it opens the pull request, so
-the archive merges with the change — nothing is committed to the base branch after the merge. A
+`/codeo:close` moves an issue's directory to `.codeo/done/<N>/` and pushes it before it opens the
+pull request, then records the pull request in `done/<N>/close.md` in a second commit. The archive
+merges with the change — nothing is committed to the base branch after the merge — and the first
+check run sees no live dossier. A
 send-back (review feedback or a conflict), a stash or an abandon moves it back to `.codeo/<N>/`; where the directory sits is how `close`
 tells an open PR that is waiting from one whose review work is in flight. What sits at the top
 level is work someone is actively changing. Nothing is ever deleted — a closed issue's dossier is
@@ -291,7 +293,8 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
 - **The pull request.** `close.md` records an opened pull request in a round headed
   `### Round <n> — pull request opened`, its date on the first line and the pull request as the
   line `#<number> <html_url>`, from `pr create`'s response; exactly one round carries that
-  heading, and a return from review is `— pull request updated`. Every `— review feedback` or
+  heading, and a return from review is `— pull request updated`. The round is written after the
+  pull request exists, in the commit after the archive. Every `— review feedback` or
   `— conflicts with <base>` round carries the line `qc round at review: <k>`, `<k>` being the
   latest `qc.md` round when it was written.
 - **Form lines.** `Deployed revision: <x>` in `implement.md`, under `## Where this stands` or in

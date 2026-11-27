@@ -139,6 +139,10 @@ is the container the message names.
         | dossier at `.codeo/<N>/`, abandon live | Backlog (`board.statuses.backlog`), or Ready (`board.statuses.ready`) |
         | dossier at `.codeo/done/<N>/`, pull request open | In review (`board.statuses.inReview`) |
         | dossier at `.codeo/done/<N>/`, no pull request, or closed unmerged | none fits: always a mismatch |
+
+        A no-pull-request row is also what an interrupted close leaves between its archive push and
+        `pr create`: report it as an interrupted close to finish with `/codeo:close`, not as a
+        mismatch to fix by hand.
         | pull request merged | not compared: the existing `unclosed:<N>` item covers it |
 
         An abandon stays live until `/codeo:init` writes its resume line, and *resume* sets Ready
