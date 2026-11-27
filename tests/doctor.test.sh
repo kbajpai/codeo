@@ -363,6 +363,7 @@ doctor_fails_containers_without_the_plugin_pin() {
     run
     grep -qF "has no plugin.ref, so the container" <<<"$out" || fail "half pin (ref missing): $out"
     ! grep -qF "plugin.repo" <<<"$out" || fail "names the present key: $out"
+    grep -qF "cannot install codeo; set it (see" <<<"$out" || fail "one key says set it: $out"
     jq '.plugin = {ref: "v1"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
     run
     grep -qF "has no plugin.repo, so the container" <<<"$out" || fail "half pin (repo missing): $out"

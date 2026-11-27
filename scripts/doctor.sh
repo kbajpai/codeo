@@ -292,7 +292,8 @@ if [[ -e $CODEO_PROJECT_ROOT/.devcontainer/codeo-container.sh || -e $CODEO_PROJE
         pin_gap=$(codeo_pin_missing "$CODEO_STATE_DIR/config.json")
         if [[ -n $pin_gap ]]; then
             pin_gap=${pin_gap//repo/plugin.repo}; pin_gap=${pin_gap//ref/plugin.ref}; pin_gap=${pin_gap// / and }
-            cont_msg="${cont_msg:+$cont_msg; }the container scripts are present but .codeo/config.json has no $pin_gap, so the container cannot install codeo; set them (see docs/container-templates.md in the codeo plugin ($CODEO_PLUGIN_ROOT/docs/container-templates.md))"
+            pin_them=them; [[ $pin_gap == *" and "* ]] || pin_them=it
+            cont_msg="${cont_msg:+$cont_msg; }the container scripts are present but .codeo/config.json has no $pin_gap, so the container cannot install codeo; set $pin_them (see docs/container-templates.md in the codeo plugin ($CODEO_PLUGIN_ROOT/docs/container-templates.md))"
         fi
         if [[ -n $cont_msg ]]; then
             report fail containers "$cont_msg"
