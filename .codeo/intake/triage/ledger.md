@@ -198,8 +198,8 @@
 | `issue:163` | Close the #152 leftovers; filed 2026-11-23, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-23 |
 | `qc:157:F8-F10-F11-F12-F13` | #157 non-blocking QC findings: web close says "nothing to remove" though the branch stays, sweep wording without the web exception, cleanup drops the leftover command on a failed name proof (F8, F12, F13 filed, F10-F11 out of scope) | filed #166 | 2026-11-24 |
 | `issue:166` | Close the #157 leftovers; filed 2026-11-24, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-24 |
-| `qc:161:F4-F7-preexisting` | #161 F4, F7 and four pre-existing README/CHANGELOG/`stop_started` gaps | already #173 | 2026-11-25 |
-| `qc:161:F5-F6-F8` | #161 `SessionStart` hook: skip check, undocumented, restart wording | already #173 | 2026-11-25 |
+| `qc:161:F4-F7-preexisting` | #161 non-blocking findings F4, F7 and four pre-existing README/CHANGELOG/`stop_started` gaps | filed #173 | 2026-11-25 |
+| `qc:161:F5-F6-F8` | #161 `SessionStart` hook: skip check, undocumented, restart wording | filed #173 | 2026-11-25 |
 | `unclosed:161` | `origin/claude/ecstatic-mendel-n3qyzl` and `origin/docs/documentation-leftovers-154-146-removal` still on origin though #161 merged (PR #167) | fix named — `/codeo:close` in #161's checkout; the branch delete is by hand | 2026-11-26 |
 | `issue:168` | Release v1.0.9; filed 2026-11-25 or earlier, board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-25 |
 | `issue:170` | Docs: host command installs separately, macOS flock and keychain; board Status `Backlog` → `Ready` | ready | 2026-11-25 |
