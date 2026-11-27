@@ -110,7 +110,7 @@ is the container the message names.
    | No pull request, dossier under `.codeo/done/<N>/` at `HEAD` | → **Phase 1, resumed after the archive push** — run steps 2, 3 and 5 onward (step 4 is skipped: the archive is pushed) |
    | `state` is `open`, dossier under `.codeo/done/<N>/`, no round in `close.md` records this pull request | → **Phase 1, resumed after `pr create`** — run steps 2–3, then 6–7 (steps 4–5 are skipped): record it from this lookup (step 6) and commit and push it (step 7) |
    | `state` is `open`, dossier under `.codeo/done/<N>/` | → **Phase 2 — waiting** |
-   | `state` is `open`, dossier at `.codeo/<N>/`, no `— review feedback` or `— conflicts with <base>` round after the one recording this pull request (or none records it) | → **Phase 1, first open resumed** by an older plugin or a pull request opened by hand — step 5 skipped; steps 6, 4, 7 run in that order, archive and record in one commit |
+   | `state` is `open`, dossier at `.codeo/<N>/`, a round records this pull request and no `— review feedback` or `— conflicts with <base>` round comes after it, or no round records it and there is no `— review feedback` or `— conflicts with <base>` round at all (a send-back round with no record is a return from review) | → **Phase 1, first open resumed** by an older plugin or a pull request opened by hand — step 5 skipped; steps 6, 4, 7 run in that order, archive and record in one commit |
    | `state` is `open`, dossier back at `.codeo/<N>/` | → **Phase 1 — return from review** |
    | `state` is `closed` and `merged_at` is set | → **Phase 3 — clean up** |
    | `state` is `closed` and `merged_at` is empty, or `HEAD`'s `close.md` ends in a `— abandoned` round while the lock is held | → **Closed unmerged** |
@@ -217,7 +217,10 @@ is the container the message names.
      which lists the merges and direct commits on `<base>` itself; their subjects usually carry the
      pull request number), then the `qc round at review: <k>` line
      close-03 above requires.
-     When a pull request is already open (the "resumed after `pr create`" row) a conflict is step 11's send-back instead: it un-archives and writes the round, exactly like step 9's `CONFLICTING` case, so step 3 sends nothing back there.
+     When a pull request is already open (the "resumed after `pr create`" row) a conflict is
+     step 11's send-back instead: step 3 sends nothing back there and the run goes on to steps 6-7
+     (record it and push). The next run's step 9 finds `CONFLICTING` and goes to step 11, which
+     un-archives and writes the round.
    - Append this invocation's `## Log` line, ending ` · cost: ` with what
      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints.
    - Commit `close.md`, staged by name, with the subject
