@@ -81,7 +81,7 @@ is the container the message names.
    and say what `intake.sh` printed. Nothing else is written.
 
 4. **Close.** End with the closing block
-   (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`). When something was proven, or a `leftover` line was printed (an issue that failed only `name` gets one), the next
+   (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`). When something was proven, or a `leftover` line was printed (an issue that failed only `name` gets one while origin still holds its `codeo-live/<N>/*` branches), the next
    goal is those leftovers removed on the host and the next issue started: step 1 is running the
    printed commands on the host (`git status` in each clone first, for a removal command), step 2
    `/codeo:init #<M>`, `<M>` being the next issue to start. When nothing was proven and no `leftover`
