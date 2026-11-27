@@ -483,6 +483,80 @@ rm -f "$DOCKER_MARKER" "$GH_STUB_DIR"/GET_repos_o_n_issues_12.json
 assert_eq "line" "12${tab}recorded" "$(run_record 12)"
 assert_eq "marker" "absent" "$([[ -e $DOCKER_MARKER ]] && echo present || echo absent)"
 
+# stdout and stderr apart: run_cleanup_split sets cleanup_out and cleanup_err.
+run_cleanup_split() {
+    local errf=$scratch_root/split.err
+    cleanup_out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" 2>"$errf") || true
+    cleanup_err=$(cat "$errf")
+}
+hide_note="cleanup: note: 1 issue(s) with a recorded removal are not listed"
+
+# Issues 12 and 30, both proven, as in the ascending case.
+two_proven() {
+    setup_repo "12:$body" "30:$body"
+    fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+    fixture 30 closed 42 2026-01-01T00:00:00Z feat/30
+    set_overlay "$overlay"
+}
+
+case_desc="a recorded issue that passes is not listed"
+two_proven
+push_removed 12
+run_cleanup_split
+assert_eq "stdout" "30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "$hide_note" "$cleanup_err"
+
+case_desc="a recorded issue whose proof fails is listed as not proven"
+two_proven
+fixture 12 open 41 2026-01-01T00:00:00Z feat/12
+push_removed 12
+run_cleanup_split
+assert_eq "stdout" "12${tab}failed${tab}issue
+30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "" "$cleanup_err"
+
+case_desc="a recorded issue whose only failure is name is listed as not proven"
+two_proven
+set_overlay $'name: codeo-{N}\npattern: ^codeo-3[0-9]$\ncommand: docker rm -f {name}'
+push_removed 12
+run_cleanup_split
+assert_eq "stdout" "12${tab}failed${tab}name
+30${tab}proven${tab}docker rm -f codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "" "$cleanup_err"
+
+case_desc="a recorded issue keeps its leftover line"
+two_proven
+push_branch codeo-live/12/m
+push_removed 12
+run_cleanup_split
+assert_eq "stdout" "12${tab}leftover${tab}git push origin --delete codeo-live/12/m
+30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "$hide_note" "$cleanup_err"
+
+case_desc="a record for another issue hides nothing"
+two_proven
+push_removed 99
+run_cleanup_split
+assert_eq "stdout" "12${tab}proven${tab}$want_cmd${tab}-
+30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
+assert_eq "stderr" "" "$cleanup_err"
+
+case_desc="two engineers keep each other's records"
+two_proven
+origin_url=$(git -C "$REPO_WORK" remote get-url origin)
+clone_b=$(mktemp -d "$scratch_root/engineer-b.XXXXXX")
+git clone -q "$origin_url" "$clone_b" 2>/dev/null
+mkdir -p "$clone_b/.codeo"
+cp "$REPO_WORK/.codeo/config.json" "$clone_b/.codeo/config.json"
+intake_script=$plugin_src/scripts/intake.sh
+# Neither clone has fetched the intake branch before it records and commits. `intake.sh commit` replaces the directory with the
+# clone's own, so B restores first, as the cleanup skill's step 0 does; without it B's commit would drop 12.md.
+(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" record 12 >/dev/null 2>&1 && bash "$intake_script" commit cleanup "x" >/dev/null 2>&1) || true
+(cd "$clone_b" && bash "$intake_script" restore cleanup >/dev/null 2>&1 && PATH="$stub_bin:$PATH" bash "$script" record 30 >/dev/null 2>&1 && bash "$intake_script" commit cleanup "x" >/dev/null 2>&1) || true
+git -C "$REPO_WORK" fetch -q origin
+assert_eq "files" "12.md
+30.md" "$(git -C "$REPO_WORK" ls-tree -r --name-only origin/codeo/intake | sed -n 's|.*/removed/||p' | sort)"
+
 case_desc="no container-engine command is ever run"
 assert_eq "marker" "absent" "$([[ -e $DOCKER_MARKER ]] && echo present || echo absent)"
 

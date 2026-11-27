@@ -7,13 +7,16 @@
 #       one tab-separated line per issue, in ascending N, and after a proven issue (or one whose only failed proof is
 #       `name`) with leftover branches a second line, `leftover`:
 #           <N> TAB proven TAB <command> TAB <fallback>
-#                                           every proof passed; <command> is `-` when the overlay gives none;
+#                                           every proof passed and no removal is recorded; <command> is `-` when the overlay gives none;
 #                                           <fallback> is the overlay's expanded fallback text, or `-` when it has none
 #           <N> TAB failed TAB <proof>      the first proof that failed
 #           <N> TAB leftover TAB <command>  right after a proven line, or a `failed name` line, when origin still holds codeo-live/<N>/<machine> branches
 #                                           (a hosted web session's live signal); <command> is one `git push origin --delete` naming
 #                                           each such branch whose name is only letters, digits, `.`, `_` and `-`. Read from the
 #                                           refs the fetch pruned; none, no line.
+#       An issue that passes every proof but has a removal record on origin's codeo/intake (see `record`) is not listed
+#       (its leftover line still is), and stderr says `cleanup: note: <k> issue(s) with a recorded removal are not listed`.
+#       A record never hides a failed proof: an issue that fails one is listed as failed, recorded or not.
 #       Proofs, in order:
 #           issue         the issue's state is closed
 #           pull-request  done/<N>/close.md has a `#<number> <url>` line and that PR has a merged_at
@@ -174,18 +177,24 @@ leftover_proof() {
     printf '%s\tleftover\tgit push origin --delete %s\n' "$n" "${names[*]}"
 }
 
+hidden=0
 while IFS= read -r n; do
     proof=$(first_failed_proof "$n")
     if [[ $proof == ok ]]; then
         out=$(name_proof "$n")
-        case $out in
-            -) printf '%s\tproven\t-\t-\n' "$n" ;;
-            name) printf '%s\tfailed\tname\n' "$n" ;;
-            *) printf '%s\tproven\t%s\t%s\n' "$n" "$(head -n1 <<<"${out#cmd:}")" "$(tail -n1 <<<"$out")" ;;
-        esac
+        if [[ $out == name ]]; then
+            printf '%s\tfailed\tname\n' "$n"
+        elif grep -qxF "$n" <<<"$recorded"; then
+            hidden=$((hidden + 1))
+        elif [[ $out == - ]]; then
+            printf '%s\tproven\t-\t-\n' "$n"
+        else
+            printf '%s\tproven\t%s\t%s\n' "$n" "$(head -n1 <<<"${out#cmd:}")" "$(tail -n1 <<<"$out")"
+        fi
         leftover_proof "$n"
     else
         printf '%s\tfailed\t%s\n' "$n" "$proof"
     fi
 done < <(git ls-tree --name-only "$base_sha" -- "$state_rel/done/" 2>/dev/null |
     sed -n 's|.*/\([0-9][0-9]*\)$|\1|p' | sort -n)
+if ((hidden)); then echo "cleanup: note: $hidden issue(s) with a recorded removal are not listed" >&2; fi
