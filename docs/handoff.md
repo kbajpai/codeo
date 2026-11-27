@@ -93,8 +93,9 @@ the checkout the session is in:
    `resumed: by <login> after` line, else its `| Owner |` row), and passes only when the login is
    the owner, is among the issue's assignees when it has any, and equals the lock's `user:` line
    when the lock has one. Otherwise it exits 1 with one `codeo:` line, and the skill stops. The line is
-   `codeo: #<N> belongs to <owner> (last resumed <date>, or claimed <date>) — you are <login>; …`,
-   `codeo: #<N> is assigned to <assignees>, not <login> — …` or
+   `codeo: #<N> belongs to <owner> (claimed) — you are <login>; …` (`(last resumed <date>)` after a
+   resume), `codeo: #<N> is assigned to <assignees>, not <login> — …` (for the recorded owner it
+   ends `… though you are its recorded owner — add yourself: github.sh issue assignee-add <N> <login>`) or
    `codeo: this checkout was locked by <user>, you are <login> — …`. When the
    engineer says in so many words to take the workflow over, `verify --override "<words>"` passes
    that one call and appends `- <date> — override: <login> over <owner>: "<words>"` to the local
@@ -109,29 +110,34 @@ flowchart TD
     B -- no --> X1["refuse: lock: no workflow lock here"]
     B -- yes --> C[codeo_whoami]
     C -- exit 1 --> X2[refuse with its codeo: line]
-    C -- unverified, web --> D{lock user equals the variable?}
-    D -- yes --> OK1[pass, note: not independently verified]
-    D -- no --> X3[refuse]
-    C -- User --> E{origin ref reachable?}
-    E -- error --> X4[refuse: could not check ownership]
-    E -- no ref --> F[read the local init.md, say so]
-    E -- yes --> E2{dossier on origin's branch?}
-    E2 -- no --> X6[refuse: could not check ownership]
-    E2 -- yes --> F2[read origin's init.md from FETCH_HEAD]
+    C -- "User or unverified" --> E{origin reachable?}
+    E -- error --> X3["refuse: could not check ownership"]
+    E -- "no ref or no remote" --> F[read the local init.md, note it]
+    E -- ref present --> E2{dossier on origin's branch?}
+    E2 -- no --> X3
+    E2 -- yes --> F2["read refs/codeo/verify/BRANCH"]
     F --> G
-    F2 --> G{login equals owner, is an assignee, equals lock user?}
-    G -- yes --> OK2[pass]
-    G -- no, override given --> OK3[pass and record the override line]
-    G -- no --> X5["refuse: belongs to / is assigned to / locked by"]
+    F2 --> G{login equals owner?}
+    G -- no --> X4["refuse: belongs to OWNER"]
+    G -- yes --> H{an assignee, when there are any?}
+    H -- no --> X5["refuse: is assigned to (names assignee-add when the caller is the owner)"]
+    H -- yes --> I{equals the lock's user, when it has one?}
+    I -- no --> X6["refuse: locked by USER"]
+    I -- yes --> OK["pass; notes: not independently verified (unverified), legacy lock"]
+    X4 -- "--override" --> OV[record the override line, pass once]
+    X5 -- "--override" --> OV
+    X6 -- "--override" --> OV
 ```
 
 A lock with no `user:` line is legacy: `verify` falls back to the assignees and the pushed dossier
-and says so. A web session's `unverified` login (the variable, when `GET /user` is refused) is
-compared only with the lock's own `user:` line, never with the owner or the assignees, and
-`verify` says it is not independently verified. `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" owner
-[<N>]` prints the recorded owner from the **local** dossier: a display helper (`close` uses it to
-name the assignee a stash removes). Decisions use `verify`, which reads the pushed copy after
-fetching the branch, from `FETCH_HEAD`.
+and says so. A web session's `unverified` login (`CODEO_GITHUB_LOGIN`, when `GET /user` is refused)
+is compared like any other: with the owner, the assignees and the lock's `user:` line. The variable
+can only refuse, never vouch: a match passes with the note "not independently verified: hosted web
+session". `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" owner [<N>]` prints the recorded owner from the
+**local** dossier: a display helper (`close` uses it to name the assignee a stash removes). Decisions
+use `verify`, which reads the pushed copy from a private ref, `refs/codeo/verify/<branch>`, that its
+fetch of the branch writes (never from `FETCH_HEAD`, which another fetch can overwrite). A branch not
+on origin, or no origin remote, means the local dossier, said in a note.
 
 Because the lock names the issue, **a bare invocation of `plan`, `implement`, `qc` or `close` in the
 bound checkout is not ambiguous.** The engineer named the issue when they ran `init`; reading the
@@ -251,8 +257,8 @@ it.
   only in a hosted web session (it is ignored anywhere else) — else for a web session the issue's
   first assignee (who may not be the person at the keyboard), else for any other session
   `git config user.name`, else `unknown`; a web session never uses `git config user.name`. The
-  signal is information only and never an ownership check: `CODEO_GITHUB_LOGIN` never satisfies
-  `lock.sh verify`. The machine is `CODEO_MACHINE`, else the
+  signal is information only and never an ownership check: `lock.sh verify` compares `CODEO_GITHUB_LOGIN` with the
+  owner and the assignees like any login and can only refuse with it. The machine is `CODEO_MACHINE`, else the
   container's volume, else its sandbox, else for a web session `web-` plus the first 8 characters
   of the session id without its `cse_` prefix (the lock's `session`, else
   `CLAUDE_CODE_REMOTE_SESSION_ID`), else the hostname. A web session keeps the label of its first beat in `<git dir>/codeo-live-machine` (`CODEO_MACHINE` wins and is never saved), and `clear` leaves it, so a session that ends and resumes, or whose id changes, shows as one row. The label names the checkout: a later issue worked there publishes under it. A reclaimed VM or a new checkout gets a new label, and the old row shows for up to the TTL. The

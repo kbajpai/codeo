@@ -201,6 +201,11 @@ close_sec=$(sed -n '/^## close$/,/^## triage$/p' "$repo/docs/skills.md")
 [[ $init_sec == *'user whoami'* ]] || { printf 'FAIL identity: docs/skills.md init section does not mention user whoami\n'; exit 1; }
 [[ $close_sec == *'lock.sh verify'* ]] || { printf 'FAIL identity: docs/skills.md close section does not mention lock.sh verify\n'; exit 1; }
 
+[[ $close_sec == *'user whoami'* ]] || { printf 'FAIL identity: docs/skills.md close section does not mention user whoami\n'; exit 1; }
+! grep -qF 'never satisfies' "$repo/docs/handoff.md" || { printf 'FAIL identity: docs/handoff.md still says never satisfies\n'; exit 1; }
+grep -qF 'refs/codeo/verify' "$repo/docs/handoff.md" || { printf 'FAIL identity: docs/handoff.md does not name refs/codeo/verify\n'; exit 1; }
+grep -qF 'lock file present?' "$repo/docs/handoff.md" || { printf 'FAIL identity: docs/handoff.md flowchart lacks lock file present?\n'; exit 1; }
+
 out=$(check_skills_doc "$repo/skills" "$repo/docs/skills.md" "$repo/lib/extension-points.tsv")
 if [[ -n "$out" ]]; then
     printf '%s\n' "$out"

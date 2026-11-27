@@ -376,7 +376,9 @@ grep -qF 'Claim line' README.md && fail identity-docs "README.md still mentions 
 if [[ -n ${lock:-} ]]; then
     grep -qF 'is assigned to' <<<"$lock" || fail identity-docs "the lock entry does not name the 'is assigned to' refusal"
     grep -qF 'locked by' <<<"$lock" || fail identity-docs "the lock entry does not name the 'locked by' refusal"
+    grep -qF 'assignee-add' <<<"$lock" || fail identity-docs "the lock entry does not name the assignee-add line"
 fi
+grep -qF 'when it has any' README.md || fail identity-docs "README.md does not say the assignee check applies only when the issue has assignees"
 grep -qF 'branch matches' docs/handoff.md && fail identity-docs "docs/handoff.md's verify flowchart still says branch matches"
 grep -qF 'is assigned to' docs/handoff.md || fail identity-docs "docs/handoff.md does not name the 'is assigned to' refusal"
 grep -qF 'locked by' docs/handoff.md || fail identity-docs "docs/handoff.md does not name the 'locked by' refusal"
