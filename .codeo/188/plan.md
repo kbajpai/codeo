@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Explored, nothing drafted yet. Every line F2-F6 cites was read against the script it describes, and the
+Q1-Q4 are answered. The plan is drafted at `.codeo/188/plan-draft.md` and waits for the engineer to approve it, ask for changes or reject it.
 other three workflows in flight were compared. Four questions are open: one on how far F4's "nothing is
 asked" reaches (Q1), and one for each workflow whose plan touches a file this one edits (Q2-Q4). The plan
 is drafted once they are answered.
@@ -35,6 +35,7 @@ have a copy under `templates/containers/.codeo/overlays/` that `tests/containers
 **Options:** home-checkout only (recommended) · all three · no preference, you pick.
 
 **Answer:**
+Home-checkout only. (The engineer's reply in the conversation, 2026-11-27: "Go with your picks", taking the recommended option.)
 
 ### Q2 — #195 overlaps on `skills/close/**`, `CHANGELOG.md` and `tests/**`: how to proceed?
 
@@ -52,6 +53,7 @@ pull request, named as dismissed.
 subject does not reach) · sequence after #195 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "Go with your picks", taking the recommended option.)
 
 ### Q3 — #204 overlaps on `skills/close/SKILL.md`, `CHANGELOG.md` and `tests/**`: how to proceed?
 
@@ -66,6 +68,7 @@ coordinate* accepts that rebase. *Sequence after #204* waits for a workflow that
 **Options:** proceed and coordinate (recommended) · sequence after #204 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "Go with your picks", taking the recommended option.)
 
 ### Q4 — #206 overlaps on `skills/cleanup/SKILL.md`, `CHANGELOG.md` and `tests/cleanup-skill.test.sh`: how to proceed?
 
@@ -82,6 +85,7 @@ the comma in `CHANGELOG.md` stays.
 **Options:** proceed and coordinate (recommended) · sequence after #206 · re-scope.
 
 **Answer:**
+Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "Go with your picks", taking the recommended option.)
 
 ## Notes
 
@@ -104,3 +108,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-27 — Q1-Q4 raised · cost: 1m · fable-5-2 71k in + 555k cached / 5k out
+- 2026-11-27 — Q1-Q4 answered by the engineer in conversation ("Go with your picks": the recommended option for each); plan drafted at .codeo/188/plan-draft.md, awaiting review
