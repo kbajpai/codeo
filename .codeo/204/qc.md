@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4, stopped at step 10: the build passes, the independent review found no Critical issue, and one Important finding turns on intent (Q4: a green pull request can merge before its record commit lands). No verdict is written while Q4 is open; the rest of the round is below under `## Notes`.
+Round 4, done. Q4 is answered (accept the window). The build and the suite pass, all four criteria are met, no blocking finding is open: clear, forward to `/codeo:close`. J1-J5 are non-blocking and recorded.
 
 ## Questions
 
@@ -186,6 +186,43 @@ Each file was changed on `main` by `c7505a9 feat: identify the acting user stric
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 4 — 2026-11-27
+
+**Sync.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, exit 0 (before the review and again after Q4 was answered; the merge base is `c7505a9`, #195's merge). `overlap.sh 204`: nothing. `overlap.sh --outside 204`: nothing. Between the suite and review run on `4e4c223` and this write-up only `.codeo/204/qc.md` changed.
+
+**Scope.** `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths: `.codeo/204/*.md`, `CHANGELOG.md`, `README.md`, and the rest). No `deploy=` line: no shared environment is configured. `qc/invariants-extra` and `qc/wiki-rules`: exit 3, no further rules.
+
+**Build.** The `shell` suite's `build` is `true`: exit 0.
+
+**Suites.** `bash tests/run.sh` on `4e4c223`: `all cases passed`, `suite exit=0`.
+
+**Acceptance criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | The first CI run on a PR opened by `/codeo:close` passes qc-verdict | met | `skills/close/SKILL.md` step 4 archives and pushes (`— archived`), a failed push is a stop before step 5's `pr create`; `tests/qc-verdict.test.sh` case "the archive commit and the record commit both pass": `qc-verdict.sh <base> <archive commit>` exits 0 and prints `round 1 clear`; the reviewer read `scripts/qc-verdict.sh` and `scripts/dossier-check.sh` (unchanged) and confirmed neither fails an archive with no `— pull request opened` round |
+| 2 | `close.md` in `.codeo/done/<N>/` still records the PR number and URL | met | step 6 writes the `— pull request opened` round with `#<number> <html_url>` into `.codeo/done/<N>/close.md` on every path that opens or finds a pull request (first open, resumed after `pr create`, first open resumed with or without a pre-pull-request conflict round), step 7 commits and pushes it; the same test case's second commit exits 0. Residual window: see J1 |
+| 3 | A review send-back still makes qc-verdict fail until the dossier is archived again | met | step 11 unchanged; `tests/qc-verdict.test.sh`'s head3 (un-archive on top of the record commit) exits 1 naming `.codeo/7`, and the existing "live dossier" case |
+| 4 | Close fixtures and tests and `docs/dossier.md` match the new order | met | the two fixtures' log wording, the `tests/role.test.sh` case, `docs/dossier.md`; full suite exit 0 |
+
+**Documentation check.** `docs/dossier.md`, `docs/handoff.md`, `docs/skills.md`, `README.md` (lines 306, 379-380), `skills/triage/SKILL.md`, `skills/init/SKILL.md` and `CHANGELOG.md` describe the new order and the archived-with-no-pull-request state, in present tense without issue numbers; `grep` for the old order finds only statements that stay true (`skills/close/SKILL.md:12`, `skills/qc/SKILL.md:481` say that close opens the pull request). No wiki module, no diagram changes.
+
+**Merge with main.** The merge commit `1e5afbc` resolved four conflicts; `main` had taken `close-15` and `close-16`, this branch's rule is `close-17`. Checked by this pass and the reviewer: each of `close-01` to `close-17` appears once in the skill and in `docs/skills-inventory.md` (17), `tests/inventory.test.sh` counts `[close]=17`, the hash fixture matches, both `## Unreleased` bullets survive.
+
+**Earlier rounds, recapped.** F1 (blocking in round 1) — fixed by `9c2c5c1`; F2 (blocking in round 1) — fixed by `9c2c5c1` and `89d5e43`; G1 (blocking in round 2) — fixed by `465e63c`; H1 (blocking in round 3) — fixed by the merge `1e5afbc`. Their non-blocking siblings G2, G3, G5, G6 were fixed in `465e63c`, `e476333` and `3d805df`; G4, G7 and G8 stay recorded as non-blocking in round 2.
+
+**Independent review** (opus, `QC review:`, over `c7505a9..4e4c223`): no Critical finding; one Important; it called the change not ready on that Important finding alone. Quoted in plain text, classified:
+
+- **J1 (non-blocking, `/codeo:plan`'s) — `skills/close/SKILL.md` steps 4, 5, 7.** The archive commit turns the pull request green at once, so it can merge between `pr create` and the push of the `— PR #<pr>` commit; if that push fails or the session dies there, the base branch's `.codeo/done/<N>/close.md` has no `#<number> <url>` line and close-09 forbids adding it later. The follow-up record commit is the design the issue itself prescribes and the plan adopted, so this is the plan's trade-off, not the code diverging from it. It was raised as Q4 and the engineer accepted the window ("go with your pick": accept), so it is recorded here and does not send the change back. The cost, for the record: a pull request merged in that window leaves no record of its number, `/codeo:close` stops at step 12 on a local commit the pull request never had, and `scripts/cleanup.sh` cannot prove that merge.
+- **J2 (non-blocking, `/codeo:implement`'s) — `SKILL.md` lines 226-237.** "step 3 sends nothing back there and the run goes on to steps 6-7" sits in the first conflict bullet while the bullets after it still say to commit `— conflicts with <base>` and "Hand off … and stop", and it names only the "resumed after `pr create`" row although step 1 says step 3 sends nothing back whenever a pull request is open.
+- **J3 (non-blocking, `/codeo:implement`'s) — `SKILL.md` lines 157 and 189.** "the two resumed rows" is ambiguous with three rows named "resumed".
+- **J4 (non-blocking, `/codeo:implement`'s) — `tests/qc-verdict.test.sh` lines 441-444.** The comment says "the live dossier on the base side of the move still fails" but only the un-archived send-back head asserts a failure.
+- **J5 (non-blocking, `/codeo:implement`'s; inherited from `main`'s step 0) — `SKILL.md` line 89 against 188-192 and 261.** `lock.sh verify --override` writes its `override:` line into the local `init.md` (`scripts/lock.sh` lines 25-26 and 154-155) while step 3 allows only `close.md` to be modified and step 4's commit holds the rename alone, so no commit on this path carries the line.
+
+Declined to judge by the reviewer, accepted: a staged rename left by an interruption between `git mv` and its commit (a step-3 stop, as in older releases); a `close.md` recording a different pull request number (close-02); the `waits:` line reading `review — dossier archived` before the pull request opens (the docs and triage now explain it; the label is `scripts/inflight.sh`'s, a recorded follow-up); the flaky `readme.test.sh`; pull requests opened outside `/codeo:close`.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-27 — Q1-Q2 raised (overlaps with #188 and #195) · cost: 1m · opus-5-5 255k in + 304k cached / 875 out
@@ -194,3 +231,4 @@ Each file was changed on `main` by `c7505a9 feat: identify the acting user stric
 - 2026-11-27 — round 2: Q3 answered; build true exit 0, tests/run.sh exit 0, 4 criteria (all met on the main path, criterion 2 not met on one older-plugin path), reviewer on opus; 1 blocking (G1), 7 non-blocking; back to /codeo:implement · cost: 9m · opus-5-5 416k in + 2.2M cached / 18k out · sonnet-5-5 24k in + 1.8M cached / 4k out
 - 2026-11-27 — round 3: sync with main conflicts (4 files, #195's c7505a9); stopped at step 2; back to /codeo:implement · cost: 0m · opus-5-5 394k in + 874k cached / 1k out · sonnet-5-5 30k in + 20k cached / 81 out
 - 2026-11-27 — round 4: sync clean, build true, review on opus; Q4 raised (a green PR can merge before its record commit); no verdict · cost: 5m · opus-5-5 554k in + 4.3M cached / 22k out · sonnet-5-5 22k in + 447k cached / 1k out
+- 2026-11-27 — round 4: Q4 answered (accept); build true exit 0, tests/run.sh exit 0, 4 criteria met, reviewer on opus; 0 blocking, 5 non-blocking (J1-J5); clear, forward to /codeo:close · cost: 0m · sonnet-5-5 1k in + 951k cached / 890 out
