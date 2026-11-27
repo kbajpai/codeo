@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Exercises hooks/live-signal.sh by feeding it the hook JSON a session would, against scratch git
-# repos and a local-path bare origin. The hook runs the real scripts/, so a stub `gh` that always
-# fails and CODEO_GITHUB_LOGIN keep every case off the network.
+# repos and a local-path bare origin. The hook runs the real scripts/, so a stub `gh` that answers only
+# `gh api user` (alice, a User) and the issue's assignees (none) keeps every case off the network.
 #
 #   live-signal.test.sh
 #       Exits non-zero and names the failing cases; prints "all cases passed" otherwise.
@@ -14,10 +14,36 @@ scratch_root=$(mktemp -d)
 trap 'rm -rf "$scratch_root"' EXIT
 export HOME="$scratch_root/home"
 mkdir -p "$HOME" "$scratch_root/bin"
-printf '#!/bin/sh\nexit 1\n' > "$scratch_root/bin/gh"
+cat > "$scratch_root/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+[[ ${1:-} == api ]] || { echo "gh-stub: only 'gh api' is stubbed, got: $*" >&2; exit 1; }
+shift
+query=
+path=
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -q) query=$2; shift 2 ;;
+        -X|--method|-f|-F) shift 2 ;;
+        -*) shift ;;
+        *) path=$1; shift ;;
+    esac
+done
+case $path in
+    user)
+        [[ ${GH_STUB_USER:-} != FAIL ]] || { echo "gh: 403" >&2; exit 1; }
+        json=${GH_STUB_USER:-'{"login":"alice","type":"User"}'} ;;
+    repos/*/issues/*)
+        [[ ${GH_STUB_ASSIGNEES:-} != FAIL ]] || { echo "gh: 500" >&2; exit 1; }
+        json=$(jq -nc --argjson a "${GH_STUB_ASSIGNEES:-[]}" \
+            '{number:1,title:"t",state:"open",closed_at:null,html_url:"u",body:"",labels:[],assignees:($a|map({login:.}))}') ;;
+    *) echo "gh-stub: no answer for $path" >&2; exit 1 ;;
+esac
+if [[ -n $query ]]; then jq -rc "$query" <<< "$json"; else printf '%s\n' "$json"; fi
+STUB
 chmod +x "$scratch_root/bin/gh"
 export PATH="$scratch_root/bin:$PATH"
-export CODEO_GITHUB_LOGIN=alice CODEO_MACHINE=testbox GIT_TERMINAL_PROMPT=0
+unset CODEO_GITHUB_LOGIN
+export CODEO_MACHINE=testbox GIT_TERMINAL_PROMPT=0
 unset CLAUDE_CODE_REMOTE CLAUDE_CODE_REMOTE_SESSION_ID
 unset CODEO_LIVE_REFRESH_SECONDS CODEO_LIVE_TTL_SECONDS CODEO_LIVE_PUSH_TIMEOUT
 export CODEO_LIVE_PUSH_TIMEOUT=3

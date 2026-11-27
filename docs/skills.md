@@ -60,8 +60,9 @@ The skill turns a filed issue into a place to work: a pushed branch carrying a d
 ### Reads and writes
 
 - Reads the GitHub issue, its board Status (`board.sh status`, when a board is configured), `.codeo/intake/<N>/issue.md` when there is one, the list of workflows already under way from `inflight.sh`, and the project's `init/host-workflow` overlay section when there is one.
+- Resolves who is acting before any claim, with `github.sh user whoami`: it refuses an unresolved login and an account that is not a person (a bot, an organization), and takes `CODEO_GITHUB_LOGIN` only in a hosted web session, as an `unverified` login that is compared with the owner and the assignees like any other. It records the login as the `| Owner |` row of `init.md`, on a fresh init and on a resume, and as the login of a resume line.
 - Writes the branch, pushed create-only through `claim.sh`, which is the claim; on a resume, one `resumed:` log line in `init.md`, pushed against the tip it saw.
-- Writes the issue's assignee, and its board Status from Ready to in progress through `board.sh`, when a board is configured.
+- Writes the issue's assignee, and its board Status from Ready to in progress through `board.sh`, when a board is configured. A failed `assignee-add` is recorded as an `assignee-add failed` line under `## Notes` of `init.md`, committed and pushed on its own, and reported in the closing message.
 - Writes `.codeo/<N>/init.md`, the adopted `.codeo/<N>/issue.md` and, when it is the first to need it, `.codeo/.gitignore`, all committed onto the branch.
 - Writes the lock: by default `lock.sh take local` writes it in this checkout from the pushed `init.md`; with a host workflow, wherever that workflow says.
 
@@ -92,6 +93,7 @@ The skill produces a reviewed planning artifact and never edits application code
 
 ### Reads and writes
 
+- Runs `lock.sh verify` at step 0, after the lock checks, and stops when the person acting is not the owner.
 - Reads `.codeo/<N>/init.md` and `issue.md`, the pages under the docs directory (and the wiki pages, with the `wiki` module), the plans under the plans directory, the invariants document when one is configured, the codebase, the project's overlay sections for this skill, and every other in-flight workflow's footprint through `inflight.sh` and `overlap.sh`.
 - Writes `<plansDir>/YYYY-MM-DD-<slug>.md` or `<docsDir>/<slug>.md`, and `.codeo/<N>/plan.md` (its questions, its `## Outcome`, and one `## Log` line per invocation), committed and pushed on every turn it writes it. The plan doc itself stays unstaged while it awaits the engineer's approval; the dossier does not.
 - Writes the leases on the exclusive resources its footprint names, through `intake.sh lease`.
@@ -124,6 +126,7 @@ The skill executes an already-approved plan; it does not plan, draft issues, or 
 
 ### Reads and writes
 
+- Runs `lock.sh verify` at step 0, after the lock checks, and stops when the person acting is not the owner.
 - Reads the committed plan file, `.codeo/<N>/init.md` and `plan.md`, `qc.md` or `close.md` when sent back, the codebase, the pages under the docs directory (and the wiki pages, with the `wiki` module) that the plan's documentation tasks name, the project's overlay sections for this skill, and every other in-flight workflow's footprint through `inflight.sh` and `overlap.sh`.
 - Takes the lease on the shared environment resource, when one is configured, at the first task that needs it, and records a wait when another issue holds it or has the turn, through `intake.sh lease` only. It takes it again before any round's hand-off when the change since the last deployed revision alters what the environment runs. It never releases it; that is `/codeo:qc`'s, at its clear verdict.
 - Writes application and test code, the documentation pages the plan names, and `.codeo/<N>/implement.md` (its questions, its `## Outcome`, and one `## Log` line per invocation), committed and pushed on every turn it writes it.
@@ -155,6 +158,7 @@ The skill is the gate between building and merging. It never fixes what it finds
 
 ### Reads and writes
 
+- Runs `lock.sh verify` at step 0, after the lock checks, and stops when the person acting is not the owner.
 - Reads the diff, the plan file, every other skill's dossier file, the pages under the docs directory (and the wiki pages, with the `wiki` module), the project's overlay sections for this skill, every other in-flight workflow's footprint through `inflight.sh` and `overlap.sh`, and the output of the suites it runs.
 - Writes `.codeo/<N>/qc.md` (its questions, its `## Outcome` rounds with the `#### Environment` block when the project has a shared environment, and one `## Log` line per invocation), committed and pushed on every turn it writes it. Nothing else.
 - Checks the lease on the shared environment resource, when one is configured, re-takes it only as its holder, and records no wait on it. It releases the lease at a clear verdict and only then, through `intake.sh lease release` when this issue holds it, with the script's output appended to the round.
@@ -188,10 +192,11 @@ The skill is the pipeline's last step. The workflow ends at the merge, not when 
 
 ### Reads and writes
 
+- Runs `lock.sh verify` first, after the lock checks and the role check, and stops with its one line when the person acting is not the owner (an override only on the engineer's own words).
 - Reads the lock, every dossier file (`qc.md`'s last round above all), and the pull request's state, reviews and checks on GitHub.
 - Writes `.codeo/<N>/close.md` (its questions, its `## Outcome` rounds and one `## Log` line per invocation), the commits carrying it and the archive moves, the pull request and its comments, and the clean base-branch merge it makes when the branch is behind, its one commit that is not a dossier commit. Nothing else.
 - Deletes `.codeo/active` (and clears the live signal with it, then sweeps the issue's `codeo-live/<issue>/*` branches on origin with `live.sh sweep`, which a hosted web session cannot delete itself) and the merged branch on the remote (or, on an abandon, the unmerged one, only when the engineer asks), and moves the dossier directory in and out of `.codeo/done/`. It is the only skill that may do any of these.
-- Releases every lease the issue holds at every exit (the merge, a stash, an abandon) and the environment at approval when it is still held. It takes the shared environment resource only for a put-back, when the issue no longer holds it, and releases it with the rest. It removes the issue's assignee on a stash or an abandon, after putting the environment back.
+- Releases every lease the issue holds at every exit (the merge, a stash, an abandon) and the environment at approval when it is still held. It takes the shared environment resource only for a put-back, when the issue no longer holds it, and releases it with the rest. On a stash or an abandon it removes the recorded owner (`lock.sh owner <N>`) from the issue's assignees, after putting the environment back. A legacy workflow records no owner: the stash then removes the verified caller (`user whoami`) only when `verify` passed without an override, and with an override it skips the removal and says so. It never removes a login that was not verified.
 - Moves the issue's board card through `board.sh`, with a board: In review when the pull request opens or is readied again, In progress on a send-back, Ready on a stash, Backlog on an abandon, Done once the merge is verified. Each move is part of its step, never a gate on it.
 
 ### Hand-offs and non-goals

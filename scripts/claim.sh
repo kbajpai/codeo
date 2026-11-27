@@ -63,13 +63,13 @@
 #            added that heading, and <n> is the heading's round number
 #         1  the branch or ref is missing
 #
-#   claim.sh --resume-line <issue> <branch> <repo> [<login>]
+#   claim.sh --resume-line <issue> <branch> <repo> <login>
 #       Reads origin/<branch> in <repo> (the caller fetches first), with the same two counts as
 #       --stash-live, and prints the one line `init` appends to init.md's ## Log (before its
 #       " · cost: …"): "- <today> — resumed: by <login> after the stash of <date>" or "… after the
 #       abandon of <date>" (by the last park's kind) while parks > resumes, else "- <today> —
-#       resumed: by <login> after a lost container". <today> is `date -u +%F`; <login> is "no
-#       login" when absent or empty; <date> is the committer date (%cs) of the newest commit on
+#       resumed: by <login> after a lost container". <today> is `date -u +%F`; <login> is required
+#       (a missing or empty one exits 1: a resume line never says "no login"); <date> is the committer date (%cs) of the newest commit on
 #       origin/<branch> that added a heading of that kind to .codeo/<issue>/close.md (the
 #       newest touching it, when none did). The writer and the reader of the line are this one
 #       file, so they cannot disagree.
@@ -250,10 +250,11 @@ if [[ $mode == stash-live ]]; then
 fi
 
 if [[ $mode == resume-line ]]; then
-    n=${1:?usage: claim.sh --resume-line <issue> <branch> <repo> [<login>]}
-    branch=${2:?usage: claim.sh --resume-line <issue> <branch> <repo> [<login>]}
-    repo=${3:?usage: claim.sh --resume-line <issue> <branch> <repo> [<login>]}
+    n=${1:?usage: claim.sh --resume-line <issue> <branch> <repo> <login>}
+    branch=${2:?usage: claim.sh --resume-line <issue> <branch> <repo> <login>}
+    repo=${3:?usage: claim.sh --resume-line <issue> <branch> <repo> <login>}
     login=${4:-}
+    [[ -n $login ]] || die '--resume-line needs the acting login (a resume line never says "no login")'
     ref="origin/$branch"
     git -C "$repo" rev-parse -q --verify "$ref^{commit}" >/dev/null || die "$ref does not exist in $repo"
     parks=$(count_lines "$repo" "$ref" ".codeo/$n/close.md" "$park_re")
@@ -264,7 +265,7 @@ if [[ $mode == resume-line ]]; then
     else
         after="a lost container"
     fi
-    echo "- $(date -u +%F) — resumed: by ${login:-no login} after $after"
+    echo "- $(date -u +%F) — resumed: by $login after $after"
     exit 0
 fi
 

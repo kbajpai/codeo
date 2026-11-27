@@ -82,8 +82,18 @@ is the container the message names.
    Don't refuse outright and don't reopen it — ask whether to reopen (the user's action, not
    yours), re-target another number, or proceed knowingly.
 
-   **Check nobody else has it.** An `assignees` entry other than
-   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" user login` is someone else's claim, and
+   **Resolve who you are, before any claim.** Run
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" user whoami`; it prints `<login>`, a tab and the
+   type (`User`, or `unverified`).
+   <!-- rule: init-11 -->
+   When `user whoami` exits 1, print its one `codeo:` line and stop: an unresolved login or a Bot
+   is never claimed for, and no assignee check is skipped anywhere below. The login is recorded as
+   the `| Owner | <login> |` row of `init.md`'s header table (after `| Branch |`), on a fresh init
+   and on a resume (an older `init.md` with no Owner row gets one then), is the last argument of `claim.sh --resume-line`, and is what `assignee-add`
+   adds. An `unverified` login (a web session) is recorded and compared like any other: an assignee other than the login stops it unless the engineer's override is recorded, and the lost-checkout resume needs the assignee to equal the login.
+
+   **Check nobody else has it.** An `assignees` entry other than the login `user whoami` printed
+   is someone else's claim, and
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh"` listing this issue on a pushed branch is
    someone's workflow already under way. Either one stops the skill, naming the person and branch,
    with one exception: `inflight.sh` listing this issue as `(working)` on any branch is not a
@@ -94,9 +104,8 @@ is the container the message names.
    `## Notes` in `init.md` verbatim — one line, `- <date> — override: "<the engineer's words>"` — in the
    dossier's first commit at step 9, or the resume's commit at step 6.
    `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Parallel workflows`.
-   When `github.sh user login` prints nothing (no token, no `$CODEO_GITHUB_LOGIN`), the assignee
-   comparison cannot run — say so and continue rather than stopping, since there is nothing to
-   compare against; the `inflight.sh` check still applies. `overlap.sh` has nothing to compare
+   An `unverified` login is compared with the assignee like any other, as said above, and the `inflight.sh`
+   check applies too. `overlap.sh` has nothing to compare
    yet — no branch, no footprint — so `init`'s check is `inflight.sh` alone, deliberately.
 
    **Check the board says it is Ready — when there is a board.** Whether one is configured is
@@ -193,12 +202,11 @@ is the container the message names.
      `/codeo:triage`, or by hand, if it is not.
      Exit 3 has two readings, each quoted from the script's line, and both are a lost-checkout
      resume only when the issue's assignee is
-     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" user login`: `has no stash` means no stash or
+     the login `user whoami` printed — an `unverified` login included: `has no stash` means no stash or
      abandon is live, and `already resumed — …` means the last stash or abandon was already
      resumed — by this engineer, when the assignee is them, whose checkout was then lost (the
      state `claim.sh --resume-line` writes as `after a lost container`). Any other assignee makes
-     either reading someone's running workflow: stop and quote the line. With no login there is no
-     assignee to compare, so stop and say so. Exit 1 means the branch or ref is missing: stop.
+     either reading someone's running workflow: stop and quote the line. Exit 1 means the branch or ref is missing: stop.
    - Any other exit (128, typically): origin did not answer. Stop and quote git's message. Step 5's
      `git fetch origin` normally fails first, so this is rare.
 
@@ -232,7 +240,8 @@ is the container the message names.
       <!-- rule: init-05 -->
       Write nothing else on that line: the script chose its wording, `--stash-live` counts it, and
       an engineer's override goes under `## Notes`, never on that line. `<login>` is what step 3's
-      `github.sh user login` printed; pass it empty when that printed nothing.
+      `github.sh user whoami` printed. On a resume also set the `| Owner |` row of `init.md`'s
+      header table to it (adding the row after `| Branch |` when an older `init.md` has none), in the same commit.
    4. Commit that file alone, staged by name, with the subject
       `docs(codeo): init dossier for #<N> — resumed` — on an exit-4 takeover the same commit also
       carries the engineer's override line under `## Notes`. Its log line is also what spends the
@@ -245,19 +254,17 @@ is the container the message names.
    from the script's line, run `git worktree remove --force <scratch>` and `git branch -D
    <branch>`, and write nothing else — no assignee, no card move. Exit 1 is a push failure of
    another kind; report git's message and stop. On exit 0, `git worktree remove <scratch>`, then
-   run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-add <N>` and, with a board,
+   run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-add <N> <login>` and, with a board,
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$IN_PROGRESS"` (a stash normally moved
    it back to Ready and an abandon to the backlog, but a failed move or a lost checkout may have
-   left it anywhere). Quote the line(s) it prints in this turn's output. A failure moving the card
+   left it anywhere). Quote the line(s) it prints in this turn's output. A failed `assignee-add` here is recorded as step 9 says (an `assignee-add failed` line under `## Notes`, its own commit, pushed, and reported in the closing message). A failure moving the card
    (refused in a web session, or a missing `project` scope) is reported — say to move `#<N>` to
-   `$IN_PROGRESS` by hand — and the claim still stands; go on to step 10 regardless. When
-   `github.sh user login` printed nothing at step 3, there is no login to add — skip the assignee
-   call and say so in this turn's output rather than stopping the skill. Any other checkout of
+   `$IN_PROGRESS` by hand — and the claim still stands; go on to step 10 regardless. Any other checkout of
    this branch the engineer still has open needs `git pull --ff-only` there, because the resume
    pushed a commit it does not have. If the pull is refused, that checkout has commits it never
    pushed: stop and name them (`git log origin/<branch>..`), and leave them to the engineer as
    above. The claim already stands — the resume line is pushed, and the assignee and the card
-   followed it where a login and the board allowed — so do not re-run `init`: reconcile that
+   followed it where the board allowed — so do not re-run `init`: reconcile that
    checkout's commits, then `git pull --ff-only` there. Then go on to step 10.
 
 7. **Draft the dossier.** Write `.codeo/<N>/init.md` in this checkout for the gate — the proposed
@@ -287,9 +294,8 @@ is the container the message names.
    `.codeo/` that no feature branch sees. Fill in `## Where this stands` with the branch and base
    SHA, and append the first `## Log` line —
    `- <date> — initialized: branch <branch> off <base> at <sha> · cost: <output of bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" init>`
-   (or `cost: unavailable`). When `github.sh user login` printed nothing back at step 3, there is
-   no login to add as assignee — add the **Claim** line to `## Outcome` now (below), since this
-   commit is the one place that fact can still be recorded.
+   (or `cost: unavailable`). Add the `| Owner | <login> |` row, the login step 3's `user whoami` printed, to
+   the header table, after `| Branch |`, in the dossier it drafts.
    <!-- rule: init-09 -->
    Commit `.codeo/.gitignore`, `.codeo/<N>/init.md`, and any adopted `issue.md` there, staged by
    name (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability` has the convention), with the subject
@@ -305,16 +311,15 @@ is the container the message names.
    report git's message and stop.
 
    Then `git worktree remove <scratch>` — the local `<branch>` stays, tracking `origin/<branch>`
-   (the push set its upstream) — and, only when a login was available at step 3, now that the push
-   has claimed the branch, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-add <N>`
-   — when it was not, the `## Outcome` already says so and there is nothing left to call. Finally,
+   (the push set its upstream) — and, now that the push has claimed the branch,
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-add <N> <login>`. Finally,
    with a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$IN_PROGRESS"` — the card
    move is the claim as the board shows it, as the assignee is on the issue. It sets the Status
    on every synced project (`board.projects` plus the gate project) whose board has the option,
    adding the issue there first when it is missing, leaving a card on any other project alone, printing one `board.sh: #<N> <old> → <new> on #<project> <title>`
-   line per project written. Quote those lines in this turn's output. The dossier is pushed by
-   now, so the outcome (those lines, or the failure the script reports) is reported here and at
-   step 10, not in the `## Log` line. A failure here (refused in a web session, or a missing
+   line per project written. A failed `assignee-add` is written as `- <date> — assignee-add failed: <git/gh's message>` under `init.md`'s `## Notes` (created when absent, before `## Outcome`), committed alone, staged by name, with the subject `docs(codeo): init dossier for #<N> — assignee-add failed`, and pushed; it is also reported in the closing message. The claim stands on the pushed branch. Quote those lines in this turn's output. The dossier is pushed by
+   now, so the board outcome (those lines, or the failure the script reports) is reported here and at
+   step 10, not in the `## Log` line (a failed `assignee-add` has its own `## Notes` commit above). A failure here (refused in a web session, or a missing
    `project` scope) is reported and the claim still stands — say to move `#<N>` to `$IN_PROGRESS`
    by hand, and continue rather than stopping; the branch, dossier and lock never wait on the
    board. With no board there is no call to make.
@@ -368,9 +373,7 @@ is the container the message names.
 ## The outcome
 
 `init.md`'s `## Outcome` is what every later step reads first, so it is the issue made
-workable — no design, no status field, with one exception: a trailing **Claim** line, written
-only when step 9 could not add the assignee for lack of a login. That is a fact recorded once,
-the way the table above it is, not a status the reader tracks across rounds.
+workable — no design, no status field.
 
 <!-- rule: init-08 -->
 Acceptance criteria are copied verbatim and never reworded: they are the standard `/codeo:qc`
@@ -395,9 +398,6 @@ judges against.
 
 **Open at intake.** What the issue itself left unresolved — history, frozen; see
 `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Intake questions are not dossier questions`.
-
-**Claim.** Present only when step 9 skipped the assignee call: "Skipped — no GitHub login
-available; run `github.sh issue assignee-add <N>` once one is present."
 ```
 
 The branch is what finds everything again after a lost context window, and after a lost machine
