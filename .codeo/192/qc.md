@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done. Q1 is answered; two blocking findings, F7 and F14, both `/codeo:implement`'s; the verdict is back to `/codeo:implement`.
+Round 3, done. No blocking finding: F7 and F14 are fixed, every criterion is met, the build and the full suite pass. The verdict is clear; the next step is `/codeo:close`. Non-blocking findings F15–F19 are in the round and under Notes.
 
 ## Questions
 
@@ -30,7 +30,7 @@ Restrict to the session's own project, as recommended. Given in the conversation
 
 ## Notes
 
-- Non-blocking, left for `/codeo:implement` to take or `/codeo:triage` to collect: F8–F13 of round 2.
+- Non-blocking, left for `/codeo:triage` to collect or a later change to take: F15–F19 of round 3 (an abbreviated `--am`, a quoted `-C`/`cd` target with a space, renames in the staged-set check, unlisted writes and the page's lists, per-call cost), and F13 of round 2.
 
 ## Outcome
 
@@ -152,8 +152,61 @@ Not findings: the reviewer's other points (`pull`, `branch`, `worktree` allowed;
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 3 — 2026-11-27
+
+**Sync.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main` (exit 0). `overlap.sh 192` and `overlap.sh --outside 192`: no output, exit 0. Code reviewed: `462bc41..37d6891`.
+
+**Scope.** `git diff origin/main...HEAD --stat`: 10 files, 1326 insertions, 1 deletion. `scope.sh origin/main HEAD` printed `scope: suite shell needed for unclassified paths:` for `.codeo/192/{implement,init,plan,qc}.md` and `CHANGELOG.md`, then `suite.shell=true`. No `deploy=` line: no environment is configured, so step 9 does not apply.
+
+**Build.** Suite `shell`, build `true`: `build-exit=0`.
+
+**Tests.** Suite `shell`, test `bash tests/run.sh`, run whole: `all cases passed`, `test-exit=0`. `bash tests/home-guard.test.sh` alone: `all cases passed` (18 case groups, among them `role_sh_only_in_the_project` and `bash_long_commands`).
+
+**Project rules.** `overlay.sh qc invariants-extra` and `qc wiki-rules`: exit 3 (none). No invariants file is configured.
+
+**Probes run here against the current hook** (scratch clones, `CODEO_DOCKERENV` and `CODEO_CONTAINERENV` pointed at missing files): in a home clone `Edit`, `Write`, `git commit` (with `a.txt` staged) and `git push` all deny, with the reason `codeo: this checkout's role is home, so project changes are not made here. File the issue with /codeo:issue, start it with 'codeo issue <N>', and work in its checkout. To allow it for this session, start Claude Code with CODEO_HOME_EDITS=allow.`; in an `issue:192` clone `Edit` and `git push` allow; `CODEO_HOME_EDITS=allow git push` and `CLAUDE_CODE_REMOTE=true git push` allow; a `Write` under `.codeo/intake/…` allows. An `Edit` and a `git -C` into an unrelated repository whose executable `role.sh` creates a marker file both allow and the marker does not appear. A 23 KB heredoc with no `git`, `LC_ALL=C.UTF-8`: 0.013 s (round 2: about 7 s at 31 KB).
+
+#### Acceptance criteria
+
+| # | Criterion | Settled by | Verdict |
+|---|---|---|---|
+| 1 | In home, Edit/Write, `git commit`, `git push` refused with the one-line reason; the same succeed in `issue:<N>` | `file_tools_refused_in_guarded_roles`, `file_tools_allowed_elsewhere`, `bash_git_writes_refused_in_home`, `bash_unguarded_roles`, `bash_without_gnu_sed`; the probes above | met |
+| 2 | Override lets the calls through; a session without it stays guarded | `override_and_fail_open`, `bash_unguarded_roles`; `CODEO_HOME_EDITS=allow git push` allows only through the environment; the command text cannot set it | met |
+| 3 | `/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup` still run in home, `.codeo/` writes included | `file_tools_allowed_elsewhere`, `bash_allowed_in_home`, `bash_judged_by_the_checkout_it_addresses`, `bash_codeo_commands_in_home`; the skills commit through `intake.sh` and `claim.sh`, which the guard does not see | met |
+| 4 | Hosted sessions and non-codeo projects unaffected | `file_tools_allowed_elsewhere` (hosted, a repository with no `role.sh`), `bash_unguarded_roles`, `role_sh_only_in_the_project` (another repository's `role.sh` is never run), `bash_long_commands` (a long command with no `git` returns within its bound) | met |
+| 5 | A test covers each criterion against a scratch clone; `bash tests/run.sh` passes | `tests/home-guard.test.sh`, 18 case groups; `bash tests/run.sh` → `all cases passed` | met |
+
+#### Documentation check
+
+`docs/home-checkout.md` `## The edit guard` and `CHANGELOG.md` `## Unreleased` describe the change in present tense, without issue numbers in the page text. The page now states which repositories are judged, the 16 KB limit, the bash 3.2 and BSD tools, the redirection and absolute-path forms, and the limits of F10 and F11. The flowchart has the project check; it has no node for the early exits (a command with no `git`, or over 16 KB), which is a gap in the picture, not a wrong statement. Statements that are not exact: the page says quoted `git -C` and `cd` targets are followed, which is false when the quoted target holds a space, `~` or `$VAR` (F16); "abbreviations of three letters or more" of `--amend` is exact for the code but git also accepts `--am` (F15); "`git commit` passes only when everything it would commit is under `.codeo/`" is not exact for a rename out of a project file (F17); the heredoc-body false refusal is listed under what the guard does not see (F18). The `CHANGELOG.md` bullet still matches.
+
+#### Independent review
+
+A fresh opus reviewer was given the acceptance criteria, the engineer's project-only decision and the diff range. It ran `bash tests/home-guard.test.sh` (`all cases passed`) and probed the hook in scratch clones. Its verdict, in plain text: ready to merge with fixes; every criterion is met and the project-only rule holds; `git commit --am` and a quoted `git -C` target with a space get through, and the commit check and the page's lists need small corrections.
+
+#### Questions this round
+
+None. Q1 was answered in round 2 and its fix is recapped below.
+
+#### Findings
+
+- **F7 (blocking in round 2) — fixed** by `e8142ce`; re-run above (0.013 s for 23 KB), and `bash_long_commands` passes.
+- **F14 (blocking in round 2) — fixed** by `4a202ce`; re-run above, and `role_sh_only_in_the_project` passes.
+- **F8, F9, F12 (non-blocking in round 2) — fixed** by `3f4ae2e`, `cc717d6`, `4829526`; **F10, F11 — documented** by `744ed1a`. F8's fix leaves F15 below.
+- **F15 — non-blocking, `/codeo:implement`'s.** `git commit --am -m x` is allowed in a home clone with only `.codeo/…` staged (reproduced here; `--amend` and `--ame` deny): git accepts `--am` as `--amend`, and the code refuses only abbreviations of three letters or more. Effect: the tip of the local base branch can be amended, which the guard exists to refuse. Not blocking: `--amend` written in full, and its abbreviations from `--ame`, are refused, so it is not reached by accident. Needed: refuse any unique prefix of `--amend` of two letters or more, and say so on the page.
+- **F16 — non-blocking, `/codeo:implement`'s.** A quoted `git -C` or `cd` target holding a space, `~` or `$VAR` is not judged: `git -C "<home with a space>" push` and `cd "<home with a space>" && git push` allow (reproduced here, home at `…/My Code/codeo-home`). `normalize_cmd` keeps the target's content but `read -ra` splits it at the space, and an unresolvable `-C` target drops the segment. The page says quoted targets are followed. Not blocking: a session in the project runs plain `git push`, and the form needs a quoted path to the same checkout with a space in it. Needed: judge by the project when the target cannot be resolved, or name it on the page.
+- **F17 — non-blocking, `/codeo:implement`'s** (reported by the reviewer, not reproduced here). The staged-set check uses `git diff --cached --name-only`, which lists only the destination of a rename, so `mv src/a.txt .codeo/a.txt; git stage -A; git commit -m x` passes and deletes `src/a.txt`; and with `diff.relative=true` a commit run from inside `.codeo/` lists paths relative to it. Needed: `--no-renames`, and an absolute root for the listing, in both calls.
+- **F18 — non-blocking, `/codeo:implement`'s** (reviewer's, not reproduced). Writes the guard neither refuses nor lists as unseen: `git stage` (a synonym of `add`), `update-index`, `update-ref`, `notes`, `sparse-checkout`, `clean`, `checkout -- <path>`, `branch -f`; a backtick command, `sudo`, `env`, `exec` or `nohup` before `git`, a redirection attached to the subcommand (`git push>/dev/null`) and an attached `git -C<dir>` are not seen. A quoted `.codeo` pathspec (`git add ".codeo/192/x"`) is refused. The page lists the heredoc-body refusal under what is not seen; it is a false refusal. `git stage` belongs with `add`; the rest is the page's list.
+- **F19 — non-blocking, `/codeo:implement`'s** (reviewer's measurements). Per-call cost: every Bash call runs `jq` three times, and any command containing the letters `git` (`github`, `.gitignore`) goes through `normalize_cmd` in every project; an 11 KB Python heredoc took about 0.28 s and 16 KB of `''` pairs about 1.4 s, under the 16 KB cap; stock bash 3.2 will be slower. Needed, if wanted: one `jq` for the three fields, an early return when the project has no `.devcontainer/scripts/role.sh`, and the `cwd` canonicalisation after the `git` test.
+- **F13 (non-blocking, round 2) — unchanged.** The stash listing, comments, heredoc bodies, `git clean` and `git branch -f` stay as the page says; the last two are the engineer's call.
+
+Not findings: the reviewer's declined points (`pull`, plain `checkout`/`switch`, `worktree` allowed; shell-level writes; `bash -c`, subshells, aliases, `--git-dir`, `.git/` writes; a separate clone of the project not judged, which is the engineer's rule; `commit -p`; whether `MultiEdit` exists; a `.codeo/` symlink; `jq` missing on a Mac) are documented limits or the engineer's choices. No issue was filed from this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-27 — qc round 1: back to implement, 2 blocking and 4 non-blocking findings · cost: 7m · opus-5-5 175k in + 2.5M cached / 28k out · sonnet-5-5 115k in + 303k cached / 1k out
 - 2026-11-27 — qc round 2 paused: Q1 raised, F7 blocking, build and suite pass · cost: 9m · opus-5-5 272k in + 1.9M cached / 25k out · sonnet-5-5 191k in + 660k cached / 4k out
 - 2026-11-27 — qc round 2: back to implement, 2 blocking (F7, F14) and 6 non-blocking findings; Q1 answered · cost: 10m · opus-5-5 272k in + 1.9M cached / 25k out · sonnet-5-5 199k in + 2.2M cached / 10k out
+- 2026-11-27 — qc round 3: clear, forward to close; no blocking finding, 5 non-blocking (F15–F19) · cost: 8m · opus-5-5 358k in + 3.1M cached / 37k out · sonnet-5-5 265k in + 610k cached / 3k out
