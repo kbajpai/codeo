@@ -8,11 +8,18 @@
 
 ## Where this stands
 
-Round 1, done. All five tasks of `docs/plans/2026-11-27-cleanup-removal-records-206.md` are built, each reviewed clean, and the whole-branch review approved. The build (`true`, the `shell` suite's `build`) exits 0. Next step: `/codeo:qc`.
+Round 2 (send-back from `qc.md` round 1): all four tasks of `docs/plans/2026-11-27-cleanup-removal-records-206-round-2.md` are built (commits `98e257b`, `9d0f40d`, `723abc7`, `b76c549`), each reviewed clean, and the whole-branch review approved. The build (`true`) exits 0. `overlap.sh 206` now prints one overlap not raised before, so Q1 is open and the round's `## Outcome` waits for it. Next step: answer Q1, then re-run `/codeo:implement`.
 
 ## Questions
 
-None.
+### Q1 — #204 overlaps on `tests/intake.test.sh`: proceed, sequence, or re-scope?
+
+**Why it matters:** round 2's footprint adds `scripts/intake.sh` and `tests/intake.test.sh`, and `overlap.sh 206` printed `204	tests/intake.test.sh` after the build. #204 (`chore/204-fix-codeo-close-opens-pr`, assignee kbajpai, step `qc`, last verdict round 3 — back to `/codeo:implement`) declares `glob:tests/**`; its branch has not changed `tests/intake.test.sh` or `scripts/intake.sh`, so the overlap is the declared glob only. Round 2 adds two cases to `tests/intake.test.sh` and one flag to `scripts/intake.sh`, so a conflict is unlikely unless #204 later edits the same file.
+
+**Options:** proceed and coordinate (recommended) · sequence after #204 · re-scope.
+
+**Answer:**
+
 
 ## Notes
 
@@ -44,3 +51,4 @@ None.
 ## Log
 
 - 2026-11-27 — round 1: five tasks built and reviewed, plan committed and pushed at the engineer's `Commit+Push` · cost: 38m · sonnet-5-5 528k in + 13.6M cached / 79k out
+- 2026-11-27 — round 2 built and reviewed; Q1 raised (overlap with #204 on tests/intake.test.sh), outcome waits · cost: 25m · sonnet-5-5 376k in + 13.2M cached / 55k out
