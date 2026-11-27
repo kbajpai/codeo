@@ -62,7 +62,7 @@ under_codeo_p() {
 # git_write_p <subcommand> <dir> <args…>: succeeds when that git invocation is a write that the
 # .codeo/ exemptions do not cover.
 git_write_p() {
-    local sub=$1 dir=$2 a path all_codeo=1 n=0 changed cluster_a=0 root skip=0
+    local sub=$1 dir=$2 a path all_codeo=1 n=0 changed cluster_a=0 root skip=0 o
     shift 2
     case $sub in
         push | merge | rebase | cherry-pick | revert | am | apply | reset | stash | tag) return 0 ;;
@@ -97,7 +97,9 @@ git_write_p() {
                     --amend | --only | -o | -i | --include | --) return 0 ;;
                     --all) cluster_a=1 ;;
                     --message | --file | --author | --reuse-message | --reedit-message) skip=1 ;;
-                    --*) ;;
+                    --*)
+                        o=${a#--}
+                        if [[ ${#o} -ge 3 ]] && [[ amend == "$o"* || include == "$o"* || only == "$o"* ]]; then return 0; fi ;;
                     -?*)
                         [[ $a == *a* ]] && cluster_a=1
                         [[ $a =~ [mFCc]$ ]] && skip=1 ;;

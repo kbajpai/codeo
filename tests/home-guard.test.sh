@@ -329,6 +329,17 @@ bcheck deny "$h" "git push" LC_ALL=C.UTF-8
 bcheck allow "$h" "${filler:0:17000}; git push" LC_ALL=C.UTF-8
 timed deny "${filler:0:16000}; git push"
 
+case_desc=bash_commit_abbreviated_options
+h=$(bhome ab1 codeo)
+for cmd in "git commit --amen -m x" "git commit --ame -m x" "git commit --amend -m x" "git commit --inc .codeo/192/init.md -m x" \
+    "git commit --incl .codeo/192/init.md -m x" "git commit --include .codeo/192/init.md -m x" "git commit --onl .codeo/192/init.md -m x" \
+    "git commit --only .codeo/192/init.md -m x"; do
+    bcheck deny "$h" "$cmd"
+done
+bcheck allow "$h" "git commit --all-x -m x"
+bcheck allow "$h" "git commit --message x"
+bcheck allow "$h" "git commit --no-verify -m x"
+
 case_desc=hooks_json_registers_the_guard
 hj="$plugin_root/hooks/hooks.json"
 reg=$(jq -r '[.hooks.PreToolUse[] | select(.matcher == "Edit|Write|NotebookEdit|Bash") | .hooks | select(length == 1) | .[0].command] | join("|")' "$hj")
