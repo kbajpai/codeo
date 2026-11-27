@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, stopped at step 2: the branch conflicts with `main` (#195 merged as `c7505a9`) in `CHANGELOG.md`, `docs/skills-inventory.md`, `tests/fixtures/skills-inventory.rules.sha256` and `tests/inventory.test.sh`. Back to `/codeo:implement` to merge and resolve.
+Round 4, stopped at step 10: the build passes, the independent review found no Critical issue, and one Important finding turns on intent (Q4: a green pull request can merge before its record commit lands). No verdict is written while Q4 is open; the rest of the round is below under `## Notes`.
 
 ## Questions
 
@@ -57,7 +57,27 @@ I recommend proceed and coordinate.
 **Answer:**
 Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
+### Q4 — A green pull request can now merge before its record commit lands. Accept the window, document recovery, or open as a draft?
+
+**Why it matters:** the independent review (opus) found that the new order trades a safety net for the fix. Before, the pull request stayed red (`qc-verdict` failed on the live dossier) until the single commit carrying both the archive and the record was pushed, so it could not merge without its record. Now the archive commit makes it green at once, and it is mergeable between `pr create` (step 5) and the push of the `— PR #<pr>` commit (step 7). If that push fails (the skill reports it and keeps the commit) or the session dies in between, and a reviewer or auto-merge then merges, the base branch's `.codeo/done/<N>/close.md` has no `#<number> <url>` line and nothing can add it afterwards (`close-09`: nothing is committed to the base branch after the merge). The next `/codeo:close` then stops at step 12 on a local commit the pull request never had, and `scripts/cleanup.sh` (lines 19 and 73) cannot prove the merge for that issue. Normally the window is seconds inside one run, an open pull request with no record is recovered by the next run (step 1's "resumed after `pr create`" row), and the issue itself prescribes recording the number "in a follow-up commit", so the window is part of the requested design; but the loss of the old fail-closed behaviour is the reviewer's one Important finding and the severity turns on how much you mind it.
+
+- **Accept the window (recommended).** Record it as a non-blocking finding (below) and verdict clear. Cost: a merged pull request without its record is unrecoverable by close and breaks `cleanup.sh` for that issue; the engineer reads close's report (which says the record push failed) and merges only after it lands.
+- **Document the recovery.** One more implement round adds to the close skill what to do when the pull request merged with no record (step 12 stops; the engineer records the number by hand and `cleanup.sh` is told). Cost: a full qc round again for a rare path.
+- **Open the pull request as a draft until the record lands.** Step 5 opens it as a draft and step 7 marks it ready after the push; a draft cannot merge. Cost: a design change that `/codeo:plan` owns (a new round of the plan), a `github.sh` call to mark ready, and the engineer's own `--draft` request would need to survive it.
+
+I recommend accepting the window.
+
+**Options:** accept the window (recommended) · document the recovery · open as a draft until the record lands · no preference, you pick.
+
+**Answer:**
+
 ## Notes
+Round 4 so far (round 3 stopped at the sync; this pass merged cleanly: `sync-main.sh --abort-on-conflict` printed `sync-main: the branch already contains origin/main`, exit 0; `overlap.sh 204` and `overlap.sh --outside 204` printed nothing; `scope.sh`: `suite.shell=true`, no `deploy=` line; build `true` exit 0). The full suite was started on `4e4c223`; its result is quoted in the round once Q4 is answered. Independent review (opus, `QC review:`) of `c7505a9..4e4c223`: no Critical; the merge resolution is correct (close-01 to close-17 once each in the skill and the inventory, count 17, hash fixture consistent, both CHANGELOG bullets kept); step 1's table is a partition; the reviewer found one Important finding (Q4) and these Minors, all non-blocking and `/codeo:implement`'s:
+
+- **J2** `skills/close/SKILL.md` lines 226-237: "step 3 sends nothing back there and the run goes on to steps 6-7" sits in the first conflict bullet while the bullets after it still say to commit `— conflicts with <base>` and "Hand off … and stop"; and it names only the "resumed after `pr create`" row although step 1 says step 3 sends nothing back whenever a pull request is open (the first-open-resumed row too).
+- **J3** lines 157 and 189: "the two resumed rows" is ambiguous, three rows carry "resumed"; read as including the first-open-resumed row, step 2 would look for `qc.md` under `done/<N>/`.
+- **J4** `tests/qc-verdict.test.sh` lines 441-444: the comment says "the live dossier on the base side of the move still fails" but only the un-archived send-back head asserts a failure.
+- **J5** (inherited from main) `skills/close/SKILL.md` line 89 against 188-192 and 261: `lock.sh verify --override` writes its `override:` line into the local `init.md` (`scripts/lock.sh` lines 25-26, 154-155), while step 3 allows only `close.md` to be modified and step 4's commit holds "the rename alone", so no commit on this path carries the line.
 
 - Filed nothing with `/codeo:issue`. F5 (below) concerns `scripts/inflight.sh`, which this change leaves alone; it is recorded as non-blocking rather than filed, because the cure is likely part of F4's wording fix.
 
@@ -172,3 +192,4 @@ Each file was changed on `main` by `c7505a9 feat: identify the acting user stric
 - 2026-11-27 — round 2: Q3 raised (#195, tests/identity.test.sh) · cost: 0m · opus-5-5 333k in + 29k cached / 556 out
 - 2026-11-27 — round 2: Q3 answered; build true exit 0, tests/run.sh exit 0, 4 criteria (all met on the main path, criterion 2 not met on one older-plugin path), reviewer on opus; 1 blocking (G1), 7 non-blocking; back to /codeo:implement · cost: 9m · opus-5-5 416k in + 2.2M cached / 18k out · sonnet-5-5 24k in + 1.8M cached / 4k out
 - 2026-11-27 — round 3: sync with main conflicts (4 files, #195's c7505a9); stopped at step 2; back to /codeo:implement · cost: 0m · opus-5-5 394k in + 874k cached / 1k out · sonnet-5-5 30k in + 20k cached / 81 out
+- 2026-11-27 — round 4: sync clean, build true, review on opus; Q4 raised (a green PR can merge before its record commit); no verdict · cost: 5m · opus-5-5 554k in + 4.3M cached / 22k out · sonnet-5-5 22k in + 447k cached / 1k out
