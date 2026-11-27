@@ -48,7 +48,7 @@ curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bas
 It installs the latest release, which is the highest `vX.Y.Z` tag of the repository. Claude Code sessions that are already open need a restart to load the plugins. It prints one `install:` line per step, between the lines `claude` prints itself.
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/obra/superpowers-marketplace.git
 Refreshing marketplace cache (timeout: 120s)…
 Cloning repository (timeout: 120s): https://github.com/obra/superpowers-marketplace.git
@@ -59,13 +59,13 @@ Installing plugin "superpowers@superpowers-marketplace"...✔ Successfully insta
 install: superpowers installed (user scope)
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/kbajpai/codeo.git
 Refreshing marketplace cache (timeout: 120s)…
-Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.10)
+Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.11)
 Clone complete, validating marketplace…
 Cleaning up old marketplace cache…
 ✔ Successfully added marketplace: codeo (declared in user settings)
 Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: user)
-install: codeo v1.0.10 installed (user scope)
-install: done - codeo v1.0.10, user scope, superpowers 7.0.2
+install: codeo v1.0.11 installed (user scope)
+install: done - codeo v1.0.11, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -74,10 +74,10 @@ install: restart any Claude Code sessions already open to load the plugins
 Run it again and nothing changes:
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 install: superpowers already installed (user scope), left alone
-install: codeo v1.0.10 already installed (user scope)
-install: nothing changed - codeo v1.0.10, user scope, superpowers 7.0.2
+install: codeo v1.0.11 already installed (user scope)
+install: nothing changed - codeo v1.0.11, user scope, superpowers 7.0.2
 ```
 
 `claude plugin list` shows what is installed:
@@ -86,7 +86,7 @@ install: nothing changed - codeo v1.0.10, user scope, superpowers 7.0.2
 Installed plugins:
 
   ❯ codeo@codeo
-    Version: 1.0.10
+    Version: 1.0.11
     Scope: user
     Status: ✔ enabled
 
@@ -98,10 +98,10 @@ Installed plugins:
 
 ### Options
 
-`--version` installs a release other than the latest (`v1.0.9`, or `1.0.9`). The installer checks the tag exists before it changes anything. Asking for a different version than the one installed replaces it; [docs/updating.md](docs/updating.md) shows what that prints, including a downgrade:
+`--version` installs a release other than the latest (`v1.0.10`, or `1.0.10`). The installer checks the tag exists before it changes anything. Asking for a different version than the one installed replaces it; [docs/updating.md](docs/updating.md) shows what that prints, including a downgrade:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.9
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.10
 ```
 
 `--scope project` installs both plugins for one project instead of for you. Run it inside the project's git repository (any folder in it works); it writes the project's `.claude/settings.json`:
@@ -111,7 +111,7 @@ curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bas
 ```
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/obra/superpowers-marketplace.git
 Refreshing marketplace cache (timeout: 120s)…
 Cloning repository (timeout: 120s): https://github.com/obra/superpowers-marketplace.git
@@ -122,13 +122,13 @@ Installing plugin "superpowers@superpowers-marketplace"...✔ Successfully insta
 install: superpowers installed (project scope)
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/kbajpai/codeo.git
 Refreshing marketplace cache (timeout: 120s)…
-Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.10)
+Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.11)
 Clone complete, validating marketplace…
 Cleaning up old marketplace cache…
 ✔ Successfully added marketplace: codeo (declared in project settings)
 Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: project)
-install: codeo v1.0.10 installed (project scope)
-install: done - codeo v1.0.10, project scope, superpowers 7.0.2
+install: codeo v1.0.11 installed (project scope)
+install: done - codeo v1.0.11, project scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -143,7 +143,7 @@ Commit the file it wrote. This is its content (`jq -S . .claude/settings.json`),
   "extraKnownMarketplaces": {
     "codeo": {
       "source": {
-        "ref": "v1.0.10",
+        "ref": "v1.0.11",
         "repo": "kbajpai/codeo",
         "source": "github"
       }
@@ -269,7 +269,7 @@ init: ok config: .codeo/config.json written
 init: ok suite: api
 init: ok suite: web
 init: ok suite: k8s
-init: ok config: plugin pin v1.0.10 (the container installs it)
+init: ok config: plugin pin v1.0.11 (the container installs it)
 init: ok containers: 22 written, 1 kept
 ok config: config.json is valid
 ok schema: supported (plugin understands up to 1)
@@ -601,7 +601,7 @@ fail containers: differ from the templates: .devcontainer/codeo-container.sh; re
 **`its source doesn't match its extraKnownMarketplaces entry`.** Adding the codeo marketplace at a second tag by hand fails, because the marketplace is already added at the first:
 
 ```
-$ claude plugin marketplace add kbajpai/codeo@v1.0.10
+$ claude plugin marketplace add kbajpai/codeo@v1.0.11
 Adding marketplace…✘ Failed to add marketplace: Cannot add marketplace "codeo": its source doesn't match its extraKnownMarketplaces entry in user or managed settings; add it from the source that entry lists, or change the entry.
 ```
 
@@ -614,15 +614,15 @@ Run the install command instead, which removes the marketplace and adds it at th
 Run the install command again. With no `--version` it installs the latest release. If that differs from what you have, it replaces codeo: one machine holds one codeo version, so the replace removes the codeo marketplace, which uninstalls codeo at every scope on the machine, and installs the new release at the scope you asked for. A plain run installs it at user scope, for you; `--scope project` installs it for the project; `--version <tag>` picks a release, and moving to an older one also replaces codeo ([docs/updating.md](docs/updating.md)):
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.9 -> v1.0.10 (user scope)
-install: done - codeo v1.0.10, user scope, superpowers 7.0.2
+install: codeo v1.0.10 -> v1.0.11 (user scope)
+install: done - codeo v1.0.11, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
