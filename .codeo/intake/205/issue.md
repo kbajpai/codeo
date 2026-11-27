@@ -1,4 +1,4 @@
-# Issue new-190-192-leftovers — issue
+# Issue #205 — issue
 
 ## Where this stands
 
@@ -68,8 +68,9 @@ Setup wizard and container templates (#190):
 
 ## Outcome
 
-Pending approval.
+Approved by the engineer and filed as #205.
 
 ## Log
 
 2026-11-27 — draft written from triage run 12 Q1 and Q2, consolidated into one issue at the engineer's request
+2026-11-27 — approved and filed as #205
