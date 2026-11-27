@@ -141,18 +141,52 @@ step_contains "with no qc round line any clear round passes" 2 'any clear round 
 step_contains "the merge check lists conflicted files by name" 3 'git merge-tree --write-tree --name-only origin/<base> HEAD'
 step_contains "the conflict log follows the first parent" 3 "git log --first-parent --format='%h %s'"
 
-# Step 5: the record follows a first-open conflict round.
-step_contains "the record goes in as the next round after a conflict round" 5 'next `### Round <n>`'
-# Step 5: the dossier forms docs/dossier.md documents and the dossier checker reads.
-step_contains 'the opened round'\''s date is its first line' 5 'In the `— pull request opened` round, the date is the round'\''s first line, beneath the heading,'
-step_contains 'the opened round records #number html_url' 5 'and the pull request is the line `#<number> <html_url>`, from the two fields `pr create`'
-step_contains 'the opened round writes no send-back parenthesis' 5 'It writes no send-back parenthesis, even'
-step_contains 'a return from review is a pull request updated round' 5 'A return from review is headed `### Round <n> — pull request updated`, with the date as its'
-step_contains 'the updated round names the review round on the next line' 5 'first line and, on the next line, `(send-back from close.md round <m>)` naming the review round'
-step_contains 'pull request opened heads exactly one round' 5 '`— pull request opened` heads exactly one round'
+# Step 6: the record follows a first-open conflict round.
+step_contains "the record goes in as the next round after a conflict round" 6 'next `### Round <n>`'
+# Step 6: the dossier forms docs/dossier.md documents and the dossier checker reads.
+step_contains 'the opened round'\''s date is its first line' 6 'In the `— pull request opened` round, the date is the round'\''s first line, beneath the heading,'
+step_contains 'the opened round records #number html_url' 6 'and the pull request is the line `#<number> <html_url>`, from the two fields `pr create`'
+step_contains 'the opened round writes no send-back parenthesis' 6 'It writes no send-back parenthesis, even'
+step_contains 'a return from review is a pull request updated round' 6 'A return from review is headed `### Round <n> — pull request updated`, with the date as its'
+step_contains 'the updated round names the review round on the next line' 6 'first line and, on the next line, `(send-back from close.md round <m>)` naming the review round'
+step_contains 'pull request opened heads exactly one round' 6 '`— pull request opened` heads exactly one round'
 
-# Step 6: a project's first close has no .codeo/done/ yet, and git mv will not create it.
-step_order "the archive directory is created before the move" 6 'mkdir -p .codeo/done' 'git mv .codeo/<N> .codeo/done/<N>'
+# Step 4: archive before the pull request. A project's first close has no .codeo/done/ yet, and git mv will not create it.
+step_order "the archive directory is created before the move" 4 'mkdir -p .codeo/done' 'git mv .codeo/<N> .codeo/done/<N>'
+step_contains "the archive commit is named archived" 4 '— archived'
+step_contains "the archive subject names the dossier close" 4 'docs(codeo): close dossier for #<N> — archived'
+step_contains "a failed archive push is a stop" 4 'A failed push is a stop'
+step_contains "no pull request opens on a live dossier" 4 'no pull request is opened on a head that still carries the live dossier'
+must_contain "close-17 is placed" '<!-- rule: close-17 -->'
+text_order "the archive push comes before pr create" "$(step 4)$(step 5)" 'git push' 'pr create'
+if [[ $(step 4) == *'github.sh" pr create'* ]]; then fail "step 4 runs pr create — the archive step must open nothing"; fi
+grep -B1 -F '4. **Archive' "$skill" | head -n1 | grep -qF '<!-- rule: close-17 -->' || fail "close-17 is not directly above step 4"
+must_contain "whether a round records the pull request is read from HEAD" 'Whether a round in `close.md` records this pull request is read from `HEAD`'
+step_contains "the archive-push row runs steps 2, 3 and 5 onward" 1 'steps 2, 3 and 5 onward'
+step_contains "the pr-create row runs steps 2–3, then 6–8" 1 'steps 2–3, then 6–8'
+step_contains "the first open resumed row runs 2 and 3, then 6, 4, 7 and 8, step 5 skipped" 1 'steps 2 and 3, then 6, 4, 7 and 8, in that order, step 5 skipped'
+step_contains "the un-archiving send-back at step 3 is for a dossier archived with no pull request" 1 'un-archives in its own send-back commit only when no pull request exists yet'
+step_contains "with a pull request open, step 3 sends nothing back and step 11 does" 1 'when a pull request is open, step 3 sends nothing back and step 11 does, from the next run'
+step_contains "step 3 names both resumed rows for the close.md exception" 3 'on either resumed row'
+step_contains "an open pull request's conflict is step 11's send-back" 3 "a conflict is"
+step_contains "step 3 sends nothing back on an open pull request" 3 "step 11's send-back instead: step 3 sends nothing back there"
+step_contains "step 3 goes on to steps 6-7 on an open pull request" 3 "and the run goes on to steps 6-7"
+if step 1 | grep -qF 'a send-back round with no record is a return from review'; then fail "step 1 still calls a send-back round with no record a return from review"; fi
+if step 1 | grep -qF 'round at all'; then fail "step 1 still keys the first open resumed on there being no send-back round at all"; fi
+step_contains "no round records the pull request: a first open resumed, whatever other rounds exist" 1 'or no round records it, whatever other rounds exist'
+step_contains "a conflict round with no record predates the pull request" 1 'a `— conflicts with <base>` round with no record predates the pull request'
+step_contains "only a recorded pull request followed by a send-back round is a return from review" 1 'a round records this pull request and a `— review feedback` or `— conflicts with <base>` round comes after it'
+step_contains "the prose reads the first open resumed from the record" 1 'is the open pull request with the dossier at `.codeo/<N>/` and no round recording it'
+step_contains "a conflict round before the pull request does not make a return from review" 1 'a conflict round from before the pull request existed does not make a return from review'
+
+# Steps 5-7: open, record, commit the record.
+step_contains "the pull request is opened in step 5" 5 'pr create'
+step_contains "the record is the number and url" 6 '#<number> <html_url>'
+step_contains "the record commit is PR-subjected" 7 '— PR #<pr>'
+
+# Step 1: the two rows the reorder adds to the phase table.
+step_contains "a resumed archive push is a phase row" 1 'resumed after the archive push'
+step_contains "an open pull request with no recorded round is a phase row" 1 'no round in `close.md` records this pull request'
 
 # Step 7: the review-return comment body is written outside the tree.
 step_order "the review-return comment body is a mktemp file" 7 'pr comment <PR> <body-file>' 'mktemp'
@@ -273,7 +307,7 @@ step_contains "the stash row excludes a merged pull request" 1 'on any pull requ
 step_contains "close-04 names step 9's merge as its one exception" 3 'bar the clean base-branch merge step 9 makes'
 step_contains "a return from review pulls an Update-branch merge first" 3 'so nothing is committed on a stale tip'
 step_contains "diverged from upstream is a stop" 3 'Ahead and behind both is a stop'
-step_contains "the first-open record has its own round heading" 5 '### Round <n> — pull request opened'
+step_contains "the first-open record has its own round heading" 6 '### Round <n> — pull request opened'
 step_contains "a first open resumed keeps the PR subject" 7 'a first open resumed keeps the `— PR #<pr>` subject'
 step_contains "the review-return comment is conditional on a review round" 7 'a review round in `close.md`, not a first open resumed'
 step_contains "the watch after an approval ends on the merge only" 8 "jq -e '.state != \"open\"' >/dev/null"
@@ -308,11 +342,11 @@ step_order "the failed send-back push is checked before routing" 2 'Before that 
 step_contains "a failed send-back push is never routed to qc" 2 'would let a clear round on unchanged code pass the review'
 step_contains "close-04 keeps this skill's own modified close.md" 3 'The one exception is this skill'"'"'s own dossier'
 step_contains "a staged rename is still a stop" 3 'A staged rename, or any other path, is still a stop.'
-step_contains "an existing PR-opened round is not duplicated" 3 'step 5 adds no second `— pull request opened` round'
+step_contains "an existing PR-opened round is not duplicated" 3 'step 6 adds no second `— pull request opened` round'
 step_contains "only this skill's own commits ahead are pushed" 3 'they are pushed only when each'
 step_contains "unjudged commits ahead route to qc" 3 '`/codeo:qc` never judged: name it, stop, and route to `/codeo:qc`'
 step_contains "the conflict send-back push has a failure path" 3 'reported loudly and the commit kept, and there is no hand-off until it lands'
-step_contains "a resumed first open records from the lookup" 5 "(on a first open resumed, from step 1's lookup)"
+step_contains "a resumed first open records from the lookup" 6 "(on a first open resumed, from step 1's lookup)"
 step_contains "the review-return comment waits for the push" 7 'only once the push has landed'
 step_contains "a re-run into Phase 2 posts the review-return comment" 7 'a re-run into Phase 2 never skips it'
 step_contains "step 9 pushes only this skill's own commits" 9 'only when each is this skill'"'"'s own'

@@ -112,19 +112,30 @@ is the container the message names.
    | What the facts say | Phase |
    |---|---|
    | `--stash`, or the engineer parking the work, or `HEAD`'s `close.md` ends in a `— stashed` round while the lock is held — on any pull request not merged | → **Stash** |
-   | No pull request for the branch (`number` is null) | → **Phase 1 — open** |
+   | No pull request for the branch (`number` is null), dossier at `.codeo/<N>/` | → **Phase 1 — archive, then open** |
+   | No pull request, dossier under `.codeo/done/<N>/` at `HEAD` | → **Phase 1, resumed after the archive push** — run steps 2, 3 and 5 onward (step 4 is skipped: the archive is pushed) |
+   | `state` is `open`, dossier under `.codeo/done/<N>/`, no round in `close.md` records this pull request | → **Phase 1, resumed after `pr create`** — run steps 2–3, then 6–8 (steps 4–5 are skipped): record it from this lookup (step 6) and commit and push it (step 7), then hand off (step 8) |
    | `state` is `open`, dossier under `.codeo/done/<N>/` | → **Phase 2 — waiting** |
-   | `state` is `open`, dossier back at `.codeo/<N>/` | → **Phase 1 — return from review** |
+   | `state` is `open`, dossier at `.codeo/<N>/`, and either a round records this pull request and no `— review feedback` or `— conflicts with <base>` round comes after it, or no round records it, whatever other rounds exist (a `— conflicts with <base>` round with no record predates the pull request) | → **Phase 1, first open resumed** by an older plugin or a pull request opened by hand — step 5 skipped; steps 2 and 3, then 6, 4, 7 and 8, in that order, step 5 skipped (the verdict gate and the tree and conflict checks still run), archive and record in one commit |
+   | `state` is `open`, dossier at `.codeo/<N>/`, a round records this pull request and a `— review feedback` or `— conflicts with <base>` round comes after it (the dossier is back from a send-back) | → **Phase 1 — return from review** |
    | `state` is `closed` and `merged_at` is set | → **Phase 3 — clean up** |
    | `state` is `closed` and `merged_at` is empty, or `HEAD`'s `close.md` ends in a `— abandoned` round while the lock is held | → **Closed unmerged** |
+
+   The table is read top to bottom and the first row that fits wins, so an open pull request with the
+   dossier under `.codeo/done/<N>/` is Phase 2 once a round in `close.md` records it.
 
    Where the dossier sits is read from `HEAD`, the committed tree —
    `git ls-tree -d --name-only HEAD .codeo/<N> .codeo/done/<N>` — never from the working tree:
    a rename staged but never committed is not an archive, and origin still carries the live dossier.
-   An open pull request with the dossier at `.codeo/<N>/` and no review round in `close.md` — no
-   `— review feedback` or `— conflicts with <base>` round after the one recording the pull request —
-   is the first open resumed, not a return from review: the pull request exists, so step 4 is
-   skipped, and steps 5–7 record and archive it as a first open. A merged pull request cannot be
+   Whether a round in `close.md` records this pull request is read from `HEAD` too: a round that
+   exists only in the working tree — step 6 wrote it and an interruption came before step 7 committed it —
+   counts as not recorded. That run takes the "resumed after `pr create`" row, step 3 keeps the modified
+   `.codeo/done/<N>/close.md` as it stands, step 6 adds no second round, and step 7 commits it.
+   The first-open-resumed row is the open pull request with the dossier at `.codeo/<N>/` and no round recording it
+   in `close.md`, or a recording round with no `— review feedback` or `— conflicts with <base>` round after it;
+   a conflict round from before the pull request existed does not make a return from review. That is the first open resumed, not a return from review: the pull
+   request exists, so step 5 is skipped, and the archive rides in step 7's one commit with the record. A conflict found at step 3
+   un-archives in its own send-back commit only when no pull request exists yet (the "resumed after the archive push" row), as step 11 does; when a pull request is open, step 3 sends nothing back and step 11 does, from the next run. A merged pull request cannot be
    stashed or abandoned: on `--stash`, or a request to abandon, with `merged_at` set, say so, and
    Phase 3 runs instead. A `close.md` at `HEAD` whose last round is `— stashed` (or `— abandoned`)
    while the lock is held is an interrupted park, which this run finishes — with or without
@@ -142,8 +153,8 @@ is the container the message names.
 
 ## Phase 1 — open the pull request
 
-2. **The verdict is clear.** Read the latest `### Round <n>` in `.codeo/<N>/qc.md`'s `## Outcome`
-   and its last bold `**Verdict: …**` or `**Routing: …**` span, the way `qc-verdict.sh` reads it:
+2. **The verdict is clear.** Read the latest `### Round <n>` in `qc.md`'s `## Outcome`
+   (under `.codeo/<N>/`, or `.codeo/done/<N>/` on the two resumed rows of step 1's table) and its last bold `**Verdict: …**` or `**Routing: …**` span, the way `qc-verdict.sh` reads it:
    only that span counts, and the clear form is ``**Verdict: clear — forward to `/codeo:close`.**``.
    A clear verdict — no blocking finding — is the precondition. No `qc.md`, no round, or anything
    other than clear stops this skill: name exactly what is outstanding, route back to `/codeo:qc`,
@@ -175,9 +186,9 @@ is the container the message names.
 3. **The tree is clean and pushed.**
    <!-- rule: close-04 -->
    `git status --porcelain` prints nothing. The one exception is this skill's own dossier:
-   `.codeo/<N>/close.md` modified in place and nothing else — answers the engineer wrote in the
+   `.codeo/<N>/close.md` — or `.codeo/done/<N>/close.md`, on either resumed row — modified in place and nothing else — answers the engineer wrote in the
    file, or a round an interrupted invocation wrote — is kept as it stands and goes into this
-   step's next dossier commit; step 5 adds no second `— pull request opened` round when one already
+   step's next dossier commit; step 6 adds no second `— pull request opened` round when one already
    records this pull request's number. A staged rename, or any other path, is still a stop.
    Anything else it prints — uncommitted code, a stray file — stops the skill and asks the engineer
    what it is: this skill commits its own dossier and
@@ -203,13 +214,19 @@ is the container the message names.
    each conflicting file by name, one per line, up to a blank line and git's messages. Any other
    exit is a stop — report what git printed. A conflict is a send-back to `/codeo:implement`, the same as
    review feedback:
-   - Add `### Round <n> — conflicts with <base>` to `close.md`'s `## Outcome` — the next round
+   - On a resume after the archive push (no pull request yet), un-archive first: `git mv .codeo/done/<N> .codeo/<N>`, staged
+     and committed with the round below, exactly as step 11 does. Then add
+     `### Round <n> — conflicts with <base>` to `close.md`'s `## Outcome` (under `.codeo/<N>/`) — the next round
      after the highest `### Round` already there, or `### Round 1` when there is none — with the
      date as its first line, then each conflicting file and the changes on `<base>` that touched it
      (`git log --first-parent --format='%h %s' $(git merge-base origin/<base> HEAD)..origin/<base> -- <file>`,
      which lists the merges and direct commits on `<base>` itself; their subjects usually carry the
      pull request number), then the `qc round at review: <k>` line
      close-03 above requires.
+     When a pull request is already open (the "resumed after `pr create`" row) a conflict is
+     step 11's send-back instead: step 3 sends nothing back there and the run goes on to steps 6-7
+     (record it and push). The next run's step 9 finds `CONFLICTING` and goes to step 11, which
+     un-archives and writes the round.
    - Append this invocation's `## Log` line, ending ` · cost: ` with what
      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints.
    - Commit `close.md`, staged by name, with the subject
@@ -231,7 +248,25 @@ is the container the message names.
    `overlap: skipping #<M>'s changed paths` warning with exit 0 is quoted to the engineer, and the
    step carries on with that workflow's footprint alone.
 
-4. **Open the pull request** — or, on a return from review, skip this: the pull request exists, and
+<!-- rule: close-17 -->
+4. **Archive the dossier, before the pull request opens.** `mkdir -p .codeo/done`, then
+   `git mv .codeo/<N> .codeo/done/<N>` — the files are tracked, so git records a rename. The
+   `mkdir` is for a project's first close: `git mv` will not create a missing destination
+   directory, and git tracks no empty one, so `.codeo/done/` exists only once something has been
+   archived into it. The archive reaches `<base>` with the merge, which is the only way it can:
+   nothing is committed to the base branch after the merge. Archive and push before opening the
+   pull request: the head the pull request opens on carries no live dossier, so the first
+   `qc-verdict` run passes, since that check fails closed on a live dossier.
+
+   A first open commits the rename alone, staged by name, with the subject
+   `docs(codeo): close dossier for #<N> — archived`, and runs `git push`. A failed push is a stop:
+   report what git printed, keep the commit, and open nothing —
+   no pull request is opened on a head that still carries the live dossier; the next invocation
+   finds the dossier under `.codeo/done/<N>/` and step 1 says where it resumes. On a return from review, or when a pull
+   request is already open on the live dossier (step 1's older-plugin row), the rename is only
+   staged here and goes into step 7's single commit.
+
+5. **Open the pull request** — or, on a return from review, skip this: the pull request exists, and
    the push at step 7 updates it.
    - **Title:** from the issue, in the conventional-commits form the repository's history already
      uses — read `git log --format=%s -20 origin/<base>` and match its types and scopes.
@@ -251,10 +286,10 @@ is the container the message names.
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr create <title> <body-file> <branch> "$BASE"`.
    When the engineer asks for a draft, put `--draft` before the title; otherwise the pull request
    opens ready for review.
-   It prints `{number, html_url}`; those are what step 5 records. A non-zero exit is a stop: report
+   It prints `{number, html_url}`; those are what step 6 records. A non-zero exit is a stop: report
    its one line, and nothing below runs.
 
-5. **Record it.** Write `close.md`'s `## Outcome` under `### Round <n> — pull request opened` —
+6. **Record it.** Write `.codeo/done/<N>/close.md`'s (`.codeo/<N>/close.md` in step 1's older-plugin row, which step 4 then moves) `## Outcome` under `### Round <n> — pull request opened` —
    `### Round 1` when the outcome is empty, otherwise the next after the highest `### Round`
    already there: the pull request's number and URL as the
    response printed them (on a first open resumed, from step 1's lookup), not reconstructed; the `qc.md` round and verdict it went out on; any
@@ -281,27 +316,21 @@ is the container the message names.
    Append one `## Log` line: the date, what this invocation did, the board result, then ` · cost: `
    with what `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints.
 
-6. **Archive the dossier.** `mkdir -p .codeo/done`, then `git mv .codeo/<N> .codeo/done/<N>` —
-   the files are tracked, so git records a rename. The `mkdir` is for a project's first close:
-   `git mv` will not create a missing destination directory, and git tracks no empty one, so
-   `.codeo/done/` exists only once something has been archived into it. The archive reaches `<base>` with the merge, which is the only way it can:
-   nothing is committed to the base branch after the merge. It is also what lets the `qc-verdict`
-   check pass, since that check fails closed on a live dossier.
-
-7. **Commit and push.** One commit carrying `close.md` and the rename, staged by name — the
-   rename `git mv` staged, and `.codeo/done/<N>/close.md` — with the subject
+7. **Commit and push.** One commit carrying `.codeo/done/<N>/close.md`, staged by name — and, on a
+   return from review or a pull request opened on the live dossier, the rename `git mv` staged at
+   step 4 with it, since a first open archived and pushed it already — with the subject
    `docs(codeo): close dossier for #<N> — PR #<pr>` (`— round <n>` on a return from review, and
    only then: a first open resumed keeps the `— PR #<pr>` subject;
    `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Durability`). Then `git push`; the open pull request
    picks it up. A failed push is reported loudly and the commit kept: the pull request does not
-   carry the archive until it lands, and step 9's first check pushes it on the next invocation. On
+   carry the record until it lands, and step 9's first check pushes it on the next invocation. On
    a return from review — a review round in `close.md`, not a first open resumed — also leave one
    comment on the pull request, only once the push has landed (after a failed push, step 9 posts
    it when its first check pushes the `— round <n>` commit; a re-run into Phase 2 never skips it) —
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr comment <PR> <body-file>` — listing,
    for each review point, what changed, quoted from `implement.md`'s latest round, so the reviewer
    does not have to diff to find out. The body file is a `mktemp` file outside the working tree,
-   as at step 4, so the tree stays clean for the next invocation's step 3.
+   as at step 5, so the tree stays clean for the next invocation's step 3.
 
 8. **Hand the pull request to the engineer, and keep the lock.** Report its URL and say plainly
    that the workflow stays open until it merges, that merging is the engineer's, and that running
@@ -411,7 +440,9 @@ is the container the message names.
       against. This round is what `/codeo:implement` reads after the send-back.
     - Un-archive: `git mv .codeo/done/<N> .codeo/<N>`. The dossier's place is what tells every
       later invocation that review work is in flight (step 1's table), and a live dossier keeps the
-      `qc-verdict` check failing until step 6 archives it again.
+      `qc-verdict` check failing until step 4 archives it again — staged on this return path and
+      committed with step 7's record, or committed alone and pushed when step 3 sent back a first open
+      that had no pull request yet.
     - Move the card back, with a board:
       `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$IN_PROGRESS"`, handled as the
       preamble says; the send-back carries on whatever it prints.

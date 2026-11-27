@@ -200,6 +200,24 @@ assert_contains "the later fp3 wins" '| `fp3` | dropped | 2026-10-09 |' "$ledger
 assert_eq "three rows" 3 "$(grep -c '^| `' <<<"$ledger")"
 assert_eq "footer kept" "footer" "$(tail -n 1 <<<"$ledger")"
 
+case_desc="commit_keeps_files_the_clone_lacks"
+o=$(fresh_origin)
+a=$(clone_of "$o")
+b=$(clone_of "$o")
+dossier "$a" x/one.md "one"
+run "$a" commit x "docs: a"
+dossier "$b" x/two.md "two"
+run "$b" commit x "docs: b"
+assert_eq "exit" 0 "$status"
+assert_eq "origin has both" $'.codeo/intake/x/one.md\n.codeo/intake/x/two.md' "$(on_origin "$o")"
+
+case_desc="commit_still_updates_a_changed_file"
+dossier "$b" x/two.md "two, rewritten"
+run "$b" commit x "docs: b again"
+assert_eq "exit" 0 "$status"
+assert_eq "new text" "two, rewritten" "$(show_origin "$o" x/two.md)"
+assert_contains "one.md still there" ".codeo/intake/x/one.md" "$(on_origin "$o")"
+
 case_desc="a_refused_commit_keeps_its_local_commit"
 o=$(fresh_origin)
 c=$(clone_of "$o")

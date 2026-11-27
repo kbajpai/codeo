@@ -37,14 +37,28 @@ grep -qF 'or a `leftover` line was printed' <<<"$step4" || check_fail "step 4 do
 grep -qF '/codeo:triage' <<<"$step4" || check_fail "step 4 no longer names /codeo:triage"
 grep -qF 'while origin still holds a validly named' <<<"$step4" || check_fail "step 4 does not say a failed-name issue gets a leftover line only while origin holds a validly named branch"
 
+# Recording removals: the skill runs the record command, relays the note, and never removes or runs anything itself.
+grep -qF 'cleanup.sh" record' "$skill" || check_fail "the skill does not run cleanup.sh record"
+grep -qF 'removed/' "$skill" || check_fail "the skill does not name removed/"
+! grep -qF 'rm -f' "$skill" || check_fail "the skill names rm -f"
+step1=$(awk '/^1\. \*\*Run the script/{f=1; next} /^2\. /{f=0} f' "$skill")
+grep -qF 'cleanup: note:' <<<"$step1" || check_fail "step 1 does not relay the cleanup: note: line"
+step3=$(awk '/^3\. \*\*Record/{f=1; next} /^4\. /{f=0} f' "$skill")
+for needle in 'record <N>' "the engineer's statement" 'intake.sh" commit cleanup'; do
+    grep -qF -- "$needle" <<<"$step3" || check_fail "step 3 does not contain: $needle"
+done
+
 # Generic text names no container, and the list's reach is stated.
 ! grep -qF 'Home-container' "$skill" || check_fail "the skill still says Home-container"
 ! grep -qF 'home container' "$skill" || check_fail "the skill still says home container"
 step2=$(awk '/^2\. \*\*Say what the proof cannot see/{f=1; next} /^3\. /{f=0} f' "$skill")
 grep -qF 'every issue under `.codeo/done/`' <<<"$step2" || check_fail "step 2 does not state the list's reach"
+grep -qF 'until their removals are recorded' <<<"$step2" || check_fail "step 2 does not say the list holds an issue until its removal is recorded"
 docs="$repo/docs/skills.md"
 section=$(awk '/^## cleanup$/{f=1; next} /^## /{f=0} f' "$docs")
 grep -qF 'every issue under `.codeo/done/`' <<<"$section" || check_fail "docs/skills.md cleanup section does not state the list's reach"
+grep -qF 'cleanup.sh record' <<<"$section" || check_fail "docs/skills.md cleanup section does not name cleanup.sh record"
+grep -qF 'records that so the next run' "$repo/README.md" || check_fail "README.md does not say cleanup records the removal so the next run omits it"
 ! grep -qF 'in the home container, and only prints' "$docs" || check_fail "docs/skills.md still says cleanup runs in the home container"
 ! grep -qF 'runs in the home container only' "$docs" || check_fail "docs/skills.md still says cleanup runs in the home container only"
 
@@ -99,6 +113,11 @@ for bad in codeo-home codeo-gh codeo-git codeo-; do
     [[ $out == $'70\tfailed\tname' ]] || check_fail "the overlay's pattern does not reject $bad: $out"
 done
 out=$(run "$body")
+[[ $out != *'{'* && $out != *'}'* ]] || check_fail "the overlay's printed line holds a brace"
+tbody=$(awk '/^## removal-command$/{f=1; next} /^## /{f=0} f && NF' "$repo/templates/containers/.codeo/overlays/cleanup.md")
+tout=$(run "${tbody//@CODENAME@/codeo}")
+[[ $tout == *$'\tproven\t'* ]] || check_fail "the template overlay's run did not print a proven line: $tout"
+[[ $tout != *'{'* && $tout != *'}'* ]] || check_fail "the template overlay's printed line holds a brace"
 [[ $out == $'70\tproven\tcodeo rm 70\t'* ]] || check_fail "the overlay does not accept codeo-70: $out"
 fb=${out#$'70\tproven\tcodeo rm 70\t'}
 [[ $fb == *'docker rm -f codeo-70'* && $fb == *'docker volume rm codeo-70'* && $fb == *'codeo-track.sh mark 70 container codeo-70 removed'* && $fb == *'unpushed'* && $fb != *'{'* ]] || check_fail "the overlay's fallback does not expand: $fb"
@@ -112,6 +131,21 @@ fbline=$(grep -E '^fallback: ' "$repo/.codeo/overlays/cleanup.md")
 for needle in 'from the folder that holds the script' 'else codeo-track.sh sits beside' 'CODEO_TRACK names it' 'records nothing' 'once the removal succeeds'; do
     [[ $fbline == *"$needle"* ]] || check_fail "the overlay's fallback line lacks: $needle"
 done
+
+# Wording pins: a commit never deletes, record does not restore, the undo is by hand.
+step3=$(awk '/^3\. \*\*Record what was printed/{f=1} /^4\. \*\*Close/{f=0} f' "$skill")
+p1=$(printf '%s\n' "$step3" | awk 'NR>1 && /^$/{exit} {print}')
+p2=$(printf '%s\n' "$step3" | awk '/Record a removal the engineer says/{f=1} f&&/^$/{exit} f')
+[[ $p1 != *'Nothing else is written.' ]] || check_fail "step 3's first paragraph still ends Nothing else is written."
+[[ $p2 == *'Nothing else is written outside the run record and the removal records.' ]] || check_fail "step 3's record paragraph lacks its closing sentence"
+[[ $(<"$skill") != *"restores origin's"* ]] || check_fail "the skill still says record restores origin's records"
+[[ $(<"$skill") == *'right after its own, or alone when its removal is recorded'* ]] || check_fail "step 1's leftover sentence lacks the recorded case"
+reads=$(grep -E '^- \*\*Reads\*\*' -A1 "$skill")
+[[ $reads == *'on `origin/codeo/intake`'* ]] || check_fail "the Hand-off Reads does not name codeo/intake"
+cs=$(awk '/^## cleanup$/{f=1;next} /^## /{f=0} f' "$repo/docs/skills.md")
+[[ $cs != *"restores origin's records first"* ]] || check_fail "docs/skills.md cleanup still says record restores origin's records first"
+[[ $cs == *'adds it back'* ]] || check_fail "docs/skills.md cleanup does not say a clone adds it back"
+[[ $(<"$repo/README.md") == *'still listed'* ]] || check_fail "README.md does not say the issue is still listed"
 
 [[ $fail -eq 0 ]] || exit 1
 echo "all cases passed"

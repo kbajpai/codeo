@@ -110,6 +110,7 @@ in prose exist (only the script's existence is checked).
 - [close-14] A refusal from the role check ends the step; no override.
 - [close-15] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words, and its line is committed with close's dossier commit.
 - [close-16] A stash or abandon removes the recorded owner (`lock.sh owner`); with no owner it removes the verified caller (`user whoami`) only when `verify` passed without an override, else skips and says so; never a login that was not verified.
+- [close-17] Archive and push the dossier before opening the pull request.
 
 ## triage
 

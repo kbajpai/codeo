@@ -99,7 +99,7 @@ is the container the message names.
    with one exception: `inflight.sh` listing this issue as `(working)` on any branch is not a
    second start but the resume step 6 classifies, so that listing alone does not stop the skill.
    Another assignee stops it regardless. So does a `(PR open)` listing on any branch — the workflow
-   is waiting on its pull request: finish it with `/codeo:close` in its checkout. Taking over
+   is waiting on its pull request, or on `/codeo:close` to open it: finish it with `/codeo:close` in its checkout. Taking over
    someone else's claim needs the engineer to say so in so many words, and that override goes under
    `## Notes` in `init.md` verbatim — one line, `- <date> — override: "<the engineer's words>"` — in the
    dossier's first commit at step 9, or the resume's commit at step 6.
@@ -163,7 +163,8 @@ is the container the message names.
      `N<TAB>branch<TAB>dir` row per workflow). One row whose `dir` is `.codeo/<N>` names `<branch>`,
      whatever it is called: it is a resume candidate, and the `--carries`, `--stash-live` and
      resume sub-steps below run on it, with the derivation and the `ls-remote` skipped. A row whose
-     `dir` is `.codeo/done/<N>` is step 3's `(PR open)` stop. When this issue has more than one row,
+     `dir` is `.codeo/done/<N>` is step 3's `(PR open)` stop; that stop also covers an archive
+     pushed before its pull request exists. When this issue has more than one row,
      stop and name every branch: one workflow is never started on two.
    - *No row: derive.* The name comes from
      `bash "${CLAUDE_PLUGIN_ROOT}/scripts/branch-name.sh" <N>`, which prints
