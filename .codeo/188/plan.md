@@ -154,6 +154,6 @@ sequenced:  none
 ## Log
 
 - 2026-11-27 — Q1-Q4 raised · cost: 1m · fable-5-2 71k in + 555k cached / 5k out
-- 2026-11-27 — Q1-Q4 answered by the engineer in conversation ("Go with your picks": the recommended option for each); plan drafted at .codeo/188/plan-draft.md, awaiting review
+- 2026-11-27 — Q1-Q4 answered by the engineer in conversation ("Go with your picks": the recommended option for each); plan drafted at .codeo/188/plan-draft.md, awaiting review · cost: unavailable, an answer turn with no separate usage
 - 2026-11-27 — plan approved and written; footprint committed; Q5-Q7 raised (overlap.sh tokens for #195, #204, #206) · cost: unavailable, the hand-off line carries the total
 - 2026-11-27 — Q5-Q7 answered (proceed and coordinate); planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md · cost: 15m · fable-5-2 78k in + 848k cached / 10k out · sonnet-5-5 108k in + 2M cached / 20k out
