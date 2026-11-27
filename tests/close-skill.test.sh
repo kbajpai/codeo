@@ -155,7 +155,7 @@ step_contains 'pull request opened heads exactly one round' 6 '`— pull request
 step_order "the archive directory is created before the move" 4 'mkdir -p .codeo/done' 'git mv .codeo/<N> .codeo/done/<N>'
 step_contains "the archive commit is named archived" 4 '— archived'
 step_contains "the archive subject names the dossier close" 4 'docs(codeo): close dossier for #<N> — archived'
-step_contains "a failed archive push is a stop" 4 'a stop'
+step_contains "a failed archive push is a stop" 4 'A failed push is a stop'
 step_contains "no pull request opens on a live dossier" 4 'no pull request is opened on a head that still carries the live dossier'
 must_contain "close-15 is placed" '<!-- rule: close-15 -->'
 text_order "the archive push comes before pr create" "$(step 4)$(step 5)" 'git push' 'pr create'

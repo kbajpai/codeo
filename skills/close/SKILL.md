@@ -110,6 +110,7 @@ is the container the message names.
    | No pull request, dossier under `.codeo/done/<N>/` at `HEAD` | → **Phase 1, resumed after the archive push** — skip step 4, run step 5 onward |
    | `state` is `open`, dossier under `.codeo/done/<N>/`, no round in `close.md` records this pull request | → **Phase 1, resumed after `pr create`** — skip steps 4–5, record it from this lookup (step 6) and push (step 7) |
    | `state` is `open`, dossier under `.codeo/done/<N>/` | → **Phase 2 — waiting** |
+   | `state` is `open`, dossier at `.codeo/<N>/`, no `— review feedback` or `— conflicts with <base>` round after the one recording this pull request (or none records it) | → **Phase 1, first open resumed** by an older plugin or a pull request opened by hand — step 5 skipped; steps 6, 4, 7 run in that order, archive and record in one commit |
    | `state` is `open`, dossier back at `.codeo/<N>/` | → **Phase 1 — return from review** |
    | `state` is `closed` and `merged_at` is set | → **Phase 3 — clean up** |
    | `state` is `closed` and `merged_at` is empty, or `HEAD`'s `close.md` ends in a `— abandoned` round while the lock is held | → **Closed unmerged** |
@@ -120,11 +121,10 @@ is the container the message names.
    Where the dossier sits is read from `HEAD`, the committed tree —
    `git ls-tree -d --name-only HEAD .codeo/<N> .codeo/done/<N>` — never from the working tree:
    a rename staged but never committed is not an archive, and origin still carries the live dossier.
-   An open pull request with the dossier at `.codeo/<N>/` and no review round in `close.md` — no
-   `— review feedback` or `— conflicts with <base>` round after the one recording the pull request —
-   is the first open resumed, not a return from review — by an older plugin, or a pull request
-   opened by hand: the pull request exists, so step 5 is skipped, and steps 6, 4 and 7 run in that
-   order, the archive riding in step 7's one commit with the record. A conflict found at step 3
+   The first-open-resumed row is the open pull request with the dossier at `.codeo/<N>/` and no review
+   round in `close.md` — no `— review feedback` or `— conflicts with <base>` round after the one
+   recording the pull request. That is the first open resumed, not a return from review: the pull
+   request exists, so step 5 is skipped, and the archive rides in step 7's one commit with the record. A conflict found at step 3
    after the archive push un-archives in its own send-back commit, as step 11 does. A merged pull request cannot be
    stashed or abandoned: on `--stash`, or a request to abandon, with `merged_at` set, say so, and
    Phase 3 runs instead. A `close.md` at `HEAD` whose last round is `— stashed` (or `— abandoned`)
@@ -426,7 +426,9 @@ is the container the message names.
       against. This round is what `/codeo:implement` reads after the send-back.
     - Un-archive: `git mv .codeo/done/<N> .codeo/<N>`. The dossier's place is what tells every
       later invocation that review work is in flight (step 1's table), and a live dossier keeps the
-      `qc-verdict` check failing until step 4 archives it again.
+      `qc-verdict` check failing until step 4 archives it again — staged on this return path and
+      committed with step 7's record, or committed alone and pushed when step 3 sent back a first open
+      that had no pull request yet.
     - Move the card back, with a board:
       `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$IN_PROGRESS"`, handled as the
       preamble says; the send-back carries on whatever it prints.
