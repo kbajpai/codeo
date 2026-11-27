@@ -466,7 +466,7 @@ for args in "12 99" "12 abc" "012" ""; do
     assert_eq "no file [$args]" "absent" "$([[ -e $rec/12.md ]] && echo present || echo absent)"
 done
 
-case_desc="record is idempotent; a record already on origin keeps origin's content"
+case_desc="record is idempotent"
 setup_repo "12:$body" "30:$body"
 rec=$REPO_WORK/.codeo/intake/cleanup/removed
 run_record 12 >/dev/null
@@ -475,7 +475,7 @@ assert_eq "second run" "12${tab}already recorded" "$(run_record 12)"
 assert_eq "file as it was" "$before" "$(cat "$rec/12.md")"
 push_removed 30
 assert_eq "recorded on origin" "30${tab}already recorded" "$(run_record 30)"
-assert_eq "content is origin's" "recorded: 2026-01-01" "$(sed -n 2p "$rec/30.md")"
+assert_eq "no local file for a record on origin" "absent" "$([[ -e $rec/30.md ]] && echo present || echo absent)"
 
 case_desc="record runs no container command and no proof"
 setup_repo "12:$body"
@@ -541,20 +541,49 @@ assert_eq "stdout" "12${tab}proven${tab}$want_cmd${tab}-
 30${tab}proven${tab}docker rm -f codeo-30; docker volume rm codeo-30${tab}-" "$cleanup_out"
 assert_eq "stderr" "" "$cleanup_err"
 
+# A clone of origin with the project's config, as an engineer's checkout: new_clone <var>
+new_clone() {
+    local d
+    d=$(mktemp -d "$scratch_root/engineer.XXXXXX")
+    git clone -q "$(git -C "$REPO_WORK" remote get-url origin)" "$d" 2>/dev/null
+    mkdir -p "$d/.codeo"
+    cp "$REPO_WORK/.codeo/config.json" "$d/.codeo/config.json"
+    printf -v "$1" '%s' "$d"
+}
+commit_in() {
+    (cd "$1" && PATH="$stub_bin:$PATH" bash "$plugin_src/scripts/intake.sh" commit cleanup "x" >/dev/null 2>&1) || true
+}
+record_in() {
+    (cd "$1" && PATH="$stub_bin:$PATH" bash "$script" record "$2" >/dev/null 2>&1) || true
+}
+
 case_desc="two engineers keep each other's records"
 two_proven
-origin_url=$(git -C "$REPO_WORK" remote get-url origin)
-clone_b=$(mktemp -d "$scratch_root/engineer-b.XXXXXX")
-git clone -q "$origin_url" "$clone_b" 2>/dev/null
-mkdir -p "$clone_b/.codeo"
-cp "$REPO_WORK/.codeo/config.json" "$clone_b/.codeo/config.json"
-intake_script=$plugin_src/scripts/intake.sh
-# Neither clone has fetched the intake branch before it records and commits; record restores origin's files itself.
-(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" record 12 >/dev/null 2>&1 && bash "$intake_script" commit cleanup "x" >/dev/null 2>&1) || true
-(cd "$clone_b" && PATH="$stub_bin:$PATH" bash "$script" record 30 >/dev/null 2>&1 && bash "$intake_script" commit cleanup "x" >/dev/null 2>&1) || true
+new_clone clone_b
+# Both clones exist and have recorded before either commits: A commits first, then B.
+record_in "$REPO_WORK" 12
+record_in "$clone_b" 30
+commit_in "$REPO_WORK"
+commit_in "$clone_b"
 git -C "$REPO_WORK" fetch -q origin
 assert_eq "files" "12.md
 30.md" "$(git -C "$REPO_WORK" ls-tree -r --name-only origin/codeo/intake | sed -n 's|.*/removed/||p' | sort)"
+
+case_desc="a clone that never restored does not delete records"
+two_proven
+new_clone clone_b
+record_in "$REPO_WORK" 12
+record_in "$clone_b" 30
+commit_in "$REPO_WORK"
+commit_in "$clone_b"
+new_clone clone_c
+mkdir -p "$clone_c/.codeo/intake/cleanup"
+printf 'run\n' > "$clone_c/.codeo/intake/cleanup/2026-11-27.md"
+commit_in "$clone_c"
+git -C "$REPO_WORK" fetch -q origin
+assert_eq "files" "2026-11-27.md
+removed/12.md
+removed/30.md" "$(git -C "$REPO_WORK" ls-tree -r --name-only origin/codeo/intake | sed 's|.*/cleanup/||' | sort)"
 
 case_desc="no container-engine command is ever run"
 assert_eq "marker" "absent" "$([[ -e $DOCKER_MARKER ]] && echo present || echo absent)"
