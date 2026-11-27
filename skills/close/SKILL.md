@@ -81,6 +81,12 @@ is the container the message names.
    `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → The lock` has the three checks. `<N>` below is the
    lock's `issue` and `<branch>` its `branch`; read its `host` line now, since step 8 and the last
    report depend on it.
+   <!-- rule: close-15 -->
+   Then run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" verify`: it proves the person acting
+   owns this workflow. On exit 0 carry on. On exit 1 print its one line and stop — nothing else is
+   done. Pass `--override "<the engineer's exact words>"` only when the engineer has said in so
+   many words to take the workflow over; it is never inferred, and a refusal that says it could
+   not check is not lifted by it. The override line the script writes under `## Notes` is committed with close's own dossier commit. The role check's refusal above has no override.
 
    This step's dossier is `.codeo/<N>/close.md` (or `.codeo/done/<N>/close.md` while the pull
    request waits). Every question it raises is a numbered question in that file, in the form
@@ -242,7 +248,7 @@ is the container the message names.
    `overlap: skipping #<M>'s changed paths` warning with exit 0 is quoted to the engineer, and the
    step carries on with that workflow's footprint alone.
 
-<!-- rule: close-15 -->
+<!-- rule: close-17 -->
 4. **Archive the dossier, before the pull request opens.** `mkdir -p .codeo/done`, then
    `git mv .codeo/<N> .codeo/done/<N>` — the files are tracked, so git records a rename. The
    `mkdir` is for a project's first close: `git mv` will not create a missing destination
@@ -673,10 +679,13 @@ resume on. Then let go of what a parked workflow must not hold, in this order:
 - `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease release-all <N>` — every lease the issue
   holds, the environment's and any other exclusive one, and every wait it still has queued. Quote
   what it prints; a release that fails is reported with its line and not retried in a loop.
-- `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-remove <N>`, so the team sees the
-  issue is free. When `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" user login` prints nothing,
-  there is no login to remove: skip the call and say so rather than stopping, the same skip
-  `/codeo:init`'s claim makes.
+<!-- rule: close-16 -->
+- Take the owner from `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" owner <N>` and remove that
+  login: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-remove <N> <owner>`, so the
+  team sees the issue is free. When it prints no owner (a legacy stash), remove the login
+  `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" user whoami` prints, the caller step 0 verified,
+  only when step 0's `verify` passed without an override. With an override and no owner, skip the
+  call and say so rather than stopping. Never remove a login that was not verified.
 - With a board, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$READY"`, so the board
   shows it free too, and so `/codeo:init`, which starts only a Ready issue, can start it again.
   Handled as the preamble says: a failure is written into `close.md`'s outcome with `#<N>` and the

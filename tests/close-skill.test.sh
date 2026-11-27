@@ -157,10 +157,10 @@ step_contains "the archive commit is named archived" 4 '— archived'
 step_contains "the archive subject names the dossier close" 4 'docs(codeo): close dossier for #<N> — archived'
 step_contains "a failed archive push is a stop" 4 'A failed push is a stop'
 step_contains "no pull request opens on a live dossier" 4 'no pull request is opened on a head that still carries the live dossier'
-must_contain "close-15 is placed" '<!-- rule: close-15 -->'
+must_contain "close-17 is placed" '<!-- rule: close-17 -->'
 text_order "the archive push comes before pr create" "$(step 4)$(step 5)" 'git push' 'pr create'
 if [[ $(step 4) == *'github.sh" pr create'* ]]; then fail "step 4 runs pr create — the archive step must open nothing"; fi
-grep -B1 -F '4. **Archive' "$skill" | head -n1 | grep -qF '<!-- rule: close-15 -->' || fail "close-15 is not directly above step 4"
+grep -B1 -F '4. **Archive' "$skill" | head -n1 | grep -qF '<!-- rule: close-17 -->' || fail "close-17 is not directly above step 4"
 must_contain "whether a round records the pull request is read from HEAD" 'Whether a round in `close.md` records this pull request is read from `HEAD`'
 step_contains "the archive-push row runs steps 2, 3 and 5 onward" 1 'steps 2, 3 and 5 onward'
 step_contains "the pr-create row runs steps 2–3, then 6–8" 1 'steps 2–3, then 6–8'
@@ -381,8 +381,6 @@ section_contains "close-11 never infers a stash" "$stash_section" 'Never infer a
 section_contains "close-13 names the skill not to use" "$stash_section" 'finishing-a-development-branch'
 section_contains "a stash releases every lease" "$stash_section" 'lease release-all <N>'
 section_order "the put-back comes before the release" "$stash_section" 'close put-back' 'lease release-all <N>'
-section_contains "the assignee is removed" "$stash_section" 'github.sh" issue assignee-remove <N>'
-section_contains "no login is a skip" "$stash_section" 'github.sh" user login'
 section_contains "a stash moves the card to Ready" "$stash_section" 'board.sh" set <N> "$READY"'
 section_contains "an abandon moves the card to Backlog" "$stash_section" 'board.sh" set <N> "$BACKLOG"'
 section_contains "init resumes a stash" "$stash_section" '/codeo:init #<N>'
@@ -497,6 +495,22 @@ must_precede 'the overlap skipping sentence comes after the stop sentence' 'The 
 # The web-session exception is in the description and in docs/skills.md, not only in step 16.
 sed -n 3p "$skill" | grep -qF 'a hosted web session deletes none' || fail "the description has no web-session exception"
 awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md" | grep -qF 'a hosted web session deletes none' || fail "docs/skills.md close section has no web-session exception"
+
+# Step 0 verifies ownership (close-15).
+must_contain 'close step 0 runs verify' 'lock.sh" verify'
+must_contain 'close verify carries its rule marker' '<!-- rule: close-15 -->'
+must_contain 'close a refused verify prints its line and stops' 'print its one line and stop — nothing else is'
+must_contain 'close the override is named' '--override "<the engineer'\''s exact words>"'
+must_contain 'close the override is never inferred' 'never inferred'
+must_contain 'close commits the override line with its own dossier commit' 'committed with close'\''s own dossier commit'
+must_contain 'close-16 rule marker' '<!-- rule: close-16 -->'
+section_contains "the owner comes from lock.sh owner" "$stash_section" 'lock.sh" owner <N>'
+section_contains "the owner is removed" "$stash_section" 'assignee-remove <N> <owner>'
+section_contains "no owner printed is a skip" "$stash_section" 'prints no owner'
+section_contains "a legacy stash removes the verified caller" "$stash_section" 'user whoami'
+section_contains "the caller is removed only without an override" "$stash_section" 'without an override'
+section_contains "an override with no owner is a skip" "$stash_section" 'With an override and no owner'
+section_contains "an unverified login is never removed" "$stash_section" 'Never remove a login that was not verified'
 
 if ((failures)); then
     echo "$failures case(s) failed"

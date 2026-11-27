@@ -226,6 +226,9 @@ else
         fail lock-entry "no sentence of the lock entry names both reconcile by hand and diverged"
 fi
 
+# lock-override: the stuck-lock entry says how a refused owner is overridden.
+grep -qF -- '--override' <<<"$lock" || fail lock-override "the lock entry does not mention --override"
+
 # subsection <text> <title>: the body of a ### subsection, up to the next ###.
 subsection() { awk -v t="### $2" '/^### / { on = ($0 == t); next } on' <<<"$1"; }
 
@@ -366,6 +369,19 @@ done
 setup_sec=$(sed -n '/^## setup$/,/^## doctor$/p' docs/skills.md)
 [[ $setup_sec == *'`--containers` alone, or with `--codename <name>`, works over an existing config'* ]] ||
     fail setup-containers-over-config "docs/skills.md setup section does not say --containers works over an existing config"
+
+# identity-docs: init's README entry names no Claim line (init stops when the login is unresolved); the lock entry
+# names all three refusal forms; the handoff flowchart does not give verify a branch check it does not make.
+grep -qF 'Claim line' README.md && fail identity-docs "README.md still mentions a Claim line"
+if [[ -n ${lock:-} ]]; then
+    grep -qF 'is assigned to' <<<"$lock" || fail identity-docs "the lock entry does not name the 'is assigned to' refusal"
+    grep -qF 'locked by' <<<"$lock" || fail identity-docs "the lock entry does not name the 'locked by' refusal"
+    grep -qF 'assignee-add' <<<"$lock" || fail identity-docs "the lock entry does not name the assignee-add line"
+fi
+grep -qF 'when it has any' README.md || fail identity-docs "README.md does not say the assignee check applies only when the issue has assignees"
+grep -qF 'branch matches' docs/handoff.md && fail identity-docs "docs/handoff.md's verify flowchart still says branch matches"
+grep -qF 'is assigned to' docs/handoff.md || fail identity-docs "docs/handoff.md does not name the 'is assigned to' refusal"
+grep -qF 'locked by' docs/handoff.md || fail identity-docs "docs/handoff.md does not name the 'locked by' refusal"
 
 # A pipeline whose consumer is grep -q: grep exits at its first match, a producer still writing is killed
 # by SIGPIPE (141), and pipefail fails the whole pipeline although the line was found. The race is lost
