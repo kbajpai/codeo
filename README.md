@@ -336,8 +336,8 @@ Details: [docs/skills.md#issue](docs/skills.md#issue).
 - **Run:** `/codeo:init <number>`. The number can be `42`, `#42` or the issue's URL.
 - **It asks:** almost nothing. It stops for one review of `init.md` (approve, change or reject), and for an override if you are taking over someone else's claim. Its own question list normally reads `None.`
 - **It checks who you are:** `github.sh user whoami` must name a person's GitHub account. It refuses when it cannot tell who you are (`CODEO_GITHUB_LOGIN` counts only in a hosted web session, where it is compared with the owner and the assignees like any login but cannot vouch for you) and when the account is a bot or an organization, and it records you as the owner in `init.md`. When it cannot add you to the issue's assignees it records an `assignee-add failed` line under `## Notes` and says so. Every later step then checks you are that owner (see Troubleshooting, "A lock that is stuck or not yours").
-- **It writes:** [.codeo/<N>/init.md](.codeo/done/143/init.md): the issue, the branch, the state, and the acceptance criteria word for word. It also copies the approved draft to `.codeo/<N>/issue.md`. It cuts and pushes the branch (`<type>/<N>-<slug>`), moves the card to In progress and takes the workflow lock. Once the push has claimed the branch, it assigns you to the issue. A failed assignment is reported in the closing message and nothing else is recorded: the claim stands on the pushed branch. Init stops before any of this when it cannot tell who you are.
-- **It commits:** `docs(codeo): init dossier for #<N>`.
+- **It writes:** [.codeo/<N>/init.md](.codeo/done/143/init.md): the issue, the branch, the state, and the acceptance criteria word for word. It also copies the approved draft to `.codeo/<N>/issue.md`. It cuts and pushes the branch (`<type>/<N>-<slug>`), moves the card to In progress and takes the workflow lock. Once the push has claimed the branch, it assigns you to the issue. A failed assignment is recorded as an `assignee-add failed` line under `## Notes` of `init.md`, in a commit of its own that is pushed, and reported in the closing message; the claim stands on the pushed branch. Init stops before any of this when it cannot tell who you are.
+- **It commits:** `docs(codeo): init dossier for #<N>`, and a second commit, `docs(codeo): init dossier for #<N> — assignee-add failed`, only when the assignment failed.
 - **Next:** `/codeo:plan`, usually in the same session.
 
 Details: [docs/skills.md#init](docs/skills.md#init).
@@ -683,7 +683,7 @@ To take codeo out of a project, delete `.codeo/` and `docs/plans/` (or keep the 
 
 ## The skills
 
-The six pipeline skills run in order inside one workflow, each owning one dossier file under `.codeo/<issue>/`; `triage` and `cleanup` run outside the workflow lock, between workflows, and a project's role guard (see [`.devcontainer/README.md`](.devcontainer/README.md#roles-and-the-guard)) keeps each skill in the checkout it belongs in; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
+The six pipeline skills run in order inside one workflow. Each one other than `issue` owns one dossier file under `.codeo/<issue>/`; `issue` keeps its dossier on the intake branch as `.codeo/intake/<N>/issue.md` until `/codeo:init` adopts it; `triage` and `cleanup` run outside the workflow lock, between workflows, and a project's role guard (see [`.devcontainer/README.md`](.devcontainer/README.md#roles-and-the-guard)) keeps each skill in the checkout it belongs in; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
 
 | Skill | Purpose |
 |-------|---------|
