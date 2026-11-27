@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1 and Q2 are answered ("go with your picks": tests only; proceed and coordinate with #195). The plan is drafted at `.codeo/204/plan-draft.md` and waits for the engineer's approval.
+Round 1. Q1 and Q2 are answered. The plan is approved and written (`docs/plans/2026-11-27-close-archive-before-pr-204.md`, unstaged), but #206 has since declared an overlapping footprint: Q3 is open, and `## Outcome` stays pending until it is answered.
 
 ## Questions
 
@@ -43,6 +43,22 @@ I recommend proceed and coordinate, with #204 merging first because it is the sm
 **Answer:**
 Proceed and coordinate, as recommended; #204 merges first. Given in the conversation: "go with your picks".
 
+### Q3 — #206 now declares files this plan also changes. Proceed, sequence, or re-scope?
+
+**Why it matters:** `#206` (branch `fix/206-codeo-cleanup-prints-codeo-rm`, assignee kbajpai, step `init (working)`, waiting on its own `issue.md` Q1) wrote its footprint after Q2 was answered. It overlaps this plan's on `glob:CHANGELOG.md`, `glob:README.md` and `glob:docs/skills.md`. The footprint's `tests/**` also covers its `tests/cleanup.test.sh` and `tests/cleanup-skill.test.sh`; this plan touches neither (`overlap.sh` prints them as `glob:tests/cleanup-skill.test.sh` and `glob:tests/cleanup.test.sh`). Its branch has changed nothing yet. No exclusive resource is shared.
+
+The shared files are prose and a changelog; this change edits the `/codeo:close` paragraphs of `README.md` and `docs/skills.md` and one `CHANGELOG.md` bullet, and #206 edits the `/codeo:cleanup` ones. Conflicts, if any, are adjacent lines.
+
+- Proceed and coordinate: both go on; whichever merges second merges the base branch and resolves what conflicts.
+- Sequence after #206: this plan waits for #206's merge. #206 has not been planned, so the wait is open-ended and every pull request keeps its red first run meanwhile.
+- Re-scope: nothing here can be cut to avoid the shared files.
+
+I recommend proceed and coordinate, as for #195.
+
+**Options:** proceed and coordinate (recommended) · sequence after #206 · re-scope.
+
+**Answer:**
+
 ## Notes
 
 **The design (my calls; corrected at the review gate if wrong).**
@@ -74,3 +90,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-27 — Q1-Q2 raised · cost: 3m · fable-5-2 126k in + 1M cached / 14k out
 - 2026-11-27 — Q1-Q2 answered (picks); drafted .codeo/204/plan-draft.md, awaiting approval · cost: 7m · fable-5-2 131k in + 1.7M cached / 17k out · sonnet-5-5 133k in + 330k cached / 11k out
+- 2026-11-27 — plan approved and written: docs/plans/2026-11-27-close-archive-before-pr-204.md; Q3 raised (overlap with #206) · cost: 9m · fable-5-2 131k in + 1.7M cached / 17k out · sonnet-5-5 142k in + 987k cached / 13k out
