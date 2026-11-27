@@ -169,6 +169,15 @@ Check the expanded text, as recommended. Given in the conversation: "Go with you
 - Recorded issues still cost their proofs on every run (two GitHub reads each): acceptance criterion 4 needs the proofs to run before a record may hide a line.
 - No overlay is set for `plan/plan-shape`, `plan/proof-of-done` or `plan/wiki-rules` (exit 3 each); no invariants document, no shared environment, no `wiki` module, no `resources[]`.
 
+### Footprint
+
+```
+files:      scripts/intake.sh, tests/intake.test.sh, scripts/cleanup.sh, skills/cleanup/SKILL.md, docs/skills.md, docs/extension-points.md, README.md, CHANGELOG.md, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, docs/plans/2026-11-27-cleanup-removal-records-206.md, docs/plans/2026-11-27-cleanup-removal-records-206-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-27-cleanup-removal-records-206.md`, approved by the engineer and left unstaged. Shape: an executable plan under `docs/plans/` (five checkbox tasks, each proved by `bash tests/run.sh`, the `shell` suite having no `filter`); no separate reference doc.
@@ -186,14 +195,6 @@ Check the expanded text, as recommended. Given in the conversation: "Go with you
 
 **Intake questions resolved:** the one left to plan at intake, whether the placeholder fix lives in the script or the overlay text: the script (Q1).
 
-### Footprint
-
-```
-files:      scripts/cleanup.sh, skills/cleanup/SKILL.md, docs/skills.md, docs/extension-points.md, README.md, CHANGELOG.md, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, docs/plans/2026-11-27-cleanup-removal-records-206.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
 
 ## Log
 
