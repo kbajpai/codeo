@@ -14,9 +14,21 @@
 #       (park_re) in <state>/<N>/close.md than resume lines (resume_re) in <state>/<N>/init.md, both
 #       trimmed of trailing whitespace, an absent file counting 0. Decided before any web checkout.
 #       Unset, or anything else, it behaves as above.
+#       Needs a verified login (lib/identity.sh codeo_whoami): without one, or when the issue's
+#       owner or assignees are someone else, it takes no lock and prints a TODO line. The lock
+#       records the login on a `user:` line after `host:`.
+#
+#   lock.sh verify [--override "<words>"]
+#       Exit 0 and "lock: verified #<N> as <login>" when the acting login owns the locked issue;
+#       exit 1 and one "codeo:" line on stderr otherwise. --override passes one ownership refusal
+#       and records an `override:` line under ## Notes of the local init.md.
+#
+#   lock.sh owner [<N>]
+#       Prints the recorded owner login of #<N> (default: the locked issue), or nothing.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/identity.sh"
 # The dossier globs and git pathspecs below are relative to the repo root, not the caller's cwd.
 [[ -z $CODEO_PROJECT_ROOT ]] || cd "$CODEO_PROJECT_ROOT"
 
@@ -57,6 +69,177 @@ stale_local() {
     local branch=$1 target=$2
     git show-ref --verify --quiet "refs/heads/$branch" &&
         ! git merge-base --is-ancestor "$branch" "$target"
+}
+
+same_login() { [[ ${1,,} == "${2,,}" ]]; }
+
+# The local dossier file of <issue>: live, else archived under done/. Prints nothing when absent.
+local_init() {
+    local f
+    for f in "$state_rel/$1/init.md" "$state_rel/done/$1/init.md"; do
+        [[ -f $f ]] && { printf '%s\n' "$f"; return 0; }
+    done
+    return 0
+}
+
+# check_owner <issue> <branch> <login> <type>: exit 0 when <login> may act on the issue; 1 with one
+# "codeo:" line in $refusal (and $refused_owner) when it belongs to someone else; 2 when it could
+# not be checked (no override applies). $note collects what a pass should say. A hosted web
+# session's unverified login is never compared with the owner or the assignees (verify compares it
+# with the lock's own user: line). The pushed dossier is read from origin/<branch>; no such ref,
+# or no origin remote at all, means the local dossier; any other failure to reach origin fails
+# closed.
+check_owner() {
+    local n=$1 branch=$2 login=$3 type=$4 rc=0 src= p tmp owner date when assignees out
+    refusal= refused_owner= note=
+    [[ $type != unverified ]] || return 0
+    tmp=$(mktemp)
+    if git remote get-url origin >/dev/null 2>&1; then
+        git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null 2>&1 || rc=$?
+        if ((rc == 0)); then
+            if ! git fetch -q origin "$branch" 2>/dev/null; then
+                refusal="codeo: could not check who owns #$n: cannot reach origin"
+                rm -f "$tmp"; return 2
+            fi
+            for p in "$state_rel/$n/init.md" "$state_rel/done/$n/init.md"; do
+                if git show "origin/$branch:$p" > "$tmp" 2>/dev/null; then src=origin; break; fi
+            done
+        elif ((rc != 2)); then
+            refusal="codeo: could not check who owns #$n: cannot reach origin"
+            rm -f "$tmp"; return 2
+        fi
+    fi
+    if [[ -z $src ]]; then
+        p=$(local_init "$n")
+        if [[ -n $p ]]; then cp "$p" "$tmp"; fi
+        note="branch not on origin: read the local dossier"
+    fi
+    owner=$(codeo_owner_of_init "$tmp")
+    date=$(sed -n 's/^- \([0-9-]\{1,\}\) — resumed: by .* after .*/\1/p' "$tmp" | tail -n1)
+    rm -f "$tmp"
+    if [[ -n $owner ]] && ! same_login "$owner" "$login"; then
+        refused_owner=$owner
+        when=claimed
+        if [[ -n $date ]]; then when="last resumed $date"; fi
+        refusal="codeo: #$n belongs to $owner ($when) — you are $login; ask them, or take it over with /codeo:init #$n"
+        return 1
+    fi
+    if ! out=$(bash "$CODEO_PLUGIN_ROOT/scripts/github.sh" issue view "$n" 2>/dev/null) ||
+        ! assignees=$(jq -r '.assignees | join(", ")' <<< "$out" 2>/dev/null); then
+        refusal="codeo: could not check who owns #$n: cannot read the issue's assignees"
+        return 2
+    fi
+    if [[ -n $assignees ]] && ! jq -e --arg l "${login,,}" '.assignees | map(ascii_downcase) | index($l)' <<< "$out" >/dev/null; then
+        refused_owner=${owner:-$assignees}
+        refusal="codeo: #$n is assigned to $assignees, not $login — ask them, or take it over with /codeo:init #$n"
+        return 1
+    fi
+    return 0
+}
+
+# Appends one override line to the local dossier's ## Notes (created before ## Outcome when absent).
+record_override() {
+    local file=$1 line=$2 i notes=-1 outcome=-1 end lines=()
+    mapfile -t lines < "$file"
+    for i in "${!lines[@]}"; do
+        if [[ ${lines[i]} == '## Notes' && $notes -lt 0 ]]; then notes=$i; fi
+        if [[ ${lines[i]} == '## Outcome' && $outcome -lt 0 ]]; then outcome=$i; fi
+    done
+    {
+        if ((notes >= 0)); then
+            end=${#lines[@]}
+            for ((i = notes + 1; i < ${#lines[@]}; i++)); do
+                if [[ ${lines[i]} == '## '* ]]; then end=$i; break; fi
+            done
+            while ((end - 1 > notes)) && [[ -z ${lines[end - 1]} ]]; do end=$((end - 1)); done
+            printf '%s\n' "${lines[@]:0:end}"
+            if ((end == notes + 1)); then echo; fi
+            printf '%s\n' "$line"
+            if ((end < ${#lines[@]})); then echo; printf '%s\n' "${lines[@]:end}"; fi
+        elif ((outcome >= 0)); then
+            if ((outcome > 0)); then printf '%s\n' "${lines[@]:0:outcome}"; fi
+            printf '## Notes\n\n%s\n\n' "$line"
+            printf '%s\n' "${lines[@]:outcome}"
+        else
+            printf '%s\n' "${lines[@]}"
+            printf '\n## Notes\n\n%s\n' "$line"
+        fi
+    } > "$file.tmp.$$" && mv "$file.tmp.$$" "$file"
+}
+
+verify() {
+    local override= have_override= row login type n branch locked_user rc=0 file line
+    while (($#)); do
+        case $1 in
+            --override) have_override=1; override=${2:-}; shift; if (($# > 0)); then shift; fi ;;
+            *) echo "usage: lock.sh verify [--override \"<words>\"]" >&2; return 1 ;;
+        esac
+    done
+    if [[ -n $have_override && -z ${override//[[:space:]]/} ]]; then
+        echo "codeo: --override needs the engineer's words" >&2
+        return 1
+    fi
+    if [[ ! -f $CODEO_STATE_DIR/active ]]; then
+        echo "lock: no workflow lock here" >&2
+        return 1
+    fi
+    n=$(sed -n 's/^issue: *//p' "$CODEO_STATE_DIR/active" | head -n1)
+    branch=$(sed -n 's/^branch: *//p' "$CODEO_STATE_DIR/active" | head -n1)
+    locked_user=$(sed -n 's/^user: *//p' "$CODEO_STATE_DIR/active" | head -n1)
+    row=$(codeo_whoami) || return 1
+    login=${row%%$'\t'*}
+    type=${row#*$'\t'}
+
+    refusal=
+    note=
+    refused_owner=
+    if [[ $type == unverified ]]; then
+        note="not independently verified: hosted web session"
+        if [[ -n $locked_user ]] && ! same_login "$locked_user" "$login"; then
+            refused_owner=$locked_user
+            refusal="codeo: this checkout was locked by $locked_user, you are $login — ask them, or take it over with /codeo:init #$n"
+        fi
+    else
+        check_owner "$n" "$branch" "$login" "$type" || rc=$?
+        if ((rc == 2)); then echo "$refusal" >&2; return 1; fi
+        if ((rc == 0)); then
+            if [[ -z $locked_user ]]; then
+                note="${note:+$note; }legacy lock: no recorded user"
+            elif ! same_login "$locked_user" "$login"; then
+                refused_owner=$locked_user
+                refusal="codeo: this checkout was locked by $locked_user, you are $login — ask them, or take it over with /codeo:init #$n"
+            fi
+        fi
+    fi
+
+    if [[ -n $refusal ]]; then
+        if [[ -z $have_override ]]; then
+            echo "$refusal" >&2
+            return 1
+        fi
+        file=$(local_init "$n")
+        if [[ -z $file ]]; then
+            echo "codeo: no local dossier for #$n to record the override in" >&2
+            return 1
+        fi
+        line="- $(date -u +%Y-%m-%d) — override: $login over ${refused_owner:-unknown}: \"$override\""
+        record_override "$file" "$line"
+        echo "$line"
+        say "verified #$n as $login (by override)"
+        return 0
+    fi
+    say "verified #$n as $login${note:+ ($note)}"
+}
+
+owner() {
+    local n=${1:-} file
+    if [[ -z $n ]]; then
+        [[ -f $CODEO_STATE_DIR/active ]] || { echo "lock: no workflow lock here" >&2; return 1; }
+        n=$(sed -n 's/^issue: *//p' "$CODEO_STATE_DIR/active" | head -n1)
+    fi
+    file=$(local_init "$n")
+    if [[ -n $file ]]; then codeo_owner_of_init "$file"; fi
+    return 0
 }
 
 take() {
@@ -166,11 +349,16 @@ take() {
             # Opt-in, for a session whose hook retakes the lock: close --stash and an abandon leave
             # the dossier at <state>/<N>/ with no lock, and a retake would undo them.
             todo+=("#$n is stashed or abandoned: no lock taken")
+        elif ! who=$(codeo_whoami 2>&1); then
+            todo+=("no lock taken: ${who#codeo: }")
+        elif n=$(basename "$(dirname "${found[0]}")") && login=${who%%$'\t'*} &&
+            ! check_owner "$n" "$branch" "$login" "${who#*$'\t'}"; then
+            todo+=("no lock taken: ${refusal#codeo: }")
         else
             n=$(basename "$(dirname "${found[0]}")")
             {
-                printf 'issue:   %s\nbranch:  %s\nstarted: %s\nhost:    %s\n' \
-                    "$n" "$branch" "$(date -u +%Y-%m-%d)" "$host"
+                printf 'issue:   %s\nbranch:  %s\nstarted: %s\nhost:    %s\nuser:    %s\n' \
+                    "$n" "$branch" "$(date -u +%Y-%m-%d)" "$host" "$login"
                 if [[ $host == container && -n $sandbox_flag && $sandbox =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
                     # Told which sandbox this checkout runs in: record it, not a volume.
                     printf 'sandbox: %s\n' "$sandbox"
@@ -200,5 +388,7 @@ take() {
 
 case ${1:-} in
     take) shift; take "$@" ;;
-    *) echo "usage: lock.sh take <container|web|local> [--sandbox <name>] [session-id]" >&2; exit 1 ;;
+    verify) shift; verify "$@" ;;
+    owner) shift; owner "$@" ;;
+    *) echo "usage: lock.sh take <container|web|local> [--sandbox <name>] [session-id] | verify [--override \"<words>\"] | owner [<N>]" >&2; exit 1 ;;
 esac

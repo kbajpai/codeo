@@ -45,6 +45,37 @@ exec "$REAL_GIT" "$@"
 STUB
 chmod +x "$stub_bin/git"
 
+# A stub `gh` that answers only `gh api user` (from $GH_STUB_USER, JSON, or FAIL to exit 1) and
+# `gh api repos/*/issues/*` (a fixed issue whose assignees are the JSON array of logins in
+# $GH_STUB_ASSIGNEES, or FAIL), applying the caller's -q filter with jq as gh does.
+cat > "$stub_bin/gh" <<'STUB'
+#!/usr/bin/env bash
+[[ ${1:-} == api ]] || { echo "gh-stub: only 'gh api' is stubbed, got: $*" >&2; exit 1; }
+shift
+query=
+path=
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -q) query=$2; shift 2 ;;
+        -X|--method|-f|-F) shift 2 ;;
+        -*) shift ;;
+        *) path=$1; shift ;;
+    esac
+done
+case $path in
+    user)
+        [[ ${GH_STUB_USER:-} != FAIL ]] || { echo "gh: 403" >&2; exit 1; }
+        json=${GH_STUB_USER:-'{"login":"alice","type":"User"}'} ;;
+    repos/*/issues/*)
+        [[ ${GH_STUB_ASSIGNEES:-} != FAIL ]] || { echo "gh: 500" >&2; exit 1; }
+        json=$(jq -nc --argjson a "${GH_STUB_ASSIGNEES:-[]}" \
+            '{number:1,title:"t",state:"open",closed_at:null,html_url:"u",body:"",labels:[],assignees:($a|map({login:.}))}') ;;
+    *) echo "gh-stub: no answer for $path" >&2; exit 1 ;;
+esac
+if [[ -n $query ]]; then jq -rc "$query" <<< "$json"; else printf '%s\n' "$json"; fi
+STUB
+chmod +x "$stub_bin/gh"
+
 failures=0
 case_desc=
 assert_eq() {
@@ -144,6 +175,7 @@ active=$(cat "$repo/.codeo/active")
 assert_contains "issue" "issue:   38" "$active"
 assert_contains "host" "host:    container" "$active"
 assert_not_contains "no session line" "session:" "$active"
+assert_contains "user" "user:    alice" "$active"
 
 # --- container, sandbox lock ---------------------------------------------------------------------
 case_desc="container, sandbox lock"
@@ -548,7 +580,7 @@ assert_contains "todo" "lock: TODO — #38 is stashed or abandoned: no lock take
 
 case_desc="take_takes_a_resumed_stash"
 repo=$(parked_repo '# Close\n\n### Round 1 — stashed\n')
-printf -- '\n## Log\n\n- 2026-11-21 — resumed: by someone after the stash of 2026-11-20 · cost: 0m\n' >> "$repo/.codeo/38/init.md"
+printf -- '\n## Log\n\n- 2026-11-21 — resumed: by alice after the stash of 2026-11-20 · cost: 0m\n' >> "$repo/.codeo/38/init.md"
 out=$(run_lock_skip "$repo" "$(fresh_marker)" web)
 assert_eq "lock taken" yes "$(active_exists "$repo")"
 
@@ -560,7 +592,7 @@ assert_contains "todo" "no lock taken" "$out"
 
 case_desc="take_takes_a_resumed_abandon"
 repo=$(parked_repo '### Round 1 — abandoned\n')
-printf -- '- 2026-11-21 — resumed: by someone after the abandon of 2026-11-20 · cost: 0m\n' >> "$repo/.codeo/38/init.md"
+printf -- '- 2026-11-21 — resumed: by alice after the abandon of 2026-11-20 · cost: 0m\n' >> "$repo/.codeo/38/init.md"
 out=$(run_lock_skip "$repo" "$(fresh_marker)" web)
 assert_eq "lock taken" yes "$(active_exists "$repo")"
 
@@ -587,6 +619,61 @@ case_desc="take_without_skip_parked_still_takes_a_stashed_dossier"
 repo=$(parked_repo '### Round 1 — stashed\n')
 out=$(run_lock "$repo" "$(fresh_marker)" web)
 assert_eq "lock taken" yes "$(active_exists "$repo")"
+
+# --- who is acting -------------------------------------------------------------------------------
+# A clone of an origin whose branch feat/x carries an init.md with <owner_line> after the Branch row.
+owned_clone() {
+    local owner=$1 origin
+    origin=$(fresh_repo)
+    git -C "$origin" checkout -q -b feat/x
+    write_init "$origin/.codeo/38/init.md" feat/x
+    printf '| Owner | %s |\n' "$owner" >> "$origin/.codeo/38/init.md"
+    git -C "$origin" add .codeo
+    git -C "$origin" commit -q -m dossier
+    git -C "$origin" checkout -q main
+    local dir
+    dir=$(mktemp -d "$scratch_root/clone.XXXXXX")
+    git clone -q "$origin" "$dir"
+    git -C "$dir" checkout -q -b feat/x origin/feat/x
+    printf '%s' "$dir"
+}
+
+case_desc="take, unresolved login (GET /user fails, not web)"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+out=$(GH_STUB_USER=FAIL run_lock "$repo" "$(fresh_marker)" local)
+assert_eq "no lock" no "$(active_exists "$repo")"
+assert_contains "todo" "lock: TODO" "$out"
+assert_contains "reason" "cannot tell who you are" "$out"
+
+case_desc="take, Bot login"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+out=$(GH_STUB_USER='{"login":"ci[bot]","type":"Bot"}' run_lock "$repo" "$(fresh_marker)" local)
+assert_eq "no lock" no "$(active_exists "$repo")"
+assert_contains "Bot" "Bot" "$out"
+
+case_desc="take, web session, variable only"
+repo=$(fresh_repo)
+git -C "$repo" checkout -q -b feat/x
+write_init "$repo/.codeo/38/init.md" feat/x
+out=$(GH_STUB_USER=FAIL CLAUDE_CODE_REMOTE=true CODEO_GITHUB_LOGIN=carol run_lock "$repo" "$(fresh_marker)" local)
+assert_eq "lock" yes "$(active_exists "$repo")"
+assert_contains "user" "user:    carol" "$(cat "$repo/.codeo/active")"
+
+case_desc="take, branch owned by someone else"
+repo=$(owned_clone bob)
+out=$(run_lock "$repo" "$(fresh_marker)" local)
+assert_eq "no lock" no "$(active_exists "$repo")"
+assert_contains "todo" "lock: TODO" "$out"
+assert_contains "owner" "belongs to bob" "$out"
+
+case_desc="take, branch owned by the current user"
+repo=$(owned_clone alice)
+out=$(run_lock "$repo" "$(fresh_marker)" local)
+assert_eq "lock" yes "$(active_exists "$repo")"
 
 if ((failures)); then
     echo "$failures case(s) failed"

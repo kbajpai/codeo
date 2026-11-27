@@ -7,6 +7,7 @@
 #                          User, or, in a web session only, when GET /user is refused and
 #                          $CODEO_GITHUB_LOGIN is set (type "unverified"). Otherwise stdout is
 #                          empty, one "codeo:" line goes to stderr, and the exit is 1.
+#   codeo_owner_of_init F  prints the owner login recorded in dossier file F (last resume line, else Owner row)
 
 codeo_is_web_session() { [[ ${CLAUDE_CODE_REMOTE:-} == true ]]; }
 
@@ -26,4 +27,16 @@ codeo_whoami() {
         echo 'codeo: cannot tell who you are: GET /user was refused, and $CODEO_GITHUB_LOGIN counts only in a hosted web session' >&2
         return 1
     fi
+}
+
+# codeo_owner_of_init <init.md path>: prints the owner login of a dossier. The login on the LAST
+# "- <date> — resumed: by <login> after " line wins, else the "| Owner | <login> |" row of the
+# header table, else nothing. Always exits 0.
+codeo_owner_of_init() {
+    local file=$1 owner
+    [[ -f $file ]] || return 0
+    owner=$(sed -n 's/^- .* — resumed: by \([^ ]\{1,\}\) after .*/\1/p' "$file" | tail -n1)
+    [[ -n $owner ]] || owner=$(sed -n 's/^| Owner | \([^ |]\{1,\}\) |.*/\1/p' "$file" | head -n1)
+    [[ -z $owner ]] || printf '%s\n' "$owner"
+    return 0
 }
