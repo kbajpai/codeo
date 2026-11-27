@@ -175,3 +175,41 @@ sequenced:  none
 - [ ] **Step 2: End the bullet** the way its neighbours end theirs (`… (#190).`): "… No script changed (#188)." Read the bullet once more against Task 7: it must not say `gh` runs. As written ("described as they behave") it needs no other change.
 - [ ] **Step 3: Proof.** The grep prints `1`; `bash tests/run.sh` ends `all cases passed`; `git diff --stat origin/main -- scripts lib hooks .sbx .devcontainer` prints nothing.
 - [ ] **Step 4: Commit** `git add CHANGELOG.md` · `docs: the changelog line names its issue (#188)`.
+
+---
+
+## Round 3 — after QC round 3
+
+> Appended to `docs/plans/2026-11-27-close-177-qc-leftovers-188.md`. Tasks 1-9 above are done and stay as written. The banner, Global Constraints and proof-of-done rule at the top of the plan bind these tasks too.
+
+**Why:** QC round 3's F8 (blocking). `docs/home-checkout.md:9` says `live.sh`, without `jq`, publishes the signal "getting nothing from the assignee lookup". That lookup exists only for a hosted web session: `user_label` (`scripts/live.sh:158-165`) calls `assignee_label` only when `$host` is `web`, and the paragraph is about running on the host. Task 7 wrote the sentence from the issue's F5 text and did not carry the issue's own "it matters only for a web session".
+
+**Observed, not inferred.** `user_label` was run from `scripts/live.sh` with `jq` off `PATH` and a logging `gh` stub: with `host=container` the label was the `git config user.name` value; with `host=web` it was `unknown`; `gh` was called 0 times in both. `bash scripts/github.sh user login` printed `codeo: config.json: invalid JSON in …/.codeo/config.json` and exited 1.
+
+**In this round:** QC's F8, and its non-blocking F9 (two parentheticals back to back in the cleanup overlay), a one-phrase change in two files already in the footprint. **Not in this round:** F4, F6 and F7, which stay in `qc.md` for `/codeo:triage` (F4 by the engineer's answer at Q8).
+
+**Global Constraints, added:** still wording only, no script edited; both tasks stay inside the footprint; documentation moved: `docs/home-checkout.md` and the cleanup overlay with its template, nothing else.
+
+### Task 10: `docs/home-checkout.md:9` — who the signal's user is without `jq`
+
+**Files:**
+- Modify: `docs/home-checkout.md:9` (QC round 3, F8)
+
+- [ ] **Step 1: Run the failing check.** `grep -c 'getting nothing from the assignee lookup' docs/home-checkout.md` → `1`; `grep -c 'git config user.name' docs/home-checkout.md` → note the number it prints (the page may already name it elsewhere).
+- [ ] **Step 2: Reword the end of the bullet.** Replace exactly
+  "reading the base branch as empty and getting nothing from the assignee lookup (its `github.sh` call reads `.codeo/config.json` with `jq` and stops before it reaches `gh`)."
+  with
+  "reading the base branch as empty and taking the signal's user from `git config user.name`: its `github.sh` calls read `.codeo/config.json` with `jq` and stop before they reach `gh`, so the login lookup yields nothing. A hosted web session is the only place `live.sh` asks for the issue's assignee; there, without `jq`, that lookup yields nothing as well and the user reads `unknown`."
+  Keep everything before "reading the base branch as empty" as it is, including "`live.sh` publishes the signal without `jq`", which `tests/readme.test.sh:340` pins.
+- [ ] **Step 3: Proof.** `grep -c 'getting nothing from the assignee lookup' docs/home-checkout.md` prints `0`; `grep -c 'taking the signal'"'"'s user from' docs/home-checkout.md` prints `1`; `grep -c 'is the only place `live.sh` asks for the issue'"'"'s assignee' docs/home-checkout.md` prints `1`. Then `bash tests/run.sh` ends `all cases passed`.
+- [ ] **Step 4: Commit** `git add docs/home-checkout.md` · `docs: home-checkout says where live.sh gets the signal's user without jq (#188)`.
+
+### Task 11: the cleanup overlay — one parenthesis, not two
+
+**Files:**
+- Modify: `.codeo/overlays/cleanup.md:12` and `templates/containers/.codeo/overlays/cleanup.md:12`, identically (QC round 3, F9)
+
+- [ ] **Step 1: Run the failing check.** `grep -c 'sits beside it) (otherwise it prints' .codeo/overlays/cleanup.md templates/containers/.codeo/overlays/cleanup.md` → `1` for each file.
+- [ ] **Step 2: Join the two parentheticals** in both files: "sits beside it) (otherwise it prints a note: and records nothing, and you mark the row by hand)" becomes "sits beside it; otherwise it prints a note: and records nothing, and you mark the row by hand)". Nothing else on the line changes; the pins `else codeo-track.sh sits beside`, `CODEO_TRACK names it`, `records nothing` in `tests/cleanup-skill.test.sh:112` still match. `close.md` already reads ", and otherwise" and is not touched.
+- [ ] **Step 3: Proof.** The Step 1 grep prints `0` for each file and `grep -c 'sits beside it; otherwise it prints' …` prints `1` for each. Then `bash tests/run.sh` ends `all cases passed` (it includes `containers.test.sh`'s overlay-equals-template check and `cleanup-skill`), and `git diff --stat origin/main -- scripts lib hooks .sbx .devcontainer` prints nothing.
+- [ ] **Step 4: Commit** the two overlay files · `docs: the cleanup overlay's tracker clause is one parenthesis (#188)`.
