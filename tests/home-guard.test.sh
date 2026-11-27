@@ -245,6 +245,35 @@ bcheck allow "$h" "git -C $i commit -m x" PATH="$shim:$PATH"
 bcheck allow "$h" "git -C \"$i\" push" PATH="$shim:$PATH"
 bcheck deny "$i" "cd \"$h\" && git push" PATH="$shim:$PATH"
 
+case_desc=bash_codeo_commands_in_home
+h=$(bhome cc1 codeo)
+bcheck allow "$h" "git commit -m x 2>&1"
+bcheck allow "$h" "git add .codeo/192/init.md 2>/dev/null"
+bcheck allow "$h" "git add $h/.codeo/192/init.md"
+bcheck allow "$h" "git add .codeo"
+bcheck allow "$h" "git add .codeo/"
+bcheck allow "$h" "git add ./.codeo/192/init.md &>/dev/null"
+bcheck allow "$h" "cd $h/.codeo && git add 192/init.md"
+bcheck allow "$h" "git add .codeo/192/init.md >/dev/null 2>&1"
+bcheck deny "$h" "git add src/a.txt 2>&1"
+git -C "$h" -c user.name=t -c user.email=t@t commit -q -m s
+git -C "$h" worktree add -q "$scratch_root/cc-wt" -b scratch2
+mkdir -p "$scratch_root/cc-wt/.codeo/9"
+echo i >"$scratch_root/cc-wt/.codeo/9/init.md"
+git -C "$scratch_root/cc-wt" add .codeo/9/init.md
+bcheck allow "$h" "git -C $scratch_root/cc-wt commit -m \"docs(codeo): init dossier for #9\" 2>&1 | tail -2"
+h=$(bhome cc2 src)
+bcheck deny "$h" "git commit -m x 2>&1"
+bcheck deny "$h" "git add $h/src/a.txt 2>&1"
+bcheck deny "$h" "git add .codeo-x/f 2>&1"
+bcheck deny "$h" "git add .codeo/../src/a.txt"
+bcheck deny "$h" "git add $h/.codeo/../src/a.txt"
+bcheck deny "$h" "git add $h/.codeo-x/f"
+bcheck deny "$h" "git add $scratch_root/other/.codeo/f"
+bcheck deny "$h" "git push 2>&1"
+bcheck deny "$h" "git push 2>&1 | tail -1"
+bcheck deny "$h" "cd $h/.codeo && git add ../src/a.txt"
+
 case_desc=hooks_json_registers_the_guard
 hj="$plugin_root/hooks/hooks.json"
 reg=$(jq -r '[.hooks.PreToolUse[] | select(.matcher == "Edit|Write|NotebookEdit|Bash") | .hooks | select(length == 1) | .[0].command] | join("|")' "$hj")

@@ -47,11 +47,11 @@ Refused in such a checkout:
 
 Allowed:
 
-- Any path under `.codeo/`, which is how `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` keep their notes, drafts and ledgers; a `..` that climbs out of `.codeo/` is not under it. `git add`, `rm`, `mv` and `restore` pass only when every pathspec is under `.codeo/`, and `git commit` passes only when everything it would commit is under `.codeo/` and it names no pathspec outside it; `--amend`, `-i`, `--include`, `-o`, `--only` and a bare `--` are always refused.
+- Any path under `.codeo/`, which is how `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` keep their notes, drafts and ledgers; a `..` that climbs out of `.codeo/` is not under it, and a git pathspec with any `..` is refused. `git add`, `rm`, `mv` and `restore` pass only when every pathspec is `.codeo` or under it, relative or absolute (resolved against the directory the command addresses, so `cd <home>/.codeo && git add 192/init.md` passes), and a redirection such as `2>&1` or `2>/dev/null` is not a pathspec, and `git commit` passes only when everything it would commit is under `.codeo/` and it names no pathspec outside it; `--amend`, `-i`, `--include`, `-o`, `--only` and a bare `--` are always refused.
 - Plain `git checkout` and `git switch`, `worktree`, `fetch`, `pull`, `branch` and every script, so `/codeo:init`'s scratch worktree and the `codeo` command work.
 - Every other role, a hosted web session, a project without `.devcontainer/scripts/role.sh`, and a path outside any repository.
 
-A Bash command is split at `;`, `&&`, `||`, `|` and `&`, and each `git` segment is judged by the checkout it addresses: `cd` and `git -C` targets are followed, quoted ones too, so `git -C <issue clone> commit` run from home is allowed and `git -C <home> commit` run from an issue's checkout is refused. Quoted text is never read as a command.
+A Bash command is split at `;`, `&&`, `||`, `|` and `&`, and each `git` segment is judged by the checkout it addresses: `cd` and `git -C` targets are followed, quoted ones too, so `git -C <issue clone> commit` run from home is allowed and `git -C <home> commit` run from an issue's checkout is refused. Quoted text is never read as a command. A redirection such as `2>&1` does not split the command. The guard runs on the bash 3.2 and the BSD tools of a stock macOS, as well as on GNU userland; it needs `jq`.
 
 To switch the guard off, start Claude Code with `CODEO_HOME_EDITS=allow` in the environment, or put it in the project's `.claude/settings.local.json` `env`. It lasts for the session started with it, the session cannot set it for itself, and only the exact value `allow` counts.
 
@@ -59,6 +59,9 @@ What it does not see:
 
 - A file changed through the shell: `sed -i`, redirection, `rm`, `cp`.
 - A nested shell (`bash -c`), a subshell `( … )`, a `$(…)` substitution, and a script's contents; the body of a heredoc is read as commands.
+- Shell control words and prefixes: `if … then git push; fi`, `for … do git push; done`, `{ git push; }`, `! git push`, `time`, `command`, `xargs` and `pushd` before or around a git write.
+- `git --git-dir=…`, and `git commit --pathspec-from-file`, which name paths the guard does not read.
+- A write into a repository's `.git/` directory.
 - A failure of its own: when the hook cannot find out the role, it allows the call.
 
 A clone of a project that has the role check, in a folder not named `<codename>-home`, reads as `stray` and is guarded. The guard comes with the plugin version that carries the hook, so a project has it after it updates and re-pins.

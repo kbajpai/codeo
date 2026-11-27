@@ -24,17 +24,28 @@ deny() {
         permissionDecisionReason: $r}}'
 }
 
-# under_codeo_p <path>: succeeds when the path (leading ./ stripped) lies under .codeo/.
+# redirection_p <word>: succeeds when the word is a redirection (>, >>, <, N>, >file, 2>file, <file, and
+# what normalize_cmd leaves of N>&M and &>). redirection_op_p: it is the bare operator, so the next
+# word is its target.
+redirection_p() { local re='^[0-9]*[<>]'; [[ $1 =~ $re ]]; }
+redirection_op_p() { local re='^[0-9]*[<>]+$'; [[ $1 =~ $re ]]; }
+
+# under_codeo_p <path> <dir> <root>: succeeds when the path, resolved lexically against <dir>, is
+# <root>/.codeo or lies under it. A path with a ".." segment never does.
 under_codeo_p() {
     local p=$1
-    while [[ $p == ./* ]]; do p=${p#./}; done
-    [[ $p == .codeo/* && "/$p/" != */../* ]]
+    [[ "/$p/" != */../* ]] || return 1
+    [[ $p == /* ]] || p="$2/$p"
+    while [[ $p == *//* ]]; do p=${p//\/\//\/}; done
+    while [[ $p == */./* ]]; do p=${p//\/.\//\/}; done
+    while [[ $p == */. || $p == */ ]]; do p=${p%/.}; p=${p%/}; done
+    [[ $p == "$3/.codeo" || $p == "$3/.codeo/"* ]]
 }
 
 # git_write_p <subcommand> <dir> <args…>: succeeds when that git invocation is a write that the
 # .codeo/ exemptions do not cover.
 git_write_p() {
-    local sub=$1 dir=$2 a opt= path all_codeo=1 n=0 changed cluster_a=0
+    local sub=$1 dir=$2 a path all_codeo=1 n=0 changed cluster_a=0 root skip=0
     shift 2
     case $sub in
         push | merge | rebase | cherry-pick | revert | am | apply | reset | stash | tag) return 0 ;;
@@ -49,18 +60,22 @@ git_write_p() {
             done
             return 1 ;;
         add | rm | mv | restore)
+            root=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null) || return 0
             for a in "$@"; do
+                if [[ $skip == 1 ]]; then skip=0; continue; fi
+                if redirection_p "$a"; then redirection_op_p "$a" && skip=1; continue; fi
                 [[ $a == -- ]] && continue
                 [[ $a == -* ]] && continue
                 n=$((n + 1))
-                under_codeo_p "$a" || all_codeo=0
+                under_codeo_p "$a" "$dir" "$root" || all_codeo=0
             done
             [[ $n -gt 0 && $all_codeo == 1 ]] && return 1
             return 0 ;;
         commit)
-            local skip=0
+            root=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null) || return 0
             for a in "$@"; do
                 if [[ $skip == 1 ]]; then skip=0; continue; fi
+                if redirection_p "$a"; then redirection_op_p "$a" && skip=1; continue; fi
                 case $a in
                     --amend | --only | -o | -i | --include | --) return 0 ;;
                     --all) cluster_a=1 ;;
@@ -69,14 +84,14 @@ git_write_p() {
                     -?*)
                         [[ $a == *a* ]] && cluster_a=1
                         [[ $a =~ [mFCc]$ ]] && skip=1 ;;
-                    *) under_codeo_p "$a" || return 0 ;;
+                    *) under_codeo_p "$a" "$dir" "$root" || return 0 ;;
                 esac
             done
             changed=$(git -C "$dir" diff --cached --name-only 2>/dev/null)
             [[ $cluster_a == 1 ]] && changed+=$'\n'$(git -C "$dir" diff --name-only 2>/dev/null)
             while IFS= read -r path; do
                 [[ -n $path ]] || continue
-                under_codeo_p "$path" || return 0
+                under_codeo_p "$path" "$root" "$root" || return 0
             done <<<"$changed"
             return 1 ;;
     esac
@@ -85,10 +100,10 @@ git_write_p() {
 
 # normalize_cmd <command>: sets NORM to the command with every quoted span replaced by Q, except a
 # quoted word right after "cd " or "-C ", which keeps its content and loses its quotes, and with
-# every segment break (&&, ||, ;, |, &) turned into a newline. Plain bash, no sed -z: a stock macOS
-# has bash 3.2 and the BSD tools.
+# every segment break (&&, ||, ;, |, &) turned into a newline, except that a redirection N>&M or &>
+# loses its "&" and stays one word. Plain bash, no sed -z: a stock macOS has bash 3.2 and the BSD tools.
 normalize_cmd() {
-    local s=$1 n=${#1} i=0 c j q rest pre out= keep
+    local s=$1 n=${#1} i=0 c j q rest pre next prev out= keep
     local ctx_cd='(^|[[:space:];&|(])cd[[:space:]]+$' ctx_c='-C[[:space:]]+$'
     while [[ $i -lt $n ]]; do
         c=${s:i:1}
@@ -119,8 +134,11 @@ normalize_cmd() {
                 [[ ${s:i+1:1} == '|' ]] && i=$((i + 1))
                 out+=$'\n'; i=$((i + 1)) ;;
             '&')
-                [[ ${s:i+1:1} == '&' ]] && i=$((i + 1))
-                out+=$'\n'; i=$((i + 1)) ;;
+                next=${s:i+1:1}
+                prev=; [[ $i -gt 0 ]] && prev=${s:i-1:1}
+                if [[ $next == '&' ]]; then out+=$'\n'; i=$((i + 2))
+                elif [[ $prev == '>' || $prev == '<' || $next == '>' ]]; then i=$((i + 1))
+                else out+=$'\n'; i=$((i + 1)); fi ;;
             *) out+=$c; i=$((i + 1)) ;;
         esac
     done
