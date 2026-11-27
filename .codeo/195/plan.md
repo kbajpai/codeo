@@ -8,12 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). Q9-Q11 answered (recommendations accepted) and the round-2 plan approved and written to `docs/plans/2026-11-27-identify-acting-user-195-round-2.md` (unstaged). The footprint is committed; `overlap.sh` then printed four paths for #204, raised as Q12. The outcome waits for Q12. QC's blocking finding F1 is this
-plan's: decision Q2 (a hosted web session's `unverified` login is compared only with the lock's own
-`user:` line) makes the ownership checks pass for everyone on web, because `take web` writes that
-line from the same variable. Two acceptance criteria are unmet there. Q9-Q11 re-decide it, with the
-two plan-owned side findings (F2, F3). Nothing is drafted until they are answered. The round also
-carries the implement-owned fixes F4-F8 as tasks (listed under `## Notes`, no question needed).
+Round 2 written. Q9-Q12 answered (recommendations accepted); the round-2 plan is `docs/plans/2026-11-27-identify-acting-user-195-round-2.md`, unstaged until the engineer commits it. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -202,6 +197,7 @@ that clears it.
 **Recommendation:** proceed and coordinate, as for `qc.md` Q2: whichever branch merges second regenerates `tests/fixtures/skills-inventory.rules.sha256` and re-checks its `init`/`close` prose against the other's.
 
 **Answer:**
+Proceed and coordinate. (Engineer: "Go with your recommendations", 2026-11-27.)
 
 ## Notes
 
@@ -242,15 +238,6 @@ Round 2 — implement-owned findings from `qc.md` round 1 that this round's plan
   three `unverified` carve-outs.
 
 
-### Footprint
-
-```
-files:      lib/identity.sh, scripts/github.sh, scripts/claim.sh, scripts/lock.sh, scripts/live.sh, skills/init/**, skills/plan/**, skills/implement/**, skills/qc/**, skills/close/**, docs/handoff.md, docs/dossier.md, docs/skills.md, docs/skills-inventory.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-27-identify-acting-user-195.md, docs/plans/2026-11-27-identify-acting-user-195-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 | | |
@@ -270,9 +257,39 @@ sequenced:  none
 
 **Optional skills.** `engineering:system-design` and `engineering:architecture` were not listed in this session; their structure was applied directly. No `/codeo:issue` filed.
 
+### Round 2
+
+2026-11-27
+(send-back from qc.md round 1)
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-27-identify-acting-user-195-round-2.md` (unstaged, awaiting the engineer's commit); round 1's plan stays as written |
+| Shape | Executable plan under `docs/plans/`, 6 tasks, one PR; reference-doc changes are in `docs/handoff.md`, `docs/dossier.md`, `docs/skills.md` |
+
+**Answers to the send-back.** QC's blocking F1 was this plan's: Q2 (an `unverified` web login compared only with the lock's own `user:`) let the variable satisfy the check. Q9 (a) replaces it: an `unverified` login is compared with the pushed owner, the assignees and the lock's user like a verified one, refuses on a mismatch (overridable), and passes a match with the "not independently verified" note; `take` and `init` follow. Q10 (a): a legacy stash (no recorded owner) removes the verified caller, only when `verify` passed without an override. Q11 (a): the recorded owner who is not an assignee gets a refusal that names `github.sh issue assignee-add`, and `init` records a failed `assignee-add` under `## Notes`. Q12: the new `tests/**` overlap with #204 is proceed and coordinate.
+
+**Carried as tasks, no question.** F4 (the refusal date and the doc's `(claimed)` form), F5 (the pushed dossier is read from a private ref, not `FETCH_HEAD`), F6 (backticked and padded Owner rows), F7 (flowchart and README wording), F8 (two test pins).
+
+**Options rejected.** Refusing every ownership-gated step on web unless `GET /user` resolves (web sessions could not run `plan` through `close`); narrowing the acceptance criteria to non-web hosts (the issue's text would change); removing every assignee on a legacy stash; letting the recorded owner pass without being an assignee.
+
+**Documentation pages the plan will change.** `docs/handoff.md` (the "never satisfies" passage, the `verify` flowchart, the refusal forms), `docs/dossier.md`, `docs/skills.md`, `README.md`, `CHANGELOG.md`, and the rule text of `init-11` and `close-16` in `skills/*` and `docs/skills-inventory.md`.
+
+**Intake questions resolved.** None.
+
+### Footprint
+
+```
+files:      lib/identity.sh, scripts/github.sh, scripts/claim.sh, scripts/lock.sh, scripts/live.sh, skills/init/**, skills/plan/**, skills/implement/**, skills/qc/**, skills/close/**, docs/handoff.md, docs/dossier.md, docs/skills.md, docs/skills-inventory.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-27-identify-acting-user-195.md, docs/plans/2026-11-27-identify-acting-user-195-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-27 — Q1-Q8 raised · cost: 3m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 192k in + 1M cached / 22k out
 - 2026-11-27 — planned: docs/plans/2026-11-27-identify-acting-user-195.md · cost: 8m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 235k in + 2.1M cached / 48k out · engineering:system-design and engineering:architecture unavailable, structure applied directly
 - 2026-11-27 — round 2 (send-back from qc.md round 1): Q9-Q11 raised · cost: 1m · fable-5-2 380k in + 421k cached / 5k out
 - 2026-11-27 — round 2: plan written, footprint committed, Q12 raised (new overlap with #204) · cost: 6m · fable-5-2 384k in + 824k cached / 6k out · sonnet-5-5 42k in + 3.4M cached / 20k out · engineering:system-design and engineering:architecture unavailable, structure applied directly
+- 2026-11-27 — round 2 planned: docs/plans/2026-11-27-identify-acting-user-195-round-2.md · cost: 7m · fable-5-2 384k in + 824k cached / 6k out · sonnet-5-5 43k in + 4.3M cached / 23k out · engineering:system-design and engineering:architecture unavailable, structure applied directly
