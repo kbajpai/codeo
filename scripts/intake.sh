@@ -14,7 +14,8 @@
 #
 # commit and restore:
 #   commit puts .codeo/intake/<dir>/ as it stands in the working tree onto codeo/intake, and pushes
-#   it. --drop removes <old-dir> from the branch in the same commit (the rename from new-<slug> to
+#   it. commit adds and updates files and deletes only what --drop names; a file missing from this
+#   clone is left on the branch. --drop removes <old-dir> from the branch in the same commit (the rename from new-<slug> to
 #   <N> once the issue is filed). restore writes any file of .codeo/intake/<dir>/ that the branch
 #   has and this clone does not; a file already here is left alone, as it may carry answers not yet
 #   committed. Neither reads the project config.
@@ -171,9 +172,10 @@ build() {
         if [[ -n $parent ]]; then git read-tree "$parent"; else git read-tree --empty; fi
         # -f: a row rewritten on origin since this clone last wrote it differs from the index entry.
         ((${#dropped[@]} == 0)) || git rm -f -r -q --cached --ignore-unmatch -- "${dropped[@]}"
-        # -f: the intake directory is ignored on every other branch. No -A: a dossier absent from
-        # this clone is one it never restored, not one to delete.
-        (($# == 0)) || git add -f -- "$@"
+        # -f: the intake directory is ignored on every other branch. --ignore-removal: a file absent
+        # from this clone is one it never restored, not one to delete; only <drop> removes. Without
+        # it a directory pathspec stages those deletions.
+        (($# == 0)) || git add -f --ignore-removal -- "$@"
         local tree
         tree=$(git write-tree)
         if [[ -n $parent && $tree == "$(git rev-parse "$parent^{tree}")" ]]; then
