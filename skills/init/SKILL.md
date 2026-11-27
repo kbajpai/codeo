@@ -90,7 +90,7 @@ is the container the message names.
    is never claimed for, and no assignee check is skipped anywhere below. The login is recorded as
    the `| Owner | <login> |` row of `init.md`'s header table (after `| Branch |`), on a fresh init
    and on a resume (an older `init.md` with no Owner row gets one then), is the last argument of `claim.sh --resume-line`, and is what `assignee-add`
-   adds. An `unverified` login (a web session) is recorded but never compared with an assignee.
+   adds. An `unverified` login (a web session) is recorded and compared like any other: an assignee other than the login stops it unless the engineer's override is recorded, and the lost-checkout resume needs the assignee to equal the login.
 
    **Check nobody else has it.** An `assignees` entry other than the login `user whoami` printed
    is someone else's claim, and
@@ -104,8 +104,8 @@ is the container the message names.
    `## Notes` in `init.md` verbatim — one line, `- <date> — override: "<the engineer's words>"` — in the
    dossier's first commit at step 9, or the resume's commit at step 6.
    `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Parallel workflows`.
-   An `unverified` login skips only the assignee comparison, as said above; the `inflight.sh`
-   check still applies. `overlap.sh` has nothing to compare
+   An `unverified` login is compared with the assignee like any other, as said above, and the `inflight.sh`
+   check applies too. `overlap.sh` has nothing to compare
    yet — no branch, no footprint — so `init`'s check is `inflight.sh` alone, deliberately.
 
    **Check the board says it is Ready — when there is a board.** Whether one is configured is
@@ -202,8 +202,7 @@ is the container the message names.
      `/codeo:triage`, or by hand, if it is not.
      Exit 3 has two readings, each quoted from the script's line, and both are a lost-checkout
      resume only when the issue's assignee is
-     the login `user whoami` printed (not for `unverified`) — a web session's login is not compared
-     with the assignee, so the lost-checkout resume proceeds without that comparison: `has no stash` means no stash or
+     the login `user whoami` printed — an `unverified` login included: `has no stash` means no stash or
      abandon is live, and `already resumed — …` means the last stash or abandon was already
      resumed — by this engineer, when the assignee is them, whose checkout was then lost (the
      state `claim.sh --resume-line` writes as `after a lost container`). Any other assignee makes
@@ -318,7 +317,7 @@ is the container the message names.
    move is the claim as the board shows it, as the assignee is on the issue. It sets the Status
    on every synced project (`board.projects` plus the gate project) whose board has the option,
    adding the issue there first when it is missing, leaving a card on any other project alone, printing one `board.sh: #<N> <old> → <new> on #<project> <title>`
-   line per project written. A failed `assignee-add` is reported in the closing message, not recorded in `init.md`; the claim stands on the pushed branch, and there is no follow-up commit. Quote those lines in this turn's output. The dossier is pushed by
+   line per project written. A failed `assignee-add` is written as `- <date> — assignee-add failed: <git/gh's message>` under `init.md`'s `## Notes` (created when absent, before `## Outcome`), committed alone, staged by name, with the subject `docs(codeo): init dossier for #<N> — assignee-add failed`, and pushed; it is also reported in the closing message. The claim stands on the pushed branch. Quote those lines in this turn's output. The dossier is pushed by
    now, so the outcome (those lines, or the failure the script reports) is reported here and at
    step 10, not in the `## Log` line. A failure here (refused in a web session, or a missing
    `project` scope) is reported and the claim still stands — say to move `#<N>` to `$IN_PROGRESS`

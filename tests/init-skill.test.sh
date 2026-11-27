@@ -60,7 +60,8 @@ step_contains "either TODO case ends the turn" 11 'Either way, end the turn with
 grep -qF -- 'scripts/github.sh" user whoami' "$skill" || fail "the skill never runs user whoami"
 grep -qF -- 'When `user whoami` exits 1, print its one `codeo:` line and stop' "$skill" || fail "the skill does not stop on whoami's exit 1"
 ! grep -qF -- 'say so and continue' "$skill" || fail "the skill still says [say so and continue]"
-grep -qF -- 'is recorded but never compared with an assignee' "$skill" || fail "the skill does not exempt an unverified login from the assignee comparison"
+! grep -qF -- 'never compared with an assignee' "$skill" || fail "the skill still exempts an unverified login from the assignee comparison"
+! grep -qF -- 'skips only the assignee comparison' "$skill" || fail "the skill still says an unverified login skips the assignee comparison"
 ! grep -qF -- 'no login to' "$skill" "$skill" || fail "the skill still has [no login to]"
 ! grep -qF -- 'user login' "$skill" || fail "the skill still has [user login]"
 grep -qF -- '| Owner | <login> |' "$skill" || fail "the skill names no Owner row"
@@ -73,8 +74,15 @@ grep -qF -- '<!-- rule: init-11 -->' "$skill" || fail "marker init-11 is missing
 ! grep -qF -- 'Present only when step 9' "$skill" || fail "the skill still has the Claim line rule [Present only when step 9]"
 ! grep -qF -- '**Claim.**' "$skill" || fail "the skill still has a Claim line in the outcome"
 ! grep -qF -- 'trailing **Claim**' "$skill" || fail "the skill still mentions a trailing Claim line"
-step_contains "step 6 exit 3 exempts unverified" 6 '(not for `unverified`)'
-step_contains "a failed assignee-add is reported, not recorded" 9 'A failed `assignee-add` is reported in the closing message, not recorded in `init.md`'
+! grep -qF -- '(not for `unverified`)' "$skill" || fail "step 6 exit 3 still exempts unverified"
+! grep -qF -- 'not recorded in `init.md`' "$skill" || fail "the skill still says a failed assignee-add is not recorded"
+
+# Fix round 2 (#195): an unverified login is compared; a failed assignee-add is recorded.
+init11=$(sed -n '/<!-- rule: init-11 -->/,/^$/p' "$skill")
+grep -qF -- 'unverified' <<<"$init11" || fail "init-11 does not mention unverified"
+grep -qF -- 'compared' <<<"$init11" || fail "init-11 does not say the login is compared"
+step_contains "step 9 records a failed assignee-add" 9 'assignee-add failed'
+step_contains "step 9 records it under Notes" 9 '## Notes'
 
 if ((failures)); then
     echo "$failures case(s) failed"
