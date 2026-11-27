@@ -8,11 +8,23 @@
 
 ## Where this stands
 
-Round 2, done, after the send-back from `qc.md` round 1. F1-F7 are fixed. Next step: `/codeo:qc`.
+Round 3 started after the send-back from `qc.md` round 2, and stopped at step 2a: `overlap.sh 204` printed a new overlap with #206 (Q1). Nothing is changed until it is answered. The round 2 outcome below stands.
 
 ## Questions
 
-None.
+### Q1 — #206 now changes `tests/intake.test.sh`, inside this plan's `tests/**`. Proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh 204` printed `206	glob:tests/intake.test.sh`. `#206` (branch `fix/206-codeo-cleanup-prints-codeo-rm`, assignee kbajpai) has added that file to its changed paths since `plan.md` Q3 was answered. This branch does not change `tests/intake.test.sh`: the overlap is this plan's coarse `tests/**` footprint glob, not a shared edit, so it cannot conflict. No exclusive resource is shared.
+
+- Proceed and coordinate: as `plan.md` Q3 decided for #206.
+- Sequence after #206.
+- Re-scope.
+
+I recommend proceed and coordinate.
+
+**Options:** proceed and coordinate (recommended) · sequence after #206 · re-scope.
+
+**Answer:**
 
 ## Notes
 
@@ -58,3 +70,4 @@ Each finding was checked against the code before work started; all held. Fixed i
 
 - 2026-11-27 — implemented docs/plans/2026-11-27-close-archive-before-pr-204.md: 6 tasks, 9 commits, build true · cost: 37m · sonnet-5-5 607k in + 19.7M cached / 83k out
 - 2026-11-27 — round 2: fixed qc round 1's F1-F7 (4 commits), build true · cost: 3m · sonnet-5-5 123k in + 5M cached / 23k out
+- 2026-11-27 — round 3: Q1 raised (overlap with #206, tests/intake.test.sh) · cost: 0m · sonnet-5-5 10k in + 377k cached / 405 out
