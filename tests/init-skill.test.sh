@@ -84,6 +84,8 @@ grep -qF -- 'compared' <<<"$init11" || fail "init-11 does not say the login is c
 step_contains "step 9 records a failed assignee-add" 9 'assignee-add failed'
 step_contains "step 9 records it under Notes" 9 '## Notes'
 
+step_contains "the resume path records a failed assignee-add" 6 'assignee-add failed'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

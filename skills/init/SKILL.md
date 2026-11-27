@@ -257,7 +257,7 @@ is the container the message names.
    run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue assignee-add <N> <login>` and, with a board,
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/board.sh" set <N> "$IN_PROGRESS"` (a stash normally moved
    it back to Ready and an abandon to the backlog, but a failed move or a lost checkout may have
-   left it anywhere). Quote the line(s) it prints in this turn's output. A failure moving the card
+   left it anywhere). Quote the line(s) it prints in this turn's output. A failed `assignee-add` here is recorded as step 9 says (an `assignee-add failed` line under `## Notes`, its own commit, pushed, and reported in the closing message). A failure moving the card
    (refused in a web session, or a missing `project` scope) is reported — say to move `#<N>` to
    `$IN_PROGRESS` by hand — and the claim still stands; go on to step 10 regardless. Any other checkout of
    this branch the engineer still has open needs `git pull --ff-only` there, because the resume
@@ -318,8 +318,8 @@ is the container the message names.
    on every synced project (`board.projects` plus the gate project) whose board has the option,
    adding the issue there first when it is missing, leaving a card on any other project alone, printing one `board.sh: #<N> <old> → <new> on #<project> <title>`
    line per project written. A failed `assignee-add` is written as `- <date> — assignee-add failed: <git/gh's message>` under `init.md`'s `## Notes` (created when absent, before `## Outcome`), committed alone, staged by name, with the subject `docs(codeo): init dossier for #<N> — assignee-add failed`, and pushed; it is also reported in the closing message. The claim stands on the pushed branch. Quote those lines in this turn's output. The dossier is pushed by
-   now, so the outcome (those lines, or the failure the script reports) is reported here and at
-   step 10, not in the `## Log` line. A failure here (refused in a web session, or a missing
+   now, so the board outcome (those lines, or the failure the script reports) is reported here and at
+   step 10, not in the `## Log` line (a failed `assignee-add` has its own `## Notes` commit above). A failure here (refused in a web session, or a missing
    `project` scope) is reported and the claim still stands — say to move `#<N>` to `$IN_PROGRESS`
    by hand, and continue rather than stopping; the branch, dossier and lock never wait on the
    board. With no board there is no call to make.
