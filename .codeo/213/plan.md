@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Two questions are open (Q1, Q2); the rest of the plan is decided. No plan file is drafted yet.
+Q1 and Q2 are answered (the recommendations). The plan is being drafted to `.codeo/213/plan-draft.md` for review; nothing is open.
 
 What exploration found:
 - **The gate is "what is on `main` now".** `origin/main` is at `3857710`, 8 commits past `v1.0.10`: #191 (the pin), #202 (#190), #203 (#192), #208 (#195), #211 (CI), #210 (#204), #212 (#206), #209 (#188). `inflight.sh --except 213` printed `no other workflow in flight`; `overlap.sh` runs once the footprint is written.
@@ -46,6 +46,7 @@ What exploration found:
 *Recommendation:* the second. The v1.0.11 changes are the ones no README reader has met yet, so they are the ones worth explaining at the release that ships them; the older omissions are no worse than they were at v1.0.10. I cannot file the follow-up issue from this checkout, so the plan records it as a `## Notes` line for `/codeo:triage`.
 
 **Answer:**
+Go with the recommendation: mismatches M1-M8 plus the omissions the unreleased work introduced (#190, #192, #195, #204, #206); the older omissions go into one issue for the next release (engineer, in the conversation, 2026-11-27; recorded here by the skill).
 
 ### Q2 — Which entries does the `## v1.0.11` changelog section get, and how are the two "next release" bullets reworded?
 
@@ -57,6 +58,7 @@ What exploration found:
 *Recommendation:* a one-line #211 bullet ending `Nothing the plugin does changes (#211).`, and reword the two bullets, since the release PR is the only place that can; the header lines (`Config schema`, `Shared state`, `Safe to bump mid-workflow`) are re-read against the diff since `v1.0.10` of `scripts/`, `lib/` and `hooks/` in Task 7 and change only if it requires it.
 
 **Answer:**
+Go with the recommendation: a one-line #211 bullet ending `Nothing the plugin does changes (#211).`, and #192's and #204's bullets reworded to the released state (engineer, in the conversation, 2026-11-27; recorded here by the skill).
 
 ## Notes
 
