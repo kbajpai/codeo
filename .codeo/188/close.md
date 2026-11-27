@@ -31,7 +31,6 @@ Opened on QC round 2's clear verdict (`**Verdict: clear — forward to `/codeo:c
 ### Round 2 — conflicts with main
 
 2026-11-27
-(send-back from close.md round 1)
 
 The engineer's merge of #209 failed: `mergeable` is `false`, `mergeStateStatus` `CONFLICTING`. `git merge-tree --write-tree --name-only origin/main HEAD` exits 1 and names one conflicting file:
 
