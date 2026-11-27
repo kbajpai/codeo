@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 is built: Tasks 10-11 of `docs/plans/2026-11-27-close-177-qc-leftovers-188.md` (after plan round 3), reviewed and committed; the branch also carries round 3's merge of `origin/main`. The build passes. Next: `/codeo:qc`.
+Round 5 is done: `origin/main` (with #204, #206 and #211) is merged into the branch and the `CHANGELOG.md` conflict is resolved; this branch's wording and pins survive in the files #204 and #206 rewrote. The build passes. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -108,9 +108,32 @@ Round 4 starts from the base branch: `sync-main.sh` reported the branch already 
 
 **Deviations from the plan:** none beyond process: Task 10's proof greps were run with `grep -c -F` and double-quoted patterns because the apostrophes in "signal's" and "issue's" break the plan's single-quoted form. The two tasks went to one implementer, one commit per task, and were reviewed as one unit over `c5633fc..17fef72`: spec compliant on both, no Critical or Important finding, one Minor deferred (the phrase "from `git config user.name`" is unqualified in its own clause, and the next sentence covers the hosted case). No separate whole-branch review was run; `/codeo:qc` round 4 reviews the whole diff independently. No `Deployed revision:`: no shared environment.
 
+
+### Round 5
+
+2026-11-27
+(send-back from qc.md round 4)
+
+QC round 4 stopped at step 2: `main` moved after round 3's merge (`9b11696` #211 parallel CI, `e8fb549` #204 archive the dossier before `/codeo:close` opens the pull request, `3b1279b` #206 runnable cleanup commands), and `CHANGELOG.md` conflicted. No plan task: this round is step 2a's work. Its finding F10 (blocking) holds, and `overlap.sh 188` printed nothing, as #204 and #206 are merged and not in flight.
+
+**Merge.** `sync-main.sh` merged `origin/main` and stopped on one conflict, `CHANGELOG.md`, under `## Unreleased`: #204 added its `/codeo:close` bullet in the place where this branch has its documentation-leftovers bullet. The two are independent entries, so both are kept (this branch's first, then #204's), and the `Shared state:` line stands as `main` has it. Merge commit `fa2fccd`. Every one of `main`'s five `## Unreleased` bullets is in the resolved file (compared by their first 60 characters, none missing), and `git diff origin/main -- CHANGELOG.md` shows only this branch's one bullet.
+
+**Also changed on `main`, re-checked on the merged tree against what this branch changed:**
+- `skills/cleanup/SKILL.md` (#206 rewrote the skill): step 4 on the merged tree reads "(an issue that failed only `name` gets one while origin still holds a validly named `codeo-live/<N>/*` branch)" (line 96). `scripts/cleanup.sh`'s `leftover_proof` (line 173) still counts only names matching `^codeo-live/<N>/[A-Za-z0-9._-]+$` and prints nothing otherwise. #206's header comment (line 13) adds that a `leftover` line can also stand alone when an issue's removal is recorded; that case is not what this parenthesis describes.
+- `tests/cleanup-skill.test.sh`: the `step4=` line (35), this branch's pin on it (38, "while origin still holds a validly named") and the tracker needles (131, `else codeo-track.sh sits beside`, `CODEO_TRACK names it`) all survive; the old whole-file `while origin still holds` check is still gone.
+- `skills/close/SKILL.md` and `tests/close-skill.test.sh` (#204 reordered the skill): step 17 is still the step that holds the live-signal paragraph; "drop the `refs/heads/` prefix first" (line 588) and "per branch that passes" (590) are intact, and so are their two pins (266-267).
+- `.codeo/overlays/{cleanup,close}.md` and their templates: both overlays still equal their templates after substitution, and each carries "CODEO_TRACK names it, else codeo-track.sh sits beside it".
+- `docs/home-checkout.md`: "taking the signal's user" and "when that file is missing" are still there once each.
+- Other files `main` changed, such as `scripts/cleanup.sh`, `docs/handoff.md` and the CI workflow, hold no sentence this branch changed.
+
+`overlap.sh --outside 188` prints nothing.
+
+**Built:** nothing beyond the merge and the conflict resolution; no documentation page changed in this round. **Build result:** the `shell` suite's `build` is `true` and exits 0; `git diff --stat origin/main -- scripts lib hooks .sbx .devcontainer` prints nothing. The suite itself is `/codeo:qc`'s. **Deviations from the plan:** none; no `Deployed revision:`, no shared environment.
+
 ## Log
 
 - 2026-11-27 — implemented docs/plans/2026-11-27-close-177-qc-leftovers-188.md: 6/6 tasks, build passes, review clean (2 minors deferred) · cost: 30m · sonnet-5-5 139k in + 3.9M cached / 22k out
 - 2026-11-27 — round 2 (send-back from qc.md round 1): implemented Tasks 7-9 of docs/plans/2026-11-27-close-177-qc-leftovers-188.md, 3/3, build passes, review clean · cost: 15m · sonnet-5-5 90k in + 4.1M cached / 16k out
 - 2026-11-27 — round 3 (send-back from close.md round 2): merged origin/main, resolved CHANGELOG.md (kept both bullets), re-checked the F1 and F3 sentences against #195's changes, build passes · cost: 1m · sonnet-5-5 15k in + 1.8M cached / 3k out
 - 2026-11-27 — round 4 (after plan.md round 3): implemented Tasks 10-11, 2/2, build passes, review clean (1 minor deferred) · cost: 8m · sonnet-5-5 112k in + 3.8M cached / 14k out
+- 2026-11-27 — round 5 (send-back from qc.md round 4): merged origin/main (#204, #206, #211), resolved CHANGELOG.md (kept every bullet), re-checked the cleanup, close and overlay wording and pins on the merged tree, build passes · cost: 1m · sonnet-5-5 36k in + 2M cached / 3k out
