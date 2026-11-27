@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done (send-back from qc.md round 1). F1 and F2 are fixed and committed, the build (`true`) passes, and the next step is `/codeo:qc`.
+Round 3, done (send-back from qc.md round 2). F14 and F7 are fixed with the small items, the build (`true`) passes, and the next step is `/codeo:qc`.
 
 ## Questions
 
@@ -50,7 +50,23 @@ None.
 - **Known limits found this round, left as they are:** an absolute pathspec through a symlinked prefix (such as `/tmp` against `/private/tmp` on macOS) does not match the checkout's real path and is refused (fail-closed; now said on the page); a redirection written before `git` (`2>/dev/null git add x`) makes that segment's first word not `git`, so it is not judged — the same class as F3. The BSD-sed case was proved with a shim that fails on `-z`, not on a Mac.
 - **Review:** the controller read the 3d0284a/3f3188c code diff and ran `bash tests/home-guard.test.sh` (`all cases passed`); the full suite is `/codeo:qc`'s.
 
+### Round 3 — 2026-11-27
+(send-back from qc.md round 2)
+
+- **Base branch.** `sync-main.sh`: the branch already contains `origin/main`; no `also changed on` lines. `overlap.sh 192`: nothing.
+- **F14 (blocking, answered by Q1) — held, reproduced.** A throwaway repository outside the project, whose executable `role.sh` creates a marker file, had that script run by an `Edit` of one of its files. `4a202ce`: the hook runs a repository's `role.sh` only when it is the session's project (`$CLAUDE_PROJECT_DIR`, else the repository of the hook's `cwd`) or a worktree of it (same git common directory), and allows otherwise. `/codeo:init`'s scratch worktree is a worktree of the project and stays judged. The round 1 cross-checkout cases changed with it: from an issue clone, `git -C <home> commit` and an edit by absolute path into the home clone are no longer judged. New group `role_sh_only_in_the_project` asserts the foreign `role.sh` is not run, a worktree is judged, and `CLAUDE_PROJECT_DIR` wins over `cwd`. Re-run here: an `Edit` and a `git -C` into the foreign repository both allow and no marker file appears.
+- **F7 (blocking) — held, reproduced** (7.7 s at 31 KB). `e8142ce`: a command with no `git` in it returns before normalising; a command over 16384 bytes is not judged; the context test in `normalize_cmd` reads a short tail, and it runs byte-wise. New group `bash_long_commands`. Re-run here: a 23 KB heredoc with no `git`, `LC_ALL=C.UTF-8`: 0.013 s.
+- **F8, F9, F12 (non-blocking) — taken, being cheap.** `3f4ae2e` refuses `--amen`, `--inc`, `--onl` and the other abbreviations of `--amend`, `--include` and `--only` of three letters or more; `cc717d6` runs `role.sh` with `bash` and needs only that the file exists; `4829526` takes the physical path of the Bash `cwd`. Each has a test that failed first.
+- **F10, F11 (non-blocking) — documented, not coded.** `744ed1a`: an unresolvable `cd` target and a `git` not written as the bare word (a path, quotes, `\git`, an alias, a line continuation) are on the page's not-seen list.
+- **F13 — left.** The stash listing, comments, heredoc bodies, `git clean` and `git branch -f` stay as the page says; the last two are the engineer's call.
+- **Documentation pages changed:** `docs/home-checkout.md` (`## The edit guard`: which repositories are judged, the 16 KB limit, abbreviated options, `role.sh` run with `bash`, the added limits, and the flowchart's new check). No other page.
+- **Build result:** `true` exits 0.
+- **Commits:** `4a202ce` F14, `e8142ce` F7, `3f4ae2e` F8, `cc717d6` F9, `4829526` F12, `744ed1a` the page.
+- **Known edge, left:** if the `cwd` is empty and its `cd` fails, the starting directory is empty and the call is not judged (fail-open).
+- **Review:** the controller read the code diff and re-ran the F14 and F7 reproductions; `bash tests/home-guard.test.sh` and the full `bash tests/run.sh` print `all cases passed`. Grading them is `/codeo:qc`'s.
+
 ## Log
 
 - 2026-11-26 — built: 4 tasks, 7 commits, build exit 0 · cost: 43m · sonnet-5-5 380k in + 11.5M cached / 75k out
 - 2026-11-27 — round 2: F1 and F2 fixed, 4 commits, build exit 0 · cost: 15m · sonnet-5-5 236k in + 3.8M cached / 30k out
+- 2026-11-27 — round 3: F14, F7 fixed plus F8, F9, F12, 6 commits, build exit 0 · cost: 21m · sonnet-5-5 112k in + 3.8M cached / 29k out
