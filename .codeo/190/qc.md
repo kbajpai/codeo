@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 6 is written and routed back to `/codeo:implement`: the build and the full suite pass, round 5's blocker K1 is fixed, and one documentation finding remains (L1: the README's sample run names an empty repository, which cannot produce it, and never says a new repository needs a first commit and `origin/HEAD`). Nothing in the code or the tests is blocking. Nothing is open; the routing needs no answer from the engineer.
+Round 7 is written and routed back to `/codeo:implement`: the build and the full suite pass, round 6's sample-run conditions are fixed, and one documentation finding remains (M1: the README's remedy for a repository with no `origin/HEAD` does not work, because the first run has already written `baseBranch: TODO-set-me` and a rerun keeps it). Nothing in the code or the tests is blocking. Nothing is open; the routing needs no answer from the engineer.
 
 ## Questions
 
@@ -308,6 +308,47 @@ It is the only failing file of 60. Re-run alone: `bash tests/run.sh example` fai
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 7 — 2026-11-27
+
+**Pass.** Round 6's findings are recapped below as history; this pass started again from step 0 on the tree at `10fae4b` (`7b7cc0f` is the merge base). `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`. `overlap.sh 190`: nothing printed (exit 0). `scope.sh origin/main HEAD` (86 files changed, 6673 insertions, 60 deletions): every changed path unclassified, `suite.shell=true`; no `deploy=` line (no environment configured). `overlap.sh --outside 190` printed `lib/codename.sh`, `tests/close-removal.test.sh`, `tests/doctor.test.sh`, `tests/folder-check.test.sh`, `tests/init-overlay.test.sh` and `tests/role.test.sh`: the footprint in `plan.md` still omits them (`/codeo:plan`'s; not blocking on a first-round plan).
+
+**Build.** The `shell` suite's `build` is `true`: exit 0.
+
+**Tests.** `bash tests/run.sh` (231 s): `all cases passed`, exit 0. `bash scripts/containers.sh --check` prints no `differs`; `bash scripts/doctor.sh` in this checkout prints no `fail` line and `ok containers: managed scripts match the templates`. The reviewer ran `containers`, `init`, `setup`, `doctor`, `readme` and `example` alone; each passed.
+
+**Acceptance criteria.**
+
+| # | Criterion | Verdict | Settled by |
+|---|---|---|---|
+| 1 | The audit list is recorded and none of the assumptions remains hardcoded in a script or default the template ships | met | `docs/container-templates.md` (audit table); `tests/containers.test.sh` leak scan; the reviewer re-rendered for `acme-co/shop` and grepped `kbajpai`, `codeo-<N>`, `codeo-home`, `codeo-gh`, `codeo-git` and `codeo-dev`: nothing left |
+| 2 | `/codeo:setup --containers` in another project writes a working dev container and sbx sandbox setup with the project's URL and names | met | `tests/containers.test.sh`, `tests/setup.test.sh` (passed) |
+| 3 | A test sets up a throwaway project with another owner and codename and asserts no shipped script or default still names `kbajpai/codeo` or `codeo-<N>` | met | `tests/containers.test.sh`: `another_project_gets_its_own_names`, `no_shipped_file_names_codeo_where_the_project_belongs` (passed) |
+| 4 | The C# + Angular example builds its image, and an issue container or sandbox starts and runs the project's build and test commands | untestable here — no Docker or `sbx` in this container; the engineer's two clean `host-run.sh` runs are recorded in `implement.md` and are not evidence from this pass (they predate rounds 4-7) | `implement.md` (the engineer's host output) |
+| 5 | README and `.devcontainer/README.md` describe both adoption paths, and every command in them was run | not met — the `curl … \| bash` line cannot be run before a release ships `scripts/codeo-init.sh` (stated on the page), and the README's fix for a repository with no `origin/HEAD` does not work as written (M1) | `README.md:261`; `scripts/codeo-init.sh:131` and `:173-175`; reviewer's reproduction |
+| 6 | `bash tests/run.sh` passes and codeo's own containers behave as before | met | `bash tests/run.sh` output above; `containers.sh --check` and `doctor.sh` clean |
+| 7 | `scripts/codeo-init.sh --yes` in a non-codeo clone with another codename produces a config, the container and sandbox files with the project's names and a passing doctor | met — with the plan's stated exception that doctor's `ruleset` check fails on a new repository | `tests/init.test.sh`: `an_unattended_run_adopts_another_project` (passed) |
+| 8 | The wizard fails with a stated reason, creating nothing, when there is no `origin`, `gh` is logged out or `gh` cannot see the repository, and no create call is ever made | met | `tests/init.test.sh`: `refuses_without_an_origin`, `refuses_when_gh_is_not_logged_in`, `refuses_a_repository_gh_cannot_see_and_creates_nothing` |
+| 9 | Rerunning the wizard keeps an existing config and never overwrites a seed file | met | `tests/init.test.sh`: `a_rerun_keeps_the_config`; `tests/containers.test.sh`: `a_second_run_skips_and_never_overwrites_seeds` (a rerun that cannot derive a codename from the repository name is M2) |
+| 10 | codeo's own checked-in container files equal what the templates render for codeo's config, checked by a test | met | `tests/containers.test.sh`: `codeos_own_files_match_their_templates` and the overlay, Dockerfile and `devcontainer.json` tests (passed) |
+
+**Documentation.** A scan of round 7's added lines for "now", "no longer" and issue numbers found nothing. The reviewer checked the three causes of the doctor `containers` line, the `set it` / `set them` wording, the 23-file count and the sample block's `ok` lines against the code and found them true. Findings below: M1, M3, M4, M5.
+
+**Independent review** (`QC review:`, opus, given the criteria and the diff only). Its verdict, in plain text: Ready to merge? With fixes — the code meets the acceptance criteria it could check and the tests pass; the one fix it asks for before merge is the README's remedy for a repository with no `origin/HEAD`, which it reproduced failing, and the rest are small documentation and rerun nits.
+
+**Round 6 findings, recapped.** L1 (blocking in round 6) — its sample conditions are fixed by `10fae4b`, but the remedy the commit added for a repository with no `origin/HEAD` is wrong (M1). L2-L7 were taken in `10fae4b`; L8 and L9 were left for `/codeo:triage`.
+
+**Findings** (this round's findings are numbered M1-M6; each answers *blocking or not* and *whose it is*):
+- **M1 — blocking, `/codeo:implement`'s.** `README.md:261` says of a repository with no commit yet: "push the first commit and run `git remote set-head origin <base>`, or set `baseBranch` in `.codeo/config.json`, and run it again." The first run has already written `.codeo/config.json` with `baseBranch: TODO-set-me` (`scripts/codeo-init.sh:173-175`); a rerun keeps that config and, with `--env containers`, stops at `codeo_base_error` (`scripts/codeo-init.sh:131`): `init: fail config: config.json: baseBranch is TODO-set-me; set baseBranch…`. Setting `origin/HEAD` alone fixes nothing. Reproduced by the reviewer: a scratch clone with no `origin/HEAD` and a stub `gh`, first run `fail config … TODO-set-me`, then `git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main` and a rerun stopped with the config still `TODO-set-me`. A brand-new repository is the main audience, and this is the path it takes. Fix: say to set `baseBranch` in `.codeo/config.json` (or delete the file) and run the wizard again; or have the wizard replace a kept `TODO-set-me` `baseBranch` once `origin/HEAD` resolves, and document that.
+- **M2 — non-blocking, `/codeo:implement`'s.** A rerun fails with `init: fail answer: cannot derive a codename from '42'` when the repository name gives no codename, although the kept config has one (the wizard derives its default before it reads the kept config). Reproduced by the reviewer on `acme-co/42`: the first run with `--codename shop` succeeded, a plain `--yes --env containers` rerun failed. Use the kept config's `codename` as the default. (Related to K2 and L9.)
+- **M3 — non-blocking, `/codeo:implement`'s.** The sample block (`README.md:263`) shows `ok suites: 3 suite(s), every build and test command resolves` and `ok superpowers: installed`, which need `dotnet`, `npm` and `kubectl` on the host's PATH and superpowers installed; the stated conditions name only the flags, the commit or `origin/HEAD`, and the Dockerfile. A reader repeating the run without them sees `fail suites`. Name them.
+- **M4 — non-blocking, `/codeo:implement`'s.** The sentence "or running `codeo update` from it, replaces the first" (`README.md`, `.devcontainer/README.md` *One `codeo` command per machine*, `docs/container-templates.md` audit row) is not what `codeo update` does: it replaces `readlink -f ${BASH_SOURCE[0]}` and the scripts under its own `~/<codename>` only (`templates/containers/.devcontainer/codeo`, `cmd_update`). Only installing the second command at the same path replaces the first. Drop the clause.
+- **M5 — non-blocking, `/codeo:implement`'s.** `docs/container-templates.md:27` says `codeo-track.sh` is among the files that "clone" the repository; the tracker only derives the slug for `gh` comment calls. Reword the row.
+- **M6 — non-blocking, `/codeo:implement`'s.** Run through `curl … | bash`, doctor runs from the temporary release clone, so a `differs` result prints `refresh with: bash /tmp/tmp.XXXX/scripts/containers.sh --force`, a temporary path. It shows only when the project already had differing managed files. Found by reading the code, not reproduced.
+
+**Routing.** Back to `/codeo:implement` for M1 (documentation only: the remedy, or one wizard line that makes the remedy work), and M3-M5 in the same round where cheap. M2 and M6 are non-blocking: the engineer may take them in the same round or leave them for `/codeo:triage`. Nothing in the code or the tests is blocking; a full pass starts again from step 0 of this skill on the new diff.
+
+**Verdict: back to `/codeo:implement`.**
+
 ## Log
 
 - 2026-11-26 — round 1: build passed, suite failed (`example.test.sh`), six blocking findings, routed back to implement · cost: 13m · opus-5-5 659k in + 8.7M cached / 29k out
@@ -316,3 +357,4 @@ It is the only failing file of 60. Re-run alone: `bash tests/run.sh example` fai
 - 2026-11-26 — round 4: build and full suite passed, two documentation blockers (J1, J2), routed back to implement · cost: 12m · opus-5-5 178k in + 5.6M cached / 38k out · sonnet-5-5 17k in + 6.7M cached / 7k out
 - 2026-11-27 — round 5: build and full suite passed, one documentation blocker (K1), routed back to implement · cost: 11m · opus-5-5 192k in + 5.7M cached / 28k out · sonnet-5-5 13k in + 6.3M cached / 5k out
 - 2026-11-27 — round 6: build and full suite passed, one documentation blocker (L1), routed back to implement · cost: 5m · opus-5-5 269k in + 4M cached / 21k out · sonnet-5-5 138k in + 504k cached / 2k out
+- 2026-11-27 — round 7: build and full suite passed, one documentation blocker (M1), routed back to implement · cost: 6m · opus-5-5 315k in + 4.4M cached / 26k out · sonnet-5-5 24k in + 620k cached / 654 out
