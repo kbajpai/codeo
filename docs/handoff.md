@@ -39,12 +39,15 @@ issue:   12
 branch:  feat/12-order-export
 started: 2026-03-04
 host:    local
+user:    alice
 ```
 
 `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" take <container|web|local> [session-id]` writes it,
 from the `init.md` that names the branch the checkout has checked out; it never comes from anything
 typed by hand, and it never fails its caller — what it could not do it prints as a `TODO` line. On
-the base branch it takes no lock. `host` says what kind of checkout took it:
+the base branch it takes no lock. `user` is the login `github.sh user whoami` verified when it took
+the lock; without a verified login, or when the issue's recorded owner or assignees are someone
+else, it takes no lock and prints a `TODO`. `host` says what kind of checkout took it:
 
 - **`container`** — a dev container; a `volume:` line follows, identifying the container so it can
   be found again. When its start script ran in an sbx sandbox, a `sandbox:` line with the sandbox's
@@ -71,7 +74,7 @@ back, and until the merge the issue is what the pipeline is working on.
 dossiers or the lock record may carry a home directory or any other absolute path: those are one
 machine's, and the records travel.
 
-**Every other skill reads it first and stops if it can't.** Three checks, in order — each against
+**Every other skill reads it first and stops if it can't.** Four checks, in order — each against
 the checkout the session is in:
 
 1. **No `active` file?** No workflow is running *here*. Name `/codeo:init #<N>` as the step that
@@ -84,6 +87,47 @@ the checkout the session is in:
    branches to make the lock true.
 3. **An argument naming a different issue than `issue`?** Hard stop, naming both. A workflow is not
    redirected by an argument; it is closed or stashed first.
+4. **Not the owner?** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" verify` proves the person acting
+   owns the issue. It resolves the acting login strictly (`github.sh user whoami`: a person's
+   account, never a bot), reads the owner from the pushed `init.md` (the login on its last
+   `resumed: by <login> after` line, else its `| Owner |` row), and passes only when the login is
+   the owner, is among the issue's assignees when it has any, and equals the lock's `user:` line
+   when the lock has one. Otherwise it exits 1 with one line, `codeo: #<N> belongs to <owner>
+   (last resumed <date>, or claimed <date>) — you are <login>; …`, and the skill stops. When the
+   engineer says in so many words to take the workflow over, `verify --override "<words>"` passes
+   that one call and appends `- <date> — override: <login> over <owner>: "<words>"` to the local
+   `init.md`'s `## Notes`; the next step judges again. A takeover that should last is
+   `/codeo:init`'s resume path, which writes a resume line naming the new owner. A refusal that
+   says ownership could not be checked (origin unreachable, no dossier on origin's branch,
+   assignees unreadable) is not lifted by an override.
+
+```mermaid
+flowchart TD
+    A[lock.sh verify] --> B{lock present, branch matches?}
+    B -- no --> X1[refuse: checks 1-2]
+    B -- yes --> C[codeo_whoami]
+    C -- exit 1 --> X2[refuse with its codeo: line]
+    C -- unverified, web --> D{lock user equals the variable?}
+    D -- yes --> OK1[pass, note: not independently verified]
+    D -- no --> X3[refuse]
+    C -- User --> E{origin ref reachable?}
+    E -- error --> X4[refuse: could not check ownership]
+    E -- no ref --> F[read the local init.md, say so]
+    E -- yes --> F2[read origin's init.md from FETCH_HEAD]
+    F --> G
+    F2 --> G{login equals owner, is an assignee, equals lock user?}
+    G -- yes --> OK2[pass]
+    G -- no, override given --> OK3[pass and record the override line]
+    G -- no --> X5["refuse: #N belongs to owner"]
+```
+
+A lock with no `user:` line is legacy: `verify` falls back to the assignees and the pushed dossier
+and says so. A web session's `unverified` login (the variable, when `GET /user` is refused) is
+compared only with the lock's own `user:` line, never with the owner or the assignees, and
+`verify` says it is not independently verified. `bash "${CLAUDE_PLUGIN_ROOT}/scripts/lock.sh" owner
+[<N>]` prints the recorded owner from the **local** dossier: a display helper (`close` uses it to
+name the assignee a stash removes). Decisions use `verify`, which reads the pushed copy after
+fetching the branch, from `FETCH_HEAD`.
 
 Because the lock names the issue, **a bare invocation of `plan`, `implement`, `qc` or `close` in the
 bound checkout is not ambiguous.** The engineer named the issue when they ran `init`; reading the
@@ -199,11 +243,12 @@ it.
   gets 20 seconds, the two bounds of a `clear` at the default `CODEO_LIVE_PUSH_TIMEOUT` of 8; set it to 10 or more and the hook can end `clear` during the REST delete, so the signal then only expires. The signal adds nothing to the feature branch or its PR, and it is information only:
   no script refuses or waits because a workflow is live. On a public repository it names a user, a
   machine label and the host kind (container, web or local), and never an email address. The user
-  is `CODEO_GITHUB_LOGIN`, else the login `GET /user` returns, else for a web session the issue's
+  is the lenient `github.sh user login` — the login `GET /user` returns, else `CODEO_GITHUB_LOGIN`
+  only in a hosted web session (it is ignored anywhere else) — else for a web session the issue's
   first assignee (who may not be the person at the keyboard), else for any other session
   `git config user.name`, else `unknown`; a web session never uses `git config user.name`. The
-  signal reads `CODEO_GITHUB_LOGIN` before `GET /user`, where `github.sh` assignments try
-  `GET /user` first. The machine is `CODEO_MACHINE`, else the
+  signal is information only and never an ownership check: `CODEO_GITHUB_LOGIN` never satisfies
+  `lock.sh verify`. The machine is `CODEO_MACHINE`, else the
   container's volume, else its sandbox, else for a web session `web-` plus the first 8 characters
   of the session id without its `cse_` prefix (the lock's `session`, else
   `CLAUDE_CODE_REMOTE_SESSION_ID`), else the hostname. A web session keeps the label of its first beat in `<git dir>/codeo-live-machine` (`CODEO_MACHINE` wins and is never saved), and `clear` leaves it, so a session that ends and resumes, or whose id changes, shows as one row. The label names the checkout: a later issue worked there publishes under it. A reclaimed VM or a new checkout gets a new label, and the old row shows for up to the TTL. The

@@ -195,6 +195,12 @@ extr=$(grep ' extra ' <<<"$out1" || true)
 expect no-tsv "FAIL tsv-missing" "$doc" "$scratch/absent.tsv"
 [[ "$cases_failed" -eq 0 ]] || exit 1
 
+# identity: the init entry names the strict login lookup and the close entry the ownership check.
+init_sec=$(sed -n '/^## init$/,/^## plan$/p' "$repo/docs/skills.md")
+close_sec=$(sed -n '/^## close$/,/^## triage$/p' "$repo/docs/skills.md")
+[[ $init_sec == *'user whoami'* ]] || { printf 'FAIL identity: docs/skills.md init section does not mention user whoami\n'; exit 1; }
+[[ $close_sec == *'lock.sh verify'* ]] || { printf 'FAIL identity: docs/skills.md close section does not mention lock.sh verify\n'; exit 1; }
+
 out=$(check_skills_doc "$repo/skills" "$repo/docs/skills.md" "$repo/lib/extension-points.tsv")
 if [[ -n "$out" ]]; then
     printf '%s\n' "$out"

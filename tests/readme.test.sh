@@ -226,6 +226,9 @@ else
         fail lock-entry "no sentence of the lock entry names both reconcile by hand and diverged"
 fi
 
+# lock-override: the stuck-lock entry says how a refused owner is overridden.
+grep -qF -- '--override' <<<"$lock" || fail lock-override "the lock entry does not mention --override"
+
 # subsection <text> <title>: the body of a ### subsection, up to the next ###.
 subsection() { awk -v t="### $2" '/^### / { on = ($0 == t); next } on' <<<"$1"; }
 

@@ -3,11 +3,12 @@
 ## Unreleased
 
 Config schema: 1 (unchanged)
-Shared state: none
+Shared state: the `| Owner |` row of `init.md`, the lock's `user:` line and the `override:` line under `## Notes`
 Safe to bump mid-workflow: yes
 
 - The container and sandbox setup is reusable by another project: `/codeo:setup --codename <name> --containers` and `scripts/codeo-init.sh` (one command, which fetches its own release when run alone) write a dev container, an sbx sandbox setup, the host command and the role-guard and host-workflow overlays, named from `.codeo/config.json` (`codename`, `repo.owner`, `repo.name`, `baseBranch`), from templates under `templates/containers/`. `/codeo:doctor` gains a `containers` check. `docs/container-templates.md` lists what is codeo's and what is yours. The sandbox runs Docker's pinned image, so a stack's toolchain is available in the dev container only. A C# + Angular + Kubernetes example is under `examples/csharp-angular/`. codeo's own managed scripts and overlays are rendered from the same templates, and its Dockerfile and devcontainer.json equal them outside the toolchain section and one extension; `/codeo:setup --containers` writes the codename and the plugin pin into the config, and `/codeo:doctor` fails a project whose pin is missing (#190).
 - A `home`, `stale:?` or `stray` checkout refuses Edit, Write, NotebookEdit and git writes run through Bash with one line, unless the session was started with `CODEO_HOME_EDITS=allow`. The home skills' `.codeo/` writes are unaffected, and so are hosted sessions and projects without `.devcontainer/scripts/role.sh`. `docs/home-checkout.md` has the section. The guard comes with the next release (#192).
+- `/codeo:init` resolves the acting user strictly (`github.sh user whoami`: a person's GitHub account, never a bot, and `CODEO_GITHUB_LOGIN` only in a hosted web session, where it is never compared with an assignee) and records the owner as the `| Owner |` row of `init.md` and the lock's `user:` line. Every later step runs `lock.sh verify` first and stops with one line when the person acting is not the owner, an assignee or the login that took the lock; `--override "<words>"` passes one call and records an `override:` line under `## Notes`, and `/codeo:init`'s resume path is the lasting takeover. A stash or an abandon removes the recorded owner from the assignees, and `github.sh issue assignee-remove` requires the login. A workflow begun before this release has no owner row or `user:` line and is checked by its assignees and resume line, with a legacy note (#195).
 
 ## v1.0.10 — 2026-11-26
 
