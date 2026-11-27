@@ -8,6 +8,8 @@
 
 ## Where this stands
 
+Round 6 (send-back from `qc.md` round 5) is done: the blocking finding K1 (the doctor `containers` check missing from the README and `docs/skills.md`) and the cheap K4-K6 are fixed (see `### Round 6` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed.
+
 Round 5 (send-back from `qc.md` round 4) is done: the two blocking findings J1-J2 and the cheap ones J4-J13 (except J3) are fixed (see `### Round 5` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed.
 
 Round 4 (send-back from `qc.md` round 3) is built and reviewed: H1-H8 are fixed in five commits (`5c475e8`, `011974d`, `b8d523b`, `d5d4c21`, and the earlier round 3 ones stand), and the `shell` build passes. The round's outcome is not written: at the start of this check `overlap.sh 190` printed #192's overlaps on `CHANGELOG.md` and `docs/home-checkout.md`, which stop the step until Q1 and Q2 are answered (see *Questions*).
@@ -222,6 +224,23 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 
 **Deferred Minor findings from this round's reviews (not fixed):** the header comment at `lib/codename.sh:17` still says `codeo_base_error` refuses only `TODO-set-me`; an empty config file is reported as `is not a JSON object` (jq parses empty input) and a directory as `is not valid JSON`; the J11 note prints with a plain `echo`, not through `say`; `codeo_base_error` ignores a jq failure that cannot happen after the shape check; the `<plugin>` lookup sentence relies on the script's registry lookup, not a run against a real registry; the engineer's host runs predate J4-J12, so the example's image build and the wizard against a real repository were not re-run after this round.
 
+### Round 6 — 2026-11-27
+(send-back from qc.md round 5)
+
+**What was built** (one commit on top of round 5: `f23bf6f`; the implementer ran on sonnet and the diff was read before this outcome):
+- **K1** — the README's *Checks from /codeo:doctor* group has a **containers.** entry covering both causes (managed scripts that differ from the templates, fixed with `containers.sh --force`; a missing `plugin.repo` or `plugin.ref`, fixed with `/codeo:setup --containers` or by setting both) and a sample line; the "does not check" sentence no longer lists `plugin`, and says the pin is checked for a project that has container scripts; the check counts in the README (the doctor transcript note and the skills table) and in `docs/skills.md` (Purpose, the checks sentence, Reads) say eleven checks plus `priority-labels` and `containers` in the projects they apply to; `tests/readme.test.sh` pins `containers` among thirteen names.
+- **K4** — doctor's pin message says "the container scripts are present" (the check also triggers on `.sbx/codeo-sandbox.sh` alone); the two assertions in `tests/doctor.test.sh` match.
+- **K5** — the README says the home-checkout note prints when the containers step ran and the config has a codename.
+- **K6** — `.devcontainer/scripts/plugins.sh`'s header says "the project's issue containers need" (it has no template copy; `containers.sh --check` is clean); the rename note says "to run the home skills (/codeo:issue, /codeo:init, /codeo:triage, /codeo:cleanup) here" in `lib/codename.sh`, `tests/containers.test.sh`, `tests/init.test.sh` and the README.
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. For information, the implementer ran `containers`, `doctor`, `readme`, `init`, `skills-doc`, `setup` and `role`, each ending `all cases passed`, and `bash scripts/containers.sh --check` prints no `differs`; grading is `/codeo:qc`'s.
+
+**Documentation pages changed this round:** `README.md`, `docs/skills.md`.
+
+**Overlap with #192:** `overlap.sh 190` printed nothing at the start of this round; nothing this round touches `CHANGELOG.md` or `docs/home-checkout.md`.
+
+**Left for `/codeo:triage` or a later round (non-blocking, not taken):** K2 (the wizard and `setup --containers` derive the codename from different sources when the kept config's `repo.name` differs from origin), K3 (a few refusals still come after the pin is written), K7 (the wizard asks "Codename" at a terminal when the kept config already names one, then ignores the answer), K8 (`containers.sh --force` writes through a symlink at a managed path). The footprint gap in `plan.md` stays `/codeo:plan`'s. No host step is needed.
+
 ## Log
 
 - 2026-11-26 — implemented: Tasks 1-11 and the in-checkout half of Task 12 through subagent rounds on sonnet (every implementer, reviewer and fix round), 21 commits; host steps pending · cost: 68m · sonnet-5-5 1.7M in + 58M cached / 322k out
@@ -230,3 +249,4 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 - 2026-11-26 — round 3 (send-back from qc round 2): G1-G4 and G6, G8-G11 fixed in three commits, each task reviewed on sonnet · cost: 20m · sonnet-5-5 417k in + 33.6M cached / 82k out
 - 2026-11-26 — round 4 (send-back from qc round 3): H1-H8 fixed in four commits, each task reviewed on sonnet; overlap questions Q1-Q2 answered · cost: 73m · sonnet-5-5 499k in + 27.4M cached / 90k out
 - 2026-11-27 — round 5 (send-back from qc round 4): J1-J2 and J4-J13 fixed in four commits, each task reviewed on sonnet · cost: 16m · sonnet-5-5 320k in + 18.7M cached / 61k out
+- 2026-11-27 — round 6 (send-back from qc round 5): K1 and K4-K6 fixed in one commit, reviewed by reading the diff · cost: 2m · sonnet-5-5 89k in + 1.4M cached / 11k out
