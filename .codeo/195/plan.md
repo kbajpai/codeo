@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). QC's blocking finding F1 is this
+Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). Q9-Q11 answered (recommendations accepted); the draft at `.codeo/195/plan-draft.md` awaits review. QC's blocking finding F1 is this
 plan's: decision Q2 (a hosted web session's `unverified` login is compared only with the lock's own
 `user:` line) makes the ownership checks pass for everyone on web, because `take web` writes that
 line from the same variable. Two acceptance criteria are unmet there. Q9-Q11 re-decide it, with the
@@ -159,6 +159,7 @@ bound and will now make the same network calls as elsewhere (`ls-remote`, `fetch
 timeout there means no lock and a TODO, as for any other host.
 
 **Answer:**
+(a) An `unverified` login is compared like a verified one (pushed owner, assignees, the lock's `user:`); a mismatch refuses and is overridable; a match passes with the "not independently verified" note; same rule in `take` and in `init`'s prose. (Engineer: "Go with your recommendations", 2026-11-27.)
 
 ### Q10 — Stash or abandon of a workflow begun before this change (QC F2)
 
@@ -174,6 +175,7 @@ legacy workflow's stash leaves the assignee to remove by hand.
 when an override was used.
 
 **Answer:**
+(a) When no owner is recorded and `verify` passed without an override, remove the caller's login. (Engineer: go with recommendations.)
 
 ### Q11 — A failed `assignee-add` after an `init` takeover locks the new owner out (QC F3)
 
@@ -189,6 +191,7 @@ leave as is.
 that clears it.
 
 **Answer:**
+(a) Keep the refusal; when the caller is the recorded owner the line names the real fix (`github.sh issue assignee-add <N> <login>`), and `init` writes a failed `assignee-add` under `init.md`'s `## Notes`. (Engineer: go with recommendations.)
 
 ## Notes
 
