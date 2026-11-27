@@ -274,6 +274,30 @@ assert_eq "line" "12${tab}proven${tab}x {{.Names}}${tab}-" "$(run_cleanup)"
 set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: x ${HOME}'
 assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {HOME}\nrc=1' "$(run_cleanup_rc)"
 
+case_desc="a doubled brace around {N} is refused"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: rm {{N}}'
+assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {1}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="a placeholder in the name template is refused when the command prints it"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: x-{M}\npattern: ^x-.*$\ncommand: rm {name}'
+assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {M}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="a name template that no printed text uses is not refused"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: x-{M}\npattern: ^x-.*$\ncommand: codeo rm {N}'
+assert_eq "line" "12${tab}proven${tab}codeo rm 12${tab}-" "$(run_cleanup)"
+
+case_desc="a brace expansion is not a placeholder"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: rm codeo-{1,2}'
+assert_eq "line" "12${tab}proven${tab}rm codeo-{1,2}${tab}-" "$(run_cleanup)"
+
 case_desc="dossier still on another branch"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
