@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done. Q1-Q9 are answered and the plan is approved: `docs/plans/2026-11-27-cleanup-removal-records-206.md`, left unstaged for review. Next step: `/codeo:implement`. One finding changes the size of the first fault: `scripts/cleanup.sh` already expands `{N}` in `command:` (line 104, shipped in v1.0.9 with #152; the issue's run used plugin 1.0.8). What is left of that fault is the refusal of a placeholder the script does not know (Q1) and a test that pins this project's own overlay.
+Round 2, after a send-back from `/codeo:qc` round 1 (`qc.md`: F1 and F2 blocking, F3 non-blocking and the plan's, F4-F7 non-blocking and `/codeo:implement`'s). The plan's premise that `intake.sh commit` only adds files is false, so two engineers' records can delete each other (root cause in `qc.md`). Q10-Q12 are open; nothing is drafted until they are answered. Round 1's plan, `docs/plans/2026-11-27-cleanup-removal-records-206.md`, is built and stays as history.
 
 ## Questions
 
@@ -120,6 +120,46 @@ Proceed and coordinate, as Q6 was answered. Given in the conversation: "go with 
 **Answer:**
 Proceed and coordinate, as Q7 was answered. Given in the conversation: "go with your picks" (the same decision as Q7, restated here only so the overlap check reads it).
 
+### Q10 — How does `intake.sh commit` stop deleting files its clone lacks?
+
+**Why it matters:** this is the blocking finding F1 in `qc.md`. `intake.sh`'s `build` runs `git add -f -- <dir>` on a tree it just read from origin's tip; with git 2.x a directory pathspec also stages the deletion of every file under it that the committing clone's working tree lacks (confirmed on git 2.53.0). So a commit replaces the directory with the committing clone's copy: records another engineer pushed since this clone last restored are deleted, and the retry after a refused push rebuilds from the same working tree and deletes them reliably. The comment at `scripts/intake.sh:176-177` says the code means "no -A". The choice sets which commands change and which files and tests the plan's footprint gains (`scripts/intake.sh`, `tests/intake.test.sh`).
+
+- Add `--ignore-removal` to the `git add` in `build`, for every caller. A commit then adds and updates files and never deletes one unless `--drop` names it (rename and lease release already delete that way, before the add). It also stops a stale clone deleting the dated run records and triage records, which is the same bug today. The cost: a dossier file deleted from a working tree stays on the intake branch until someone drops it.
+- The same flag only when `<dir>` is `cleanup`. The cost: a special case in a shared script, and the other directories keep the bug.
+- Leave `build` alone and make `cleanup.sh record` and the skill's run-record commit restore from origin's tip immediately before every commit, with a restore inside `commit`'s retry loop. The cost: it is a race narrowed, not removed, between the restore and the push, and it moves intake logic into the cleanup skill.
+
+I recommend the flag for every caller.
+
+**Options:** flag for every caller (recommended) · flag for `cleanup` only · restore before each commit · no preference, you pick.
+
+**Answer:**
+
+### Q11 — Is there an undo for a recorded removal?
+
+**Why it matters:** this is F2. `docs/skills.md` says to delete the file from `codeo/intake` by hand, and that does not hold: any clone that holds a copy adds it back at its next `intake.sh commit cleanup`, which the skill runs every time. Whichever way it goes decides whether the script gains a command and what the docs say.
+
+- No undo command; the documentation says a wrong record is corrected by deleting `.codeo/intake/cleanup/removed/<N>.md` from the intake branch and from every clone that holds a copy, and that a clone still holding it adds it back. Smallest, and true.
+- `cleanup.sh unrecord <N>…`, which removes the local file and commits it away with `--drop`. A stale clone can still bring the file back, so it is no more reliable than the by-hand removal, with more code to keep.
+
+I recommend no undo command.
+
+**Options:** no undo command (recommended) · `cleanup.sh unrecord` · no preference, you pick.
+
+**Answer:**
+
+### Q12 — Does the placeholder check look at the text the script prints?
+
+**Why it matters:** this is F3 (non-blocking). The check removes `{N}` and `{name}` and then looks for leftovers, while the script prints the expanded text, so `command: rm {{N}}` passes the check and prints `rm {12}`, `{{N}name}` prints `{12name}`, and `name: x-{M}` with a permissive `pattern:` puts `{M}` into the printed command. `docs/extension-points.md` says any other `{word}` token stops the run, which is too strong for the check as written.
+
+- Expand `name`, `command` and `fallback` once up front with a sample issue number (`1`) and look for `\{[A-Za-z0-9_]+\}` in that text. It covers all three cases above, `{{.Names}}` still passes, `${HOME}` is still refused, and the documented sentence becomes true. The cost: a few more lines in the check.
+- Keep the check as built and narrow the sentence in `docs/extension-points.md` to what it does.
+
+I recommend checking the expanded text.
+
+**Options:** check the expanded text (recommended) · keep the check and narrow the documentation · no preference, you pick.
+
+**Answer:**
+
 ## Notes
 
 - The intake branch has no removal record `cleanup.sh` can read yet. Once this ships and the pin is bumped, the 64 issues of `.codeo/intake/cleanup/2026-11-27-2.md` are recorded by the engineer through the new step; the pull request does not write to `codeo/intake`.
@@ -155,5 +195,6 @@ sequenced:  none
 ## Log
 
 - 2026-11-27 — Q1-Q7 raised · cost: 2m · fable-5-2 87k in + 649k cached / 8k out
-- 2026-11-27 — Q1-Q7 answered ("go with your picks"); draft written, footprint committed
+- 2026-11-27 — Q1-Q7 answered ("go with your picks"); draft written, footprint committed · cost: not recorded when written
 - 2026-11-27 — planned: docs/plans/2026-11-27-cleanup-removal-records-206.md · cost: 8m · fable-5-2 103k in + 1M cached / 13k out · sonnet-5-5 135k in + 1.6M cached / 26k out
+- 2026-11-27 — round 2 after a send-back from qc.md round 1: Q10-Q12 raised · cost: 1m · sonnet-5-5 658 in + 592k cached / 2k out
