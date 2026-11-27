@@ -8,30 +8,12 @@
 
 ## Where this stands
 
-Round 1. Q1-Q8 answered (recommendations accepted). Draft at .codeo/195/plan-draft.md awaits review; Q1-Q8 were open and each one changed tasks, so
-nothing is drafted until they are answered.
-
-What exploration found (the questions rest on it):
-
-- `github.sh user login` (`scripts/github.sh:35-45`) tries `GET /user`, then `$CODEO_GITHUB_LOGIN`,
-  and prints only the login, so it cannot say whether the account is a Bot. No `.type`/`[bot]`
-  check on the acting user exists anywhere.
-- `scripts/live.sh:156-163` (`user_label`) reads `$CODEO_GITHUB_LOGIN` *before* `GET /user`, the
-  reverse of `github.sh`. `scripts/intake.sh:644,696` falls back to `git config user.email`.
-- A hosted web session is detected inline as `CLAUDE_CODE_REMOTE == true` in `live.sh`,
-  `hooks/live-signal.sh`, `board.sh` and `.devcontainer/scripts/role.sh`; there is no shared helper.
-- `init`'s login handling, the assignee check, `assignee-add` and the `no login` resume line are
-  all prose in `skills/init/SKILL.md`; `claim.sh --resume-line` only prints what it is handed.
-- Step 0 of plan, implement, qc and close is prose pointing at `docs/handoff.md → The lock`;
-  nothing is a script. `lock.sh take` is called from `init`, `hooks/live-signal.sh` (web) and
-  `.devcontainer/scripts/devcontainer-start.sh` (container/sandbox).
-- Stash/abandon run `github.sh issue assignee-remove <N>` with no login, so `github.sh`'s
-  default (the current login) removes the caller, not the owner (`skills/close/SKILL.md:645`).
-- The same resume-line regex lives in `claim.sh:101`, `lock.sh:32` and `role.sh:122`.
-- New rule ids need three edits (`docs/skills-inventory.md`, the `want` map in
-  `tests/inventory.test.sh`, the regenerated hash); several `*-skill.test.sh` files pin phrases.
-- `CHANGELOG.md` takes a bullet per PR under `## Unreleased`.
-- No other workflow is in flight, so there is no footprint overlap to raise yet.
+Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). QC's blocking finding F1 is this
+plan's: decision Q2 (a hosted web session's `unverified` login is compared only with the lock's own
+`user:` line) makes the ownership checks pass for everyone on web, because `take web` writes that
+line from the same variable. Two acceptance criteria are unmet there. Q9-Q11 re-decide it, with the
+two plan-owned side findings (F2, F3). Nothing is drafted until they are answered. The round also
+carries the implement-owned fixes F4-F8 as tasks (listed under `## Notes`, no question needed).
 
 ## Questions
 
@@ -157,6 +139,57 @@ acceptance criteria are one list, and splitting buys little when the tasks alrea
 **Answer:**
 One pull request, identity tasks first. (Engineer: go with recommendations.)
 
+### Q9 — Web sessions: what does an `unverified` login get compared with? (replaces Q2)
+
+**Why it matters:** today `lock.sh take web` writes `user:` from `$CODEO_GITHUB_LOGIN` and `verify`
+compares the same variable with that line (`scripts/lock.sh:95`, and the `unverified` branch of
+`verify`), so B on A's branch and A's stale checkout both pass on web. The issue says the variable
+is "never used to satisfy an ownership check"; a comparison that can only *refuse* does not satisfy
+anything.
+**Options:** (a) an `unverified` login is compared exactly like a verified one — pushed owner,
+assignees, the lock's `user:` — and a mismatch refuses (overridable like any ownership refusal); a
+match passes with the "not independently verified" note. The same rule in `take` (no lock on a
+mismatch) and in `init`'s prose (another engineer's assignee or owner stops an unverified login
+unless the override is recorded; the lost-checkout resume needs the variable to equal the
+assignee). · (b) refuse every ownership-gated step in a web session unless `GET /user` resolves
+(today that means web sessions cannot run plan/implement/qc/close at all). · (c) keep the code and
+narrow the acceptance criteria to non-web hosts, which needs the issue's text changed.
+**Recommendation:** (a). Cost to know: `take web` runs from the live-signal hook under an 8 second
+bound and will now make the same network calls as elsewhere (`ls-remote`, `fetch`, `issue view`); a
+timeout there means no lock and a TODO, as for any other host.
+
+**Answer:**
+
+### Q10 — Stash or abandon of a workflow begun before this change (QC F2)
+
+**Why it matters:** `lock.sh owner` prints nothing for a dossier with no Owner row and old
+`by no login` resume lines, so `close-16` skips the removal and the stashed issue stays assigned;
+the next `/codeo:init` then stops on "another assignee", and `Safe to bump mid-workflow: yes` is not
+quite true.
+**Options:** (a) when no owner is recorded and `verify` passed without an override, remove the
+caller's login (verify has already established the caller is an assignee whenever there are any) ·
+(b) remove every assignee of the issue · (c) leave the behaviour and say in the changelog that a
+legacy workflow's stash leaves the assignee to remove by hand.
+**Recommendation:** (a): it restores what a stash did before, only for the legacy case, and never
+when an override was used.
+
+**Answer:**
+
+### Q11 — A failed `assignee-add` after an `init` takeover locks the new owner out (QC F3)
+
+**Why it matters:** B takes A's workflow over through `init`'s resume path; the resume line makes B
+the owner, but if `assignee-add` fails A stays the only assignee and every later `verify` refuses B
+with `is assigned to A, not B — … take it over with /codeo:init`, a loop that names the wrong fix.
+**Options:** (a) keep the refusal (an owner must be an assignee) but, when the caller *is* the
+recorded owner, make the line name the real fix (`github.sh issue assignee-add <N> <login>`), and
+have `init` write a failed `assignee-add` as a line under `init.md`'s `## Notes` so the next step
+can see why · (b) let the recorded owner pass `verify` with a note even when not an assignee · (c)
+leave as is.
+**Recommendation:** (a): the assignee rule stays strict and the engineer is told the one command
+that clears it.
+
+**Answer:**
+
 ## Notes
 
 Calls made without asking (correct any of them in your answers):
@@ -177,6 +210,24 @@ Calls made without asking (correct any of them in your answers):
   live-signal user chain), `docs/dossier.md` (the Owner row), `docs/skills.md` (init, close),
   `README.md` troubleshooting ("A lock that is stuck or not yours"), `CHANGELOG.md` Unreleased.
 - The one subagent report quoted `.claude/settings.json` paths; nothing in it asked for any action.
+
+Round 2 — implement-owned findings from `qc.md` round 1 that this round's plan carries as tasks
+(no decision needed; say so in an answer if any should be left out):
+
+- F4: `docs/handoff.md` quotes `(last resumed <date>, or claimed <date>)`; the code prints
+  `(claimed)`. The doc follows the code; the resume date is taken only from a line whose login the
+  owner regex accepts.
+- F5: the pushed dossier is fetched into a private ref (`refs/codeo/verify/<branch>`) and read from
+  it, not from `FETCH_HEAD`, which the live-signal beat rewrites concurrently.
+- F6: the Owner-row parser accepts a backticked login and flexible whitespace.
+- F7: the `verify` flowchart shows the legacy-lock and web paths as built; `README.md` says "when it
+  has any" for the assignee rule.
+- F8: `tests/lock.test.sh`'s unresolved-login `take` case sets `CODEO_GITHUB_LOGIN`; the
+  `--override` pin in `tests/qc-skill.test.sh` also catches a wrapped `lease take` command.
+- Also corrected by Q9: `docs/handoff.md`'s "`CODEO_GITHUB_LOGIN` never satisfies `lock.sh verify`"
+  passage, `docs/dossier.md`/`docs/skills.md`/`CHANGELOG.md` wording, and `skills/init/SKILL.md`'s
+  three `unverified` carve-outs.
+
 
 ## Outcome
 
@@ -210,3 +261,4 @@ sequenced:  none
 
 - 2026-11-27 — Q1-Q8 raised · cost: 3m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 192k in + 1M cached / 22k out
 - 2026-11-27 — planned: docs/plans/2026-11-27-identify-acting-user-195.md · cost: 8m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 235k in + 2.1M cached / 48k out · engineering:system-design and engineering:architecture unavailable, structure applied directly
+- 2026-11-27 — round 2 (send-back from qc.md round 1): Q9-Q11 raised · cost: 1m · fable-5-2 380k in + 421k cached / 5k out
