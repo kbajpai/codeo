@@ -56,6 +56,8 @@ grep -qF 'until their removals are recorded' <<<"$step2" || check_fail "step 2 d
 docs="$repo/docs/skills.md"
 section=$(awk '/^## cleanup$/{f=1; next} /^## /{f=0} f' "$docs")
 grep -qF 'every issue under `.codeo/done/`' <<<"$section" || check_fail "docs/skills.md cleanup section does not state the list's reach"
+grep -qF 'cleanup.sh record' <<<"$section" || check_fail "docs/skills.md cleanup section does not name cleanup.sh record"
+grep -qF 'records that so the next run' "$repo/README.md" || check_fail "README.md does not say cleanup records the removal so the next run omits it"
 ! grep -qF 'in the home container, and only prints' "$docs" || check_fail "docs/skills.md still says cleanup runs in the home container"
 ! grep -qF 'runs in the home container only' "$docs" || check_fail "docs/skills.md still says cleanup runs in the home container only"
 

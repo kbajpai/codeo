@@ -590,7 +590,7 @@ template it supplies expanding with `{N}`.
 **Expected back.** Three lines, and an optional fourth. `name:` is the name of what the issue left behind, with
 `{N}` for the issue number. `pattern:` is an extended regular expression the expanded name must
 match, so a name that is not an issue's own is refused. `command:` is the command that removes it,
-with `{name}` for the expanded name and `{N}` for the issue number. An optional `fallback:` is one line of text for an engineer who cannot run the command, with `{name}` and `{N}` expanded the same way; the script prints it as a fourth tab-separated field on every proven line (`-` when there is none) and the skill shows it beneath the command. The script expands and prints the command and never runs it;
+with `{name}` for the expanded name and `{N}` for the issue number. An optional `fallback:` is one line of text for an engineer who cannot run the command, with `{name}` and `{N}` expanded the same way; the script prints it as a fourth tab-separated field on every proven line (`-` when there is none) and the skill shows it beneath the command. `command:` and `fallback:` may hold only `{N}` and `{name}`; any other `{word}` token (`{M}`, `${HOME}`) makes the script stop with a `cleanup:` line naming the key and the token, and print nothing. A Go template such as `{{.Names}}` is not a placeholder and is printed as written. The script expands and prints the command and never runs it;
 a missing line or a name that does not match the pattern makes the issue not proven.
 
 **Default when absent.** None; the proven issues are listed and no command is printed.
