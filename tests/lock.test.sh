@@ -664,7 +664,12 @@ assert_eq "lock" yes "$(active_exists "$repo")"
 assert_contains "user" "user:    carol" "$(cat "$repo/.codeo/active")"
 
 case_desc="take, branch owned by someone else"
-repo=$(owned_clone bob)
+repo=$(owned_clone alice)
+origin=$(git -C "$repo" remote get-url origin)
+git -C "$origin" checkout -q feat/x
+printf -- '- 2026-11-27 — resumed: by bob after the stash of 2026-11-26\n' >> "$origin/.codeo/38/init.md"
+git -C "$origin" commit -q -am "resume by bob"
+git -C "$origin" checkout -q main
 out=$(run_lock "$repo" "$(fresh_marker)" local)
 assert_eq "no lock" no "$(active_exists "$repo")"
 assert_contains "todo" "lock: TODO" "$out"

@@ -136,6 +136,24 @@ setup() {
     git -C "$repo" checkout -q -b feat/x origin/feat/x
 }
 
+# Pushes B's resume line to origin's feat/x AFTER the clone, so the local dossier lacks it.
+push_resume() {
+    local who=$1
+    git -C "$origin" checkout -q feat/x
+    printf -- '- 2026-11-27 — resumed: by %s after the stash of 2026-11-26\n' "$who" >> "$origin/.codeo/38/init.md"
+    git -C "$origin" commit -q -am "resume by $who"
+    git -C "$origin" checkout -q main
+}
+
+# Like setup, but the clone is single-branch (main only): origin/feat/x is not a tracked ref.
+setup_single() {
+    setup "$@"
+    repo=$(mktemp -d "$scratch_root/clone.XXXXXX")
+    git clone -q --single-branch -b main "$origin" "$repo"
+    git -C "$repo" fetch -q origin feat/x
+    git -C "$repo" checkout -q -b feat/x FETCH_HEAD
+}
+
 # The lock: <user> may be empty for a legacy lock.
 write_lock() {
     local user=${1:-}
@@ -173,12 +191,30 @@ assert_contains "owner" "belongs to alice" "$err"
 assert_contains "you" "you are bob" "$err"
 
 case_desc="A's stale checkout after B resumed"
-setup alice '- 2026-11-27 — resumed: by bob after the stash of 2026-11-26
-'; write_lock alice
+setup alice; write_lock alice
+push_resume bob
 run_verify
 assert_eq "exit" 1 "$rc"
 assert_contains "owner" "belongs to bob" "$err"
 assert_contains "date" "last resumed 2026-11-27" "$err"
+
+case_desc="stale single-branch clone: pushed dossier says bob"
+setup_single alice; write_lock alice
+push_resume bob
+run_verify
+assert_eq "exit" 1 "$rc"
+assert_contains "owner" "belongs to bob" "$err"
+assert_not_contains "not a miss" "not on origin" "$err"
+
+case_desc="origin has the branch but no dossier: fails closed"
+setup_single alice; write_lock alice
+git -C "$origin" checkout -q feat/x
+git -C "$origin" rm -q -r .codeo/38
+git -C "$origin" commit -q -m "drop dossier"
+git -C "$origin" checkout -q main
+run_verify
+assert_eq "exit" 1 "$rc"
+assert_contains "msg" "could not check who owns" "$err"
 
 case_desc="assigned to someone else"
 setup alice; write_lock alice

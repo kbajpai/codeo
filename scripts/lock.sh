@@ -86,9 +86,9 @@ local_init() {
 # "codeo:" line in $refusal (and $refused_owner) when it belongs to someone else; 2 when it could
 # not be checked (no override applies). $note collects what a pass should say. A hosted web
 # session's unverified login is never compared with the owner or the assignees (verify compares it
-# with the lock's own user: line). The pushed dossier is read from origin/<branch>; no such ref,
-# or no origin remote at all, means the local dossier; any other failure to reach origin fails
-# closed.
+# with the lock's own user: line). The pushed dossier is read from FETCH_HEAD after fetching <branch>; no such ref,
+# or no origin remote at all, means the local dossier; a branch on origin without a dossier, or
+# any other failure to reach origin, fails closed.
 check_owner() {
     local n=$1 branch=$2 login=$3 type=$4 rc=0 src= p tmp owner date when assignees out
     refusal= refused_owner= note=
@@ -102,8 +102,12 @@ check_owner() {
                 rm -f "$tmp"; return 2
             fi
             for p in "$state_rel/$n/init.md" "$state_rel/done/$n/init.md"; do
-                if git show "origin/$branch:$p" > "$tmp" 2>/dev/null; then src=origin; break; fi
+                if git show "FETCH_HEAD:$p" > "$tmp" 2>/dev/null; then src=origin; break; fi
             done
+            if [[ -z $src ]]; then
+                refusal="codeo: could not check who owns #$n: no dossier on origin's $branch"
+                rm -f "$tmp"; return 2
+            fi
         elif ((rc != 2)); then
             refusal="codeo: could not check who owns #$n: cannot reach origin"
             rm -f "$tmp"; return 2
