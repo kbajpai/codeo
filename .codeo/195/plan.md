@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). Q9-Q11 answered (recommendations accepted); the draft at `.codeo/195/plan-draft.md` awaits review. QC's blocking finding F1 is this
+Round 2, after a send-back from `/codeo:qc` (`qc.md` round 1). Q9-Q11 answered (recommendations accepted) and the round-2 plan approved and written to `docs/plans/2026-11-27-identify-acting-user-195-round-2.md` (unstaged). The footprint is committed; `overlap.sh` then printed four paths for #204, raised as Q12. The outcome waits for Q12. QC's blocking finding F1 is this
 plan's: decision Q2 (a hosted web session's `unverified` login is compared only with the lock's own
 `user:` line) makes the ownership checks pass for everyone on web, because `take web` writes that
 line from the same variable. Two acceptance criteria are unmet there. Q9-Q11 re-decide it, with the
@@ -193,6 +193,16 @@ that clears it.
 **Answer:**
 (a) Keep the refusal; when the caller is the recorded owner the line names the real fix (`github.sh issue assignee-add <N> <login>`), and `init` writes a failed `assignee-add` under `init.md`'s `## Notes`. (Engineer: go with recommendations.)
 
+### Q12 — New overlap with #204 (`chore/204-fix-codeo-close-opens-pr`): proceed, sequence, or re-scope?
+
+`overlap.sh 195` printed four paths for #204 that no earlier question names: `tests/fixtures/dossiers/good-basic/close.md`, `tests/fixtures/golden/case-a/close.md`, `tests/qc-verdict.test.sh`, `tests/role.test.sh`. #204 (assignee `kbajpai`) is now at `implement (working)`, its `changed:` line lists real files, and it waits on its own `qc.md` Q1 and Q2.
+
+**Why it matters:** this plan's footprint has the `tests/**` glob, and #204 now changes those four test files. This round edits `tests/identity.test.sh` (new), `tests/lock-verify.test.sh`, `tests/lock.test.sh`, `tests/init-skill.test.sh`, `tests/close-skill.test.sh`, `tests/qc-skill.test.sh`, `tests/readme.test.sh` and `tests/skills-doc.test.sh`, none of which is one of the four, so the contact is the glob, not a file. The real contact with #204 is unchanged from `qc.md` Q2 (`skills/close/SKILL.md`, `skills/init/SKILL.md`, the docs pages, the rule inventory and its pinned hash), which this round touches again in Tasks 3, 4 and 6 (`init-11`, `close-16`).
+**Options:** proceed and coordinate · sequence after #204 · re-scope.
+**Recommendation:** proceed and coordinate, as for `qc.md` Q2: whichever branch merges second regenerates `tests/fixtures/skills-inventory.rules.sha256` and re-checks its `init`/`close` prose against the other's.
+
+**Answer:**
+
 ## Notes
 
 Calls made without asking (correct any of them in your answers):
@@ -265,3 +275,4 @@ sequenced:  none
 - 2026-11-27 — Q1-Q8 raised · cost: 3m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 192k in + 1M cached / 22k out
 - 2026-11-27 — planned: docs/plans/2026-11-27-identify-acting-user-195.md · cost: 8m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 235k in + 2.1M cached / 48k out · engineering:system-design and engineering:architecture unavailable, structure applied directly
 - 2026-11-27 — round 2 (send-back from qc.md round 1): Q9-Q11 raised · cost: 1m · fable-5-2 380k in + 421k cached / 5k out
+- 2026-11-27 — round 2: plan written, footprint committed, Q12 raised (new overlap with #204) · cost: 6m · fable-5-2 384k in + 824k cached / 6k out · sonnet-5-5 42k in + 3.4M cached / 20k out · engineering:system-design and engineering:architecture unavailable, structure applied directly
