@@ -40,7 +40,7 @@ user_login() {
     elif codeo_is_web_session && [[ -n ${CODEO_GITHUB_LOGIN:-} ]]; then
         echo "$CODEO_GITHUB_LOGIN"
     else
-        echo "github: no login: GET /user was refused and \$CODEO_GITHUB_LOGIN is unset" >&2
+        echo "github: no login: GET /user was refused and \$CODEO_GITHUB_LOGIN is unset (or ignored outside a hosted web session)" >&2
         return 1
     fi
 }
@@ -108,7 +108,9 @@ case $group in
                     || die "issue $n: could not add assignee $login"
                 ;;
             assignee-remove)
-                n=${1:?issue number}; login=${2:-$(user_login)} || exit 1
+                n=${1:?issue number}
+                login=${2:-}
+                [[ -n $login ]] || die "issue assignee-remove needs the login to remove"
                 gh api -X DELETE "repos/$repo/issues/$n/assignees" -f "assignees[]=$login" >/dev/null \
                     || die "issue $n: could not remove assignee $login"
                 ;;

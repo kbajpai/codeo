@@ -16,7 +16,7 @@ codeo_whoami() {
         login=${row%%$'\t'*}
         type=${row#*$'\t'}
         if [[ $type != User ]]; then
-            echo "codeo: $login is a $type account, not a person: sign in with your own GitHub login" >&2
+            echo "codeo: $login is a ${type:-unknown} account, not a person: sign in with your own GitHub login" >&2
             return 1
         fi
         printf '%s\t%s\n' "$login" "$type"

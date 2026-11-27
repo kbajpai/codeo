@@ -175,6 +175,16 @@ if out=$(bash "$script" issue assignee-remove 85 kbajpai 2>"$err_file"); then rc
 assert_eq "exit code" 0 "$rc"
 assert_contains "call" "METHOD=DELETE PATH=repos/$repo/issues/85/assignees FIELD=assignees[]=kbajpai" "$(cat "$calls_log")"
 
+case_desc="issue assignee-remove 85 (no login)"
+reset_case
+write_fixture DELETE "repos/$repo/issues/85/assignees" <<'JSON'
+{"id":85}
+JSON
+if out=$(bash "$script" issue assignee-remove 85 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_contains "stderr" "needs the login" "$(cat "$err_file")"
+assert_eq "no DELETE call" 0 "$(grep -c DELETE "$calls_log" || true)"
+
 case_desc='issue search "web session"'
 reset_case
 write_fixture GET "search/issues" <<'JSON'
@@ -292,6 +302,7 @@ if out=$(bash "$script" user login 2>"$err_file"); then rc=0; else rc=$?; fi
 unset CODEO_GITHUB_LOGIN
 assert_eq "exit code" 1 "$rc"
 assert_eq "stdout" "" "$out"
+assert_contains "stderr explains the fallback" "CODEO_GITHUB_LOGIN" "$(cat "$err_file")"
 
 case_desc="user whoami (User)"
 reset_case
@@ -321,6 +332,25 @@ JSON
 if out=$(bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
 assert_eq "exit code" 1 "$rc"
 assert_eq "stdout" "" "$out"
+assert_contains "stderr is a codeo line" "codeo:" "$(cat "$err_file")"
+
+case_desc="user whoami (type missing)"
+reset_case
+write_fixture GET "user" <<'JSON'
+{"login":"x"}
+JSON
+if out=$(bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout" "" "$out"
+assert_contains "stderr says unknown" "unknown" "$(cat "$err_file")"
+
+case_desc="user whoami (login a[bot], type User)"
+reset_case
+write_fixture GET "user" <<'JSON'
+{"login":"a[bot]","type":"User"}
+JSON
+if out=$(bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 0 "$rc"
 
 case_desc="user whoami (GET /user 403s, CODEO_GITHUB_LOGIN set, not a web session)"
 reset_case
@@ -347,6 +377,7 @@ mark_fail GET "user"
 if out=$(CLAUDE_CODE_REMOTE=true bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
 assert_eq "exit code" 1 "$rc"
 assert_eq "stdout" "" "$out"
+assert_contains "stderr is a codeo line" "codeo:" "$(cat "$err_file")"
 
 case_desc="user login (GET /user 403s, no env var)"
 reset_case
