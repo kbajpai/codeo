@@ -243,7 +243,7 @@ a_kept_config_without_a_codename_gets_the_answer_written_into_it() {
     grep -q '^init: ok containers' "$work/out" || fail "containers step: $(cat "$work/out")"
     ! grep -q '^init: fail containers' "$work/out" || fail "containers failed"
     grep -qxF "init: note: the home checkout is a clone whose folder is named plainsetup-home; this folder is 'plainsetup'" "$work/out" || fail "home line: $(cat "$work/out")"
-    grep -qxF 'init: note: rename or re-clone it as plainsetup-home to run /codeo:issue and /codeo:init here' "$work/out" || fail "rename line"
+    grep -qxF 'init: note: rename or re-clone it as plainsetup-home to run the home skills (/codeo:issue, /codeo:init, /codeo:triage, /codeo:cleanup) here' "$work/out" || fail "rename line"
     # A clone already in its home folder gets the first line only.
     mkdir "$work/homes"; git init -q "$work/homes/goodname-home"; d=$work/homes/goodname-home
     git -C "$d" remote add origin git@github.com:acme-co/goodname.git; git -C "$d" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main

@@ -36,7 +36,7 @@ codeo_home_lines() {
     local dir=${2##*/}
     printf "the home checkout is a clone whose folder is named %s-home; this folder is '%s'\n" "$1" "$dir"
     [[ $dir == "$1-home" ]] ||
-        printf 'rename or re-clone it as %s-home to run /codeo:issue and /codeo:init here\n' "$1"
+        printf 'rename or re-clone it as %s-home to run the home skills (/codeo:issue, /codeo:init, /codeo:triage, /codeo:cleanup) here\n' "$1"
 }
 
 # codeo_pin_missing <config>: prints which half of the plugin pin the config lacks, "repo", "ref" or "repo ref", and

@@ -434,7 +434,7 @@ setup_says_where_the_home_checkout_lives() {
     git -C "$d" remote add origin git@github.com:acme-co/shop.git; git -C "$d" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
     (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "setup --containers failed"
     grep -qxF "codeo: the home checkout is a clone whose folder is named shop-home; this folder is 'shop'" "$work/out" || fail "home line: $(cat "$work/out")"
-    grep -qxF 'codeo: rename or re-clone it as shop-home to run /codeo:issue and /codeo:init here' "$work/out" || fail "rename line missing"
+    grep -qxF 'codeo: rename or re-clone it as shop-home to run the home skills (/codeo:issue, /codeo:init, /codeo:triage, /codeo:cleanup) here' "$work/out" || fail "rename line missing"
     mkdir -p "$work/homeok"; git init -q "$work/homeok/shop-home"; d=$work/homeok/shop-home
     git -C "$d" remote add origin git@github.com:acme-co/shop.git; git -C "$d" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
     (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers >"$work/out" 2>&1) || fail "setup --containers failed"

@@ -21,7 +21,7 @@
 #   adopting-paths   Setting a project up has an "Adopting codeo with containers" section naming scripts/codeo-init.sh and
 #                    /codeo:setup --containers and linking docs/container-templates.md
 #   troubleshooting-groups
-#                    Troubleshooting has three ### groups in order; the doctor group's bold leads are the twelve
+#                    Troubleshooting has three ### groups in order; the doctor group's bold leads are the thirteen
 #                    check names; the Installing and the pin group opens with its two entries; the intro says three groups
 #   adopting-guard   docs/home-checkout.md has "Adopting the guard in your project" (role-guard, .codeo/overlays/,
 #                    /codeo:doctor); the README role-guard entry and docs/extension-points.md link to it
@@ -206,7 +206,7 @@ fi
 trouble=$(section "$readme" Troubleshooting)
 for lead in "A role-guard refusal" "A lock that is stuck or not yours" "A step that was interrupted" \
     "A card that is not Ready" config. schema. codename. gh-auth. gh-scopes. \
-    board. priority-labels. ruleset. suites. deps. overlays. superpowers.; do
+    board. priority-labels. ruleset. suites. deps. overlays. superpowers. containers.; do
     grep -qF -- "**$lead" <<<"$trouble" || fail troubleshooting "no entry starting **$lead"
 done
 
@@ -268,12 +268,12 @@ Installing and the pin" ]] ||
 if ! grep -qxF '### Checks from /codeo:doctor' <<<"$trouble"; then
     fail troubleshooting-groups "Troubleshooting has no ### Checks from /codeo:doctor"
 else
-    doctor_checks="config schema codename gh-auth gh-scopes board priority-labels ruleset suites deps overlays superpowers"
+    doctor_checks="config schema codename gh-auth gh-scopes board priority-labels ruleset suites deps overlays superpowers containers"
     while IFS= read -r line; do
         lead=$(sed -n 's/^\*\*\([^*]*\)\*\*.*$/\1/p' <<<"$line")
         lead=${lead%.}
         grep -qxF -- "$lead" < <(printf '%s\n' $doctor_checks) ||
-            fail troubleshooting-groups "an entry under Checks from /codeo:doctor starts \"${line:0:60}\", not one of the twelve checks"
+            fail troubleshooting-groups "an entry under Checks from /codeo:doctor starts \"${line:0:60}\", not one of the thirteen checks"
     done < <(subsection "$trouble" "Checks from /codeo:doctor" | grep '^\*\*' || true)
     doctor_leads=$(subsection "$trouble" "Checks from /codeo:doctor" | grep '^\*\*' | sed -n 's/^\*\*\([^*]*\)\*\*.*$/\1/p' | sed 's/\.$//' || true)
     for check in $doctor_checks; do
