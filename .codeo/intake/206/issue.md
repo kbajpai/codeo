@@ -1,4 +1,4 @@
-# Issue new-cleanup-sh-placeholder-and-removed-record — issue
+# Issue #206 — issue
 
 ## Where this stands
 
@@ -55,8 +55,9 @@ Second, the engineer ran the removal on all hosts and recorded it (`.codeo/intak
 
 ## Outcome
 
-Pending approval.
+Approved by the engineer and filed as #206.
 
 ## Log
 
 2026-11-27 — draft written from the cleanup run, two faults consolidated into one issue
+2026-11-27 — approved and filed as #206
