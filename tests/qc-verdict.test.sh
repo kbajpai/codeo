@@ -438,6 +438,43 @@ assert_eq "exit code" 1 "$rc"
 assert_contains "stderr names the file" ".codeo/7" "$out"
 assert_lacks "no archived-dossier line on a failure" "no archived dossier" "$out"
 
+# --- case: the archive commit, then the record commit, both pass --------------------------------
+# /codeo:close archives the dossier and pushes before it opens the pull request, so the first CI
+# run sees an archive whose close.md has no `— pull request opened` round yet; the second sees the
+# round and the `#<n> <url>` line. Both must judge the same clear qc.md, and the live dossier on the
+# base side of the move still fails.
+case_desc="the archive commit and the record commit both pass; the live dossier fails"
+dir=$(new_repo)
+mkdir -p "$dir/.codeo/7"
+echo "issue 7" > "$dir/.codeo/7/init.md"
+git -C "$dir" add .codeo
+git -C "$dir" commit -q -m base
+base=$(git -C "$dir" rev-parse HEAD)
+mkdir -p "$dir/.codeo/done"
+git -C "$dir" mv .codeo/7 .codeo/done/7
+qc_md '### Round 1 — 2026-09-01
+
+Everything checked out.
+
+**Verdict: clear.**' > "$dir/.codeo/done/7/qc.md"
+printf '## Outcome\n\n## Log\n\n- archived\n' > "$dir/.codeo/done/7/close.md"
+git -C "$dir" add .codeo
+git -C "$dir" commit -q -m "docs(codeo): close dossier for #7 — archived"
+head1=$(git -C "$dir" rev-parse HEAD)
+printf '## Outcome\n\n### Round 1 — pull request opened\n\n2026-09-02\n\n#9 https://example.test/o/r/pull/9\n\n## Log\n\n- archived\n' > "$dir/.codeo/done/7/close.md"
+git -C "$dir" add .codeo
+git -C "$dir" commit -q -m "docs(codeo): close dossier for #7 — PR #9"
+head2=$(git -C "$dir" rev-parse HEAD)
+run_case "$dir" "$base" "$head1"
+assert_eq "archive commit: exit code" 0 "$rc"
+assert_contains "archive commit: output" "round 1 clear" "$out"
+run_case "$dir" "$base" "$head2"
+assert_eq "record commit: exit code" 0 "$rc"
+assert_contains "record commit: output" "round 1 clear" "$out"
+run_case "$dir" "$base" "$base"
+assert_eq "live dossier at head: exit code" 1 "$rc"
+assert_contains "live dossier at head: stderr names it" ".codeo/7" "$out"
+
 # --- case: live dossier, run from a subdirectory -----------------------------------------------
 case_desc="live dossier, run from a subdirectory"
 dir=$(new_repo)
