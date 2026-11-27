@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-All six tasks of `docs/plans/2026-11-27-close-177-qc-leftovers-188.md` are built, reviewed and committed. The build passes. Next: `/codeo:qc`.
+Round 2 is built: Tasks 7-9 of `docs/plans/2026-11-27-close-177-qc-leftovers-188.md` (after QC round 1), reviewed and committed; Tasks 1-6 stand from round 1. The build passes. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -17,7 +17,7 @@ None.
 ## Notes
 
 - Step 2a: `sync-main.sh` reported the branch already contains `origin/main`; no `also changed on` lines. `overlap.sh 188` printed nothing.
-- Two minor review findings, deferred and not fixed here:
+- Round 1 deferred two minor review findings; Round 2 fixes both (the pin now reads step 4, the changelog bullet names its issue):
   - `tests/cleanup-skill.test.sh`: the new `while origin still holds` pin greps the whole skill file, so it would still pass if the phrase moved out of step 4.
   - `CHANGELOG.md`: the new `## Unreleased` bullet has no `(#188)` suffix, where the neighbouring bullets end with their issue number.
 
@@ -46,6 +46,29 @@ None.
 - Task 1's check greps `differ by a day from the` (the phrase wraps); Task 6's check diffs against `origin/main`, since local `main` can lag.
 - The six tasks were sent to one implementer in order, with one commit per task (small same-shape edits), and reviewed as one unit over `764f4f9..e667163`: spec compliant on all six, no Critical or Important finding. No separate whole-branch review was run; `/codeo:qc`'s independent review follows. No `Deployed revision:`: no shared environment.
 
+
+### Round 2
+
+2026-11-27
+(send-back from qc.md round 1)
+
+Round 2 starts from the base branch: `sync-main.sh` reported the branch already contains `origin/main`; `overlap.sh 188` printed nothing. QC's findings were checked against the code before any work: F1 reproduced (with `jq` off `PATH`, `github.sh issue view` exits 1 on `config.json: invalid JSON` and never calls `gh`), F2 holds (`.sbx/codeo-sandbox.sh:22` has no fallback when `CODEO_TRACK` names a missing file), F3 holds (`scripts/cleanup.sh:119` accepts only `[A-Za-z0-9._-]` names), F5 holds. F4 (pins for the docs sentences) is out of scope by the engineer's answer (`plan.md` Q8).
+
+**Built** — three tasks, one commit each, on top of `7d1c573`:
+
+| Task | Commit | What changed |
+|---|---|---|
+| 7 | `44f7c5b` | `docs/home-checkout.md`: the assignee lookup is described as stopping at `github.sh`'s `jq` read of `.codeo/config.json`, before `gh` (QC F1); the tracker sentence says "when that file is missing" (QC F2) |
+| 8 | `19e36d8` | `skills/cleanup/SKILL.md` step 4: "while origin still holds a validly named `codeo-live/<N>/*` branch" (QC F3); in `tests/cleanup-skill.test.sh` the whole-file `while origin still holds` check is gone and a pin on the `step4` variable replaces it (QC F5) |
+| 9 | `92e7d92` | `CHANGELOG.md`: the Unreleased bullet ends "No script changed (#188)." (QC F5) |
+
+**Documentation pages changed:** `docs/home-checkout.md`, `skills/cleanup/SKILL.md`, `CHANGELOG.md`. No documentation gap; no script changed (`git diff --stat origin/main -- scripts lib hooks .sbx .devcontainer` prints nothing).
+
+**Build result:** the `shell` suite's `build` is `true` and exits 0. The implementer ran the whole `bash tests/run.sh` before the Task 8 and 9 commits, ending `all cases passed`, and Task 8's pin failed before its wording change and passed after; grading the suite is `/codeo:qc`'s.
+
+**Deviations from the plan:** none. The three tasks went to one implementer, one commit per task, and were reviewed as one unit over `7d1c573..92e7d92`: spec compliant on all three, no Critical or Important finding, one Minor that needs no change. No separate whole-branch review was run; `/codeo:qc` round 2 reviews the whole diff independently. No `Deployed revision:`: no shared environment.
+
 ## Log
 
 - 2026-11-27 — implemented docs/plans/2026-11-27-close-177-qc-leftovers-188.md: 6/6 tasks, build passes, review clean (2 minors deferred) · cost: 30m · sonnet-5-5 139k in + 3.9M cached / 22k out
+- 2026-11-27 — round 2 (send-back from qc.md round 1): implemented Tasks 7-9 of docs/plans/2026-11-27-close-177-qc-leftovers-188.md, 3/3, build passes, review clean · cost: 15m · sonnet-5-5 90k in + 4.1M cached / 16k out
