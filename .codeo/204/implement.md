@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3 started after the send-back from `qc.md` round 2, and stopped at step 2a: `overlap.sh 204` printed a new overlap with #206 (Q1). Nothing is changed until it is answered. The round 2 outcome below stands.
+Round 3, done, after the send-back from `qc.md` round 2. G1, G2, G3, G5 and G6 are fixed. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -67,8 +67,28 @@ Each finding was checked against the code before work started; all held. Fixed i
 
 **Deviations from the plan.** None of scope: the files edited are the plan's. No shared environment: no lease, no deploy. Sync with `main` at the start of the round: the branch already contained it.
 
+### Round 3
+
+2026-11-27
+(send-back from qc.md round 2)
+
+Sync with `main` at the start of the round: the branch already contained it. `overlap.sh` raised one overlap, #206's `tests/intake.test.sh` (Q1, answered: proceed and coordinate). Each finding was checked against the code before work started; all held. Fixed in three commits (`465e63c`, `e476333`, `3d805df`) by one implementer on the subagent model, with a scoped review:
+
+- **G1 (blocking).** `skills/close/SKILL.md` step 1: when no round in `close.md` records the pull request, the row is a first open resumed, whatever other rounds exist — a conflict round without a record predates the pull request, as step 6 already says. Only a round recording the pull request followed by a `— review feedback` or `— conflicts with <base>` round is a return from review. The wrong parenthetical added in round 2 is gone. On a pull request opened by hand or by an older plugin after a step-3 conflict, step 6 now writes the `— pull request opened` round with `#<number> <url>`, so criterion 2 holds on that path, and no review-return comment is posted. Pins: the old-wording pin became a check that the text is gone, plus fixed-string pins for the new rule.
+- **G2.** The resumed-after-`pr create` row runs steps 2-3 then 6-8; the first-open-resumed row runs steps 2 and 3, then 6, 4, 7 and 8, step 5 skipped.
+- **G3.** Step 1's prose says the un-archiving send-back at step 3 is for the dossier archived with no pull request yet; with a pull request open, step 3 sends nothing back and the next run's step 9 sends the conflict back through step 11.
+- **G5.** `docs/dossier.md`: the record is written in the commit after the archive, or in the archive's own commit when the pull request was opened before the archive.
+- **G6.** `docs/handoff.md`: the `review — dossier archived` line does not look for a pull request; between close's archive push and `pr create` the workflow waits for `/codeo:close`, not for review.
+
+**Documentation pages changed:** `docs/dossier.md`, `docs/handoff.md`; the skill's own text carries G1-G3.
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. The implementer ran `close-skill`, `skills-lint`, `skills-doc`, `readme`, `init-skill`, `triage-skill` and `closing-block` tests (all passed, new pins red before the edit); the full suite is `/codeo:qc`'s.
+
+**Deviations from the plan.** None of scope. Open and left as deferred minors: step 3's sentence for the resumed-after-`pr create` row still says "the run goes on to steps 6-7" where step 1 says 6-8 (an existing pin fixes the string; no run is misdirected); whether a `— pull request updated` round counts as recording the pull request in the first-open-resumed row is not stated. G4, G7 and G8 from `qc.md` round 2 are recorded there as non-blocking and untouched. No shared environment: no lease, no deploy.
+
 ## Log
 
 - 2026-11-27 — implemented docs/plans/2026-11-27-close-archive-before-pr-204.md: 6 tasks, 9 commits, build true · cost: 37m · sonnet-5-5 607k in + 19.7M cached / 83k out
 - 2026-11-27 — round 2: fixed qc round 1's F1-F7 (4 commits), build true · cost: 3m · sonnet-5-5 123k in + 5M cached / 23k out
 - 2026-11-27 — round 3: Q1 raised (overlap with #206, tests/intake.test.sh) · cost: 0m · sonnet-5-5 10k in + 377k cached / 405 out
+- 2026-11-27 — round 3: fixed qc round 2's G1, G2, G3, G5, G6 (3 commits), build true · cost: 2m · sonnet-5-5 89k in + 3.6M cached / 16k out
