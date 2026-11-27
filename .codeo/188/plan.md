@@ -98,6 +98,15 @@ Proceed and coordinate. (The engineer's reply in the conversation, 2026-11-27: "
 - No invariants document is configured and no shared environment, so there is no invariant check and no
   lease task.
 
+### Footprint
+
+```
+files:      docs/release-checklist.md, CHANGELOG.md, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/home-checkout.md, .codeo/overlays/cleanup.md, .codeo/overlays/close.md, templates/containers/.codeo/overlays/cleanup.md, templates/containers/.codeo/overlays/close.md, tests/close-skill.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, docs/plans/2026-11-27-close-177-qc-leftovers-188.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
