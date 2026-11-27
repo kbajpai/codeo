@@ -360,6 +360,11 @@ stale_archived_with_an_open_pull_request_is_lock_lost() {
     check_matrix stale:67 67
 }
 
+stale_archived_before_the_pull_request_opened_is_lock_lost() {
+    stale_with arconly lost done/67/close.md '## Outcome\n' || return 0
+    check_matrix stale:67 67
+}
+
 stale_stashed() {
     stale_with stashed stashed 67/close.md '### Round 1 — pull request opened\n\n### Round 2 — stashed\n' || return 0
     check_matrix stale:67 67
@@ -413,6 +418,7 @@ cases=(
     stale_finished
     stale_finished_by_the_remote_base
     stale_archived_with_an_open_pull_request_is_lock_lost
+    stale_archived_before_the_pull_request_opened_is_lock_lost
     stale_stashed
     stale_abandoned
     stale_lock_lost_without_a_close

@@ -141,6 +141,10 @@ is the container the message names.
         | dossier at `.codeo/done/<N>/`, no pull request, or closed unmerged | none fits: always a mismatch |
         | pull request merged | not compared: the existing `unclosed:<N>` item covers it |
 
+        A no-pull-request row is also what an interrupted close leaves between its archive push and
+        `pr create`: report it as an interrupted close to finish with `/codeo:close`, not as a
+        mismatch to fix by hand.
+
         An abandon stays live until `/codeo:init` writes its resume line, and *resume* sets Ready
         before that, so Ready is not a mismatch for a live abandon.
         A Status of `none` or `unset` is a mismatch. A mismatch is a question quoting the `status`
