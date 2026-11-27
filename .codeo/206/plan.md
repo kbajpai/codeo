@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1 (`qc.md`: F1 and F2 blocking, F3 non-blocking and the plan's, F4-F7 non-blocking and `/codeo:implement`'s). The plan's premise that `intake.sh commit` only adds files is false, so two engineers' records can delete each other (root cause in `qc.md`). Q10-Q12 are answered (every recommendation taken); the round-2 plan is drafted at `.codeo/206/plan-draft.md` and waits for the engineer's approval. Round 1's plan, `docs/plans/2026-11-27-cleanup-removal-records-206.md`, is built and stays as history.
+Round 2, done. Q10-Q12 are answered and the plan is approved: `docs/plans/2026-11-27-cleanup-removal-records-206-round-2.md`, left unstaged for review (round 1's plan stays as history). Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -169,15 +169,6 @@ Check the expanded text, as recommended. Given in the conversation: "Go with you
 - Recorded issues still cost their proofs on every run (two GitHub reads each): acceptance criterion 4 needs the proofs to run before a record may hide a line.
 - No overlay is set for `plan/plan-shape`, `plan/proof-of-done` or `plan/wiki-rules` (exit 3 each); no invariants document, no shared environment, no `wiki` module, no `resources[]`.
 
-### Footprint
-
-```
-files:      scripts/intake.sh, tests/intake.test.sh, scripts/cleanup.sh, skills/cleanup/SKILL.md, docs/skills.md, docs/extension-points.md, README.md, CHANGELOG.md, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, docs/plans/2026-11-27-cleanup-removal-records-206.md, docs/plans/2026-11-27-cleanup-removal-records-206-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 **Plan:** `docs/plans/2026-11-27-cleanup-removal-records-206.md`, approved by the engineer and left unstaged. Shape: an executable plan under `docs/plans/` (five checkbox tasks, each proved by `bash tests/run.sh`, the `shell` suite having no `filter`); no separate reference doc.
@@ -196,9 +187,42 @@ sequenced:  none
 **Intake questions resolved:** the one left to plan at intake, whether the placeholder fix lives in the script or the overlay text: the script (Q1).
 
 
+### Round 2
+
+2026-11-27
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-27-cleanup-removal-records-206-round-2.md`, approved by the engineer and left unstaged. Shape: an executable plan under `docs/plans/` (four checkbox tasks, each proved by `bash tests/run.sh`); round 1's plan stays as history.
+
+**What round 1 got wrong.** It assumed `intake.sh commit` only adds files, so one file per issue would let two engineers' records coexist. It does not: `build` runs `git add -f -- <dir>`, and with git 2.x a directory pathspec also stages the deletion of files the clone lacks, so a commit replaces the directory with the clone's copy (`qc.md` round 1, F1; the root cause is written there). `implement.md` worked around it with a restore in `record`, which narrows the window and does not close it.
+
+**Decisions** (Q10-Q12, every recommendation taken: "Go with your picks"):
+- `build` in `scripts/intake.sh` adds with `--ignore-removal`, for every caller, so a commit deletes only what `--drop` names. That fixes the removal records, the dated run records and the triage records at once, and `record` drops its restore call (Q10).
+- No undo command. The documentation says a wrong record is deleted from the intake branch and from every clone holding a copy, and that a clone still holding it adds it back (Q11, F2).
+- The placeholder check expands `command:` and `fallback:` once with a sample issue number and looks at the text that would print, so `rm {{N}}` is refused and the documented sentence is true; the `name:` template is refused only through a command or fallback that prints it (Q12, F3).
+- F4-F7 (a stale sentence in the skill, the `leftover` line wording, the skill's `Reads` list, the README entry) ride along in Task 4.
+
+**Rejected:** the flag for `cleanup` only; restoring before each commit; `cleanup.sh unrecord`; keeping the check as built and narrowing its documentation.
+
+**Documentation pages the plan changes:** `docs/skills.md` (`## cleanup`), `docs/extension-points.md` (`cleanup/removal-command`), `README.md` (the `role stale` entry), `CHANGELOG.md` (the Unreleased bullet and the `Shared state:` line). Task 4 also greps for any page that says `intake.sh commit` replaces a directory.
+
+**Overlap:** `overlap.sh 206` printed nothing for the new footprint (`scripts/intake.sh` and `tests/intake.test.sh` are listed by no other workflow); #204, #195 and #188 stay as answered (`plan.md` Q6-Q9, `qc.md` Q1-Q2). No lock is needed: no exclusive resource.
+
+**Intake questions resolved:** none new.
+
+### Footprint
+
+```
+files:      scripts/intake.sh, tests/intake.test.sh, scripts/cleanup.sh, skills/cleanup/SKILL.md, docs/skills.md, docs/extension-points.md, README.md, CHANGELOG.md, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, docs/plans/2026-11-27-cleanup-removal-records-206.md, docs/plans/2026-11-27-cleanup-removal-records-206-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-27 — Q1-Q7 raised · cost: 2m · fable-5-2 87k in + 649k cached / 8k out
 - 2026-11-27 — Q1-Q7 answered ("go with your picks"); draft written, footprint committed · cost: not recorded when written
 - 2026-11-27 — planned: docs/plans/2026-11-27-cleanup-removal-records-206.md · cost: 8m · fable-5-2 103k in + 1M cached / 13k out · sonnet-5-5 135k in + 1.6M cached / 26k out
 - 2026-11-27 — round 2 after a send-back from qc.md round 1: Q10-Q12 raised · cost: 1m · sonnet-5-5 658 in + 592k cached / 2k out
+- 2026-11-27 — planned round 2: docs/plans/2026-11-27-cleanup-removal-records-206-round-2.md · cost: 18m · sonnet-5-5 28k in + 4.6M cached / 23k out
