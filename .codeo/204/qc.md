@@ -25,6 +25,7 @@ I recommend proceed and coordinate, #204 merging first: it is finished and has n
 **Options:** proceed and coordinate (recommended) · sequence after #188 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended; #204 merges first. Given in the conversation: "go with your picks".
 
 ### Q2 — #195's branch now changes many of the files this branch changes. Proceed, sequence, or re-scope?
 
@@ -39,6 +40,7 @@ I recommend proceed and coordinate, as plan.md Q2 decided, with #204 merging fir
 **Options:** proceed and coordinate (recommended) · sequence after #195 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended; #204 merges first. Given in the conversation: "go with your picks".
 
 ## Notes
 
