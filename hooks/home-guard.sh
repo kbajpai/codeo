@@ -9,8 +9,8 @@
 # guarded_role <dir>: prints the role and returns 0 when the checkout holding <dir> is guarded.
 guarded_role() {
     local root=$1 role
-    [[ -x $root/.devcontainer/scripts/role.sh ]] || return 1
-    role=$("$root/.devcontainer/scripts/role.sh" "$root" 2>/dev/null) || return 1
+    [[ -f $root/.devcontainer/scripts/role.sh ]] || return 1
+    role=$(bash "$root/.devcontainer/scripts/role.sh" "$root" 2>/dev/null) || return 1
     case $role in
         home | 'stale:?' | stray) printf '%s\n' "$role"; return 0 ;;
     esac

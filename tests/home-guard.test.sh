@@ -340,6 +340,13 @@ bcheck allow "$h" "git commit --all-x -m x"
 bcheck allow "$h" "git commit --message x"
 bcheck allow "$h" "git commit --no-verify -m x"
 
+case_desc=role_sh_need_not_be_executable
+h=$(clone nx1 codeo-home main)
+chmod 644 "$h/.devcontainer/scripts/role.sh"
+out=$(hook "$(file_json Write "$h" "$h/src/a.txt")")
+assert_eq "mode 644 role.sh still denies a Write" deny "$(decision "$out")"
+bcheck deny "$h" "git push"
+
 case_desc=hooks_json_registers_the_guard
 hj="$plugin_root/hooks/hooks.json"
 reg=$(jq -r '[.hooks.PreToolUse[] | select(.matcher == "Edit|Write|NotebookEdit|Bash") | .hooks | select(length == 1) | .[0].command] | join("|")' "$hj")
