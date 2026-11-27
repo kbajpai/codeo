@@ -4,7 +4,7 @@
 #
 #   doctor.sh
 #
-# Checks: config, schema, codename, gh-auth, gh-scopes, board, priority-labels (only when issue.priority is true), ruleset, suites, deps, overlays, superpowers.
+# Checks: config, schema, codename, gh-auth, gh-scopes, board, priority-labels (only when issue.priority is true), ruleset, suites, deps, overlays, superpowers, containers (only when the project has .devcontainer/ or .sbx/ scripts).
 # Every GitHub read is `gh api` except the board check's `gh project view`, which is GraphQL-backed; nothing uses the
 # GraphQL-backed `gh issue|pr|run`.
 # The ruleset check reads the effective rules for the base branch from
@@ -14,6 +14,7 @@
 set -uo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/codename.sh"
 
 failed=0
 report() { # status check detail
@@ -268,6 +269,38 @@ if [[ -r "$plugins_file" ]] && jq -e '.plugins | type == "object"' "$plugins_fil
     fi
 else
     report ok superpowers "cannot verify"
+fi
+
+# containers: only for a project that has them. The managed scripts must still match the plugin's templates
+# (scripts/containers.sh --check); the files a project edits (Dockerfile, devcontainer.json) are its own.
+if [[ -e $CODEO_PROJECT_ROOT/.devcontainer/codeo-container.sh || -e $CODEO_PROJECT_ROOT/.sbx/codeo-sandbox.sh ]]; then
+    # Without plugin.repo and plugin.ref the container cannot install codeo (plugins.sh, devcontainer-start.sh).
+    cont_msg=""
+    if [[ $config_ok -eq 0 ]]; then
+        report fail containers "skipped: config is unusable"
+    else
+        if cont_out=$(bash "$CODEO_PLUGIN_ROOT/scripts/containers.sh" --check 2>&1); then
+            :
+        else
+            cont_bad=$(sed -n 's/^containers: differs //p' <<<"$cont_out" | tr '\n' ' ' | sed 's/ $//')
+            if [[ -n $cont_bad ]]; then
+                cont_msg="differ from the templates: $cont_bad; refresh with: bash $CODEO_PLUGIN_ROOT/scripts/containers.sh --force"
+            else
+                cont_msg=$(head -n 1 <<<"$cont_out")
+            fi
+        fi
+        pin_gap=$(codeo_pin_missing "$CODEO_STATE_DIR/config.json")
+        if [[ -n $pin_gap ]]; then
+            pin_gap=${pin_gap//repo/plugin.repo}; pin_gap=${pin_gap//ref/plugin.ref}; pin_gap=${pin_gap// / and }
+            pin_them=them; [[ $pin_gap == *" and "* ]] || pin_them=it
+            cont_msg="${cont_msg:+$cont_msg; }the container scripts are present but .codeo/config.json has no $pin_gap, so the container cannot install codeo; set $pin_them (see docs/container-templates.md in the codeo plugin ($CODEO_PLUGIN_ROOT/docs/container-templates.md))"
+        fi
+        if [[ -n $cont_msg ]]; then
+            report fail containers "$cont_msg"
+        else
+            report ok containers "managed scripts match the templates"
+        fi
+    fi
 fi
 
 exit "$failed"

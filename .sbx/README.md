@@ -33,6 +33,14 @@ Download the script once:
 curl -fsSL -o codeo-sandbox.sh https://raw.githubusercontent.com/kbajpai/codeo/main/.sbx/codeo-sandbox.sh
 ```
 
+In another project, download the script from its own repository, on its base branch, where the files were committed:
+
+```bash
+curl -fsSL -o codeo-sandbox.sh https://raw.githubusercontent.com/<owner>/<repo>/<base>/.sbx/codeo-sandbox.sh
+```
+
+In a script rendered for a project, `CODEO_REPO_URL` defaults to the project's own repository, `https://github.com/<owner>/<repo>.git`, and the sandbox is `<codename>-<N>`. `.devcontainer/README.md` describes how a project gets these files (*Using this in another project*).
+
 The `codeo` command runs this script for you: `codeo issue <N> [<branch>] --sandbox`, `codeo open <N>`, `codeo shell <N>`, `codeo rm <N>` and `codeo list` stand for the commands below. Install it as `.devcontainer/README.md` describes in *Installing the `codeo` command*. `codeo` runs the script from `~/codeo` (`CODEO_HOME`), so the clone `codeo-<N>` is made there, whatever directory the command is run from. It downloads the script into `~/codeo` the first time, and `codeo update` replaces it.
 
 Run the commands from the directory that holds the downloaded file. The clone `codeo-<N>` is made in that directory. When `CODEO_SBX_IMAGE` is set, the script reads the image pin from the file it names, and refuses when that file is missing. Otherwise it reads `codeo-<N>/.sbx/claude-image` in the clone, then `.sbx/claude-image` on `origin/HEAD` of the clone (`git -C codeo-<N> show origin/HEAD:.sbx/claude-image`). No file beside the script is read. `CODEO_REPO_URL` names another repository to clone (default `https://github.com/kbajpai/codeo.git`), and `CODEO_CODE` names the VS Code program `open` runs, in place of `code`.
@@ -121,7 +129,11 @@ When `end` cannot start the sandbox or fetch from it, it also removes nothing, w
 
 ## The image pin
 
-`.sbx/claude-image` is one line, the Claude image as `docker.io/sbx/claude@sha256:<64 hex digits>`. `issue` creates the sandbox from it, reading it from the file `CODEO_SBX_IMAGE` names when that is set, else from `codeo-<N>/.sbx/claude-image`, else from `origin/HEAD:.sbx/claude-image` in the clone, and refuses when none is found or the line holds anything else. Moving the pin is an edit to `.sbx/claude-image`, with a line in `CHANGELOG.md`. A sandbox that exists keeps the image it was created from.
+`.sbx/claude-image` is one line, the Claude image as `docker.io/sbx/claude@sha256:<64 hex digits>`. `issue` creates the sandbox from it, reading it from the file `CODEO_SBX_IMAGE` names when that is set, else from `codeo-<N>/.sbx/claude-image`, else from `origin/HEAD:.sbx/claude-image` in the clone, and refuses when none is found or the line holds anything else. Moving the pin is an edit to `.sbx/claude-image`, with a line in `CHANGELOG.md`. A sandbox that exists keeps the image it was created from. In another project `.sbx/claude-image` is a seed file: codeo writes it once, never overwrites it, and it is yours to change.
+
+## What the sandbox contains
+
+The sandbox runs Docker's pinned image, which holds the agent's tools but not a project's language toolchain. The pin has to stay a `docker.io/sbx/claude@sha256:` digest, so the project's `.devcontainer/Dockerfile` does not apply to the sandbox. A project whose build needs a toolchain runs its suites in the dev container (`codeo issue <N> --container`), or installs the toolchain inside the sandbox itself. sbx can save a template (`sbx template save`, cited in `docs/dev-environment-sbx-evaluation.md` as U16's workaround); that was not tried here and is not verified.
 
 ## Stopped sandboxes
 
@@ -134,5 +146,7 @@ A sandbox that only `sbx create` and `sbx exec` have started stops by itself abo
 ```bash
 curl -fsSL -o codeo-track.sh https://raw.githubusercontent.com/kbajpai/codeo/main/.devcontainer/codeo-track.sh
 ```
+
+In another project the line is `curl -fsSL -o codeo-track.sh https://raw.githubusercontent.com/<owner>/<repo>/<base>/.devcontainer/codeo-track.sh`.
 
 The tracker takes the repository from `CODEO_REPO_URL`, else from the `origin` of the checkout it runs in, else the upstream default; `codeo-sandbox.sh` runs it with `CODEO_REPO_URL` set to the repository it clones from (the variable, else the upstream default), so it records against that repository whatever directory it runs in. Without `codeo-track.sh` the script prints one `codeo-sandbox: note:` line and records nothing. A record that fails (`gh` missing or not logged in) prints one `track:` line naming the row to add by hand and never fails `issue` or `end`. `.devcontainer/README.md` describes the comment.

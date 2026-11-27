@@ -29,10 +29,9 @@ number and branch filled in:
   `codeo-<N>` (the folder names the container). This route records the branch row only; the
   container, image and volume are not recorded.
 - *From a command line:* on the host, not inside this container, in a terminal, run
-  `bash codeo-container.sh issue <N> <branch>`. `codeo-container.sh` is the file the download line in
-  `.devcontainer/README.md` saves; it needs only Docker. If `codeo-<N>` exists (a stash being resumed), remove it first with `codeo rm <N>`, once `git status` in it shows nothing unpushed, or the command refuses. Then
-  `bash codeo-container.sh shell <N>` opens a shell in `codeo-<N>`; start `claude` there.
-- *In a Docker Sandboxes sandbox:* on the host, run `bash codeo-sandbox.sh issue <N> <branch>`, then `bash codeo-sandbox.sh open <N>` (VS Code) or `bash codeo-sandbox.sh shell <N>`. `codeo-sandbox.sh` is the file the download line in `.sbx/README.md` saves. A sandbox is ended with `codeo rm <N>` (which runs `bash codeo-sandbox.sh end <N>`), not with `docker rm`.
+  `codeo issue <N> <branch> --container` (the `codeo` command keeps `codeo-container.sh` in its own home directory, so no clone of the project is needed on the host, and the script needs only Docker). From a host clone of the project, `bash .devcontainer/codeo-container.sh issue <N> <branch>` does the same. If `codeo-<N>` exists (a stash being resumed), remove it first with `codeo rm <N>`, once `git status` in it shows nothing unpushed, or the command refuses. Then
+  `codeo shell <N>` (from a host clone, `bash .devcontainer/codeo-container.sh shell <N>`) opens a shell in `codeo-<N>`; start `claude` there.
+- *In a Docker Sandboxes sandbox:* on the host, the simplest is `codeo issue <N> <branch> --sandbox`, then `codeo open <N>` (VS Code) or `codeo shell <N>`: the `codeo` command keeps `codeo-sandbox.sh` (downloaded from `.sbx/codeo-sandbox.sh` on `main`) and the `codeo-<N>` clone in its home directory. Without it, put `codeo-sandbox.sh` in a folder outside the project clone, because the script makes the `codeo-<N>` clone in the folder it runs from, and run `bash codeo-sandbox.sh issue <N> <branch>`, then `bash codeo-sandbox.sh open <N>` or `bash codeo-sandbox.sh shell <N>` there. A sandbox is ended with `codeo rm <N>` (which runs `bash codeo-sandbox.sh end <N>` in that folder), not with `docker rm`.
 
 Whichever route, when the container has started its start script prints
 `lock: took the lock for #<N> on <branch>`; then run `/codeo:plan` there. If the start script

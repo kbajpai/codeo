@@ -275,12 +275,15 @@ It runs in the checkout the project's role check allows, outside the workflow lo
 
 Sets up codeo in a project. It runs `scripts/setup.sh` from the project root, which creates `.codeo/` (with a `.gitignore` for the per-checkout files), a starter `config.json`, and `docs/plans/`. It triggers on "set up codeo", "setup codeo", "initialise codeo", "install codeo in this repo".
 
-The script reads the repository owner and name from the `origin` remote and the base branch from `origin/HEAD`; when one does not resolve, the value is the marker `TODO-set-me` and a line on stderr says so, so a guessed value never passes for a real one. It refuses, exiting non-zero, when `.codeo/config.json` already exists. Any `--stack <name>` the engineer gives is passed through and recorded under the top-level `stacks` array, and does nothing else.
+The script reads the repository owner and name from the `origin` remote and the base branch from `origin/HEAD`; when one does not resolve, the value is the marker `TODO-set-me` and a line on stderr says so, so a guessed value never passes for a real one. It refuses, exiting non-zero, when `.codeo/config.json` already exists, with one exception: `--containers` alone, or with `--codename <name>`, works over an existing config (below), and `--codename <other>` is refused when the config already names a different codename; plain `setup.sh`, `--stack` and `--codename` without `--containers` still refuse. Any `--stack <name>` the engineer gives is passed through and recorded under the top-level `stacks` array, and does nothing else.
+
+The repository and its `origin` remote must already exist: setup never creates a repository. `--codename <name>` records `codename` in the config, the name that prefixes the project's containers, sandboxes, images and volumes. `--containers` also writes the dev container, the sbx sandbox files and the `.codeo/overlays/` role-guard and host-workflow overlays, through `scripts/containers.sh`, named from the config; it also writes `codename` (the repository's name made to fit the rule, when `--codename` is not given) and the plugin pin `plugin.repo` and `plugin.ref` into the config, the pin failing soft with one line when no release is found; given alone (or with only `--codename`), with a config already present, it adds a missing `codename` and pin to it and writes those files. [`container-templates.md`](container-templates.md) lists what is codeo's and what is the project's.
 
 ### Reads and writes
 
 - Reads the `origin` remote and `origin/HEAD` of the project's git repository.
 - Creates `.codeo/`, `.codeo/.gitignore`, a starter `.codeo/config.json`, and `docs/plans/`. It never overwrites an existing `config.json`.
+- With `--containers`, also writes `codename` and the plugin pin into the config when absent, and the files under `.devcontainer/`, `.sbx/` and `.codeo/overlays/` that `scripts/containers.sh` renders; the overlays and the other seed files are written only when absent.
 
 ### Hand-offs and non-goals
 
@@ -294,13 +297,13 @@ None.
 
 ### Purpose and triggers
 
-Checks that codeo is ready in a project: config, GitHub login and scopes, board, branch ruleset, suite commands and dependencies, reporting every failure. It runs `scripts/doctor.sh` from the project root. It triggers on "check codeo", "codeo doctor", "doctor", "is codeo set up", "why does codeo fail".
+Checks that codeo is ready in a project: config, GitHub login and scopes, board, branch ruleset, suite commands and dependencies, and the container scripts and plugin pin when the project has them, reporting every failure. It runs `scripts/doctor.sh` from the project root. It triggers on "check codeo", "codeo doctor", "doctor", "is codeo set up", "why does codeo fail".
 
-The script runs eleven checks: config, schema, codename, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays and superpowers, plus a twelfth, `priority-labels`, only when `issue.priority` is on; it checks that the four `priority:` labels exist. It prints one `ok` or `fail` line per check, runs every check even after a failure, and exits non-zero if any failed. The ruleset check reads the effective rules for the base branch and compares the required status checks with `ci.requiredChecks`.
+The script runs eleven checks: config, schema, codename, gh-auth, gh-scopes, board, ruleset, suites, deps, overlays and superpowers, plus two that print only in some projects: `priority-labels` when `issue.priority` is on (it checks that the four `priority:` labels exist), and `containers` when the project has `.devcontainer/codeo-container.sh` or `.sbx/codeo-sandbox.sh` (it checks that the managed container scripts match the plugin's templates and that `plugin.repo` and `plugin.ref` are set; it also fails when the config cannot be rendered). It prints one `ok` or `fail` line per check, runs every check even after a failure, and exits non-zero if any failed. The ruleset check reads the effective rules for the base branch and compares the required status checks with `ci.requiredChecks`.
 
 ### Reads and writes
 
-- Reads `.codeo/config.json`, the project's overlays and the extension-point registry `lib/extension-points.tsv` (the `overlays` check), and the installed-plugins file `~/.claude/plugins/installed_plugins.json` (the `superpowers` check). Checks with `command -v` that `gh`, `jq`, `git` and the first word of each suite's build and test commands are on the PATH, and that bash is 4.3 or newer. Reads GitHub through `gh api` (the board check's `gh project view` is the one exception, being GraphQL-backed); when `ci.requiredChecks` is absent the ruleset check compares against `tests` and `qc-verdict`.
+- Reads `.codeo/config.json`, the project's overlays and the extension-point registry `lib/extension-points.tsv` (the `overlays` check), and the installed-plugins file `~/.claude/plugins/installed_plugins.json` (the `superpowers` check). For a project with container scripts it also reads those managed scripts and `plugin.repo` and `plugin.ref`, and runs `scripts/containers.sh --check` (the `containers` check). Checks with `command -v` that `gh`, `jq`, `git` and the first word of each suite's build and test commands are on the PATH, and that bash is 4.3 or newer. Reads GitHub through `gh api` (the board check's `gh project view` is the one exception, being GraphQL-backed); when `ci.requiredChecks` is absent the ruleset check compares against `tests` and `qc-verdict`.
 - Writes nothing but its report.
 
 ### Hand-offs and non-goals

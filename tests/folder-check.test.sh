@@ -61,13 +61,13 @@ silent() {
     [[ -z $fc_out ]] || fail "folder '$1': wanted no output, got '$fc_out'"
 }
 
-# todo <folder> <fragment>: one "todo:" line naming the fragment and the README.
+# todo <folder> <fragment>: one "todo:" line naming the fragment and no pointer to a README.
 todo() {
     fc_run "$1"
     ((fc_rc == 0)) || fail "exit $fc_rc: $fc_err"
     [[ $fc_out == todo:* && $fc_out != *$'\n'* ]] || fail "folder '$1': wanted one 'todo:' line, got '$fc_out'"
     [[ $fc_out == *"$2"* ]] || fail "folder '$1': wanted the line to contain $2, got '$fc_out'"
-    [[ $fc_out == *'(.devcontainer/README.md)' ]] || fail "folder '$1': wanted the line to end with the README, got '$fc_out'"
+    [[ $fc_out != *README* ]] || fail "folder '$1': the line points at a README a project does not have: '$fc_out'"
 }
 
 home_folder_on_main_is_silent() {

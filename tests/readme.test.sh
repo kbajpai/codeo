@@ -17,12 +17,16 @@
 #   walkthrough      Your first workflow has six "###" steps: issue, init, plan, implement, qc, close
 #   troubleshooting  the four new entries sit beside the existing doctor entries
 #   lock-entry       the stuck-lock entry names both groups: /codeo:init #<N> and "reconcile by hand" (with diverged)
-#   setup-steps      Setting a project up has ### 1. 2. 3. then Running on the host; no prose line starts with a space
+#   setup-steps      Setting a project up has ### 1. 2. 3., Running on the host, then Adopting codeo with containers; no prose line starts with a space
+#   adopting-paths   Setting a project up has an "Adopting codeo with containers" section naming scripts/codeo-init.sh and
+#                    /codeo:setup --containers and linking docs/container-templates.md
 #   troubleshooting-groups
-#                    Troubleshooting has three ### groups in order; the doctor group's bold leads are the twelve
+#                    Troubleshooting has three ### groups in order; the doctor group's bold leads are the thirteen
 #                    check names; the Installing and the pin group opens with its two entries; the intro says three groups
 #   adopting-guard   docs/home-checkout.md has "Adopting the guard in your project" (role-guard, .codeo/overlays/,
 #                    /codeo:doctor); the README role-guard entry and docs/extension-points.md link to it
+#   adopting-guard-ships  the Adopting the guard section no longer says role.sh "is not shipped" and says
+#                    `/codeo:setup --containers` writes it
 #   updating         docs/updating.md's Updating superpowers section says restart
 #   skill-count      docs/handoff.md has a line starting "Six pipeline skills" (and none "Seven"), docs/skills.md one starting "Six skills form the pipeline"
 #   home-checkout    docs/home-checkout.md says what a missing jq and an existing container do
@@ -82,10 +86,10 @@ slug_got=$(slugs "$slug_tmp/h.md" | tr '\n' ' ')
 rm -rf "$slug_tmp"
 [[ "$slug_got" == "x x-1 x-2 y " ]] || fail slugs "repeated headings give \"$slug_got\", want \"x x-1 x-2 y \""
 
-pages=("$readme" docs/updating.md docs/home-checkout.md)
+pages=("$readme" docs/updating.md docs/home-checkout.md docs/container-templates.md)
 for p in "${pages[@]:1}"; do [[ -f $p ]] || fail pages "$p is missing"; done
 pages=("$readme")
-for p in docs/updating.md docs/home-checkout.md; do [[ -f $p ]] && pages+=("$p"); done
+for p in docs/updating.md docs/home-checkout.md docs/container-templates.md; do [[ -f $p ]] && pages+=("$p"); done
 
 # commands: every /codeo:<name> on every page, fences included.
 while IFS= read -r name; do
@@ -202,7 +206,7 @@ fi
 trouble=$(section "$readme" Troubleshooting)
 for lead in "A role-guard refusal" "A lock that is stuck or not yours" "A step that was interrupted" \
     "A card that is not Ready" config. schema. codename. gh-auth. gh-scopes. \
-    board. priority-labels. ruleset. suites. deps. overlays. superpowers.; do
+    board. priority-labels. ruleset. suites. deps. overlays. superpowers. containers.; do
     grep -qF -- "**$lead" <<<"$trouble" || fail troubleshooting "no entry starting **$lead"
 done
 
@@ -222,7 +226,10 @@ else
         fail lock-entry "no sentence of the lock entry names both reconcile by hand and diverged"
 fi
 
-# setup-steps: three numbered ### steps, then Running on the host; no prose line starts with a space.
+# subsection <text> <title>: the body of a ### subsection, up to the next ###.
+subsection() { awk -v t="### $2" '/^### / { on = ($0 == t); next } on' <<<"$1"; }
+
+# setup-steps: three numbered ### steps, then Running on the host and Adopting codeo with containers; no prose line starts with a space.
 setup=$(section "$readme" "Setting a project up")
 setup_heads=$(sed -n 's/^### \(.*\)$/\1/p' <<<"$setup")
 for i in 1 2 3; do
@@ -231,8 +238,26 @@ for i in 1 2 3; do
 done
 [[ "$(sed -n 4p <<<"$setup_heads")" == "Running on the host" ]] ||
     fail setup-steps "Setting a project up: the ### heading after step 3 is not \"Running on the host\""
+[[ "$(sed -n 5p <<<"$setup_heads")" == "Adopting codeo with containers" ]] ||
+    fail setup-steps "Setting a project up: the ### heading after Running on the host is not \"Adopting codeo with containers\""
 indented=$(grep -c '^ ' <<<"$setup" || true)
 [[ "$indented" -eq 0 ]] || fail setup-steps "Setting a project up has $indented prose lines starting with a space"
+
+# adopting-paths: the section names both ways to adopt the containers and links the reference page.
+adopting=$(subsection "$setup" "Adopting codeo with containers")
+if [[ -z $adopting ]]; then
+    fail adopting-paths "Setting a project up has no ### Adopting codeo with containers"
+else
+    grep -qF 'scripts/codeo-init.sh' <<<"$adopting" || fail adopting-paths "the Adopting section does not name scripts/codeo-init.sh"
+    grep -qF '/codeo:setup --containers' <<<"$adopting" || fail adopting-paths "the Adopting section does not name /codeo:setup --containers"
+    grep -qF '](docs/container-templates.md' <<<"$adopting" || fail adopting-paths "the Adopting section does not link docs/container-templates.md"
+    grep -qiF "is public" <<<"$adopting" || fail adopting-paths "the Adopting section does not say the repository must be public"
+    grep -qF "<codename>-home" <<<"$adopting" || fail adopting-paths "the Adopting section does not name the <codename>-home folder"
+    grep -qF "CODEO_HOME" <<<"$adopting" || fail adopting-paths "the Adopting section does not name CODEO_HOME"
+    grep -qiF 'one `codeo` command serves one project per machine' <<<"$adopting" || fail adopting-paths "the Adopting section does not state the one codeo command per machine condition"
+    grep -qF "](.devcontainer/README.md#using-this-in-another-project)" <<<"$adopting" || fail adopting-paths "the Adopting section does not link the project install line in .devcontainer/README.md"
+    ! grep -qF "bash scripts/containers.sh" <<<"$adopting" || fail adopting-paths "the Adopting section shows bash scripts/containers.sh, which a project does not have"
+fi
 
 # troubleshooting-groups: three ### groups, the doctor group's leads, the pin group's first entries.
 t_heads=$(sed -n 's/^### \(.*\)$/\1/p' <<<"$trouble")
@@ -240,17 +265,15 @@ t_heads=$(sed -n 's/^### \(.*\)$/\1/p' <<<"$trouble")
 Checks from /codeo:doctor
 Installing and the pin" ]] ||
     fail troubleshooting-groups "Troubleshooting ### headings are: $(tr '\n' ',' <<<"$t_heads"); want During a workflow, Checks from /codeo:doctor, Installing and the pin"
-# subsection <text> <title>: the body of a ### subsection, up to the next ###.
-subsection() { awk -v t="### $2" '/^### / { on = ($0 == t); next } on' <<<"$1"; }
 if ! grep -qxF '### Checks from /codeo:doctor' <<<"$trouble"; then
     fail troubleshooting-groups "Troubleshooting has no ### Checks from /codeo:doctor"
 else
-    doctor_checks="config schema codename gh-auth gh-scopes board priority-labels ruleset suites deps overlays superpowers"
+    doctor_checks="config schema codename gh-auth gh-scopes board priority-labels ruleset suites deps overlays superpowers containers"
     while IFS= read -r line; do
         lead=$(sed -n 's/^\*\*\([^*]*\)\*\*.*$/\1/p' <<<"$line")
         lead=${lead%.}
         grep -qxF -- "$lead" < <(printf '%s\n' $doctor_checks) ||
-            fail troubleshooting-groups "an entry under Checks from /codeo:doctor starts \"${line:0:60}\", not one of the twelve checks"
+            fail troubleshooting-groups "an entry under Checks from /codeo:doctor starts \"${line:0:60}\", not one of the thirteen checks"
     done < <(subsection "$trouble" "Checks from /codeo:doctor" | grep '^\*\*' || true)
     doctor_leads=$(subsection "$trouble" "Checks from /codeo:doctor" | grep '^\*\*' | sed -n 's/^\*\*\([^*]*\)\*\*.*$/\1/p' | sed 's/\.$//' || true)
     for check in $doctor_checks; do
@@ -282,6 +305,12 @@ grep -qF "](docs/$anchor" <(entry "$trouble" "A role-guard refusal") ||
     fail adopting-guard "README.md's role-guard entry does not link ](docs/$anchor"
 grep -qF "]($anchor" <(prose docs/extension-points.md 2>/dev/null) ||
     fail adopting-guard "docs/extension-points.md does not link ]($anchor"
+
+# adopting-guard-ships: the section says the containers setup writes role.sh, not that it is withheld.
+! grep -qF 'is not shipped' <<<"$adopt" ||
+    fail adopting-guard-ships "the Adopting the guard section still says role.sh is not shipped"
+grep -qF '`/codeo:setup --containers` writes `.devcontainer/scripts/role.sh`' <<<"$adopt" ||
+    fail adopting-guard-ships "the Adopting the guard section does not say /codeo:setup --containers writes role.sh"
 
 # updating: the superpowers update says to restart.
 grep -qF restart <(section docs/updating.md "Updating superpowers") ||
@@ -318,6 +347,25 @@ grep -qF 'security -v unlock-keychain ~/Library/Keychains/login.keychain-db' "$d
     fail host-command "$dc does not mention security -v unlock-keychain ~/Library/Keychains/login.keychain-db"
 grep -qF 'keychain cannot be accessed because the current session does not allow user interaction' "$dc" ||
     fail host-command "$dc does not quote the keychain-cannot-be-accessed error"
+
+# containers-transcript: the adoption section shows the wizard's init lines inside a code fence.
+awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on && /^```/ { f = !f; next } on && f && /^init: ok containers:/ { found = 1 } END { exit !found }' "$readme" ||
+    fail containers-transcript "Adopting codeo with containers has no code-fenced line starting init: ok containers:"
+
+# adopting-install-line: the adoption section shows the project's own codeo install line inside a code fence.
+awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on && /^```/ { f = !f; next } on && f && /curl -fsSL -o ~\/.local\/bin\/codeo https:\/\/raw.githubusercontent.com\/<owner>\/<repo>\/<base>\/.devcontainer\/codeo && chmod \+x ~\/.local\/bin\/codeo/ { found = 1 } END { exit !found }' "$readme" ||
+    fail adopting-install-line "Adopting codeo with containers has no code-fenced project install line for the codeo command"
+
+# adopting-notes: the adoption section names the wizard's `init: note:` lines (the kept-seed and home-checkout notes, and the private-repository note).
+sec=$(awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on' "$readme")
+for w in '`init: note:`' 'init: note: kept files are yours' 'init: note: the home checkout is a clone whose folder is named' 'init: note: rename or re-clone it as' 'is private;'; do
+    [[ $sec == *"$w"* ]] || fail adopting-notes "Adopting codeo with containers does not mention $w"
+done
+
+# setup-containers-over-config: docs/skills.md's setup section says --containers works over an existing config.
+setup_sec=$(sed -n '/^## setup$/,/^## doctor$/p' docs/skills.md)
+[[ $setup_sec == *'`--containers` alone, or with `--codename <name>`, works over an existing config'* ]] ||
+    fail setup-containers-over-config "docs/skills.md setup section does not say --containers works over an existing config"
 
 # A pipeline whose consumer is grep -q: grep exits at its first match, a producer still writing is killed
 # by SIGPIPE (141), and pipefail fails the whole pipeline although the line was found. The race is lost
