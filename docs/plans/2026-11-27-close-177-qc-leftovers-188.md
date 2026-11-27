@@ -130,3 +130,48 @@ wiki:       none
 exclusive:  none
 sequenced:  none
 ```
+
+---
+
+## Round 2 — after QC round 1
+
+> Appended to `docs/plans/2026-11-27-close-177-qc-leftovers-188.md`. Tasks 1-6 above are done and stay as written. The banner, Global Constraints and proof-of-done rule at the top of the plan bind these tasks too.
+
+**Why:** QC round 1 found that Task 4's F5 sentence is untrue (its F1, blocking). The plan took "`gh` still runs" from the issue; in fact `assignee_label` calls `scripts/github.sh`, which reads `.repo.owner` at load (`scripts/github.sh:27`) through `jq empty` on the config (`lib/env.sh:86`) and stops with `config.json: invalid JSON` before any `gh` call. Reproduced with no `jq` on `PATH` and a logging `gh` stub: exit 1, no `gh` call.
+
+**In this round (engineer's answer, dossier Q8):** QC's F1, F2, F3 and F5. **Not in this round:** F4 (pins for the docs sentences); it stays in `qc.md` for `/codeo:triage`.
+
+**Global Constraints, added:** still wording only — no script is edited. All three tasks stay inside the footprint; no new file. Documentation moved: `docs/home-checkout.md` and `skills/cleanup/SKILL.md` again, nothing else.
+
+### Task 7: `docs/home-checkout.md` — the assignee lookup stops before `gh`; "when that file is missing"
+
+**Files:**
+- Modify: `docs/home-checkout.md:9` (QC F1) and `:132` (QC F2)
+
+- [ ] **Step 1: Run the failing checks.** `grep -c 'gh` still runs' docs/home-checkout.md` → `1`; `grep -c 'with neither, the scripts' docs/home-checkout.md` → `1`.
+- [ ] **Step 2: F1.** Replace the parenthetical "(`gh` still runs, but parsing its answer needs `jq`)" with "(its `github.sh` call reads `.codeo/config.json` with `jq` and stops before it reaches `gh`)". Keep "getting nothing from the assignee lookup" in front of it.
+- [ ] **Step 3: F2.** In the tracker sentence at `:132`, replace "with neither, the scripts print" with "when that file is missing, the scripts print". The rest of the sentence stays: one `note:` line, record nothing, ask nothing, the question above included. (`CODEO_TRACK` set to a missing path does not fall back to the script beside it, `.sbx/codeo-sandbox.sh:22`.)
+- [ ] **Step 4: Proof.** Both greps print `0`; `grep -c 'stops before it reaches' docs/home-checkout.md` and `grep -c 'when that file is missing, the scripts' docs/home-checkout.md` each print `1`. Then `bash tests/run.sh` ends `all cases passed`.
+- [ ] **Step 5: Commit** `git add docs/home-checkout.md` · `docs: home-checkout says the assignee lookup stops before gh without jq (#188)`.
+
+### Task 8: `skills/cleanup/SKILL.md` — a validly named branch; the pin reads step 4
+
+**Files:**
+- Modify: `skills/cleanup/SKILL.md:84` (QC F3)
+- Test: `tests/cleanup-skill.test.sh:27` and after `:38` (QC F5, second half)
+
+- [ ] **Step 1: Write the failing pin.** Delete the line-27 check (`grep -qF 'while origin still holds' "$skill"`), which reads the whole file. After the two existing `<<<"$step4"` checks (`:37-38`), add, in the same style: `grep -qF 'while origin still holds a validly named' <<<"$step4" || check_fail "step 4 does not say a failed-name issue gets a leftover line only while origin holds a validly named branch"`.
+- [ ] **Step 2: Run it to see it fail.** `bash tests/run.sh cleanup-skill` — Expected: `=== FAIL: cleanup-skill.test.sh` with that message.
+- [ ] **Step 3: Reword the parenthesis** to "(an issue that failed only `name` gets one while origin still holds a validly named `codeo-live/<N>/*` branch)". `scripts/cleanup.sh:115-123` counts only names of letters, digits, `.`, `_` and `-`.
+- [ ] **Step 4: Proof.** `bash tests/run.sh` ends `all cases passed`.
+- [ ] **Step 5: Commit** `git add skills/cleanup/SKILL.md tests/cleanup-skill.test.sh` · `docs: cleanup's leftover line needs a validly named branch; the pin reads step 4 (#188)`.
+
+### Task 9: `CHANGELOG.md` — the bullet carries its issue number
+
+**Files:**
+- Modify: `CHANGELOG.md` (`## Unreleased`, the bullet Task 6 added)
+
+- [ ] **Step 1: Run the failing check.** `grep -c '(#188)' CHANGELOG.md` → `0`.
+- [ ] **Step 2: End the bullet** the way its neighbours end theirs (`… (#190).`): "… No script changed (#188)." Read the bullet once more against Task 7: it must not say `gh` runs. As written ("described as they behave") it needs no other change.
+- [ ] **Step 3: Proof.** The grep prints `1`; `bash tests/run.sh` ends `all cases passed`; `git diff --stat origin/main -- scripts lib hooks .sbx .devcontainer` prints nothing.
+- [ ] **Step 4: Commit** `git add CHANGELOG.md` · `docs: the changelog line names its issue (#188)`.
