@@ -159,6 +159,13 @@ step_contains "a failed archive push is a stop" 4 'A failed push is a stop'
 step_contains "no pull request opens on a live dossier" 4 'no pull request is opened on a head that still carries the live dossier'
 must_contain "close-15 is placed" '<!-- rule: close-15 -->'
 text_order "the archive push comes before pr create" "$(step 4)$(step 5)" 'git push' 'pr create'
+if [[ $(step 4) == *'github.sh" pr create'* ]]; then fail "step 4 runs pr create — the archive step must open nothing"; fi
+grep -B1 -F '4. **Archive' "$skill" | head -n1 | grep -qF '<!-- rule: close-15 -->' || fail "close-15 is not directly above step 4"
+must_contain "whether a round records the pull request is read from HEAD" 'Whether a round in `close.md` records this pull request is read from `HEAD`'
+step_contains "the archive-push row runs steps 2, 3 and 5 onward" 1 'steps 2, 3 and 5 onward'
+step_contains "the pr-create row runs steps 2–3 then 6–7" 1 'steps 2–3, then 6–7'
+step_contains "step 3 names both resumed rows for the close.md exception" 3 'on either resumed row'
+step_contains "an open pull request's conflict is step 11's send-back" 3 "a conflict is step 11's send-back instead"
 
 # Steps 5-7: open, record, commit the record.
 step_contains "the pull request is opened in step 5" 5 'pr create'
