@@ -38,6 +38,7 @@ fi
 # $GIT_STUB_FAIL is a glob over the arguments, deliberately unquoted: a case sets it to make one
 # git subcommand fail while everything else still reaches the real git.
 if [[ -n ${GIT_STUB_FAIL:-} && "$*" == $GIT_STUB_FAIL ]]; then exit 1; fi
+if [[ ${1:-} == fetch && -n ${GIT_FETCH_LOG:-} ]]; then printf "%s\n" "$*" >> "$GIT_FETCH_LOG"; fi
 if [[ ${1:-} == fetch && -n ${GIT_STUB_AFTER_FETCH:-} ]]; then
     "$REAL_GIT" "$@" || exit $?
     eval "$GIT_STUB_AFTER_FETCH"
@@ -301,6 +302,21 @@ GH_STUB_USER='{"login":"bob","type":"User"}' run_verify
 assert_eq "exit" 1 "$rc"
 assert_contains "owner" "belongs to alice (claimed)" "$err"
 assert_not_contains "no date" "last resumed" "$err"
+
+case_desc="fetch passes --no-write-fetch-head and targets the private ref"
+setup alice; write_lock alice
+: > "$scratch_root/fetchlog"
+GIT_FETCH_LOG="$scratch_root/fetchlog" run_verify
+assert_eq "exit" 0 "$rc"
+assert_contains "flag" "--no-write-fetch-head" "$(cat "$scratch_root/fetchlog")"
+assert_contains "ref" "+refs/heads/feat/x:refs/codeo/verify/feat/x" "$(cat "$scratch_root/fetchlog")"
+
+case_desc="fetch fails while a stale private ref exists"
+setup alice; write_lock alice
+git -C "$repo" update-ref refs/codeo/verify/feat/x HEAD
+GIT_STUB_FAIL='fetch -q*' run_verify
+assert_eq "exit" 1 "$rc"
+assert_contains "msg" "could not check" "$err"
 
 case_desc="origin unreachable"
 setup alice; write_lock alice

@@ -98,7 +98,7 @@ check_owner() {
     refusal= refused_owner= note=
     [[ $type != unverified ]] || note="not independently verified: hosted web session"
     ref="refs/codeo/verify/$branch"
-    if [[ $(git fetch -h 2>&1) == *--no-write-fetch-head* ]]; then nofh=--no-write-fetch-head; fi
+    if [[ $(git fetch -h 2>&1) == *write-fetch-head* ]]; then nofh=--no-write-fetch-head; fi
     tmp=$(mktemp)
     if git remote get-url origin >/dev/null 2>&1; then
         GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null 2>&1 || rc=$?
