@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is built: Tasks 7-9 of `docs/plans/2026-11-27-close-177-qc-leftovers-188.md` (after QC round 1), reviewed and committed; Tasks 1-6 stand from round 1. The build passes. Next: `/codeo:qc`.
+Round 3 is done: `origin/main` (with #195) is merged into the branch and the `CHANGELOG.md` conflict is resolved. The build passes. Next: `/codeo:qc`.
 
 ## Questions
 
@@ -68,7 +68,27 @@ Round 2 starts from the base branch: `sync-main.sh` reported the branch already 
 
 **Deviations from the plan:** none. The three tasks went to one implementer, one commit per task, and were reviewed as one unit over `7d1c573..92e7d92`: spec compliant on all three, no Critical or Important finding, one Minor that needs no change. No separate whole-branch review was run; `/codeo:qc` round 2 reviews the whole diff independently. No `Deployed revision:`: no shared environment.
 
+
+### Round 3
+
+2026-11-27
+(send-back from close.md round 2)
+
+Pull request #209 failed to merge: `CHANGELOG.md` conflicted with `main` after #195 (PR #208, `c7505a9`) merged first. No plan task: this round is step 2a's work.
+
+**Merge.** `sync-main.sh` merged `origin/main` and stopped on one conflict, `CHANGELOG.md`, under `## Unreleased`: #195 rewrote the `Shared state:` line and added its `/codeo:init` bullet; this branch added its documentation-leftovers bullet. The two bullets are independent entries, so both are kept (this branch's first, then #195's), and #195's `Shared state:` line stands. Merge commit `887beb2`; `git merge-tree --write-tree --name-only origin/main HEAD` now exits 0 and `overlap.sh 188` prints nothing.
+
+**Also changed on `main`** (merged cleanly, re-checked against this branch's work):
+- `scripts/live.sh`, `scripts/github.sh`, `lib/env.sh` — the F1 sentence in `docs/home-checkout.md:9` still holds: `assignee_label` still calls `github.sh`, which still reads `.repo.owner` through `codeo_cfg_required` and `jq empty` (`scripts/github.sh:28`, `lib/env.sh:86`) before any `gh` call. #195 dropped `CODEO_GITHUB_LOGIN` from `live.sh`'s `user_label`; the sentence names neither.
+- `skills/close/SKILL.md` and `tests/close-skill.test.sh` — the F3 wording ("drop the `refs/heads/` prefix first", "per branch that passes") and its two pins (`tests/close-skill.test.sh:232-233`) are intact.
+- `docs/handoff.md`, `docs/skills.md`, `docs/dossier.md`, `README.md`, `skills/{init,plan,implement,qc}/SKILL.md`, `tests/` — no sentence this branch changed is among them.
+
+Spot checks on the merged tree: `home-checkout.md` still carries "stops before it reaches `gh`" and "when that file is missing, the scripts"; `skills/cleanup/SKILL.md` still says "validly named"; `CHANGELOG.md` carries one `(#188)`; `overlap.sh --outside 188` prints nothing.
+
+**Built:** nothing beyond the merge and the conflict resolution; no documentation page changed in this round. **Build result:** the `shell` suite's `build` is `true` and exits 0; the suite itself is `/codeo:qc`'s. **Deviations from the plan:** none; no `Deployed revision:`, no shared environment.
+
 ## Log
 
 - 2026-11-27 — implemented docs/plans/2026-11-27-close-177-qc-leftovers-188.md: 6/6 tasks, build passes, review clean (2 minors deferred) · cost: 30m · sonnet-5-5 139k in + 3.9M cached / 22k out
 - 2026-11-27 — round 2 (send-back from qc.md round 1): implemented Tasks 7-9 of docs/plans/2026-11-27-close-177-qc-leftovers-188.md, 3/3, build passes, review clean · cost: 15m · sonnet-5-5 90k in + 4.1M cached / 16k out
+- 2026-11-27 — round 3 (send-back from close.md round 2): merged origin/main, resolved CHANGELOG.md (kept both bullets), re-checked the F1 and F3 sentences against #195's changes, build passes · cost: 1m · sonnet-5-5 15k in + 1.8M cached / 3k out
