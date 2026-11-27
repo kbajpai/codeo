@@ -243,3 +243,4 @@
 | `qc:83:F1-F2` | #83 `CHANGELOG.md:13` wording; the line is no longer on `origin/main` | already fixed on main | 2026-11-27 |
 | `triage:2026-11-27-6:parallel-collisions` | #204, #195, #188 and #206 all change `CHANGELOG.md`, the close skill, shared docs and the inventory hash; plans say `exclusive: none` | filed #207 | 2026-11-27 |
 | `issue:207` | Parallel issues collide on shared files; filed 2026-11-27, board Status Backlog → `Ready` on the engineer's say-so | ready | 2026-11-27 |
+| `issue:213` | Release v1.0.11 from main, check the README, and pin codeo to it; filed 2026-11-27, board Status Backlog → `Ready` on the engineer's say-so | ready | 2026-11-27 |
