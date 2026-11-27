@@ -9,9 +9,6 @@
 ## Where this stands
 
 Q1-Q4 are answered. The plan is drafted at `.codeo/188/plan-draft.md` and waits for the engineer to approve it, ask for changes or reject it.
-other three workflows in flight were compared. Four questions are open: one on how far F4's "nothing is
-asked" reaches (Q1), and one for each workflow whose plan touches a file this one edits (Q2-Q4). The plan
-is drafted once they are answered.
 
 ## Questions
 
