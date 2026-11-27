@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The code and docs are read and the design is settled bar Q1-Q2 below (see `## Notes` for the design and my own calls). No draft is written until both are answered.
+Round 1. Q1 and Q2 are answered ("go with your picks": tests only; proceed and coordinate with #195). The plan is drafted at `.codeo/204/plan-draft.md` and waits for the engineer's approval.
 
 ## Questions
 
@@ -24,6 +24,7 @@ I recommend tests only.
 **Options:** tests only (recommended) · tests and a live run of #204's own close · no preference, you pick.
 
 **Answer:**
+Tests only, as recommended. Given in the conversation: "go with your picks".
 
 ### Q2 — #195 is in flight and its footprint covers files this plan changes. Proceed, sequence, or re-scope?
 
@@ -40,6 +41,7 @@ I recommend proceed and coordinate, with #204 merging first because it is the sm
 **Options:** proceed and coordinate (recommended) · sequence after #195 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended; #204 merges first. Given in the conversation: "go with your picks".
 
 ## Notes
 
@@ -58,7 +60,7 @@ I recommend proceed and coordinate, with #204 merging first because it is the sm
 ### Footprint
 
 ```
-files:      skills/close/SKILL.md, skills/triage/SKILL.md, skills/init/SKILL.md, scripts/inflight.sh, .devcontainer/scripts/role.sh, docs/dossier.md, docs/handoff.md, docs/skills.md, docs/skills-inventory.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-27-close-archive-before-pr-204.md
+files:      skills/close/SKILL.md, skills/triage/SKILL.md, skills/init/SKILL.md, docs/dossier.md, docs/handoff.md, docs/skills.md, docs/skills-inventory.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-27-close-archive-before-pr-204.md
 wiki:       none
 exclusive:  none
 sequenced:  none
@@ -71,3 +73,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-27 — Q1-Q2 raised · cost: 3m · fable-5-2 126k in + 1M cached / 14k out
+- 2026-11-27 — Q1-Q2 answered (picks); drafted .codeo/204/plan-draft.md, awaiting approval · cost: 7m · fable-5-2 131k in + 1.7M cached / 17k out · sonnet-5-5 133k in + 330k cached / 11k out
