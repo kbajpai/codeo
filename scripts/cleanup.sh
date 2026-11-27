@@ -25,6 +25,13 @@
 #           name          the overlay's name template, pattern and command are all present, and the expanded
 #                         name matches the pattern.
 #
+#   cleanup.sh record <N>…
+#       Writes .codeo/intake/cleanup/removed/<N>.md in the working tree for each issue the engineer has removed, and prints
+#           <N> TAB recorded            a record was written
+#           <N> TAB already recorded    the record is on origin's codeo/intake or already in the working tree
+#       It runs no proof, never commits, and writes nothing unless every number is an issue with a .codeo/done/<N> on origin/<baseBranch>
+#       (otherwise exit 1 with a cleanup: line).
+#
 # The overlay's command is built in name_proof and the leftover delete in leftover_proof: the only two places a command is built.
 # The overlay body (cleanup/removal-command) is three lines, and an optional fourth: `name: <template with {N}>`,
 # `pattern: <extended regex>`, `command: <template with {N} and {name}>` and `fallback: <text with {N} and {name}>`; command: and fallback: may hold only {N} and {name}, and any other {word} ends the run; it comes from `overlay.sh cleanup removal-command`. No
@@ -36,6 +43,15 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 die() { echo "cleanup: $*" >&2; exit 1; }
 
+mode=list
+if [[ ${1:-} == record ]]; then
+    mode=record
+    shift
+    (($#)) || die "usage: cleanup.sh record <issue>…"
+elif (($#)); then
+    die "usage: cleanup.sh [record <issue>…]"
+fi
+
 cd "$(git rev-parse --show-toplevel)"
 base=$(codeo_base_branch)
 state_rel=${CODEO_STATE_DIR#"$CODEO_PROJECT_ROOT"/}
@@ -46,6 +62,31 @@ git fetch -q --prune origin || die "fetch failed; nothing proven"
 git config --get-all remote.origin.fetch | grep -Eqx '\+?refs/heads/\*:refs/remotes/origin/\*' ||
     die "origin's fetch refspec does not cover every branch; nothing proven"
 base_sha=$(git rev-parse "origin/$base") || die "no origin/$base"
+# The intake branch's name is intake.sh's `branch`; its removal records are the files under removed_rel.
+intake_ref=refs/remotes/origin/codeo/intake
+removed_rel=$state_rel/intake/cleanup/removed
+recorded=
+if git rev-parse -q --verify "$intake_ref" >/dev/null; then
+    recorded=$(git ls-tree --name-only "$intake_ref" -- "$removed_rel/" | sed -n 's|.*/\([0-9][0-9]*\)\.md$|\1|p')
+fi
+
+if [[ $mode == record ]]; then
+    for n; do
+        [[ $n =~ ^[1-9][0-9]*$ ]] || die "not an issue number: $n; nothing recorded"
+        git cat-file -e "$base_sha:$state_rel/done/$n" 2>/dev/null || die "#$n has no $state_rel/done/$n on origin/$base; nothing recorded"
+    done
+    mkdir -p "$removed_rel"
+    for n; do
+        if grep -qxF "$n" <<<"$recorded" || [[ -e $removed_rel/$n.md ]]; then
+            printf '%s\talready recorded\n' "$n"
+            continue
+        fi
+        printf 'issue:    #%s\nrecorded: %s\n' "$n" "$(date -u +%F)" > "$removed_rel/$n.md"
+        printf '%s\trecorded\n' "$n"
+    done
+    exit 0
+fi
+
 # Every lease and wait on the intake branch, read once: held|waiting TAB resource TAB issue TAB by TAB since.
 leases=$(bash "$CODEO_PLUGIN_ROOT/scripts/intake.sh" lease list --tsv </dev/null 2>/dev/null) || die "could not read the leases"
 

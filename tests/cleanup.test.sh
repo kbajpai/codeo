@@ -419,6 +419,70 @@ fixture 7 open 41 2026-01-01T00:00:00Z feat/7
 set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: codeo rm {N}\nfallback: docker rm -f {name}'
 assert_eq "proof failure" "7${tab}failed${tab}issue" "$(run_cleanup)"
 
+# A removal record on origin's codeo/intake branch: push_removed <N>…
+push_removed() {
+    local t n
+    t=$(mktemp -d "$scratch_root/removed.XXXXXX")
+    git clone -q "$(git -C "$REPO_WORK" remote get-url origin)" "$t" 2>/dev/null
+    if git -C "$t" rev-parse -q --verify origin/codeo/intake >/dev/null; then
+        git -C "$t" checkout -q -B codeo/intake origin/codeo/intake
+    else
+        git -C "$t" checkout -q --orphan codeo/intake
+        git -C "$t" rm -rqf . 2>/dev/null || true
+    fi
+    mkdir -p "$t/.codeo/intake/cleanup/removed"
+    for n; do
+        printf 'issue:    #%s\nrecorded: 2026-01-01\n' "$n" > "$t/.codeo/intake/cleanup/removed/$n.md"
+    done
+    git -C "$t" add -A
+    git -C "$t" commit -q -m "removed"
+    git -C "$t" push -q origin codeo/intake
+}
+
+run_record() {
+    (cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" record "$@" 2>&1) || true
+}
+
+case_desc="record writes one file per issue"
+setup_repo "12:$body" "30:$body"
+rec=$REPO_WORK/.codeo/intake/cleanup/removed
+assert_eq "lines" "12${tab}recorded
+30${tab}recorded" "$(run_record 12 30)"
+assert_eq "issue line" "issue:    #12" "$(sed -n 1p "$rec/12.md")"
+assert_eq "date line" "recorded: $(date -u +%F)" "$(sed -n 2p "$rec/12.md")"
+assert_eq "30 file" "yes" "$([[ -f $rec/30.md ]] && echo yes || echo no)"
+assert_eq "tracked files unchanged" "" "$(git -C "$REPO_WORK" status --porcelain --untracked-files=no)"
+assert_eq "no commit" "init" "$(git -C "$REPO_WORK" log -1 --format=%s)"
+
+case_desc="record refuses before writing"
+setup_repo "12:$body"
+rec=$REPO_WORK/.codeo/intake/cleanup/removed
+for args in "12 99" "12 abc" "012" ""; do
+    rc=0
+    # shellcheck disable=SC2086
+    out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" record $args 2>&1) || rc=$?
+    assert_eq "exit 1 [$args]" "1" "$rc"
+    assert_eq "cleanup: line [$args]" "yes" "$([[ $out == cleanup:* ]] && echo yes || echo no)"
+    assert_eq "no file [$args]" "absent" "$([[ -e $rec/12.md ]] && echo present || echo absent)"
+done
+
+case_desc="record is idempotent"
+setup_repo "12:$body" "30:$body"
+rec=$REPO_WORK/.codeo/intake/cleanup/removed
+run_record 12 >/dev/null
+before=$(cat "$rec/12.md")
+assert_eq "second run" "12${tab}already recorded" "$(run_record 12)"
+assert_eq "file as it was" "$before" "$(cat "$rec/12.md")"
+push_removed 30
+assert_eq "recorded on origin" "30${tab}already recorded" "$(run_record 30)"
+assert_eq "no local file" "absent" "$([[ -e $rec/30.md ]] && echo present || echo absent)"
+
+case_desc="record runs no container command and no proof"
+setup_repo "12:$body"
+rm -f "$DOCKER_MARKER" "$GH_STUB_DIR"/GET_repos_o_n_issues_12.json
+assert_eq "line" "12${tab}recorded" "$(run_record 12)"
+assert_eq "marker" "absent" "$([[ -e $DOCKER_MARKER ]] && echo present || echo absent)"
+
 case_desc="no container-engine command is ever run"
 assert_eq "marker" "absent" "$([[ -e $DOCKER_MARKER ]] && echo present || echo absent)"
 
