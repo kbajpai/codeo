@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 complete: **back to `/codeo:plan`.** Q1-Q3 (overlaps with #188, #204, #206) were answered *proceed and coordinate*. The build passes and the full `shell` suite shows only the two environmental failures that also fail on `origin/main`. The independent review found one blocking defect that is the plan's, not the code's: in a hosted web session the ownership checks never refuse anyone (plan Q2). Two acceptance criteria (B refused on A's branch; A's stale checkout refused) are not met there. Everything else is met.
+Round 2 complete: **clear — forward to `/codeo:close`.** The build and the full `shell` suite pass; all nine criteria are met, round 1's F1-F8 are answered. Five non-blocking findings (F1 a web-session match passes with a note; F2-F5 documentation and prose gaps) are recorded.
 
 ## Questions
 
@@ -190,7 +190,54 @@ wrong. `/codeo:plan` re-decides web-session ownership (with F2 and F3 in the sam
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 2 — 2026-11-27
+
+(answers the send-back of round 1, implemented in `implement.md` round 2)
+
+**Sync and scope.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`. `overlap.sh 195`: nothing printed (exit 0). `overlap.sh --outside 195`: nothing printed (exit 0). `scope.sh origin/main HEAD`: `suite.shell=true` (unclassified paths `.codeo/195/*`, `CHANGELOG.md`, `README.md` run the suite); no `deploy=` line, no shared environment configured. No invariants file and no overlay rules (`overlay.sh qc invariants-extra`, `wiki-rules`: exit 3).
+
+**Build.** The `shell` suite's `build` command is `true`: exit 0.
+
+**Suite.** `bash tests/run.sh` (the `shell` suite's whole `test` command), run in this pass: `all cases passed`, exit 0. Unlike round 1, `live` and `sandbox` did not fail here.
+
+**Independent review.** One reviewer on `opus`, given the acceptance criteria and the diff, not the implementer's account: no Critical findings; two Important, nine Minor (classified below). It ran `lock-verify`, `identity`, `github`, `lock` and `claim` tests: all passed.
+
+#### Criteria
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| With `gh api user` failing and the variable set, `init` outside a web session refuses. | met | `tests/github.test.sh` `user whoami (GET /user 403s, CODEO_GITHUB_LOGIN set, not a web session)` (exit 1); `tests/lock.test.sh` `take, unresolved login` now sets the variable (no lock); `init-11` stops on that exit, pinned by `tests/init-skill.test.sh` |
+| With a Bot login, `init` refuses. | met | `tests/github.test.sh` `user whoami (Bot)`, `(Organization)`, `(login a[bot], type User)`; `tests/lock.test.sh` `take, Bot login` (no lock) |
+| A normal `init` records the login in `init.md`, the lock and the live signal. | met | lock `user:` (`tests/lock.test.sh`); live signal (`tests/live.test.sh` `user: alice`, `resolver login`); `| Owner |` row read back by `codeo_owner_of_init`, now also backticked or padded (`tests/identity.test.sh`) |
+| Tests cover each case. | met | the cases above |
+| B running close, plan, implement or qc on A's branch is refused with one line naming the owner. | met | `tests/lock-verify.test.sh` `B on A's branch` (exit 1, `belongs to alice`); now also in a web session: `web, variable names someone other than the pushed owner` (exit 1, `belongs to alice`, `you are mallory`); `take, web, pushed owner differs` (no lock, TODO `belongs to`); step 0 of the four skills runs `lock.sh verify` (`plan-10`, `implement-11`, `qc-15`, `close-15`) |
+| A stale checkout of A after B resumed is refused. | met | `tests/lock-verify.test.sh` `A's stale checkout after B resumed`, the single-branch clone case, and the same with `FETCH_HEAD` clobbered after the fetch (reads `refs/codeo/verify/feat/x`); web variants refused as above |
+| The override works once and is recorded. | met | `tests/lock-verify.test.sh` `override on a refusal`, `web, mismatch with --override` (one `override:` line), the refusal again without it; empty and newline overrides record nothing |
+| Stash by a non-owner does not remove the owner's assignment or move the card. | met | step 0's `lock.sh verify` refuses a non-owner before any stash step (`close-15`); `close-16` removes the recorded owner, and a legacy stash removes the verified caller only without an override (`tests/close-skill.test.sh`); `assignee-remove` without a login fails with no API call (`tests/github.test.sh`) |
+| Tests cover each step. | met | per-step pins in `tests/plan-skill.test.sh`, `implement-skill`, `qc-skill`, `close-skill`, `init-skill`, plus `tests/lock-verify.test.sh` |
+
+Round 1's F1-F8 are all answered: F1 (blocking in round 1) — fixed by `bb0b476`/`4108af1`, F2 — `ae41702`, F3 — `5bd08c0`/`d7d38bb`, F4/F6 — `3df8021`, F5 — `bb0b476`, F7 — `83b3351`, F8 — `dd73c62`.
+
+#### Documentation
+
+Checked against the code: the refusal strings in `docs/handoff.md`, `README.md` Troubleshooting and `docs/dossier.md` match `scripts/lock.sh` word for word; the `verify` flowchart is valid by inspection (not rendered: no render step is configured); no page still says "never satisfies", "never compared" or "never the caller". Untrue or incomplete statements found are findings F2-F5 below.
+
+#### Findings
+
+- **F1 (non-blocking, `/codeo:plan`'s — for the engineer's awareness).** In a hosted web session where `GET /user` is refused, a `CODEO_GITHUB_LOGIN` that *matches* the pushed owner passes `verify` and `take` (with the note `not independently verified: hosted web session`); only a mismatch refuses. A person on A's branch who sets the variable to A's login passes as A, which the issue's wording ("never used to satisfy an ownership check") reads against. This is the behaviour round 1's own routing asked for ("refuse on a mismatch only, a match keeps its note") and plan Q9 (a) decided with the engineer; it cannot be closed without a second factor (for example the web session id) or by refusing every unverified login, both of which round 1's plan rejected as breaking web sessions at `plan`..`close`. Recorded so the pull request can say so; no send-back.
+- **F2 (non-blocking, `/codeo:implement`'s).** `README.md:339` (init, "It writes") still says "A failed assignment is reported in the closing message and nothing else is recorded", which contradicts `README.md:338`, `docs/skills.md`, `docs/dossier.md` and `skills/init/SKILL.md` (an `assignee-add failed` line under `## Notes`, its own commit). A leftover from round 1.
+- **F3 (non-blocking, `/codeo:implement`'s).** Small documentation and comment gaps: README's init "It commits:" line omits the `— assignee-add failed` commit and its could-not-check list omits "no dossier on origin's branch"; `docs/handoff.md`'s list of reasons `take` writes no lock omits could-not-check; `scripts/live.sh:74` says the variable is "read only by `github.sh user login`" (`codeo_whoami` reads it too); `scripts/github.sh:303`'s usage line omits `user whoami`.
+- **F4 (non-blocking, `/codeo:implement`'s).** `close-16` says to remove "the login `user whoami` prints", which is `<login><TAB><type>`; the prose does not say to strip the type, and in a web session the type is `unverified`.
+- **F5 (non-blocking, `/codeo:implement`'s).** After the remote branch is deleted (`ls-remote` exit 2), a stale checkout reads its own local dossier and passes `verify`; the issue is by then finished, so the impact is small. `refs/codeo/verify/*` refs are never pruned. The stash-by-non-owner criterion is pinned by skill text only (the project's norm for skills).
+
+Findings that are known and carried from `implement.md`: a legacy dossier with no recorded owner on an unassigned issue gives a login nothing to compare with; a stale `refs/codeo/verify/feat` can block a fetch into `feat/x`. Neither is new to this pass.
+
+No issue was filed by this pass.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-27 — Q1-Q3 raised (overlaps with #188, #204, #206 found at step 2) · cost: 1m · opus-5-5 337k in + 738k cached / 2k out
 - 2026-11-27 — round 1: back to /codeo:plan (F1 blocking: web-session ownership, plan Q2) · cost: 20m · opus-5-5 483k in + 3.9M cached / 32k out · sonnet-5-5 42k in + 3.7M cached / 8k out
+- 2026-11-27 — round 2: clear, forward to /codeo:close (5 non-blocking findings) · cost: 5m · opus-5-5 255k in + 2.9M cached / 21k out · sonnet-5-5 151k in + 376k cached / 5k out
