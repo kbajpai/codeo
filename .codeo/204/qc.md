@@ -44,7 +44,7 @@ Proceed and coordinate, as recommended; #204 merges first. Given in the conversa
 
 ### Q3 — #195 now changes `tests/identity.test.sh`, inside this plan's `tests/**`. Proceed, sequence, or re-scope?
 
-**Why it matters:** `overlap.sh 204` printed `195	tests/identity.test.sh`. `#195` (branch `feat/195-identify-acting-user-strictly-verify`, assignee kbajpai, step `implement (working)`) has added that file since Q2. This branch does not change it — the overlap is this plan's coarse `tests/**` footprint glob, not a shared edit — so it cannot conflict. No exclusive resource is shared.
+**Why it matters:** `overlap.sh 204` printed `195	tests/identity.test.sh`. `#195` (branch `feat/195-identify-acting-user-strictly-verify`, assignee kbajpai, step `qc (working)`) has added that file since Q2. This branch does not change it — the overlap is this plan's coarse `tests/**` footprint glob, not a shared edit — so it cannot conflict. No exclusive resource is shared.
 
 - Proceed and coordinate: as Q2 decided for #195.
 - Sequence after #195.
