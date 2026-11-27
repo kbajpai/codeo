@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Sent back to `/codeo:implement`: pull request #209 conflicts with `main` in `CHANGELOG.md` after #195 merged. Once `/codeo:implement` and `/codeo:qc` have run again, `/codeo:close` pushes the update to the same pull request.
+The pull request is brought up to date with `main` and waits for the engineer to review and merge it. Running `/codeo:close` again after the merge finishes the workflow.
 
 ## Questions
 
@@ -40,7 +40,17 @@ The same merge, `c7505a9`, also changed files this branch's wording describes, w
 
 qc round at review: 2
 
+### Round 3 — pull request updated
+
+2026-11-27
+(send-back from close.md round 2)
+
+Pull request #209 conflicted with `main` in `CHANGELOG.md` after #195 merged (round 2). It was brought up to date through `/codeo:implement` rounds 3 and 5 (merges `887beb2` and `fa2fccd`: `CHANGELOG.md` resolved by keeping every `## Unreleased` bullet), and in between `/codeo:qc` round 3 found that `docs/home-checkout.md:9` described an assignee lookup that does not run on the host, fixed by `/codeo:plan` round 3 and `/codeo:implement` round 4 (`55eb82e`, `17fef72`). It went back through `/codeo:qc` as round 5, cleared by the verdict ``**Verdict: clear — forward to `/codeo:close`.**`` with no blocking finding, on the tree merged with #195, #204, #206 and #211 (the `shell` suite ended `all cases passed`). `git merge-tree --write-tree --name-only origin/main HEAD` exits 0 again, and `overlap.sh 188` printed nothing.
+
+qc round at review: 5
+
 ## Log
 
 - 2026-11-27 — pull request #209 opened on qc round 2; board: In review on #188; dossier archived to .codeo/done/188 · cost: 1m · sonnet-5-5 27k in + 990k cached / 5k out
 - 2026-11-27 — pull request #209 conflicts with main (#195 merged first): CHANGELOG.md; send-back to /codeo:implement, dossier un-archived; board: In progress on #188 · cost: 6m · sonnet-5-5 33k in + 2.7M cached / 9k out
+- 2026-11-27 — pull request #209 updated after the conflicts-with-main send-back (qc round 5 clear); board: In review on #188; dossier archived to .codeo/done/188 · cost: 0m · sonnet-5-5 24k in + 1.1M cached / 2k out
