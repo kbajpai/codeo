@@ -236,7 +236,10 @@
 | `issue:201` | multi-user audit issue #201; board Status Backlog | backlog | 2026-11-27 |
 | `qc:192:F15-F19` | #192 non-blocking guard gaps: `--am` abbreviation, quoted `-C`/`cd` targets, rename sources, unlisted writes, per-call cost (F5/F13 left as an open question) | filed #205 | 2026-11-27 |
 | `qc:190:N1-N5-K-L-M-leftovers` | #190 non-blocking fixes and doc slips: codename on rerun, rename re-seed, `perl` requirement, refusals before writes, symlink on `--force`, wording | filed #205 | 2026-11-27 |
-| `qc:190:promised` | #190 promised design work: one `codeo` host command per machine, sbx toolchain, `sort -V` on old macOS, private repositories, per-project command name, plugin pin (G7) | deferred | 2026-11-27 |
+| `qc:190:promised` | #190 promised design work (one `codeo` host command per machine, sbx toolchain, `sort -V` on old macOS, private repositories, per-project command name, plugin pin G7); no open issue | deferred | 2026-11-27 |
 | `issue:204` | /codeo:close opens the PR before archiving the dossier; not on the board → `Ready` on the engineer's say-so | ready | 2026-11-27 |
 | `issue:205` | Close the #190 and #192 QC leftovers; filed 2026-11-27, board Status Backlog | backlog | 2026-11-27 |
 | `issue:206` | /codeo:cleanup prints `codeo rm {N}` unexpanded and lists issues again after removal; board Status Backlog → `Ready` on the engineer's say-so | ready | 2026-11-27 |
+| `qc:83:F1-F2` | #83 `CHANGELOG.md:13` wording; the line is no longer on `origin/main` | already fixed on main | 2026-11-27 |
+| `triage:2026-11-27-6:parallel-collisions` | #204, #195, #188 and #206 all change `CHANGELOG.md`, the close skill, shared docs and the inventory hash; plans say `exclusive: none` | filed #207 | 2026-11-27 |
+| `issue:207` | Parallel issues collide on shared files; filed 2026-11-27, board Status Backlog → `Ready` on the engineer's say-so | ready | 2026-11-27 |
