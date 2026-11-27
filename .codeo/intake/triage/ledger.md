@@ -226,3 +226,11 @@
 | `qc:182:F1-F3` | #182 QC round 1 F1-F3 (README doctor-skip wording, install test still uses v1.0.9 as latest, changelog bullet omits qc/doctor changes) | filed #193 | 2026-11-26 |
 | `qc:179:G4-H1-H3-I1-I2-J1-J3` | #179 QC rounds 2-5 non-blocking notes (lock-entry wording, README:27, test guards, Updating restart line, home-checkout:49) | filed #193 | 2026-11-26 |
 | `issue:193` | Close the #179 and #182 QC leftovers; filed 2026-11-26, board Status Backlog | backlog | 2026-11-26 |
+| `issue:194` | Tracker: make codeo safe for several engineers; board Status Backlog | backlog | 2026-11-27 |
+| `issue:195` | Identify the acting user strictly and verify ownership; board Status `Backlog` → `Ready` on the engineer's say-so | ready | 2026-11-27 |
+| `issue:196` | multi-user audit issue #196; board Status Backlog | backlog | 2026-11-27 |
+| `issue:197` | multi-user audit issue #197; board Status Backlog | backlog | 2026-11-27 |
+| `issue:198` | multi-user audit issue #198; board Status Backlog | backlog | 2026-11-27 |
+| `issue:199` | multi-user audit issue #199; board Status Backlog | backlog | 2026-11-27 |
+| `issue:200` | multi-user audit issue #200; board Status Backlog | backlog | 2026-11-27 |
+| `issue:201` | multi-user audit issue #201; board Status Backlog | backlog | 2026-11-27 |
