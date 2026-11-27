@@ -8,6 +8,7 @@
 #                          $CODEO_GITHUB_LOGIN is set (type "unverified"). Otherwise stdout is
 #                          empty, one "codeo:" line goes to stderr, and the exit is 1.
 #   codeo_owner_of_init F  prints the owner login recorded in dossier file F (last resume line, else Owner row)
+#   codeo_owner_date_of_init F  prints the date of the last accepted resume line in F, else nothing
 
 codeo_is_web_session() { [[ ${CLAUDE_CODE_REMOTE:-} == true ]]; }
 
@@ -31,12 +32,21 @@ codeo_whoami() {
 
 # codeo_owner_of_init <init.md path>: prints the owner login of a dossier. The login on the LAST
 # "- <date> — resumed: by <login> after " line wins, else the "| Owner | <login> |" row of the
-# header table, else nothing. Always exits 0.
+# header table (spacing and backticks around the login tolerated), else nothing. Always exits 0.
 codeo_owner_of_init() {
     local file=$1 owner
     [[ -f $file ]] || return 0
     owner=$(sed -n 's/^- [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} — resumed: by \([^ ]\{1,\}\) after .*/\1/p' "$file" | tail -n1)
-    [[ -n $owner ]] || owner=$(sed -n 's/^| Owner | \([^ |]\{1,\}\) |.*/\1/p' "$file" | head -n1)
+    [[ -n $owner ]] || owner=$(sed -n 's/^| *Owner *| *`\{0,1\}\([^ |`]\{1,\}\)`\{0,1\} *|.*/\1/p' "$file" | head -n1)
     [[ -z $owner ]] || printf '%s\n' "$owner"
+    return 0
+}
+
+# codeo_owner_date_of_init <init.md path>: prints the YYYY-MM-DD of the LAST resume line whose login
+# is accepted; nothing when the owner comes from the Owner row or there is none. Always exits 0.
+codeo_owner_date_of_init() {
+    local file=$1
+    [[ -f $file ]] || return 0
+    sed -n 's/^- \([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\) — resumed: by [^ ]\{1,\} after .*/\1/p' "$file" | tail -n1
     return 0
 }
