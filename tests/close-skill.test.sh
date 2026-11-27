@@ -229,7 +229,8 @@ step_contains "step 17 reports how the close ended" 17 'Report** how the close e
 step_contains "step 17 names the web branch delete command" 17 'git push origin --delete codeo-live/<issue>/<machine>'
 step_contains "step 17 covers a hosted session whatever the lock's host" 17 'CLAUDE_CODE_REMOTE'
 step_contains "step 17 reads the live-signal branches from origin" 17 "git ls-remote --heads origin 'codeo-live/<issue>/*'"
-step_contains "step 17 prints one delete per branch it read" 17 'one `git push origin --delete <branch>` per branch it printed'
+step_contains "step 17 drops the refs/heads prefix before the allowlist" 17 'drop the `refs/heads/` prefix'
+step_contains "step 17 prints one delete per branch that passes" 17 'one `git push origin --delete <branch>` per branch that passes'
 step_contains "step 17 says when no live-signal branch is on origin" 17 'no live-signal branch is on `origin`'
 step_contains "step 17 falls back to the saved machine label" 17 'codeo-live-machine'
 step_contains "step 17 says the branch stays only when a beat pushed one" 17 'only when a beat pushed'
