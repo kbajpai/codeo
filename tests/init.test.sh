@@ -231,6 +231,12 @@ a_clone_without_origin_head_does_not_say_ok_and_skips_the_containers() {
     grep -qxF 'init: fail config: baseBranch is TODO-set-me (the clone has no origin/HEAD: set baseBranch in .codeo/config.json)' "$work/out" || fail "config line: $(cat "$work/out")"
     ! grep -q '^init: ok config: .codeo/config.json written' "$work/out" || fail "config said ok"
     [[ ! -e $d/.devcontainer ]] || fail "containers rendered with baseBranch TODO-set-me"
+    # The rerun keeps the config and stops until baseBranch is set; setting it is the documented remedy.
+    if (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out2" 2>&1); then fail "the rerun accepted TODO-set-me"; fi
+    grep -qxF "init: fail config: config.json: baseBranch is TODO-set-me; set baseBranch in .codeo/config.json to the repository's base branch" "$work/out2" || fail "rerun line: $(cat "$work/out2")"
+    jq '.baseBranch = "main"' "$d/.codeo/config.json" >"$work/cfg.new" && mv "$work/cfg.new" "$d/.codeo/config.json"
+    (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out3" 2>&1) || true
+    grep -q '^init: ok containers:' "$work/out3" && [[ -e $d/.devcontainer/devcontainer.json ]] || fail "containers not written after setting baseBranch: $(cat "$work/out3")"
 }
 
 a_kept_config_without_a_codename_gets_the_answer_written_into_it() {
