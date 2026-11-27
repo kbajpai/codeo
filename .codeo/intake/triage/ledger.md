@@ -239,3 +239,4 @@
 | `qc:190:promised` | #190 promised design work: one `codeo` host command per machine, sbx toolchain, `sort -V` on old macOS, private repositories, per-project command name, plugin pin (G7) | deferred | 2026-11-27 |
 | `issue:204` | /codeo:close opens the PR before archiving the dossier; not on the board → `Ready` on the engineer's say-so | ready | 2026-11-27 |
 | `issue:205` | Close the #190 and #192 QC leftovers; filed 2026-11-27, board Status Backlog | backlog | 2026-11-27 |
+| `issue:206` | /codeo:cleanup prints `codeo rm {N}` unexpanded and lists issues again after removal; board Status Backlog → `Ready` on the engineer's say-so | ready | 2026-11-27 |
