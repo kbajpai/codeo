@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q7 are answered (the engineer took every recommendation). The plan is drafted at `.codeo/206/plan-draft.md` and waits for the engineer's approval; the footprint is committed under `## Notes`. Next: approval, then the plan file under `docs/plans/`. One finding changes the size of the first fault: `scripts/cleanup.sh` already expands `{N}` in `command:` (line 104, shipped in v1.0.9 with #152; the issue's run used plugin 1.0.8). What is left of that fault is the refusal of a placeholder the script does not know (Q1) and a test that pins this project's own overlay.
+Round 1, done. Q1-Q9 are answered and the plan is approved: `docs/plans/2026-11-27-cleanup-removal-records-206.md`, left unstaged for review. Next step: `/codeo:implement`. One finding changes the size of the first fault: `scripts/cleanup.sh` already expands `{N}` in `command:` (line 104, shipped in v1.0.9 with #152; the issue's run used plugin 1.0.8). What is left of that fault is the refusal of a placeholder the script does not know (Q1) and a test that pins this project's own overlay.
 
 ## Questions
 
@@ -126,6 +126,23 @@ Proceed and coordinate, as Q7 was answered. Given in the conversation: "go with 
 - Recorded issues still cost their proofs on every run (two GitHub reads each): acceptance criterion 4 needs the proofs to run before a record may hide a line.
 - No overlay is set for `plan/plan-shape`, `plan/proof-of-done` or `plan/wiki-rules` (exit 3 each); no invariants document, no shared environment, no `wiki` module, no `resources[]`.
 
+## Outcome
+
+**Plan:** `docs/plans/2026-11-27-cleanup-removal-records-206.md`, approved by the engineer and left unstaged. Shape: an executable plan under `docs/plans/` (five checkbox tasks, each proved by `bash tests/run.sh`, the `shell` suite having no `filter`); no separate reference doc.
+
+**Decisions** (Q1-Q9, every recommendation taken: "go with your picks"):
+- The `{N}` fault was already half fixed in v1.0.9. What is added is the refusal: `command:` and `fallback:` may hold only `{N}` and `{name}`, and any other `{word}` token (`${HOME}` too, not `{{.Names}}`) exits 1 with one `cleanup:` line. The fix lives in the script, not the overlay text. A test pins this project's overlay and the shipped template as brace-free (Q1).
+- Removal records are one file per issue, `.codeo/intake/cleanup/removed/<N>.md`, on `codeo/intake`; `intake.sh` is unchanged because `intake.sh commit` already keeps other clones' files (Q2).
+- `cleanup.sh record <N>…` writes them and never commits; the skill commits through `intake.sh`. It validates every number before writing any (Q3).
+- A recorded issue hides only when every proof passes; a failed proof, or a failed `name`, still lists it. A recorded issue keeps its `leftover` line (Q4). A stderr note counts what was hidden (Q5).
+- Overlap with #204 and #195 on `README.md`, `CHANGELOG.md` and `docs/skills.md`: proceed and coordinate (Q6-Q9).
+
+**Rejected:** refusing any brace; a single ledger file with a merge in `intake.sh`; parsing the dated run records; the skill writing the files itself; dropping a recorded issue's leftover line; saying nothing about hidden issues; sequencing after #204 or #195.
+
+**Documentation moved:** `docs/skills.md` (`## cleanup`), `docs/extension-points.md` (`cleanup/removal-command`), `README.md` (the `role stale` entry and the skills table row), `CHANGELOG.md` (one bullet and the `Shared state:` line). `.devcontainer/README.md`, `docs/container-templates.md` and `docs/skills-inventory.md` need no change; no rule marker is added.
+
+**Intake questions resolved:** the one left to plan at intake, whether the placeholder fix lives in the script or the overlay text: the script (Q1).
+
 ### Footprint
 
 ```
@@ -135,11 +152,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-27 — Q1-Q7 raised · cost: 2m · fable-5-2 87k in + 649k cached / 8k out
 - 2026-11-27 — Q1-Q7 answered ("go with your picks"); draft written, footprint committed
+- 2026-11-27 — planned: docs/plans/2026-11-27-cleanup-removal-records-206.md · cost: 8m · fable-5-2 103k in + 1M cached / 13k out · sonnet-5-5 135k in + 1.6M cached / 26k out
