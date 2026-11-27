@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1 (`qc.md`: F1 and F2 blocking, F3 non-blocking and the plan's, F4-F7 non-blocking and `/codeo:implement`'s). The plan's premise that `intake.sh commit` only adds files is false, so two engineers' records can delete each other (root cause in `qc.md`). Q10-Q12 are open; nothing is drafted until they are answered. Round 1's plan, `docs/plans/2026-11-27-cleanup-removal-records-206.md`, is built and stays as history.
+Round 2, after a send-back from `/codeo:qc` round 1 (`qc.md`: F1 and F2 blocking, F3 non-blocking and the plan's, F4-F7 non-blocking and `/codeo:implement`'s). The plan's premise that `intake.sh commit` only adds files is false, so two engineers' records can delete each other (root cause in `qc.md`). Q10-Q12 are answered (every recommendation taken); the round-2 plan is drafted at `.codeo/206/plan-draft.md` and waits for the engineer's approval. Round 1's plan, `docs/plans/2026-11-27-cleanup-removal-records-206.md`, is built and stays as history.
 
 ## Questions
 
@@ -133,6 +133,7 @@ I recommend the flag for every caller.
 **Options:** flag for every caller (recommended) · flag for `cleanup` only · restore before each commit · no preference, you pick.
 
 **Answer:**
+Flag for every caller, as recommended. Given in the conversation: "Go with your picks".
 
 ### Q11 — Is there an undo for a recorded removal?
 
@@ -146,6 +147,7 @@ I recommend no undo command.
 **Options:** no undo command (recommended) · `cleanup.sh unrecord` · no preference, you pick.
 
 **Answer:**
+No undo command, as recommended. Given in the conversation: "Go with your picks".
 
 ### Q12 — Does the placeholder check look at the text the script prints?
 
@@ -159,6 +161,7 @@ I recommend checking the expanded text.
 **Options:** check the expanded text (recommended) · keep the check and narrow the documentation · no preference, you pick.
 
 **Answer:**
+Check the expanded text, as recommended. Given in the conversation: "Go with your picks".
 
 ## Notes
 
