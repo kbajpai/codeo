@@ -76,6 +76,15 @@ Loose ends found while planning, for `/codeo:triage` (no issue number: `/codeo:i
 - Later work: `/codeo:doctor`'s `board` check reads `board.projects[]` only, so a config with just `board.gateProject` reports "every configured project is readable" while probing nothing (`scripts/doctor.sh`, the `board` block). File it with `/codeo:issue` in a home checkout.
 - Later work: the README omissions Q1 leaves out, if the answer is the first or second option. File them as one issue with `/codeo:issue` in a home checkout.
 
+### Footprint
+
+```
+files:      .claude-plugin/plugin.json, CHANGELOG.md, README.md, docs/updating.md, tests/install.test.sh, .codeo/config.json, docs/plans/2026-11-27-release-v1-0-11.md, .codeo/213/**
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
