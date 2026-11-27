@@ -366,6 +366,18 @@ the_wizard_stops_on_a_todo_base_branch_before_any_write() {
     cmp -s "$work/bad.orig" "$d/.codeo/config.json" && [[ ! -e $d/.devcontainer ]] || fail "something was written"
 }
 
+the_wizard_stops_on_a_bad_base_branch_before_any_write() {
+    local d b n=0
+    for b in 'x;rm' '-bad'; do
+        n=$((n + 1)); d=$(new_clone "wizbadb$n" git@github.com:acme-co/shop.git)
+        mkdir "$d/.codeo"; jq -n --arg b "$b" '{schema:1,repo:{owner:"acme-co",name:"shop"},baseBranch:$b}' >"$d/.codeo/config.json"; cp "$d/.codeo/config.json" "$work/bad.orig"
+        if (cd "$d" && bash "$init" --yes --skip-install --env containers --version v9.9.9 >"$work/out" 2>&1); then fail "accepted '$b'"; fi
+        [[ $(grep -c 'fail config' "$work/out") == 1 ]] && grep -q "baseBranch '$b' is not a branch name" "$work/out" || fail "message '$b': $(cat "$work/out")"
+        ! grep -q 'containers:' "$work/out" || fail "containers ran"
+        cmp -s "$work/bad.orig" "$d/.codeo/config.json" && [[ ! -e $d/.codeo/config.json.new && ! -e $d/.devcontainer ]] || fail "something was written for '$b'"
+    done
+}
+
 for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_creates_nothing \
     refuses_when_gh_is_not_logged_in an_unattended_run_adopts_another_project a_rerun_keeps_the_config \
     questions_are_asked_only_for_what_flags_left an_unattended_run_never_asks \
@@ -376,7 +388,7 @@ for c in refuses_without_an_origin refuses_a_repository_gh_cannot_see_and_create
     an_invalid_explicit_codename_states_the_rule a_flag_without_a_value_is_a_usage_error a_setup_failure_names_its_reason \
     a_kept_config_without_a_codename_gets_the_answer_written_into_it a_kept_config_without_a_codename_and_an_underivable_name_fails_before_writing \
     a_failed_suite_write_is_reported_and_the_next_suite_is_tried the_wizard_fills_only_the_missing_plugin_key the_wizard_notes_kept_seeds_once the_wizard_takes_the_ref_from_the_forks_repository_and_refuses_invalid_json \
-    a_flag_codename_that_the_config_overrules_is_called_the_answer a_version_that_is_not_a_release_tag_is_a_usage_error a_private_repository_gets_a_note_and_the_wizard_goes_on the_wizard_stops_on_a_todo_base_branch_before_any_write; do
+    a_flag_codename_that_the_config_overrules_is_called_the_answer a_version_that_is_not_a_release_tag_is_a_usage_error a_private_repository_gets_a_note_and_the_wizard_goes_on the_wizard_stops_on_a_todo_base_branch_before_any_write the_wizard_stops_on_a_bad_base_branch_before_any_write; do
     "$c"
 done
 echo "all cases passed"

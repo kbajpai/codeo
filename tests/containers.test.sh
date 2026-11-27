@@ -288,6 +288,33 @@ pin_fill_says_when_it_replaces_a_plugin_that_is_not_an_object() {
     [[ ! -s $work/err ]] || fail "said something for an absent plugin: $(cat "$work/err")"
 }
 
+setup_refuses_a_bad_base_branch_before_any_write() {
+    local d b a want
+    for b in 'x;rm' '-bad'; do
+        for a in "" "--codename b2"; do
+            rm -rf "$work/badb"; pin_project badb null; d="$work/badb"
+            jq --arg b "$b" 'del(.codename) | .baseBranch = $b' "$d/.codeo/config.json" >"$d/c.new" && mv "$d/c.new" "$d/.codeo/config.json"
+            cp "$d/.codeo/config.json" "$work/orig.json"
+            want="codeo: config.json: baseBranch '$b' is not a branch name (letters, digits, dot, underscore, slash and hyphen, starting with a letter or digit)"
+            if (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers $a >"$work/out" 2>&1); then fail "accepted '$b' $a"; fi
+            [[ $(cat "$work/out") == "$want" ]] || fail "message '$b' $a: $(cat "$work/out")"
+            cmp -s "$work/orig.json" "$d/.codeo/config.json" && [[ ! -e $d/.codeo/config.json.new && ! -e $d/.devcontainer ]] || fail "wrote something for '$b' $a"
+        done
+    done
+}
+
+setup_follows_a_slash_base_branch_and_defaults_an_absent_one() {
+    local d b
+    for b in 'release/1.x' ''; do
+        rm -rf "$work/okb"; pin_project okb '{"repo":"a/b","ref":"v1"}'; d="$work/okb"
+        if [[ -n $b ]]; then jq --arg b "$b" 'del(.codename) | .baseBranch = $b' "$d/.codeo/config.json" >"$d/c.new"
+        else jq 'del(.codename, .baseBranch)' "$d/.codeo/config.json" >"$d/c.new"; fi
+        mv "$d/c.new" "$d/.codeo/config.json"
+        (cd "$d" && bash "$plugin_root/scripts/setup.sh" --containers --codename b2 >"$work/out" 2>&1) || fail "refused base '$b': $(cat "$work/out")"
+        [[ $(jq -r .codename "$d/.codeo/config.json") == b2 ]] || fail "codename not written for '$b'"
+    done
+}
+
 setup_refuses_a_plugin_repo_that_is_not_an_owner_and_name() {
     local r d
     for r in 'https://evil/x' 'a/b/c' '../x' 'noslash' '-a/b'; do
@@ -432,7 +459,7 @@ for c in codeos_dockerfile_equals_the_template_outside_the_toolchain_section cod
     setup_codename_with_containers_writes_it_into_a_codenameless_config setup_refuses_another_codename_on_a_config_that_has_one setup_refuses_a_todo_repository_before_deriving_a_codename setup_says_where_the_home_checkout_lives \
     an_underivable_repo_name_fails_before_any_write setup_containers_writes_the_plugin_pin the_plugin_pin_fails_soft_without_a_release \
     a_base_branch_other_than_main_is_followed overlays_name_the_base_branch a_bad_base_branch_is_refused a_prefix_codename_does_not_leak dots_in_owner_and_repo_survive \
-    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once the_ref_comes_from_the_repository_the_config_names setup_refuses_an_invalid_config_before_the_pin setup_refuses_a_plugin_repo_that_is_not_an_owner_and_name setup_refuses_a_todo_base_branch_before_any_write pin_fill_says_when_it_replaces_a_plugin_that_is_not_an_object; do
+    setup_fills_only_the_missing_plugin_key setup_reports_a_failed_pin_write setup_notes_kept_seeds_once the_ref_comes_from_the_repository_the_config_names setup_refuses_an_invalid_config_before_the_pin setup_refuses_a_plugin_repo_that_is_not_an_owner_and_name setup_refuses_a_todo_base_branch_before_any_write setup_refuses_a_bad_base_branch_before_any_write setup_follows_a_slash_base_branch_and_defaults_an_absent_one pin_fill_says_when_it_replaces_a_plugin_that_is_not_an_object; do
     "$c"
 done
 echo "all cases passed"

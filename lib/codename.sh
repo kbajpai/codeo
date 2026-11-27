@@ -99,12 +99,24 @@ codeo_config_shape_error() {
     return 1
 }
 
-# codeo_base_error <config>: the message containers.sh gives, and exit 1, when baseBranch is TODO-set-me.
-codeo_base_error() {
-    [[ $(jq -r '.baseBranch // empty' "$1" 2>/dev/null || true) != TODO-set-me ]] || {
+# codeo_base_value_error <base>: the message, and exit 1, when a baseBranch is TODO-set-me or not a branch name. scripts/containers.sh
+# and codeo_base_error both use it, so they cannot drift.
+codeo_base_value_error() {
+    if [[ $1 == TODO-set-me ]]; then
         echo "config.json: baseBranch is TODO-set-me; set baseBranch in .codeo/config.json to the repository's base branch"
         return 1
+    fi
+    [[ $1 =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || {
+        echo "config.json: baseBranch '$1' is not a branch name (letters, digits, dot, underscore, slash and hyphen, starting with a letter or digit)"
+        return 1
     }
+}
+
+# codeo_base_error <config>: the same check on the config's baseBranch; an absent or empty one is not refused (containers.sh uses main).
+codeo_base_error() {
+    local b
+    b=$(jq -r '.baseBranch // empty | tostring' "$1" 2>/dev/null || true)
+    [[ -z $b ]] || codeo_base_value_error "$b"
 }
 
 # codeo_pin_repo_error <config>: prints "config.json: plugin.repo '<x>' is not an owner/name" and returns 1 when the

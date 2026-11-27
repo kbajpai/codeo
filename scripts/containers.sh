@@ -20,6 +20,7 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/codename.sh"
 
 usage() {
     echo "usage: containers.sh [--check] [--force]" >&2
@@ -45,14 +46,12 @@ codename=$(codeo_cfg .codename) || codeo_die "config.json has no codename: run /
 base=$(codeo_cfg .baseBranch || echo main)
 
 # setup.sh writes TODO-set-me for what it could not read; that must never be rendered into a file or a URL.
-[[ $base != TODO-set-me ]] || codeo_die "config.json: baseBranch is TODO-set-me; set baseBranch in .codeo/config.json to the repository's base branch"
+msg=$(codeo_base_value_error "$base") || codeo_die "$msg"
 [[ $owner != TODO-set-me && $repo != TODO-set-me ]] || codeo_die "config.json: repo.owner and repo.name are TODO-set-me; set repo in .codeo/config.json to the GitHub owner and repository name"
 
 # These land in file names, container names and URLs, so only the characters those allow get through.
 [[ $codename =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]] ||
     codeo_die "config.json: codename '$codename' must be lower-case letters, digits and single hyphens, starting with a letter"
-[[ $base =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] ||
-    codeo_die "config.json: baseBranch '$base' is not a branch name (letters, digits, dot, underscore, slash and hyphen, starting with a letter or digit)"
 [[ $owner =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ && $repo =~ ^[A-Za-z0-9_.-]+$ ]] ||
     codeo_die "config.json: repo.owner/repo.name are not a GitHub owner and repository name"
 
