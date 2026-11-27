@@ -348,8 +348,6 @@ section_contains "close-11 never infers a stash" "$stash_section" 'Never infer a
 section_contains "close-13 names the skill not to use" "$stash_section" 'finishing-a-development-branch'
 section_contains "a stash releases every lease" "$stash_section" 'lease release-all <N>'
 section_order "the put-back comes before the release" "$stash_section" 'close put-back' 'lease release-all <N>'
-section_contains "the assignee is removed" "$stash_section" 'github.sh" issue assignee-remove <N>'
-section_contains "no login is a skip" "$stash_section" 'github.sh" user login'
 section_contains "a stash moves the card to Ready" "$stash_section" 'board.sh" set <N> "$READY"'
 section_contains "an abandon moves the card to Backlog" "$stash_section" 'board.sh" set <N> "$BACKLOG"'
 section_contains "init resumes a stash" "$stash_section" '/codeo:init #<N>'
@@ -464,6 +462,22 @@ must_precede 'the overlap skipping sentence comes after the stop sentence' 'The 
 # The web-session exception is in the description and in docs/skills.md, not only in step 16.
 sed -n 3p "$skill" | grep -qF 'a hosted web session deletes none' || fail "the description has no web-session exception"
 awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md" | grep -qF 'a hosted web session deletes none' || fail "docs/skills.md close section has no web-session exception"
+
+# Step 0 verifies ownership (close-15).
+must_contain 'close step 0 runs verify' 'lock.sh" verify'
+must_contain 'close verify carries its rule marker' '<!-- rule: close-15 -->'
+must_contain 'close a refused verify prints its line and stops' 'print its one line and stop — nothing else is'
+must_contain 'close the override is named' '--override "<the engineer'\''s exact words>"'
+must_contain 'close the override is never inferred' 'never inferred'
+must_contain 'close commits the override line with its own dossier commit' 'committed with close'\''s own dossier commit'
+must_contain 'close-16 rule marker' '<!-- rule: close-16 -->'
+section_contains "the owner comes from lock.sh owner" "$stash_section" 'lock.sh" owner <N>'
+section_contains "the owner is removed" "$stash_section" 'assignee-remove <N> <owner>'
+section_contains "no owner printed is a skip" "$stash_section" 'prints no owner'
+section_contains "a legacy stash removes the verified caller" "$stash_section" 'user whoami'
+section_contains "the caller is removed only without an override" "$stash_section" 'without an override'
+section_contains "an override with no owner is a skip" "$stash_section" 'With an override and no owner'
+section_contains "an unverified login is never removed" "$stash_section" 'Never remove a login that was not verified'
 
 if ((failures)); then
     echo "$failures case(s) failed"

@@ -115,6 +115,13 @@ must_lack 'no issue-container claim in generic text' 'issue container'
 must_precede 'the overlap stop sentence comes first' 'The step stops until it is answered' 'A non-zero exit, with or without an'
 must_precede 'the overlap skipping sentence comes after the stop sentence' 'The step stops until it is answered' 'An `overlap: skipping #<M>'\''s changed paths` warning'
 
+# Step 0 verifies ownership (implement-11).
+must_contain 'implement step 0 runs verify' 'lock.sh" verify'
+must_contain 'implement verify carries its rule marker' '<!-- rule: implement-11 -->'
+must_contain 'implement a refused verify prints its line and stops' 'print its one line and stop — nothing else is'
+must_contain 'implement the override is named' '--override "<the engineer'\''s exact words>"'
+must_contain 'implement the override is never inferred' 'never inferred'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

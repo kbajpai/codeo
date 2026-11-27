@@ -91,6 +91,13 @@ must_lack 'no home-container claim in generic text' 'in the home container'
 must_lack 'no issue-container claim in generic text' 'issue container'
 ! grep -qF -- 'issue container' "$plugin_root/docs/handoff.md" || fail 'handoff.md — still has [issue container]'
 
+# Step 0 verifies ownership (plan-10).
+must_contain 'plan step 0 runs verify' 'lock.sh" verify'
+must_contain 'plan verify carries its rule marker' '<!-- rule: plan-10 -->'
+must_contain 'plan a refused verify prints its line and stops' 'print its one line and stop — nothing else is'
+must_contain 'plan the override is named' '--override "<the engineer'\''s exact words>"'
+must_contain 'plan the override is never inferred' 'never inferred'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

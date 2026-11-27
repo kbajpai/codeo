@@ -208,6 +208,39 @@ _Pending — written at the hand-off._
   — elapsed minutes, then one `<model> <fresh> in + <cached> cached / <out> out` group per model,
   all separated by ` · ` — or `cost: unavailable` when the script cannot run. `handoff.md` has the rule.
 
+## The owner
+
+Only `init.md` records who owns the workflow, in a `| Owner | alice |` row after `| Branch |` (the login may also be wrapped in backticks; its
+header table has `Issue`, `Branch` and `Updated`; the `## Outcome` table repeats `Branch`, and the
+checks read the first `| Owner |` row in the file wherever it sits); `/codeo:init`
+writes it from the login `github.sh user whoami` verified, on a fresh init and again on a resume.
+The owner is read from the pushed `init.md` (`lock.sh verify` fetches the branch into the private ref
+`refs/codeo/verify/<branch>` and reads it from there): the login on its **last** `- <date> — resumed: by <login> after …` line, else the
+`| Owner |` row. A resume line's login is required, since `claim.sh --resume-line` refuses a missing
+or empty one; the line keeps its form, so a resume is how a takeover lasts. A dossier with neither
+is legacy, and the step then checks the issue's assignees alone.
+
+When the engineer overrides a refused ownership check, `lock.sh verify --override "<words>"` appends
+one line under `## Notes` (created before `## Outcome` when absent) and the skill's next dossier
+commit carries it:
+
+```markdown
+- 2026-03-05 — override: bob over alice: "alice is out; I am finishing this today"
+```
+
+The override is judged again at the next step; it neither changes the owner nor counts as a resume
+line.
+
+When `/codeo:init` cannot add the claimant to the issue's assignees, it writes one line under `## Notes`
+(created before `## Outcome` when absent), in a commit of its own, and says so in its closing message:
+
+```markdown
+- 2026-03-05 — assignee-add failed: <the message git or gh printed>
+```
+
+The claim stands on the pushed branch; when the issue has other assignees, `lock.sh verify` refuses the owner with the `assignee-add`
+line until the owner is added.
+
 ## The footprint
 
 `plan.md`'s `## Outcome` ends with a `### Footprint`, the one block in any dossier written for a
