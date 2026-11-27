@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Q1 and Q2 are answered (the recommendations). The plan is being drafted to `.codeo/213/plan-draft.md` for review; nothing is open.
+Planned and approved: `docs/plans/2026-11-27-release-v1-0-11.md` (unstaged). Q1-Q2 are answered, nothing is open, and `overlap.sh 213` printed nothing. The next step is `/codeo:implement`, once the plan is reviewed and committed.
 
 What exploration found:
 - **The gate is "what is on `main` now".** `origin/main` is at `3857710`, 8 commits past `v1.0.10`: #191 (the pin), #202 (#190), #203 (#192), #208 (#195), #211 (CI), #210 (#204), #212 (#206), #209 (#188). `inflight.sh --except 213` printed `no other workflow in flight`; `overlap.sh` runs once the footprint is written.
@@ -76,6 +76,21 @@ Loose ends found while planning, for `/codeo:triage` (no issue number: `/codeo:i
 - Later work: `/codeo:doctor`'s `board` check reads `board.projects[]` only, so a config with just `board.gateProject` reports "every configured project is readable" while probing nothing (`scripts/doctor.sh`, the `board` block). File it with `/codeo:issue` in a home checkout.
 - Later work: the README omissions Q1 leaves out, if the answer is the first or second option. File them as one issue with `/codeo:issue` in a home checkout.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-27-release-v1-0-11.md` (approved 2026-11-27, unstaged) |
+| Shape | Plan under `docs/plans/`, 12 tasks; no reference doc, since nothing is a standing decision |
+
+**Decisions.** Q1: the release PR fixes the eight README mismatches M1-M8 and the omissions the unreleased work introduced (the edit guard and `CODEO_HOME_EDITS=allow`, the bot and identity refusals, a stash removing you from the assignees, cleanup's placeholder stop, setup's `--codename` and `--containers`); the older omissions are not fixed and go to one later issue. Q2: a one-line #211 changelog bullet, and #192's and #204's bullets reworded to the released state. Two PRs, as for v1.0.10: the release PR from `release/v1.0.11`, cut from `origin/main` in a worktree (five files: `plugin.json`, `CHANGELOG.md`, `README.md`, `docs/updating.md`, `tests/install.test.sh`), this branch carrying the pin, plan and dossier. You merge both PRs and tag (lightweight, `git tag v1.0.11 <SHA>`); the agent runs the clean-clone test and publishes the Release on your say-so. Version stubs: `1.0.10`→`1.0.11` then `1.0.9`→`1.0.10`, the skipped ordering and refused stubs left alone, the `v1.0.11` ordering stub taken to `v1.0.12`; dry-run on `3857710` ended `all cases passed` for `install.test.sh` and `readme.test.sh`.
+
+**Rejected.** Mismatches only, and mismatches plus every omission (Q1); no #211 bullet, and leaving the two "next release" bullets as written (Q2); one PR from this branch, which `qc-verdict` fails, and pinning before the tag exists.
+
+**Documentation pages the plan changes:** `README.md` (Tasks 2-4) and `docs/updating.md` (version numbers only). No wiki module. No intake question was resolved by this skill; no issue was filed (`/codeo:issue` refused in this checkout; three loose ends are recorded under `## Notes` for `/codeo:triage`); the `engineering` skills were not used.
+
+**Risk for `/codeo:qc`.** Criteria 3-7 depend on your merge, tag and rebuild; criterion 6 is met when `/codeo:close`'s PR merges. README edits must be checked against the cited code, not the plan's summary; M2 (`ruleset` reported as `fail … skipped`) was not re-read at planning. `main` may move before Task 1: re-read `## Unreleased` and the README comparison for files it touched.
+
 ### Footprint
 
 ```
@@ -85,10 +100,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-27 — Q1-Q2 raised · cost: 4m · fable-5-2 138k in + 1.2M cached / 9k out · sonnet-5-5 509k in + 7M cached / 53k out
+- 2026-11-27 — Q1-Q2 answered; draft written to plan-draft.md for review · cost: unavailable
+- 2026-11-27 — planned: docs/plans/2026-11-27-release-v1-0-11.md · cost: 30m · fable-5-2 138k in + 1.2M cached / 9k out · sonnet-5-5 541k in + 8.9M cached / 71k out
