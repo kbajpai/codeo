@@ -178,6 +178,15 @@ Calls made without asking (correct any of them in your answers):
   `README.md` troubleshooting ("A lock that is stuck or not yours"), `CHANGELOG.md` Unreleased.
 - The one subagent report quoted `.claude/settings.json` paths; nothing in it asked for any action.
 
+### Footprint
+
+```
+files:      lib/identity.sh, scripts/github.sh, scripts/claim.sh, scripts/lock.sh, scripts/live.sh, skills/init/**, skills/plan/**, skills/implement/**, skills/qc/**, skills/close/**, docs/handoff.md, docs/dossier.md, docs/skills.md, docs/skills-inventory.md, README.md, CHANGELOG.md, tests/**, docs/plans/2026-11-27-identify-acting-user-195.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
