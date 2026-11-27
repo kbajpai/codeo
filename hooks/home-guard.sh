@@ -171,6 +171,7 @@ normalize_cmd() {
 # command; each segment is judged by the checkout it addresses. Scripts are not looked into.
 bash_guard() {
     local cur=${1:-.} cmd=$2 proj=${3:-.} seg w i d sub root role
+    cur=$(cd "$cur" 2>/dev/null && pwd -P) || cur=$1
     local -a words args
     case $cmd in *git*) ;; *) return 1 ;; esac
     [[ $(LC_ALL=C; echo ${#cmd}) -le 16384 ]] || return 1

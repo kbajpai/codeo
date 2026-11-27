@@ -347,6 +347,13 @@ out=$(hook "$(file_json Write "$h" "$h/src/a.txt")")
 assert_eq "mode 644 role.sh still denies a Write" deny "$(decision "$out")"
 bcheck deny "$h" "git push"
 
+case_desc=bash_cwd_through_a_symlink
+h=$(bhome sl1 codeo)
+ln -s "$h" "$scratch_root/sl-link"
+bcheck allow "$scratch_root/sl-link" "git add .codeo/192/init.md"
+bcheck deny "$scratch_root/sl-link" "git add src/a.txt"
+bcheck allow "$scratch_root/sl-link" "git commit -m x"
+
 case_desc=hooks_json_registers_the_guard
 hj="$plugin_root/hooks/hooks.json"
 reg=$(jq -r '[.hooks.PreToolUse[] | select(.matcher == "Edit|Write|NotebookEdit|Bash") | .hooks | select(length == 1) | .[0].command] | join("|")' "$hj")
