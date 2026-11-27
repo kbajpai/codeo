@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 is planned: Tasks 7-9 are approved and appended to the plan file (unstaged). Next: `/codeo:implement`.
+Round 3, after a send-back from `/codeo:qc` round 3 (F8: `docs/home-checkout.md:9` describes an assignee lookup that does not run on the host). Two new tasks (10-11) are drafted at `.codeo/188/plan-draft.md` and wait for approval. No question is open: the fix is determined by what `live.sh` does, observed by running `user_label` without `jq`.
 
 ## Questions
 
@@ -186,3 +186,4 @@ sequenced:  none
 - 2026-11-27 — Q5-Q7 answered (proceed and coordinate); planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md · cost: 15m · fable-5-2 78k in + 848k cached / 10k out · sonnet-5-5 108k in + 2M cached / 20k out
 - 2026-11-27 — round 2 opened (send-back from qc.md round 1); Q8 raised and answered through the question tool; round-2 tasks drafted at .codeo/188/plan-draft.md, awaiting review · cost: unavailable, the hand-off line carries the total
 - 2026-11-27 — round 2 approved; planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md (Tasks 7-9) · cost: 33m · fable-5-2 218k in + 995k cached / 7k out · sonnet-5-5 24k in + 955k cached / 2k out
+- 2026-11-27 — round 3 opened (send-back from qc.md round 3); no question raised; Tasks 10-11 drafted at .codeo/188/plan-draft.md, awaiting review · cost: unavailable, the hand-off line carries the total
