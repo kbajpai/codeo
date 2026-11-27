@@ -12,7 +12,7 @@
 #       project's .codeo/config.json.
 #
 #   Verbs: issue view|assignee-add|assignee-remove|search|list-all, issue-types (prints nothing
-#   when the owner is a user, who has none), user login,
+#   when the owner is a user, who has none), user login|whoami (whoami: <login><TAB><type>, a person only),
 #   pr list-for-branch|view|get|reviews|comments|review-comments|checks|create [--draft]|comment, run list,
 #   workflow dispatch <workflow-file> <ref> (prints nothing on success; the ref must carry the
 #   workflow file and the caller needs `actions: write`), label list | label create <name>
@@ -22,6 +22,7 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/identity.sh"
 # Read inside $(...), where codeo_cfg_required's exit ends only the subshell; the || exit then
 # ends the script, for an unusable config and for a key that is merely absent alike.
 owner=$(codeo_cfg_required .repo.owner) || exit 1
@@ -29,14 +30,14 @@ name=$(codeo_cfg_required .repo.name) || exit 1
 repo=$owner/$name
 die() { echo "github: $*" >&2; exit 1; }
 
-# GET /user, else $CODEO_GITHUB_LOGIN, else nothing — both `/user` and the org-level
+# GET /user, else (web session only) $CODEO_GITHUB_LOGIN, else nothing — both `/user` and the org-level
 # issue-types endpoint are refused on a web session's proxy credential regardless of token,
 # because neither is scoped to this repository.
 user_login() {
     local login
     if login=$(gh api user -q .login 2>/dev/null); then
         echo "$login"
-    elif [[ -n ${CODEO_GITHUB_LOGIN:-} ]]; then
+    elif codeo_is_web_session && [[ -n ${CODEO_GITHUB_LOGIN:-} ]]; then
         echo "$CODEO_GITHUB_LOGIN"
     else
         echo "github: no login: GET /user was refused and \$CODEO_GITHUB_LOGIN is unset" >&2
@@ -158,8 +159,11 @@ case $group in
         ;;
     user)
         sub=${1:?user subcommand}; shift
-        [[ $sub == login ]] || die "unknown user subcommand: $sub"
-        user_login
+        case $sub in
+            login) user_login ;;
+            whoami) codeo_whoami ;;
+            *) die "unknown user subcommand: $sub" ;;
+        esac
         ;;
     pr)
         sub=${1:?pr subcommand}; shift

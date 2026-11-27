@@ -8,7 +8,7 @@
 #   github.test.sh
 #       Exits non-zero and names the first failing case; prints "all cases passed" otherwise.
 set -euo pipefail
-unset GH_TOKEN CODEO_GITHUB_LOGIN
+unset GH_TOKEN CODEO_GITHUB_LOGIN CLAUDE_CODE_REMOTE
 
 plugin_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 script="$plugin_root/scripts/github.sh"
@@ -278,11 +278,75 @@ assert_eq "login" "kbajpai" "$out"
 case_desc="user login (GET /user 403s, CODEO_GITHUB_LOGIN set)"
 reset_case
 mark_fail GET "user"
+export CODEO_GITHUB_LOGIN=someone CLAUDE_CODE_REMOTE=true
+if out=$(bash "$script" user login 2>"$err_file"); then rc=0; else rc=$?; fi
+unset CODEO_GITHUB_LOGIN CLAUDE_CODE_REMOTE
+assert_eq "exit code" 0 "$rc"
+assert_eq "login" "someone" "$out"
+
+case_desc="user login (GET /user 403s, CODEO_GITHUB_LOGIN set, not a web session)"
+reset_case
+mark_fail GET "user"
 export CODEO_GITHUB_LOGIN=someone
 if out=$(bash "$script" user login 2>"$err_file"); then rc=0; else rc=$?; fi
 unset CODEO_GITHUB_LOGIN
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout" "" "$out"
+
+case_desc="user whoami (User)"
+reset_case
+write_fixture GET "user" <<'JSON'
+{"login":"kbajpai","type":"User"}
+JSON
+if out=$(bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
 assert_eq "exit code" 0 "$rc"
-assert_eq "login" "someone" "$out"
+assert_eq "stdout" "$(printf 'kbajpai\tUser')" "$out"
+
+case_desc="user whoami (Bot)"
+reset_case
+write_fixture GET "user" <<'JSON'
+{"login":"acme-bot[bot]","type":"Bot"}
+JSON
+if out=$(bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout" "" "$out"
+assert_contains "stderr names the login" "acme-bot[bot]" "$(cat "$err_file")"
+assert_contains "stderr names the type" "Bot" "$(cat "$err_file")"
+
+case_desc="user whoami (Organization)"
+reset_case
+write_fixture GET "user" <<'JSON'
+{"login":"acme","type":"Organization"}
+JSON
+if out=$(bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout" "" "$out"
+
+case_desc="user whoami (GET /user 403s, CODEO_GITHUB_LOGIN set, not a web session)"
+reset_case
+mark_fail GET "user"
+export CODEO_GITHUB_LOGIN=someone
+if out=$(bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
+unset CODEO_GITHUB_LOGIN
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout" "" "$out"
+assert_contains "stderr explains the fallback" "CODEO_GITHUB_LOGIN" "$(cat "$err_file")"
+
+case_desc="user whoami (GET /user 403s, web session)"
+reset_case
+mark_fail GET "user"
+export CODEO_GITHUB_LOGIN=someone CLAUDE_CODE_REMOTE=true
+if out=$(bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
+unset CODEO_GITHUB_LOGIN CLAUDE_CODE_REMOTE
+assert_eq "exit code" 0 "$rc"
+assert_eq "stdout" "$(printf 'someone\tunverified')" "$out"
+
+case_desc="user whoami (GET /user 403s, web session, no variable)"
+reset_case
+mark_fail GET "user"
+if out=$(CLAUDE_CODE_REMOTE=true bash "$script" user whoami 2>"$err_file"); then rc=0; else rc=$?; fi
+assert_eq "exit code" 1 "$rc"
+assert_eq "stdout" "" "$out"
 
 case_desc="user login (GET /user 403s, no env var)"
 reset_case
