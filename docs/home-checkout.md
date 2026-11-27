@@ -38,7 +38,7 @@ Each skill asks `.devcontainer/scripts/role.sh --check <skill>` first, and the a
 
 ## The edit guard
 
-A plugin hook, `hooks/home-guard.sh` (registered in `hooks/hooks.json`), refuses a change to the project in a checkout whose role is `home`, `stale:?` or `stray`, so the work goes through an issue: `/codeo:issue`, then `codeo issue <N>`, then the work in that issue's checkout. It asks the checkout's own `.devcontainer/scripts/role.sh` for the role and keeps no copy of its rules. A refusal is one line naming the role and the way out.
+A plugin hook, `hooks/home-guard.sh` (registered in `hooks/hooks.json`), refuses a change to the project in a checkout whose role is `home`, `stale:?` or `stray`, so the work goes through an issue: `/codeo:issue`, then `codeo issue <N>`, then the work in that issue's checkout. It asks the checkout's own `.devcontainer/scripts/role.sh` for the role, run with `bash` (it need not be executable), and keeps no copy of its rules. It judges only the session's project (`$CLAUDE_PROJECT_DIR`, else the directory the session runs in) and that project's worktrees; an edit, a `git -C` target or a `cd` target in any other repository is not judged, and that repository's `role.sh` is never run. A refusal is one line naming the role and the way out.
 
 Refused in such a checkout:
 
@@ -47,11 +47,11 @@ Refused in such a checkout:
 
 Allowed:
 
-- Any path under `.codeo/`, which is how `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` keep their notes, drafts and ledgers; a `..` that climbs out of `.codeo/` is not under it, and a git pathspec with any `..` is refused. `git add`, `rm`, `mv` and `restore` pass only when every pathspec is `.codeo` or under it, relative or absolute (resolved against the directory the command addresses, so `cd <home>/.codeo && git add 192/init.md` passes; an absolute pathspec must spell the checkout's real path, since a symlinked prefix such as `/tmp` on macOS does not match it and is refused), and a redirection such as `2>&1` or `2>/dev/null` is not a pathspec, and `git commit` passes only when everything it would commit is under `.codeo/` and it names no pathspec outside it; `--amend`, `-i`, `--include`, `-o`, `--only` and a bare `--` are always refused.
+- Any path under `.codeo/`, which is how `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` keep their notes, drafts and ledgers; a `..` that climbs out of `.codeo/` is not under it, and a git pathspec with any `..` is refused. `git add`, `rm`, `mv` and `restore` pass only when every pathspec is `.codeo` or under it, relative or absolute (resolved against the directory the command addresses, so `cd <home>/.codeo && git add 192/init.md` passes; an absolute pathspec must spell the checkout's real path, since a symlinked prefix such as `/tmp` on macOS does not match it and is refused), and a redirection such as `2>&1` or `2>/dev/null` is not a pathspec, and `git commit` passes only when everything it would commit is under `.codeo/` and it names no pathspec outside it; `--amend`, `-i`, `--include`, `-o`, `--only`, their abbreviations of three letters or more (`--amen`, `--inc`, `--onl`) and a bare `--` are always refused.
 - Plain `git checkout` and `git switch`, `worktree`, `fetch`, `pull`, `branch` and every script, so `/codeo:init`'s scratch worktree and the `codeo` command work.
-- Every other role, a hosted web session, a project without `.devcontainer/scripts/role.sh`, and a path outside any repository.
+- Every other role, a hosted web session, a repository that is neither the session's project nor a worktree of it, a project without `.devcontainer/scripts/role.sh`, and a path outside any repository.
 
-A Bash command is split at `;`, `&&`, `||`, `|` and `&`, and each `git` segment is judged by the checkout it addresses: `cd` and `git -C` targets are followed, quoted ones too, so `git -C <issue clone> commit` run from home is allowed and `git -C <home> commit` run from an issue's checkout is refused. Quoted text is never read as a command. A redirection such as `2>&1` does not split the command. The guard runs on the bash 3.2 and the BSD tools of a stock macOS, as well as on GNU userland; it needs `jq`.
+A Bash command is split at `;`, `&&`, `||`, `|` and `&`, and each `git` segment is judged by the checkout it addresses: `cd` and `git -C` targets are followed, quoted ones too, so `git -C <worktree of home> commit` run from home is judged as that worktree, while `git -C <another clone> commit` is not judged at all: a separate clone is not a worktree of the project. A command longer than 16 KB (16384 bytes) is not judged. Quoted text is never read as a command. A redirection such as `2>&1` does not split the command. The guard runs on the bash 3.2 and the BSD tools of a stock macOS, as well as on GNU userland; it needs `jq`.
 
 To switch the guard off, start Claude Code with `CODEO_HOME_EDITS=allow` in the environment, or put it in the project's `.claude/settings.local.json` `env`. It lasts for the session started with it, the session cannot set it for itself, and only the exact value `allow` counts.
 
@@ -61,6 +61,8 @@ What it does not see:
 - A nested shell (`bash -c`), a subshell `( … )`, a `$(…)` substitution, and a script's contents; the body of a heredoc is read as commands.
 - Shell control words and prefixes: `if … then git push; fi`, `for … do git push; done`, `{ git push; }`, `! git push`, `time`, `command`, `xargs` and `pushd` before or around a git write.
 - `git --git-dir=…`, and `git commit --pathspec-from-file`, which name paths the guard does not read.
+- A `cd` target it cannot resolve (`cd -`, a bare `cd`, `cd ~/…`, `cd $VAR/…`): the directory stays where it was; and a subshell's `cd` carries into the later segments.
+- `git` written other than as the bare word `git`: a path such as `/usr/bin/git`, a quoted `"git"` or `'push'`, `\git`, a git alias, a backslash-newline continuation.
 - A write into a repository's `.git/` directory.
 - A failure of its own: when the hook cannot find out the role, it allows the call.
 
@@ -73,11 +75,13 @@ flowchart TD
     B -- no --> C{file tool or Bash?}
     C -- file tool --> D{path under .codeo/ or outside any repo?}
     D -- yes --> Z
-    D -- no --> G
+    D -- no --> P
     C -- Bash --> E[split into segments, track cd and git -C]
     E --> F{git write that the exemptions do not cover?}
     F -- no --> Z
-    F -- yes --> G{role.sh role of that checkout}
+    F -- yes --> P{checkout is the project or a worktree of it?}
+    P -- no --> Z
+    P -- yes --> G{role.sh role of that checkout}
     G -- "home, stale:?, stray" --> X[deny with one line]
     G -- "anything else, or no role.sh, or an error" --> Z
 ```
