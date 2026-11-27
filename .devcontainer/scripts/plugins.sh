@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the two Claude Code plugins codeo's own development needs: superpowers, and codeo at the
+# Installs the two Claude Code plugins the project's issue containers need: superpowers, and codeo at the
 # version pinned in .codeo/config.json (plugin.repo and plugin.ref). Safe to re-run: what is already
 # installed at the pin is left alone, and a changed pin (repo or ref) replaces the installed codeo. Claude loads
 # plugins when a session starts, so a session already open will not see a change until it restarts.

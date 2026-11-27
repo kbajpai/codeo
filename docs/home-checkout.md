@@ -81,17 +81,17 @@ flowchart TD
 
 ## Adopting the guard in your project
 
-The guard is the project's own: `/codeo:setup` writes none, and a project without one is never refused.
+The guard is the project's to keep. `/codeo:setup --containers` writes `.devcontainer/scripts/role.sh` as a managed script and the eight `## role-guard` overlays as seed files the project may edit; `scripts/codeo-init.sh --env containers` writes the same. Plain `/codeo:setup`, without `--containers`, writes no guard, and a project without one is never refused.
 
-To add one, give each of the eight guarded skills (`issue`, `init`, `triage`, `cleanup`, `plan`, `implement`, `qc`, `close`) a `## role-guard` section in `.codeo/overlays/<skill>.md`. The section is plain text that tells the skill to run the project's check first and what each exit means:
+The eight guarded skills are `issue`, `init`, `triage`, `cleanup`, `plan`, `implement`, `qc` and `close`. Each has a `## role-guard` section in `.codeo/overlays/<skill>.md`, plain text that tells the skill to run the project's check first and what each exit means:
 
 - 0: go on.
 - 1: print the one line and stop; nothing the engineer says lifts it.
 - Anything else: report what was printed and go on.
 
-The check is any script the project writes. The skill reads the exit and, on exit 1, the one line the check prints; on any other exit it reports what the check printed. `/codeo:doctor`'s `overlays` check confirms each section name is a registered point and used once.
+The check is any script. The one `--containers` writes is `role.sh`; a project may replace it with its own check and point the overlays at that instead. The skill reads the exit and, on exit 1, the one line the check prints; on any other exit it reports what the check printed. `/codeo:doctor`'s `overlays` check confirms each section name is a registered point and used once.
 
-codeo's own guard is the worked example: `.codeo/overlays/plan.md` (a one-paragraph section) and `.devcontainer/scripts/role.sh`, whose roles are the table above. The script reads the clone's folder, the lock and the branch, calls `container-name.sh` beside it, and assumes the folder names `<codename>-home` and `<codename>-<N>`. It is not shipped for other projects, so a project writes its own check for its own layout.
+codeo's own guard is the worked example: `.codeo/overlays/plan.md` (a one-paragraph section) and `.devcontainer/scripts/role.sh`, whose roles are the table above. The script reads the clone's folder, the lock and the branch, calls `container-name.sh` beside it, and assumes the folder names `<codename>-home` and `<codename>-<N>`, which the rendered containers use. A project whose clones are named otherwise writes its own check for its own layout.
 
 For the point's contract and its generic example, see [`extension-points.md`](extension-points.md#issuerole-guard).
 

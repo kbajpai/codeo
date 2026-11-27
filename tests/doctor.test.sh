@@ -350,7 +350,33 @@ doctor_priority_create_command_works_with_a_space_in_the_plugin_path() {
     [[ $(bash -c "$cmd" 2>&1) == "ran: label create priority: low" ]] || fail "command broke on the space: $cmd"
 }
 
-for c in doctor_overlays_ok_with_trailing_whitespace_and_crlf doctor_overlays_fail_on_a_duplicate_section \
+doctor_fails_containers_without_the_plugin_pin() {
+    jq '.codename = "widgets"' <<<"$healthy" > .codeo/config.json
+    bash "$plugin_root/scripts/containers.sh" >/dev/null || fail "render failed"
+    run
+    [[ $rc -ne 0 ]] || fail "expected non-zero"
+    grep -qxF 'fail containers: the container scripts are present but .codeo/config.json has no plugin.repo and plugin.ref, so the container cannot install codeo; set them (see docs/container-templates.md in the codeo plugin ('"$plugin_root"'/docs/container-templates.md))' <<<"$out" || fail "no pin failure"
+    jq '.plugin = {repo: "o/codeo", ref: "v1.0.0"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
+    run
+    grep -q '^ok containers' <<<"$out" || fail "pinned project not ok"
+    jq '.plugin = {repo: "o/codeo"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
+    run
+    grep -qF "has no plugin.ref, so the container" <<<"$out" || fail "half pin (ref missing): $out"
+    ! grep -qF "plugin.repo" <<<"$out" || fail "names the present key: $out"
+    grep -qF "cannot install codeo; set it (see" <<<"$out" || fail "one key says set it: $out"
+    jq '.plugin = {ref: "v1"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
+    run
+    grep -qF "has no plugin.repo, so the container" <<<"$out" || fail "half pin (repo missing): $out"
+    jq '.plugin = {repo: "o/codeo", ref: "v1.0.0"}' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
+    echo "# x" >> .devcontainer/codeo
+    jq 'del(.plugin)' .codeo/config.json > .codeo/config.json.new && mv .codeo/config.json.new .codeo/config.json
+    run
+    grep -q '^fail containers: differ from the templates: .*; the container scripts are present but' <<<"$out" || fail "both problems not reported"
+    grep -qF "refresh with: bash $plugin_root/scripts/containers.sh --force" <<<"$out" || fail "refresh path: $out"
+    rm -rf .devcontainer .sbx .codeo/overlays
+}
+
+for c in doctor_fails_containers_without_the_plugin_pin doctor_overlays_ok_with_trailing_whitespace_and_crlf doctor_overlays_fail_on_a_duplicate_section \
     doctor_overlays_hint_at_a_double_space_heading doctor_superpowers_json_without_plugins_key_is_not_a_fail \
     doctor_overlays_ok_when_none doctor_overlays_ok_counts_sections \
     doctor_overlays_fail_names_file_section_and_known_points doctor_superpowers_fail_with_install_command \

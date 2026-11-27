@@ -169,11 +169,58 @@ It asks for the login password. This is what `codeo home` showed over SSH; other
 | `stray` | on the host, no lock, and a folder that is not `<codename>-home` | Refuses every guarded skill in one line: the checkout is neither the home clone nor an issue's; a home-only skill is sent to a home checkout, any other to an issue's. |
 | `unguarded` | `CLAUDE_CODE_REMOTE=true`, or a container in a folder that is neither `<codename>-home` nor `<codename>-<digits>` | Lets everything run, as it does without a guard. |
 
+A project that adopted the templates gets the same rule under its own codename: the clone `/codeo:setup --containers` ran in plays the home role on the host only in a folder named `<codename>-home` that holds no lock and is on the base branch; with no lock in a differently named folder it is `stray`, and off the base branch in `<codename>-home` it is `stale:?`.
+
 A host checkout is never `unguarded`: it is `home`, `issue:<N>` or `stray`. A hosted web session is exempt, and so is a container in any other folder (a toolbox or distrobox container also has `/run/.containerenv`, so a clone there in a folder named `<codename>-home` or `<codename>-<digits>` is guarded). `/codeo:doctor` and `/codeo:setup` are outside the guard: `role.sh --check` exits 2 for them. `<codename>` is `.codeo/config.json`'s `codename`, else the clone's folder name.
 
 Each guarded skill (`/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup`, `/codeo:plan`, `/codeo:implement`, `/codeo:qc`, `/codeo:close`) has a `role-guard` section in its overlay, `.codeo/overlays/<skill>.md`, that runs `bash .devcontainer/scripts/role.sh --check <skill>` as the skill's first step. `--check` exits 0 and prints nothing when the skill may run, and exits 1 with one line naming where the skill runs and this container's role when it may not; any other exit (the script is missing, or failed) is reported by the overlay text, which then goes on. A refusal ends the step; nothing the engineer says lifts it, and the way forward is the checkout the message names. `role.sh` with no arguments prints the role.
 
 A container whose clone lacks the role script and the guard overlays, such as one created from a branch cut before the guard existed, is not guarded: it runs every skill as before until it is removed.
+
+## Using this in another project
+
+Everything above names codeo's own containers (`codeo-home`, `codeo-<N>`, `kbajpai/codeo`). Another project gets its own copy of these files, rendered from the plugin's `templates/containers/` with the project's names.
+
+**Where the files come from.** `/codeo:setup --containers`, or `scripts/codeo-init.sh --env containers` from outside Claude Code, writes `.codeo/config.json` and then the container files into the project. The top-level README's [Adopting codeo with containers](../README.md#adopting-codeo-with-containers) describes both ways, and [docs/container-templates.md](../docs/container-templates.md) is the reference for the files, the names and the placeholders.
+
+**Managed and seed files.** The scripts (`.devcontainer/codeo`, `codeo-container.sh`, `codeo-track.sh`, `.sbx/codeo-sandbox.sh` and `.devcontainer/scripts/`) are managed: codeo rewrites them on request and checks them. The Dockerfile, `devcontainer.json`, `.sbx/claude-image` and the `.codeo/overlays/` files are seeds: written once, never overwritten, yours to edit. [docs/container-templates.md](../docs/container-templates.md#managed-and-seed-files) lists each.
+
+**Checking and refreshing.** Run `bash <plugin>/scripts/containers.sh` from inside the project, where `<plugin>` is the installed plugin's directory. `bash .devcontainer/scripts/codeo-root.sh` run inside a project that has the container scripts prints it and exits 0, or exits 1 with one `codeo-root:` line when it finds no installed codeo (`CODEO_ROOT` overrides the lookup; one set to a directory without `scripts/lock.sh` fails). Otherwise it is the `installPath` recorded for `codeo@codeo` in the plugin registry, `~/.claude/plugins/installed_plugins.json` (an entry for another project is skipped; `CLAUDE_CONFIG_DIR` replaces `~/.claude`), a directory under `~/.claude/plugins/cache/` in a default install, and the command fails when that directory has no `scripts/lock.sh`. The command:
+
+- With no flag, it writes each file that is absent and leaves a file that exists alone.
+- `--check` writes nothing and exits 1 when a managed file differs from its template or is missing. `/codeo:doctor` runs it.
+- `--force` rewrites the managed files from the templates; the seeds stay. `--check` and `--force` do not go together.
+
+Each file gets one line, `containers: wrote <path>`, `containers: skip <path>`, `containers: ok <path>` (with `--check`, equal to the template) or `containers: differs <path>` (with `--check`, different or missing). The status is 0 on success, 1 when `--check` finds a difference or the config is unusable, and 2 on a usage error.
+
+**Your toolchain.** The Dockerfile has no language runtime. Add your compilers and SDKs only between its two toolchain marker comments, so a later comparison with a newer template stays a small diff.
+
+**Names.** With the config's `codename`, the project's containers are named:
+
+| What | Name |
+|---|---|
+| Home container, its clone and its volume | `<codename>-home` |
+| Issue container, its clone and its volume | `<codename>-<N>` |
+| Volumes shared by every container | `<codename>-gh` and `<codename>-git` |
+| Image of an issue container | `<codename>-dev:<codename>-<N>` |
+
+**Where the `codeo` command downloads from.** The `codeo` command, and the scripts it downloads, come from the project's own repository on its base branch: `https://raw.githubusercontent.com/<owner>/<repo>/<base>`, where `<base>` is `baseBranch` in the config (default `main`). Commit `.devcontainer/`, `.sbx/` and `.codeo/` to that branch first, then install the command from the project's own copy:
+
+```bash
+mkdir -p ~/.local/bin && curl -fsSL -o ~/.local/bin/codeo https://raw.githubusercontent.com/<owner>/<repo>/<base>/.devcontainer/codeo && chmod +x ~/.local/bin/codeo
+```
+
+`CODEO_RAW_URL` names another base URL to download from, and `CODEO_REPO_URL` another repository to clone; in a rendered script their defaults are the project's own.
+
+**One `codeo` command per machine.** The install line puts the command at `~/.local/bin/codeo`, the same name and path as codeo's own command and as every other adopted project's, and the command carries its project's codename and repository. Installing another project's command at that path replaces the first, and `codeo` on `PATH` is whichever project's command was installed last: `codeo issue 5` then works on that project's repository and `codeo rm 5` removes that project's `<codename>-5`. To work with two projects, install each command under its own file name, for example the same line with `-o ~/.local/bin/<codename>` and `chmod +x ~/.local/bin/<codename>`. Renaming the file is enough: the command keeps its files in `~/<codename>` (one directory per codename, unless `CODEO_HOME` says otherwise) and `codeo update` replaces the file it runs as. The command's messages and the `codeo rm <N>` that a workflow prints still say `codeo`; type the renamed command in its place.
+
+**The repository must be public.** The image build (`https://github.com/<owner>/<repo>.git#<ref>:.devcontainer`), the container's clone and the downloads above fetch without credentials, so for a private repository the install line, `codeo issue <N>`, `codeo update` and the container's clone fail with no explanation. `CODEO_CONTEXT` (the `.devcontainer` directory of a local clone) builds the image without fetching it, but the container still clones from `CODEO_REPO_URL` with no credentials, so a private repository's container still fails at the clone. `CODEO_RAW_URL` can name a server that serves the three scripts without credentials, and a script already in `CODEO_HOME` is not downloaded again. The sandbox route's clone is made by the host's own `git`. codeo does not test a private repository and has no authenticated fetch.
+
+**Where the `codeo` command keeps its files.** `CODEO_HOME` defaults to `~/<codename>`, and the codename defaults to the repository's name, so a project cloned to `~/<codename>` (the repository's name made to fit the rule, unless it is set) makes every `codeo` command stop with "is a git checkout; set CODEO_HOME". Keep the project's clone elsewhere, or set `CODEO_HOME`.
+
+**The home checkout.** The clone `/codeo:setup --containers` or the wizard ran in is a home checkout only under that name (see *Roles and the guard*): On the host, a clone is a home checkout when its folder is named `<codename>-home`, it holds no lock and it is on the base branch; a host clone with no lock in a differently named folder reads as `stray`, and the home skills (`/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup`) are refused there. Both ways end by printing the name the folder needs and whether the current one has it; rename or re-clone the folder when it does not.
+
+**An example.** `examples/csharp-angular/` shows a Dockerfile toolchain section (`examples/csharp-angular/.devcontainer/Dockerfile`) and suites (`examples/csharp-angular/codeo-suites.json`) for a C# API, an Angular web app and Kubernetes manifests, with `api/`, `k8s/`, `web/` (the generated Angular app, shipped as is), `examples/csharp-angular/scripts/generate-web.sh` (which regenerates it) and `examples/csharp-angular/scripts/run-suites.sh` beside them. [docs/container-templates.md](../docs/container-templates.md#the-c--angular-example) lists the files and the steps to use them. The example has not been built by this repository's tests, which use stub commands in place of .NET, Node and Docker. `examples/csharp-angular/scripts/host-run.sh` checks it end to end on a host with Docker; [docs/container-templates.md](../docs/container-templates.md#the-c--angular-example) has the details.
 
 ## Removing a finished container
 

@@ -225,7 +225,7 @@ ok superpowers: installed
 
 That is what a project sees when its base branch has the ruleset. A new repository has no branch ruleset yet, so `ruleset` fails (`fail ruleset: main does not require: tests qc-verdict`, or `could not read rules`) until the base branch requires the checks `tests` and `qc-verdict`, or you list your own under `ci.requiredChecks` (see [Configuration](#configuration)); see **ruleset.** in [Checks from /codeo:doctor](#checks-from-codeodoctor).
 
-A twelfth check, `priority-labels`, prints only when `issue.priority` is `true`; see **priority-labels.** in [Checks from /codeo:doctor](#checks-from-codeodoctor).
+Two more checks print only in some projects: `priority-labels` when `issue.priority` is `true`, and `containers` when the project has container scripts (`.devcontainer/codeo-container.sh` or `.sbx/codeo-sandbox.sh`); see **priority-labels.** and **containers.** in [Checks from /codeo:doctor](#checks-from-codeodoctor).
 
 Then commit `.codeo/` and `docs/plans/`; the config is shared by everyone who works on the project.
 
@@ -234,6 +234,72 @@ Then commit `.codeo/` and `docs/plans/`; the config is shared by everyone who wo
 The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` in a clone named `<codename>-home`. A project with its own role guard refuses a skill outside its checkout. The project needs a GitHub repository whose `origin` remote points at it; a project board is optional.
 
 See [docs/home-checkout.md](docs/home-checkout.md) for the home checkout, the guard and the tracking comment, and [.devcontainer/README.md](.devcontainer/README.md) for the dev container.
+
+### Adopting codeo with containers
+
+A project that wants codeo's dev container and sbx sandbox files has two ways to adopt them. Both need the same things first: the repository exists on GitHub, the clone's `origin` remote points at it, and `gh` is logged in with access to it. codeo never creates a repository. The one-command way checks all three and stops with `init: fail preflight` when one is missing.
+
+Four more conditions decide whether the result works:
+
+- **The repository is public.** The container route builds the image from `https://github.com/<owner>/<repo>.git`, clones the repository inside the container, and the `codeo` command, its scripts and the project's `codeo` install line (under *The project's `codeo` command* below) download from `raw.githubusercontent.com`. The image build's Git URL, the container's clone and the `raw.githubusercontent.com` downloads use no credentials (the `codeo issue` branch lookup uses the host's own `git`, which can use the host's credentials). For a private repository the install line, `codeo issue <N>`, `codeo update` and the container's clone fail with no explanation. The workarounds are narrow. `CODEO_CONTEXT` (the `.devcontainer` directory of a local clone) builds the image without fetching it, but the container still clones from `CODEO_REPO_URL` with no credentials, so a private repository's container still fails at the clone. `CODEO_RAW_URL` names another base URL the `codeo` command downloads its three scripts from, and a script already in `CODEO_HOME` is not downloaded again. The sandbox route's clone is made by the host's own `git`. codeo does not test a private repository and has no authenticated fetch. The wizard prints a note when `gh` reports the repository private; it is a note, not a refusal.
+- **The home checkout's folder is named `<codename>-home`.** The clone you run `/codeo:setup --containers` or the wizard in is a home checkout only under that name. The role guard decides it (`.devcontainer/scripts/role.sh`): On the host, a clone is a home checkout when its folder is named `<codename>-home`, it holds no lock and it is on the base branch; a host clone with no lock in a differently named folder reads as `stray`, and the home skills (`/codeo:issue`, `/codeo:init`, `/codeo:triage`, `/codeo:cleanup`) are refused there. (A clone inside a container in a folder named neither `<codename>-home` nor `<codename>-<N>` is not guarded at all.) Both ways end by printing the name the folder needs and whether the current folder has it; rename or re-clone the folder when it does not.
+- **The project's clone is not at `~/<codename>`.** The `codeo` command keeps its scripts and sandbox clones in `~/<codename>` (`CODEO_HOME`), and the codename defaults to the repository's name, so a project cloned to `~/<codename>` (the repository's name made to fit the rule, unless it is set) makes every `codeo` command stop with "is a git checkout; set CODEO_HOME". Keep the project's clone elsewhere, or set `CODEO_HOME` to another directory.
+- **One `codeo` command serves one project per machine.** The rendered `codeo` command is installed as `~/.local/bin/codeo`, the same name and path as codeo's own command and as every other adopted project's, and it carries its project's codename and repository. Installing a second project's command at that path replaces the first, and `codeo` on `PATH` is whichever project's command was installed last; `codeo issue 5` then works on that project's repository and `codeo rm 5` removes that project's `<codename>-5`. To work with two projects, install each command under its own file name, for example `~/.local/bin/<codename>`; renaming the file is enough, because the command keeps its files in `~/<codename>` (a different directory for each codename) and `codeo update` replaces the file it runs as. The command's messages and the `codeo rm <N>` a workflow prints still say `codeo`: type the renamed command in its place.
+
+In a command below, `<plugin>` is the installed plugin's directory. `bash .devcontainer/scripts/codeo-root.sh` run inside a project that has the container scripts prints it and exits 0, or exits 1 with one `codeo-root:` line when it finds no installed codeo (`CODEO_ROOT` overrides the lookup; one set to a directory without `scripts/lock.sh` fails). Otherwise it is the `installPath` recorded for `codeo@codeo` in the plugin registry, `~/.claude/plugins/installed_plugins.json` (an entry for another project is skipped; `CLAUDE_CONFIG_DIR` replaces `~/.claude`), a directory under `~/.claude/plugins/cache/` in a default install, and the command fails when that directory has no `scripts/lock.sh`.
+
+**One command.** From inside the project's clone, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/scripts/codeo-init.sh | bash -s -- --env containers
+```
+
+The command fetches the newest release (the highest `vX.Y.Z` tag) and works from the first release that ships `scripts/codeo-init.sh`; a release without it ends `init: fail fetch: <tag> has no scripts/codeo-init.sh`, and until one ships it, run `bash <plugin>/scripts/codeo-init.sh --env containers` from a checkout of codeo or the installed plugin instead.
+
+`scripts/codeo-init.sh` fetches its own release when it runs alone like this, installs the plugins, writes `.codeo/config.json`, writes the container files and then runs the `/codeo:doctor` checks. It asks a few questions (codename, scope, the environment, `none` or `containers`, unless `--env` is given, and whether to add a suite) only at a terminal, and only for what a flag did not answer; `--yes` takes every default. Its other flags are `--codename <name>`, `--scope user|project`, `--version vX.Y.Z`, `--suite <name>:<paths>:<build>:<test>` (repeatable; the build command cannot contain a colon, only the test command may) and `--skip-install`, which leaves the plugin install to you. Each step prints one line, `init: ok <step>`, `init: skip <step>` (nothing to do, for example a config that already exists and is kept) or `init: fail <step>: <reason>`, `init: note: <text>` (a note that is not a step and does not change the exit status), and the doctor's lines follow. The steps run in this order: `preflight` (the repository exists and `gh` can see it), `install`, `config`, `suite` (one per `--suite`), `config` again for the plugin pin the container installs, and `containers`. The exit status is 0 when every step and every doctor check passed, 1 otherwise and 2 for a usage error. Running it again is safe: the config is kept, apart from the suites, the plugin pin and a missing codename its flags add (a config without a codename gets the one given or derived), and a codename that differs from the config's is ignored with one `init: skip codename` line; the container files are written only where absent, and the `containers` line counts those written and those kept.
+
+A repository with no commit yet has no `origin/HEAD`, and the wizard then prints `init: fail config: baseBranch is TODO-set-me (the clone has no origin/HEAD: …)` and `init: skip containers: baseBranch is not set` in place of the lines below; the first run has already written `.codeo/config.json` with `baseBranch` set to `TODO-set-me`, and a rerun keeps that config and stops with `init: fail config: config.json: baseBranch is TODO-set-me; set baseBranch in .codeo/config.json to the repository's base branch`. Set `baseBranch` in `.codeo/config.json` to the branch (for example `main`) and run the wizard again; the config is kept, so nothing else changes. To avoid the failure, push the first commit and run `git remote set-head origin <base>` before the first run.
+
+The block below is the output of a run on a Linux host with `--yes --skip-install --env containers --codename shopdemo` and one `--suite` per suite (`api`, `web` and `k8s`), in a clone of a repository with one commit on `main` and `origin/HEAD` set, with `dotnet`, `npm` and `kubectl` on the host's `PATH` and the superpowers plugin installed (without them doctor prints `fail suites` and `fail superpowers` lines in place of the two `ok` lines), whose `.devcontainer/Dockerfile` was already in place (the example's), which is why `init: ok containers:` reports 22 written and 1 kept; a project with no Dockerfile yet gets all 23 written. `--skip-install` is why the install step prints `init: skip`, and `fail ruleset` is the expected failure on a new repository (see below). The block is that run's output up to the `containers` line and doctor's lines; the wizard also prints the `init: note:` lines described here, which are not in the block. It prints the notes after the `containers` line, before doctor's lines: when it kept a seed file, `init: note: kept files are yours and are not checked against the templates …` (the sentence ends by pointing at `docs/container-templates.md`, Managed and seed files), and, when the containers step ran and the config has a codename, `init: note: the home checkout is a clone whose folder is named <codename>-home; this folder is '<folder>'`, followed, only when the folder is named otherwise, by `init: note: rename or re-clone it as <codename>-home to run the home skills (/codeo:issue, /codeo:init, /codeo:triage, /codeo:cleanup) here`. When `gh` reports the repository private, a note follows the `preflight` line: `init: note: <owner>/<repo> is private; the container route and the codeo command fetch GitHub URLs without credentials and fail for a private repository …`. It is a note, not a refusal; the run goes on:
+
+```
+init: ok preflight: kbajpai/rodeo2 exists and gh can see it
+init: skip install: --skip-install
+init: ok config: .codeo/config.json written
+init: ok suite: api
+init: ok suite: web
+init: ok suite: k8s
+init: ok config: plugin pin v1.0.10 (the container installs it)
+init: ok containers: 22 written, 1 kept
+ok config: config.json is valid
+ok schema: supported (plugin understands up to 1)
+ok codename: shopdemo
+ok gh-auth: gh api user succeeded
+ok gh-scopes: no board configured; the project scope is not needed
+ok board: no board configured
+fail ruleset: main does not require: tests qc-verdict
+ok suites: 3 suite(s), every build and test command resolves
+ok deps: jq, git, bash 5.3.9(1)-release
+ok overlays: 11 section(s) in 8 file(s)
+ok superpowers: installed
+ok containers: managed scripts match the templates
+```
+
+**Inside Claude Code.** With the plugin installed, run `/codeo:setup --containers`; add `--codename <name>` to choose the codename. It writes `.codeo/config.json` as [step 1](#1-run-codeosetup) describes, then the container files. It also writes `codename` (the repository's name made to fit the codename rule, when `--codename` is not given) and the plugin pin `plugin.repo` and `plugin.ref` (the newest release of codeo), so the files and the config agree and the container installs codeo; with no release to find, it says so in one line and still writes the files. In a project that already has a config, `/codeo:setup --containers` alone (or with `--codename <name>`, when the config has no codename) adds a missing `codename` and a missing pin to it and writes the container files, and changes nothing else in the config.
+
+Either way, the files written are the managed scripts and the seeds. The managed files are `.devcontainer/codeo`, `.devcontainer/codeo-container.sh`, `.devcontainer/codeo-track.sh`, `.sbx/codeo-sandbox.sh` and the scripts under `.devcontainer/scripts/`; `bash <plugin>/scripts/containers.sh --force` rewrites them and `/codeo:doctor` checks that they match. The seeds are yours to edit and are never overwritten: `.devcontainer/Dockerfile`, `.devcontainer/devcontainer.json`, `.sbx/claude-image` and one for each of the eight workflow skills in `.codeo/overlays/`. [docs/container-templates.md](docs/container-templates.md) lists each file, where its names come from and where your own toolchain goes. The sandbox uses Docker's pinned image and does not get the project's toolchain, which the dev container does (see [docs/container-templates.md](docs/container-templates.md)).
+
+Commit `.devcontainer/`, `.sbx/` and `.codeo/` to your base branch: `codeo issue <N>` downloads its scripts from there.
+
+**The project's `codeo` command.** Once the files are on the base branch, install the project's own command on each host that runs `codeo issue <N>`, with `<owner>/<repo>` the repository and `<base>` its base branch (`baseBranch` in the config, default `main`):
+
+```bash
+mkdir -p ~/.local/bin && curl -fsSL -o ~/.local/bin/codeo https://raw.githubusercontent.com/<owner>/<repo>/<base>/.devcontainer/codeo && chmod +x ~/.local/bin/codeo
+```
+
+The same line is in [.devcontainer/README.md](.devcontainer/README.md#using-this-in-another-project), next to the one-`codeo`-per-machine condition above.
+
+A new repository has no branch ruleset, so `/codeo:doctor` reports `fail ruleset` until the base branch requires the checks `tests` and `qc-verdict` (or `ci.requiredChecks` lists your own). On a host that has the project's toolchain and the plugins installed, `fail ruleset` is the one failure a fresh adoption is expected to show; a host without them also shows the `deps`, `superpowers` or `suites` check.
 
 ## Your first workflow
 
@@ -333,7 +399,7 @@ Run the command in Steps 1. A step that was interrupted can be run again: it wor
 
 ## Configuration
 
-The project's settings live in `.codeo/config.json`. It is committed, so everyone on the project shares it. Four keys are required (`schema`, `repo.owner`, `repo.name`, `baseBranch`); every other key is optional and has the default shown. A key the plugin does not know is ignored without a message, so a misspelt key does nothing. The four required keys fail validation if they are missing or still hold the `TODO-set-me` marker that `/codeo:setup` writes for a value it could not read. `/codeo:doctor` checks that, and then `schema`, `codename`, `board` (`board.owner` and `board.projects` are read, and the board counts as set if either is present), `issue.priority`, `ci.requiredChecks` (against the base branch's ruleset, which also reads `repo.*` and `baseBranch`) and each suite's `build` and `test`. It does not check `resources`, `environment`, `hooks`, `modules`, `models`, `triage`, `invariants`, `docsDir`, `plansDir`, `labelTypes`, `skipGlobs`, `plugin` or `stacks`. `/codeo:setup` writes only the required keys plus an empty `suites` and an empty `resources`; `/codeo:setup --stack <name>` also writes `stacks`.
+The project's settings live in `.codeo/config.json`. It is committed, so everyone on the project shares it. Four keys are required (`schema`, `repo.owner`, `repo.name`, `baseBranch`); every other key is optional and has the default shown. A key the plugin does not know is ignored without a message, so a misspelt key does nothing. The four required keys fail validation if they are missing or still hold the `TODO-set-me` marker that `/codeo:setup` writes for a value it could not read. `/codeo:doctor` checks that, and then `schema`, `codename`, `board` (`board.owner` and `board.projects` are read, and the board counts as set if either is present), `issue.priority`, `ci.requiredChecks` (against the base branch's ruleset, which also reads `repo.*` and `baseBranch`) and each suite's `build` and `test`. It does not check `resources`, `environment`, `hooks`, `modules`, `models`, `triage`, `invariants`, `docsDir`, `plansDir`, `labelTypes`, `skipGlobs` or `stacks`. It checks `plugin.repo` and `plugin.ref` only for a project that has container scripts (the `containers` check). `/codeo:setup` writes only the required keys plus an empty `suites` and an empty `resources`; `/codeo:setup --stack <name>` also writes `stacks`.
 
 The table runs in five groups, in this order: required keys, project and suites, board and issues, environment and leases, models and checks. A key written `suites[].name` is a field of each entry in the `suites` list.
 
@@ -343,7 +409,7 @@ The table runs in five groups, in this order: required keys, project and suites,
 | `repo.owner` | yes | none | The GitHub owner of the repository. |
 | `repo.name` | yes | none | The GitHub name of the repository. |
 | `baseBranch` | yes | none | The branch workflows start from and pull requests target, such as `main`. |
-| `codename` | no | the clone's folder name | A short name for the project, used to name its clones and dev containers (`<codename>-home`, `<codename>-<N>`). Lower-case letters, digits and single hyphens, starting with a letter, 2 to 30 characters. |
+| `codename` | no | none for `scripts/containers.sh`, which refuses a config without one; the dev container's `container-name.sh` and `role.sh` fall back to the clone's folder name. `/codeo:setup --containers` and `scripts/codeo-init.sh` write it (the repository's name made to fit the rule, unless you pass `--codename`) | A short name for the project, used to name its clones and dev containers (`<codename>-home`, `<codename>-<N>`). Lower-case letters, digits and single hyphens, starting with a letter. `/codeo:setup --codename` and `/codeo:doctor` require 2 to 30 characters; `scripts/containers.sh` checks only the characters. |
 | `plugin.repo` | no | none | The codeo plugin repository the dev container installs, as `owner/name`. Set it together with `plugin.ref`. |
 | `plugin.ref` | no | none | The tag or branch of the codeo plugin the dev container installs. Needed together with `plugin.repo`. |
 | `suites[].name` | yes, per suite | none | The suite's name. |
@@ -521,6 +587,12 @@ fail suites: not installed or unset: api:make api:pytest
 fail superpowers: not installed; install it with: claude plugin install superpowers@superpowers-marketplace
 ```
 
+**containers.** Printed only when the project has `.devcontainer/codeo-container.sh` or `.sbx/codeo-sandbox.sh`. It fails for any of three causes, and reports every one that applies. `differ from the templates: <files>; refresh with: bash <plugin>/scripts/containers.sh --force` means a managed container script was edited, is missing or is older than the plugin's template: run that command (the message prints the plugin's folder in place of `<plugin>`), then review the diff, since `--force` overwrites the managed scripts. `the container scripts are present but .codeo/config.json has no plugin.repo and plugin.ref, so the container cannot install codeo; set them (see docs/container-templates.md …)` means the container has no pin to install codeo from: run `/codeo:setup --containers`, or set both `plugin.repo` and `plugin.ref` in `.codeo/config.json` by hand. The third cause is a config the templates cannot be rendered from (a missing or invalid `codename`, `TODO-set-me` in the repository or base branch, a malformed owner or name): the line is the first line of `containers.sh`'s refusal, for example `fail containers: codeo: config.json has no codename: run /codeo:setup --containers …`, and it names its own fix; fix the config key it names, then rerun. With an unusable config the line is `skipped: config is unusable`; fix the config first.
+
+```
+fail containers: differ from the templates: .devcontainer/codeo-container.sh; refresh with: bash /home/you/.claude/plugins/codeo/scripts/containers.sh --force
+```
+
 ### Installing and the pin
 
 **`its source doesn't match its extraKnownMarketplaces entry`.** Adding the codeo marketplace at a second tag by hand fails, because the marketplace is already added at the first:
@@ -622,7 +694,7 @@ The six pipeline skills run in order inside one workflow, each owning one dossie
 | [`/codeo:cleanup`](docs/skills.md#cleanup) | Print the commands that remove finished issues' containers; it proves each one first and runs nothing |
 
 [`/codeo:setup`](docs/skills.md#setup) writes `.codeo/` with a starter `config.json` and creates `docs/plans/`;
-[`/codeo:doctor`](docs/skills.md#doctor) checks the whole set-up — config, schema, codename, GitHub login and scopes, board, priority labels, branch ruleset, suites, dependencies, overlays and superpowers (twelve checks, `priority-labels` only when `issue.priority` is `true`) — and reports every failure.
+[`/codeo:doctor`](docs/skills.md#doctor) checks the whole set-up — config, schema, codename, GitHub login and scopes, board, branch ruleset, suites, dependencies, overlays and superpowers (eleven checks, plus `priority-labels` when `issue.priority` is `true` and `containers` when the project has container scripts) — and reports every failure.
 
 A project shapes a skill without editing it through overlay files, `.codeo/overlays/<skill>.md`.
 Each skill's extension points are listed in `docs/skills.md` and documented in
@@ -636,6 +708,7 @@ in `docs/dossier.md` and `docs/handoff.md`.
 - [`docs/dossier.md`](docs/dossier.md): the dossier files under `.codeo/<issue>/` and their protocol
 - [`docs/handoff.md`](docs/handoff.md): how a workflow moves between steps, sessions and machines
 - [`docs/home-checkout.md`](docs/home-checkout.md): the home checkout, the role guard and the tracking comment
+- [`docs/container-templates.md`](docs/container-templates.md): the dev container and sbx sandbox files codeo writes, managed or seed, and where each name comes from
 - [`docs/updating.md`](docs/updating.md): updating, replacing, restoring and moving a project's pin
 - [`.devcontainer/README.md`](.devcontainer/README.md): the dev container, roles and the `codeo` host command
 - [`CHANGELOG.md`](CHANGELOG.md): every release, with its config schema, shared state and mid-workflow safety

@@ -147,7 +147,7 @@ case $role in
                 if [[ $kind == home ]]; then
                     echo "$head issue #$number's workflow was $word and this checkout holds no lock (role $role); run it in a home checkout."
                 elif [[ $word == stashed ]]; then
-                    echo "$head issue #$number's workflow was stashed and this container holds no lock (role $role); /codeo:init #$number in a home checkout is the way back, never the start script, and it opens a new container with this one's name, so remove this one on the host first, once git status here shows nothing unpushed (.devcontainer/README.md says how)."
+                    echo "$head issue #$number's workflow was stashed and this container holds no lock (role $role); /codeo:init #$number in a home checkout is the way back, never the start script, and it opens a new container with this one's name, so remove this one on the host first, once git status here shows nothing unpushed."
                 else
                     echo "$head issue #$number's workflow was abandoned and this container holds no lock (role $role); nothing more runs here, and it may hold the only copy of the work, so check that the branch is still on origin before removing it."
                 fi ;;

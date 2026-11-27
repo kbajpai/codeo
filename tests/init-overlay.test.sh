@@ -18,7 +18,7 @@ out=$(bash scripts/overlay.sh init host-workflow 2>/dev/null) || rc=$?
 for needle in 'home checkout' 'the host clone named `codeo-home`' 'This skill does not write `.codeo/active`' 'Clone Repository in Named Container Volume' \
     'https://github.com/kbajpai/codeo/tree/' 'codeo-<N>' 'git worktree remove' 'git branch -D' \
     '/codeo:plan' 'lock: took the lock for #<N>' \
-    'bash codeo-container.sh issue <N> <branch>' 'bash codeo-container.sh shell <N>' 'command line' 'codeo rm <N>' \
+    'codeo issue <N> <branch> --container' 'no clone of the project is needed on the host' 'From a host clone of the project, `bash .devcontainer/codeo-container.sh issue <N> <branch>`' 'codeo shell <N>' 'bash .devcontainer/codeo-container.sh shell <N>' 'codeo issue <N> <branch> --sandbox' 'outside the project clone' 'bash codeo-sandbox.sh issue <N> <branch>' 'command line' 'codeo rm <N>' \
     'bash .devcontainer/codeo-track.sh add <N> branch <branch>' 'track:' 'changes nothing'; do
     [[ "$out" == *"$needle"* ]] || fail "overlay output lacks: $needle"
 done

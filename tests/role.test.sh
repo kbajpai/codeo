@@ -97,7 +97,7 @@ stale_needles() {
     else
         case $state in
             finished) want+=("/codeo:cleanup"); bad=(devcontainer-start.sh re-run) ;;
-            stashed) want+=("/codeo:init #67" "never the start script" "remove this one" ".devcontainer/README.md"); bad=(re-run finished) ;;
+            stashed) want+=("/codeo:init #67" "never the start script" "remove this one" "nothing unpushed"); bad=(re-run finished) ;;
             abandoned) want+=("nothing more runs here" "the only copy"); bad=("/codeo:init #" devcontainer-start.sh re-run "the way back") ;;
             lost) want+=("workflow is live" "re-run bash .devcontainer/scripts/devcontainer-start.sh"); bad=(finished stashed abandoned /codeo:cleanup) ;;
             unknown) want+=("container of the issue it is for"); bad=(devcontainer-start.sh finished) ;;

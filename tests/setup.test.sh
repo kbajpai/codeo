@@ -67,8 +67,17 @@ setup_records_stacks() {
     [[ $(jq -c .stacks "$d/.codeo/config.json") == '["dotnet","angular"]' ]] || fail "stacks array"
 }
 
+# $1 overrides the file checked, so the case can be shown failing against a doctored copy.
+setup_documents_codename_and_containers() {
+    local skill="${1:-$plugin_root/skills/setup/SKILL.md}"
+    grep -q -e '--codename' "$skill" || fail "setup skill does not name --codename"
+    grep -q -e '--containers' "$skill" || fail "setup skill does not name --containers"
+    grep -q 'never creates a repository' "$skill" || fail "setup skill does not say it never creates a repository"
+}
+
 for c in setup_creates_state_dir_and_config setup_refuses_an_existing_config \
-    setup_derives_repo_and_base_branch_from_origin setup_marks_unresolved_values_and_says_so setup_records_stacks; do
+    setup_derives_repo_and_base_branch_from_origin setup_marks_unresolved_values_and_says_so setup_records_stacks \
+    setup_documents_codename_and_containers; do
     "$c"
 done
 echo "all cases passed"
