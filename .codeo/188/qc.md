@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 4 is written: back to `/codeo:implement`. The pass stopped at step 2 because `main` moved again (#204, #206 and #211 merged) and the branch now conflicts with it in `CHANGELOG.md`. #204 and #206 also rewrote `skills/close/SKILL.md`, `skills/cleanup/SKILL.md` and their tests, where this branch's wording and pins must survive the merge. Nothing is open.
+Round 5 is written and the verdict is clear: round 3's F8 and round 4's F10 are fixed, the build and the whole `shell` suite pass on the tree merged with #195, #204, #206 and #211, all six criteria are met, and the independent review found no Critical or Important issue. F4, F6, F7 and the new F11 are non-blocking and recorded for `/codeo:triage`. Nothing is open. Next step: `/codeo:close`.
 
 ## Questions
 
@@ -168,9 +168,45 @@ This is the full pass after `/codeo:plan` round 3 and `/codeo:implement` round 4
 
 **Verdict: back to `/codeo:implement`.** Merge `origin/main` (with #204, #206 and #211), resolve `CHANGELOG.md` by keeping every `## Unreleased` entry, and confirm that this branch's F3 wording and pins in `skills/close/SKILL.md` and `tests/close-skill.test.sh`, and its F4 and F6 wording and pins in `skills/cleanup/SKILL.md` and `tests/cleanup-skill.test.sh`, survive the merge where #204 and #206 rewrote those files. Then run `/codeo:qc` again.
 
+
+### Round 5 — 2026-11-27
+
+This is the full pass after `/codeo:implement` round 5 merged `origin/main` (with #204, #206 and #211) into the branch (`fa2fccd`) and resolved the `CHANGELOG.md` conflict that stopped round 4.
+
+**Sync, overlap, scope, build.** `sync-main.sh --abort-on-conflict`: `sync-main: the branch already contains origin/main`, so there are no `also changed on` lines this round (round 5's merge was `fa2fccd`). `overlap.sh 188` printed nothing. `scope.sh origin/main HEAD` printed `suite.shell=true` (its `unclassified paths` list: the `.codeo/188/` dossiers, `CHANGELOG.md` and the two `templates/containers/.codeo/overlays/` files) and no `deploy=` line; no shared environment is configured, so there is no environment step. The `shell` suite's `build` is `true` and exited 0. `overlap.sh --outside 188` printed nothing. `git diff origin/main...HEAD --stat` outside the dossiers and plan: 12 files, 18 insertions, 14 deletions.
+
+**Suite.** `bash tests/run.sh` exited 0 and printed `all cases passed` (real time 1m6s).
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| Each of F2-F6 is corrected as the requirement states, or the pull request names it as dismissed with a reason | met | F2 `docs/release-checklist.md` (`grep -c 'differ by a day from the'` prints `1`); F3 `skills/close/SKILL.md` step 17; F4 the overlays and `docs/home-checkout.md:132`; F5 `docs/home-checkout.md:9`; F6 `skills/cleanup/SKILL.md:96`; the comma (`grep -c 'on record, is listed' CHANGELOG.md` prints `0`). F5 follows the code where the issue's premise ("`gh` still runs") was wrong about it, which the pull request body says |
+| `docs/release-checklist.md` no longer says the UTC date is "the day after" local date | met | `grep -c 'the day after' docs/release-checklist.md` prints `0` |
+| `skills/close/SKILL.md` allowlist wording works on the literal `ls-remote` output, and the "per branch" wording agrees with the skip clause | met | step 17 says each line is `<sha>`, a tab, then `refs/heads/<branch>`, to "drop the `refs/heads/` prefix first", and to print one delete "per branch that passes" (`grep -c` prints `1` for each phrase; `per branch it printed` prints `0`); pinned at `tests/close-skill.test.sh:266-267` |
+| The three tracker-condition lines (F4) name `CODEO_TRACK` as well as `codeo-track.sh`, and say nothing is asked without a tracker | met | "CODEO_TRACK names it, else codeo-track.sh sits beside it" is in all four overlay files (`grep -c` prints `1` in each) and both overlays are byte-equal to their templates after the `@…@` substitution; `docs/home-checkout.md:132` says "when that file is missing, the scripts print one `note:` line, record nothing, and ask nothing, the question above included", true of both scripts (`track_confirm` returns 0 when `track_present` fails). The overlay lines describe `end`, which asks nothing, as the engineer settled in `plan.md` Q1 |
+| `docs/home-checkout.md:9` and `skills/cleanup/SKILL.md:84` match what `live.sh` and `scripts/cleanup.sh` do | met | `docs/home-checkout.md:9` against `scripts/live.sh:158-165`: running `user_label` from `scripts/live.sh` with `jq` off `PATH` and a logging `gh` stub gave `Test Person` (the `git config user.name` value) for `host=container` and `host=local`, `unknown` for `host=web`, and `gh` was called 0 times, which is what the sentence says; `skills/cleanup/SKILL.md:96` against `scripts/cleanup.sh:173-181` (`leftover_proof` counts only names matching `^codeo-live/<N>/[A-Za-z0-9._-]+$`) |
+| `bash tests/run.sh` ends `all cases passed` | met | this round's run, above |
+
+**Findings**
+
+- F8 (blocking in round 3) — fixed by `55eb82e`: `docs/home-checkout.md:9` now says where the signal's user comes from on the host and that only a hosted web session asks for the assignee; the experiment above confirms both host kinds and the hosted one.
+- F9 (non-blocking in round 3) — fixed by `17fef72`: the cleanup overlay's tracker clause is one parenthesis, and its pins still match.
+- F10 (blocking in round 4) — fixed by `fa2fccd`: `main`'s `## Unreleased` bullets all survive (compared by their first 60 characters, none missing; the section's header lines are identical to `main`), and `git diff origin/main -- CHANGELOG.md` shows only this branch's bullet and the removed comma; this branch's wording and pins survive in the files #204 and #206 rewrote.
+- F4 (non-blocking in round 1) — still open, by the engineer's answer (`plan.md` Q8): the F2, F4 and F5 docs sentences have no test pin (`tests/readme.test.sh` pins only "`live.sh` publishes the signal without `jq`").
+- F6 and F7 (non-blocking in round 2) — still open: the cleanup parenthesis does not spell out the name rule, and step 17's "drop the `refs/heads/` prefix" could say "take the field after the tab and drop its prefix".
+- F11 — non-blocking, `/codeo:plan`'s. `docs/home-checkout.md:132`: "The tracker is `CODEO_TRACK` when set" is slightly loose, since the scripts use `${CODEO_TRACK:-…}` and a set-but-empty value falls back to the default; "when set and non-empty" would be exact.
+
+**Independent review** (opus, `QC review:`, given the criteria, told the issue's own wording may be wrong about the code, and given no account of the change): plain-text verdict "Ready to merge: Yes"; no Critical, no Important, four Minor (F7's wording, F4's missing pins, F11, and the pre-existing note below). It reproduced the `user_label` experiment itself on a local and a web host and with `jq` on `PATH` (the stub login, one `gh` call), confirmed F2, F3, F4 and F6 against `scripts/live.sh`, `scripts/github.sh`, `scripts/cleanup.sh`, `.sbx/codeo-sandbox.sh` and `.devcontainer/codeo-container.sh`, all eight overlays equal to their templates, every new pin matching its text and failing on a revert, and the `CHANGELOG.md` diff against `origin/main`; it ran `cleanup-skill`, `close-removal` and `close-skill` and each exited 0. Its declined-to-judge list (the scripts' `note:` text when `CODEO_TRACK` names a missing file, whether `live.sh` should fall back in a web session without `jq`, the unchanged parts of `home-checkout.md:9`, the alone-`leftover` case #206 added, the order of the new bullet) is outside this change.
+
+**Recorded for `/codeo:triage`, not findings of this change:** `docs/skills.md:257` (written by #206, not in this diff) says an issue "that failed only `name` still gets its leftover branch delete" without the condition that origin still holds a validly named branch, the same imprecision F6 fixed in the cleanup skill; `skills/cleanup/SKILL.md:52` carries the same unconditional wording (noted in round 2); and without `jq`, a hosted session with no `CODEO_GITHUB_LOGIN` has its user read `unknown` because `github.sh user login` also stops at the config read (the new `home-checkout.md:9` sentence now says so).
+
+**Footprint:** `overlap.sh --outside 188` printed nothing. **Documentation check:** every sentence the diff adds to a page or skill is in the present tense with no issue number and no "now" (`grep` over the added lines, with `docs/plans` left out, prints `0`); the one `(#188)` is the changelog bullet, where it belongs. No page the diff should have touched was left alone.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-27 — Q1-Q2 raised and answered through the question tool; qc round 1: suite passed, build passed, 4 of 6 criteria met, F1 blocking (plan's), F2-F5 non-blocking; back to /codeo:plan · cost: 5m · opus-5-5 270k in + 2.4M cached / 14k out · sonnet-5-5 188k in + 244k cached / 1k out
 - 2026-11-27 — qc round 2: suite passed, build passed, 6 of 6 criteria met, F1 fixed, review no Critical or Important, F6-F7 non-blocking; clear, forward to /codeo:close · cost: 5m · opus-5-5 330k in + 2M cached / 11k out · sonnet-5-5 28k in + 1.5M cached / 1k out
 - 2026-11-27 — qc round 3 (full pass after close.md round 2's conflict send-back): suite passed, build passed, 4 of 6 criteria met, F1 fixed, F8 blocking (plan's), F9 non-blocking; back to /codeo:plan · cost: 5m · opus-5-5 446k in + 2.7M cached / 14k out · sonnet-5-5 32k in + 2.4M cached / 4k out
 - 2026-11-27 — qc round 4: stopped at step 2 (sync-main: conflict: CHANGELOG.md, after #204, #206 and #211 merged); criteria not yet checkable; back to /codeo:implement · cost: 1m · opus-5-5 457k in + 989k cached / 2k out
+- 2026-11-27 — qc round 5 (full pass on the tree merged with #195, #204, #206 and #211): suite passed, build passed, 6 of 6 criteria met, F8 and F10 fixed, review no Critical or Important, F11 non-blocking; clear, forward to /codeo:close · cost: 2m · opus-5-5 583k in + 2.6M cached / 13k out · sonnet-5-5 25k in + 1.6M cached / 966 out
