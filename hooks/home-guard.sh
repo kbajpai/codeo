@@ -83,13 +83,58 @@ git_write_p() {
     return 1
 }
 
+# normalize_cmd <command>: sets NORM to the command with every quoted span replaced by Q, except a
+# quoted word right after "cd " or "-C ", which keeps its content and loses its quotes, and with
+# every segment break (&&, ||, ;, |, &) turned into a newline. Plain bash, no sed -z: a stock macOS
+# has bash 3.2 and the BSD tools.
+normalize_cmd() {
+    local s=$1 n=${#1} i=0 c j q rest pre out= keep
+    local ctx_cd='(^|[[:space:];&|(])cd[[:space:]]+$' ctx_c='-C[[:space:]]+$'
+    while [[ $i -lt $n ]]; do
+        c=${s:i:1}
+        case $c in
+            '"' | "'")
+                keep=0
+                if [[ $out =~ $ctx_cd || $out =~ $ctx_c ]]; then keep=1; fi
+                rest=${s:i+1}
+                if [[ $c == "'" || $keep == 1 ]]; then
+                    pre=${rest%%"$c"*}
+                    if [[ $pre == "$rest" ]]; then out+=$c; i=$((i + 1)); continue; fi
+                    j=$((i + 1 + ${#pre}))
+                else
+                    j=$((i + 1))
+                    while [[ $j -lt $n ]]; do
+                        q=${s:j:1}
+                        if [[ $q == '\' ]]; then j=$((j + 2)); continue; fi
+                        [[ $q == '"' ]] && break
+                        j=$((j + 1))
+                    done
+                    if [[ $j -ge $n ]]; then out+=$c; i=$((i + 1)); continue; fi
+                    pre=${s:i+1:j-i-1}
+                fi
+                if [[ $keep == 1 ]]; then out+=$pre; else out+=Q; fi
+                i=$((j + 1)) ;;
+            ';') out+=$'\n'; i=$((i + 1)) ;;
+            '|')
+                [[ ${s:i+1:1} == '|' ]] && i=$((i + 1))
+                out+=$'\n'; i=$((i + 1)) ;;
+            '&')
+                [[ ${s:i+1:1} == '&' ]] && i=$((i + 1))
+                out+=$'\n'; i=$((i + 1)) ;;
+            *) out+=$c; i=$((i + 1)) ;;
+        esac
+    done
+    NORM=$out
+}
+
 # bash_guard <cwd> <command>: prints the deny object for the first refused git write and returns 0;
 # prints nothing and returns 1 otherwise. Quoted text is blanked first, so it is never read as a
 # command; each segment is judged by the checkout it addresses. Scripts are not looked into.
 bash_guard() {
     local cur=${1:-.} cmd=$2 seg w i d sub root role
     local -a words args
-    cmd=$(printf '%s' "$cmd" | sed -z -E "s/((^|[[:space:];&|(])cd[[:space:]]+|-C[[:space:]]+)\"([^\"]*)\"/\\1\\3/g; s/((^|[[:space:];&|(])cd[[:space:]]+|-C[[:space:]]+)'([^']*)'/\\1\\3/g; s/(\"([^\"\\\\]|\\\\.)*\"|'[^']*')/Q/g; s/&&|\|\||[;|&]/\n/g")
+    normalize_cmd "$cmd"
+    cmd=$NORM
     while IFS= read -r seg; do
         read -ra words <<<"$seg"
         while [[ ${#words[@]} -gt 0 && ${words[0]} =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; do words=("${words[@]:1}"); done

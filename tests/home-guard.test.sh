@@ -231,6 +231,20 @@ bcheck allow "$h" "git commit -m x"
 bcheck allow "$h" 'git commit -m "a; git push"'
 bcheck allow "$h" "git commit .codeo/192/init.md -m x"
 
+case_desc=bash_without_gnu_sed
+shim="$scratch_root/shim"
+mkdir -p "$shim"
+real_sed=$(command -v sed)
+printf '#!/bin/sh\nfor a in "$@"; do [ "$a" = -z ] && exit 2; done\nexec %s "$@"\n' "$real_sed" >"$shim/sed"
+chmod +x "$shim/sed"
+h=$(bhome gs1 src)
+i=$(clone gs2 codeo-192 feat/192-x 192)
+bcheck deny "$h" "git push" PATH="$shim:$PATH"
+bcheck deny "$h" "git commit -m x" PATH="$shim:$PATH"
+bcheck allow "$h" "git -C $i commit -m x" PATH="$shim:$PATH"
+bcheck allow "$h" "git -C \"$i\" push" PATH="$shim:$PATH"
+bcheck deny "$i" "cd \"$h\" && git push" PATH="$shim:$PATH"
+
 case_desc=hooks_json_registers_the_guard
 hj="$plugin_root/hooks/hooks.json"
 reg=$(jq -r '[.hooks.PreToolUse[] | select(.matcher == "Edit|Write|NotebookEdit|Bash") | .hooks | select(length == 1) | .[0].command] | join("|")' "$hj")
