@@ -67,11 +67,14 @@ is the container the message names.
    the engineer asks you to run one, say it runs on the host and print it again.
    If the script exits non-zero, report its one `cleanup:` line and stop.
 
+   A `cleanup: note:` line the script prints on stderr says how many recorded removals it left out;
+   relay it under the lists as printed.
+
 2. **Say what the proof cannot see.** Every time, even when nothing was proven:
    - Unpushed work in a clone is invisible from here. The proof looks at `origin` only.
    - The proofs need a clone that fetches every branch of `origin`; a clone limited to some branches stops with a message and proves nothing.
    - Nothing `origin` holds records whether a clone was left clean, or whether `/codeo:close` ran to its end there: the lock lives only in that clone. A lease the issue still holds is the one trace this proof can see, and it lists the issue as not proven.
-   - The list is every issue under `.codeo/done/` on the base branch, whether or not it ever had a container, and it grows with each merge; a printed command may name a container that no longer exists, and running it then removes nothing.
+   - The list is every issue under `.codeo/done/` on the base branch, whether or not it ever had a container, and it grows with each merge until their removals are recorded (step 3), and an issue the engineer recorded that now fails a proof is listed as not proven; a printed command may name a container that no longer exists, and running it then removes nothing.
    - The commands run on the host, in a shell, and only after `git status` in that clone shows
      nothing left to lose.
 
@@ -79,6 +82,16 @@ is the container the message names.
    same day adds `-2`): the lists as printed and the date. Commit it with
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit cleanup "docs(codeo): cleanup record for <date>"`
    and say what `intake.sh` printed. Nothing else is written.
+
+   **Record a removal the engineer says they did.** When the engineer names issues whose containers
+   they removed on the host (`I removed 34 36`), or says they removed every proven one, in which case
+   list the proven numbers back and run only for the ones they confirm, run
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup.sh" record <N>…` and relay its lines; `record`
+   restores origin's cleanup records itself. Then commit with
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" commit cleanup "docs(codeo): cleanup removals recorded for #<N>…"`
+   and relay what `intake.sh` printed. If the commit reports a failure, say so and stop; do not
+   retry. A record is the engineer's statement; nothing here verifies that the container is gone, and
+   the next run still proves every issue. Never record a number the engineer did not name.
 
 4. **Close.** End with the closing block
    (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Closing block`). When something was proven, or a `leftover` line was printed (an issue that failed only `name` gets one), the next
@@ -93,7 +106,7 @@ is the container the message names.
 
 - **Reads** `origin`: the base branch's `.codeo/done/` directories, every branch's `.codeo/<N>/`
   listing, issues and pull requests, through the script.
-- **Writes** `.codeo/intake/cleanup/` — the run's record — committed to `codeo/intake` through
+- **Writes** `.codeo/intake/cleanup/` — the run's record and the removal records under `removed/` — committed to `codeo/intake` through
   `intake.sh`, never to the checked-out branch.
 - **Never touches** the lock, any dossier, any branch other than `codeo/intake`, issue, board or pull request, or the
   container engine.

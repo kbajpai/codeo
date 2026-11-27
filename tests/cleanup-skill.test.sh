@@ -36,11 +36,23 @@ step4=$(awk '/^4\. \*\*Close/{f=1; next} /^## /{f=0} f' "$skill")
 grep -qF 'or a `leftover` line was printed' <<<"$step4" || check_fail "step 4 does not send a leftover-only run to the printed commands"
 grep -qF '/codeo:triage' <<<"$step4" || check_fail "step 4 no longer names /codeo:triage"
 
+# Recording removals: the skill runs the record command, relays the note, and never removes or runs anything itself.
+grep -qF 'cleanup.sh" record' "$skill" || check_fail "the skill does not run cleanup.sh record"
+grep -qF 'removed/' "$skill" || check_fail "the skill does not name removed/"
+! grep -qF 'rm -f' "$skill" || check_fail "the skill names rm -f"
+step1=$(awk '/^1\. \*\*Run the script/{f=1; next} /^2\. /{f=0} f' "$skill")
+grep -qF 'cleanup: note:' <<<"$step1" || check_fail "step 1 does not relay the cleanup: note: line"
+step3=$(awk '/^3\. \*\*Record/{f=1; next} /^4\. /{f=0} f' "$skill")
+for needle in 'record <N>' "the engineer's statement" 'intake.sh" commit cleanup'; do
+    grep -qF -- "$needle" <<<"$step3" || check_fail "step 3 does not contain: $needle"
+done
+
 # Generic text names no container, and the list's reach is stated.
 ! grep -qF 'Home-container' "$skill" || check_fail "the skill still says Home-container"
 ! grep -qF 'home container' "$skill" || check_fail "the skill still says home container"
 step2=$(awk '/^2\. \*\*Say what the proof cannot see/{f=1; next} /^3\. /{f=0} f' "$skill")
 grep -qF 'every issue under `.codeo/done/`' <<<"$step2" || check_fail "step 2 does not state the list's reach"
+grep -qF 'until their removals are recorded' <<<"$step2" || check_fail "step 2 does not say the list holds an issue until its removal is recorded"
 docs="$repo/docs/skills.md"
 section=$(awk '/^## cleanup$/{f=1; next} /^## /{f=0} f' "$docs")
 grep -qF 'every issue under `.codeo/done/`' <<<"$section" || check_fail "docs/skills.md cleanup section does not state the list's reach"
@@ -101,6 +113,7 @@ out=$(run "$body")
 [[ $out != *'{'* && $out != *'}'* ]] || check_fail "the overlay's printed line holds a brace"
 tbody=$(awk '/^## removal-command$/{f=1; next} /^## /{f=0} f && NF' "$repo/templates/containers/.codeo/overlays/cleanup.md")
 tout=$(run "${tbody//@CODENAME@/codeo}")
+[[ $tout == *$'\tproven\t'* ]] || check_fail "the template overlay's run did not print a proven line: $tout"
 [[ $tout != *'{'* && $tout != *'}'* ]] || check_fail "the template overlay's printed line holds a brace"
 [[ $out == $'70\tproven\tcodeo rm 70\t'* ]] || check_fail "the overlay does not accept codeo-70: $out"
 fb=${out#$'70\tproven\tcodeo rm 70\t'}
