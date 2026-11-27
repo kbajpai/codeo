@@ -202,7 +202,8 @@ is the container the message names.
      `/codeo:triage`, or by hand, if it is not.
      Exit 3 has two readings, each quoted from the script's line, and both are a lost-checkout
      resume only when the issue's assignee is
-     the login `user whoami` printed: `has no stash` means no stash or
+     the login `user whoami` printed (not for `unverified`) — a web session's login is not compared
+     with the assignee, so the lost-checkout resume proceeds without that comparison: `has no stash` means no stash or
      abandon is live, and `already resumed — …` means the last stash or abandon was already
      resumed — by this engineer, when the assignee is them, whose checkout was then lost (the
      state `claim.sh --resume-line` writes as `after a lost container`). Any other assignee makes
@@ -317,7 +318,7 @@ is the container the message names.
    move is the claim as the board shows it, as the assignee is on the issue. It sets the Status
    on every synced project (`board.projects` plus the gate project) whose board has the option,
    adding the issue there first when it is missing, leaving a card on any other project alone, printing one `board.sh: #<N> <old> → <new> on #<project> <title>`
-   line per project written. Quote those lines in this turn's output. The dossier is pushed by
+   line per project written. A failed `assignee-add` is reported in the closing message, not recorded in `init.md`; the claim stands on the pushed branch, and there is no follow-up commit. Quote those lines in this turn's output. The dossier is pushed by
    now, so the outcome (those lines, or the failure the script reports) is reported here and at
    step 10, not in the `## Log` line. A failure here (refused in a web session, or a missing
    `project` scope) is reported and the claim still stands — say to move `#<N>` to `$IN_PROGRESS`
@@ -373,9 +374,7 @@ is the container the message names.
 ## The outcome
 
 `init.md`'s `## Outcome` is what every later step reads first, so it is the issue made
-workable — no design, no status field, with one exception: a trailing **Claim** line, written
-only when step 9 could not add the assignee. That is a fact recorded once,
-the way the table above it is, not a status the reader tracks across rounds.
+workable — no design, no status field.
 
 <!-- rule: init-08 -->
 Acceptance criteria are copied verbatim and never reworded: they are the standard `/codeo:qc`
@@ -401,9 +400,6 @@ judges against.
 
 **Open at intake.** What the issue itself left unresolved — history, frozen; see
 `${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → Intake questions are not dossier questions`.
-
-**Claim.** Present only when step 9's assignee call failed: "Skipped — run `github.sh issue
-assignee-add <N> <login>` once it can."
 ```
 
 The branch is what finds everything again after a lost context window, and after a lost machine

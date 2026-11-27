@@ -67,6 +67,13 @@ grep -qF -- '| Owner | <login> |' "$skill" || fail "the skill's header table has
 step_contains "the resume passes the whoami login to --resume-line" 6 'whoami` printed'
 grep -qF -- '<!-- rule: init-11 -->' "$skill" || fail "marker init-11 is missing"
 
+# Fix round 1 (#195): no Claim line; the exit-3 resume carves out unverified.
+! grep -qF -- 'Present only when step 9' "$skill" || fail "the skill still has the Claim line rule [Present only when step 9]"
+! grep -qF -- '**Claim.**' "$skill" || fail "the skill still has a Claim line in the outcome"
+! grep -qF -- 'trailing **Claim**' "$skill" || fail "the skill still mentions a trailing Claim line"
+step_contains "step 6 exit 3 exempts unverified" 6 '(not for `unverified`)'
+step_contains "a failed assignee-add is reported, not recorded" 9 'A failed `assignee-add` is reported in the closing message, not recorded in `init.md`'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
