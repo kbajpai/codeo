@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after a send-back from `/codeo:qc` round 1 (F1: the F5 sentence says `gh` still runs without `jq`; it does not). Q8 is answered: F1, F2, F3 and F5 are in, F4 is out. Three new tasks (7-9) are drafted at `.codeo/188/plan-draft.md` and wait for approval.
+Round 2 is planned: Tasks 7-9 are approved and appended to the plan file (unstaged). Next: `/codeo:implement`.
 
 ## Questions
 
@@ -133,15 +133,6 @@ F2 + F3 wording, and F5 changelog suffix and pin scope. Not F4. (The engineer, t
 - No invariants document is configured and no shared environment, so there is no invariant check and no
   lease task.
 
-### Footprint
-
-```
-files:      docs/release-checklist.md, CHANGELOG.md, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/home-checkout.md, .codeo/overlays/cleanup.md, .codeo/overlays/close.md, templates/containers/.codeo/overlays/cleanup.md, templates/containers/.codeo/overlays/close.md, tests/close-skill.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, docs/plans/2026-11-27-close-177-qc-leftovers-188.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 2026-11-27
@@ -160,6 +151,33 @@ sequenced:  none
 **Intake questions resolved:** none; `init.md` left none open.
 
 
+### Round 2
+
+2026-11-27
+(send-back from qc.md round 1)
+
+**Plan:** `docs/plans/2026-11-27-close-177-qc-leftovers-188.md` gains `## Round 2` with Tasks 7-9, approved by the engineer and left unstaged for them to commit. Tasks 1-6 stay as written.
+
+**Why:** QC's F1 (blocking): the F5 sentence at `docs/home-checkout.md:9` says `gh` still runs without `jq`, and it does not. `assignee_label` calls `scripts/github.sh`, which reads `.repo.owner` through `jq empty` (`scripts/github.sh:27`, `lib/env.sh:86`) and stops before any `gh` call; reproduced with a `PATH` holding no `jq` and a logging `gh` stub. The premise came from the issue and #177's QC round 2, and the plan inherited it.
+
+**Decisions**
+- Fix F1 by keeping "getting nothing from the assignee lookup" and saying `github.sh` stops on its config read before `gh` (Task 7).
+- Fold in QC's non-blocking F2 ("when that file is missing"), F3 ("a validly named branch") and F5 (`(#188)` on the changelog bullet, and the cleanup pin read from step 4 only) (Tasks 7-9). Rejected: F4, pins for the three docs sentences, which would add `tests/readme.test.sh` to the footprint; it stays in `qc.md` for `/codeo:triage` (Q8).
+- No script changes, no new file; the footprint is the one round 1 had, so no new overlap with #195, #204 or #206 (`overlap.sh 188` prints nothing).
+
+**Documentation the round changes:** `docs/home-checkout.md`, `skills/cleanup/SKILL.md`, `CHANGELOG.md`.
+
+**Intake questions resolved:** none.
+
+### Footprint
+
+```
+files:      docs/release-checklist.md, CHANGELOG.md, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/home-checkout.md, .codeo/overlays/cleanup.md, .codeo/overlays/close.md, templates/containers/.codeo/overlays/cleanup.md, templates/containers/.codeo/overlays/close.md, tests/close-skill.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, docs/plans/2026-11-27-close-177-qc-leftovers-188.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-27 — Q1-Q4 raised · cost: 1m · fable-5-2 71k in + 555k cached / 5k out
@@ -167,3 +185,4 @@ sequenced:  none
 - 2026-11-27 — plan approved and written; footprint committed; Q5-Q7 raised (overlap.sh tokens for #195, #204, #206) · cost: unavailable, the hand-off line carries the total
 - 2026-11-27 — Q5-Q7 answered (proceed and coordinate); planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md · cost: 15m · fable-5-2 78k in + 848k cached / 10k out · sonnet-5-5 108k in + 2M cached / 20k out
 - 2026-11-27 — round 2 opened (send-back from qc.md round 1); Q8 raised and answered through the question tool; round-2 tasks drafted at .codeo/188/plan-draft.md, awaiting review · cost: unavailable, the hand-off line carries the total
+- 2026-11-27 — round 2 approved; planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md (Tasks 7-9) · cost: 33m · fable-5-2 218k in + 995k cached / 7k out · sonnet-5-5 24k in + 955k cached / 2k out
