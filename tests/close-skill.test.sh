@@ -168,7 +168,13 @@ step_contains "step 3 names both resumed rows for the close.md exception" 3 'on 
 step_contains "an open pull request's conflict is step 11's send-back" 3 "a conflict is"
 step_contains "step 3 sends nothing back on an open pull request" 3 "step 11's send-back instead: step 3 sends nothing back there"
 step_contains "step 3 goes on to steps 6-7 on an open pull request" 3 "and the run goes on to steps 6-7"
-step_contains "a send-back round with no record is a return from review" 1 "a send-back round with no record is a return from review"
+if step 1 | grep -qF 'a send-back round with no record is a return from review'; then fail "step 1 still calls a send-back round with no record a return from review"; fi
+if step 1 | grep -qF 'round at all'; then fail "step 1 still keys the first open resumed on there being no send-back round at all"; fi
+step_contains "no round records the pull request: a first open resumed, whatever other rounds exist" 1 'or no round records it, whatever other rounds exist'
+step_contains "a conflict round with no record predates the pull request" 1 'a `— conflicts with <base>` round with no record predates the pull request'
+step_contains "only a recorded pull request followed by a send-back round is a return from review" 1 'a round records this pull request and a `— review feedback` or `— conflicts with <base>` round comes after it'
+step_contains "the prose reads the first open resumed from the record" 1 'is the open pull request with the dossier at `.codeo/<N>/` and no round recording it'
+step_contains "a conflict round before the pull request does not make a return from review" 1 'a conflict round from before the pull request existed does not make a return from review'
 
 # Steps 5-7: open, record, commit the record.
 step_contains "the pull request is opened in step 5" 5 'pr create'
