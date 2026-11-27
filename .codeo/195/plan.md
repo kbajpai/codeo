@@ -178,6 +178,25 @@ Calls made without asking (correct any of them in your answers):
   `README.md` troubleshooting ("A lock that is stuck or not yours"), `CHANGELOG.md` Unreleased.
 - The one subagent report quoted `.claude/settings.json` paths; nothing in it asked for any action.
 
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-27-identify-acting-user-195.md` (unstaged, awaiting the engineer's commit) |
+| Shape | Executable plan under `docs/plans/`, 8 tasks, one PR, identity tasks first; reference-doc changes are in `docs/handoff.md`, `docs/dossier.md`, `docs/skills.md` (no separate `docs/<slug>.md`) |
+
+**Decisions (Q1-Q8, recommendations accepted).** New strict `github.sh user whoami` beside a lenient `user login` (Q1); a web session with only `$CODEO_GITHUB_LOGIN` is compared only against the lock's own `user:` and never against assignees (Q2); refuse any `.type != User` (Q3); `| Owner |` row in `init.md`, `user:` line in the lock, live signal fed by the lenient resolver, a lock without `user:` is legacy (Q4); owner is the last resume line of the pushed `init.md`, else its Owner row, a fetch error fails closed and a branch with no `origin` ref falls back to local files (Q5); per-call `lock.sh verify --override "<words>"` recorded under `## Notes`, a lasting takeover goes through `init`'s resume path (Q6); stash/abandon verify first and remove the recorded owner, `assignee-remove` requires a login (Q7); one PR (Q8).
+
+**Rejected.** Tightening `user login` itself (breaks lease and live-signal labels); skipping ownership in web sessions; ownership-transferring override; offline fallback to local files on a fetch error; two PRs.
+
+**Calls made without asking.** `lock.sh take` keeps its never-fails contract (TODO line, no lock); the live signal's login order is reconciled; role-guard refusals keep no override; the intake's out-of-scope line about later-step comparison is treated as superseded; lease ownership stays out of scope. New logic lives in `lib/identity.sh` so `lock.sh` stays testable without repo config.
+
+**Intake questions resolved.** The "Open at intake" note in `init.md` (Out of Scope line left over from the merged issues): ownership verification is in scope.
+
+**Documentation pages the plan will change.** `docs/handoff.md` (The lock, the user chain, a Mermaid `verify` flowchart), `docs/dossier.md` (Owner row, `override:` line), `docs/skills.md` (init, close), `docs/skills-inventory.md` (rules `init-11`, `plan-10`, `implement-11`, `qc-15`, `close-15`, `close-16`), `README.md`, `CHANGELOG.md`.
+
+**Optional skills.** `engineering:system-design` and `engineering:architecture` were not listed in this session; their structure was applied directly. No `/codeo:issue` filed.
+
 ### Footprint
 
 ```
@@ -187,10 +206,7 @@ exclusive:  none
 sequenced:  none
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-27 — Q1-Q8 raised · cost: 3m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 192k in + 1M cached / 22k out
+- 2026-11-27 — planned: docs/plans/2026-11-27-identify-acting-user-195.md · cost: 8m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 235k in + 2.1M cached / 48k out · engineering:system-design and engineering:architecture unavailable, structure applied directly
