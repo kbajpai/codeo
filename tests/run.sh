@@ -13,17 +13,38 @@ unset CODEO_GOLDEN_DIR
 dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 pattern="${1:-}"
 
-failed=()
-ran=0
+# Files run in parallel (CODEO_TEST_JOBS workers, default one per CPU). Each file's output goes to
+# its own log, so a passing file stays quiet and a failing one is replayed below.
+jobs="${CODEO_TEST_JOBS:-$(nproc 2>/dev/null || echo 2)}"
+logs=$(mktemp -d)
+trap 'rm -rf "$logs"' EXIT
+
+files=()
 for file in "$dir"/*.test.sh; do
     [[ -e "$file" ]] || continue
     name=$(basename "$file")
     [[ "$name" == *"$pattern"* ]] || continue
-    ran=$((ran + 1))
-    # Output is captured so a passing file stays quiet; a failing one is replayed below.
-    if ! output=$(bash "$file" 2>&1); then
+    files+=("$file")
+done
+ran="${#files[@]}"
+
+run_one() {
+    local name
+    name=$(basename "$1")
+    bash "$1" >"$2/$name.log" 2>&1 || : >"$2/$name.failed"
+}
+export -f run_one
+
+if [[ "$ran" -gt 0 ]]; then
+    printf '%s\0' "${files[@]}" | xargs -0 -P "$jobs" -I{} bash -c 'run_one "$1" "$2"' _ {} "$logs"
+fi
+
+failed=()
+for file in "${files[@]}"; do
+    name=$(basename "$file")
+    if [[ -e "$logs/$name.failed" ]]; then
         failed+=("$name")
-        printf '=== FAIL: %s\n%s\n' "$name" "$output"
+        printf '=== FAIL: %s\n%s\n' "$name" "$(cat "$logs/$name.log")"
     fi
 done
 
