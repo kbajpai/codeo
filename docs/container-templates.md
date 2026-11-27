@@ -58,7 +58,7 @@ A project that is not codeo therefore carries its own name, its repository and i
 - `.sbx/claude-image`
 - `.codeo/overlays/issue.md`, `init.md`, `triage.md`, `cleanup.md`, `plan.md`, `implement.md`, `qc.md` and `close.md`
 
-Run it from inside the project, where `<plugin>` is the installed plugin's directory (the script is in the plugin, not in the project). `bash .devcontainer/scripts/codeo-root.sh` run inside a project that has the container scripts prints it and exits 0, or exits 1 with one `codeo-root:` line when it finds no installed codeo (`CODEO_ROOT` overrides the lookup; one set to a directory without `scripts/lock.sh` fails). Without a container clone, it is the `installPath` recorded for `codeo@codeo` in `~/.claude/plugins/installed_plugins.json`, a directory under `~/.claude/plugins/cache/` in a default install (`CLAUDE_CONFIG_DIR` replaces `~/.claude`). The command:
+Run it from inside the project, where `<plugin>` is the installed plugin's directory (the script is in the plugin, not in the project). `bash .devcontainer/scripts/codeo-root.sh` run inside a project that has the container scripts prints it and exits 0, or exits 1 with one `codeo-root:` line when it finds no installed codeo (`CODEO_ROOT` overrides the lookup; one set to a directory without `scripts/lock.sh` fails). Otherwise it is the `installPath` recorded for `codeo@codeo` in the plugin registry, `~/.claude/plugins/installed_plugins.json` (an entry for another project is skipped; `CLAUDE_CONFIG_DIR` replaces `~/.claude`), a directory under `~/.claude/plugins/cache/` in a default install, and the command fails when that directory has no `scripts/lock.sh`. The command:
 
 ```bash
 bash <plugin>/scripts/containers.sh [--check] [--force]
