@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, after a send-back from `/codeo:qc` round 3 (F8: `docs/home-checkout.md:9` describes an assignee lookup that does not run on the host). Two new tasks (10-11) are drafted at `.codeo/188/plan-draft.md` and wait for approval. No question is open: the fix is determined by what `live.sh` does, observed by running `user_label` without `jq`.
+Round 3 is planned: Tasks 10-11 are approved and appended to the plan file. Next: `/codeo:implement`.
 
 ## Questions
 
@@ -133,15 +133,6 @@ F2 + F3 wording, and F5 changelog suffix and pin scope. Not F4. (The engineer, t
 - No invariants document is configured and no shared environment, so there is no invariant check and no
   lease task.
 
-### Footprint
-
-```
-files:      docs/release-checklist.md, CHANGELOG.md, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/home-checkout.md, .codeo/overlays/cleanup.md, .codeo/overlays/close.md, templates/containers/.codeo/overlays/cleanup.md, templates/containers/.codeo/overlays/close.md, tests/close-skill.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, docs/plans/2026-11-27-close-177-qc-leftovers-188.md
-wiki:       none
-exclusive:  none
-sequenced:  none
-```
-
 ## Outcome
 
 2026-11-27
@@ -178,6 +169,33 @@ sequenced:  none
 
 **Intake questions resolved:** none.
 
+### Round 3
+
+2026-11-27
+(send-back from qc.md round 3)
+
+**Plan:** `docs/plans/2026-11-27-close-177-qc-leftovers-188.md` gains `## Round 3` with Tasks 10-11, approved by the engineer and committed with the plan file. Tasks 1-9 stand as written.
+
+**Why:** QC round 3's F8 (blocking): `docs/home-checkout.md:9` says `live.sh`, without `jq`, gets "nothing from the assignee lookup", but that lookup runs only in a hosted web session (`scripts/live.sh:161`, `host == web`), and the paragraph is about running on the host. The plan inherited the gap from the issue's F5, whose own "it matters only for a web session" never reached the page. No question was needed: the fix follows from what `live.sh` does, observed by running `user_label` from `scripts/live.sh` with `jq` off `PATH` and a logging `gh` stub (`host=container` gave the `git config user.name` value, `host=web` gave `unknown`, `gh` was called 0 times, and `github.sh user login` exited 1 on `config.json: invalid JSON`).
+
+**Decisions**
+- Task 10 rewrites the end of the `home-checkout.md:9` bullet to say the signal's user comes from `git config user.name`, that `github.sh` stops at its `jq` config read before `gh`, and that only a hosted web session asks for the assignee, where without `jq` the label reads `unknown`. The text before it, which `tests/readme.test.sh:340` pins, stays.
+- Task 11 folds in QC's non-blocking F9: the cleanup overlay and its template join their two back-to-back parentheticals with "; otherwise". The existing pins still match. Rejected: F4 (pins for the docs sentences, by the engineer's answer at Q8), F6 and F7 (the cleanup parenthesis not naming the name rule; step 17's "prefix" wording), which stay in `qc.md` for `/codeo:triage`.
+- No script changes, no new file; the footprint is unchanged, so `overlap.sh 188` prints nothing and `overlap.sh --outside 188` prints nothing.
+
+**Documentation the round changes:** `docs/home-checkout.md`, `.codeo/overlays/cleanup.md` and `templates/containers/.codeo/overlays/cleanup.md`.
+
+**Intake questions resolved:** none.
+
+### Footprint
+
+```
+files:      docs/release-checklist.md, CHANGELOG.md, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/home-checkout.md, .codeo/overlays/cleanup.md, .codeo/overlays/close.md, templates/containers/.codeo/overlays/cleanup.md, templates/containers/.codeo/overlays/close.md, tests/close-skill.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, docs/plans/2026-11-27-close-177-qc-leftovers-188.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 ## Log
 
 - 2026-11-27 — Q1-Q4 raised · cost: 1m · fable-5-2 71k in + 555k cached / 5k out
@@ -187,3 +205,4 @@ sequenced:  none
 - 2026-11-27 — round 2 opened (send-back from qc.md round 1); Q8 raised and answered through the question tool; round-2 tasks drafted at .codeo/188/plan-draft.md, awaiting review · cost: unavailable, the hand-off line carries the total
 - 2026-11-27 — round 2 approved; planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md (Tasks 7-9) · cost: 33m · fable-5-2 218k in + 995k cached / 7k out · sonnet-5-5 24k in + 955k cached / 2k out
 - 2026-11-27 — round 3 opened (send-back from qc.md round 3); no question raised; Tasks 10-11 drafted at .codeo/188/plan-draft.md, awaiting review · cost: unavailable, the hand-off line carries the total
+- 2026-11-27 — round 3 approved; planned: docs/plans/2026-11-27-close-177-qc-leftovers-188.md (Tasks 10-11) · cost: 5m · fable-5-2 406k in + 1.7M cached / 7k out · sonnet-5-5 19k in + 407k cached / 1k out
