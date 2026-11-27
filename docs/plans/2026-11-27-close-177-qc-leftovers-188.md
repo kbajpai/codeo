@@ -1,0 +1,132 @@
+# Close the #177 QC leftovers (F2-F6) Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Correct five sentences (and one comma) that are true on one path only, as #177's QC round 2 recorded them, so the docs, skills and overlays match what the scripts do.
+
+**Architecture:** Wording only, in six tasks, one per finding plus the changelog. Each fix that a test already pins moves the pin first (red), then the wording (green); the ones no test covers get a `grep` check with its expected count. No script changes.
+
+**Tech Stack:** Markdown, bash test files under `tests/`, run by `bash tests/run.sh [pattern]`.
+
+**Spec:** `.codeo/188/issue.md` (Key Requirements F2-F6) and `.codeo/done/177/qc.md`, round 2, F2-F6. No separate reference doc: nothing here is a standing decision.
+
+## Global Constraints
+
+- **Wording only.** `scripts/live.sh`, `scripts/cleanup.sh`, `.sbx/codeo-sandbox.sh` and `.devcontainer/codeo-container.sh` are read, never edited. The `note: codeo-track.sh is not beside this script` text they print is script output and stays.
+- **Overlays and their templates change together.** `tests/containers.test.sh` (`codeos_own_overlays_equal_the_render`) fails when `.codeo/overlays/{cleanup,close}.md` differ from `templates/containers/.codeo/overlays/` after substitution, so every overlay edit is made in both files, byte for byte.
+- **Engineer's answers (dossier Q1-Q4).** "Nothing is asked without a tracker" goes into `docs/home-checkout.md` only; the overlays gain `CODEO_TRACK` and nothing about asking, because `codeo-sandbox.sh end` never asks. Overlaps with #195, #204 and #206 are accepted: proceed and coordinate.
+- **Documentation this change moves:** the pages *are* the tasks (`docs/release-checklist.md`, `docs/home-checkout.md`, `skills/close/SKILL.md`, `skills/cleanup/SKILL.md`, the overlays). No other page under `docs/` describes the five corrected sentences (checked with `grep -rn` for each phrase), so nothing else is documented. No diagram changes.
+- **Invariants:** none configured. **Shared environment:** none, so no task needs a lease and every task is proved in this checkout.
+- **Proof of done.** The `shell` suite has no single-test `filter`, so each task's proof is `bash tests/run.sh`, which must end with `all cases passed`. During red and green, `bash tests/run.sh <pattern>` runs one file, printing `all cases passed` or `=== FAIL: <file>`.
+- **Commits** are one per task, staged by name; the plan document itself stays unstaged until the engineer asks.
+
+## Review Focus
+
+- A literal reader skipping every `ls-remote` line because of the `refs/heads/` prefix: Task 2 pins the prefix-dropping sentence.
+- An overlay edited without its template: Task 3's proof is the whole suite, which includes the template-equality test.
+- A fixed sentence that becomes untrue again when #195, #204 or #206 land: Task 2, 5 and the Global Constraints name each; the second workflow to merge re-reads the sentence.
+
+---
+
+## File Structure
+
+| File | Change |
+|---|---|
+| `docs/release-checklist.md:91-92` | F2 wording |
+| `CHANGELOG.md:40` | stray comma; `## Unreleased` gains one line |
+| `skills/close/SKILL.md:550-552` | F3 wording |
+| `tests/close-skill.test.sh:232` | F3 pin |
+| `.codeo/overlays/cleanup.md:12`, `.codeo/overlays/close.md:11` and the two `templates/containers/.codeo/overlays/` copies | F4 wording |
+| `tests/cleanup-skill.test.sh:111`, `tests/close-removal.test.sh:32` | F4 pins |
+| `docs/home-checkout.md:9` and `:132` | F5 wording; F4 tracker sentence |
+| `skills/cleanup/SKILL.md:84` | F6 wording |
+| `tests/cleanup-skill.test.sh` | F6 pin |
+| `docs/plans/2026-11-27-close-177-qc-leftovers-188.md` | this plan |
+
+## Tasks
+
+### Task 1: F2 — the UTC date can differ by a day; the stray comma
+
+**Files:**
+- Modify: `docs/release-checklist.md:91-92`
+- Modify: `CHANGELOG.md:40`
+
+- [ ] **Step 1: Run the failing check.** `grep -c 'the day after' docs/release-checklist.md; grep -c 'on record, is listed' CHANGELOG.md`
+  Expected: `1` then `1` (both defects present).
+- [ ] **Step 2: Reword F2.** Replace "which can be the day after the engineer's local date" with "which can differ by a day from the engineer's local date" (west of UTC the UTC date is ahead, east of it behind). Keep the line wrapped as it is.
+- [ ] **Step 3: Remove the comma.** In the v1.0.9 section, "on record, is listed" becomes "on record is listed".
+- [ ] **Step 4: Proof.** The same `grep -c` pair now prints `0` then `0`, and `grep -c 'differ by a day from the engineer' docs/release-checklist.md` prints `1`. Then `bash tests/run.sh` ends `all cases passed`.
+- [ ] **Step 5: Commit** `git add docs/release-checklist.md CHANGELOG.md` · `docs: the release date can differ by a day from local; drop a stray comma (#188)`.
+
+### Task 2: F3 — the `ls-remote` allowlist works on the literal output
+
+**Files:**
+- Modify: `skills/close/SKILL.md:550-552` (step 17, hosted-web paragraph)
+- Test: `tests/close-skill.test.sh:232`
+
+- [ ] **Step 1: Write the failing pins.** Replace the `per branch it printed` `step_contains` line with two, in the file's style:
+  `step_contains "step 17 drops the refs/heads prefix before the allowlist" 17 'drop the `refs/heads/` prefix'` and
+  `step_contains "step 17 prints one delete per branch that passes" 17 'one `git push origin --delete <branch>` per branch that passes'`.
+- [ ] **Step 2: Run it to see it fail.** `bash tests/run.sh close-skill` — Expected: `=== FAIL: close-skill.test.sh`, naming both new pins.
+- [ ] **Step 3: Reword the paragraph.** Say each line `ls-remote` prints is `<sha>`, a tab, then `refs/heads/<branch>`; to drop the `refs/heads/` prefix first; then, for each name that is `codeo-live/<issue>/` followed only by letters, digits, `.`, `_` or `-`, to say it stays on `origin` and print one `git push origin --delete <branch>` per branch that passes, with that exact name, run outside the hosted session. The clauses for no output, a name outside the set, and a failed read stay as they are.
+- [ ] **Step 4: Proof.** `bash tests/run.sh` ends `all cases passed`.
+- [ ] **Step 5: Commit** `git add skills/close/SKILL.md tests/close-skill.test.sh` · `docs: step 17's allowlist reads the literal ls-remote output (#188)`.
+
+### Task 3: F4 — the overlays name `CODEO_TRACK`
+
+**Files:**
+- Modify: `.codeo/overlays/cleanup.md:12`, `.codeo/overlays/close.md:11`, `templates/containers/.codeo/overlays/cleanup.md`, `templates/containers/.codeo/overlays/close.md` (same line in each)
+- Test: `tests/cleanup-skill.test.sh:111`, `tests/close-removal.test.sh:32`
+
+- [ ] **Step 1: Write the failing pins.** In both files, replace the needle `'when codeo-track.sh sits beside'` with `'else codeo-track.sh sits beside'` and add the needle `'CODEO_TRACK names it'`.
+- [ ] **Step 2: Run to see it fail.** `bash tests/run.sh cleanup-skill; bash tests/run.sh close-removal` — Expected: both print `=== FAIL`, lacking the new needles.
+- [ ] **Step 3: Reword the condition** in all four files, identically: "which marks its row itself only when it finds the tracker (`CODEO_TRACK` names it, else codeo-track.sh sits beside it)". The rest of the sentence (the `note:`, "records nothing", marking by hand) is unchanged, and so is everything about asking: `end` asks nothing (Q1).
+- [ ] **Step 4: Proof.** `bash tests/run.sh` ends `all cases passed` — which includes `containers.test.sh`'s overlay-equals-template check.
+- [ ] **Step 5: Commit** the four overlay files and two tests · `docs: the overlays say CODEO_TRACK also supplies the tracker (#188)`.
+
+### Task 4: F4 and F5 — `docs/home-checkout.md`
+
+**Files:**
+- Modify: `docs/home-checkout.md:9` (F5) and `:132` (F4; the tracking-comment section, since the cited `:66` states no tracker condition)
+
+- [ ] **Step 1: Run the failing checks.** `grep -c 'skipping the assignee lookup' docs/home-checkout.md` → `1`; `grep -c 'CODEO_TRACK' docs/home-checkout.md` → `0`.
+- [ ] **Step 2: F5.** Replace "skipping the assignee lookup" with "getting nothing from the assignee lookup (`gh` still runs, but parsing its answer needs `jq`)". It matters only for a web session whose `GET /user` failed; do not widen the claim.
+- [ ] **Step 3: F4.** End the paragraph at `:132` with one sentence: the tracker is `CODEO_TRACK` when set, else `codeo-track.sh` beside the script; with neither, the scripts print one `note:` line, record nothing, and ask nothing, the question above included.
+- [ ] **Step 4: Proof.** The first two greps print `0` and `1` or more; `bash tests/run.sh` ends `all cases passed`.
+- [ ] **Step 5: Commit** `git add docs/home-checkout.md` · `docs: home-checkout's assignee lookup and tracker sentences are exact (#188)`.
+
+### Task 5: F6 — a `name`-only failure gets a `leftover` line only while origin holds branches
+
+**Files:**
+- Modify: `skills/cleanup/SKILL.md:84`
+- Test: `tests/cleanup-skill.test.sh`
+
+- [ ] **Step 1: Write the failing pin** in the file's `check_fail` style: the skill's text must contain `'while origin still holds'`: `[[ $(<"$skill") == *'while origin still holds'* ]] || check_fail "step 4 does not say a failed-name issue gets a leftover line only while origin holds its branches"`.
+- [ ] **Step 2: Run to see it fail.** `bash tests/run.sh cleanup-skill` — Expected: `=== FAIL: cleanup-skill.test.sh` with that message.
+- [ ] **Step 3: Reword the parenthesis** to "(an issue that failed only `name` gets one while origin still holds its `codeo-live/<N>/*` branches)". `tests/cleanup.test.sh:160-170` already shows both cases and is not edited.
+- [ ] **Step 4: Proof.** `bash tests/run.sh` ends `all cases passed`.
+- [ ] **Step 5: Commit** `git add skills/cleanup/SKILL.md tests/cleanup-skill.test.sh` · `docs: cleanup's leftover line depends on origin still holding branches (#188)`.
+
+### Task 6: Changelog line and the final check
+
+**Files:**
+- Modify: `CHANGELOG.md` (`## Unreleased`)
+
+- [ ] **Step 1: Add one bullet** after the existing two, in their style: documentation leftovers from #177's QC round 2 (F2-F6) — the release date can differ by a day, step 17 drops `refs/heads/`, the overlays and `docs/home-checkout.md` say `CODEO_TRACK` supplies the tracker, `live.sh`'s assignee lookup and `cleanup`'s `leftover` line are described as they behave; no script changes. Leave the `Config schema`, `Shared state` and `Safe to bump` lines as they are.
+- [ ] **Step 2: Proof.** `bash tests/run.sh` ends `all cases passed`, and `git diff --stat main -- scripts lib hooks .sbx .devcontainer` prints nothing (no script changed).
+- [ ] **Step 3: Commit** `git add CHANGELOG.md` · `docs: changelog line for the #177 leftovers (#188)`.
+
+## Self-review
+
+- **Spec coverage:** F2 → Task 1; F3 → 2; F4 → 3 and 4; F5 → 4; F6 → 5; the comma → 1; the criteria's last line → every proof. Each acceptance criterion of `init.md` has a task.
+- **Dismissed:** none. The only departure is where F4's "nothing is asked" lands (`home-checkout.md`, not the overlays), by the engineer's answer to Q1; the pull request says so.
+- **Cited line numbers** are those found at planning time; `:66` in the issue is not where `home-checkout.md` states the condition, and `CHANGELOG.md:30` is `:40`.
+
+### Footprint
+
+```
+files:      docs/release-checklist.md, CHANGELOG.md, skills/close/SKILL.md, skills/cleanup/SKILL.md, docs/home-checkout.md, .codeo/overlays/cleanup.md, .codeo/overlays/close.md, templates/containers/.codeo/overlays/cleanup.md, templates/containers/.codeo/overlays/close.md, tests/close-skill.test.sh, tests/cleanup-skill.test.sh, tests/close-removal.test.sh, docs/plans/2026-11-27-close-177-qc-leftovers-188.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
