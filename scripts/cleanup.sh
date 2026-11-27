@@ -27,7 +27,7 @@
 #
 # The overlay's command is built in name_proof and the leftover delete in leftover_proof: the only two places a command is built.
 # The overlay body (cleanup/removal-command) is three lines, and an optional fourth: `name: <template with {N}>`,
-# `pattern: <extended regex>`, `command: <template with {N} and {name}>` and `fallback: <text with {N} and {name}>`; it comes from `overlay.sh cleanup removal-command`. No
+# `pattern: <extended regex>`, `command: <template with {N} and {name}>` and `fallback: <text with {N} and {name}>`; command: and fallback: may hold only {N} and {name}, and any other {word} ends the run; it comes from `overlay.sh cleanup removal-command`. No
 # overlay (overlay.sh exit 3, or 2 while the point is unregistered) means `proven` with `-` and `-`; any other failure dies.
 #
 # Config keys read: baseBranch (see lib/env.sh).
@@ -63,6 +63,17 @@ esac
 overlay_value() {
     awk -v k="$1" 'index($0, k ":") == 1 { sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit }' <<<"$overlay"
 }
+
+# A placeholder the script does not expand would print as a command nobody can run.
+if [[ -n $overlay ]]; then
+    unknown='\{[A-Za-z0-9_]+\}'
+    for key in command fallback; do
+        left=$(overlay_value "$key")
+        left=${left//\{N\}/}
+        left=${left//\{name\}/}
+        [[ ! $left =~ $unknown ]] || die "the overlay's $key: keeps a placeholder the script does not expand: ${BASH_REMATCH[0]}"
+    done
+fi
 
 # The first failing proof for issue $1, or `ok`.
 first_failed_proof() {

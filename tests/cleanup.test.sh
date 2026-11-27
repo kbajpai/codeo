@@ -247,6 +247,33 @@ fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: remove {N} {name}'
 assert_eq "line" "12${tab}proven${tab}remove 12 codeo-12${tab}-" "$(run_cleanup)"
 
+# Like run_cleanup, but a last line `rc=<exit status>` keeps the exit status.
+run_cleanup_rc() {
+    local rc=0 out
+    out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" 2>&1) || rc=$?
+    printf '%s\nrc=%s' "$out" "$rc"
+}
+
+case_desc="an unexpanded placeholder in the command stops the run"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: codeo rm {M}'
+assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {M}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="an unexpanded placeholder in the fallback stops the run"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: codeo rm {N}\nfallback: run {issue}'
+assert_eq "line" $'cleanup: the overlay\'s fallback: keeps a placeholder the script does not expand: {issue}\nrc=1' "$(run_cleanup_rc)"
+
+case_desc="a shell brace and a Go template are not placeholders"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: x {{.Names}}'
+assert_eq "line" "12${tab}proven${tab}x {{.Names}}${tab}-" "$(run_cleanup)"
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: x ${HOME}'
+assert_eq "line" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {HOME}\nrc=1' "$(run_cleanup_rc)"
+
 case_desc="dossier still on another branch"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12

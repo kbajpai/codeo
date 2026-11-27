@@ -98,6 +98,10 @@ for bad in codeo-home codeo-gh codeo-git codeo-; do
     [[ $out == $'70\tfailed\tname' ]] || check_fail "the overlay's pattern does not reject $bad: $out"
 done
 out=$(run "$body")
+[[ $out != *'{'* && $out != *'}'* ]] || check_fail "the overlay's printed line holds a brace"
+tbody=$(awk '/^## removal-command$/{f=1; next} /^## /{f=0} f && NF' "$repo/templates/containers/.codeo/overlays/cleanup.md")
+tout=$(run "${tbody//@CODENAME@/codeo}")
+[[ $tout != *'{'* && $tout != *'}'* ]] || check_fail "the template overlay's printed line holds a brace"
 [[ $out == $'70\tproven\tcodeo rm 70\t'* ]] || check_fail "the overlay does not accept codeo-70: $out"
 fb=${out#$'70\tproven\tcodeo rm 70\t'}
 [[ $fb == *'docker rm -f codeo-70'* && $fb == *'docker volume rm codeo-70'* && $fb == *'codeo-track.sh mark 70 container codeo-70 removed'* && $fb == *'unpushed'* && $fb != *'{'* ]] || check_fail "the overlay's fallback does not expand: $fb"
