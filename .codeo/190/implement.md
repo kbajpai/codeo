@@ -8,6 +8,8 @@
 
 ## Where this stands
 
+Round 5 (send-back from `qc.md` round 4) is done: the two blocking findings J1-J2 and the cheap ones J4-J13 (except J3) are fixed (see `### Round 5` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed.
+
 Round 4 (send-back from `qc.md` round 3) is built and reviewed: H1-H8 are fixed in five commits (`5c475e8`, `011974d`, `b8d523b`, `d5d4c21`, and the earlier round 3 ones stand), and the `shell` build passes. The round's outcome is not written: at the start of this check `overlap.sh 190` printed #192's overlaps on `CHANGELOG.md` and `docs/home-checkout.md`, which stop the step until Q1 and Q2 are answered (see *Questions*).
 
 Round 3 (send-back from `qc.md` round 2) is done: the four blocking findings G1-G4 and the cheap non-blocking ones (G6, G8-G11) are fixed (see `### Round 3` under *Outcome*). The branch builds (`shell` suite `build` is `true`); nothing in this dossier is open. No host step is needed: the round changed wizard and setup behaviour, shipped text and pages, not the example's image.
@@ -188,6 +190,38 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 
 **Deferred Minor findings from this round's reviews (not fixed):** `docs/container-templates.md` says a seed needs "a dev user with UID 1000" though only the Dockerfile's `ARG USER_UID=1000` fixes the number (conservative); `codeo_pin_url`'s dot-only segments such as `a/..` pass the `plugin.repo` pattern and just fail the lookup; the wizard's guard uses `-e` where later steps use `-f`; `codeo_pin_missing` prints nothing on an invalid config in the code paths that do not check validity first; a `CODEO_PLUGIN_BASE` with a trailing slash yields `base//owner/name.git`; the seed note prints on every rerun of an unmodified project; `.devcontainer/README.md`'s "`codeo update` from it" does not say it means `codeo update` run through the other project's command.
 
+### Round 5 — 2026-11-27
+(send-back from qc.md round 4)
+
+**What was built** (four commits on top of round 4: `d8a4dd9`, `d210e9d`, `83f1e8f`, `7953b3f`; each reviewed, two needed a fix round):
+- **J1** — the README's adoption section says the transcript block is that run's output up to the `containers` line and doctor's lines, and that the wizard also prints `init: note:` lines that are not in the block (the kept-seed note and the home-checkout lines after the `containers` line; the private-repository note after the preflight line), named from the code; the "one line per step" sentence and the header comment of `scripts/codeo-init.sh` mention the notes.
+- **J2** — `docs/skills.md`'s setup section says `--containers`, alone or with `--codename <name>`, works over an existing config (adds a missing codename and plugin pin, writes the container files), that `--codename <other>` is refused when the config already names a different codename, and that plain `setup.sh`, `--stack` and `--codename` without `--containers` still refuse over an existing config.
+- **J4** — setup and the wizard say `is not a JSON object` for valid JSON that is not an object and `is not valid JSON` when jq cannot parse it, one line, nothing written.
+- **J5** — the messages name files a project has (`/codeo:setup --containers`, doctor's refresh hint with the real plugin path, `docs/container-templates.md` in the codeo plugin); each adoption page says how to find `<plugin>` (`bash .devcontainer/scripts/codeo-root.sh`, `CODEO_ROOT`, the registry's `installPath` for `codeo@codeo`, and that it fails without `scripts/lock.sh`).
+- **J6** — a rerun says `the derived codename '<x>' is ignored` when nobody answered or flagged one.
+- **J7** — over an existing config, setup and the wizard (with `--env containers`) check `baseBranch` (the `TODO-set-me` marker and the branch-name pattern, one shared function in `lib/codename.sh` that `scripts/containers.sh` now also calls) before any write, with containers.sh's message; an empty or absent `baseBranch` still defaults to `main`; `run_containers` prints nothing for empty output.
+- **J8** — `--version` must look like `vX.Y.Z` (both parsers, exit 2).
+- **J9, J13** — the audit row names the three places the plugin's default source appears; the CHANGELOG bullet says managed scripts and overlays are rendered from the same templates and the Dockerfile and `devcontainer.json` equal them outside the toolchain section and one extension.
+- **J10** — the kept-seed note names the sections each overlay needs.
+- **J11** — the wizard reads `.private`/`.visibility` from its existing `gh api` call and prints one `init: note:` for a private repository (a note, not a refusal); the README and `docs/container-templates.md` say so.
+- **J12** — `codeo_pin_fill` says so on stderr when it replaces a `plugin` value that is not an object.
+
+**Build result:** the `shell` suite's `build` is `true`: exit 0. For information, `bash scripts/containers.sh --check` prints no `differs` and `bash scripts/doctor.sh` prints no `fail`; the implementer's own full runs of `bash tests/run.sh` ended `all cases passed`; grading is `/codeo:qc`'s.
+
+**Documentation pages changed this round:** `README.md`, `docs/skills.md`, `docs/container-templates.md`, `.devcontainer/README.md`, and one clause of `CHANGELOG.md`.
+
+**Overlap with #192:** it is now at the step `implement (working)`; `overlap.sh 190` printed nothing at the end of this round (the pairs on `CHANGELOG.md` and `docs/home-checkout.md` were answered as Q1 and Q2: *proceed and coordinate*). This round touched one clause of `CHANGELOG.md` and nothing in `docs/home-checkout.md`.
+
+**Deviations and rulings (each with what it costs if wrong):**
+1. J3 (the wizard exits 1 on a fresh adoption because doctor's `ruleset` check fails on a new repository) was not changed: it is the plan's stated exception. Costs: CI treats a fresh adoption as a failure.
+2. The wizard's `baseBranch` check applies when a config exists and `--env containers` is given; an `--env none` rerun over a `TODO-set-me` config is not stopped (it writes no container file). Costs: a stale marker survives until containers are added.
+3. The README transcript block was not re-captured (a host re-run is the engineer's to do if a verbatim block with the notes is wanted).
+4. In `scripts/containers.sh` the `baseBranch` refusal now precedes the owner, name and codename refusals, so a config with several bad values reports `baseBranch` first.
+
+**Footprint gap still open (`/codeo:plan`'s):** `overlap.sh --outside 190` prints `lib/codename.sh`, `tests/close-removal.test.sh`, `tests/doctor.test.sh`, `tests/folder-check.test.sh`, `tests/init-overlay.test.sh` and `tests/role.test.sh`.
+
+**Deferred Minor findings from this round's reviews (not fixed):** the header comment at `lib/codename.sh:17` still says `codeo_base_error` refuses only `TODO-set-me`; an empty config file is reported as `is not a JSON object` (jq parses empty input) and a directory as `is not valid JSON`; the J11 note prints with a plain `echo`, not through `say`; `codeo_base_error` ignores a jq failure that cannot happen after the shape check; the `<plugin>` lookup sentence relies on the script's registry lookup, not a run against a real registry; the engineer's host runs predate J4-J12, so the example's image build and the wizard against a real repository were not re-run after this round.
+
 ## Log
 
 - 2026-11-26 — implemented: Tasks 1-11 and the in-checkout half of Task 12 through subagent rounds on sonnet (every implementer, reviewer and fix round), 21 commits; host steps pending · cost: 68m · sonnet-5-5 1.7M in + 58M cached / 322k out
@@ -195,3 +229,4 @@ Removal commands for what `host-run.sh` creates are printed by the script; it re
 - 2026-11-26 — round 2 (send-back from qc round 1): F1-F10 fixed in four commits, each task reviewed on sonnet · cost: 34m · sonnet-5-5 563k in + 23.8M cached / 96k out
 - 2026-11-26 — round 3 (send-back from qc round 2): G1-G4 and G6, G8-G11 fixed in three commits, each task reviewed on sonnet · cost: 20m · sonnet-5-5 417k in + 33.6M cached / 82k out
 - 2026-11-26 — round 4 (send-back from qc round 3): H1-H8 fixed in four commits, each task reviewed on sonnet; overlap questions Q1-Q2 answered · cost: 73m · sonnet-5-5 499k in + 27.4M cached / 90k out
+- 2026-11-27 — round 5 (send-back from qc round 4): J1-J2 and J4-J13 fixed in four commits, each task reviewed on sonnet · cost: 16m · sonnet-5-5 320k in + 18.7M cached / 61k out
