@@ -104,6 +104,7 @@ in prose exist (only the script's existence is checked).
 - [close-12] Before an irreversible put-back, stop and show the engineer.
 - [close-13] Never use `finishing-a-development-branch`.
 - [close-14] A refusal from the role check ends the step; no override.
+- [close-15] Archive and push the dossier before opening the pull request.
 
 ## triage
 
