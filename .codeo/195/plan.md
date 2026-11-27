@@ -1,0 +1,179 @@
+# Issue #195 — plan
+
+| | |
+|---|---|
+| Issue | https://github.com/kbajpai/codeo/issues/195 |
+| Branch | `feat/195-identify-acting-user-strictly-verify` |
+| Updated | 2026-11-27 |
+
+## Where this stands
+
+Round 1. Exploration done; the plan is not drafted. Q1-Q8 are open and each one changes tasks, so
+nothing is drafted until they are answered.
+
+What exploration found (the questions rest on it):
+
+- `github.sh user login` (`scripts/github.sh:35-45`) tries `GET /user`, then `$CODEO_GITHUB_LOGIN`,
+  and prints only the login, so it cannot say whether the account is a Bot. No `.type`/`[bot]`
+  check on the acting user exists anywhere.
+- `scripts/live.sh:156-163` (`user_label`) reads `$CODEO_GITHUB_LOGIN` *before* `GET /user`, the
+  reverse of `github.sh`. `scripts/intake.sh:644,696` falls back to `git config user.email`.
+- A hosted web session is detected inline as `CLAUDE_CODE_REMOTE == true` in `live.sh`,
+  `hooks/live-signal.sh`, `board.sh` and `.devcontainer/scripts/role.sh`; there is no shared helper.
+- `init`'s login handling, the assignee check, `assignee-add` and the `no login` resume line are
+  all prose in `skills/init/SKILL.md`; `claim.sh --resume-line` only prints what it is handed.
+- Step 0 of plan, implement, qc and close is prose pointing at `docs/handoff.md → The lock`;
+  nothing is a script. `lock.sh take` is called from `init`, `hooks/live-signal.sh` (web) and
+  `.devcontainer/scripts/devcontainer-start.sh` (container/sandbox).
+- Stash/abandon run `github.sh issue assignee-remove <N>` with no login, so `github.sh`'s
+  default (the current login) removes the caller, not the owner (`skills/close/SKILL.md:645`).
+- The same resume-line regex lives in `claim.sh:101`, `lock.sh:32` and `role.sh:122`.
+- New rule ids need three edits (`docs/skills-inventory.md`, the `want` map in
+  `tests/inventory.test.sh`, the regenerated hash); several `*-skill.test.sh` files pin phrases.
+- `CHANGELOG.md` takes a bullet per PR under `## Unreleased`.
+- No other workflow is in flight, so there is no footprint overlap to raise yet.
+
+## Questions
+
+### Q1 — Make `user login` strict, or add a new strict verb beside it?
+
+**Why it matters:** `user login` is also read by `intake.sh` (lease `by:` lines, with an email
+fallback) and, indirectly, `live.sh`. Making it refuse Bots and ignore the variable outside web
+sessions changes all of them; a new verb leaves them alone but leaves two ways to ask "who am I".
+**Options:** (a) new verb `github.sh user whoami` printing `login` and `type`, strict, and
+`user login` left as the lenient best-effort label · (b) tighten `user login` itself and fix the
+callers that relied on the leniency · (c) no preference, you pick.
+**Recommendation:** (a). The strict path is what `init`, `lock take`, claim and `lock.sh verify`
+call; the lenient one stays for labels (live signal, lease `by:`) where a wrong name is harmless.
+
+**Answer:**
+
+### Q2 — In a hosted web session with only `$CODEO_GITHUB_LOGIN`, what may the session do?
+
+**Why it matters:** the issue lets the variable stand in for the login only where `GET /user`
+cannot work (web), but forbids using it for an ownership check. So in web, `init` can record the
+variable, while `lock.sh verify` cannot rely on it. Something has to decide what verify does there.
+**Options:** (a) web verify compares the variable only against the lock's own recorded `user:`
+(proving "same session as the one that started it") and never against assignees, with a one-line
+note that ownership was not independently verified · (b) web verify is skipped entirely with that
+note · (c) web verify refuses unless a real login resolves, which today means it always refuses.
+**Recommendation:** (a): it still catches a stale checkout, and it never lets the variable name
+someone else as the owner.
+
+**Answer:**
+
+### Q3 — How is "Bot" decided, and what is refused?
+
+**Why it matters:** `GET /user` returns `.type`. A shared bot token reports `Bot`; a user-owned PAT
+reports `User`; a GitHub App installation token cannot call `/user` at all and falls into the
+"unresolved" case. The issue refuses both unresolved and Bot outside web.
+**Options:** (a) refuse when `.type != User` (so `Organization`/anything unexpected also refuses) ·
+(b) refuse only on `.type == Bot` or a login ending `[bot]`.
+**Recommendation:** (a), the stricter form; the whole point is one real person per login.
+
+**Answer:**
+
+### Q4 — Where and in what form is the login recorded?
+
+**Why it matters:** the issue says the plan decides the file format, and `lock.sh`, the live signal
+and `init.md` are all read by scripts, so the format is a convention to pin in `docs/handoff.md`
+and `docs/dossier.md`. Existing locks and dossiers have none of it.
+**Proposal:** `init.md`'s header table gets a row `| Owner | alice |` written at step 9 (fresh) and
+on resume; the lock gets a line `user:    alice` after `host:`; the live signal keeps its existing
+`user:` field but is fed from the strict resolver. A lock with no `user:` line (written before this
+change) is treated as legacy: `verify` falls back to assignees and the resume line, and says so.
+The resume line stays in its current form (login after `by`), so the three copies of the regex
+need no change.
+**Options:** accept the proposal · change the row/line names · record somewhere else.
+
+**Answer:**
+
+### Q5 — What defines the owner that `lock.sh verify` compares against?
+
+**Why it matters:** this is the heart of "A's stale checkout after B resumed is refused", and the
+checkout cannot tell from its own files that B resumed; B's resume line is on the pushed branch.
+**Proposal:** `verify <issue>` resolves the current login (Q1), then fetches `origin/<branch>` and
+reads, in order: the latest `resumed: by <login>` line in the pushed `init.md`, else the pushed
+`init.md`'s Owner row; and the issue's assignees. The caller passes only if it is the owner and an
+assignee, **and** the local lock's `user:` equals the owner (that last comparison is what refuses
+A's stale checkout). Refusal is one line: `codeo: #195 belongs to <owner> (last resumed <date>)…`.
+**Open sub-question — fetch fails (offline, or the branch is not pushed yet, as at `init`
+before the first push):** (a) fail closed with a line saying ownership could not be checked ·
+(b) fall back to the local files and say so. **Recommendation:** (b) only when the branch has no
+`origin` ref at all; (a) when the fetch itself errors.
+**Options:** accept the proposal and the recommendation · different owner rule · different
+offline behaviour.
+
+**Answer:**
+
+### Q6 — What is the override, how does it work "once", and where is it recorded?
+
+**Why it matters:** the issue wants an explicit, recorded override that works once. Existing
+patterns differ: `init`'s takeover is a prose line under `## Notes`; `intake.sh lease take
+--override <text>` is script-written; `CODEO_HOME_EDITS=allow` (#192) is an environment variable
+that records nothing. Role-guard refusals deliberately have none, and that stays.
+**Proposal:** `lock.sh verify <issue> --override "<the engineer's words>"`. It passes that one
+call and appends `- <date> — override: <login> over <owner>: "<words>"` to `init.md`'s `## Notes`
+(never the resume line), printing the line so the skill commits it with its next dossier commit.
+"Once" means: the next step's `verify` is judged again, so a second step needs its own override —
+**unless** the engineer wants a takeover to transfer ownership. For a real takeover the engineer
+goes through `/codeo:init`'s existing resume path, which writes the resume line that makes them
+the owner.
+**Options:** accept (per-call override, takeover is `init`'s resume path) · override transfers
+ownership by writing a resume-style line itself · the override is an environment variable like #192.
+
+**Answer:**
+
+### Q7 — Stash/abandon by a non-owner, and the `assignee-remove` default
+
+**Why it matters:** B4: `assignee-remove <N>` defaults to the current login, so B's stash leaves A
+assigned and moves the card. Acceptance requires that a non-owner's stash changes neither.
+**Proposal:** close's stash/abandon step calls `lock.sh verify` first (refuses a non-owner without
+the override); on success it removes the *recorded owner* explicitly (`assignee-remove <N>
+<owner>`), not the caller. `github.sh issue assignee-remove` stops defaulting to the current login
+and requires the login argument (a missing one is an error), so the defect cannot recur from any
+caller. `tests/github.test.sh` and `tests/close-skill.test.sh` update accordingly.
+**Options:** accept · keep the default but only change close's call (smaller, leaves the trap).
+
+**Answer:**
+
+### Q8 — One pull request or two?
+
+**Why it matters:** the issue merges identity and ownership, and says ownership depends on
+identity. Identity (Q1-Q4: strict resolver, `init`/`take`/claim refusals, recorded login) can ship
+alone and is safe to merge first; ownership (Q5-Q7: `verify`, step 0 in four skills, close/stash,
+new rule ids, hash churn) is the larger and riskier half.
+**Options:** one PR, with identity tasks first so a partial build still works · two PRs, filed as
+a second issue by `/codeo:issue` and sequenced after this one. **Recommendation:** one PR; the
+acceptance criteria are one list, and splitting buys little when the tasks already run in order.
+
+**Answer:**
+
+## Notes
+
+Calls made without asking (correct any of them in your answers):
+
+- `lock.sh take` keeps its "never fails the caller" contract: on an unresolved or Bot login
+  outside web it takes no lock and prints a `TODO` line, matching how it already reports a
+  refused checkout. `init` and the claim path, which are skills, refuse outright with one
+  `codeo:` line.
+- `scripts/live.sh`'s `user_label` order (variable first) is reconciled with the strict resolver's
+  rule: the variable is honoured only in web sessions. `docs/handoff.md` lines 195-206, which
+  document the old order, are rewritten in the same task.
+- A shared `is_web_session` helper replaces the inline `CLAUDE_CODE_REMOTE == true` tests this
+  change touches (`github.sh`, `live.sh`, the new `verify`); the ones it does not touch stay.
+- Role-guard refusals keep having no override (`plan-09`, `implement-10`, `qc-14`, `close-14`).
+- The issue's out-of-scope line about "comparing the recorded login at later steps" is treated as
+  superseded, as `init.md` noted; lease ownership stays out of scope.
+- Docs this change will move: `docs/handoff.md` (The lock, the lock sample, step-0 checks, the
+  live-signal user chain), `docs/dossier.md` (the Owner row), `docs/skills.md` (init, close),
+  `README.md` troubleshooting ("A lock that is stuck or not yours"), `CHANGELOG.md` Unreleased.
+- The one subagent report quoted `.claude/settings.json` paths; nothing in it asked for any action.
+
+## Outcome
+
+_Pending — written at the hand-off._
+
+## Log
+
+- 2026-11-27 — Q1-Q8 raised · cost: 3m · fable-5-2 70k in + 382k cached / 4k out · sonnet-5-5 192k in + 1M cached / 22k out
