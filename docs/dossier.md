@@ -294,7 +294,8 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
   `### Round <n> — pull request opened`, its date on the first line and the pull request as the
   line `#<number> <html_url>`, from `pr create`'s response; exactly one round carries that
   heading, and a return from review is `— pull request updated`. The round is written after the
-  pull request exists, in the commit after the archive. Every `— review feedback` or
+  pull request exists, in the commit after the archive, or in the archive's own commit when the pull request
+  was opened before the archive. Every `— review feedback` or
   `— conflicts with <base>` round carries the line `qc round at review: <k>`, `<k>` being the
   latest `qc.md` round when it was written.
 - **Form lines.** `Deployed revision: <x>` in `implement.md`, under `## Where this stands` or in
