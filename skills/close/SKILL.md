@@ -108,11 +108,14 @@ is the container the message names.
    | `--stash`, or the engineer parking the work, or `HEAD`'s `close.md` ends in a `— stashed` round while the lock is held — on any pull request not merged | → **Stash** |
    | No pull request for the branch (`number` is null), dossier at `.codeo/<N>/` | → **Phase 1 — archive, then open** |
    | No pull request, dossier under `.codeo/done/<N>/` at `HEAD` | → **Phase 1, resumed after the archive push** — skip step 4, run step 5 onward |
-   | `state` is `open`, dossier under `.codeo/done/<N>/`, no round in `close.md` records this pull request | → **Phase 1, resumed after `pr create`** — skip steps 4–5, record it from this lookup (step 6) and push (step 7); otherwise Phase 2 |
+   | `state` is `open`, dossier under `.codeo/done/<N>/`, no round in `close.md` records this pull request | → **Phase 1, resumed after `pr create`** — skip steps 4–5, record it from this lookup (step 6) and push (step 7) |
    | `state` is `open`, dossier under `.codeo/done/<N>/` | → **Phase 2 — waiting** |
    | `state` is `open`, dossier back at `.codeo/<N>/` | → **Phase 1 — return from review** |
    | `state` is `closed` and `merged_at` is set | → **Phase 3 — clean up** |
    | `state` is `closed` and `merged_at` is empty, or `HEAD`'s `close.md` ends in a `— abandoned` round while the lock is held | → **Closed unmerged** |
+
+   The table is read top to bottom and the first row that fits wins, so an open pull request with the
+   dossier under `.codeo/done/<N>/` is Phase 2 once a round in `close.md` records it.
 
    Where the dossier sits is read from `HEAD`, the committed tree —
    `git ls-tree -d --name-only HEAD .codeo/<N> .codeo/done/<N>` — never from the working tree:
@@ -140,8 +143,8 @@ is the container the message names.
 
 ## Phase 1 — open the pull request
 
-2. **The verdict is clear.** Read the latest `### Round <n>` in `.codeo/<N>/qc.md`'s `## Outcome`
-   and its last bold `**Verdict: …**` or `**Routing: …**` span, the way `qc-verdict.sh` reads it:
+2. **The verdict is clear.** Read the latest `### Round <n>` in `qc.md`'s `## Outcome`
+   (under `.codeo/<N>/`, or `.codeo/done/<N>/` on the two resumed rows of step 1's table) and its last bold `**Verdict: …**` or `**Routing: …**` span, the way `qc-verdict.sh` reads it:
    only that span counts, and the clear form is ``**Verdict: clear — forward to `/codeo:close`.**``.
    A clear verdict — no blocking finding — is the precondition. No `qc.md`, no round, or anything
    other than clear stops this skill: name exactly what is outstanding, route back to `/codeo:qc`,
@@ -173,7 +176,7 @@ is the container the message names.
 3. **The tree is clean and pushed.**
    <!-- rule: close-04 -->
    `git status --porcelain` prints nothing. The one exception is this skill's own dossier:
-   `.codeo/<N>/close.md` modified in place and nothing else — answers the engineer wrote in the
+   `.codeo/<N>/close.md` — or `.codeo/done/<N>/close.md`, on a resume after the archive push — modified in place and nothing else — answers the engineer wrote in the
    file, or a round an interrupted invocation wrote — is kept as it stands and goes into this
    step's next dossier commit; step 6 adds no second `— pull request opened` round when one already
    records this pull request's number. A staged rename, or any other path, is still a stop.
@@ -201,7 +204,9 @@ is the container the message names.
    each conflicting file by name, one per line, up to a blank line and git's messages. Any other
    exit is a stop — report what git printed. A conflict is a send-back to `/codeo:implement`, the same as
    review feedback:
-   - Add `### Round <n> — conflicts with <base>` to `close.md`'s `## Outcome` — the next round
+   - On a resume after the archive push, un-archive first: `git mv .codeo/done/<N> .codeo/<N>`, staged
+     and committed with the round below, exactly as step 11 does. Then add
+     `### Round <n> — conflicts with <base>` to `close.md`'s `## Outcome` (under `.codeo/<N>/`) — the next round
      after the highest `### Round` already there, or `### Round 1` when there is none — with the
      date as its first line, then each conflicting file and the changes on `<base>` that touched it
      (`git log --first-parent --format='%h %s' $(git merge-base origin/<base> HEAD)..origin/<base> -- <file>`,
