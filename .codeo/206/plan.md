@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The code, tests, docs and the intake branch are read. Q1-Q7 are open; nothing is drafted until they are answered. One finding changes the size of the first fault: `scripts/cleanup.sh` already expands `{N}` in `command:` (line 104, shipped in v1.0.9 with #152; the issue's run used plugin 1.0.8). What is left of that fault is the refusal of a placeholder the script does not know (Q1) and a test that pins this project's own overlay.
+Round 1. Q1-Q7 are answered (the engineer took every recommendation). The plan is drafted at `.codeo/206/plan-draft.md` and waits for the engineer's approval; the footprint is committed under `## Notes`. Next: approval, then the plan file under `docs/plans/`. One finding changes the size of the first fault: `scripts/cleanup.sh` already expands `{N}` in `command:` (line 104, shipped in v1.0.9 with #152; the issue's run used plugin 1.0.8). What is left of that fault is the refusal of a placeholder the script does not know (Q1) and a test that pins this project's own overlay.
 
 ## Questions
 
@@ -24,6 +24,7 @@ Either way this project's overlay and the shipped template print no brace, and a
 **Options:** `{word}` token only (recommended) · any brace · no preference, you pick.
 
 **Answer:**
+`{word}` token only, as recommended. Given in the conversation: "go with your picks".
 
 ### Q2 — What shape is the removal record on the intake branch?
 
@@ -38,6 +39,7 @@ I recommend one file per issue.
 **Options:** one file per issue (recommended) · one ledger file with a merge · parse the dated records · no preference, you pick.
 
 **Answer:**
+One file per issue, as recommended. Given in the conversation: "go with your picks".
 
 ### Q3 — How does an engineer record a removal?
 
@@ -51,6 +53,7 @@ In both, a record means "removed on every host that had it", and the skill and d
 **Options:** `cleanup.sh record <N>…` (recommended) · the skill writes the files · no preference, you pick.
 
 **Answer:**
+`cleanup.sh record <N>…`, as recommended. Given in the conversation: "go with your picks".
 
 ### Q4 — Does a recorded issue still get its `leftover` line?
 
@@ -64,6 +67,7 @@ I recommend still printing it.
 **Options:** still printed (recommended) · dropped · no preference, you pick.
 
 **Answer:**
+Still printed, as recommended. Given in the conversation: "go with your picks".
 
 ### Q5 — Does a run say how many recorded issues it left out?
 
@@ -78,6 +82,7 @@ I recommend the stderr note.
 **Options:** stderr note (recommended) · nothing · one stdout line per issue · no preference, you pick.
 
 **Answer:**
+The stderr note, as recommended. Given in the conversation: "go with your picks".
 
 ### Q6 — #204 is in flight and its footprint overlaps this plan's. Proceed, sequence, or re-scope?
 
@@ -86,6 +91,7 @@ I recommend the stderr note.
 **Options:** proceed and coordinate (recommended) · sequence after #204 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ### Q7 — #195 is in flight and its footprint overlaps this plan's. Proceed, sequence, or re-scope?
 
@@ -94,12 +100,22 @@ I recommend the stderr note.
 **Options:** proceed and coordinate (recommended) · sequence after #195 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
 - The intake branch has no removal record `cleanup.sh` can read yet. Once this ships and the pin is bumped, the 64 issues of `.codeo/intake/cleanup/2026-11-27-2.md` are recorded by the engineer through the new step; the pull request does not write to `codeo/intake`.
 - Recorded issues still cost their proofs on every run (two GitHub reads each): acceptance criterion 4 needs the proofs to run before a record may hide a line.
 - No overlay is set for `plan/plan-shape`, `plan/proof-of-done` or `plan/wiki-rules` (exit 3 each); no invariants document, no shared environment, no `wiki` module, no `resources[]`.
+
+### Footprint
+
+```
+files:      scripts/cleanup.sh, skills/cleanup/SKILL.md, docs/skills.md, docs/extension-points.md, README.md, CHANGELOG.md, tests/cleanup.test.sh, tests/cleanup-skill.test.sh, docs/plans/2026-11-27-cleanup-removal-records-206.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
 
 ## Outcome
 
@@ -108,3 +124,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-27 — Q1-Q7 raised · cost: 2m · fable-5-2 87k in + 649k cached / 8k out
+- 2026-11-27 — Q1-Q7 answered ("go with your picks"); draft written, footprint committed
