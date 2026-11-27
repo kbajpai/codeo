@@ -642,7 +642,7 @@ case_desc="take, unresolved login (GET /user fails, not web)"
 repo=$(fresh_repo)
 git -C "$repo" checkout -q -b feat/x
 write_init "$repo/.codeo/38/init.md" feat/x
-out=$(GH_STUB_USER=FAIL run_lock "$repo" "$(fresh_marker)" local)
+out=$(GH_STUB_USER=FAIL CODEO_GITHUB_LOGIN=eve run_lock "$repo" "$(fresh_marker)" local)
 assert_eq "no lock" no "$(active_exists "$repo")"
 assert_contains "todo" "lock: TODO" "$out"
 assert_contains "reason" "cannot tell who you are" "$out"

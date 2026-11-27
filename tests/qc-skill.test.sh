@@ -122,8 +122,19 @@ must_contain "a later round reuses evidence only on deploy=false" 'environment e
 must_contain "qc never deploys" 'This skill never deploys'
 must_contain "a missing deploy is implement's" 'naming the missing deploy'
 # --override belongs to lock.sh verify (qc-15) alone, never to a lease take.
-if grep -F -- 'lease take' "$skill" | grep -qF -- '--override'; then
-    fail "the skill takes a lease with --override — $(grep -F -- 'lease take' "$skill" | grep -F -- '--override' | head -1)"
+# A wrapped command carries it on a continuation line, so the take line and the next two are checked.
+override_on_lease_take() {
+    printf '%s\n' "$1" | awk '
+        /lease take/ { n = 3 }
+        n > 0 { if (index($0, "--override")) { print; found = 1 } n-- }
+        END { exit !found }'
+}
+if override_on_lease_take "$(cat "$skill")" >/dev/null; then
+    fail "the skill takes a lease with --override — $(override_on_lease_take "$(cat "$skill")" | head -1)"
+fi
+if ! override_on_lease_take 'lease take 38 \
+    --override "x"' >/dev/null; then
+    fail "the override pin misses a wrapped lease take"
 fi
 
 # The final review wave.
