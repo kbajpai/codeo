@@ -102,6 +102,24 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with your
 **Answer:**
 Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
+### Q8 — #204 overlaps on `glob:CHANGELOG.md`, `glob:README.md` and `glob:docs/skills.md`: proceed, sequence, or re-scope?
+
+**Why it matters:** this is Q6's decision, restated with the tokens `overlap.sh` printed for the committed footprint (Q6 named the paths without the `glob:` form, so the script did not count it as raised). #204 (`chore/204-fix-codeo-close-opens-pr`, assignee kbajpai, step `init`) and this plan both edit those three files, in different sections.
+
+**Options:** proceed and coordinate (recommended) · sequence after #204 · re-scope.
+
+**Answer:**
+Proceed and coordinate, as Q6 was answered. Given in the conversation: "go with your picks" (the same decision as Q6, restated here only so the overlap check reads it).
+
+### Q9 — #195 overlaps on `glob:CHANGELOG.md`, `glob:README.md` and `glob:docs/skills.md`: proceed, sequence, or re-scope?
+
+**Why it matters:** Q7's decision, restated the same way. #195 (`feat/195-identify-acting-user-strictly-verify`, assignee kbajpai, step `plan` done) and this plan both edit those three files, in different sections.
+
+**Options:** proceed and coordinate (recommended) · sequence after #195 · re-scope.
+
+**Answer:**
+Proceed and coordinate, as Q7 was answered. Given in the conversation: "go with your picks" (the same decision as Q7, restated here only so the overlap check reads it).
+
 ## Notes
 
 - The intake branch has no removal record `cleanup.sh` can read yet. Once this ships and the pin is bumped, the 64 issues of `.codeo/intake/cleanup/2026-11-27-2.md` are recorded by the engineer through the new step; the pull request does not write to `codeo/intake`.
