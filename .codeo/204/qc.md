@@ -70,6 +70,7 @@ I recommend accepting the window.
 **Options:** accept the window (recommended) · document the recovery · open as a draft until the record lands · no preference, you pick.
 
 **Answer:**
+Accept the window, as recommended. Given in the conversation: "go with your pick".
 
 ## Notes
 Round 4 so far (round 3 stopped at the sync; this pass merged cleanly: `sync-main.sh --abort-on-conflict` printed `sync-main: the branch already contains origin/main`, exit 0; `overlap.sh 204` and `overlap.sh --outside 204` printed nothing; `scope.sh`: `suite.shell=true`, no `deploy=` line; build `true` exit 0). The full suite was started on `4e4c223`; its result is quoted in the round once Q4 is answered. Independent review (opus, `QC review:`) of `c7505a9..4e4c223`: no Critical; the merge resolution is correct (close-01 to close-17 once each in the skill and the inventory, count 17, hash fixture consistent, both CHANGELOG bullets kept); step 1's table is a partition; the reviewer found one Important finding (Q4) and these Minors, all non-blocking and `/codeo:implement`'s:
