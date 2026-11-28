@@ -87,7 +87,7 @@ constrain other people and accidents, not the owner.
      higher version.
 
    (`.claude-plugin/marketplace.json` carries no version.) Also run
-   `bash tools/changelog.sh assemble vX.Y.Z YYYY-MM-DD` and commit `CHANGELOG.md` and the deleted fragments, through a pull request
+   `bash tools/changelog.sh assemble vX.Y.Z YYYY-MM-DD` (it refuses a leftover `## Unreleased` heading in `CHANGELOG.md` and a version that already has a section, writing and deleting nothing; fold or remove the heading or the existing section first) and commit `CHANGELOG.md` and the deleted fragments, through a pull request
    like any other change; read the `Shared state:` line it writes against the dossier conventions this step names. The date is the
    UTC date the release pull request opens (`gh pr view --json createdAt`), which can differ by a day from the
    engineer's local date. Once that pull request merges, test the merged commit — the one the tag will name — from a clean clone:
