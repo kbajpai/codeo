@@ -131,6 +131,15 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with your
 - This issue's own changelog entry is written as a fragment, the first one.
 - The optional `engineering:system-design` and `engineering:architecture` skills are not installed here; their structure is applied directly.
 
+### Footprint
+
+```
+files:      tools/changelog.sh, tests/changelog.test.sh, tests/fixtures/changelog/**, changelog.d/**, .codeo/overlays/plan.md, .codeo/config.json, tests/inventory.test.sh, tests/inventory-pin.test.sh, tests/fixtures/skills-inventory.rules.sha256, tests/intake-lease.test.sh, tests/overlap.test.sh, scripts/base-moved.sh, scripts/overlap.sh, tests/base-moved.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, tests/plan-skill.test.sh, tests/init-skill.test.sh, tests/qc-skill.test.sh, tests/close-skill.test.sh, docs/skills-inventory.md, docs/skills.md, docs/dossier.md, docs/handoff.md, docs/release-checklist.md, README.md, CONTRIBUTING.md, docs/plans/2026-11-28-parallel-issue-collisions-207.md
+wiki:       none
+exclusive:  none
+sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/config.json (Q7)
+```
+
 ## Outcome
 
 _Pending — written at the hand-off._
