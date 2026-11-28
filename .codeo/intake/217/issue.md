@@ -1,8 +1,8 @@
-# Issue — issue (draft: codeo go, codeo done, --version, update output)
+# Issue #217 — issue
 
 | | |
 |---|---|
-| Issue | not filed yet |
+| Issue | https://github.com/kbajpai/codeo/issues/217 |
 | Updated | 2026-11-28 |
 
 ## Where this stands
