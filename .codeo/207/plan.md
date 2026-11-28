@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q7 are answered (the recommended picks, given in the conversation). The draft is at `.codeo/207/plan-draft.md`, waiting for the engineer's review.
+Round 1, done. Q1-Q7 are answered and the plan is approved: `docs/plans/2026-11-28-parallel-issue-collisions-207.md`. Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -131,6 +131,17 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with your
 - This issue's own changelog entry is written as a fragment, the first one.
 - The optional `engineering:system-design` and `engineering:architecture` skills are not installed here; their structure is applied directly.
 
+## Outcome
+
+
+**Plan file:** `docs/plans/2026-11-28-parallel-issue-collisions-207.md` — shape: a plan under `docs/plans/` (checkbox tasks, `REQUIRED SUB-SKILL` banner), no reference doc, because every decision is a choice among options the dossier records.
+
+**Decisions.** Changelog fragments `changelog.d/<N>.md` assembled by `tools/changelog.sh`, this repository only, header lines carried per fragment, bullets in issue order (Q1-Q2). Inventory pin one `<id><TAB><sha256>` line per rule (Q3); rejected: `merge=union`, no pin. An exclusive parameterised `skill` resource plus every overlap answer recorded in `sequenced:` (Q4); rejected: lock only, recommendation only. `/codeo:init` informs and `/codeo:plan` gates (Q5). QC records `Graded base:` and `/codeo:close` runs `base-moved.sh` before merging a moved base; rebase rejected (Q6). #213 proceeds beside (Q7).
+
+**Documentation:** README.md, docs/skills.md, docs/dossier.md, docs/handoff.md, docs/skills-inventory.md, docs/release-checklist.md, CONTRIBUTING.md; the release entry is the fragment changelog.d/207.md.
+
+**Overlap:** `overlap.sh 207` printed nothing for the committed footprint; no exclusive resource is configured yet, so no lock is taken.
+
 ### Footprint
 
 ```
@@ -140,10 +151,7 @@ exclusive:  none
 sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/config.json (Q7)
 ```
 
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-28 — Q1-Q7 raised (scope of the four mechanisms; overlap with #213) · cost: 3m · fable-5-2 96k in + 1.4M cached / 11k out
+- 2026-11-28 — planned: docs/plans/2026-11-28-parallel-issue-collisions-207.md · cost: 20m · fable-5-2 107k in + 1.8M cached / 18k out · sonnet-5-5 139k in + 738k cached / 33k out
