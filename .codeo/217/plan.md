@@ -115,6 +115,13 @@ Proceed and coordinate. As recommended. Given in the conversation: "Go with your
 
 ## Notes
 
+### Footprint
+
+files: .devcontainer/codeo, templates/containers/.devcontainer/codeo, scripts/cleanup.sh, skills/init/SKILL.md, tests/codeo-command.test.sh, tests/cleanup.test.sh, tests/init-skill.test.sh, tests/readme.test.sh, tests/fixtures/skills-inventory.rules.sha256, docs/skills-inventory.md, docs/skills.md, README.md, .devcontainer/README.md, docs/home-checkout.md, docs/release-checklist.md, CHANGELOG.md, docs/plans/2026-11-28-codeo-go-done-217.md
+wiki: none
+exclusive: none
+sequenced: none
+
 **The two intake questions, looked into.**
 
 - *Does `claude -p` run `/codeo:init` as a slash command?* The current headless docs say yes: "User-invoked skills and custom commands work. Include `/skill-name` in the prompt string and Claude Code expands it before running." (https://code.claude.com/docs/en/headless.md). The plugin form `/codeo:init #<N>` is not shown there literally and was not run; the plan's first `go` task proves it with a harmless skill before anything depends on it. Two things the docs add: an unmatched `/name` does not fail (it goes to the model as plain text and exits 0), and `--bare` loads no plugins, so `go` never passes it. `-p` shows no trust dialog.
