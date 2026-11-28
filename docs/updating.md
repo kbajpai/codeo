@@ -7,6 +7,21 @@ This page covers what happens when you run the install command again: an update 
 Run the install command again. With no `--version` it installs the latest release; if that differs from what you have, it removes the codeo marketplace, which uninstalls codeo at every scope on the machine, adds the marketplace back at the new tag, and installs codeo at the scope you asked for. A plain run installs it for you; a run with `--scope project` installs it for the project:
 
 ```
+install: release v1.0.11
+install: superpowers already installed (user scope), left alone
+✔ Successfully removed marketplace: codeo
+Also uninstalled 1 plugin from this marketplace:
+  codeo@codeo
+The removal also deletes their saved options, secrets and data where it can.
+To use a plugin again, add the marketplace back and reinstall the plugin.
+install: codeo v1.0.10 -> v1.0.11 (user scope)
+install: done - codeo v1.0.11, user scope, superpowers 7.0.2
+install: restart any Claude Code sessions already open to load the plugins
+```
+
+To install a release other than the latest, pass `--version` (as in the README). A run that asks for a different version than the one installed replaces it, so this is also how you go back to an older release. Downgrading to `v1.0.10` prints:
+
+```
 install: release v1.0.10
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
@@ -14,23 +29,8 @@ Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.9 -> v1.0.10 (user scope)
+install: codeo v1.0.11 -> v1.0.10 (user scope)
 install: done - codeo v1.0.10, user scope, superpowers 7.0.2
-install: restart any Claude Code sessions already open to load the plugins
-```
-
-To install a release other than the latest, pass `--version` (as in the README). A run that asks for a different version than the one installed replaces it, so this is also how you go back to an older release. Downgrading to `v1.0.9` prints:
-
-```
-install: release v1.0.9
-install: superpowers already installed (user scope), left alone
-✔ Successfully removed marketplace: codeo
-Also uninstalled 1 plugin from this marketplace:
-  codeo@codeo
-The removal also deletes their saved options, secrets and data where it can.
-To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.10 -> v1.0.9 (user scope)
-install: done - codeo v1.0.9, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -39,18 +39,18 @@ install: restart any Claude Code sessions already open to load the plugins
 One machine holds one codeo version, so a replace does not keep the other scopes' copies: removing the marketplace uninstalls codeo from every project and every local install on the machine, not only the one you ran the command in. The installer prints one line for each project install and each local install it dropped, with the command that restores it, and it leaves every project's `.claude/settings.json` and `.claude/settings.local.json` as they were, so `git status` stays clean. The project the command runs in is named too, when you ran a plain run inside it. A plain update run from your home folder, with codeo installed for two projects and locally for a third:
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.9 -> v1.0.10 (user scope)
-install: codeo is no longer installed for /home/you/app (project scope, v1.0.9); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: codeo is no longer installed for /home/you/api (project scope, v1.0.9); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: codeo is no longer installed for /home/you/loc (local scope, v1.0.9); its .claude/settings.local.json was not changed; run claude plugin install codeo@codeo --scope local there to restore it
-install: done - codeo v1.0.10, user scope, superpowers 7.0.2
+install: codeo v1.0.10 -> v1.0.11 (user scope)
+install: codeo is no longer installed for /home/you/app (project scope, v1.0.10); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: codeo is no longer installed for /home/you/api (project scope, v1.0.10); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: codeo is no longer installed for /home/you/loc (local scope, v1.0.10); its .claude/settings.local.json was not changed; run claude plugin install codeo@codeo --scope local there to restore it
+install: done - codeo v1.0.11, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -75,37 +75,37 @@ Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo
 `claude plugin list` then shows the install again, with its scope and the machine's version. The restore does not move the project's pin. To move it, edit `ref` in the project's `.claude/settings.json` and commit it, as *Moving a project's pin* below describes; `install.sh --scope project` run in a restored project changes nothing, because its install is already at the machine's version. A `--scope project` run rewrites the project's `ref` only when it installs or replaces codeo at project scope (the project has no install, or the machine's codeo is at another release). That run also reinstalls a user-scope copy that existed at the same release and names every other project it dropped:
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 install: superpowers already installed (project scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.9 -> v1.0.10 (project scope)
-install: your user-scope codeo moved to v1.0.10 too: one machine holds one codeo version
-install: codeo is no longer installed for /home/you/api (project scope, v1.0.9); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: done - codeo v1.0.10, project scope, superpowers 7.0.2
+install: codeo v1.0.10 -> v1.0.11 (project scope)
+install: your user-scope codeo moved to v1.0.11 too: one machine holds one codeo version
+install: codeo is no longer installed for /home/you/api (project scope, v1.0.10); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: done - codeo v1.0.11, project scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
 ## When an update fails
 
-The marketplace is removed before the new one is added, so if a step fails in between (the network drops, say), codeo is left uninstalled. The installer then prints the dropped-install lines, if any, and ends with `install: codeo is no longer installed: <the last line claude printed>; run this again`; running the same command again finishes the job, and the restore commands apply once it has finished, because they need the codeo marketplace. When a `--scope project` update that removed a user-scope copy fails, the line ends `run this again with --scope project, then once without --scope to restore your user-scope copy`. When one scope was reinstalled and the other was not, it prints `install: codeo v1.0.10 is installed at project scope but not at user scope: <the last line claude printed>; run this again with --scope user`. A user-scope copy that was disabled comes back enabled, and the line says so: `install: codeo v1.0.9 -> v1.0.10 (user scope) (it was disabled; it is enabled now)`.
+The marketplace is removed before the new one is added, so if a step fails in between (the network drops, say), codeo is left uninstalled. The installer then prints the dropped-install lines, if any, and ends with `install: codeo is no longer installed: <the last line claude printed>; run this again`; running the same command again finishes the job, and the restore commands apply once it has finished, because they need the codeo marketplace. When a `--scope project` update that removed a user-scope copy fails, the line ends `run this again with --scope project, then once without --scope to restore your user-scope copy`. When one scope was reinstalled and the other was not, it prints `install: codeo v1.0.11 is installed at project scope but not at user scope: <the last line claude printed>; run this again with --scope user`. A user-scope copy that was disabled comes back enabled, and the line says so: `install: codeo v1.0.10 -> v1.0.11 (user scope) (it was disabled; it is enabled now)`.
 
 A plain update run from your home folder that fails at the add step, with codeo installed for two projects and locally for a third, prints the dropped installs before the error:
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo is no longer installed for /home/you/app (project scope, v1.0.9); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: codeo is no longer installed for /home/you/api (project scope, v1.0.9); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
-install: codeo is no longer installed for /home/you/loc (local scope, v1.0.9); its .claude/settings.local.json was not changed; run claude plugin install codeo@codeo --scope local there to restore it
+install: codeo is no longer installed for /home/you/app (project scope, v1.0.10); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: codeo is no longer installed for /home/you/api (project scope, v1.0.10); its .claude/settings.json was not changed; run claude plugin install codeo@codeo --scope project there to restore it
+install: codeo is no longer installed for /home/you/loc (local scope, v1.0.10); its .claude/settings.local.json was not changed; run claude plugin install codeo@codeo --scope local there to restore it
 install: codeo is no longer installed: Error: network unreachable; run this again
 ```
 
