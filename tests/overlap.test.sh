@@ -278,6 +278,40 @@ case_desc="a none footprint against a literal pairs nothing"
 clone=$(SC_APART=1 SC_A_FILES='none' scenario 'Clips/New/Thing.cs')
 assert_eq "lines" "9${tab}exclusive:terraform" "$(run "$clone" 7)"
 
+# skill_scenario <their_files> <their_exclusive> — a scenario where issue 9 (pushed) and issue 7 (this
+# clone) both name skills/close/SKILL.md and exclusive skill:close, with 9's footprint then rewritten
+# to the given files and exclusive on origin's feat/b.
+skill_scenario() {
+    local clone origin
+    clone=$(SC_APART=1 SC_A_FILES='skills/close/SKILL.md' scenario 'skills/close/SKILL.md')
+    sed -i "s/^exclusive:.*/exclusive:  skill:close/" "$clone/.codeo/7/plan.md"
+    git -C "$clone" add .codeo
+    git -C "$clone" commit -q -m "exclusive skill:close"
+    origin=$(origin_of "$clone")
+    git -C "$origin" checkout -q feat/b
+    sed -i "s|^files:.*|files:      $1|; s/^exclusive:.*/exclusive:  $2/" "$origin/.codeo/9/plan.md"
+    git -C "$origin" add .codeo
+    git -C "$origin" commit -q -m "skill footprint"
+    git -C "$origin" checkout -q main
+    printf '%s' "$clone"
+}
+
+case_desc="a second issue on one skill file names the other issue and the file"
+clone=$(skill_scenario 'skills/close/SKILL.md' 'skill:close')
+assert_eq "lines" "9${tab}exclusive:skill:close
+9${tab}glob:skills/close/SKILL.md" "$(run "$clone" 7)"
+
+case_desc="a raised skill file pair is dropped while the exclusive still prints"
+clone=$(skill_scenario 'skills/close/SKILL.md' 'skill:close')
+printf '\n### Q3 — Overlap\n\nIssue #9 also names glob:skills/close/SKILL.md.\n' >> "$clone/.codeo/7/plan.md"
+git -C "$clone" add .codeo
+git -C "$clone" commit -q -m "raise the pair"
+assert_eq "lines" "9${tab}exclusive:skill:close" "$(run "$clone" 7)"
+
+case_desc="a different skill and a different skill exclusive do not pair"
+clone=$(skill_scenario 'skills/plan/SKILL.md' 'skill:plan')
+assert_eq "lines" "" "$(run "$clone" 7)"
+
 # two_block_plan <clone> <files1> <files2> — issue 7's plan.md with two `### Footprint` blocks, committed.
 two_block_plan() {
     printf '# Plan\n\n## Notes\n\n### Footprint\n\n```\nfiles:      %s\nwiki:       none\nexclusive:  terraform\n```\n\n### Footprint\n\n```\nfiles:      %s\nwiki:       none\nexclusive:  terraform\n```\n' \
