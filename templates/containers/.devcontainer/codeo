@@ -27,6 +27,8 @@ usage: codeo <command> [args]
   open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
   list                                                              list issue containers and sandboxes
   rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
+  go <N> [--container|--sandbox] [--yes]                             start the issue and drive it to a pull request
+  done <N> [--container|--sandbox]                                  finish the issue and remove its environment
   default [container|sandbox]                                       show or set the default kind for issue
   update                                                            update codeo and its scripts
   help                                                              show this help
@@ -88,6 +90,8 @@ codeo: work a GitHub issue in a dev container or an sbx sandbox.
   codeo open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
   codeo list                                                              list issue containers and sandboxes
   codeo rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
+  codeo go <N> [--container|--sandbox] [--yes]                             start the issue and drive it to a pull request
+  codeo done <N> [--container|--sandbox]                                  finish the issue and remove its environment
   codeo default [container|sandbox]                                       show or set the default kind for issue
   codeo update                                                            update codeo and its scripts
   codeo help                                                              show this help
@@ -811,8 +815,72 @@ cmd_update() {
     echo "updated codeo and its three scripts"
 }
 
+# keychain_check: on macOS, stop when the login keychain is locked, because claude and docker read it. Any
+# other OS, or no security program, passes. The security call is the only call it makes.
+keychain_check() {
+    [[ "$(uname -s)" == Darwin ]] || return 0
+    command -v security >/dev/null 2>&1 || return 0
+    security show-keychain-info "$HOME/Library/Keychains/login.keychain-db" >/dev/null 2>&1 ||
+        die "the login keychain is locked, and claude and docker read it; unlock it, then run this again: security -v unlock-keychain ~/Library/Keychains/login.keychain-db"
+}
+
+# home_clone: print the absolute path of the home clone ($CODEO_HOME_CLONE, else $PWD); die unless its role is home.
+# In $(home_clone) the die ends only the subshell, so callers assign the result.
+home_clone() {
+    local c=${CODEO_HOME_CLONE:-$PWD} role
+    role=$(bash "$c/.devcontainer/scripts/role.sh" "$c" 2>/dev/null) || role=unknown
+    [[ "$role" == home ]] ||
+        die "$c is not a codeo home checkout (its role is ${role:-unknown}); run this in your @CODENAME@-home clone or set CODEO_HOME_CLONE"
+    printf '%s\n' "$c"
+}
+
+# plugin_root <clone>: print the installed plugin root, as the clone's codeo-root.sh finds it.
+plugin_root() {
+    local out
+    out=$(cd "$1" && bash .devcontainer/scripts/codeo-root.sh 2>&1) || die "${out:-codeo-root: no output}"
+    printf '%s\n' "$out"
+}
+
+# cmd_go <N> [--container|--sandbox] [--yes]: start and drive issue N from the home clone (skeleton).
+cmd_go() {
+    local n="" arg
+    kind_flag=""
+    for arg in "$@"; do
+        case "$arg" in
+            --container | --sandbox) parse_kind_flag "$arg" ;;
+            --yes) ;;
+            -*) usage ;;
+            *) [[ -z "$n" ]] || usage; n=$arg ;;
+        esac
+    done
+    [[ -n "$n" ]] && valid_number "$n" || usage
+    keychain_check
+    local clone
+    clone=$(home_clone)
+    die "not implemented"
+}
+
+# cmd_done <N> [--container|--sandbox]: finish issue N from the home clone (skeleton).
+cmd_done() {
+    local n="" arg
+    kind_flag=""
+    for arg in "$@"; do
+        case "$arg" in
+            --container | --sandbox) parse_kind_flag "$arg" ;;
+            -*) usage ;;
+            *) [[ -z "$n" ]] || usage; n=$arg ;;
+        esac
+    done
+    [[ -n "$n" ]] && valid_number "$n" || usage
+    keychain_check
+    local clone
+    clone=$(home_clone)
+    die "not implemented"
+}
+
 main() {
     abs_path_env CODEO_HOME always
+    abs_path_env CODEO_HOME_CLONE always
     abs_path_env CODEO_CONTEXT always
     abs_path_env CODEO_SBX_IMAGE always
     abs_path_env CODEO_SBX slash
@@ -826,6 +894,8 @@ main() {
         open) cmd_open "$@" ;;
         list) cmd_list "$@" ;;
         rm) cmd_rm "$@" ;;
+        go) cmd_go "$@" ;;
+        done) cmd_done "$@" ;;
         default) cmd_default "$@" ;;
         update) cmd_update "$@" ;;
         help | -h | --help) cmd_help "$@" ;;

@@ -37,7 +37,7 @@ cm_sys() {
     local t p
     mkdir -p "$cm_dir/sys"
     for t in bash env cat grep sed sort cut head tail tr wc mkdir mv cp rm chmod mktemp readlink \
-        dirname basename ls sleep date find id flock; do
+        dirname basename ls sleep date find id flock jq; do
         p=$(PATH=/usr/bin:/bin command -v "$t" 2>/dev/null) || continue
         ln -sf "$p" "$cm_dir/sys/$t"
     done
@@ -98,6 +98,23 @@ done
 exit 0
 STUB
     chmod +x "$cm_dir/bin/git" "$cm_dir/bin/curl"
+    # uname prints the contents of $d/uname_out (Linux when absent); security exits $d/security_status;
+    # jq and claude only log. uname is not logged.
+    cat >"$cm_dir/bin/uname" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+cat "$d/uname_out" 2>/dev/null || echo Linux
+STUB
+    for n in security jq claude; do
+        cat >"$cm_dir/bin/$n" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "${0##*/} $*" >>"$d/calls"
+[[ "${0##*/}" != security ]] || exit "$(cat "$d/security_status" 2>/dev/null || echo 0)"
+exit 0
+STUB
+    done
+    chmod +x "$cm_dir/bin/uname" "$cm_dir/bin/security" "$cm_dir/bin/jq" "$cm_dir/bin/claude"
     for n in codeo-container.sh codeo-sandbox.sh; do
         cat >"$cm_home/$n" <<'STUB'
 #!/bin/bash
@@ -129,6 +146,7 @@ cm_run() {
     env -i HOME="$cm_dir/h" "${home_arg[@]}" PATH="$cm_dir/bin:$cm_dir/sys" \
         ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} ${CODEO_SBX:+CODEO_SBX="$CODEO_SBX"} \
         ${CODEO_CONTEXT:+CODEO_CONTEXT="$CODEO_CONTEXT"} ${CODEO_SBX_IMAGE:+CODEO_SBX_IMAGE="$CODEO_SBX_IMAGE"} \
+        ${CODEO_HOME_CLONE:+CODEO_HOME_CLONE="$CODEO_HOME_CLONE"} \
         "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
@@ -2106,6 +2124,84 @@ t_help_and_usage_list_version() {
     grep -qF -- '--version, -v' <<<"$cm_err" || fail "usage lacks --version: $cm_err"
 }
 
+# cm_clone <dir> <role>: a clone whose role.sh prints <role>.
+cm_clone() {
+    mkdir -p "$1/.devcontainer/scripts"
+    printf '#!/bin/bash\necho %s\n' "$2" >"$1/.devcontainer/scripts/role.sh"
+}
+
+t_keychain_locked_stops_before_any_call() {
+    cm_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    echo 36 >"$cm_dir/security_status"
+    cm_run done 5
+    [[ $cm_status -eq 1 ]] || fail "status $cm_status"
+    local want="codeo: the login keychain is locked, and claude and docker read it; unlock it, then run this again: security -v unlock-keychain ~/Library/Keychains/login.keychain-db"
+    [[ "$cm_err" == "$want" ]] || fail "stderr: $cm_err"
+    [[ "$(cat "$cm_dir/calls")" == "security show-keychain-info $cm_dir/h/Library/Keychains/login.keychain-db" ]] ||
+        fail "calls: $(cat "$cm_dir/calls")"
+}
+
+t_keychain_unlocked_goes_on() {
+    cm_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    cm_clone "$cm_dir/clone" stray
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run done 5
+    if grep -q "keychain is locked" <<<"$cm_err"; then fail "keychain line present: $cm_err"; fi
+    grep -qF "is not a codeo home checkout" <<<"$cm_err" || fail "no home_clone message: $cm_err"
+}
+
+t_keychain_skipped_off_macos() {
+    cm_setup "$current"
+    echo Linux >"$cm_dir/uname_out"
+    cm_clone "$cm_dir/clone" stray
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
+    if grep -q '^security' "$cm_dir/calls"; then fail "security called"; fi
+}
+
+t_home_clone_refuses_a_non_home_checkout() {
+    cm_setup "$current"
+    cm_clone "$cm_dir/clone" stray
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
+    [[ $cm_status -eq 1 ]] || fail "status $cm_status"
+    [[ "$cm_err" == "codeo: $cm_dir/clone is not a codeo home checkout (its role is stray); run this in your codeo-home clone or set CODEO_HOME_CLONE" ]] ||
+        fail "stderr: $cm_err"
+}
+
+t_home_clone_env_wins_over_cwd() {
+    cm_setup "$current"
+    cm_clone "$cm_dir/clone" home
+    cm_clone "$cm_dir/cwd" stray
+    pushd "$cm_dir/cwd" >/dev/null
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
+    popd >/dev/null
+    [[ "$cm_err" == "codeo: not implemented" ]] || fail "stderr: $cm_err"
+    pushd "$cm_dir/cwd" >/dev/null
+    cm_run go 5
+    popd >/dev/null
+    grep -qF "$cm_dir/cwd is not a codeo home checkout (its role is stray)" <<<"$cm_err" || fail "cwd not used: $cm_err"
+}
+
+t_bad_arguments_are_usage_before_the_keychain() {
+    cm_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    local a
+    for a in "go x" "done" "go 5 --force" "done 5 --yes"; do
+        # shellcheck disable=SC2086
+        cm_run $a
+        [[ $cm_status -eq 2 ]] || fail "$a: status $cm_status"
+    done
+    [[ ! -s "$cm_dir/calls" ]] || fail "calls: $(cat "$cm_dir/calls")"
+}
+
+t_usage_and_help_list_go_and_done() {
+    cm_setup "$current"
+    cm_run help
+    { grep -q 'codeo go <N>' <<<"$cm_out" && grep -q 'codeo done <N>' <<<"$cm_out"; } || fail "help: $cm_out"
+    cm_run
+    { grep -q '  go <N>' <<<"$cm_err" && grep -q '  done <N>' <<<"$cm_err"; } || fail "usage: $cm_err"
+}
+
 # rm_stubs_152: rm_stubs for issue 152 (the stub names codeo-5).
 rm_stubs_152() {
     rm_stubs
@@ -2405,6 +2501,13 @@ cases=(
     t_version_equals_plugin_json
     t_version_extra_args_usage
     t_help_and_usage_list_version
+    t_keychain_locked_stops_before_any_call
+    t_keychain_unlocked_goes_on
+    t_keychain_skipped_off_macos
+    t_home_clone_refuses_a_non_home_checkout
+    t_home_clone_env_wins_over_cwd
+    t_bad_arguments_are_usage_before_the_keychain
+    t_usage_and_help_list_go_and_done
     t_rm_container_marks
     t_rm_refused_marks_nothing
     t_rm_kept_volume_marks_container_and_image
