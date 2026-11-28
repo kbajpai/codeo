@@ -35,7 +35,7 @@ codeo is an agent-workflow plugin for Claude Code. It is for engineers who work 
 - `gh`, the GitHub CLI; board use also needs `gh project`, which reads GraphQL, so the token must be allowed to use it
 - `claude`, Claude Code
 
-`install.sh` checks all five tools in one run and names every one that is missing or too old; `/codeo:doctor` checks bash, `jq`, `git` and `gh`, and never runs `claude`. The installer installs none of them: use your system's package manager, then run it again.
+`install.sh` checks all five tools in one run and names every one that is missing or too old; `/codeo:doctor` checks bash, `jq` and `git`, its `gh-auth` check covers `gh`, and it never runs `claude`. The installer installs none of them: use your system's package manager, then run it again.
 
 ## Installing
 
@@ -48,7 +48,7 @@ curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bas
 It installs the latest release, which is the highest `vX.Y.Z` tag of the repository. Claude Code sessions that are already open need a restart to load the plugins. It prints one `install:` line per step, between the lines `claude` prints itself.
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/obra/superpowers-marketplace.git
 Refreshing marketplace cache (timeout: 120s)…
 Cloning repository (timeout: 120s): https://github.com/obra/superpowers-marketplace.git
@@ -59,13 +59,13 @@ Installing plugin "superpowers@superpowers-marketplace"...✔ Successfully insta
 install: superpowers installed (user scope)
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/kbajpai/codeo.git
 Refreshing marketplace cache (timeout: 120s)…
-Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.10)
+Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.11)
 Clone complete, validating marketplace…
 Cleaning up old marketplace cache…
 ✔ Successfully added marketplace: codeo (declared in user settings)
 Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: user)
-install: codeo v1.0.10 installed (user scope)
-install: done - codeo v1.0.10, user scope, superpowers 7.0.2
+install: codeo v1.0.11 installed (user scope)
+install: done - codeo v1.0.11, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -74,10 +74,10 @@ install: restart any Claude Code sessions already open to load the plugins
 Run it again and nothing changes:
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 install: superpowers already installed (user scope), left alone
-install: codeo v1.0.10 already installed (user scope)
-install: nothing changed - codeo v1.0.10, user scope, superpowers 7.0.2
+install: codeo v1.0.11 already installed (user scope)
+install: nothing changed - codeo v1.0.11, user scope, superpowers 7.0.2
 ```
 
 `claude plugin list` shows what is installed:
@@ -86,7 +86,7 @@ install: nothing changed - codeo v1.0.10, user scope, superpowers 7.0.2
 Installed plugins:
 
   ❯ codeo@codeo
-    Version: 1.0.10
+    Version: 1.0.11
     Scope: user
     Status: ✔ enabled
 
@@ -98,10 +98,10 @@ Installed plugins:
 
 ### Options
 
-`--version` installs a release other than the latest (`v1.0.9`, or `1.0.9`). The installer checks the tag exists before it changes anything. Asking for a different version than the one installed replaces it; [docs/updating.md](docs/updating.md) shows what that prints, including a downgrade:
+`--version` installs a release other than the latest (`v1.0.10`, or `1.0.10`). The installer checks the tag exists before it changes anything. Asking for a different version than the one installed replaces it; [docs/updating.md](docs/updating.md) shows what that prints, including a downgrade:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.9
+curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bash -s -- --version v1.0.10
 ```
 
 `--scope project` installs both plugins for one project instead of for you. Run it inside the project's git repository (any folder in it works); it writes the project's `.claude/settings.json`:
@@ -111,7 +111,7 @@ curl -fsSL https://raw.githubusercontent.com/kbajpai/codeo/main/install.sh | bas
 ```
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/obra/superpowers-marketplace.git
 Refreshing marketplace cache (timeout: 120s)…
 Cloning repository (timeout: 120s): https://github.com/obra/superpowers-marketplace.git
@@ -122,13 +122,13 @@ Installing plugin "superpowers@superpowers-marketplace"...✔ Successfully insta
 install: superpowers installed (project scope)
 Adding marketplace…SSH not configured, cloning via HTTPS: https://github.com/kbajpai/codeo.git
 Refreshing marketplace cache (timeout: 120s)…
-Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.10)
+Cloning repository (timeout: 120s): https://github.com/kbajpai/codeo.git (ref: v1.0.11)
 Clone complete, validating marketplace…
 Cleaning up old marketplace cache…
 ✔ Successfully added marketplace: codeo (declared in project settings)
 Installing plugin "codeo@codeo"...✔ Successfully installed plugin: codeo@codeo (scope: project)
-install: codeo v1.0.10 installed (project scope)
-install: done - codeo v1.0.10, project scope, superpowers 7.0.2
+install: codeo v1.0.11 installed (project scope)
+install: done - codeo v1.0.11, project scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -143,7 +143,7 @@ Commit the file it wrote. This is its content (`jq -S . .claude/settings.json`),
   "extraKnownMarketplaces": {
     "codeo": {
       "source": {
-        "ref": "v1.0.10",
+        "ref": "v1.0.11",
         "repo": "kbajpai/codeo",
         "source": "github"
       }
@@ -170,7 +170,7 @@ Run these once, in the project's git repository, inside Claude Code, after insta
 
 ### 1. Run /codeo:setup
 
-It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. Until you replace it, `/codeo:doctor` fails `config` (`config.json: repo.owner is still TODO-set-me`, and likewise `repo.name` or `baseBranch`) and `ruleset` is skipped. It refuses to overwrite a `config.json` that exists. `--stack <name>` records a stack name. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
+It creates `.codeo/` with a starter `config.json` (the schema, the repository's owner and name read from the `origin` remote, the base branch read from `origin/HEAD`, and empty `suites` and `resources`), a `.codeo/.gitignore` for the per-checkout files, and `docs/plans/`. A value it cannot read is written as `TODO-set-me` and named on stderr. Until you replace it, `/codeo:doctor` fails `config` (`config.json: repo.owner is still TODO-set-me`, and likewise `repo.name` or `baseBranch`) and `ruleset` also fails, reporting `skipped: baseBranch is not set` or `skipped: config is unusable`. It refuses to overwrite a `config.json` that exists, unless `--containers` is the only option besides `--codename`: that runs on an existing config and adds a missing `codename` and `plugin` pin (see [Adopting codeo with containers](#adopting-codeo-with-containers)). `--stack <name>` records a stack name; `--codename <name>` records the project's codename (2-30 characters of lower-case letters, digits and single hyphens, starting with a letter); `--containers` also writes the dev container and sandbox files. In a project cloned from a GitHub repository whose `origin` points at it, `setup` prints:
 
 ```
 codeo: created .codeo/config.json for kbajpai/codeo (base main); run /codeo:doctor next
@@ -203,7 +203,7 @@ Every key is in [Configuration](#configuration). The one thing most projects set
 }
 ```
 
-`board`, `codename`, `plugin`, `models` and everything else optional are written by hand; setup leaves them out (`/codeo:setup --stack <name>` also writes `stacks`).
+`board`, `models` and everything else optional are written by hand; setup does not write them. `/codeo:setup --codename <name>` also writes `codename`, `--containers` writes `codename` and the `plugin` pin, and `--stack <name>` writes `stacks`.
 
 ### 3. Run /codeo:doctor
 
@@ -231,7 +231,7 @@ Then commit `.codeo/` and `docs/plans/`; the config is shared by everyone who wo
 
 ### Running on the host
 
-The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` in a clone named `<codename>-home`. A project with its own role guard refuses a skill outside its checkout. The project needs a GitHub repository whose `origin` remote points at it; a project board is optional.
+The home role runs `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` in a clone named `<codename>-home`. A project with its own role guard refuses a skill outside its checkout, and the plugin's edit guard refuses project edits in a home checkout (see [The edit guard](docs/home-checkout.md#the-edit-guard)). The project needs a GitHub repository whose `origin` remote points at it; a project board is optional.
 
 See [docs/home-checkout.md](docs/home-checkout.md) for the home checkout, the guard and the tracking comment, and [.devcontainer/README.md](.devcontainer/README.md) for the dev container.
 
@@ -269,7 +269,7 @@ init: ok config: .codeo/config.json written
 init: ok suite: api
 init: ok suite: web
 init: ok suite: k8s
-init: ok config: plugin pin v1.0.10 (the container installs it)
+init: ok config: plugin pin v1.0.11 (the container installs it)
 init: ok containers: 22 written, 1 kept
 ok config: config.json is valid
 ok schema: supported (plugin understands up to 1)
@@ -336,8 +336,8 @@ Details: [docs/skills.md#issue](docs/skills.md#issue).
 - **Run:** `/codeo:init <number>`. The number can be `42`, `#42` or the issue's URL.
 - **It asks:** almost nothing. It stops for one review of `init.md` (approve, change or reject), and for an override if you are taking over someone else's claim. Its own question list normally reads `None.`
 - **It checks who you are:** `github.sh user whoami` must name a person's GitHub account. It refuses when it cannot tell who you are (`CODEO_GITHUB_LOGIN` counts only in a hosted web session, where it is compared with the owner and the assignees like any login but cannot vouch for you) and when the account is a bot or an organization, and it records you as the owner in `init.md`. When it cannot add you to the issue's assignees it records an `assignee-add failed` line under `## Notes` and says so. Every later step then checks you are that owner (see Troubleshooting, "A lock that is stuck or not yours").
-- **It writes:** [.codeo/<N>/init.md](.codeo/done/143/init.md): the issue, the branch, the state, and the acceptance criteria word for word. It also copies the approved draft to `.codeo/<N>/issue.md`. It cuts and pushes the branch (`<type>/<N>-<slug>`), moves the card to In progress and takes the workflow lock. Once the push has claimed the branch, it assigns you to the issue. A failed assignment is reported in the closing message and nothing else is recorded: the claim stands on the pushed branch. Init stops before any of this when it cannot tell who you are.
-- **It commits:** `docs(codeo): init dossier for #<N>`.
+- **It writes:** [.codeo/<N>/init.md](.codeo/done/143/init.md): the issue, the branch, the state, and the acceptance criteria word for word. It also copies the approved draft to `.codeo/<N>/issue.md`. It cuts and pushes the branch (`<type>/<N>-<slug>`), moves the card to In progress and takes the workflow lock. Once the push has claimed the branch, it assigns you to the issue. A failed assignment is recorded as an `assignee-add failed` line under `## Notes` of `init.md`, in a commit of its own that is pushed, and reported in the closing message; the claim stands on the pushed branch. Init stops before any of this when it cannot tell who you are.
+- **It commits:** `docs(codeo): init dossier for #<N>`, and a second commit, `docs(codeo): init dossier for #<N> — assignee-add failed`, only when the assignment failed.
 - **Next:** `/codeo:plan`, usually in the same session.
 
 Details: [docs/skills.md#init](docs/skills.md#init).
@@ -377,7 +377,7 @@ Details: [docs/skills.md#qc](docs/skills.md#qc).
 
 - **Run:** `/codeo:close [--stash]`. `--stash` parks the workflow instead of finishing it.
 - **It asks:** whether to delete the remote branch, once, after the merge. It never merges: you merge the pull request on GitHub, then run the command again. Overlap with another workflow (`overlap.sh`) is a numbered question in `close.md`, and so is what to do with a pull request closed unmerged: reopen it, stash the work or abandon it.
-- **It writes:** [.codeo/<N>/close.md](.codeo/done/143/close.md). It archives the dossier to `.codeo/done/<N>/` and pushes it before opening the pull request, so the first check passes, then opens the pull request and records it. With a board, the card goes to In review when the pull request opens, back to In progress on a send-back, and to Done once the merge is proved and the issue is closed. When the pull request is behind the base branch (which GitHub reports only where the base requires branches to be up to date), a clean `git merge --no-edit origin/<base>` is pushed for you; a conflict is a send-back. It comments on the pull request when it returns from review, listing what changed, and again after the merge, recording what it checked and released. After you merge and run it again, it proves the merge, releases every lease, asks about deleting the branch, then deletes the issue's `codeo-live/<issue>/*` branches on origin (a hosted web session deletes none: it cannot delete a branch) and removes the lock. A stash sends the card back to Ready. A pull request closed unmerged can be abandoned, which sends the card to Backlog.
+- **It writes:** [.codeo/<N>/close.md](.codeo/done/143/close.md). It archives the dossier to `.codeo/done/<N>/` and pushes it before opening the pull request, so the first check passes, then opens the pull request and records it. With a board, the card goes to In review when the pull request opens, back to In progress on a send-back, and to Done once the merge is proved and the issue is closed. When the pull request is behind the base branch (which GitHub reports only where the base requires branches to be up to date), a clean `git merge --no-edit origin/<base>` is pushed for you; a conflict is a send-back. It comments on the pull request when it returns from review, listing what changed, and again after the merge, recording what it checked and released. After you merge and run it again, it proves the merge, releases every lease, asks about deleting the branch, then deletes the issue's `codeo-live/<issue>/*` branches on origin (a hosted web session deletes none: it cannot delete a branch) and removes the lock. A stash sends the card back to Ready. A stash or an abandon removes you from the issue's assignees. A pull request closed unmerged can be abandoned, which sends the card to Backlog.
 - **It commits:** `docs(codeo): close dossier for #<N> — archived`, then `docs(codeo): close dossier for #<N> — PR #<pr>`. Review feedback or a conflict with the base branch is another round (`— review feedback`) and goes back through `/codeo:implement` and `/codeo:qc`.
 - **Next:** the first run ends by telling you to review and merge the pull request, then run `/codeo:close` again. After the merge, `/codeo:triage`, which looks for loose ends the work left behind. A stash ends with `/codeo:init #<N>`, to start it again.
 
@@ -492,11 +492,13 @@ The entries are in three groups. *During a workflow* covers what stops a step wh
 
 ### During a workflow
 
-**A role-guard refusal.** The guard is the project's own, not the plugin's: it is this project's role check, run at the start of each skill, and a project set up with `/codeo:setup` has none and is never refused. If you meet a refusal, you are in a project that has added the guard; [docs/home-checkout.md](docs/home-checkout.md) and [.devcontainer/README.md](.devcontainer/README.md#roles-and-the-guard) describe it. To add a guard to your own project, see [Adopting the guard in your project](docs/home-checkout.md#adopting-the-guard-in-your-project).
+**A role-guard refusal.** The skill guard is the project's own: it is this project's role check, run at the start of each skill. A plain `/codeo:setup` project has none, and `/codeo:setup --containers` installs `.devcontainer/scripts/role.sh` and the role-guard overlays, so such a project can be refused. If you meet a refusal, you are in a project that has added the guard; [docs/home-checkout.md](docs/home-checkout.md) and [.devcontainer/README.md](.devcontainer/README.md#roles-and-the-guard) describe it. To add a guard to your own project, see [Adopting the guard in your project](docs/home-checkout.md#adopting-the-guard-in-your-project).
 
-- **Symptom.** The skill stops with one line that starts `/codeo:<skill> can't run here:` or says where the skill runs.
+The plugin also ships an edit guard, `hooks/home-guard.sh` (registered in `hooks/hooks.json`), which acts in the session's project (and its worktrees) when that project has `.devcontainer/scripts/role.sh`, and allows the call when it cannot find out the role. In a checkout whose role is `home`, `stale:?` or `stray`, Edit, Write, NotebookEdit and git writes through Bash are refused with one line. The way out is `/codeo:issue`, then `codeo issue <N>`, then the work in that issue's checkout. Writes under `.codeo/` are exempt, and starting Claude Code with `CODEO_HOME_EDITS=allow` in the environment switches the guard off for that session (only the exact value `allow` counts); see [The edit guard](docs/home-checkout.md#the-edit-guard).
+
+- **Symptom.** The skill stops with one line that starts `/codeo:<skill> can't run here:` or says where the skill runs. In a container locked for another issue it reads `/codeo:<skill> runs in issue #<N>'s container, but this checkout's role is mismatch:<N>:<folder> (issue #<N>).`
 - **Cause.** The skill belongs in another checkout. `/codeo:issue`, `/codeo:init`, `/codeo:triage` and `/codeo:cleanup` run in a home checkout; `/codeo:plan`, `/codeo:implement`, `/codeo:qc` and `/codeo:close` run in the issue's own checkout.
-- **Fix.** Run the skill in the checkout the line names. Nothing you say in the session lifts a refusal. In a dev container, a line with `role stale:<N>` says what became of the workflow: finished (`/codeo:cleanup` in a home checkout prints how to remove the container and, once you say you removed it, records that so the next run does not list the issue again unless it fails a proof, in which case it is still listed), stashed (`/codeo:init #<N>` in a home checkout is the way back, never the start script, and the old container is removed on the host first) or abandoned (nothing more runs there; check the branch is still on origin before removing the container). A workflow that is live but lost its lock is fixed by re-running `bash .devcontainer/scripts/devcontainer-start.sh`. The `stale` row of [.devcontainer/README.md](.devcontainer/README.md#roles-and-the-guard) has the full list. A clone named `<codename>-home` that reads as `stray` needs `jq` installed; see [docs/home-checkout.md](docs/home-checkout.md).
+- **Fix.** Run the skill in the checkout the line names. Nothing you say in the session lifts a refusal. In a dev container, a line with `role stale:<N>` says what became of the workflow: finished (`/codeo:cleanup` in a home checkout prints how to remove the container and, once you say you removed it, records that so the next run does not list the issue again unless it fails a proof, in which case it is still listed), stashed (`/codeo:init #<N>` in a home checkout is the way back, never the start script, and the old container is removed on the host first) or abandoned (nothing more runs there; check the branch is still on origin before removing the container). A workflow that is live but lost its lock is fixed by re-running `bash .devcontainer/scripts/devcontainer-start.sh`. The `stale` row of [.devcontainer/README.md](.devcontainer/README.md#roles-and-the-guard) has the full list. A clone named `<codename>-home` that reads as `stray` needs `jq` installed; see [docs/home-checkout.md](docs/home-checkout.md). `/codeo:cleanup` stops with `the overlay's <key>: keeps a placeholder the script does not expand: {word}` when the overlay's `command:` or `fallback:` uses a `{word}` placeholder the script cannot fill; fix the overlay.
 
 ```
 /codeo:plan runs in an issue's checkout, but this checkout's role is home.
@@ -508,7 +510,7 @@ The entries are in three groups. *During a workflow* covers what stops a step wh
 - **Cause.** No lock means the step before was skipped, or you are in another checkout. A branch mismatch means someone switched branches or the lock is stale. The other two mean this checkout already holds a workflow. A `lock: TODO …` line means the lock script could not finish part of its work, and the line says which.
 - **Fix.** For no lock, run `/codeo:init #<N>`. For a branch mismatch, switch back to the branch the lock names (`git switch <branch>`), or finish the workflow there with `/codeo:close` or `/codeo:close --stash`; do not edit `.codeo/active` to make it agree with the branch. For another issue, finish or stash that one first, in its own checkout. When `/codeo:init` refuses, run it in another checkout (a second clone or a `git worktree`), or finish this workflow with `/codeo:close`. For a `lock: TODO …` line, do what it says, except as set out here: the example below is the one case where you edit the lock, by writing the volume name into its `volume:` line (`docker volume ls` on the host lists the volumes). For a TODO that says no single `init.md` names the branch and found 0, run `/codeo:init #<N>`. For a TODO that says the issue is stashed or abandoned, `/codeo:init #<N>` resumes a stashed issue; for an abandoned one it stops with the `claim: #<N> was abandoned …` line, and there are two ways on: say in so many words that you are taking the work up again, or delete the old branch on origin and run `/codeo:init #<N>` again (the card must then be Ready; see "A card that is not Ready" below). When the TODO says it found more than one, two issues' dossiers name the same branch; despite the line's "run init for the issue", `/codeo:init` does not fix it: settle by hand which issue owns the branch, then re-run the script. For a TODO that says the local branch holds commits the branch it would check out lacks (`origin/<branch>` or the current `HEAD`), or that the branch and `origin/<branch>` have diverged, reconcile by hand (the `git log --oneline …` command the line prints shows the commits) and re-run the script; `/codeo:init` does not fix it. Taking a lock that exists only prints `lock already taken`.
 
-A step that stops on the lock prints one of three `codeo:` lines: `codeo: #<N> belongs to <owner> (claimed) — you are <login>; …` (`(last resumed <date>)` after a resume), `codeo: #<N> is assigned to <assignees>, not <login> — …` or `codeo: this checkout was locked by <user>, you are <login> — …`. Usually this means the issue is someone else's: the owner is the login on the last resume line of the pushed `init.md`, else its `Owner` row, and you must also be among the issue's assignees **when it has any** and be the login that took the lock (its `user:` line). If you are the recorded owner but not an assignee, the line ends `add yourself: github.sh issue assignee-add <N> <login>`; run it. Ask the owner, or take the work over for good with `/codeo:init #<N>`, whose resume path records you as the new owner. To go on once, without changing the owner, tell the skill in so many words that you are taking the workflow over: it runs `lock.sh verify --override "<your words>"`, which passes that one call and records an `override:` line under `## Notes` of `init.md`. A refusal that says ownership could not be checked (origin unreachable, or the issue unreadable) is not lifted by an override: fix the connection and run the step again.
+A step that stops on the lock prints one of three `codeo:` lines: `codeo: #<N> belongs to <owner> (claimed) — you are <login>; …` (`(last resumed <date>)` after a resume), `codeo: #<N> is assigned to <assignees>, not <login> — …` or `codeo: this checkout was locked by <user>, you are <login> — …`. Usually this means the issue is someone else's: the owner is the login on the last resume line of the pushed `init.md`, else its `Owner` row, and you must also be among the issue's assignees **when it has any** and be the login that took the lock (its `user:` line). If you are the recorded owner but not an assignee, the line ends `add yourself: github.sh issue assignee-add <N> <login>`; run it. Ask the owner, or take the work over for good with `/codeo:init #<N>`, whose resume path records you as the new owner. To go on once, without changing the owner, tell the skill in so many words that you are taking the workflow over: it runs `lock.sh verify --override "<your words>"`, which passes that one call and records an `override:` line under `## Notes` of `init.md`. A refusal that says ownership could not be checked (origin unreachable, or the issue unreadable) is not lifted by an override: fix the connection and run the step again. When `github.sh user whoami` cannot name a person, `/codeo:init` and `lock.sh take` stop with `codeo: <login> is a Bot account, not a person: sign in with your own GitHub login` or `codeo: cannot tell who you are: …`, and `lock.sh take` prints it as a `lock: TODO — no lock taken: …` line. Sign in with your own GitHub login; `CODEO_GITHUB_LOGIN` counts only in a hosted web session.
 
 ```
 lock: TODO — could not read the workspace volume's name from /proc/self/mountinfo: fill the lock's volume line in by hand (docker volume ls on the host)
@@ -532,7 +534,7 @@ Another `lock: TODO` line, specific to a container lock, is `--sandbox needs a n
 
 `/codeo:doctor` prints one `ok` or `fail` line per check and reports every failure. Each entry below is one check and the fix its own message gives. Paths in the messages below are your project's own.
 
-**config.** `config.json not found at …/.codeo/config.json` means the project has no codeo state: run `/codeo:setup`. An `invalid JSON` message means the file does not parse; fix the file with `jq . .codeo/config.json`, which points at the error. A `schema … is newer than this plugin supports (1); update the plugin` message means the project was set up by a newer codeo: run the install command to get the latest release. A `config.json: missing <key>` message (`.schema`, `.repo.owner`, `.repo.name` or `.baseBranch`) means a required key is absent, and `config.json: repo.owner is still TODO-set-me` (or `repo.name`, or `baseBranch`) means `/codeo:setup` could not read it and wrote the marker: set the value in `.codeo/config.json`. Until you do, `ruleset` is skipped (`fail ruleset: skipped: baseBranch is not set` when it is the base branch, otherwise `skipped: config is unusable`).
+**config.** `config.json not found at …/.codeo/config.json` means the project has no codeo state: run `/codeo:setup`. An `invalid JSON` message means the file does not parse; fix the file with `jq . .codeo/config.json`, which points at the error. A `schema … is newer than this plugin supports (1); update the plugin` message means the project was set up by a newer codeo: run the install command to get the latest release. A `config.json: missing <key>` message (`.schema`, `.repo.owner`, `.repo.name` or `.baseBranch`) means a required key is absent, and `config.json: repo.owner is still TODO-set-me` (or `repo.name`, or `baseBranch`) means `/codeo:setup` could not read it and wrote the marker: set the value in `.codeo/config.json`. Until you do, `ruleset` also fails and reports `skipped: …` (`fail ruleset: skipped: baseBranch is not set` when it is the base branch, otherwise `fail ruleset: skipped: config is unusable`).
 
 ```
 fail config: config.json not found at /home/you/app/.codeo/config.json
@@ -601,7 +603,7 @@ fail containers: differ from the templates: .devcontainer/codeo-container.sh; re
 **`its source doesn't match its extraKnownMarketplaces entry`.** Adding the codeo marketplace at a second tag by hand fails, because the marketplace is already added at the first:
 
 ```
-$ claude plugin marketplace add kbajpai/codeo@v1.0.10
+$ claude plugin marketplace add kbajpai/codeo@v1.0.11
 Adding marketplace…✘ Failed to add marketplace: Cannot add marketplace "codeo": its source doesn't match its extraKnownMarketplaces entry in user or managed settings; add it from the source that entry lists, or change the entry.
 ```
 
@@ -614,15 +616,15 @@ Run the install command instead, which removes the marketplace and adds it at th
 Run the install command again. With no `--version` it installs the latest release. If that differs from what you have, it replaces codeo: one machine holds one codeo version, so the replace removes the codeo marketplace, which uninstalls codeo at every scope on the machine, and installs the new release at the scope you asked for. A plain run installs it at user scope, for you; `--scope project` installs it for the project; `--version <tag>` picks a release, and moving to an older one also replaces codeo ([docs/updating.md](docs/updating.md)):
 
 ```
-install: release v1.0.10
+install: release v1.0.11
 install: superpowers already installed (user scope), left alone
 ✔ Successfully removed marketplace: codeo
 Also uninstalled 1 plugin from this marketplace:
   codeo@codeo
 The removal also deletes their saved options, secrets and data where it can.
 To use a plugin again, add the marketplace back and reinstall the plugin.
-install: codeo v1.0.9 -> v1.0.10 (user scope)
-install: done - codeo v1.0.10, user scope, superpowers 7.0.2
+install: codeo v1.0.10 -> v1.0.11 (user scope)
+install: done - codeo v1.0.11, user scope, superpowers 7.0.2
 install: restart any Claude Code sessions already open to load the plugins
 ```
 
@@ -683,7 +685,7 @@ To take codeo out of a project, delete `.codeo/` and `docs/plans/` (or keep the 
 
 ## The skills
 
-The six pipeline skills run in order inside one workflow, each owning one dossier file under `.codeo/<issue>/`; `triage` and `cleanup` run outside the workflow lock, between workflows, and a project's role guard (see [`.devcontainer/README.md`](.devcontainer/README.md#roles-and-the-guard)) keeps each skill in the checkout it belongs in; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
+The six pipeline skills run in order inside one workflow. Each one other than `issue` owns one dossier file under `.codeo/<issue>/`; `issue` keeps its dossier on the intake branch as `.codeo/intake/<N>/issue.md` until `/codeo:init` adopts it; `triage` and `cleanup` run outside the workflow lock, between workflows, and a project's role guard (see [`.devcontainer/README.md`](.devcontainer/README.md#roles-and-the-guard)) keeps each skill in the checkout it belongs in; `setup` and `doctor` set a project up and check it. [`docs/skills.md`](docs/skills.md) describes each one: what it does, what it reads and writes, what it hands off to and never does, and its extension points.
 
 | Skill | Purpose |
 |-------|---------|
