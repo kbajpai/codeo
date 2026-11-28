@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is **waiting on you (Task 7)**; the release pull request's CI is green after a rerun (the earlier failure was a test flake, see *CI failure on #214* under `## Notes`): Tasks 1-6 of `docs/plans/2026-11-27-release-v1-0-11.md` are done and reviewed, and the release pull request is open: https://github.com/kbajpai/codeo/pull/214 (`release/v1.0.11` into `main`, head `b277022`). Tasks 8-12 follow your merge. `## Outcome` stays pending until the whole plan is built. Nothing is open (no question), and `overlap.sh 213` printed nothing.
+Round 1 is **waiting on you (Task 9, the tag)**: pull request #214 merged on 2026-11-28 at 00:46 UTC (a squash; merge commit `00de557a939e7b7b3477c34c23dff81820ff03ae`, `release: v1.0.11 (#214)`), and Task 8's clean-clone test of that commit passed: Tasks 1-6 of `docs/plans/2026-11-27-release-v1-0-11.md` are done and reviewed, and the release pull request is open: https://github.com/kbajpai/codeo/pull/214 (`release/v1.0.11` into `main`, head `b277022`). Tasks 8-12 follow your merge. `## Outcome` stays pending until the whole plan is built. Nothing is open (no question), and `overlap.sh 213` printed nothing.
 
 **The release branch** is cut from `origin/main` at `3857710` and changes exactly `.claude-plugin/plugin.json`, `CHANGELOG.md`, `README.md`, `docs/updating.md` and `tests/install.test.sh`:
 
@@ -20,6 +20,8 @@ Round 1 is **waiting on you (Task 7)**; the release pull request's CI is green a
 | 4 README guard, identity, cleanup, M6, M7 | `2c40f44`, `b04fffa` | one fix round (two Important findings, both addressed and re-reviewed) |
 | 5 changelog | `b277022` | clean |
 | 6 suite and release PR | pull request #214 | checked by the controller (below) |
+
+**Task 8 (clean clone of `00de557a939e7b7b3477c34c23dff81820ff03ae`, 2026-11-28):** `git rev-parse HEAD` printed that SHA, `jq -r .version .claude-plugin/plugin.json` printed `1.0.11`, and `bash tests/run.sh` ended `all cases passed` with this sandbox's global gitignore switched off (`GIT_CONFIG_GLOBAL=/dev/null`). Run exactly as the plan writes it, only `sandbox.test.sh` failed, because this sandbox's global gitignore lists `.sbx` and that test runs `git add .sbx` in a temporary repository; it passes in CI and on any machine without that ignore. The release pull request's own CI was green (see *CI failure on #214* under `## Notes`).
 
 **Task 6 checks, on head `b277022`:** `git diff --name-only origin/main` lists exactly the five files; `bash tests/readme.test.sh` and `bash tests/install.test.sh` end `all cases passed`; `bash tests/run.sh` ends `all cases passed` only with this sandbox's global gitignore switched off (`GIT_CONFIG_GLOBAL=/dev/null bash tests/run.sh`): that ignore lists `.sbx`, and `tests/sandbox.test.sh` runs `git add .sbx` in a temporary repository, which it refuses. Without the override only that one file fails, and it fails the same way on `origin/main`. The sandbox also lacked the `hostname` binary (live.test.sh), which was installed with apt. PR checks: `qc-verdict` passed; `tests` was pending when this was written.
 
@@ -65,3 +67,4 @@ _Pending — written at the hand-off._
 - 2026-11-27 — Tasks 5-6 done: changelog `b277022`; release pull request #214 opened; waiting for the merge (Task 7) · cost: unavailable (the invocation spans several stops; the subagents' cost is not summed)
 - 2026-11-28 — release pull request #214: `tests` fails four times on `close-skill.test.sh`'s last assertion and does not reproduce locally; stopped to ask the engineer how to proceed · cost: unavailable
 - 2026-11-28 — release pull request #214 green after a rerun (the failures were a SIGPIPE flake in two tests, diagnosed with a throwaway pull request, closed); waiting for the merge (Task 7) · cost: unavailable
+- 2026-11-28 — Tasks 7-8 done: #214 merged as `00de557`; clean-clone test passed; waiting for the tag (Task 9) · cost: unavailable
