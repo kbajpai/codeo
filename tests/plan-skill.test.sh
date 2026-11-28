@@ -79,8 +79,9 @@ must_contain 'step 10 keeps sequenced none when nothing was sequenced' 'stays `n
 dossier="$plugin_root/docs/dossier.md"
 grep -qF -- 'only when an overlap question was answered that way' "$dossier" &&
     fail 'docs/dossier.md still says sequenced is written only when something was sequenced'
-grep -qF -- '`sequenced` — `none` unless an overlap question was answered *sequence after #M*' "$dossier" ||
-    fail 'docs/dossier.md does not say sequenced reads none unless something was sequenced'
+grep -qF -- '`sequenced` — one clause per answered overlap question' "$dossier" &&
+    grep -qF -- '`none` only when no overlap question was raised' "$dossier" ||
+    fail 'docs/dossier.md does not say sequenced holds one clause per answered question, none only when none was raised'
 
 # The home-only guard refuses /codeo:issue in an issue container: the caller records the finding instead.
 must_contain 'a refused call is recorded in the dossier' "record the finding in this skill's own dossier"

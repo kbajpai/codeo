@@ -271,9 +271,10 @@ sequenced:  after #7 — both add an Orders migration (Q6)
   it from the first environment task. Each is something two
   branches cannot both change and merge cleanly, and each is a lock `intake.sh lease` takes, one
   file per resource (`:` spelled `_`).
-- `sequenced` — `none` unless an overlap question was answered *sequence after #M*; then which
-  issue this waits for, why, and the question that decided it. It is never left out:
-  `dossier-check.sh` fails a block without it.
+- `sequenced` — one clause per answered overlap question: `after #M — <why> (Q<k>)` when the
+  workflow waits for #M, `beside #M — <what overlaps> (Q<k>)` when it proceeds alongside it,
+  `Q<k>` being the question that decided it. `none` only when no overlap question was raised.
+  It is never left out: `dossier-check.sh` fails a block without it.
 
 A block written after a send-back covers the branch, not only the round: its `files` carry the
 round's own paths plus every earlier path the branch still changes. `overlap.sh --outside <N>`

@@ -307,7 +307,9 @@ it.
   footprint alone. An `exclusive` resource — one of the config's `resources[]` — is one where two
   branches cannot both change it and merge cleanly, so for those the plan takes a lock
   (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take <resource> <N> <purpose>`), refused
-  while another issue holds it.
+  while another issue holds it. Skill files are leased per directory: when the project configures
+  a parameterised `skill` resource, a plan that changes `skills/plan/**` holds `skill:plan`, and
+  the refusal names the holder.
 - **Leases and their queue.** Every lock goes through
   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease`, and lives on the intake branch, where
   every engineer can see it; every decision is read from origin after a fetch, and with origin

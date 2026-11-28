@@ -28,6 +28,10 @@ An issue's entry is the file `changelog.d/<issue>.md`: optional header lines `Co
 
 A plan's changelog documentation task writes `changelog.d/<issue>.md`, never `CHANGELOG.md`, and its footprint lists `changelog.d/**`.
 
+## The skills inventory pin
+
+`tests/inventory.test.sh` pins `docs/skills-inventory.md` to the rules in the skills, one line per rule. `bash tests/inventory.test.sh --update` rewrites it. After a merge or a rebase, run it and commit the fixture. Two changes to different rules merge without a conflict; two changes to the same rule conflict in `docs/skills-inventory.md` as well.
+
 ## Checking a dossier
 
 ```bash
