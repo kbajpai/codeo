@@ -65,7 +65,29 @@ None.
 
 **Deferred, non-blocking (for `/codeo:qc` to weigh):** long unwrapped lines in `skills/close/SKILL.md` step 11; `skills/init/SKILL.md` lists "no resources configured" as a failure of the lease read though it prints nothing and exits 0; the inflight test asserts only the `/codeo:implement` leg; a stripped caution reason can keep stray punctuation (`No.` → `no — .`); two non-`no` cautions joined are not pinned; the README does not repeat close's one-line note for exit 4.
 
+### Round 3
+
+2026-11-28
+(after plan.md round 3)
+
+**Built.**
+- F7, F8: `/codeo:qc` records `git merge-base HEAD origin/<base>` as a bare `Graded base:` line (rule `qc-16`, text and pin updated); `scripts/base-moved.sh` reads the last `Graded base:` line as a bare line, list item or in backticks, and compares from `git merge-base <sha> HEAD`; new cases cover the three forms, a sha newer than the graded tree, and the *Update branch* state; `docs/dossier.md` carries the same definition. One existing case ("an earlier Graded base line is ignored when a later one exists") now merges the later commit first, because an unmerged later sha is the false record the new rule compares from the merge base.
+- F9, F10, F11: `tools/changelog.sh assemble` keeps every distinct `yes` note joined with `; `, defaults `Config schema:` to the newest section's number plus ` (unchanged)` (and refuses when it cannot read one), drops blank lines after a fragment's header, validates `vX.Y.Z` and `YYYY-MM-DD` (exit 2) and reports a missing `CHANGELOG.md` (exit 1).
+- Text: close step 9 names the way on from exit 1 and step 11 the heading when review feedback and a moved base arrive together; plan and `docs/dossier.md` give the `; ` separator; the plan skill says a file with no directory segment where a wildcard stands names no lease; init's failure wording drops "no resources configured".
+
+**Documentation pages changed:** `README.md`, `docs/skills.md`, `CONTRIBUTING.md`, `docs/release-checklist.md`, `docs/dossier.md`, `changelog.d/207.md`, `docs/skills-inventory.md` (`qc-16`).
+
+**Build result:** the `shell` suite's `build` is `true` and passed; `bash tests/run.sh` ends `all cases passed`; `bash scripts/overlap.sh --outside 207` prints nothing; no file mode changed. F9 reproduced by hand in a scratch copy: two `yes` notes both appear in the assembled `Safe to bump mid-workflow:` line. The step 2a sync merged `origin/main` cleanly (1 commit); `also changed on main:` `.devcontainer/README.md`, `.devcontainer/scripts/session-title.sh`, `CHANGELOG.md`, `tests/devcontainer.test.sh`, `docs/plans/2026-11-28-session-title-sequence-181.md`, `.codeo/done/181/*` — none is a file this branch changed.
+
+**Deviations from the plan.**
+- Task 4 also reworded the `/codeo:close` exit-4 note in both pages and added the `assemble` exit-2 and `Config schema:` check lines to `CONTRIBUTING.md` and the release checklist (the plan listed them).
+- Task 5: the whole-round review ran its suite once with a single failure in `overlay.test.sh` ("plan.md is not readable") that did not repeat alone or on rerun; this round changes nothing under overlay.
+- Review: every task had a task review with no Critical or Important finding; the whole-round review (sonnet, per rule implement-06) found none either.
+
+**Deferred, non-blocking (for `/codeo:qc` to weigh):** `scripts/base-moved.sh:7` and close step 9 say close "compares the graded commit with origin/<base>" though the script starts from the merge base (the header says so); an empty `Graded base:` value reads as exit 4 ("no Graded base line"); the schema default of a value like `1 → 2` is `1 (unchanged)`; long lines in qc-16 and `docs/dossier.md`; the diff error in `base-moved.sh` names `$sha`; the `yes` dedupe is case-sensitive; the close and plan skill pins are whole-file; the first fragment bullet does not mention the `yes` join.
+
 ## Log
 
 - 2026-11-28 — implemented: all 13 tasks, build and suite pass · cost: 55m · sonnet-5-5 1.2M in + 39.7M cached / 191k out
 - 2026-11-28 — round 2 implemented: all 7 tasks, build and suite pass · cost: 36m · sonnet-5-5 698k in + 35.5M cached / 127k out
+- 2026-11-28 — round 3 implemented: all 5 tasks, build and suite pass · cost: 12m · sonnet-5-5 473k in + 7.9M cached / 53k out
