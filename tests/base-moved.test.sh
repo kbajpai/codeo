@@ -85,8 +85,9 @@ assert_eq "stdout" "a.txt" "$out"
 setup
 case_desc="an earlier Graded base line is ignored when a later one exists"
 first=$graded
-commit_in "$origin" a.txt main-a "main a"
+sed -i "3s/.*/main-three/" "$origin/a.txt"; git -C "$origin" commit -q -am "main a3"
 git -C "$clone" fetch -q origin main
+git -C "$clone" merge -q --no-edit origin/main
 later=$(git -C "$clone" rev-parse origin/main)
 printf 'Graded base: %s\n\nGraded base: %s\n' "$first" "$later" > "$clone/.codeo/7/qc.md"
 run_moved 7
@@ -188,6 +189,45 @@ run_moved 7
 assert_eq "exit" 1 "$status"
 assert_eq "stdout" "" "$out"
 assert_eq "stderr" "base-moved: -abc is not a commit" "$err"
+
+setup
+case_desc="a list item and backticks around the sha are read"
+commit_in "$origin" a.txt main-a "main a"
+for form in "- Graded base: $graded" "Graded base: \`$graded\`" "- Graded base: \`$graded\`"; do
+    printf '## Round 1\n\n%s\n' "$form" > "$clone/.codeo/7/qc.md"
+    run_moved 7
+    assert_eq "$form: exit" 3 "$status"
+    assert_eq "$form: stdout" "a.txt" "$out"
+done
+
+setup
+case_desc="a sha newer than the graded tree cannot hide changes"
+commit_in "$origin" b.txt main-b1 "main b1"
+git -C "$clone" fetch -q origin main
+git -C "$clone" merge -q --no-edit origin/main
+commit_in "$origin" a.txt main-b2 "main b2"
+git -C "$clone" fetch -q origin main
+printf '## Round 1\n\nGraded base: %s\n' "$(git -C "$clone" rev-parse origin/main)" > "$clone/.codeo/7/qc.md"
+run_moved 7
+assert_eq "exit" 3 "$status"
+assert_eq "stdout" "a.txt" "$out"
+
+setup
+case_desc="update branch state: HEAD already contains the new base"
+sed -i "3s/.*/main-three/" "$origin/a.txt"; git -C "$origin" commit -q -am "main a3"
+git -C "$clone" fetch -q origin main
+git -C "$clone" merge -q --no-edit origin/main
+run_moved 7
+assert_eq "same file: exit" 3 "$status"
+assert_eq "same file: stdout" "a.txt" "$out"
+
+setup
+commit_in "$origin" b.txt main-b "main b"
+git -C "$clone" fetch -q origin main
+git -C "$clone" merge -q --no-edit origin/main
+run_moved 7
+assert_eq "other file: exit" 0 "$status"
+assert_eq "other file: stdout" "" "$out"
 
 setup
 case_desc="usage errors"

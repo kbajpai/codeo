@@ -97,8 +97,9 @@ is the container the message names.
 
    <!-- rule: qc-16 -->
    After a sync that exits 0, the round records the base commit it graded: a line
-   `Graded base: <sha>`, the sha from `git rev-parse origin/<base>`, on a line of its own in the
-   round. When the sync printed `sync-main: merged origin/<base> (<n> commit(s))`, the round also
+   `Graded base: <sha>`, the sha from `git merge-base HEAD origin/<base>` taken straight after the
+   sync exits 0 (the base commit the graded tree contains), written as a bare line (no bullet, no
+   backticks) of its own in the round. When the sync printed `sync-main: merged origin/<base> (<n> commit(s))`, the round also
    says `Behind: merged <n> commit(s) from origin/<base> before grading`, with that `<n>`; when the
    branch already contained `origin/<base>`, no `Behind:` line is written. A round that stops on the
    sync's exit 1 or 2 records no `Graded base:` line. `/codeo:close` reads the

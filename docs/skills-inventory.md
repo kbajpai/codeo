@@ -145,7 +145,7 @@ in prose exist (only the script's existence is checked).
 
 - [qc-15] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words.
 
-- [qc-16] Each round records the `origin/<base>` commit it graded on a `Graded base: <sha>` line, and a round that merged base commits first says how many.
+- [qc-16] Each round that was graded records the base commit its tree contains, `git merge-base HEAD origin/<base>`, on a `Graded base:` line, and a round that merged base commits first says how many.
 
 ## close
 
