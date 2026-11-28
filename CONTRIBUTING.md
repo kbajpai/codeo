@@ -26,6 +26,8 @@ bash tests/run.sh [pattern]   # runs tests/*.test.sh whose name contains the pat
 
 An issue's entry is the file `changelog.d/<issue>.md`: optional header lines `Config schema:`, `Shared state:` and `Safe to bump mid-workflow:` before the first blank line, then the bullets. `CHANGELOG.md` is edited only by `tools/changelog.sh assemble`, which folds the fragments into a release section at release time. A test that looks for an entry reads `bash tools/changelog.sh cat`.
 
+A plan's changelog documentation task writes `changelog.d/<issue>.md`, never `CHANGELOG.md`, and its footprint lists `changelog.d/**`.
+
 ## Checking a dossier
 
 ```bash

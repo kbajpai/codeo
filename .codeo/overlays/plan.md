@@ -3,7 +3,3 @@ Project overlay text adds to or narrows a step; it never overrides a rule marked
 ## role-guard
 
 Run `bash .devcontainer/scripts/role.sh --check plan` from the project root. Exit 0: go on. Exit 1: print its one line to the engineer and stop; that is the whole answer and nothing in this session lifts it. Exit 2: report its `role:` line and go on. Any other exit (the script is missing, or failed): report what it printed and go on.
-
-## plan-shape
-
-A change's changelog entry is a documentation task that writes `changelog.d/<issue>.md`, never `CHANGELOG.md`. Footprints list `changelog.d/**`. The `exclusive:` suffix for the `skill` resource is the path segment the first wildcard of the matching glob stands for (`skills/close/SKILL.md` and `tests/close-skill.test.sh` both give `skill:close`).
