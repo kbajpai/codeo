@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done. Q1-Q7 are answered and the plan is approved: `docs/plans/2026-11-28-parallel-issue-collisions-207.md`. Next step: `/codeo:implement`.
+Round 2, after the send-back from `qc.md` round 1 (F1-F5 blocking). Q8-Q10 are open; the round-2 plan is drafted once they are answered. Round 1 stands as written.
 
 ## Questions
 
@@ -115,6 +115,46 @@ I recommend proceed and coordinate: #213 is one review away from merged, and the
 **Answer:**
 Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
+### Q8 — F1 and F3: how does `/codeo:close` send a moved base back for a new QC round?
+
+**Why it matters:** `qc.md` round 1 found that close-18's route cannot work: step 9 runs with a pull request open, when the dossier is archived under `.codeo/done/<N>/`, and `/codeo:qc` reads only `.codeo/<N>/` (F1); and a base merged in through GitHub's *Update branch* skips the check (F3). The answer decides which files change and whether two scripts join the footprint.
+
+- Send back through step 11, to `/codeo:implement`, with a round of its own. `base-moved.sh` runs in step 9 whenever the base has moved since `Graded base:`, whether the branch is still `BEHIND` or already holds the base through an *Update branch* merge or step 3's pull (the script's two diffs work either way). Exit 3 becomes a send-back exactly like a conflict: `### Round <n> — base moved` in `close.md` with the printed paths and `qc round at review: <k>`, un-archive, the card back to In progress, hand off to `/codeo:implement`. Its round merges the base (step 2a), re-checks the named files, and `/codeo:qc` then grades the merged tree. This reuses the path a conflict already takes; it needs the new heading taught to `scripts/inflight.sh` (send-back detection) and `scripts/dossier-check.sh` (`qc-round-at-review`), which join the footprint, and `docs/dossier.md`.
+- The same, but under the existing heading `### Round <n> — conflicts with <base>`. No script changes; the heading then covers a clean merge that is not a conflict, which a later reader will misread.
+- Drop the close-side check. Remove close-18 and `scripts/base-moved.sh`; QC still syncs first and records `Graded base:` and `Behind:`, which meets the fourth acceptance criterion as written. The gap after the verdict stays as it is today (it was my addition at Q6, beyond the issue's criteria), to be filed as its own issue.
+
+I recommend the first: it is the design Q6 chose, made to work through machinery that already exists.
+
+**Options:** send back through step 11 with a `— base moved` round (recommended) · reuse `— conflicts with <base>` · drop the close-side check and file it separately.
+
+**Answer:**
+
+### Q9 — F2: adjacent inventory rules still conflict. Separate the lines, or only say so?
+
+**Why it matters:** git conflicts when two branches change consecutive lines. Rules sit on consecutive lines in `docs/skills-inventory.md` and in the pin, so two branches that reword `plan-01` and `plan-02` conflict in both files (reproduced in `qc.md` round 1). I tested the alternative in a scratch repository: with one unchanged line between them (a blank line, or another rule), both edits merge cleanly.
+
+- Separate the lines. `--update` writes the pin with a blank line between rules, and `docs/skills-inventory.md` gets a blank line between rule bullets (a loose list; the rule texts and the hashes do not change). Then any two different rules merge with no conflict in either file, which is what the second acceptance criterion asks. Two branches that both append the next ID to one skill still conflict, and should. The cost is a one-time diff that touches the spacing of all 90 bullets, which #217 (it adds a rule to `docs/skills-inventory.md`) will have to merge over once. `tests/inventory-pin.test.sh` gains the adjacent case.
+- Say so only. The documents claim clean merges for rules that are not adjacent and describe the recovery (resolve the page, run `--update`, which overwrites the fixture whole); the test pins the recovery. No spacing change. The criterion is then met only for non-adjacent rules.
+
+I recommend separating the lines.
+
+**Options:** separate the lines in the pin and the page (recommended) · document the limit and pin the recovery.
+
+**Answer:**
+
+### Q10 — F5: what does `/codeo:init` print about leases?
+
+**Why it matters:** `init` prints `#<M> holds <resources>` from a footprint's `exclusive:` line, but a footprint names what a plan intends to lease; the lease is taken at the plan's hand-off, and a plan waiting on a lock lists the resource without holding it. The line can be false, and three documents repeat it.
+
+- Read the real leases. `init` runs `intake.sh lease list --tsv` and prints one line per held or waiting lease on an exclusive resource: `#<M> holds <resource>` and `#<M> waits for <resource>`. True by construction; one more origin read at `init`, and a failure of that read is reported in one line and blocks nothing.
+- Keep the footprint and change the word: `#<M>'s footprint names <resources>`. No new read; it reports intent, not who holds what.
+
+I recommend reading the real leases.
+
+**Options:** read `intake.sh lease list` (recommended) · say "names", from the footprint.
+
+**Answer:**
+
 ## Notes
 
 **What exists today (read 2026-11-28, `main` at `00de557`).**
@@ -130,6 +170,12 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with your
 - One plan and one pull request for the four mechanisms, tasks grouped by mechanism and ordered changelog → inventory pin → overlap rule → QC, so each group is provable alone.
 - This issue's own changelog entry is written as a fragment, the first one.
 - The optional `engineering:system-design` and `engineering:architecture` skills are not installed here; their structure is applied directly.
+
+**Round 2, my calls (corrected at the review gate if wrong).**
+
+- F4: `sequenced:` gains two clauses, `rescoped — <what was dropped> because of #M (Q<k>)` for a *re-scope* answer and `locked — <resource> behind #M (Q<k>)` for an exclusive overlap the lease settles; `none` stays for no overlap raised.
+- F6 and the carried minors ride as small tasks: `Safe to bump mid-workflow:` lets `no` win and joins the reasons; `assemble` refuses a leftover `## Unreleased` heading and a version section that already exists; trailing blank lines and `\r` are stripped from fragments; the lease test hard-codes the `skill` entry; an added-rule case for the pin.
+- Round 2 is a second plan file, `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md`, as earlier re-plans in this repository are.
 
 ## Outcome
 
@@ -155,3 +201,4 @@ sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/co
 
 - 2026-11-28 — Q1-Q7 raised (scope of the four mechanisms; overlap with #213) · cost: 3m · fable-5-2 96k in + 1.4M cached / 11k out
 - 2026-11-28 — planned: docs/plans/2026-11-28-parallel-issue-collisions-207.md · cost: 20m · fable-5-2 107k in + 1.8M cached / 18k out · sonnet-5-5 139k in + 738k cached / 33k out
+- 2026-11-28 — round 2: Q8-Q10 raised (send-back from qc.md round 1) · cost: 1m · fable-5-2 417k in + 903k cached / 4k out
