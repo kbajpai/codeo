@@ -1,0 +1,1 @@
+- Thirty-one fixes a typo (#31).
