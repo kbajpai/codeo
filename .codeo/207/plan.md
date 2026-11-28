@@ -204,6 +204,15 @@ The fragment is the entry, as recommended. Given in the conversation, through th
 - F11 and the carried minors that are one-line fixes ride as one task; the rest are listed as not done.
 - Round 3 is a third plan file, `docs/plans/2026-11-28-parallel-issue-collisions-207-round-3.md`.
 
+### Footprint
+
+```
+files:      tools/changelog.sh, tests/changelog.test.sh, tests/fixtures/changelog/**, changelog.d/**, .codeo/overlays/plan.md, .codeo/config.json, tests/inventory.test.sh, tests/inventory-pin.test.sh, tests/fixtures/skills-inventory.rules.sha256, tests/intake-lease.test.sh, tests/overlap.test.sh, scripts/base-moved.sh, scripts/overlap.sh, tests/base-moved.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, tests/plan-skill.test.sh, tests/init-skill.test.sh, tests/qc-skill.test.sh, tests/close-skill.test.sh, docs/skills-inventory.md, docs/skills.md, docs/dossier.md, docs/handoff.md, docs/release-checklist.md, README.md, CONTRIBUTING.md, docs/plans/2026-11-28-parallel-issue-collisions-207.md, scripts/inflight.sh, scripts/dossier-check.sh, skills/implement/SKILL.md, tests/inflight.test.sh, tests/dossier-check.test.sh, tests/fixtures/dossiers/**, tests/implement-skill.test.sh, docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md, docs/plans/2026-11-28-parallel-issue-collisions-207-round-3.md
+wiki:       none
+exclusive:  none
+sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/config.json (Q7); beside #217 — both change skills/init/SKILL.md, tests/inventory.test.sh and the skills inventory (qc.md Q1, Q2)
+```
+
 ## Outcome
 
 
@@ -229,14 +238,6 @@ The fragment is the entry, as recommended. Given in the conversation, through th
 
 **Overlap:** `overlap.sh 207` printed nothing for the committed round-2 footprint (the #217 pairs were raised and answered at `qc.md` Q1); `overlap.sh --outside 207` printed nothing. No exclusive resource is held by this plan.
 
-### Footprint
-
-```
-files:      tools/changelog.sh, tests/changelog.test.sh, tests/fixtures/changelog/**, changelog.d/**, .codeo/overlays/plan.md, .codeo/config.json, tests/inventory.test.sh, tests/inventory-pin.test.sh, tests/fixtures/skills-inventory.rules.sha256, tests/intake-lease.test.sh, tests/overlap.test.sh, scripts/base-moved.sh, scripts/overlap.sh, tests/base-moved.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, tests/plan-skill.test.sh, tests/init-skill.test.sh, tests/qc-skill.test.sh, tests/close-skill.test.sh, docs/skills-inventory.md, docs/skills.md, docs/dossier.md, docs/handoff.md, docs/release-checklist.md, README.md, CONTRIBUTING.md, docs/plans/2026-11-28-parallel-issue-collisions-207.md, scripts/inflight.sh, scripts/dossier-check.sh, skills/implement/SKILL.md, tests/inflight.test.sh, tests/dossier-check.test.sh, tests/fixtures/dossiers/**, tests/implement-skill.test.sh, docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/config.json (Q7); beside #217 — both change skills/init/SKILL.md and the skills inventory (qc.md Q1)
-```
 
 ## Log
 
