@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The code and the four colliding issues' dossiers (#188, #195, #204, #206) are read. Q1-Q7 are open; nothing is drafted until they are answered. Answer under each `**Answer:**`, then run `/codeo:plan` again.
+Round 1. Q1-Q7 are answered (the recommended picks, given in the conversation). The draft is at `.codeo/207/plan-draft.md`, waiting for the engineer's review.
 
 ## Questions
 
@@ -24,6 +24,7 @@ I recommend this repository only: the issue's evidence is codeo's own `CHANGELOG
 **Options:** this repository only (recommended) · a plugin feature · no preference, you pick.
 
 **Answer:**
+This repository only, as recommended. Given in the conversation: "go with your picks".
 
 ### Q2 — What does a fragment hold, and how do the three header lines reach the release section?
 
@@ -37,6 +38,7 @@ I recommend the first. One point for you to check: assembled bullets come out in
 **Options:** per-issue file with header contributions, bullets in issue order (recommended) · bullets only, header lines by hand · something else, described in the answer.
 
 **Answer:**
+One file per issue with header contributions, bullets in issue-number order, as recommended. Given in the conversation: "go with your picks".
 
 ### Q3 — What form does the committed inventory pin take, so two rule changes merge?
 
@@ -51,6 +53,7 @@ I recommend one line per rule. The file keeps its name unless you want it rename
 **Options:** one line per rule (recommended) · single hash with `merge=union` · no committed pin.
 
 **Answer:**
+One line per rule, as recommended. Given in the conversation: "go with your picks".
 
 ### Q4 — What should "act on an overlap" mean for the shared skill files?
 
@@ -65,6 +68,7 @@ I recommend both. The lock is the only option that changes what happened on 2026
 **Options:** both (recommended) · exclusive resource per skill only · recommendation rule only.
 
 **Answer:**
+Both: an exclusive `skill` resource with a lock, and every overlap decision recorded in `sequenced:`, as recommended. Given in the conversation: "go with your picks".
 
 ### Q5 — Does `/codeo:init` take part, or is `/codeo:plan` the only gate?
 
@@ -79,6 +83,7 @@ I recommend the first.
 **Options:** plan is the gate and init informs (recommended) · init asks · plan only.
 
 **Answer:**
+`/codeo:plan` is the gate and `init` informs, as recommended. Given in the conversation: "go with your picks".
 
 ### Q6 — `/codeo:qc` already merges `origin/main` at the start of every round. What should change?
 
@@ -93,6 +98,7 @@ I recommend the second. If the gap you saw on 2026-11-27 was something else (for
 **Options:** pin and close the after-verdict gap (recommended) · pin only · rebase.
 
 **Answer:**
+Pin what exists and close the after-verdict gap, as recommended. Given in the conversation: "go with your picks".
 
 ### Q7 — #213 overlaps on `glob:CHANGELOG.md` and `glob:README.md`: how to proceed?
 
@@ -107,6 +113,7 @@ I recommend proceed and coordinate: #213 is one review away from merged, and the
 **Options:** proceed and coordinate (recommended) · sequence after #213 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
