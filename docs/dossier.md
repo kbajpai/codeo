@@ -273,6 +273,8 @@ sequenced:  after #7 — both add an Orders migration (Q6)
   file per resource (`:` spelled `_`).
 - `sequenced` — one clause per answered overlap question: `after #M — <why> (Q<k>)` when the
   workflow waits for #M, `beside #M — <what overlaps> (Q<k>)` when it proceeds alongside it,
+  `rescoped — <what was dropped> because of #M (Q<k>)` when it dropped part of its scope,
+  `locked — <resource> behind #M (Q<k>)` when an exclusive overlap is settled by the lease wait,
   `Q<k>` being the question that decided it. `none` only when no overlap question was raised.
   It is never left out: `dossier-check.sh` fails a block without it.
 

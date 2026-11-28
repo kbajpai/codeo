@@ -108,6 +108,11 @@ must_contain 'plan lists a resource under exclusive, not left to judgment' 'list
 must_contain 'plan-11 carries its rule marker' '<!-- rule: plan-11 -->'
 must_contain 'plan writes sequence-after to sequenced' '`after #M — <why> (Q<k>)`'
 must_contain 'plan writes proceed-and-coordinate to sequenced' '`beside #M — <what overlaps> (Q<k>)`'
+must_contain 'plan writes re-scope to sequenced' '`rescoped — <what was dropped> because of #M (Q<k>)`'
+must_contain 'plan writes a lock to sequenced' '`locked — <resource> behind #M (Q<k>)`'
+for clause in 'rescoped — <what was dropped> because of #M (Q<k>)' 'locked — <resource> behind #M (Q<k>)' 'after #M — <why> (Q<k>)' 'beside #M — <what overlaps> (Q<k>)'; do
+    grep -qF -- "$clause" "$dossier" || fail "docs/dossier.md sequenced bullet lacks [$clause]"
+done
 must_contain 'plan writes none when nothing was raised' '`none` when no overlap was raised'
 must_contain 'plan records the answer before the commit' 'written to the footprint'\''s `sequenced:` line before the footprint is committed'
 must_order 'the sequenced rule sits before the footprint commit' '<!-- rule: plan-11 -->' 'Commit it alone, staged by name'

@@ -86,7 +86,7 @@ in prose exist (only the script's existence is checked).
 
 - [plan-10] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words.
 
-- [plan-11] An overlap question's answer is written to the footprint's `sequenced:` line before the footprint is committed: `after #M — <why> (Q<k>)` for *sequence after*, `beside #M — <what overlaps> (Q<k>)` for *proceed and coordinate*, `none` when no overlap was raised.
+- [plan-11] An overlap question's answer is written to the footprint's `sequenced:` line before the footprint is committed: `after #M — <why> (Q<k>)` for *sequence after*, `beside #M — <what overlaps> (Q<k>)` for *proceed and coordinate*, `rescoped — <what was dropped> because of #M (Q<k>)` for *re-scope*, `locked — <resource> behind #M (Q<k>)` for an exclusive overlap the lease settles, `none` when no overlap was raised.
 
 ## implement
 

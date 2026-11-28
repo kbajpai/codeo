@@ -320,7 +320,10 @@ is the container the message names.
        <!-- rule: plan-11 -->
        An overlap question's answer is written to the footprint's `sequenced:` line before the footprint is committed:
        `after #M — <why> (Q<k>)` for *sequence after*, `beside #M — <what overlaps> (Q<k>)` for
-       *proceed and coordinate*, `none` when no overlap was raised.
+       *proceed and coordinate*,
+       `rescoped — <what was dropped> because of #M (Q<k>)` for *re-scope*,
+       `locked — <resource> behind #M (Q<k>)` for an exclusive overlap the lease settles,
+       `none` when no overlap was raised.
 
        Commit it alone, staged by name, with the subject
        `docs(codeo): plan dossier for #<N> — footprint`, and push.
@@ -349,8 +352,9 @@ is the container the message names.
        `## Where this stands`, commit, push, and stop with `## Outcome` still pending — the
        hand-off waits for the lock as `implement` waits for the environment; re-invoked, run this
        step again from sub-step 1. For exclusive resources the lock replaces *sequence after*;
-       `sequenced:` remains for files and pages, and a *proceed and coordinate* answer is recorded
-       there as `beside #M`, not dropped.
+       `sequenced:` records that lock as `locked — <resource> behind #M (Q<k>)`, and a
+       *proceed and coordinate* or *re-scope* answer as `beside #M` or `rescoped`, not dropped;
+       every form is listed at sub-step 1.
     4. **Write the outcome — only when nothing was raised and every lock is held.** Nothing in
        `.codeo/<N>/plan.md` may still be open. The outcome is the plan file's path, the shape
        chosen in step 5, the decisions made and the options rejected, the documentation pages the
