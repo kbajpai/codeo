@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done: back to `/codeo:plan`. Q1 is answered. Next step: `/codeo:plan` (four blocking findings, F1-F4 and F5 below).
+Round 1, done: back to `/codeo:plan`. Q1 is answered. Next step: `/codeo:plan` (five blocking findings, F1-F5 below).
 
 ## Questions
 
@@ -104,5 +104,5 @@ No `/codeo:issue` was filed. F1, F3 and F4 touch the same rules and docs as the 
 
 ## Log
 
-- 2026-11-28 — Q1 raised (overlap with #217 found at step 2) · cost: 0m · sonnet-5-5 20k in + 150k cached / 3k out
+- 2026-11-28 — Q1 raised (overlap with #217 found at step 2) · cost: 0m · opus-5-5 329k in + 379k cached / 763 out
 - 2026-11-28 — round 1: back to /codeo:plan (F1-F5 blocking) · cost: 8m · opus-5-5 439k in + 2.3M cached / 19k out · sonnet-5-5 35k in + 3.2M cached / 8k out
