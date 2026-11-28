@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The issue, the hook (`.devcontainer/scripts/session-title.sh`), its tests and the other workflows in flight are read. Q1-Q5 are open; no plan is drafted until they are answered. Q1-Q3 are design choices the issue leaves open, Q4 is a file overlap with #217, and Q5 is where the changelog entry goes while #207 is in flight.
+Round 1. Q1-Q5 are answered (every recommendation taken). The plan is drafted in `.codeo/181/plan-draft.md` and awaits the engineer's approval; nothing is written under `docs/plans/` before that.
 
 ## Questions
 
@@ -25,6 +25,7 @@ I recommend the clone's git directory.
 **Options:** the clone's git directory (recommended) · Claude Code's config directory · `.codeo/` with an exclude entry · no preference, you pick.
 
 **Answer:**
+The clone's git directory, as recommended. Given in the conversation: "go with your picks".
 
 ### Q2 — How does a session keep its number?
 
@@ -38,6 +39,7 @@ In both, a `/rename`d session spends no number, and a number is taken only when 
 **Options:** title first, then a ledger (recommended) · title only · no preference, you pick.
 
 **Answer:**
+Title first, then a ledger, as recommended. Given in the conversation: "go with your picks".
 
 ### Q3 — What does the hook print when it cannot use the counter?
 
@@ -51,6 +53,7 @@ I recommend the old shape.
 **Options:** the old shape (recommended) · nothing · no preference, you pick.
 
 **Answer:**
+The old shape, as recommended. Given in the conversation: "go with your picks".
 
 ### Q4 — #217 also changes `CHANGELOG.md` and `.devcontainer/README.md`. Proceed, sequence, or re-scope?
 
@@ -59,6 +62,7 @@ I recommend the old shape.
 **Options:** proceed and coordinate (recommended) · sequence after #217 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ### Q5 — Does the changelog entry go in `CHANGELOG.md`, or in a `changelog.d/181.md` fragment?
 
@@ -72,6 +76,7 @@ I recommend `CHANGELOG.md`.
 **Options:** `CHANGELOG.md` (recommended) · `changelog.d/181.md` · no preference, you pick.
 
 **Answer:**
+`CHANGELOG.md`, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
