@@ -72,7 +72,7 @@ constrain other people and accidents, not the owner.
    The list must show both rulesets as `active` before the next step.
 
 6. Before tagging, set the release's version where it is written:
-   - **move to the release being cut:** `.claude-plugin/plugin.json`'s version; in `README.md`, the
+   - **move to the release being cut:** `.claude-plugin/plugin.json`'s version; `CODEO_VERSION` in `.devcontainer/codeo` and in `templates/containers/.devcontainer/codeo` (both copies, the same value; `tests/codeo-command.test.sh`'s version cases fail when either differs from the plugin version); in `README.md`, the
      installer transcripts, the `ref` in the settings example and the `marketplace add` example; in
      `tests/install.test.sh`, the stubs that stand for the latest release; in `docs/updating.md`,
      every version that stands for the latest release;

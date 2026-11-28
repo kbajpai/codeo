@@ -351,6 +351,20 @@ grep -qF 'security -v unlock-keychain ~/Library/Keychains/login.keychain-db' "$d
 grep -qF 'keychain cannot be accessed because the current session does not allow user interaction' "$dc" ||
     fail host-command "$dc does not quote the keychain-cannot-be-accessed error"
 
+# host-command-go-done: both pages name codeo go, codeo done and --version; the release checklist names CODEO_VERSION;
+# the keychain section keeps its unlock pin and names the check go and done run.
+for f in .devcontainer/README.md README.md; do
+    for w in 'codeo go' 'codeo done' '--version'; do
+        grep -qF -- "$w" "$f" || fail host-command-go-done "$f does not name $w"
+    done
+done
+grep -qF 'CODEO_VERSION' docs/release-checklist.md ||
+    fail host-command-go-done "docs/release-checklist.md does not name CODEO_VERSION"
+grep -qF 'security -v unlock-keychain ~/Library/Keychains/login.keychain-db' .devcontainer/README.md ||
+    fail host-command-go-done ".devcontainer/README.md lost the unlock-keychain pin"
+grep -qF 'show-keychain-info' .devcontainer/README.md ||
+    fail host-command-go-done ".devcontainer/README.md does not name show-keychain-info"
+
 # containers-transcript: the adoption section shows the wizard's init lines inside a code fence.
 awk -v t="### Adopting codeo with containers" '/^### / { on = ($0 == t); next } on && /^```/ { f = !f; next } on && f && /^init: ok containers:/ { found = 1 } END { exit !found }' "$readme" ||
     fail containers-transcript "Adopting codeo with containers has no code-fenced line starting init: ok containers:"

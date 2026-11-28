@@ -37,7 +37,7 @@ cm_sys() {
     local t p
     mkdir -p "$cm_dir/sys"
     for t in bash env cat grep sed sort cut head tail tr wc mkdir mv cp rm chmod mktemp readlink \
-        dirname basename ls sleep date find id flock; do
+        dirname basename ls sleep date find id flock jq; do
         p=$(PATH=/usr/bin:/bin command -v "$t" 2>/dev/null) || continue
         ln -sf "$p" "$cm_dir/sys/$t"
     done
@@ -98,6 +98,23 @@ done
 exit 0
 STUB
     chmod +x "$cm_dir/bin/git" "$cm_dir/bin/curl"
+    # uname prints the contents of $d/uname_out (Linux when absent); security exits $d/security_status;
+    # jq and claude only log. uname is not logged.
+    cat >"$cm_dir/bin/uname" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+cat "$d/uname_out" 2>/dev/null || echo Linux
+STUB
+    for n in security jq claude; do
+        cat >"$cm_dir/bin/$n" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "${0##*/} $*" >>"$d/calls"
+[[ "${0##*/}" != security ]] || exit "$(cat "$d/security_status" 2>/dev/null || echo 0)"
+exit 0
+STUB
+    done
+    chmod +x "$cm_dir/bin/uname" "$cm_dir/bin/security" "$cm_dir/bin/jq" "$cm_dir/bin/claude"
     for n in codeo-container.sh codeo-sandbox.sh; do
         cat >"$cm_home/$n" <<'STUB'
 #!/bin/bash
@@ -129,6 +146,8 @@ cm_run() {
     env -i HOME="$cm_dir/h" "${home_arg[@]}" PATH="$cm_dir/bin:$cm_dir/sys" \
         ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} ${CODEO_SBX:+CODEO_SBX="$CODEO_SBX"} \
         ${CODEO_CONTEXT:+CODEO_CONTEXT="$CODEO_CONTEXT"} ${CODEO_SBX_IMAGE:+CODEO_SBX_IMAGE="$CODEO_SBX_IMAGE"} \
+        ${CODEO_HOME_CLONE:+CODEO_HOME_CLONE="$CODEO_HOME_CLONE"} \
+        ${CODEO_ROOT:+CODEO_ROOT="$CODEO_ROOT"} \
         "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
@@ -1474,7 +1493,7 @@ t_update_replaces_three() {
     update_setup "$current"
     cm_run update
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
-    [[ "$cm_out" == "updated codeo and its three scripts" ]] || fail "stdout: $cm_out"
+    [[ "$(tail -n 1 <<<"$cm_out")" == "updated codeo and its three scripts" ]] || fail "stdout: $cm_out"
     grep -q 'new codeo-container.sh' "$cm_home/codeo-container.sh" || fail "container script not replaced"
     grep -q 'new codeo-sandbox.sh' "$cm_home/codeo-sandbox.sh" || fail "sandbox script not replaced"
     grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not replaced"
@@ -1493,6 +1512,52 @@ t_update_replaces_three() {
     [[ -z "$(find "$cm_home" -name '.update.*')" ]] || fail "temp directory left"
 }
 
+# update_old_version: the version the installed copy of codeo carries.
+update_old_version() {
+    sed -n 's/^CODEO_VERSION=//p' "$script" | head -n 1
+}
+
+t_update_prints_versions_and_each_file() {
+    update_setup "$current"
+    local old new=9.9.9 f want
+    old=$(update_old_version)
+    printf '#!/bin/bash\nCODEO_VERSION=%s\n# new codeo\n' "$new" >"$cm_dir/body_codeo"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    for f in codeo-container.sh codeo-sandbox.sh codeo-track.sh codeo; do
+        want+="downloading $f"$'\n'"downloaded $f"$'\n'
+    done
+    want+="version: $old -> $new"$'\n'
+    for f in codeo-container.sh codeo-sandbox.sh codeo-track.sh codeo; do
+        want+="installing $f"$'\n'"installed $f"$'\n'
+    done
+    want+="updated codeo and its three scripts"
+    [[ "$cm_out" == "$want" ]] || fail "stdout: $cm_out"
+}
+
+t_update_same_version_says_so() {
+    update_setup "$current"
+    local old
+    old=$(update_old_version)
+    printf '#!/bin/bash\nCODEO_VERSION=%s\n# new codeo\n' "$old" >"$cm_dir/body_codeo"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    grep -qxF "version: $old (already the newest)" <<<"$cm_out" || fail "stdout: $cm_out"
+    grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not installed"
+    grep -qx 'installed codeo' <<<"$cm_out" || fail "stdout: $cm_out"
+}
+
+t_update_old_download_says_unknown() {
+    update_setup "$current"
+    local old
+    old=$(update_old_version)
+    printf '#!/bin/bash\n# new codeo\n' >"$cm_dir/body_codeo"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    grep -qxF "version: $old -> unknown" <<<"$cm_out" || fail "stdout: $cm_out"
+    [[ "$(tail -n 1 <<<"$cm_out")" == "updated codeo and its three scripts" ]] || fail "stdout: $cm_out"
+}
+
 t_update_failed_download_changes_nothing() {
     update_setup "$current"
     echo codeo-sandbox.sh >"$cm_dir/fail"
@@ -1501,6 +1566,7 @@ t_update_failed_download_changes_nothing() {
     cm_run update
     expect_update_untouched "$before" codeo-sandbox.sh
     ! grep -q '^mv ' "$cm_dir/calls" || fail "mv ran: $(grep '^mv ' "$cm_dir/calls")"
+    ! grep -q '^installed ' "$cm_dir/out" || fail "stdout has an installed line: $cm_out"
 }
 
 t_update_empty_file_refused() {
@@ -1510,6 +1576,7 @@ t_update_empty_file_refused() {
     before=$(update_snapshot)
     cm_run update
     expect_update_untouched "$before" codeo-sandbox.sh
+    ! grep -q '^installed ' "$cm_dir/out" || fail "stdout has an installed line: $cm_out"
 }
 
 t_update_not_a_script_refused() {
@@ -1519,6 +1586,7 @@ t_update_not_a_script_refused() {
     before=$(update_snapshot)
     cm_run update
     expect_update_untouched "$before" codeo
+    ! grep -q '^installed ' "$cm_dir/out" || fail "stdout has an installed line: $cm_out"
 }
 
 t_update_without_scripts() {
@@ -2023,6 +2091,129 @@ t_usage_and_help_list_yes() {
     grep -qF '[--container|--sandbox] [--yes]' <<<"$cm_err" || fail "usage lacks --yes: $cm_err"
 }
 
+t_version_flags_print_the_constant() {
+    cm_setup "$current"
+    local f want
+    want=$(jq -r .version "$repo/.claude-plugin/plugin.json")
+    for f in --version -v; do
+        cm_run "$f"
+        [[ "$cm_status" -eq 0 ]] || fail "$f: exit $cm_status, want 0"
+        [[ "$cm_out" == "codeo $want" ]] || fail "$f: stdout '$cm_out', want 'codeo $want'"
+        [[ -z "$cm_err" ]] || fail "$f: stderr '$cm_err', want empty"
+        [[ ! -s "$cm_dir/calls" ]] || fail "$f: made calls: $(cat "$cm_dir/calls")"
+    done
+}
+
+t_version_equals_plugin_json() {
+    local want got f
+    want=$(jq -r .version "$repo/.claude-plugin/plugin.json")
+    for f in .devcontainer/codeo templates/containers/.devcontainer/codeo; do
+        got=$(sed -n 's/^CODEO_VERSION=//p' "$repo/$f")
+        [[ "$got" == "$want" ]] || fail "$f: CODEO_VERSION is '$got', plugin.json says '$want'"
+    done
+}
+
+t_version_extra_args_usage() {
+    expect_usage --version x
+    expect_usage -v x
+}
+
+t_help_and_usage_list_version() {
+    cm_setup "$current"
+    cm_run help
+    grep -qF -- '--version, -v' <<<"$cm_out" || fail "help lacks --version: $cm_out"
+    cm_run
+    grep -qF -- '--version, -v' <<<"$cm_err" || fail "usage lacks --version: $cm_err"
+}
+
+# cm_keychain: the login keychain file in the scratch HOME.
+cm_keychain() {
+    mkdir -p "$cm_dir/h/Library/Keychains"
+    : >"$cm_dir/h/Library/Keychains/login.keychain-db"
+}
+
+# cm_clone <dir> <role>: a clone whose role.sh prints <role>.
+cm_clone() {
+    mkdir -p "$1/.devcontainer/scripts"
+    printf '#!/bin/bash\necho %s\n' "$2" >"$1/.devcontainer/scripts/role.sh"
+}
+
+t_keychain_locked_stops_before_any_call() {
+    cm_setup "$current"
+    cm_keychain
+    echo Darwin >"$cm_dir/uname_out"
+    echo 36 >"$cm_dir/security_status"
+    cm_run done 5
+    [[ $cm_status -eq 1 ]] || fail "status $cm_status"
+    local want="codeo: the login keychain is locked, and claude and docker read it; unlock it, then run this again: security -v unlock-keychain ~/Library/Keychains/login.keychain-db"
+    [[ "$cm_err" == "$want" ]] || fail "stderr: $cm_err"
+    [[ "$(cat "$cm_dir/calls")" == "security show-keychain-info $cm_dir/h/Library/Keychains/login.keychain-db" ]] ||
+        fail "calls: $(cat "$cm_dir/calls")"
+}
+
+t_keychain_unlocked_goes_on() {
+    cm_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    cm_clone "$cm_dir/clone" stray
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run done 5
+    if grep -q "keychain is locked" <<<"$cm_err"; then fail "keychain line present: $cm_err"; fi
+    grep -qF "is not a codeo home checkout" <<<"$cm_err" || fail "no home_clone message: $cm_err"
+}
+
+t_keychain_skipped_off_macos() {
+    cm_setup "$current"
+    echo Linux >"$cm_dir/uname_out"
+    cm_clone "$cm_dir/clone" stray
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
+    if grep -q '^security' "$cm_dir/calls"; then fail "security called"; fi
+    grep -qF "is not a codeo home checkout" <<<"$cm_err" || fail "did not carry on to the home check: $cm_err"
+}
+
+t_home_clone_refuses_a_non_home_checkout() {
+    cm_setup "$current"
+    cm_clone "$cm_dir/clone" stray
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
+    [[ $cm_status -eq 1 ]] || fail "status $cm_status"
+    [[ "$cm_err" == "codeo: go: home: $cm_dir/clone is not a codeo home checkout (its role is stray); run this in your codeo-home clone or set CODEO_HOME_CLONE" ]] ||
+        fail "stderr: $cm_err"
+}
+
+t_home_clone_env_wins_over_cwd() {
+    cm_setup "$current"
+    cm_clone "$cm_dir/clone" home
+    cm_clone "$cm_dir/cwd" stray
+    pushd "$cm_dir/cwd" >/dev/null
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
+    popd >/dev/null
+    if grep -q "not a codeo home checkout" <<<"$cm_err"; then fail "env clone refused: $cm_err"; fi
+    pushd "$cm_dir/cwd" >/dev/null
+    cm_run go 5
+    popd >/dev/null
+    grep -qF "$cm_dir/cwd is not a codeo home checkout (its role is stray)" <<<"$cm_err" || fail "cwd not used: $cm_err"
+}
+
+t_bad_arguments_are_usage_before_the_keychain() {
+    cm_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    local a
+    for a in "go x" "done" "go 5 --force" "done 5 --yes"; do
+        # shellcheck disable=SC2086
+        cm_run $a
+        [[ $cm_status -eq 2 ]] || fail "$a: status $cm_status"
+    done
+    [[ ! -s "$cm_dir/calls" ]] || fail "calls: $(cat "$cm_dir/calls")"
+}
+
+t_usage_and_help_list_go_and_done() {
+    cm_setup "$current"
+    cm_run help
+    { grep -q 'codeo go <N>' <<<"$cm_out" && grep -q 'codeo done <N>' <<<"$cm_out"; } || fail "help: $cm_out"
+    { grep -qF "start the issue and open its container" <<<"$cm_out" && grep -qF "prove the issue finished and remove its container or sandbox" <<<"$cm_out"; } || fail "help text: $cm_out"
+    cm_run
+    { grep -q '  go <N>' <<<"$cm_err" && grep -q '  done <N>' <<<"$cm_err"; } || fail "usage: $cm_err"
+    { grep -qF "start the issue and open its container" <<<"$cm_err" && grep -qF "prove the issue finished and remove its container or sandbox" <<<"$cm_err"; } || fail "usage text: $cm_err"
+}
+
 # rm_stubs_152: rm_stubs for issue 152 (the stub names codeo-5).
 rm_stubs_152() {
     rm_stubs
@@ -2178,6 +2369,503 @@ t_rm_container_with_git_checkout_home_goes_ahead() {
     [[ "$(ls -A "$cm_dir/h/codeo")" == ".git" ]] || fail "wrote into ~/codeo: $(ls -A "$cm_dir/h/codeo")"
 }
 
+# done_setup: a home clone with the real codeo-root.sh and a stub plugin root (CODEO_ROOT) whose
+# lock.sh exists, whose cleanup.sh logs "cleanup.sh <args> pwd=<cwd>" and prints "5<TAB>proven" or the
+# contents of $d/prove_out, and fails on record when record_fail exists; intake.sh logs the same way. docker answers rm.
+done_setup() {
+    cm_setup "$1"
+    rm_stubs
+    cm_clone "$cm_dir/clone" home
+    cp "$repo/.devcontainer/scripts/codeo-root.sh" "$cm_dir/clone/.devcontainer/scripts/"
+    mkdir -p "$cm_dir/plug/scripts"
+    echo '#!/bin/bash' >"$cm_dir/plug/scripts/lock.sh"
+    cat >"$cm_dir/plug/scripts/cleanup.sh" <<'STUB'
+#!/bin/bash
+d=${0%/plug/*}
+echo "cleanup.sh $* pwd=$(pwd)" >>"$d/calls"
+case "$1" in
+    prove) if [[ -e "$d/prove_out" ]]; then cat "$d/prove_out"; else printf '%s\tproven\n' "$2"; fi ;;
+    record) [[ ! -e "$d/record_fail" ]] || { echo "cleanup: no origin
+second line" >&2; exit 1; } ;;
+esac
+exit 0
+STUB
+    cat >"$cm_dir/plug/scripts/intake.sh" <<'STUB'
+#!/bin/bash
+d=${0%/plug/*}
+echo "intake.sh $* pwd=$(pwd)" >>"$d/calls"
+exit 0
+STUB
+    CODEO_HOME_CLONE="$cm_dir/clone"
+    CODEO_ROOT="$cm_dir/plug"
+}
+
+# done_run <args...>: cm_run with the clone and plugin root, then forget them.
+done_run() {
+    cm_run "$@"
+    unset CODEO_HOME_CLONE CODEO_ROOT
+}
+
+t_done_removes_when_every_proof_passes() {
+    done_setup "$current"
+    done_run done 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "docker rm -f codeo-5"
+    expect_call "docker volume rm codeo-5"
+    [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
+    expect_call "cleanup.sh prove 5 pwd=$cm_dir/clone"
+    expect_call "git -C $cm_dir/clone fetch -q origin"
+    local got
+    got=$(grep -E '^(cleanup|intake)\.sh (record|commit)' "$cm_dir/calls")
+    [[ "$got" == "cleanup.sh record 5 pwd=$cm_dir/clone"$'\n'"intake.sh commit cleanup docs(codeo): cleanup removal recorded for #5 pwd=$cm_dir/clone" ]] || fail "record calls: $got"
+    ! grep -qE '^(claude|gh) ' "$cm_dir/calls" || fail "claude or gh called"
+}
+
+t_done_names_the_failed_proof_and_removes_nothing() {
+    local p
+    for p in issue pull-request branch dossier lease; do
+        done_setup "$current-$p"
+        printf '5\tfailed\t%s\n' "$p" >"$cm_dir/prove_out"
+        done_run done 5 --container
+        [[ "$cm_status" -eq 1 ]] || fail "$p: exit $cm_status"
+        [[ "$cm_err" == "codeo: done: #5 is not finished: $p failed; nothing removed" ]] || fail "$p: stderr: $cm_err"
+        ! grep -q '^docker' "$cm_dir/calls" || fail "$p: docker called"
+        ! grep -qE 'cleanup.sh record|intake.sh' "$cm_dir/calls" || fail "$p: recorded"
+    done
+}
+
+t_done_unsaved_work_still_refuses() {
+    done_setup "$current"
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    done_run done 5 --container
+    expect_refused abc1234
+    grep -qF 'holds work that exists only there' <<<"$cm_err" || fail "not rm's line: $cm_err"
+    ! grep -qE 'cleanup.sh record|intake.sh' "$cm_dir/calls" || fail "recorded"
+}
+
+t_done_container_not_found_records_nothing() {
+    done_setup "$current"
+    touch "$cm_dir/gone" "$cm_dir/start_fail"
+    done_run done 5 --container
+    [[ "$cm_status" -eq 1 && "$cm_err" == "codeo: no container codeo-5 found; nothing removed" ]] || fail "$cm_status $cm_err"
+    ! grep -qE 'cleanup.sh record|intake.sh' "$cm_dir/calls" || fail "recorded"
+}
+
+t_done_record_failure_warns_and_exits_zero() {
+    done_setup "$current"
+    touch "$cm_dir/record_fail"
+    done_run done 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: warning: #5 was removed but the removal was not recorded: cleanup: no origin" ]] || fail "stderr: $cm_err"
+    ! grep -q 'intake.sh' "$cm_dir/calls" || fail "committed after a failed record"
+}
+
+t_done_passes_the_kind_flag_to_rm() {
+    done_setup "$current"
+    done_run done 5 --sandbox
+    expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
+    ! grep -q -- '--force' "$cm_dir/calls" || fail "force passed"
+    local got
+    got=$(grep -E '^(cleanup|intake)\.sh (record|commit)' "$cm_dir/calls")
+    [[ "$got" == "cleanup.sh record 5 pwd=$cm_dir/clone"$'\n'"intake.sh commit cleanup docs(codeo): cleanup removal recorded for #5 pwd=$cm_dir/clone" ]] || fail "sandbox record calls: $got"
+}
+
+t_done_sandbox_end_failure_records_nothing() {
+    done_setup "$current"
+    echo 7 >"$cm_dir/status"
+    done_run done 5 --sandbox
+    [[ "$cm_status" -eq 7 ]] || fail "exit $cm_status, want 7"
+    ! grep -qE 'cleanup.sh record|intake.sh' "$cm_dir/calls" || fail "recorded"
+}
+
+t_done_never_passes_force() {
+    done_setup "$current"
+    done_run done 5 --force
+    [[ "$cm_status" -eq 2 && "$cm_err" == usage:* ]] || fail "$cm_status $cm_err"
+    [[ ! -s "$cm_dir/calls" ]] || fail "calls: $(cat "$cm_dir/calls")"
+}
+
+t_done_dies_with_codeo_roots_line() {
+    done_setup "$current"
+    rm -f "$cm_dir/plug/scripts/lock.sh"
+    done_run done 5 --container
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: codeo-root: CODEO_ROOT=$cm_dir/plug has no scripts/lock.sh" ]] || fail "stderr: $cm_err"
+    ! grep -q '^docker' "$cm_dir/calls" || fail "docker called"
+}
+
+# go_setup: done_setup's home clone and stub plugin root, plus real jq, a claude stub (prints $d/claude_out,
+# exits $d/claude_rc, and when it runs moves the lookup state to has_after/branches_after, as a pushed branch
+# would) and board.sh/config.sh stubs (board.sh prints $d/board_status, exits $d/board_rc).
+go_setup() {
+    done_setup "$1"
+    rm -f "$cm_dir/bin/jq"
+    cat >"$cm_dir/bin/claude" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "claude $* pwd=$(pwd)" >>"$d/calls"
+if [[ -e "$d/has_after" ]]; then cp "$d/has_after" "$d/has"; cp "$d/branches_after" "$d/branches"; fi
+[[ ! -e "$d/claude_err" ]] || cat "$d/claude_err" >&2
+cat "$d/claude_out"
+exit "$(cat "$d/claude_rc")"
+STUB
+    chmod +x "$cm_dir/bin/claude"
+    printf '{"subtype":"success","is_error":false,"result":"all done","permission_denials":[]}\n' >"$cm_dir/claude_out"
+    echo 0 >"$cm_dir/claude_rc"
+    printf 'feat/5-x\n' >"$cm_dir/has_after"
+    printf 'feat/5-x\n' >"$cm_dir/branches_after"
+    echo Ready >"$cm_dir/board_status"
+    cat >"$cm_dir/plug/scripts/board.sh" <<'STUB'
+#!/bin/bash
+d=${0%/plug/*}
+echo "board.sh $* pwd=$(pwd)" >>"$d/calls"
+[[ ! -e "$d/board_warn" ]] || cat "$d/board_warn" >&2
+[[ "$1" != status ]] || cat "$d/board_status"
+exit "$(cat "$d/board_rc" 2>/dev/null || echo 0)"
+STUB
+    cat >"$cm_dir/plug/scripts/config.sh" <<'STUB'
+#!/bin/bash
+d=${0%/plug/*}
+echo "config.sh $*" >>"$d/calls"
+case "$2" in
+    *ready*) cat "$d/ready_name" 2>/dev/null || echo Ready ;;
+    *) cat "$d/backlog_name" 2>/dev/null || echo Backlog ;;
+esac
+STUB
+}
+
+go_calls() { grep -E '^(security|board\.sh|claude|codeo-container\.sh)' "$cm_dir/calls"; }
+
+t_go_runs_the_steps_in_order() {
+    go_setup "$current"
+    cm_keychain
+    echo Darwin >"$cm_dir/uname_out"
+    echo Backlog >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local want="security show-keychain-info $cm_dir/h/Library/Keychains/login.keychain-db
+board.sh status 5 pwd=$cm_dir/clone
+board.sh set 5 ready pwd=$cm_dir/clone
+claude -p /codeo:init #5 --approved --output-format json --permission-prompts none --allowedTools Skill Read Glob Grep Write Edit Bash pwd=$cm_dir/clone
+codeo-container.sh issue 5 feat/5-x pwd=$cm_home"
+    [[ "$(go_calls)" == "$want" ]] || fail "calls: $(go_calls)"
+    [[ "$cm_out" == $'container: codeo-5\nbranch: feat/5-x' ]] || fail "stdout: $cm_out"
+}
+
+t_go_ready_card_is_not_moved() {
+    go_setup "$current"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
+    grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
+}
+
+t_go_none_and_unset_cards_are_set_to_ready() {
+    local s
+    for s in none unset; do
+        go_setup "$current-$s"
+        echo "$s" >"$cm_dir/board_status"
+        done_run go 5
+        [[ "$cm_status" -eq 0 ]] || fail "$s: exit $cm_status, err: $cm_err"
+        expect_call "board.sh set 5 ready pwd=$cm_dir/clone"
+    done
+}
+
+t_go_refuses_a_card_past_ready() {
+    local s
+    for s in "In progress" "In review" Done; do
+        go_setup "$current-${s// /-}"
+        echo "$s" >"$cm_dir/board_status"
+        done_run go 5
+        [[ "$cm_status" -eq 1 ]] || fail "$s: exit $cm_status"
+        [[ "$cm_err" == "codeo: go: board: "*"$s"* ]] || fail "$s: stderr: $cm_err"
+        [[ "$(wc -l <"$cm_dir/err")" -eq 1 ]] || fail "$s: not one line: $cm_err"
+        ! grep -qE '^(claude|docker|codeo-container)' "$cm_dir/calls" || fail "$s: later step ran: $(cat "$cm_dir/calls")"
+        ! grep -q '^board.sh set' "$cm_dir/calls" || fail "$s: card moved"
+    done
+}
+
+t_go_without_a_board_skips_the_move() {
+    go_setup "$current"
+    echo 3 >"$cm_dir/board_rc"
+    echo "board: not configured" >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_err" == "codeo: go: board: not configured, skipped" ]] || fail "stderr: $cm_err"
+    ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
+    grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
+}
+
+t_go_existing_branch_stops_before_the_board() {
+    go_setup "$current"
+    printf 'feat/5-old\n' >"$cm_dir/branches"
+    printf 'feat/5-old\n' >"$cm_dir/has"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: go: branch: "*"feat/5-old"*"codeo issue 5 feat/5-old"*"/codeo:init #5"* ]] || fail "stderr: $cm_err"
+    ! grep -qE '^(board.sh|claude|codeo-container)' "$cm_dir/calls" || fail "later step ran: $(cat "$cm_dir/calls")"
+}
+
+t_go_stops_on_each_init_failure() {
+    local c
+    for c in exit nonjson subtype denied nobranch two; do
+        go_setup "$current-$c"
+        case $c in
+            exit) echo 1 >"$cm_dir/claude_rc" ;;
+            nonjson) echo 'not json at all' >"$cm_dir/claude_out" ;;
+            subtype) echo '{"subtype":"error_max_turns","is_error":false,"result":"ran out"}' >"$cm_dir/claude_out" ;;
+            denied) echo '{"subtype":"success","is_error":false,"result":"blocked","permission_denials":[{"tool_name":"Bash"},{"tool_name":"Write"}]}' >"$cm_dir/claude_out" ;;
+            nobranch) rm -f "$cm_dir/has_after" "$cm_dir/branches_after"
+                echo '{"subtype":"success","is_error":false,"result":"Which scope do you want?"}' >"$cm_dir/claude_out" ;;
+            two) printf 'feat/5-x\nfeat/5-y\n' >"$cm_dir/has_after"; cp "$cm_dir/has_after" "$cm_dir/branches_after" ;;
+        esac
+        done_run go 5
+        [[ "$cm_status" -eq 1 ]] || fail "$c: exit $cm_status"
+        [[ "$(head -n 1 "$cm_dir/err")" == "codeo: go: init: "* || "$(head -n 1 "$cm_dir/err")" == "codeo: go: verify: "* ]] || fail "$c: stderr: $cm_err"
+        [[ "$(grep -c '^codeo: ' "$cm_dir/err")" -eq 1 ]] || fail "$c: not one codeo line: $cm_err"
+        ! grep -q '^codeo-container.sh' "$cm_dir/calls" || fail "$c: container step ran"
+        case $c in
+            exit) [[ "$(head -n 1 "$cm_dir/err")" == "codeo: go: init: claude exited 1" ]] || fail "$c: $cm_err" ;;
+            nonjson) grep -q 'not JSON' <<<"$cm_err" || fail "$c: $cm_err" ;;
+            subtype) grep -q 'error_max_turns' <<<"$cm_err" && grep -q '^    ran out$' "$cm_dir/err" || fail "$c: $cm_err" ;;
+            denied) grep -q 'Bash, Write' <<<"$cm_err" || fail "$c: $cm_err" ;;
+            nobranch) grep -q '^codeo: go: verify: ' "$cm_dir/err" && grep -q '^    Which scope do you want?$' "$cm_dir/err" || fail "$c: $cm_err" ;;
+            two) grep -q '^codeo: go: verify: .*feat/5-x feat/5-y' "$cm_dir/err" || fail "$c: $cm_err" ;;
+        esac
+    done
+}
+
+t_go_container_failure_says_how_to_retry() {
+    go_setup "$current"
+    echo 1 >"$cm_dir/status"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_err" == *"codeo: go: container: codeo issue 5 feat/5-x failed; the branch is pushed and the card is In progress: retry with codeo issue 5 feat/5-x" ]] || fail "stderr: $cm_err"
+}
+
+t_go_passes_kind_and_yes_to_issue() {
+    go_setup "$current"
+    done_run go 5 --sandbox --yes
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh issue 5 feat/5-x --yes pwd=$cm_home"
+}
+
+t_go_keychain_locked_makes_no_other_call() {
+    go_setup "$current"
+    cm_keychain
+    echo Darwin >"$cm_dir/uname_out"
+    echo 36 >"$cm_dir/security_status"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "status $cm_status"
+    [[ "$cm_err" == "codeo: the login keychain is locked, "* ]] || fail "stderr: $cm_err"
+    [[ "$(wc -l <"$cm_dir/calls")" -eq 1 ]] || fail "calls: $(cat "$cm_dir/calls")"
+}
+
+t_go_never_passes_bare() {
+    go_setup "$current"
+    done_run go 5
+    ! grep "^claude " "$cm_dir/calls" | grep -qE -- "--bare|--dangerously-skip-permissions" || fail "claude called with a banned flag"
+}
+
+
+t_go_odd_claude_output_is_one_init_line() {
+    local c
+    for c in array string number denials_string subtype_number; do
+        go_setup "$current-$c"
+        case $c in
+            array) echo '[{"type":"result","subtype":"success"}]' >"$cm_dir/claude_out" ;;
+            string) echo '"hello"' >"$cm_dir/claude_out" ;;
+            number) echo '42' >"$cm_dir/claude_out" ;;
+            denials_string) echo '{"subtype":"success","is_error":false,"result":"x","permission_denials":"Bash"}' >"$cm_dir/claude_out" ;;
+            subtype_number) echo '{"subtype":7,"is_error":false,"result":"x"}' >"$cm_dir/claude_out" ;;
+        esac
+        done_run go 5
+        [[ "$cm_status" -eq 1 ]] || fail "$c: exit $cm_status"
+        [[ "$(grep -c '^codeo: go: init: ' "$cm_dir/err")" -eq 1 ]] || fail "$c: stderr: $cm_err"
+        ! grep -qi 'jq:' "$cm_dir/err" || fail "$c: raw jq error: $cm_err"
+        ! grep -q '^codeo-container.sh' "$cm_dir/calls" || fail "$c: container step ran"
+    done
+}
+
+t_go_stderr_warning_on_success_is_not_the_path() {
+    go_setup "$current"
+    printf '#!/bin/bash\necho "warning: noise" >&2\necho home\n' >"$cm_dir/clone/.devcontainer/scripts/role.sh"
+    printf '\necho "warning: root noise" >&2\n' >>"$cm_dir/clone/.devcontainer/scripts/codeo-root.sh"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_out" == $'container: codeo-5\nbranch: feat/5-x' ]] || fail "stdout: $cm_out"
+    expect_call "board.sh status 5 pwd=$cm_dir/clone"
+}
+
+t_go_creates_a_missing_home() {
+    go_setup "$current"
+    cm_home="$cm_dir/fresh/codeo"
+    done_run go 5
+    [[ -d "$cm_home" ]] || fail "home not created: $cm_err"
+    ! grep -q '^codeo: go: branch:' "$cm_dir/err" || fail "branch step failed: $cm_err"
+    expect_call "board.sh status 5 pwd=$cm_dir/clone"
+}
+
+t_go_home_that_cannot_be_created_is_one_home_line() {
+    go_setup "$current"
+    : >"$cm_dir/afile"
+    cm_home="$cm_dir/afile/codeo"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: go: home: could not create $cm_home" ]] || fail "stderr: $cm_err"
+    ! grep -qE '^(board.sh|claude)' "$cm_dir/calls" || fail "later step ran"
+}
+
+t_go_honours_a_custom_ready_name() {
+    go_setup "$current"
+    echo Go >"$cm_dir/ready_name"
+    echo Go >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
+    grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
+}
+
+t_go_custom_backlog_name_is_still_moved() {
+    go_setup "$current"
+    echo Icebox >"$cm_dir/backlog_name"
+    echo Icebox >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "board.sh set 5 ready pwd=$cm_dir/clone"
+}
+
+t_go_refusal_names_the_configured_names() {
+    go_setup "$current"
+    echo Go >"$cm_dir/ready_name"
+    echo Icebox >"$cm_dir/backlog_name"
+    echo Done >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: go: board: the card of #5 is Done, not Go or Icebox; nothing started" ]] || fail "stderr: $cm_err"
+}
+
+t_go_shows_the_last_claude_stderr_line() {
+    go_setup "$current"
+    echo 1 >"$cm_dir/claude_rc"
+    printf 'first\nnot logged in\n\n' >"$cm_dir/claude_err"
+    echo '{"result":"partial"}' >"$cm_dir/claude_out"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$(head -n 1 "$cm_dir/err")" == "codeo: go: init: claude exited 1: not logged in" ]] || fail "stderr: $cm_err"
+    [[ "$(grep -c '^codeo: ' "$cm_dir/err")" -eq 1 ]] || fail "not one codeo line: $cm_err"
+    grep -q '^    partial$' "$cm_dir/err" || fail "result text missing: $cm_err"
+}
+
+t_go_board_stderr_is_not_the_status() {
+    go_setup "$current"
+    echo "warning: gh is out of date" >"$cm_dir/board_warn"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
+    grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
+}
+
+t_go_names_a_sandbox_by_kind() {
+    go_setup "$current"
+    done_run go 5 --sandbox
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_out" == $'sandbox: codeo-5\nbranch: feat/5-x' ]] || fail "flag: $cm_out"
+    go_setup "$current-saved"
+    echo sandbox >"$cm_home/default"
+    done_run go 5
+    [[ "$cm_out" == $'sandbox: codeo-5\nbranch: feat/5-x' ]] || fail "saved default: $cm_out"
+    go_setup "$current-override"
+    echo sandbox >"$cm_home/default"
+    done_run go 5 --container
+    [[ "$cm_out" == $'container: codeo-5\nbranch: feat/5-x' ]] || fail "--container: $cm_out"
+}
+
+t_update_finishes_with_stdout_closed() {
+    update_setup "$current"
+    cat >"$cm_dir/wrap" <<STUB
+#!/bin/bash
+exec "$bash_abs" "$cm_dir/inst/codeo" "\$@" >&-
+STUB
+    chmod +x "$cm_dir/wrap"
+    cm_script="$cm_dir/wrap"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    grep -q 'new codeo-container.sh' "$cm_home/codeo-container.sh" || fail "container script not replaced"
+    grep -q 'new codeo-sandbox.sh' "$cm_home/codeo-sandbox.sh" || fail "sandbox script not replaced"
+    grep -q 'new codeo-track.sh' "$cm_home/codeo-track.sh" || fail "tracker not replaced"
+    grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not replaced"
+}
+
+t_keychain_missing_file_goes_on() {
+    cm_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    echo 36 >"$cm_dir/security_status"
+    cm_clone "$cm_dir/clone" stray
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run done 5
+    if grep -q "keychain is locked" <<<"$cm_err"; then fail "locked message without a keychain file: $cm_err"; fi
+    grep -qF "is not a codeo home checkout" <<<"$cm_err" || fail "did not go on: $cm_err"
+}
+
+# The stream the init check reads: noise, a hook event, then the init event.
+init_stream() {
+    printf 'warning: not json\n{"type":"system","subtype":"hook"}\n'
+    printf '{"type":"system","subtype":"init","slash_commands":%s}\n' "$1"
+}
+
+t_init_check_finds_codeo_init_past_noise() {
+    local msg
+    msg=$(check_init_command "$(init_stream '["codeo:init","x"]')") || fail "refused a stream holding codeo:init: $msg"
+}
+
+t_init_check_names_slash_commands_seen() {
+    local msg
+    if msg=$(check_init_command "$(init_stream '["x","y"]')"); then
+        fail "accepted a stream without codeo:init"
+    else
+        [[ "$msg" == *'["x","y"]'* ]] || fail "message does not name the slash_commands seen: $msg"
+    fi
+    if msg=$(check_init_command 'warning: only noise'); then
+        fail "accepted a stream with no init event"
+    else
+        [[ "$msg" == *"no system init event"* ]] || fail "no-init message: $msg"
+    fi
+}
+
+# check_init_command <stream>: succeeds when the first system init event in the stream, read line by
+# line and skipping any line that is not JSON, lists codeo:init; otherwise prints why and fails.
+check_init_command() {
+    local init
+    init=$(printf '%s\n' "$1" |
+        jq -R -c 'fromjson? | select(type == "object" and .type == "system" and .subtype == "init")' |
+        head -n 1) || true
+    if [[ -z "$init" ]]; then
+        printf 'no system init event found in claude output: %s\n' "${1:0:300}"
+        return 1
+    fi
+    if ! printf '%s' "$init" | jq -e '.slash_commands | index("codeo:init")' >/dev/null 2>&1; then
+        printf 'slash_commands lacks codeo:init, got: %s\n' "$(printf '%s' "$init" | jq -c '.slash_commands')"
+        return 1
+    fi
+}
+
+# Live check, skipped unless CODEO_LIVE_CLAUDE=1: the real claude on the real PATH, run from a scratch
+# directory, lists the plugin's codeo:init slash command in its init event. No issue is touched.
+t_live_claude_lists_the_init_command() {
+    if [[ "${CODEO_LIVE_CLAUDE:-}" != 1 ]]; then
+        echo "skip $current (set CODEO_LIVE_CLAUDE=1 to run)"
+        return 0
+    fi
+    command -v claude >/dev/null 2>&1 || { fail "claude is not on PATH"; return 0; }
+    command -v jq >/dev/null 2>&1 || { fail "jq is not on PATH"; return 0; }
+    local dir out msg
+    dir="$scratch/live"
+    mkdir -p "$dir"
+    out=$(cd "$dir" && claude -p "hello" --output-format stream-json --verbose --max-turns 1 \
+        2>"$dir/stderr") || true
+    msg=$(check_init_command "$out") || fail "$msg (stderr: $(head -c 300 "$dir/stderr"))"
+}
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -2270,6 +2958,9 @@ cases=(
     t_rm_stopped_container_started_first
     t_rm_container_detected
     t_update_replaces_three
+    t_update_prints_versions_and_each_file
+    t_update_same_version_says_so
+    t_update_old_download_says_unknown
     t_update_failed_download_changes_nothing
     t_update_empty_file_refused
     t_update_not_a_script_refused
@@ -2315,6 +3006,17 @@ cases=(
     t_issue_yes_passthrough
     t_yes_refused_elsewhere
     t_usage_and_help_list_yes
+    t_version_flags_print_the_constant
+    t_version_equals_plugin_json
+    t_version_extra_args_usage
+    t_help_and_usage_list_version
+    t_keychain_locked_stops_before_any_call
+    t_keychain_unlocked_goes_on
+    t_keychain_skipped_off_macos
+    t_home_clone_refuses_a_non_home_checkout
+    t_home_clone_env_wins_over_cwd
+    t_bad_arguments_are_usage_before_the_keychain
+    t_usage_and_help_list_go_and_done
     t_rm_container_marks
     t_rm_refused_marks_nothing
     t_rm_kept_volume_marks_container_and_image
@@ -2326,6 +3028,41 @@ cases=(
     t_rm_container_fetches_missing_tracker
     t_rm_container_tracker_download_fails_but_removes
     t_rm_container_with_git_checkout_home_goes_ahead
+    t_done_removes_when_every_proof_passes
+    t_done_names_the_failed_proof_and_removes_nothing
+    t_done_unsaved_work_still_refuses
+    t_done_container_not_found_records_nothing
+    t_done_record_failure_warns_and_exits_zero
+    t_done_passes_the_kind_flag_to_rm
+    t_done_sandbox_end_failure_records_nothing
+    t_done_never_passes_force
+    t_done_dies_with_codeo_roots_line
+    t_go_runs_the_steps_in_order
+    t_go_ready_card_is_not_moved
+    t_go_none_and_unset_cards_are_set_to_ready
+    t_go_refuses_a_card_past_ready
+    t_go_without_a_board_skips_the_move
+    t_go_existing_branch_stops_before_the_board
+    t_go_stops_on_each_init_failure
+    t_go_container_failure_says_how_to_retry
+    t_go_passes_kind_and_yes_to_issue
+    t_go_keychain_locked_makes_no_other_call
+    t_go_never_passes_bare
+    t_go_odd_claude_output_is_one_init_line
+    t_go_stderr_warning_on_success_is_not_the_path
+    t_go_creates_a_missing_home
+    t_go_home_that_cannot_be_created_is_one_home_line
+    t_go_honours_a_custom_ready_name
+    t_go_custom_backlog_name_is_still_moved
+    t_go_refusal_names_the_configured_names
+    t_go_shows_the_last_claude_stderr_line
+    t_go_board_stderr_is_not_the_status
+    t_go_names_a_sandbox_by_kind
+    t_update_finishes_with_stdout_closed
+    t_keychain_missing_file_goes_on
+    t_init_check_finds_codeo_init_past_noise
+    t_init_check_names_slash_commands_seen
+    t_live_claude_lists_the_init_command
 )
 
 for current in "${cases[@]}"; do
