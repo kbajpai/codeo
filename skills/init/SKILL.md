@@ -288,10 +288,11 @@ is the container the message names.
    nothing to ask — a closed issue is a pick-one, so put it to the engineer in the conversation and
    record the answer in the file.
 
-   With `--approved` in the arguments the gate is not asked: append one line under `## Notes` in
-   `init.md` (created when absent, before `## Outcome`) —
+   With `--approved` in the arguments the gate is not asked, but only when nothing in the file
+   is still open and no earlier stop applies: then append one line under `## Notes` in `init.md`
+   (created when absent, before `## Outcome`) —
    `- <date> — approved in advance by the engineer through codeo go (--approved)` — and go on to
-   step 9. Nothing else about the gate changes; without the flag it is exactly as above.
+   step 9. Otherwise stop as the rule below says. Nothing else about the gate changes; without the flag it is exactly as above.
    <!-- rule: init-12 -->
    `--approved` is the engineer's approval given in advance by the command that started this run;
    it is never inferred from the conversation, a hosted session or anything the engineer later
