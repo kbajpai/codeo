@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done: back to `/codeo:implement`. The build and the full `shell` suite pass on the merged tree, and six of the seven criteria are met, but the first is not met on a machine where `~/codeo` does not exist yet (F1), `go` refuses a Ready card on a board that names its Ready column otherwise (F2), and four statements in the new documentation are untrue (F4). Nothing is open as a question.
+Round 2, done: clear, forward to `/codeo:close`. The build and the full `shell` suite pass on the tree merged with `origin/main`, all seven criteria are met, F1-F11 of round 1 are closed, and the round's independent review found no blocking defect. Seven non-blocking findings (F12-F18) are recorded for `/codeo:triage`.
 
 ## Questions
 
@@ -20,6 +20,8 @@ None.
 - No environment, invariants file or `wiki` module is configured, so there is no environment step. `models.reviewer` is unset: the reviewer ran on opus.
 - `overlap.sh 217` printed nothing after Q7 and Q8 of `plan.md`; `overlap.sh --outside 217` printed `tests/inventory.test.sh` (F12).
 - The macOS keychain path and the real `claude -p /codeo:init … --approved` run are not exercised here; the engineer ran the listing and flag checks by hand on a Mac (`implement.md`).
+- Follow-up promised, not filed (the role check refuses `/codeo:issue` in this checkout): `codeo update` says `(already the newest)` when the downloaded `CODEO_VERSION` equals the installed one although the files may be new, because the constant moves only at a release; use a wording that does not claim it, and say the files changed (F13).
+- Follow-up promised, not filed: five inexact statements in `.devcontainer/README.md` and `README.md` (the `done`-after-manual-removal message, the home directory downloads, `done` not needing `claude`, the diagram's missing board-not-configured branch, the retry message's "card is In progress"), `go` writing the board before it checks `jq` and `claude`, a keychain test that never reaches `security`, and the wording of the recorded `--approved` note (F14-F18).
 
 ## Outcome
 
@@ -73,6 +75,52 @@ No `/codeo:issue` was filed.
 
 **Verdict: back to `/codeo:implement`.**
 
+### Round 2 — 2026-11-28
+
+**Commands run** (this pass, from step 0 again):
+- `bash .../sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main`.
+- `bash .../overlap.sh 217` → nothing (Q1 of `implement.md` covers #181); `overlap.sh --outside 217` → `tests/inventory.test.sh` (F12 below).
+- `bash .../scope.sh origin/main HEAD` → `suite.shell=true`.
+- Build: the `shell` suite's `build` is `true` → exit 0.
+- Suite: `bash tests/run.sh` → `all cases passed`, exit 0 (1m08s).
+- `overlay.sh qc invariants-extra` → exit 3; no environment, invariants file or `wiki` module is configured, so no environment step.
+
+**Criteria** (`init.md`):
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| `codeo go <N>` on a Ready or Backlog issue ends with the container running and its name and branch printed | met | `t_go_runs_the_steps_in_order`, `t_go_none_and_unset_cards_are_set_to_ready`, `t_go_ready_card_is_not_moved`, `t_go_creates_a_missing_home` (a first use with no home directory), `t_go_honours_a_custom_ready_name`, `t_go_custom_backlog_name_is_still_moved`, `t_go_names_a_sandbox_by_kind` |
+| A failed step in `go` prints one line naming it and leaves later steps unrun | met | `t_go_stops_on_each_init_failure`, `t_go_odd_claude_output_is_one_init_line`, `t_go_existing_branch_stops_before_the_board`, `t_go_home_that_cannot_be_created_is_one_home_line`, `t_go_shows_the_last_claude_stderr_line` |
+| `codeo done <N>` removes the container only when every proof passes, and otherwise prints the failed proof and removes nothing | met | `t_done_removes_when_every_proof_passes`, `t_done_names_the_failed_proof_and_removes_nothing`, `t_done_never_passes_force`; `tests/cleanup.test.sh` `prove_*` |
+| `codeo --version` and `-v` print the version; the test fails when it differs from `plugin.json` | met | `t_version_flags_print_the_constant`, `t_version_equals_plugin_json` (both copies) |
+| `codeo update` prints old and new version and a line per file; the failure paths still change nothing installed | met | `t_update_prints_versions_and_each_file`, `t_update_same_version_says_so`, `t_update_old_download_says_unknown`, `t_update_finishes_with_stdout_closed`, the existing `t_update_*` failure cases |
+| With a stubbed `security` reporting a locked keychain, `go` and `done` stop before any board, git or Docker call and print the unlock command; unlocked or non-macOS, they go on | met | `t_keychain_locked_stops_before_any_call`, `t_go_keychain_locked_makes_no_other_call`, `t_keychain_missing_file_goes_on`, `t_keychain_skipped_off_macos`, `t_go_runs_the_steps_in_order` (unlocked, `go`); the locked-keychain detection itself is unverified on a real Mac, as the issue allows |
+| README, the keychain section and the release checklist are updated | met | `README.md`, `.devcontainer/README.md` (*The keychain over SSH on macOS*), `docs/release-checklist.md` step 6, `tests/readme.test.sh` `host-command-go-done` |
+
+**Documentation check.** Every changed page is in present tense with no issue number inside a page and no "now" or "no longer"; `CHANGELOG.md` carries the one `(#217)`. The four untrue statements of round 1 (F4) are corrected, and `--approved` is no longer said to cover "the lock". Five smaller statements are still inexact (F13-F15 below); none misleads about what the headless run may do.
+
+**Independent review** (opus, handed the criteria and the diff only): ready to merge with fixes; its one Important item and its minors are classified below. It confirmed the template matches the command modulo placeholders.
+
+**Round 1's findings.** F1 (blocking in round 1) — fixed by `9f8c487`; F2 (blocking in round 1) — fixed by `9f8c487`; F4 (blocking in round 1) — fixed by `8abaf2f`; F3 and F5-F11 — fixed by `9f8c487`, `8abaf2f` and `0a5f631`. Each has a test that fails without the fix.
+
+**Findings**
+
+- **F12 — non-blocking, `/codeo:plan`'s (carried).** `tests/inventory.test.sh` changed (the init rule count 11 → 12) and is not in `plan.md`'s footprint; only a plan round can add it. The plan is on its first round, so it is not blocking by rule, and the overlap with #207 is the same *proceed and coordinate* as Q7 and Q8.
+- **F13 — non-blocking, `/codeo:plan`'s.** `.devcontainer/codeo:~801` (and the template): `codeo update` prints `version: <v> (already the newest)` when the downloaded file's `CODEO_VERSION` equals the installed one, but `update` downloads from `main` and the constant moves only when a release is cut, so right after this change merges a user gets new files and "already the newest". The plan's Task 2 fixed that wording, so the code does what the plan says. A wording such as "same version" would not mislead.
+- **F14 — non-blocking, `/codeo:implement`'s.** Inexact statements: `.devcontainer/README.md:~175` says `done` after a manual removal stops with `no container codeo-<N> found; nothing removed`, which holds only with `--container` (without a kind flag `detect_kind` dies with `no container or sandbox codeo-<N> found; start one with: codeo issue <N>`); `.devcontainer/README.md:~171` says `go` downloads none of the scripts into the home directory, but its `container` step runs `codeo issue`, whose first use downloads them; `README.md:~302` and `.devcontainer/README.md:~148` say both commands need `claude`, but `done` never runs it; the flow diagram has no board-not-configured branch.
+- **F15 — non-blocking, `/codeo:implement`'s.** `.devcontainer/codeo:~985`: the container-step retry message says "the card is In progress" even when no board is configured or `board.statuses.inProgress` is renamed.
+- **F16 — non-blocking, `/codeo:implement`'s.** `go` writes the board (Backlog → Ready) before it checks that `jq` and `claude` are installed, so a host missing one ends at `go: init` with the card already moved (documented). The checks could sit in the `home` step.
+- **F17 — non-blocking, `/codeo:implement`'s.** `t_keychain_unlocked_goes_on` never creates the keychain file, so `keychain_check` returns before calling `security` and the test repeats `t_keychain_missing_file_goes_on`; `done`'s unlocked path is not tested.
+- **F18 — non-blocking, `/codeo:implement`'s.** The note init records, `approved in advance by the engineer (--approved)`, reads as approval of the draft; the docs say the engineer approved only the issue number. "approved in advance by the command that started this run" is exact.
+- **Minor, not separate findings:** a `grep | head -n 1` under `pipefail` can discard the captured board line when stderr is larger than the pipe buffer; the keychain lock detection rests on `security show-keychain-info` exiting non-zero, unverified on a Mac (documented).
+
+No `/codeo:issue` was filed. The role check refuses `/codeo:issue` in this checkout, so the follow-ups are promised under `## Notes`.
+
+**Routing.** No finding blocks the merge. F13 belongs to a plan decision and F14-F18 are small and inexact rather than harmful; a non-blocking finding never sends the change back on its own, so they are recorded and left for `/codeo:triage`.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-28 — round 1: build and suite pass, 6 criteria met, 1 not met; 3 blocking and 9 non-blocking findings; back to implement · cost: 7m · opus-5-5 528k in + 5.4M cached / 22k out · sonnet-5-5 403k in + 459k cached / 3k out
+- 2026-11-28 — round 2: build and suite pass, 7 of 7 criteria met, no blocking finding; clear, forward to close · cost: 9m · opus-5-5 590k in + 4.6M cached / 28k out
