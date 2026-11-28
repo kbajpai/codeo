@@ -2671,6 +2671,48 @@ t_go_stderr_warning_on_success_is_not_the_path() {
     expect_call "board.sh status 5 pwd=$cm_dir/clone"
 }
 
+# The stream the init check reads: noise, a hook event, then the init event.
+init_stream() {
+    printf 'warning: not json\n{"type":"system","subtype":"hook"}\n'
+    printf '{"type":"system","subtype":"init","slash_commands":%s}\n' "$1"
+}
+
+t_init_check_finds_codeo_init_past_noise() {
+    local msg
+    msg=$(check_init_command "$(init_stream '["codeo:init","x"]')") || fail "refused a stream holding codeo:init: $msg"
+}
+
+t_init_check_names_slash_commands_seen() {
+    local msg
+    if msg=$(check_init_command "$(init_stream '["x","y"]')"); then
+        fail "accepted a stream without codeo:init"
+    else
+        [[ "$msg" == *'["x","y"]'* ]] || fail "message does not name the slash_commands seen: $msg"
+    fi
+    if msg=$(check_init_command 'warning: only noise'); then
+        fail "accepted a stream with no init event"
+    else
+        [[ "$msg" == *"no system init event"* ]] || fail "no-init message: $msg"
+    fi
+}
+
+# check_init_command <stream>: succeeds when the first system init event in the stream, read line by
+# line and skipping any line that is not JSON, lists codeo:init; otherwise prints why and fails.
+check_init_command() {
+    local init
+    init=$(printf '%s\n' "$1" |
+        jq -R -c 'fromjson? | select(type == "object" and .type == "system" and .subtype == "init")' |
+        head -n 1) || true
+    if [[ -z "$init" ]]; then
+        printf 'no system init event found in claude output: %s\n' "${1:0:300}"
+        return 1
+    fi
+    if ! printf '%s' "$init" | jq -e '.slash_commands | index("codeo:init")' >/dev/null 2>&1; then
+        printf 'slash_commands lacks codeo:init, got: %s\n' "$(printf '%s' "$init" | jq -c '.slash_commands')"
+        return 1
+    fi
+}
+
 # Live check, skipped unless CODEO_LIVE_CLAUDE=1: the real claude on the real PATH, run from a scratch
 # directory, lists the plugin's codeo:init slash command in its init event. No issue is touched.
 t_live_claude_lists_the_init_command() {
@@ -2680,19 +2722,12 @@ t_live_claude_lists_the_init_command() {
     fi
     command -v claude >/dev/null 2>&1 || { fail "claude is not on PATH"; return 0; }
     command -v jq >/dev/null 2>&1 || { fail "jq is not on PATH"; return 0; }
-    local dir out init cmds
-    dir=$(mktemp -d)
-    out=$(cd "$dir" && claude -p "hello" --output-format stream-json --verbose --max-turns 1 2>&1) || true
-    rm -rf "$dir"
-    init=$(printf '%s\n' "$out" | jq -c 'select(.type == "system" and .subtype == "init")' 2>/dev/null |
-        head -n 1) || true
-    if [[ -z "$init" ]]; then
-        fail "no system init event found in claude output: ${out:0:300}"
-        return 0
-    fi
-    cmds=$(printf '%s' "$init" | jq -c '.slash_commands')
-    printf '%s' "$init" | jq -e '.slash_commands | index("codeo:init")' >/dev/null 2>&1 ||
-        fail "slash_commands lacks codeo:init, got: $cmds"
+    local dir out msg
+    dir="$scratch/live"
+    mkdir -p "$dir"
+    out=$(cd "$dir" && claude -p "hello" --output-format stream-json --verbose --max-turns 1 \
+        2>"$dir/stderr") || true
+    msg=$(check_init_command "$out") || fail "$msg (stderr: $(head -c 300 "$dir/stderr"))"
 }
 
 cases=(
@@ -2878,6 +2913,8 @@ cases=(
     t_go_never_passes_bare
     t_go_odd_claude_output_is_one_init_line
     t_go_stderr_warning_on_success_is_not_the_path
+    t_init_check_finds_codeo_init_past_noise
+    t_init_check_names_slash_commands_seen
     t_live_claude_lists_the_init_command
 )
 
