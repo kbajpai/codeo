@@ -352,7 +352,9 @@ is the container the message names.
        `## Where this stands`, commit, push, and stop with `## Outcome` still pending — the
        hand-off waits for the lock as `implement` waits for the environment; re-invoked, run this
        step again from sub-step 1. For exclusive resources the lock replaces *sequence after*;
-       `sequenced:` records that lock as `locked — <resource> behind #M (Q<k>)`, and a
+       `sequenced:` records that lock as `locked — <resource> behind #M (Q<k>)` for any exclusive
+       overlap question the lock answers, whether the lease is taken at once or waited for, with #M the
+       workflow the question named; it is written with the answer, before the footprint is committed. A
        *proceed and coordinate* or *re-scope* answer as `beside #M` or `rescoped`, not dropped;
        every form is listed at sub-step 1.
     4. **Write the outcome — only when nothing was raised and every lock is held.** Nothing in

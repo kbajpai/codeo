@@ -119,6 +119,8 @@ must_order 'the sequenced rule sits before the footprint commit' '<!-- rule: pla
 must_contain 'plan step 10 takes the lease' 'lease take <resource> <N>'
 must_contain 'plan a lease refusal names the holder' 'refusal names the holder'
 must_contain 'plan records the wait' 'lease wait <resource> <N>'
+must_contain 'locked is written for any exclusive overlap question, lease free or waited for' 'for any exclusive'
+must_contain 'locked is written with the answer, before the commit' 'whether the lease is taken at once or waited for'
 
 if ((failures)); then
     echo "$failures case(s) failed"
