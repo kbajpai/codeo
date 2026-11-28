@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, after the send-back from `qc.md` round 1 (F1-F5 blocking). Q8-Q10 are open; the round-2 plan is drafted once they are answered. Round 1 stands as written.
+Round 2, done, after the send-back from `qc.md` round 1: Q8-Q10 are answered and the plan is approved: `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md`. Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -180,14 +180,6 @@ Read the real leases, as recommended. Given in the conversation: "go with your p
 - F6 and the carried minors ride as small tasks: `Safe to bump mid-workflow:` lets `no` win and joins the reasons; `assemble` refuses a leftover `## Unreleased` heading and a version section that already exists; trailing blank lines and `\r` are stripped from fragments; the lease test hard-codes the `skill` entry; an added-rule case for the pin.
 - Round 2 is a second plan file, `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md`, as earlier re-plans in this repository are.
 
-### Footprint
-
-```
-files:      tools/changelog.sh, tests/changelog.test.sh, tests/fixtures/changelog/**, changelog.d/**, .codeo/overlays/plan.md, .codeo/config.json, tests/inventory.test.sh, tests/inventory-pin.test.sh, tests/fixtures/skills-inventory.rules.sha256, tests/intake-lease.test.sh, tests/overlap.test.sh, scripts/base-moved.sh, scripts/overlap.sh, tests/base-moved.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, tests/plan-skill.test.sh, tests/init-skill.test.sh, tests/qc-skill.test.sh, tests/close-skill.test.sh, docs/skills-inventory.md, docs/skills.md, docs/dossier.md, docs/handoff.md, docs/release-checklist.md, README.md, CONTRIBUTING.md, docs/plans/2026-11-28-parallel-issue-collisions-207.md, scripts/inflight.sh, scripts/dossier-check.sh, skills/implement/SKILL.md, tests/inflight.test.sh, tests/dossier-check.test.sh, tests/fixtures/dossiers/**, tests/implement-skill.test.sh, docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md
-wiki:       none
-exclusive:  none
-sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/config.json (Q7); beside #217 — both change skills/init/SKILL.md and the skills inventory (qc.md Q1)
-```
 
 ## Outcome
 
@@ -201,8 +193,31 @@ sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/co
 **Overlap:** `overlap.sh 207` printed nothing for the committed footprint; no exclusive resource is configured yet, so no lock is taken.
 
 
+### Round 2
+
+2026-11-28
+(send-back from qc.md round 1)
+
+**Plan file:** `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md` — shape: a second plan under `docs/plans/` (checkbox tasks, `REQUIRED SUB-SKILL` banner), no reference doc; round 1's plan stands as built.
+
+**Decisions.** Q8 (F1, F3): a moved base is a send-back through `/codeo:close` step 11 to `/codeo:implement`, a `### Round <n> — base moved` round, and the check also runs when the branch already holds the base (an *Update branch* merge); rejected: reusing the `— conflicts with <base>` heading, and dropping the close-side check. Q9 (F2): one blank line between rules in `docs/skills-inventory.md` and in the pin, plus a check that keeps them separated; rejected: documenting the limit only. Q10 (F5): `/codeo:init` reads `intake.sh lease list` and prints `holds` and `waits for` lines; rejected: "names" from the footprint. F4 (my call): `sequenced:` gains `rescoped — …` and `locked — …`. F6 and the carried minors are Task 5 (changelog edge cases, the lease test) and Task 1 (an added-rule case).
+
+**Documentation:** `README.md`, `docs/skills.md`, `docs/dossier.md`, `docs/handoff.md`, `docs/release-checklist.md`, `CONTRIBUTING.md`, `changelog.d/207.md` (Task 6, and the rule and round forms in Tasks 1-4).
+
+**Overlap:** `overlap.sh 207` printed nothing for the committed round-2 footprint (the #217 pairs were raised and answered at `qc.md` Q1); `overlap.sh --outside 207` printed nothing. No exclusive resource is held by this plan.
+
+### Footprint
+
+```
+files:      tools/changelog.sh, tests/changelog.test.sh, tests/fixtures/changelog/**, changelog.d/**, .codeo/overlays/plan.md, .codeo/config.json, tests/inventory.test.sh, tests/inventory-pin.test.sh, tests/fixtures/skills-inventory.rules.sha256, tests/intake-lease.test.sh, tests/overlap.test.sh, scripts/base-moved.sh, scripts/overlap.sh, tests/base-moved.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, tests/plan-skill.test.sh, tests/init-skill.test.sh, tests/qc-skill.test.sh, tests/close-skill.test.sh, docs/skills-inventory.md, docs/skills.md, docs/dossier.md, docs/handoff.md, docs/release-checklist.md, README.md, CONTRIBUTING.md, docs/plans/2026-11-28-parallel-issue-collisions-207.md, scripts/inflight.sh, scripts/dossier-check.sh, skills/implement/SKILL.md, tests/inflight.test.sh, tests/dossier-check.test.sh, tests/fixtures/dossiers/**, tests/implement-skill.test.sh, docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/config.json (Q7); beside #217 — both change skills/init/SKILL.md and the skills inventory (qc.md Q1)
+```
+
 ## Log
 
 - 2026-11-28 — Q1-Q7 raised (scope of the four mechanisms; overlap with #213) · cost: 3m · fable-5-2 96k in + 1.4M cached / 11k out
 - 2026-11-28 — planned: docs/plans/2026-11-28-parallel-issue-collisions-207.md · cost: 20m · fable-5-2 107k in + 1.8M cached / 18k out · sonnet-5-5 139k in + 738k cached / 33k out
 - 2026-11-28 — round 2: Q8-Q10 raised (send-back from qc.md round 1) · cost: 1m · fable-5-2 417k in + 903k cached / 4k out
+- 2026-11-28 — round 2 planned: docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md · cost: 8m · fable-5-2 422k in + 1.8M cached / 7k out · sonnet-5-5 430k in + 3.1M cached / 18k out
