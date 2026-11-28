@@ -59,9 +59,22 @@ rules_pin() {
     done
 }
 
+# unseparated <page>: one line per rule bullet that directly follows another rule's line.
+unseparated() {
+    awk '
+        /^## / { in_s = ($0 ~ /^## (issue|init|plan|implement|qc|close|triage|cleanup)$/); prev = $0; next }
+        in_s && /^- \[[a-z]+-[0-9]+\] / && prev != "" && prev !~ /^## / {
+            id = $2; gsub(/[\[\]]/, "", id)
+            printf "rule %s is not separated from the rule before it by a blank line\n", id
+        }
+        { prev = $0 }
+    ' "$1"
+}
+
 # pin_diff <pinned> <current>: one line per differing rule, in the order the rules appear.
 pin_diff() {
     awk -F'\t' '
+        /^$/ { next }
         NR == FNR { p[$1] = $2; po[++n] = $1; next }
         { c[$1] = $2; co[++m] = $1 }
         END {
@@ -77,7 +90,7 @@ pin_diff() {
 
 if [[ "${1:-}" == "--update" ]]; then
     mkdir -p "$(dirname "$fixture")"
-    rules_pin "$inv" >"$fixture"
+    rules_pin "$inv" | sed G >"$fixture"
     echo "rewrote $fixture"
     exit 0
 fi
@@ -103,6 +116,17 @@ expect_diff "a dropped rule" "pinned rule qc-13 is gone" "$scratch/dropped.md"
 cp "$inv" "$scratch/same.md"
 expect_diff "an untouched copy" "" "$scratch/same.md"
 rules_pin "$scratch/same.md" | cmp -s - "$scratch/base.pin" || check_fail "an untouched copy does not give an identical pin"
+
+# Rule bullets are separated by one blank line, so edits to neighbouring rules merge; the pin reader
+# ignores blank lines.
+sed -z 's/\n\n- \[plan-02\] /\n- [plan-02] /' "$inv" >"$scratch/adjacent.md"
+got=$(unseparated "$scratch/adjacent.md")
+[[ "$got" == "rule plan-02 is not separated from the rule before it by a blank line" ]] || check_fail "adjacent bullets: expected the separation FAIL for plan-02 but got - ${got//$'\n'/ | }"
+while IFS= read -r l; do [[ -z "$l" ]] || check_fail "$l"; done < <(unseparated "$inv")
+sed G "$scratch/base.pin" >"$scratch/blanks.pin"
+[[ -z "$(pin_diff "$scratch/base.pin" "$scratch/blanks.pin")" && -z "$(pin_diff "$scratch/blanks.pin" "$scratch/base.pin")" ]] || check_fail "a pin with blank lines does not read the same"
+sed -z 's/\n\n## close/\n\n- [qc-99] x\n\n## close/' "$inv" >"$scratch/added.md"
+expect_diff "an_added_rule_is_not_pinned" "rule qc-99 is not pinned" "$scratch/added.md"
 
 if [[ ! -f "$fixture" ]]; then
     check_fail "tests/fixtures/skills-inventory.rules.sha256 is missing; run: bash tests/inventory.test.sh --update"

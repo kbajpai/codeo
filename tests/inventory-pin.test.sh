@@ -78,7 +78,51 @@ the_same_rule_still_conflicts() {
     [[ "$conflicted" == *docs/skills-inventory.md* ]] || fail "docs/skills-inventory.md is not among the conflicts: [$conflicted]"
 }
 
+adjacent_rules_merge_cleanly() {
+    case_desc=adjacent_rules_merge_cleanly
+    local r out
+    r=$(new_repo adjacent)
+    reword_and_pin "$r" a plan-01 alpha
+    reword_and_pin "$r" b plan-02 bravo
+    git -C "$r" checkout -q a
+    if ! git -C "$r" merge --no-edit b >/dev/null 2>&1; then
+        fail "merge of b into a conflicted: $(git -C "$r" diff --name-only --diff-filter=U | tr '\n' ' ')"
+        return
+    fi
+    out=$(cd "$r" && bash tests/inventory.test.sh 2>&1) || true
+    [[ "$out" == *"all cases passed"* ]] || fail "merged tree does not pass: $out"
+    (cd "$r" && bash tests/inventory.test.sh --update >/dev/null)
+    git -C "$r" diff --quiet || fail "--update changed the merged tree"
+}
+
+# append_rule_and_pin <repo> <branch> <text> — on a new branch, add a qc-99 bullet after the last qc
+# bullet, re-pin, commit, and go back to main.
+append_rule_and_pin() {
+    git -C "$1" checkout -q -b "$2" main
+    sed -i "/^## close\$/i - [qc-99] $3\n" "$1/docs/skills-inventory.md"
+    (cd "$1" && bash tests/inventory.test.sh --update >/dev/null)
+    git -C "$1" commit -q -am "append qc-99 $3"
+    git -C "$1" checkout -q main
+}
+
+appended_rules_still_conflict() {
+    case_desc=appended_rules_still_conflict
+    local r conflicted
+    r=$(new_repo appended)
+    append_rule_and_pin "$r" a alpha
+    append_rule_and_pin "$r" b bravo
+    git -C "$r" checkout -q a
+    if git -C "$r" merge --no-edit b >/dev/null 2>&1; then
+        fail "merge of b into a succeeded though both appended a different qc-99"
+        return
+    fi
+    conflicted=$(git -C "$r" diff --name-only --diff-filter=U)
+    [[ "$conflicted" == *docs/skills-inventory.md* ]] || fail "docs/skills-inventory.md is not among the conflicts: [$conflicted]"
+}
+
 different_rules_merge_cleanly
+adjacent_rules_merge_cleanly
+appended_rules_still_conflict
 the_same_rule_still_conflicts
 
 if ((failures > 0)); then

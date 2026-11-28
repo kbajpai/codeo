@@ -30,7 +30,7 @@ A plan's changelog documentation task writes `changelog.d/<issue>.md`, never `CH
 
 ## The skills inventory pin
 
-`tests/inventory.test.sh` pins `docs/skills-inventory.md` to the rules in the skills, one line per rule. `bash tests/inventory.test.sh --update` rewrites it. After a merge or a rebase, run it and commit the fixture. Two changes to different rules merge without a conflict; two changes to the same rule conflict in `docs/skills-inventory.md` as well.
+`tests/inventory.test.sh` pins `docs/skills-inventory.md` to the rules in the skills, one line per rule, each followed by a blank line. `bash tests/inventory.test.sh --update` overwrites the fixture whole. Rules in the page are separated by a blank line (the test fails a rule that follows another directly), so two changes to different rules merge without a conflict. Two changes to the same rule, or two rules appended after the same rule, conflict in `docs/skills-inventory.md`: resolve the page, run `bash tests/inventory.test.sh --update` and commit the fixture.
 
 ## Checking a dossier
 
