@@ -102,21 +102,24 @@ case_desc="no Graded base line"
 printf '## Round 1\n\nnothing here\n' > "$clone/.codeo/7/qc.md"
 run_moved 7
 assert_eq "exit" 4 "$status"
-assert_eq "stdout" "base-moved: no Graded base line in $clone/.codeo/7/qc.md" "$out$err"
+assert_eq "stdout" "" "$out"
+assert_eq "stderr" "base-moved: no Graded base line in $clone/.codeo/7/qc.md" "$err"
 
 setup
 case_desc="a sha that is not a commit"
 printf 'Graded base: %s\n' "0123456789abcdef0123456789abcdef01234567" > "$clone/.codeo/7/qc.md"
 run_moved 7
 assert_eq "exit" 1 "$status"
-assert_contains "message" "base-moved:" "$out$err"
+assert_eq "stdout" "" "$out"
+assert_eq "stderr" "base-moved: 0123456789abcdef0123456789abcdef01234567 is not a commit" "$err"
 
 setup
 case_desc="no qc.md at all"
 rm "$clone/.codeo/7/qc.md"
 run_moved 7
 assert_eq "exit" 1 "$status"
-assert_contains "message" "base-moved:" "$out$err"
+assert_eq "stdout" "" "$out"
+assert_eq "stderr" "base-moved: no qc.md for issue 7" "$err"
 
 setup
 case_desc="the dossier under done/ is read when the live one is absent"
@@ -133,6 +136,58 @@ case_desc="main has not moved since the graded sha"
 run_moved 7
 assert_eq "exit" 0 "$status"
 assert_eq "stdout" "" "$out"
+
+setup
+case_desc="the base renames a file the branch changed"
+git -C "$origin" mv a.txt c.txt
+git -C "$origin" commit -q -m "main renames a to c"
+run_moved 7
+assert_eq "exit" 3 "$status"
+assert_eq "stdout" "a.txt" "$out"
+assert_eq "stderr" "" "$err"
+
+setup
+case_desc="origin unreachable"
+git -C "$clone" remote set-url origin "$scratch_root/no-such-origin"
+run_moved 7
+assert_eq "exit" 1 "$status"
+assert_eq "stdout" "" "$out"
+assert_eq "stderr" "base-moved: could not fetch origin/main" "$err"
+
+setup
+case_desc="the graded sha is not an ancestor of the base (a rebased base)"
+commit_in "$origin" b.txt main-b "main b"
+git -C "$clone" fetch -q origin main
+graded=$(git -C "$clone" rev-parse origin/main)
+printf "Graded base: %s\n" "$graded" > "$clone/.codeo/7/qc.md"
+git -C "$origin" reset -q --hard HEAD~1
+sed -i "1s/.*/rebased-a/" "$origin/a.txt"
+sed -i "1s/.*/rebased-b/" "$origin/b.txt"
+git -C "$origin" commit -q -am "rebased main"
+run_moved 7
+assert_eq "exit" 3 "$status"
+assert_eq "stdout" "a.txt" "$out"
+assert_eq "stderr" "" "$err"
+
+setup
+case_desc="a CRLF Graded base line and one with trailing text"
+commit_in "$origin" a.txt main-a "main a"
+printf 'Graded base: %s\r\n' "$graded" > "$clone/.codeo/7/qc.md"
+run_moved 7
+assert_eq "CRLF: exit" 3 "$status"
+assert_eq "CRLF: stdout" "a.txt" "$out"
+printf 'Graded base: %s (round 2)\n' "$graded" > "$clone/.codeo/7/qc.md"
+run_moved 7
+assert_eq "trailing text: exit" 3 "$status"
+assert_eq "trailing text: stdout" "a.txt" "$out"
+
+setup
+case_desc="a sha that starts with a dash"
+printf 'Graded base: -abc\n' > "$clone/.codeo/7/qc.md"
+run_moved 7
+assert_eq "exit" 1 "$status"
+assert_eq "stdout" "" "$out"
+assert_eq "stderr" "base-moved: -abc is not a commit" "$err"
 
 setup
 case_desc="usage errors"

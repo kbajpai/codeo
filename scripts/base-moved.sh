@@ -6,8 +6,8 @@
 #   base-moved.sh <N>
 #       Run from the repo root. Reads the last "Graded base: <sha>" line of .codeo/<N>/qc.md (else
 #       .codeo/done/<N>/qc.md). Prints, one per line, every path origin/<base> changed since <sha>
-#       that this branch also changed (git diff --name-only <sha> origin/<base>, intersected with
-#       git diff --name-only origin/<base>...HEAD), sorted bytewise.
+#       that this branch also changed (git diff --no-renames --name-only <sha> origin/<base>, intersected with
+#       git diff --no-renames --name-only origin/<base>...HEAD), sorted bytewise.
 #       Exit 0: nothing printed. Exit 3: paths printed. Exit 4: qc.md has no "Graded base:" line (a
 #       round written before this script); prints "base-moved: no Graded base line in <file>".
 #       Exit 1: anything else it cannot judge (usage, no qc.md, <sha> is not a commit, the fetch
@@ -22,7 +22,7 @@ if (($# != 1)) || [[ ! $1 =~ ^[0-9]+$ ]]; then
 fi
 n=$1
 
-fail() { echo "base-moved: $*"; exit 1; }
+fail() { echo "base-moved: $*" >&2; exit 1; }
 
 base=$(codeo_base_branch)
 
@@ -32,15 +32,15 @@ file=$CODEO_STATE_DIR/$n/qc.md
 
 sha=$(sed -n 's/^Graded base: *\([^[:space:]]*\).*$/\1/p' "$file" | tail -n 1)
 if [[ -z $sha ]]; then
-    echo "base-moved: no Graded base line in $file"
+    echo "base-moved: no Graded base line in $file" >&2
     exit 4
 fi
 
 git fetch -q origin "$base" 2> /dev/null || fail "could not fetch origin/$base"
-git rev-parse -q --verify "$sha^{commit}" > /dev/null 2>&1 || fail "$sha is not a commit"
+[[ $sha != -* ]] && git rev-parse --verify --quiet "${sha}^{commit}" > /dev/null 2>&1 || fail "$sha is not a commit"
 
-moved=$(git diff --name-only "$sha" "origin/$base" 2> /dev/null | LC_ALL=C sort) || fail "cannot diff $sha against origin/$base"
-ours=$(git diff --name-only "origin/$base...HEAD" 2> /dev/null | LC_ALL=C sort) || fail "cannot diff origin/$base against HEAD"
+moved=$(git diff --no-renames --name-only "$sha" "origin/$base" 2> /dev/null | LC_ALL=C sort) || fail "cannot diff $sha against origin/$base"
+ours=$(git diff --no-renames --name-only "origin/$base...HEAD" 2> /dev/null | LC_ALL=C sort) || fail "cannot diff origin/$base against HEAD"
 
 # Byte order on both sides: sort follows the locale, and some comm (uutils) always compares bytes.
 both=$(LC_ALL=C comm -12 <(printf '%s\n' "$moved") <(printf '%s\n' "$ours") | sed '/^$/d')
