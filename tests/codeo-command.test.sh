@@ -1474,7 +1474,7 @@ t_update_replaces_three() {
     update_setup "$current"
     cm_run update
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
-    [[ "$cm_out" == "updated codeo and its three scripts" ]] || fail "stdout: $cm_out"
+    [[ "$(tail -n 1 <<<"$cm_out")" == "updated codeo and its three scripts" ]] || fail "stdout: $cm_out"
     grep -q 'new codeo-container.sh' "$cm_home/codeo-container.sh" || fail "container script not replaced"
     grep -q 'new codeo-sandbox.sh' "$cm_home/codeo-sandbox.sh" || fail "sandbox script not replaced"
     grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not replaced"
@@ -1493,6 +1493,52 @@ t_update_replaces_three() {
     [[ -z "$(find "$cm_home" -name '.update.*')" ]] || fail "temp directory left"
 }
 
+# update_old_version: the version the installed copy of codeo carries.
+update_old_version() {
+    sed -n 's/^CODEO_VERSION=//p' "$script" | head -n 1
+}
+
+t_update_prints_versions_and_each_file() {
+    update_setup "$current"
+    local old new=9.9.9 f want
+    old=$(update_old_version)
+    printf '#!/bin/bash\nCODEO_VERSION=%s\n# new codeo\n' "$new" >"$cm_dir/body_codeo"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    for f in codeo-container.sh codeo-sandbox.sh codeo-track.sh codeo; do
+        want+="downloading $f"$'\n'"downloaded $f"$'\n'
+    done
+    want+="version: $old -> $new"$'\n'
+    for f in codeo-container.sh codeo-sandbox.sh codeo-track.sh codeo; do
+        want+="installing $f"$'\n'"installed $f"$'\n'
+    done
+    want+="updated codeo and its three scripts"
+    [[ "$cm_out" == "$want" ]] || fail "stdout: $cm_out"
+}
+
+t_update_same_version_says_so() {
+    update_setup "$current"
+    local old
+    old=$(update_old_version)
+    printf '#!/bin/bash\nCODEO_VERSION=%s\n# new codeo\n' "$old" >"$cm_dir/body_codeo"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    grep -qxF "version: $old (already the newest)" <<<"$cm_out" || fail "stdout: $cm_out"
+    grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not installed"
+    grep -qx 'installed codeo' <<<"$cm_out" || fail "stdout: $cm_out"
+}
+
+t_update_old_download_says_unknown() {
+    update_setup "$current"
+    local old
+    old=$(update_old_version)
+    printf '#!/bin/bash\n# new codeo\n' >"$cm_dir/body_codeo"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    grep -qxF "version: $old -> unknown" <<<"$cm_out" || fail "stdout: $cm_out"
+    [[ "$(tail -n 1 <<<"$cm_out")" == "updated codeo and its three scripts" ]] || fail "stdout: $cm_out"
+}
+
 t_update_failed_download_changes_nothing() {
     update_setup "$current"
     echo codeo-sandbox.sh >"$cm_dir/fail"
@@ -1501,6 +1547,7 @@ t_update_failed_download_changes_nothing() {
     cm_run update
     expect_update_untouched "$before" codeo-sandbox.sh
     ! grep -q '^mv ' "$cm_dir/calls" || fail "mv ran: $(grep '^mv ' "$cm_dir/calls")"
+    ! grep -q '^installed ' "$cm_dir/out" || fail "stdout has an installed line: $cm_out"
 }
 
 t_update_empty_file_refused() {
@@ -1510,6 +1557,7 @@ t_update_empty_file_refused() {
     before=$(update_snapshot)
     cm_run update
     expect_update_untouched "$before" codeo-sandbox.sh
+    ! grep -q '^installed ' "$cm_dir/out" || fail "stdout has an installed line: $cm_out"
 }
 
 t_update_not_a_script_refused() {
@@ -1519,6 +1567,7 @@ t_update_not_a_script_refused() {
     before=$(update_snapshot)
     cm_run update
     expect_update_untouched "$before" codeo
+    ! grep -q '^installed ' "$cm_dir/out" || fail "stdout has an installed line: $cm_out"
 }
 
 t_update_without_scripts() {
@@ -2304,6 +2353,9 @@ cases=(
     t_rm_stopped_container_started_first
     t_rm_container_detected
     t_update_replaces_three
+    t_update_prints_versions_and_each_file
+    t_update_same_version_says_so
+    t_update_old_download_says_unknown
     t_update_failed_download_changes_nothing
     t_update_empty_file_refused
     t_update_not_a_script_refused
