@@ -647,7 +647,8 @@ case_desc="prove_ignores_a_removal_record_and_the_overlay"
 setup_repo "12:$body"
 fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
 push_removed 12
-set_overlay ""
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: codeo rm {M}'
+assert_eq "list mode dies on the overlay" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {M}\nrc=1' "$(run_cleanup_rc)"
 assert_eq "line" "12${tab}proven"$'\nrc=0' "$(run_prove 12)"
 
 case_desc="prove_needs_one_issue_number"

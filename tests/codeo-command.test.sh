@@ -2126,6 +2126,12 @@ t_help_and_usage_list_version() {
     grep -qF -- '--version, -v' <<<"$cm_err" || fail "usage lacks --version: $cm_err"
 }
 
+# cm_keychain: the login keychain file in the scratch HOME.
+cm_keychain() {
+    mkdir -p "$cm_dir/h/Library/Keychains"
+    : >"$cm_dir/h/Library/Keychains/login.keychain-db"
+}
+
 # cm_clone <dir> <role>: a clone whose role.sh prints <role>.
 cm_clone() {
     mkdir -p "$1/.devcontainer/scripts"
@@ -2134,6 +2140,7 @@ cm_clone() {
 
 t_keychain_locked_stops_before_any_call() {
     cm_setup "$current"
+    cm_keychain
     echo Darwin >"$cm_dir/uname_out"
     echo 36 >"$cm_dir/security_status"
     cm_run done 5
@@ -2159,6 +2166,7 @@ t_keychain_skipped_off_macos() {
     cm_clone "$cm_dir/clone" stray
     CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
     if grep -q '^security' "$cm_dir/calls"; then fail "security called"; fi
+    grep -qF "is not a codeo home checkout" <<<"$cm_err" || fail "did not carry on to the home check: $cm_err"
 }
 
 t_home_clone_refuses_a_non_home_checkout() {
@@ -2497,6 +2505,7 @@ go_setup() {
 d=${0%/bin/*}
 echo "claude $* pwd=$(pwd)" >>"$d/calls"
 if [[ -e "$d/has_after" ]]; then cp "$d/has_after" "$d/has"; cp "$d/branches_after" "$d/branches"; fi
+[[ ! -e "$d/claude_err" ]] || cat "$d/claude_err" >&2
 cat "$d/claude_out"
 exit "$(cat "$d/claude_rc")"
 STUB
@@ -2510,6 +2519,7 @@ STUB
 #!/bin/bash
 d=${0%/plug/*}
 echo "board.sh $* pwd=$(pwd)" >>"$d/calls"
+[[ ! -e "$d/board_warn" ]] || cat "$d/board_warn" >&2
 [[ "$1" != status ]] || cat "$d/board_status"
 exit "$(cat "$d/board_rc" 2>/dev/null || echo 0)"
 STUB
@@ -2517,7 +2527,10 @@ STUB
 #!/bin/bash
 d=${0%/plug/*}
 echo "config.sh $*" >>"$d/calls"
-cat "$d/backlog_name" 2>/dev/null || echo Backlog
+case "$2" in
+    *ready*) cat "$d/ready_name" 2>/dev/null || echo Ready ;;
+    *) cat "$d/backlog_name" 2>/dev/null || echo Backlog ;;
+esac
 STUB
 }
 
@@ -2525,6 +2538,7 @@ go_calls() { grep -E '^(security|board\.sh|claude|codeo-container\.sh)' "$cm_dir
 
 t_go_runs_the_steps_in_order() {
     go_setup "$current"
+    cm_keychain
     echo Darwin >"$cm_dir/uname_out"
     echo Backlog >"$cm_dir/board_status"
     done_run go 5
@@ -2638,6 +2652,7 @@ t_go_passes_kind_and_yes_to_issue() {
 
 t_go_keychain_locked_makes_no_other_call() {
     go_setup "$current"
+    cm_keychain
     echo Darwin >"$cm_dir/uname_out"
     echo 36 >"$cm_dir/security_status"
     done_run go 5
@@ -2680,6 +2695,116 @@ t_go_stderr_warning_on_success_is_not_the_path() {
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
     [[ "$cm_out" == $'container: codeo-5\nbranch: feat/5-x' ]] || fail "stdout: $cm_out"
     expect_call "board.sh status 5 pwd=$cm_dir/clone"
+}
+
+t_go_creates_a_missing_home() {
+    go_setup "$current"
+    cm_home="$cm_dir/fresh/codeo"
+    done_run go 5
+    [[ -d "$cm_home" ]] || fail "home not created: $cm_err"
+    ! grep -q '^codeo: go: branch:' "$cm_dir/err" || fail "branch step failed: $cm_err"
+    expect_call "board.sh status 5 pwd=$cm_dir/clone"
+}
+
+t_go_home_that_cannot_be_created_is_one_home_line() {
+    go_setup "$current"
+    : >"$cm_dir/afile"
+    cm_home="$cm_dir/afile/codeo"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: go: home: could not create $cm_home" ]] || fail "stderr: $cm_err"
+    ! grep -qE '^(board.sh|claude)' "$cm_dir/calls" || fail "later step ran"
+}
+
+t_go_honours_a_custom_ready_name() {
+    go_setup "$current"
+    echo Go >"$cm_dir/ready_name"
+    echo Go >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
+    grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
+}
+
+t_go_custom_backlog_name_is_still_moved() {
+    go_setup "$current"
+    echo Icebox >"$cm_dir/backlog_name"
+    echo Icebox >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "board.sh set 5 ready pwd=$cm_dir/clone"
+}
+
+t_go_refusal_names_the_configured_names() {
+    go_setup "$current"
+    echo Go >"$cm_dir/ready_name"
+    echo Icebox >"$cm_dir/backlog_name"
+    echo Done >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: go: board: the card of #5 is Done, not Go or Icebox; nothing started" ]] || fail "stderr: $cm_err"
+}
+
+t_go_shows_the_last_claude_stderr_line() {
+    go_setup "$current"
+    echo 1 >"$cm_dir/claude_rc"
+    printf 'first\nnot logged in\n\n' >"$cm_dir/claude_err"
+    echo '{"result":"partial"}' >"$cm_dir/claude_out"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$(head -n 1 "$cm_dir/err")" == "codeo: go: init: claude exited 1: not logged in" ]] || fail "stderr: $cm_err"
+    [[ "$(grep -c '^codeo: ' "$cm_dir/err")" -eq 1 ]] || fail "not one codeo line: $cm_err"
+    grep -q '^    partial$' "$cm_dir/err" || fail "result text missing: $cm_err"
+}
+
+t_go_board_stderr_is_not_the_status() {
+    go_setup "$current"
+    echo "warning: gh is out of date" >"$cm_dir/board_warn"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
+    grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
+}
+
+t_go_names_a_sandbox_by_kind() {
+    go_setup "$current"
+    done_run go 5 --sandbox
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_out" == $'sandbox: codeo-5\nbranch: feat/5-x' ]] || fail "flag: $cm_out"
+    go_setup "$current-saved"
+    echo sandbox >"$cm_home/default"
+    done_run go 5
+    [[ "$cm_out" == $'sandbox: codeo-5\nbranch: feat/5-x' ]] || fail "saved default: $cm_out"
+    go_setup "$current-override"
+    echo sandbox >"$cm_home/default"
+    done_run go 5 --container
+    [[ "$cm_out" == $'container: codeo-5\nbranch: feat/5-x' ]] || fail "--container: $cm_out"
+}
+
+t_update_finishes_with_stdout_closed() {
+    update_setup "$current"
+    cat >"$cm_dir/wrap" <<STUB
+#!/bin/bash
+exec "$bash_abs" "$cm_dir/inst/codeo" "\$@" >&-
+STUB
+    chmod +x "$cm_dir/wrap"
+    cm_script="$cm_dir/wrap"
+    cm_run update
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status: $cm_err"
+    grep -q 'new codeo-container.sh' "$cm_home/codeo-container.sh" || fail "container script not replaced"
+    grep -q 'new codeo-sandbox.sh' "$cm_home/codeo-sandbox.sh" || fail "sandbox script not replaced"
+    grep -q 'new codeo-track.sh' "$cm_home/codeo-track.sh" || fail "tracker not replaced"
+    grep -q 'new codeo$' "$cm_dir/inst/codeo" || fail "codeo not replaced"
+}
+
+t_keychain_missing_file_goes_on() {
+    cm_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    echo 36 >"$cm_dir/security_status"
+    cm_clone "$cm_dir/clone" stray
+    CODEO_HOME_CLONE="$cm_dir/clone" cm_run done 5
+    if grep -q "keychain is locked" <<<"$cm_err"; then fail "locked message without a keychain file: $cm_err"; fi
+    grep -qF "is not a codeo home checkout" <<<"$cm_err" || fail "did not go on: $cm_err"
 }
 
 # The stream the init check reads: noise, a hook event, then the init event.
@@ -2925,6 +3050,16 @@ cases=(
     t_go_never_passes_bare
     t_go_odd_claude_output_is_one_init_line
     t_go_stderr_warning_on_success_is_not_the_path
+    t_go_creates_a_missing_home
+    t_go_home_that_cannot_be_created_is_one_home_line
+    t_go_honours_a_custom_ready_name
+    t_go_custom_backlog_name_is_still_moved
+    t_go_refusal_names_the_configured_names
+    t_go_shows_the_last_claude_stderr_line
+    t_go_board_stderr_is_not_the_status
+    t_go_names_a_sandbox_by_kind
+    t_update_finishes_with_stdout_closed
+    t_keychain_missing_file_goes_on
     t_init_check_finds_codeo_init_past_noise
     t_init_check_names_slash_commands_seen
     t_live_claude_lists_the_init_command

@@ -785,50 +785,52 @@ cmd_update() {
     trap upd_cleanup EXIT
     trap 'exit 130' INT
     trap 'exit 143' TERM
+    trap '' PIPE
     upd_tmp=$(mktemp -d "$dir/.update.XXXXXX") || die "could not create a temporary directory in $dir"
     for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh .devcontainer/codeo-track.sh .devcontainer/codeo; do
         name=${f##*/}
-        echo "downloading $name"
+        echo "downloading $name" 2>/dev/null || true
         curl -fsSL -o "$upd_tmp/$name" "$base/$f" 2>/dev/null || die "could not download $base/$f; nothing changed"
         [[ -s "$upd_tmp/$name" ]] || die "$base/$f is empty; nothing changed"
         [[ "$(head -c2 "$upd_tmp/$name")" == "#!" ]] || die "$base/$f is not a script; nothing changed"
-        echo "downloaded $name"
+        echo "downloaded $name" 2>/dev/null || true
     done
     new_ver=$(sed -n 's/^CODEO_VERSION=//p' "$upd_tmp/codeo" | head -n 1)
     [[ -n "$new_ver" ]] || new_ver=unknown
     if [[ "$new_ver" == "$CODEO_VERSION" ]]; then
-        echo "version: $CODEO_VERSION (already the newest)"
+        echo "version: $CODEO_VERSION (already the newest)" 2>/dev/null || true
     else
-        echo "version: $CODEO_VERSION -> $new_ver"
+        echo "version: $CODEO_VERSION -> $new_ver" 2>/dev/null || true
     fi
     upd_new=$(mktemp "$self_dir/.codeo.XXXXXX") || die "could not write beside $self; nothing changed"
     cp "$upd_tmp/codeo" "$upd_new" || die "could not write beside $self; nothing changed"
     chmod 755 "$upd_tmp/codeo-container.sh" "$upd_tmp/codeo-sandbox.sh" "$upd_tmp/codeo-track.sh" "$upd_new"
-    echo "installing codeo-container.sh"
+    echo "installing codeo-container.sh" 2>/dev/null || true
     mv -f "$upd_tmp/codeo-container.sh" "$dir/codeo-container.sh" ||
         die "update failed part-way: nothing installed was changed; run codeo update again"
-    echo "installed codeo-container.sh"
-    echo "installing codeo-sandbox.sh"
+    echo "installed codeo-container.sh" 2>/dev/null || true
+    echo "installing codeo-sandbox.sh" 2>/dev/null || true
     mv -f "$upd_tmp/codeo-sandbox.sh" "$dir/codeo-sandbox.sh" ||
         die "update failed part-way: codeo-container.sh is new, codeo-sandbox.sh, codeo-track.sh and codeo are still old; run codeo update again to finish"
-    echo "installed codeo-sandbox.sh"
-    echo "installing codeo-track.sh"
+    echo "installed codeo-sandbox.sh" 2>/dev/null || true
+    echo "installing codeo-track.sh" 2>/dev/null || true
     mv -f "$upd_tmp/codeo-track.sh" "$dir/codeo-track.sh" ||
         die "update failed part-way: codeo-container.sh and codeo-sandbox.sh are new, codeo-track.sh and codeo are still old; run codeo update again to finish"
-    echo "installed codeo-track.sh"
-    echo "installing codeo"
+    echo "installed codeo-track.sh" 2>/dev/null || true
+    echo "installing codeo" 2>/dev/null || true
     mv -f "$upd_new" "$self" ||
         die "update failed part-way: all three scripts are new, codeo is still old; run codeo update again to finish"
-    echo "installed codeo"
+    echo "installed codeo" 2>/dev/null || true
     upd_new=""
-    echo "updated codeo and its three scripts"
+    echo "updated codeo and its three scripts" 2>/dev/null || true
 }
 
 # keychain_check: on macOS, stop when the login keychain is locked, because claude and docker read it. Any
-# other OS, or no security program, passes. The security call is the only call it makes.
+# other OS, no security program, or no login keychain file passes. The security call is the only call it makes.
 keychain_check() {
     [[ "$(uname -s)" == Darwin ]] || return 0
     command -v security >/dev/null 2>&1 || return 0
+    [[ -e "$HOME/Library/Keychains/login.keychain-db" ]] || return 0
     security show-keychain-info "$HOME/Library/Keychains/login.keychain-db" >/dev/null 2>&1 ||
         die "the login keychain is locked, and claude and docker read it; unlock it, then run this again: security -v unlock-keychain ~/Library/Keychains/login.keychain-db"
 }
@@ -877,9 +879,9 @@ go_branches() {
 
 # cmd_go <N> [--container|--sandbox] [--yes]: start issue N and open its container from the home clone, in
 # steps (keychain, home, branch, board, init, verify, container); each failure is one "go: <step>: <reason>"
-# line and the later steps do not run. Prints "container: codeo-<N>" and "branch: <branch>".
+# line and the later steps do not run. Prints "container: codeo-<N>" ("sandbox:" for a sandbox) and "branch: <branch>".
 cmd_go() {
-    local n="" arg yes="" clone root out rc status backlog result branch errf
+    local n="" arg yes="" clone root dir out rc status ready backlog result branch errf berr kind
     local -a found=() issue_args=()
     kind_flag=""
     for arg in "$@"; do
@@ -903,7 +905,13 @@ cmd_go() {
         rm -f "$errf"
         go_fail home "${out#codeo: }"
     }
+    dir=$(home_dir 2>"$errf") || {
+        out=$(<"$errf")
+        rm -f "$errf"
+        go_fail home "${out#codeo: }"
+    }
     rm -f "$errf"
+    mkdir -p "$dir" 2>/dev/null || go_fail home "could not create $dir"
 
     out=$(go_branches "$n" branch) || exit 1
     if [[ -n "$out" ]]; then
@@ -912,24 +920,29 @@ cmd_go() {
     fi
 
     rc=0
-    status=$(cd "$clone" && bash "$root/scripts/board.sh" status "$n" 2>&1 </dev/null) || rc=$?
+    berr=$(mktemp) || go_fail board "could not create a temporary file"
+    status=$(cd "$clone" && bash "$root/scripts/board.sh" status "$n" 2>"$berr" </dev/null) || rc=$?
     status=${status%%$'\n'*}
     if [[ $rc -eq 3 ]]; then
+        rm -f "$berr"
         echo "codeo: go: board: not configured, skipped" >&2
     elif [[ $rc -ne 0 ]]; then
-        go_fail board "could not read the card of #$n: ${status:-board.sh exited $rc}"
+        out=$(grep -v '^[[:space:]]*$' "$berr" | head -n 1) || out=""
+        rm -f "$berr"
+        go_fail board "could not read the card of #$n: ${status:-${out:-board.sh exited $rc}}"
     else
-        backlog=""
-        case "$status" in
-            Ready) ;;
-            none | unset) backlog=1 ;;
-            *)
-                out=$(cd "$clone" && bash "$root/scripts/config.sh" get '.board.statuses.backlog // "Backlog"' 2>/dev/null </dev/null) || out=Backlog
-                [[ "$status" == "${out:-Backlog}" ]] ||
-                    go_fail board "the card of #$n is $status, not Ready or ${out:-Backlog}; nothing started"
-                backlog=1
-                ;;
-        esac
+        rm -f "$berr"
+        ready=$(cd "$clone" && bash "$root/scripts/config.sh" get '.board.statuses.ready // "Ready"' 2>/dev/null </dev/null) || ready=Ready
+        ready=${ready:-Ready}
+        backlog=$(cd "$clone" && bash "$root/scripts/config.sh" get '.board.statuses.backlog // "Backlog"' 2>/dev/null </dev/null) || backlog=Backlog
+        backlog=${backlog:-Backlog}
+        if [[ "$status" == "$ready" ]]; then
+            backlog=""
+        elif [[ "$status" == none || "$status" == unset || "$status" == "$backlog" ]]; then
+            backlog=1
+        else
+            go_fail board "the card of #$n is $status, not $ready or $backlog; nothing started"
+        fi
         if [[ -n "$backlog" ]]; then
             out=$(cd "$clone" && bash "$root/scripts/board.sh" set "$n" ready 2>&1 </dev/null) ||
                 go_fail board "could not move #$n to Ready: ${out%%$'\n'*}"
@@ -941,9 +954,10 @@ cmd_go() {
     rc=0
     out=$(cd "$clone" && claude -p "/codeo:init #$n --approved" --output-format json --permission-prompts none \
         --allowedTools Skill Read Glob Grep Write Edit Bash 2>"$errf" </dev/null) || rc=$?
+    berr=$(grep -v '^[[:space:]]*$' "$errf" | tail -n 1) || berr=""
     rm -f "$errf"
     result=$(jq -r 'if (.result | type) == "string" then .result else "" end' <<<"$out" 2>/dev/null) || result=""
-    [[ $rc -eq 0 ]] || go_fail init "claude exited $rc" "$result"
+    [[ $rc -eq 0 ]] || go_fail init "claude exited $rc${berr:+: $berr}" "$result"
     jq -e . >/dev/null 2>&1 <<<"$out" || go_fail init "claude's output is not JSON"
     jq -e 'type == "object"' >/dev/null 2>&1 <<<"$out" || go_fail init "claude's output is not a JSON object"
     local subtype is_error denied
@@ -969,7 +983,10 @@ cmd_go() {
     [[ -z "$kind_flag" ]] || issue_args+=("--$kind_flag")
     [[ -z "$yes" ]] || issue_args+=(--yes)
     "$BASH" "${BASH_SOURCE[0]}" "${issue_args[@]}" >&2 || go_fail container "codeo ${issue_args[*]} failed; the branch is pushed and the card is In progress: retry with codeo ${issue_args[*]}"
-    printf 'container: codeo-%s\nbranch: %s\n' "$n" "$branch"
+    kind=$kind_flag
+    [[ -n "$kind" ]] || kind=$(saved_default)
+    [[ "$kind" == sandbox ]] || kind=container
+    printf '%s: codeo-%s\nbranch: %s\n' "$kind" "$n" "$branch"
 }
 
 # cmd_done <N> [--container|--sandbox]: remove a finished issue's container from the home clone. Every
