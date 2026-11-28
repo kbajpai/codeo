@@ -167,6 +167,26 @@ fi
 assert_contains "contributing plan task" 'never `CHANGELOG.md`' "$contributing"
 assert_contains "contributing footprint" '`changelog.d/**`' "$contributing"
 
+case_desc=this_repositorys_207_fragment_parses_and_assembles
+frag207="$plugin_root/changelog.d/207.md"
+if [[ ! -f $frag207 ]]; then
+    echo "note: $case_desc — changelog.d/207.md is gone (assembled into a release); skipped"
+else
+    first_blank=$(grep -n -m1 '^$' "$frag207" | cut -d: -f1)
+    header_bad=$(head -n "$((first_blank - 1))" "$frag207" | grep -vE '^(Config schema|Shared state|Safe to bump mid-workflow): ' || true)
+    assert_eq "header lines only before the first blank line" "" "$header_bad"
+    bullets=$(tail -n +"$first_blank" "$frag207" | grep -cE '^- .*\(#207\)\.?$' || true)
+    if ((bullets < 1)); then
+        echo "FAIL: $case_desc — no bullet ends (#207)"
+        failures=$((failures + 1))
+    fi
+    new_work
+    cp "$frag207" "$work/changelog.d/207.md"
+    run_cl assemble v9.9.9 2026-12-01
+    assert_eq "assemble exit" 0 "$status"
+    assert_contains "section heading" "## v9.9.9 — 2026-12-01" "$(cat "$work/CHANGELOG.md")"
+fi
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
