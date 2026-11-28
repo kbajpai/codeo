@@ -2311,12 +2311,12 @@ st_setup() {
         || { fail 'git commit failed'; return 1; }
 }
 
-# st_json <event> <session_id> [session_title]: the hook's stdin fixture.
+# st_json <event> <session_id> [session_title [source]]: the hook's stdin fixture.
 st_json() {
     local event=$1 sid=$2
-    jq -cn --arg e "$event" --arg s "$sid" --arg d "$st_dir" --arg t "${3:-}" --argjson has "$(($# >= 3 ? 1 : 0))" \
+    jq -cn --arg e "$event" --arg s "$sid" --arg d "$st_dir" --arg t "${3:-}" --arg src "${4:-startup}" --argjson has "$(($# >= 3 ? 1 : 0))" \
         '{hook_event_name: $e, session_id: $s, transcript_path: "/x.jsonl", cwd: $d}
-         + (if $e == "SessionStart" then {source: "startup"} else {} end)
+         + (if $e == "SessionStart" then {source: $src} else {} end)
          + (if $has == 1 then {session_title: $t} else {} end)'
 }
 
@@ -2344,6 +2344,11 @@ st_silent() {
 }
 
 st_sid=a21b9973-0000-4000-8000-000000000000
+st_sid_b=b3c4d5e6-0000-4000-8000-000000000000
+st_sid_c=c4d5e6f7-0000-4000-8000-000000000000
+st_sid_d=d5e6f708-0000-4000-8000-000000000000
+
+st_seq_file() { printf '%s' "$st_dir/.git/codeo/session-seq"; }
 
 session_title_names_home_and_the_id() {
     st_setup home || return 0
@@ -2352,31 +2357,31 @@ session_title_names_home_and_the_id() {
     [[ -z $st_err ]] || fail "stderr '$st_err'"
     [[ -n $st_out && $st_out != *$'\n'* ]] || fail "not one line: '$st_out'"
     [[ $(st_event) == SessionStart ]] || fail "event '$(st_event)'"
-    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "title '$(st_title)'"
 }
 
 session_title_names_the_issue_with_a_lock() {
     st_setup lock || return 0
     printf 'issue:   45\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
     st_run "$(st_json SessionStart $st_sid)"
-    [[ $(st_title) == 'codeo [#45] · a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(st_title) == 'codeo [#45] · 00-a21b9973' ]] || fail "title '$(st_title)'"
 }
 
 session_title_cmd_mode_titles_home_and_the_issue() {
     st_setup cmd-mode || return 0
     local ST_CMD_MODE=1
     st_run "$(st_json SessionStart $st_sid)" unset
-    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "no lock: title '$(st_title)'"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "no lock: title '$(st_title)'"
     printf 'issue:   113\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
     st_run "$(st_json SessionStart $st_sid)" unset
-    [[ $(st_title) == 'codeo [#113] · a21b9973' ]] || fail "lock: title '$(st_title)'"
+    [[ $(st_title) == 'codeo [#113] · 00-a21b9973' ]] || fail "lock: title '$(st_title)'"
 }
 
 session_title_in_cmd_mode_accepts_any_value() {
     st_setup cmd-mode-any || return 0
     local ST_CMD_MODE=true
     st_run "$(st_json SessionStart $st_sid)" unset
-    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "title '$(st_title)'"
 }
 
 session_title_cmd_mode_writes_no_vscode_settings() {
@@ -2403,7 +2408,7 @@ session_title_in_a_sandbox_names_the_issue() {
     printf 'issue:   99\nbranch: feat/x\nstarted: now\n' >"$st_dir/.codeo/active"
     st_run "$(st_json SessionStart $st_sid)" unset
     ((st_rc == 0)) || fail "exit $st_rc"
-    [[ $(st_title) == 'codeo [#99] · a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(st_title) == 'codeo [#99] · 00-a21b9973' ]] || fail "title '$(st_title)'"
     [[ $(jq -r '."window.title"' "$f") == 'codeo [#99]' ]] || fail "window.title $(jq -r '."window.title"' "$f" 2>&1)"
 }
 
@@ -2418,7 +2423,7 @@ session_title_on_a_prompt_after_clear() {
     st_setup prompt || return 0
     st_run "$(st_json UserPromptSubmit $st_sid)"
     [[ $(st_event) == UserPromptSubmit ]] || fail "event '$(st_event)'"
-    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "title '$(st_title)'"
 }
 
 session_title_keeps_an_existing_title() {
@@ -2478,16 +2483,100 @@ session_title_treats_a_leading_newline_as_a_title() {
 session_title_replaces_its_own_title_when_the_lock_changes() {
     st_setup own || return 0
     printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
-    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
-    [[ $(st_title) == 'codeo [#47] · a21b9973' ]] || fail "title '$(st_title)'"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 00-a21b9973')"
+    [[ $(st_title) == 'codeo [#47] · 00-a21b9973' ]] || fail "title '$(st_title)'"
     rm -f "$st_dir/.codeo/active"
-    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [#47] · a21b9973')"
-    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
-    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [#47] · 00-a21b9973')"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "title '$(st_title)'"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 00-a21b9973')"
     st_silent 'current title'
     printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
-    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · ffffffff')"
-    [[ $(st_title) == 'codeo [#47] · a21b9973' ]] || fail "forked title '$(st_title)'"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 00-ffffffff')"
+    [[ $(st_title) == 'codeo [#47] · 00-a21b9973' ]] || fail "forked title '$(st_title)'"
+}
+
+session_title_numbers_sessions_in_order() {
+    st_setup order || return 0
+    local sid n=0
+    for sid in $st_sid $st_sid_b $st_sid_c; do
+        st_run "$(st_json SessionStart $sid)"
+        [[ $(st_title) == "codeo [home] · 0$n-${sid:0:8}" ]] || fail "title '$(st_title)', wanted number 0$n"
+        n=$((n + 1))
+    done
+}
+
+session_title_keeps_a_sessions_number() {
+    st_setup keeps-number || return 0
+    st_run "$(st_json SessionStart $st_sid)"
+    st_run "$(st_json SessionStart $st_sid_b)"
+    st_run "$(st_json UserPromptSubmit $st_sid)"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(grep -c . "$(st_seq_file)") == 2 ]] || fail "ledger has $(grep -c . "$(st_seq_file)") lines"
+}
+
+session_title_clear_and_fork_take_the_next_number() {
+    st_setup clear-fork || return 0
+    st_run "$(st_json SessionStart $st_sid)"
+    st_run "$(st_json UserPromptSubmit $st_sid_b)"
+    [[ $(st_title) == 'codeo [home] · 01-b3c4d5e6' ]] || fail "clear: title '$(st_title)'"
+    st_run "$(st_json SessionStart $st_sid_c 'codeo [home] · 00-a21b9973' fork)"
+    [[ $(st_title) == 'codeo [home] · 02-c4d5e6f7' ]] || fail "fork: title '$(st_title)'"
+}
+
+session_title_resume_keeps_its_number() {
+    st_setup resume || return 0
+    st_run "$(st_json SessionStart $st_sid)"
+    st_run "$(st_json SessionStart $st_sid_b)"
+    st_run "$(st_json SessionStart $st_sid 'codeo [home] · 00-a21b9973' resume)"
+    st_silent 'resume, same id'
+    st_run "$(st_json SessionStart $st_sid_d 'codeo [home] · 00-a21b9973' resume)"
+    [[ $(st_title) == 'codeo [home] · 00-d5e6f708' ]] || fail "resume, new id: title '$(st_title)'"
+    st_run "$(st_json UserPromptSubmit $st_sid_d)"
+    [[ $(st_title) == 'codeo [home] · 00-d5e6f708' ]] || fail "later prompt: title '$(st_title)'"
+}
+
+session_title_wraps_after_ff() {
+    st_setup wrap || return 0
+    mkdir -p "$(dirname "$(st_seq_file)")"
+    printf 'FE aaaaaaaa-0000\nFF bbbbbbbb-0000\n' >"$(st_seq_file)"
+    st_run "$(st_json SessionStart $st_sid)"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_counts_per_clone() {
+    local first second
+    st_setup clone-a || return 0
+    first=$st_dir
+    st_run "$(st_json SessionStart $st_sid)"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "clone a, first: '$(st_title)'"
+    st_setup clone-b || return 0
+    st_run "$(st_json SessionStart $st_sid)"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "clone b, first: '$(st_title)'"
+    second=$st_dir
+    st_dir=$first
+    st_run "$(st_json SessionStart $st_sid_b)"
+    [[ $(st_title) == 'codeo [home] · 01-b3c4d5e6' ]] || fail "clone a, second: '$(st_title)'"
+    st_dir=$second
+    st_run "$(st_json SessionStart $st_sid_b)"
+    [[ $(st_title) == 'codeo [home] · 01-b3c4d5e6' ]] || fail "clone b, second: '$(st_title)'"
+}
+
+session_title_lock_change_keeps_the_number() {
+    st_setup lock-number || return 0
+    printf 'issue:   47\nbranch: feat/x\nstarted: now\n' > "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 1A-a21b9973')"
+    [[ $(st_title) == 'codeo [#47] · 1A-a21b9973' ]] || fail "lock: title '$(st_title)'"
+    rm -f "$st_dir/.codeo/active"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [#47] · 1A-a21b9973')"
+    [[ $(st_title) == 'codeo [home] · 1A-a21b9973' ]] || fail "unlock: title '$(st_title)'"
+}
+
+session_title_moves_an_old_shape_title() {
+    st_setup old-shape || return 0
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "own: title '$(st_title)'"
+    st_run "$(st_json UserPromptSubmit $st_sid_b 'codeo [home] · ffffffff')"
+    [[ $(st_title) == 'codeo [home] · 01-b3c4d5e6' ]] || fail "other: title '$(st_title)'"
 }
 
 session_title_keeps_a_renamed_title() {
@@ -2509,6 +2598,17 @@ session_title_keeps_a_renamed_title() {
     st_silent 'upper-case suffix'
     st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b997g')"
     st_silent 'non-hex suffix'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 1a-a21b9973')"
+    st_silent 'lower-case number'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 1-a21b9973')"
+    st_silent 'one-digit number'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 1A-a21b997')"
+    st_silent 'numbered, short suffix'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 1A-A21B9973')"
+    st_silent 'numbered, upper-case suffix'
+    st_run "$(st_json UserPromptSubmit $st_sid 'x [home] · 1A-a21b9973')"
+    st_silent 'numbered, another codename'
+    [[ ! -e $(st_seq_file) ]] || fail 'a renamed session spent a number'
 }
 
 session_title_refreshes_the_window_title() {
@@ -2551,7 +2651,7 @@ session_title_hook_command_survives_a_missing_script() {
     err=$(<"$errf")
     ((rc == 0)) || fail "with the script present: exit $rc"
     [[ -z $err ]] || fail "with the script present: stderr '$err'"
-    [[ $(jq -r '.hookSpecificOutput.sessionTitle' <<<"$out") == 'codeo [home] · a21b9973' ]] \
+    [[ $(jq -r '.hookSpecificOutput.sessionTitle' <<<"$out") == 'codeo [home] · 00-a21b9973' ]] \
         || fail "with the script present: stdout '$out'"
     rm "$st_dir/.devcontainer/scripts/session-title.sh"
     rc=0
@@ -2766,6 +2866,14 @@ cases=(
     session_title_is_silent_when_the_title_script_fails
     session_title_escapes_the_codename
     session_title_treats_a_leading_newline_as_a_title
+    session_title_numbers_sessions_in_order
+    session_title_keeps_a_sessions_number
+    session_title_clear_and_fork_take_the_next_number
+    session_title_resume_keeps_its_number
+    session_title_wraps_after_ff
+    session_title_counts_per_clone
+    session_title_lock_change_keeps_the_number
+    session_title_moves_an_old_shape_title
     session_title_replaces_its_own_title_when_the_lock_changes
     session_title_keeps_a_renamed_title
     session_title_refreshes_the_window_title
