@@ -22,6 +22,18 @@ If the `/codeo:*` commands are not listed after the hook ran, start a new sessio
 bash tests/run.sh [pattern]   # runs tests/*.test.sh whose name contains the pattern
 ```
 
+## Changelog entries
+
+An issue's entry is the file `changelog.d/<issue>.md`: optional header lines `Config schema:`, `Shared state:` and `Safe to bump mid-workflow:` before the first blank line, then the bullets. `CHANGELOG.md` is edited only by `tools/changelog.sh assemble`, which folds the fragments into a release section at release time. A test that looks for an entry reads `bash tools/changelog.sh cat`.
+
+In the assembled `Safe to bump mid-workflow:` line a value beginning with the whole word `yes` is a yes and anything else is a caution; any caution beats every yes, and the cautions are joined with `; ` (a leading `no — ` is dropped from each). When every value is a yes, each `yes` value that carries a note is kept and the notes are joined with `; `. `Shared state:` values are joined with `; `, and fragments that disagree on `Config schema:` are refused. When no fragment names a `Config schema:`, the assembled line is the newest `CHANGELOG.md` section's number followed by ` (unchanged)`, and `assemble` refuses when it cannot read that number; a fragment that changes the schema says so in its own `Config schema:` line. `assemble` takes a `vX.Y.Z` version and a `YYYY-MM-DD` date and exits 2 on any other call.
+
+A plan's changelog documentation task writes `changelog.d/<issue>.md`, never `CHANGELOG.md`, and its footprint lists `changelog.d/**`.
+
+## The skills inventory pin
+
+`tests/inventory.test.sh` pins `docs/skills-inventory.md` to the rules in the skills, one line per rule, each followed by a blank line. `bash tests/inventory.test.sh --update` overwrites the fixture whole. Rules in the page are separated by a blank line (the test fails a rule that follows another directly), so two changes to different rules merge without a conflict. Two changes to the same rule, or two rules appended after the same rule, conflict in `docs/skills-inventory.md`: resolve the page, run `bash tests/inventory.test.sh --update` and commit the fixture.
+
 ## Checking a dossier
 
 ```bash

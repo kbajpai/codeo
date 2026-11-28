@@ -109,6 +109,16 @@ is the container the message names.
    check applies too. `overlap.sh` has nothing to compare
    yet — no branch, no footprint — so `init`'s check is `inflight.sh` alone, deliberately.
 
+   `init` also reads the leases other issues hold or wait for: it runs
+   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease list --tsv` (rows
+   `held|waiting<TAB>resource<TAB>issue<TAB>by<TAB>since`) and prints one line per row whose issue is not
+   this one — `#<M> holds <resource>` for `held`, `#<M> waits for <resource>` for `waiting` — and nothing
+   when there is none, before it cuts the branch. A footprint only names what a plan intends to lease, so
+   the footprint lines of `inflight.sh` are not read for this. That is information only: it asks nothing and blocks
+   nothing; this issue's own rows are excluded, on a resume too; a failure of that read
+   (origin unreachable, a non-zero exit) is reported in one line and the step carries on.
+   The overlap itself is decided at `/codeo:plan`, where there is a footprint to compare.
+
    **Check the board says it is Ready — when there is a board.** Whether one is configured is
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .board`: exit 1 with nothing printed means
    the project has none. Then say once, in this turn's output, that no board is configured, so the

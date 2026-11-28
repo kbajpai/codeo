@@ -175,7 +175,7 @@ if step 1 | grep -qF 'a send-back round with no record is a return from review';
 if step 1 | grep -qF 'round at all'; then fail "step 1 still keys the first open resumed on there being no send-back round at all"; fi
 step_contains "no round records the pull request: a first open resumed, whatever other rounds exist" 1 'or no round records it, whatever other rounds exist'
 step_contains "a conflict round with no record predates the pull request" 1 'a `— conflicts with <base>` round with no record predates the pull request'
-step_contains "only a recorded pull request followed by a send-back round is a return from review" 1 'a round records this pull request and a `— review feedback` or `— conflicts with <base>` round comes after it'
+step_contains "only a recorded pull request followed by a send-back round is a return from review" 1 'a round records this pull request and a `— review feedback`, `— conflicts with <base>` or `— base moved` round comes after it'
 step_contains "the prose reads the first open resumed from the record" 1 'is the open pull request with the dossier at `.codeo/<N>/` and no round recording it'
 step_contains "a conflict round before the pull request does not make a return from review" 1 'a conflict round from before the pull request existed does not make a return from review'
 
@@ -199,6 +199,27 @@ step_contains "an Update-branch merge on GitHub is pulled fast-forward" 9 'git p
 step_contains "conflicting is a send-back" 9 '`CONFLICTING`'
 step_contains "a conflicting pull request goes to step 11" 9 'step 11'
 
+# Step 9: a moved base that touched a graded file is a send-back through step 11 (close-18). The
+# check runs on every pass after the pull, whether or not the branch is BEHIND.
+s9=$(step 9 | tr '\n' ' ' | tr -s ' ')
+check=$(step 9 | awk '/^   <!-- rule: close-18 -->/{f=1} /^   - \*\*`BEHIND`\*\*/{f=0} f' | tr '\n' ' ' | tr -s ' ')
+[[ -n $check ]] || fail "step 9 has no moved-base check before its BEHIND bullet"
+must_contain 'close-18 rule marker' '<!-- rule: close-18 -->'
+text_order 'base-moved.sh runs after the pull' "$s9" 'git pull --ff-only' 'scripts/base-moved.sh" <N>'
+text_order 'base-moved.sh runs before the BEHIND handling' "$s9" 'scripts/base-moved.sh" <N>' '**`BEHIND`**'
+text_order 'base-moved.sh runs before any merge' "$s9" 'scripts/base-moved.sh" <N>' 'git merge --no-edit origin/<base>'
+for needle in 'every pass' 'whether or not' 'Exit 0' 'Exit 4' 'predates `Graded base:`' 'Exit 3' 'merge nothing' \
+    'Name each' 'graded those files before the base changed them' '`— base moved`' 'step 11' \
+    '`/codeo:implement`' 'Exit 1' 'quoting the stderr line' 'stdout carries only paths' 'on stderr'; do
+    [[ $check == *"$needle"* ]] || fail "moved-base check has no [$needle]"
+done
+text_order 'exit 3 goes to step 11 after naming the paths' "$check" 'Exit 3' 'step 11'
+[[ $s9 != *'Write nothing to `close.md`'* ]] || fail "step 9 still says exit 3 writes nothing to close.md"
+[[ $s9 != *'stop with the route `/codeo:qc`'* ]] || fail "step 9 still routes exit 3 to /codeo:qc"
+behind=$(step 9 | awk '/^   - \*\*`BEHIND`\*\*/{f=1} /^   - \*\*`CONFLICTING`\*\*/{f=0} f' | tr '\n' ' ' | tr -s ' ')
+[[ -n $behind ]] || fail "step 9 has no BEHIND bullet"
+text_order 'BEHIND merge-tree check precedes the merge' "$behind" 'git merge-tree --write-tree --name-only origin/<base> HEAD' 'git merge --no-edit origin/<base>'
+
 # Step 10: the release at approval.
 step_contains "the release at approval is only for a lease still held" 10 'lease list'
 step_contains "the release at approval" 10 'lease release "$ENV_RESOURCE" <N>'
@@ -209,6 +230,9 @@ step_contains "who is waiting is named" 10 'waiting'
 # Step 11: the send-back.
 step_contains "review feedback is a round" 11 '### Round <n> — review feedback'
 step_contains "a conflict is a round" 11 '— conflicts with <base>'
+step_contains "a moved base is a round" 11 '### Round <n> — base moved'
+step_contains "a base-moved round lists the paths base-moved.sh printed" 11 'base-moved.sh'
+step_contains "a base-moved send-back names its subject" 11 'close dossier for #<N> — base moved'
 step_contains "the send-back round records the qc round line" 11 'qc round at review: <k>'
 step_contains "the feedback is collected verbatim" 11 'verbatim'
 step_contains "the reviews are read" 11 'github.sh" pr reviews <PR>'
@@ -512,6 +536,13 @@ section_contains "a legacy stash removes the verified caller" "$stash_section" '
 section_contains "the caller is removed only without an override" "$stash_section" 'without an override'
 section_contains "an override with no owner is a skip" "$stash_section" 'With an override and no owner'
 section_contains "an unverified login is never removed" "$stash_section" 'Never remove a login that was not verified'
+
+# Round 3: the way on from a base-moved exit 1, and one round for feedback plus a moved base.
+must_contain 'close exit 1 names the unshallow way on' 'git fetch --unshallow'
+must_contain 'close exit 1 names the fetch way on' '`git fetch origin` and run the step again'
+must_contain 'close exit 1 falls back to a new Graded base' 'run `/codeo:qc` again, which records a new `Graded base:`'
+must_contain 'close step 11 heads a combined round review feedback' 'the round is headed `— review feedback` and lists the moved paths after the review'\''s points under the words `Base moved under graded files:`'
+must_contain 'close step 11 sends back once' 'one round, one send-back'
 
 if ((failures)); then
     echo "$failures case(s) failed"

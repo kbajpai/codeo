@@ -72,15 +72,16 @@ must_contain 'a host task is marked with a Runs on line' 'is marked with a line'
 must_contain 'a lease task carries a Needs lease line' 'carries a line `Needs lease:'
 must_contain 'a script is in a language the host is known to have' "in a language the engineer's host is known to have"
 must_contain 'a host task on the environment carries both markers' 'carries both markers, each on its own line'
-must_contain 'step 8 lists sequenced as the fourth key, none when nothing was sequenced' 'is the fourth key and reads `none` when nothing was sequenced'
+must_contain 'step 8 lists sequenced as the fourth key, none when no overlap question was raised' 'is the fourth key and reads `none` when no overlap question was raised'
 must_contain 'step 8 says a footprint without the key fails' 'fails a footprint that lacks any of the four'
-must_contain 'step 10 keeps sequenced none when nothing was sequenced' 'stays `none` otherwise'
+must_contain 'step 10 keeps sequenced none only when no overlap question was raised' 'stays `none` only when no overlap question was raised'
 
 dossier="$plugin_root/docs/dossier.md"
 grep -qF -- 'only when an overlap question was answered that way' "$dossier" &&
     fail 'docs/dossier.md still says sequenced is written only when something was sequenced'
-grep -qF -- '`sequenced` — `none` unless an overlap question was answered *sequence after #M*' "$dossier" ||
-    fail 'docs/dossier.md does not say sequenced reads none unless something was sequenced'
+grep -qF -- '`sequenced` — one clause per answered overlap question' "$dossier" &&
+    grep -qF -- '`none` only when no overlap question was raised' "$dossier" ||
+    fail 'docs/dossier.md does not say sequenced holds one clause per answered question, none only when none was raised'
 
 # The home-only guard refuses /codeo:issue in an issue container: the caller records the finding instead.
 must_contain 'a refused call is recorded in the dossier' "record the finding in this skill's own dossier"
@@ -97,6 +98,34 @@ must_contain 'plan verify carries its rule marker' '<!-- rule: plan-10 -->'
 must_contain 'plan a refused verify prints its line and stops' 'print its one line and stop — nothing else is'
 must_contain 'plan the override is named' '--override "<the engineer'\''s exact words>"'
 must_contain 'plan the override is never inferred' 'never inferred'
+
+# The skill lease suffix and the recorded overlap decision (plan-11).
+must_contain 'plan derives the suffix from the first wildcard' 'the path segment the first wildcard'
+must_contain 'plan gives the skill suffix example' '`skills/close/SKILL.md` under `skills/**`'
+must_contain 'plan gives the test suffix example' '`tests/close-skill.test.sh` under `tests/*-skill.test.sh`'
+must_contain 'plan lists a file matching several globs once per glob' 'a file matching several globs gives several entries'
+must_contain 'plan lists a resource under exclusive, not left to judgment' 'listed under `exclusive:`, never left to judgment'
+must_contain 'plan-11 carries its rule marker' '<!-- rule: plan-11 -->'
+must_contain 'plan writes sequence-after to sequenced' '`after #M — <why> (Q<k>)`'
+must_contain 'plan writes proceed-and-coordinate to sequenced' '`beside #M — <what overlaps> (Q<k>)`'
+must_contain 'plan writes re-scope to sequenced' '`rescoped — <what was dropped> because of #M (Q<k>)`'
+must_contain 'plan writes a lock to sequenced' '`locked — <resource> behind #M (Q<k>)`'
+for clause in 'rescoped — <what was dropped> because of #M (Q<k>)' 'locked — <resource> behind #M (Q<k>)' 'after #M — <why> (Q<k>)' 'beside #M — <what overlaps> (Q<k>)'; do
+    grep -qF -- "$clause" "$dossier" || fail "docs/dossier.md sequenced bullet lacks [$clause]"
+done
+must_contain 'plan writes none when nothing was raised' '`none` when no overlap was raised'
+must_contain 'plan records the answer before the commit' 'written to the footprint'\''s `sequenced:` line before the footprint is committed'
+must_order 'the sequenced rule sits before the footprint commit' '<!-- rule: plan-11 -->' 'Commit it alone, staged by name'
+must_contain 'plan step 10 takes the lease' 'lease take <resource> <N>'
+must_contain 'plan a lease refusal names the holder' 'refusal names the holder'
+must_contain 'plan records the wait' 'lease wait <resource> <N>'
+must_contain 'locked is written for any exclusive overlap question, lease free or waited for' 'for any exclusive'
+must_contain 'locked is written with the answer, before the commit' 'whether the lease is taken at once or waited for'
+
+# Round 3: several sequenced clauses, and a suffix that names no lease.
+grep -qF -- 'separated by `; `' "$skill" || fail 'plan skill does not separate several sequenced clauses by "; "'
+grep -qF -- 'separated by `; `' "$dossier" || fail 'docs/dossier.md does not separate several sequenced clauses by "; "'
+must_contain 'a path with no wildcard segment names no lease' 'names no lease and is not listed under `exclusive:`'
 
 if ((failures)); then
     echo "$failures case(s) failed"

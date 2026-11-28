@@ -29,7 +29,16 @@
       "parallel": false
     }
   ],
-  "resources": [],
+  "resources": [
+    {
+      "name": "skill",
+      "paths": [
+        "skills/**",
+        "tests/*-skill.test.sh"
+      ],
+      "parameterised": true
+    }
+  ],
   "board": {
     "owner": "kbajpai",
     "gateProject": 3,

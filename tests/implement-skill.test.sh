@@ -38,6 +38,16 @@ must_contain 'the link goes on the next line' 'beneath the heading, and the next
 must_contain 'a qc or close send-back round names its source' '`(send-back from qc.md round <k>)` or `(send-back from close.md round <k>)` for the round'
 must_contain 'a round after a re-plan names the plan round' 'step 3 read, or `(after plan.md round <k>)` when it follows a re-plan'
 
+# Step 3: a `— base moved` round from /codeo:close.
+must_contain 'step 3 names a base-moved round' '`— base moved`'
+must_contain 'the base changed files QC graded' 'the base changed files QC graded'
+must_contain 'step 2a brought the base in' 'step 2a merged it'
+must_contain 'each named file is re-checked against the plan' 're-check each named file against the plan'
+must_contain 'the check is recorded in the round outcome' 'record the check in this round'\''s outcome'
+must_contain '(no code change may be needed)' 'no code change may be needed'
+must_precede 'the re-check comes before the hand-off to qc' 're-check each named file against the plan' 'then `/codeo:qc`'
+must_contain 'the Reads line names the base-moved round' 'the latest review round in `close.md` — which may be `— base moved`'
+
 must_contain "the Outcome line qc reads" 'Deployed revision:'
 must_contain "the revision is a bare line" 'Write `Deployed revision: <x>` as a bare line under'
 must_contain "the subagent model read" "config.sh\" get '.models.subagent // \"sonnet\"'"

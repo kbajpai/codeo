@@ -86,6 +86,25 @@ step_contains "step 9 records it under Notes" 9 '## Notes'
 
 step_contains "the resume path records a failed assignee-add" 6 'assignee-add failed'
 
+# #207: init informs — it names each lease another issue holds or waits for, and decides nothing.
+step_contains "step 3 reads the lease list" 3 'lease list --tsv'
+step_contains "step 3 prints the holds line" 3 '`#<M> holds <resource>`'
+step_contains "step 3 prints the waits line" 3 '`#<M> waits for <resource>`'
+step_contains "step 3 maps held to holds" 3 'for `held`'
+step_contains "step 3 maps waiting to waits for" 3 'for `waiting`'
+step_contains "step 3 prints nothing when there is none" 3 'and nothing when there is none'
+step_contains "step 3 excludes this issue's own rows" 3 'whose issue is not this one'
+step_contains "step 3 reports a failed read in one line" 3 'reported in one line and the step carries on'
+step_contains "step 3 asks nothing and blocks nothing" 3 'asks nothing and blocks nothing'
+step_contains "step 3 leaves the overlap to plan" 3 'decided at `/codeo:plan`'
+step_contains "step 3 keeps inflight.sh alone as the check" 3 'so `init`'"'"'s check is `inflight.sh` alone'
+step_lacks "step 3 no longer reads the footprint exclusive line" 3 'whose `exclusive:` is not `none`'
+step_lacks "step 3 no longer takes holds from footprints" 3 '`#<M> holds <resources>`'
+
+# Round 3: a lease read with no resources prints nothing and exits 0, so it is not a failure.
+step_lacks 'step 3 lists no resources configured as a failure' 3 'no resources configured'
+step_contains 'step 3 keeps origin unreachable as a failure' 3 '(origin unreachable, a non-zero exit)'
+
 # --approved (#217): approval given in advance by `codeo go`, rule init-12.
 grep -qF -- '[--approved]' <(grep '^argument-hint:' "$skill") || fail "argument-hint has no [--approved]"
 step_contains "step 0 ignores --approved" 0 '--approved'

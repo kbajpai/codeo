@@ -307,7 +307,9 @@ it.
   footprint alone. An `exclusive` resource — one of the config's `resources[]` — is one where two
   branches cannot both change it and merge cleanly, so for those the plan takes a lock
   (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease take <resource> <N> <purpose>`), refused
-  while another issue holds it.
+  while another issue holds it. Skill files are leased per directory: when the project configures
+  a parameterised `skill` resource, a plan that changes `skills/plan/**` holds `skill:plan`, and
+  the refusal names the holder.
 - **Leases and their queue.** Every lock goes through
   `bash "${CLAUDE_PLUGIN_ROOT}/scripts/intake.sh" lease`, and lives on the intake branch, where
   every engineer can see it; every decision is read from origin after a fetch, and with origin
@@ -430,8 +432,9 @@ Two steps may hand work *backwards*, and everywhere else the flow runs forwards 
 
 - `/codeo:qc`, to `/codeo:implement` when the code doesn't do what the plan says, or to
   `/codeo:plan` when the code is faithful and the plan was wrong.
-- `/codeo:close`, to `/codeo:implement` when review on the pull request asks for changes, or when
-  the pull request conflicts with the base branch because a parallel workflow merged first. The fix
+- `/codeo:close`, to `/codeo:implement` when review on the pull request asks for changes, when
+  the pull request conflicts with the base branch because a parallel workflow merged first, or when
+  the base changed files QC graded (a `— base moved` round, which lists those paths). The fix
   then goes through `/codeo:qc` in full before it returns to `/codeo:close`, and onto the same pull
   request. Each such round in `close.md` records `qc round at review: <k>`, the number of the latest
   `qc.md` round when it was written; `/codeo:close` accepts only a clear `qc` round numbered above

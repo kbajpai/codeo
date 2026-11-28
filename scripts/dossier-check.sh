@@ -58,7 +58,7 @@
 #                            <file> has when <file> is there; every qc.md round but the last that
 #                            is sent back is named so by a round of the receiving file, when it is
 #                            there; and no other round carries one (docs/dossier.md → Send-backs)
-#   qc-round-at-review FAIL  every close.md "— review feedback" / "— conflicts with <base>" round
+#   qc-round-at-review FAIL  every close.md "— review feedback" / "— conflicts with <base>" / "— base moved" round
 #                            carries "qc round at review: <k>", <k> a qc.md round when qc.md is there
 #   park-heading      FAIL   a close.md "Round <n>" heading naming a stash or an abandon matches
 #                            claim.sh's park_re (read from claim.sh), the heading --stash-live counts
@@ -784,7 +784,7 @@ check_qc_round_at_review() {
     [[ $name == close.md ]] || return 0
     qc=$(sibling "$file" qc.md) || qc=
     while IFS=$'\t' read -r line n heading; do
-        [[ $heading =~ ^Round\ [0-9]+\ —\ (review\ feedback|conflicts\ with\ ) ]] || continue
+        [[ $heading =~ ^Round\ [0-9]+\ —\ (review\ feedback|conflicts\ with\ |base\ moved) ]] || continue
         k=$(round_marked_of "$file" "$line" | awk -F'\t' '
             $2 == 0 && match($3, /^[ \t]*([-*] )?qc round at review: [0-9]+/) {
                 s = substr($3, RSTART, RLENGTH); sub(/.*: /, "", s); if (!seen) print s; seen = 1

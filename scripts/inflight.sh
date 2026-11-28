@@ -17,7 +17,7 @@
 #       when both apply); `review — dossier archived` once close has archived the dossier and
 #       the archive is not on the base branch yet (a pull request is usually open, but this line does not
 #       look for one); the step a close send-back
-#       (review feedback, a conflict with the base) leaves owing (`/codeo:implement`, then `/codeo:qc` until qc
+#       (review feedback, a conflict with the base, a moved base) leaves owing (`/codeo:implement`, then `/codeo:qc` until qc
 #       grades a later round); the step qc's last verdict leaves owing, read from the `(send-back from …)` and
 #       `(after plan.md round <j>…)` markers (`/codeo:close` when clear, else `/codeo:plan`, `/codeo:implement`
 #       or `/codeo:qc`); with no verdict, the step after the last finished one (init: `/codeo:plan`, plan:
@@ -204,7 +204,7 @@ marker_round() {
         }' || true
 }
 
-# `<m> <k>` when close.md's last `### Round <m>` is a send-back (`— review feedback`, `— conflicts with …`);
+# `<m> <k>` when close.md's last `### Round <m>` is a send-back (`— review feedback`, `— conflicts with …`, `— base moved`);
 # <k> is the `qc round at review: <k>` that round records, empty when it records none. Else nothing.
 # Rounds are read only inside `## Outcome`, matched exactly as `qc-verdict.sh` matches it, so `## Outcomes`
 # and `## Outcome notes` are other sections.
@@ -214,7 +214,7 @@ close_send_back() {
         !f && t ~ /^## / { o = 0 }
         o && !f && t ~ /^### Round [0-9]+/ {
             m = t; sub(/^### Round /, "", m); sub(/[^0-9].*/, "", m)
-            sendback = (t ~ /^### Round [0-9]+[^A-Za-z0-9]+(review feedback|conflicts with)/); k = ""; next
+            sendback = (t ~ /^### Round [0-9]+[^A-Za-z0-9]+(review feedback|conflicts with|base moved)/); k = ""; next
         }
         o && !f && sendback && k == "" && match(t, /qc round at review:[ `]*[0-9]+/) {
             k = substr(t, RSTART, RLENGTH); sub(/^[^0-9]*/, "", k)

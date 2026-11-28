@@ -86,8 +86,9 @@ constrain other people and accidents, not the owner.
      release), unless the release being cut is one of them, in which case that stub takes the next
      higher version.
 
-   (`.claude-plugin/marketplace.json` carries no version.) Also retitle `CHANGELOG.md`'s
-   `## Unreleased` as `## vX.Y.Z — YYYY-MM-DD`, through a pull request like any other change. The date is the
+   (`.claude-plugin/marketplace.json` carries no version.) Also run
+   `bash tools/changelog.sh assemble vX.Y.Z YYYY-MM-DD` (a `vX.Y.Z` version and a `YYYY-MM-DD` date, else exit 2; it refuses a leftover `## Unreleased` heading in `CHANGELOG.md` and a version that already has a section, writing and deleting nothing; fold or remove the heading or the existing section first) and commit `CHANGELOG.md` and the deleted fragments, through a pull request
+   like any other change; read the `Shared state:` line it writes against the dossier conventions this step names, and the `Config schema:` line it writes (the newest section's number with `(unchanged)` when no fragment names one) against the release's actual schema. The date is the
    UTC date the release pull request opens (`gh pr view --json createdAt`), which can differ by a day from the
    engineer's local date. Once that pull request merges, test the merged commit — the one the tag will name — from a clean clone:
 

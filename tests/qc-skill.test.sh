@@ -231,6 +231,22 @@ must_contain 'qc a refused verify prints its line and stops' 'print its one line
 must_contain 'qc the override is named' '--override "<the engineer'\''s exact words>"'
 must_contain 'qc the override is never inferred' 'never inferred'
 
+# Each round records the base commit it graded (qc-16).
+sync_line=$(grep -nF 'scripts/sync-main.sh" --abort-on-conflict' "$skill" | head -1 | cut -d: -f1 || true)
+diff_line=$(grep -nF 'git diff origin/<base>...HEAD --stat' "$skill" | head -1 | cut -d: -f1 || true)
+if [[ -z $sync_line || -z $diff_line ]] || ((sync_line >= diff_line)); then
+    fail "qc step 2 syncs with the base before it scopes the diff — sync line [${sync_line:-none}], diff line [${diff_line:-none}]"
+fi
+must_contain 'qc a conflict routes to implement without grading' 'a conflict is a send-back to `/codeo:implement`'
+must_contain 'qc qc-16 marker' '<!-- rule: qc-16 -->'
+must_contain 'qc the round has a Graded base line' 'Graded base: <sha>'
+must_contain 'qc Graded base only after a clean sync' 'After a sync that exits 0, the round records the base commit it graded'
+must_contain 'qc a stopped sync records no Graded base' 'records no `Graded base:` line'
+must_contain 'qc the graded base is the merge-base with origin/<base>' 'git merge-base HEAD origin/<base>'
+must_contain 'qc the Graded base is a bare line' 'bare line'
+must_contain 'qc the Behind line form' 'Behind: merged <n> commit(s) from origin/<base> before grading'
+must_contain 'qc no Behind line when the branch already contained base' 'already contained `origin/<base>`, no `Behind:` line is written'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

@@ -79,6 +79,8 @@ want[bad-pending-above-rounds]='FAIL plan.md [footprint] no ### Footprint in ## 
 FAIL plan.md [open-question] Q2 is open but ## Outcome is written'
 want[bad-qc-round-at-review]='FAIL close.md [qc-round-at-review] round 2 carries no "qc round at review: <k>"
 FAIL close.md [qc-round-at-review] round 3 names qc round 7, which qc.md does not have'
+want[good-base-moved]=
+want[bad-base-moved-qc-round]='FAIL close.md [qc-round-at-review] round 2 carries no "qc round at review: <k>"'
 want[bad-park-heading]='FAIL close.md [park-heading] line 19: "### Round 1 — Stashed" is not a park heading claim.sh reads
 FAIL close.md [park-heading] line 25: "### Round 2 - abandoned" is not a park heading claim.sh reads'
 want[bad-finished-qc-clear]='FAIL close.md [finished-qc-clear] a pull request is opened but qc.md'"'"'s last round is not clear'
