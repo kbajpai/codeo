@@ -2097,8 +2097,8 @@ t_version_flags_print_the_constant() {
     want=$(jq -r .version "$repo/.claude-plugin/plugin.json")
     for f in --version -v; do
         cm_run "$f"
+        [[ "$cm_status" -eq 0 ]] || fail "$f: exit $cm_status, want 0"
         [[ "$cm_out" == "codeo $want" ]] || fail "$f: stdout '$cm_out', want 'codeo $want'"
-        [[ "$cm_out" == "codeo 1.0.11" ]] || fail "$f: stdout '$cm_out', want 'codeo 1.0.11'"
         [[ -z "$cm_err" ]] || fail "$f: stderr '$cm_err', want empty"
         [[ ! -s "$cm_dir/calls" ]] || fail "$f: made calls: $(cat "$cm_dir/calls")"
     done
@@ -2200,8 +2200,10 @@ t_usage_and_help_list_go_and_done() {
     cm_setup "$current"
     cm_run help
     { grep -q 'codeo go <N>' <<<"$cm_out" && grep -q 'codeo done <N>' <<<"$cm_out"; } || fail "help: $cm_out"
+    { grep -qF "start the issue and open its container" <<<"$cm_out" && grep -qF "prove the issue finished and remove its container or sandbox" <<<"$cm_out"; } || fail "help text: $cm_out"
     cm_run
     { grep -q '  go <N>' <<<"$cm_err" && grep -q '  done <N>' <<<"$cm_err"; } || fail "usage: $cm_err"
+    { grep -qF "start the issue and open its container" <<<"$cm_err" && grep -qF "prove the issue finished and remove its container or sandbox" <<<"$cm_err"; } || fail "usage text: $cm_err"
 }
 
 # rm_stubs_152: rm_stubs for issue 152 (the stub names codeo-5).

@@ -27,8 +27,8 @@ usage: codeo <command> [args]
   open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
   list                                                              list issue containers and sandboxes
   rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
-  go <N> [--container|--sandbox] [--yes]                             start the issue and drive it to a pull request
-  done <N> [--container|--sandbox]                                  finish the issue and remove its environment
+  go <N> [--container|--sandbox] [--yes]                            start the issue and open its container
+  done <N> [--container|--sandbox]                                  prove the issue finished and remove its container or sandbox
   default [container|sandbox]                                       show or set the default kind for issue
   update                                                            update codeo and its scripts
   help                                                              show this help
@@ -90,8 +90,8 @@ codeo: work a GitHub issue in a dev container or an sbx sandbox.
   codeo open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
   codeo list                                                              list issue containers and sandboxes
   codeo rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
-  codeo go <N> [--container|--sandbox] [--yes]                             start the issue and drive it to a pull request
-  codeo done <N> [--container|--sandbox]                                  finish the issue and remove its environment
+  codeo go <N> [--container|--sandbox] [--yes]                            start the issue and open its container
+  codeo done <N> [--container|--sandbox]                                  prove the issue finished and remove its container or sandbox
   codeo default [container|sandbox]                                       show or set the default kind for issue
   codeo update                                                            update codeo and its scripts
   codeo help                                                              show this help

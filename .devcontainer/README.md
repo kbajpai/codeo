@@ -108,13 +108,18 @@ When `~/.local/bin` is not on `PATH`, `codeo help` ends with the one line to add
 `codeo help` lists the commands, and the kind flag `[--container|--sandbox]` on the commands that take it:
 
 ```text
+  codeo home [--rebuild]                                                  start the home dev container
   codeo issue <N> [<branch>] [--rebuild] [--container|--sandbox] [--yes]  start work on issue N
-  codeo shell home|<N> [--container|--sandbox]                    open a shell in the home or issue environment
-  codeo open <N> [--container|--sandbox]                          open the issue's sandbox in VS Code
-  codeo rm <N> [--force] [--container  codeo go <N> [--container|--sandbox] [--yes]                             start the issue from its card and open its container
-  codeo done <N> [--container|--sandbox]                                  prove the issue finished and remove its container
-  codeo --version, -v                                                     print the codeo version
-|--sandbox]                  remove the issue's container or sandbox
+  codeo shell home|<N> [--container|--sandbox]                            open a shell in the home or issue environment
+  codeo open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
+  codeo list                                                              list issue containers and sandboxes
+  codeo rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
+  codeo go <N> [--container|--sandbox] [--yes]                            start the issue and open its container
+  codeo done <N> [--container|--sandbox]                                  prove the issue finished and remove its container or sandbox
+  codeo default [container|sandbox]                                       show or set the default kind for issue
+  codeo update                                                            update codeo and its scripts
+  codeo help                                                              show this help
+  --version, -v    print the codeo version
 ```
 
 `codeo update` downloads the newest `codeo` and its three scripts (`codeo-container.sh`, `codeo-sandbox.sh` and `codeo-track.sh`) into a temporary directory inside `~/codeo`, checks that each file is non-empty and starts with `#!`, and only then moves them over the installed ones, `codeo` last. A failed download or check removes the temporary directory and changes nothing installed; a failure while moving the files names which are new and which are still old, and running `codeo update` again finishes it. `codeo update` overwrites the installed `codeo` and its three scripts in `~/codeo`, including any hand edits made to them, and prints its progress: `downloading <name>` and `downloaded <name>` for each of the four files, then `version: <old> -> <new>` (`version: <old> (already the newest)` when they are equal, and `unknown` for the new version when the downloaded `codeo` has no `CODEO_VERSION` line), then `installing <name>` and `installed <name>` for each file, and last `updated codeo and its three scripts`. `codeo --version` (or `-v`) prints `codeo <version>` from the constant `CODEO_VERSION` in the command itself, without a call to any other program.
@@ -145,13 +150,13 @@ A bad or missing argument, or an unknown command, prints the usage on stderr and
 ```mermaid
 flowchart TD
     A["codeo go N"] --> B{args ok?}
-    B -- no --> U[usage, exit 2]
+    B -- no --> U["usage, exit 2"]
     B -- yes --> K{keychain locked? macOS only}
     K -- locked --> KE[print unlock command, stop]
     K -- ok --> H{home clone found and role home?}
     H -- no --> HE["stop: set CODEO_HOME_CLONE"]
     H -- yes --> X{branch with init.md already on origin?}
-    X -- yes --> XE[stop: codeo issue N or /codeo:init]
+    X -- yes --> XE["stop: codeo issue N or /codeo:init"]
     X -- no --> S{card status}
     S -- "Ready" --> I
     S -- "none, unset, Backlog" --> R["board.sh set N ready"] --> I
