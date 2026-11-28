@@ -1,7 +1,7 @@
 ---
 name: init
 description: Start work on an already-filed GitHub issue — validates and claims the number, gates on the project board's Ready status when a board is configured and moves the card to in progress, cuts and pushes the branch off the updated base branch with its dossier, takes the workflow lock and hands off to /codeo:plan in the same session, unless the project's host workflow says where the later steps run. Trigger on "start issue #N", "init #N", "let's work on issue N", or once /codeo:triage has marked a newly filed one Ready. Never drafts the issue's content or designs the solution — those are /codeo:issue and /codeo:plan.
-argument-hint: "<GitHub issue number to start work on>"
+argument-hint: "<GitHub issue number to start work on> [--approved]"
 model: sonnet
 ---
 
@@ -48,7 +48,8 @@ is the container the message names.
 
 0. **Invoked with no arguments? Stop and ask before doing anything else.** Don't infer the issue
    from recent conversation, open PRs, or "the only open issue." This skill is the one that
-   *starts* the workflow, so there is nothing to read a default from.
+   *starts* the workflow, so there is nothing to read a default from. The flag `--approved`
+   (step 8) is not an argument for this check: a bare `--approved` is still no issue, so stop and ask.
 
 1. **Read the project's host workflow, then check where this is running.**
    <!-- point: init/host-workflow -->
@@ -67,7 +68,7 @@ is the container the message names.
    this one), or to finish this one with `/codeo:close`. Another issue's workflow in its own
    checkout is no obstacle; that is the point.
 
-2. **Resolve and validate the number.** Accept `42`, `#42`, or a full URL; reject a URL pointing
+2. **Resolve and validate the number.** Accept `42`, `#42`, or a full URL, each with or without a trailing `--approved` (`#42 --approved` is issue 42, and the flag is not part of the number); reject a URL pointing
    at another repository than `$OWNER/$NAME` rather than silently renumbering it. Run
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" issue view <N>`.
    <!-- rule: init-01 -->
@@ -286,6 +287,19 @@ is the container the message names.
    nothing below it runs while a question in that file is still open. Most runs of this skill have
    nothing to ask — a closed issue is a pick-one, so put it to the engineer in the conversation and
    record the answer in the file.
+
+   With `--approved` in the arguments the gate is not asked, but only when nothing in the file
+   is still open and no earlier stop applies: then append one line under `## Notes` in `init.md`
+   (created when absent, before `## Outcome`) —
+   `- <date> — approved in advance by the engineer (--approved)` — and go on to
+   step 9. Otherwise stop as the rule below says. Nothing else about the gate changes; without the flag it is exactly as above.
+   <!-- rule: init-12 -->
+   `--approved` is the engineer's approval given in advance by the command that started this run;
+   it is never inferred from the conversation, a hosted session or anything the engineer later
+   says, and it does not answer a question. A question in the file, a closed issue, another
+   assignee, a workflow already under way, a resume needing the engineer's words, or a failed
+   script still stops the skill, and the skill says so in its last message, because nobody can
+   answer a headless run.
 
 9. **Cut the branch, commit the dossier onto it, push, and claim the issue.** The branch is cut in
    a scratch worktree that exists only for this step:

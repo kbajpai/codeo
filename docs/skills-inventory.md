@@ -44,6 +44,7 @@ in prose exist (only the script's existence is checked).
 - [init-09] The state directory's `.gitignore` must be committed.
 - [init-10] A refusal from the role check ends the step; no override.
 - [init-11] `init` resolves the user with `user whoami` before any claim; exit 1 stops it, and the login (an `unverified` one included) is recorded as the Owner and compared with the assignees like any other.
+- [init-12] `--approved` is the engineer's approval given in advance by the command that started the run; it is never inferred, and it does not answer a question: a question, a closed issue, another assignee, a workflow under way, a resume needing the engineer's words or a failed script still stops the skill, and its last message says so.
 
 ## plan
 

@@ -35,6 +35,13 @@
 #       It runs no proof, never commits, and writes nothing unless every number is an issue with a .codeo/done/<N> on origin/<baseBranch>
 #       (otherwise exit 1 with a cleanup: line).
 #
+#   cleanup.sh prove <N>
+#       Runs the same five proofs for the one issue and prints one line, exit 0 either way:
+#           <N> TAB proven                  every proof passed
+#           <N> TAB failed TAB <proof>      the first proof that failed (an issue with no .codeo/done/<N> on origin/<baseBranch> fails pull-request)
+#       It reads no overlay and no removal record, never builds or prints a command, and writes nothing.
+#       No number, a non-number or more than one is exit 1 with a cleanup: line, as is any error.
+#
 # The overlay's command is built in name_proof and the leftover delete in leftover_proof: the only two places a command is built.
 # The overlay body (cleanup/removal-command) is three lines, and an optional fourth: `name: <template with {N}>`,
 # `pattern: <extended regex>`, `command: <template with {N} and {name}>` and `fallback: <text with {N} and {name}>`; the script expands command: and fallback: once with a sample number and checks the expanded text, which is what it prints: any {word} left in it ends the run; it comes from `overlay.sh cleanup removal-command`. No
@@ -51,8 +58,12 @@ if [[ ${1:-} == record ]]; then
     mode=record
     shift
     (($#)) || die "usage: cleanup.sh record <issue>…"
+elif [[ ${1:-} == prove ]]; then
+    mode=prove
+    shift
+    (($# == 1)) && [[ $1 =~ ^[1-9][0-9]*$ ]] || die "usage: cleanup.sh prove <issue>"
 elif (($#)); then
-    die "usage: cleanup.sh [record <issue>…]"
+    die "usage: cleanup.sh [record <issue>… | prove <issue>]"
 fi
 
 cd "$(git rev-parse --show-toplevel)"
@@ -93,6 +104,41 @@ fi
 # Every lease and wait on the intake branch, read once: held|waiting TAB resource TAB issue TAB by TAB since.
 leases=$(bash "$CODEO_PLUGIN_ROOT/scripts/intake.sh" lease list --tsv </dev/null 2>/dev/null) || die "could not read the leases"
 
+# The first failing proof for issue $1, or `ok`.
+first_failed_proof() {
+    local n=$1 issue pr info ref sha
+    issue=$(bash "$github" issue view "$n" </dev/null 2>/dev/null) || die "could not read issue #$n"
+    [[ $(jq -r '.state' <<<"$issue") == closed ]] || { echo issue; return; }
+
+    pr=$({ git show "$base_sha:$state_rel/done/$n/close.md" 2>/dev/null || true; } |
+        awk '/^#[0-9]+ https?:\/\// { sub(/^#/, ""); print $1; exit }')
+    [[ -n $pr ]] || { echo pull-request; return; }
+    info=$(bash "$github" pr get "$pr" </dev/null) || die "could not read pull request #$pr"
+    [[ -n $(jq -r '.merged_at // empty' <<<"$info") ]] || { echo pull-request; return; }
+
+    ref=$(jq -r '.head_ref // empty' <<<"$info")
+    [[ -n $ref && $ref != null ]] || { echo branch; return; }
+    # From the refs the fetch above just pruned, never ls-remote: a failed ls-remote prints nothing and would read as "gone".
+    ! git rev-parse --verify -q "refs/remotes/origin/$ref" >/dev/null || { echo branch; return; }
+
+    while IFS= read -r ref; do
+        sha=$(git rev-parse "$ref")
+        ! git cat-file -e "$sha:$state_rel/$n" 2>/dev/null || { echo dossier; return; }
+    done < <(git for-each-ref --format='%(refname)' refs/remotes/origin | grep -v '^refs/remotes/origin/HEAD$' || true)
+
+    # The workflow let go of its leases: no held lease and no wait names the issue.
+    ! awk -F'\t' -v n="$n" '$3 == n { found = 1 } END { exit !found }' <<<"$leases" || { echo lease; return; }
+
+    echo ok
+}
+
+# prove <N>: the first failed proof for one issue, on one line. No overlay, no record, no command.
+if [[ $mode == prove ]]; then
+    proof=$(first_failed_proof "$1")
+    if [[ $proof == ok ]]; then printf '%s\tproven\n' "$1"; else printf '%s\tfailed\t%s\n' "$1" "$proof"; fi
+    exit 0
+fi
+
 # The overlay body, or nothing when there is none.
 overlay=
 rc=0
@@ -121,34 +167,6 @@ if [[ -n $overlay ]]; then
         [[ ! $text =~ $unknown ]] || die "the overlay's $key: keeps a placeholder the script does not expand: ${BASH_REMATCH[0]}"
     done
 fi
-
-# The first failing proof for issue $1, or `ok`.
-first_failed_proof() {
-    local n=$1 issue pr info ref sha
-    issue=$(bash "$github" issue view "$n" </dev/null 2>/dev/null) || die "could not read issue #$n"
-    [[ $(jq -r '.state' <<<"$issue") == closed ]] || { echo issue; return; }
-
-    pr=$({ git show "$base_sha:$state_rel/done/$n/close.md" 2>/dev/null || true; } |
-        awk '/^#[0-9]+ https?:\/\// { sub(/^#/, ""); print $1; exit }')
-    [[ -n $pr ]] || { echo pull-request; return; }
-    info=$(bash "$github" pr get "$pr" </dev/null) || die "could not read pull request #$pr"
-    [[ -n $(jq -r '.merged_at // empty' <<<"$info") ]] || { echo pull-request; return; }
-
-    ref=$(jq -r '.head_ref // empty' <<<"$info")
-    [[ -n $ref && $ref != null ]] || { echo branch; return; }
-    # From the refs the fetch above just pruned, never ls-remote: a failed ls-remote prints nothing and would read as "gone".
-    ! git rev-parse --verify -q "refs/remotes/origin/$ref" >/dev/null || { echo branch; return; }
-
-    while IFS= read -r ref; do
-        sha=$(git rev-parse "$ref")
-        ! git cat-file -e "$sha:$state_rel/$n" 2>/dev/null || { echo dossier; return; }
-    done < <(git for-each-ref --format='%(refname)' refs/remotes/origin | grep -v '^refs/remotes/origin/HEAD$' || true)
-
-    # The workflow let go of its leases: no held lease and no wait names the issue.
-    ! awk -F'\t' -v n="$n" '$3 == n { found = 1 } END { exit !found }' <<<"$leases" || { echo lease; return; }
-
-    echo ok
-}
 
 # Last proof; builds the overlay's command: prints `-`, or `name` for a failure, or `cmd:<command>` and then
 # a second line, the expanded fallback or `-`.

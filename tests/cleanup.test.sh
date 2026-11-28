@@ -609,6 +609,58 @@ assert_eq "files" "2026-11-27.md
 removed/12.md
 removed/30.md" "$(git -C "$REPO_WORK" ls-tree -r --name-only origin/codeo/intake | sed 's|.*/cleanup/||' | sort)"
 
+# prove <N>: stdout only, then the exit status on a last line.
+run_prove() {
+    local rc=0 out
+    out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" prove "$@" 2>/dev/null) || rc=$?
+    printf '%s\nrc=%s' "$out" "$rc"
+}
+
+case_desc="prove_prints_proven_when_every_proof_passes"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+set_overlay "$overlay"
+assert_eq "line" "12${tab}proven"$'\nrc=0' "$(run_prove 12)"
+
+case_desc="prove_names_each_failing_proof"
+setup_repo "12:$body"
+fixture 12 open 41 2026-01-01T00:00:00Z feat/12
+assert_eq "issue" "12${tab}failed${tab}issue"$'\nrc=0' "$(run_prove 12)"
+fixture 12 closed 41 null feat/12
+assert_eq "pull-request" "12${tab}failed${tab}pull-request"$'\nrc=0' "$(run_prove 12)"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+push_branch feat/12
+assert_eq "branch" "12${tab}failed${tab}branch"$'\nrc=0' "$(run_prove 12)"
+git -C "$REPO_WORK" push -q origin --delete feat/12
+push_branch other/thing 12
+assert_eq "dossier" "12${tab}failed${tab}dossier"$'\nrc=0' "$(run_prove 12)"
+git -C "$REPO_WORK" push -q origin --delete other/thing
+push_lease held shared 12
+assert_eq "lease" "12${tab}failed${tab}lease"$'\nrc=0' "$(run_prove 12)"
+
+case_desc="prove fails pull-request for an issue with no done directory"
+setup_repo "12:$body"
+fixture 30 closed 41 2026-01-01T00:00:00Z feat/30
+assert_eq "line" "30${tab}failed${tab}pull-request"$'\nrc=0' "$(run_prove 30)"
+
+case_desc="prove_ignores_a_removal_record_and_the_overlay"
+setup_repo "12:$body"
+fixture 12 closed 41 2026-01-01T00:00:00Z feat/12
+push_removed 12
+set_overlay $'name: codeo-{N}\npattern: ^codeo-[0-9]+$\ncommand: codeo rm {M}'
+assert_eq "list mode dies on the overlay" $'cleanup: the overlay\'s command: keeps a placeholder the script does not expand: {M}\nrc=1' "$(run_cleanup_rc)"
+assert_eq "line" "12${tab}proven"$'\nrc=0' "$(run_prove 12)"
+
+case_desc="prove_needs_one_issue_number"
+setup_repo "12:$body"
+for args in "" "x" "1 2"; do
+    rc=0
+    # shellcheck disable=SC2086
+    out=$(cd "$REPO_WORK" && PATH="$stub_bin:$PATH" bash "$script" prove $args 2>&1) || rc=$?
+    assert_eq "exit 1 [$args]" "1" "$rc"
+    assert_eq "cleanup: line [$args]" "yes" "$([[ $out == cleanup:*usage* ]] && echo yes || echo no)"
+done
+
 case_desc="no container-engine command is ever run"
 assert_eq "marker" "absent" "$([[ -e $DOCKER_MARKER ]] && echo present || echo absent)"
 

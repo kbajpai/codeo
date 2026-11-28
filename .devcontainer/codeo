@@ -9,6 +9,7 @@
 # a usage on stderr, exits 2 and runs nothing. Add a command by writing a cmd_<name> function and
 # listing its name in the case in main.
 set -euo pipefail
+CODEO_VERSION=1.0.11
 
 # die <message> [code]: print "codeo: <message>" on stderr and exit with code (default 1).
 die() {
@@ -26,9 +27,12 @@ usage: codeo <command> [args]
   open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
   list                                                              list issue containers and sandboxes
   rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
+  go <N> [--container|--sandbox] [--yes]                            start the issue and open its container
+  done <N> [--container|--sandbox]                                  prove the issue finished and remove its container or sandbox
   default [container|sandbox]                                       show or set the default kind for issue
   update                                                            update codeo and its scripts
   help                                                              show this help
+  --version, -v    print the codeo version
 USAGE
     [[ -z "${1:-}" ]] || echo "codeo: $1" >&2
     exit 2
@@ -68,6 +72,12 @@ abs_path_env() {
     export "$1=$PWD/$v"
 }
 
+# cmd_version: print "codeo <version>" on stdout.
+cmd_version() {
+    [[ $# -eq 0 ]] || usage
+    echo "codeo $CODEO_VERSION"
+}
+
 # cmd_help: print the commands on stdout, and the PATH line when ~/.local/bin is not on PATH.
 cmd_help() {
     [[ $# -eq 0 ]] || usage
@@ -80,9 +90,12 @@ codeo: work a GitHub issue in a dev container or an sbx sandbox.
   codeo open <N> [--container|--sandbox]                                  open the issue's sandbox in VS Code
   codeo list                                                              list issue containers and sandboxes
   codeo rm <N> [--force] [--container|--sandbox]                          remove the issue's container or sandbox
+  codeo go <N> [--container|--sandbox] [--yes]                            start the issue and open its container
+  codeo done <N> [--container|--sandbox]                                  prove the issue finished and remove its container or sandbox
   codeo default [container|sandbox]                                       show or set the default kind for issue
   codeo update                                                            update codeo and its scripts
   codeo help                                                              show this help
+  --version, -v    print the codeo version
 
 codeo list prints what it can; when docker or sbx fails to list it warns on stderr and exits 1.
 HELP
@@ -146,11 +159,11 @@ ensure_tracker() {
     return 0
 }
 
-# find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was
-# found. Uses a blob-less bare clone in the home directory, pointed at the current repository URL and
+# branches_for <N>: print every origin branch holding .codeo/<N>/init.md, one per line, nothing when none.
+# Uses a blob-less bare clone in the home directory, pointed at the current repository URL and
 # fetched on every lookup; rev-parse needs only the trees the fetch brought, never a blob. The whole
 # lookup holds a lock, and the clone is made in a temporary directory and renamed into place.
-find_branch() {
+branches_for() {
     local n=$1 dir repo_url b refs tmp
     local -a found=()
     dir=$(home_dir)
@@ -180,6 +193,15 @@ find_branch() {
             found+=("$b")
         fi
     done <<<"$refs"
+    ((${#found[@]} == 0)) || printf '%s\n' "${found[@]}"
+}
+
+# find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was found.
+find_branch() {
+    local n=$1 out
+    local -a found=()
+    out=$(branches_for "$n")
+    [[ -z "$out" ]] || mapfile -t found <<<"$out"
     case ${#found[@]} in
         1) printf '%s\n' "${found[0]}" ;;
         0) die "no branch holds .codeo/$n/init.md; pass the branch: codeo issue $n <branch>" ;;
@@ -754,7 +776,7 @@ upd_cleanup() {
 # to be present beforehand.
 cmd_update() {
     [[ $# -eq 0 ]] || usage
-    local dir base self self_dir f name
+    local dir base self self_dir f name new_ver
     dir=$(home_dir)
     base=$(raw_base)
     self=$(readlink -f "${BASH_SOURCE[0]}")
@@ -763,30 +785,255 @@ cmd_update() {
     trap upd_cleanup EXIT
     trap 'exit 130' INT
     trap 'exit 143' TERM
+    trap '' PIPE
     upd_tmp=$(mktemp -d "$dir/.update.XXXXXX") || die "could not create a temporary directory in $dir"
     for f in .devcontainer/codeo-container.sh .sbx/codeo-sandbox.sh .devcontainer/codeo-track.sh .devcontainer/codeo; do
         name=${f##*/}
+        echo "downloading $name" 2>/dev/null || true
         curl -fsSL -o "$upd_tmp/$name" "$base/$f" 2>/dev/null || die "could not download $base/$f; nothing changed"
         [[ -s "$upd_tmp/$name" ]] || die "$base/$f is empty; nothing changed"
         [[ "$(head -c2 "$upd_tmp/$name")" == "#!" ]] || die "$base/$f is not a script; nothing changed"
+        echo "downloaded $name" 2>/dev/null || true
     done
+    new_ver=$(sed -n 's/^CODEO_VERSION=//p' "$upd_tmp/codeo" | head -n 1)
+    [[ -n "$new_ver" ]] || new_ver=unknown
+    if [[ "$new_ver" == "$CODEO_VERSION" ]]; then
+        echo "version: $CODEO_VERSION (already the newest)" 2>/dev/null || true
+    else
+        echo "version: $CODEO_VERSION -> $new_ver" 2>/dev/null || true
+    fi
     upd_new=$(mktemp "$self_dir/.codeo.XXXXXX") || die "could not write beside $self; nothing changed"
     cp "$upd_tmp/codeo" "$upd_new" || die "could not write beside $self; nothing changed"
     chmod 755 "$upd_tmp/codeo-container.sh" "$upd_tmp/codeo-sandbox.sh" "$upd_tmp/codeo-track.sh" "$upd_new"
+    echo "installing codeo-container.sh" 2>/dev/null || true
     mv -f "$upd_tmp/codeo-container.sh" "$dir/codeo-container.sh" ||
         die "update failed part-way: nothing installed was changed; run codeo update again"
+    echo "installed codeo-container.sh" 2>/dev/null || true
+    echo "installing codeo-sandbox.sh" 2>/dev/null || true
     mv -f "$upd_tmp/codeo-sandbox.sh" "$dir/codeo-sandbox.sh" ||
         die "update failed part-way: codeo-container.sh is new, codeo-sandbox.sh, codeo-track.sh and codeo are still old; run codeo update again to finish"
+    echo "installed codeo-sandbox.sh" 2>/dev/null || true
+    echo "installing codeo-track.sh" 2>/dev/null || true
     mv -f "$upd_tmp/codeo-track.sh" "$dir/codeo-track.sh" ||
         die "update failed part-way: codeo-container.sh and codeo-sandbox.sh are new, codeo-track.sh and codeo are still old; run codeo update again to finish"
+    echo "installed codeo-track.sh" 2>/dev/null || true
+    echo "installing codeo" 2>/dev/null || true
     mv -f "$upd_new" "$self" ||
         die "update failed part-way: all three scripts are new, codeo is still old; run codeo update again to finish"
+    echo "installed codeo" 2>/dev/null || true
     upd_new=""
-    echo "updated codeo and its three scripts"
+    echo "updated codeo and its three scripts" 2>/dev/null || true
+}
+
+# keychain_check: on macOS, stop when the login keychain is locked, because claude and docker read it. Any
+# other OS, no security program, or no login keychain file passes. The security call is the only call it makes.
+keychain_check() {
+    [[ "$(uname -s)" == Darwin ]] || return 0
+    command -v security >/dev/null 2>&1 || return 0
+    [[ -e "$HOME/Library/Keychains/login.keychain-db" ]] || return 0
+    security show-keychain-info "$HOME/Library/Keychains/login.keychain-db" >/dev/null 2>&1 ||
+        die "the login keychain is locked, and claude and docker read it; unlock it, then run this again: security -v unlock-keychain ~/Library/Keychains/login.keychain-db"
+}
+
+# home_clone: print the absolute path of the home clone ($CODEO_HOME_CLONE, else $PWD); die unless its role is home.
+# In $(home_clone) the die ends only the subshell, so callers assign the result.
+home_clone() {
+    local c=${CODEO_HOME_CLONE:-$PWD} role
+    role=$(bash "$c/.devcontainer/scripts/role.sh" "$c" 2>/dev/null) || role=unknown
+    [[ "$role" == home ]] ||
+        die "$c is not a codeo home checkout (its role is ${role:-unknown}); run this in your codeo-home clone or set CODEO_HOME_CLONE"
+    printf '%s\n' "$c"
+}
+
+# plugin_root <clone>: print the installed plugin root, as the clone's codeo-root.sh finds it.
+plugin_root() {
+    local out errf msg rc=0
+    errf=$(mktemp) || die "could not create a temporary file"
+    out=$(cd "$1" && bash .devcontainer/scripts/codeo-root.sh 2>"$errf") || rc=$?
+    msg=$(<"$errf")
+    rm -f "$errf"
+    [[ $rc -eq 0 ]] || die "${msg:-${out:-codeo-root: no output}}"
+    printf '%s\n' "$out"
+}
+
+# go_fail <step> <reason> [<result text>]: print "codeo: go: <step>: <reason>", then the run's result text
+# indented when there is one, and exit 1.
+go_fail() {
+    printf 'codeo: go: %s: %s\n' "$1" "$2" >&2
+    [[ -z "${3:-}" ]] || sed 's/^/    /' <<<"$3" >&2
+    exit 1
+}
+
+# go_branches <N> <step>: print every origin branch holding .codeo/<N>/init.md; a failed lookup is one go line.
+go_branches() {
+    local errf out
+    errf=$(mktemp) || go_fail "$2" "could not create a temporary file"
+    if ! out=$(branches_for "$1" 2>"$errf"); then
+        out=$(tail -n 1 "$errf")
+        rm -f "$errf"
+        go_fail "$2" "${out#codeo: }"
+    fi
+    rm -f "$errf"
+    printf '%s\n' "$out"
+}
+
+# cmd_go <N> [--container|--sandbox] [--yes]: start issue N and open its container from the home clone, in
+# steps (keychain, home, branch, board, init, verify, container); each failure is one "go: <step>: <reason>"
+# line and the later steps do not run. Prints "container: codeo-<N>" ("sandbox:" for a sandbox) and "branch: <branch>".
+cmd_go() {
+    local n="" arg yes="" clone root dir out rc status ready backlog result branch errf berr kind
+    local -a found=() issue_args=()
+    kind_flag=""
+    for arg in "$@"; do
+        case "$arg" in
+            --container | --sandbox) parse_kind_flag "$arg" ;;
+            --yes) yes=--yes ;;
+            -*) usage ;;
+            *) [[ -z "$n" ]] || usage; n=$arg ;;
+        esac
+    done
+    [[ -n "$n" ]] && valid_number "$n" || usage
+    keychain_check
+    errf=$(mktemp) || go_fail home "could not create a temporary file"
+    clone=$(home_clone 2>"$errf") || {
+        out=$(<"$errf")
+        rm -f "$errf"
+        go_fail home "${out#codeo: }"
+    }
+    root=$(plugin_root "$clone" 2>"$errf") || {
+        out=$(<"$errf")
+        rm -f "$errf"
+        go_fail home "${out#codeo: }"
+    }
+    dir=$(home_dir 2>"$errf") || {
+        out=$(<"$errf")
+        rm -f "$errf"
+        go_fail home "${out#codeo: }"
+    }
+    rm -f "$errf"
+    mkdir -p "$dir" 2>/dev/null || go_fail home "could not create $dir"
+
+    out=$(go_branches "$n" branch) || exit 1
+    if [[ -n "$out" ]]; then
+        mapfile -t found <<<"$out"
+        go_fail branch "#$n already has ${found[*]}; for a lost container run: codeo issue $n ${found[0]}; for a stashed workflow run /codeo:init #$n in $clone"
+    fi
+
+    rc=0
+    berr=$(mktemp) || go_fail board "could not create a temporary file"
+    status=$(cd "$clone" && bash "$root/scripts/board.sh" status "$n" 2>"$berr" </dev/null) || rc=$?
+    status=${status%%$'\n'*}
+    if [[ $rc -eq 3 ]]; then
+        rm -f "$berr"
+        echo "codeo: go: board: not configured, skipped" >&2
+    elif [[ $rc -ne 0 ]]; then
+        out=$(grep -v '^[[:space:]]*$' "$berr" | head -n 1) || out=""
+        rm -f "$berr"
+        go_fail board "could not read the card of #$n: ${status:-${out:-board.sh exited $rc}}"
+    else
+        rm -f "$berr"
+        ready=$(cd "$clone" && bash "$root/scripts/config.sh" get '.board.statuses.ready // "Ready"' 2>/dev/null </dev/null) || ready=Ready
+        ready=${ready:-Ready}
+        backlog=$(cd "$clone" && bash "$root/scripts/config.sh" get '.board.statuses.backlog // "Backlog"' 2>/dev/null </dev/null) || backlog=Backlog
+        backlog=${backlog:-Backlog}
+        if [[ "$status" == "$ready" ]]; then
+            backlog=""
+        elif [[ "$status" == none || "$status" == unset || "$status" == "$backlog" ]]; then
+            backlog=1
+        else
+            go_fail board "the card of #$n is $status, not $ready or $backlog; nothing started"
+        fi
+        if [[ -n "$backlog" ]]; then
+            out=$(cd "$clone" && bash "$root/scripts/board.sh" set "$n" ready 2>&1 </dev/null) ||
+                go_fail board "could not move #$n to Ready: ${out%%$'\n'*}"
+        fi
+    fi
+
+    command -v jq >/dev/null 2>&1 || go_fail init "jq is not installed"
+    errf=$(mktemp) || go_fail init "could not create a temporary file"
+    rc=0
+    out=$(cd "$clone" && claude -p "/codeo:init #$n --approved" --output-format json --permission-prompts none \
+        --allowedTools Skill Read Glob Grep Write Edit Bash 2>"$errf" </dev/null) || rc=$?
+    berr=$(grep -v '^[[:space:]]*$' "$errf" | tail -n 1) || berr=""
+    rm -f "$errf"
+    result=$(jq -r 'if (.result | type) == "string" then .result else "" end' <<<"$out" 2>/dev/null) || result=""
+    [[ $rc -eq 0 ]] || go_fail init "claude exited $rc${berr:+: $berr}" "$result"
+    jq -e . >/dev/null 2>&1 <<<"$out" || go_fail init "claude's output is not JSON"
+    jq -e 'type == "object"' >/dev/null 2>&1 <<<"$out" || go_fail init "claude's output is not a JSON object"
+    local subtype is_error denied
+    subtype=$(jq -r 'if (.subtype | type) == "string" then .subtype else "" end' <<<"$out") || go_fail init "could not read subtype from claude's output"
+    is_error=$(jq -r 'if .is_error == true then "true" else "false" end' <<<"$out") || go_fail init "could not read is_error from claude's output"
+    if [[ "$subtype" != success || "$is_error" == true ]]; then
+        go_fail init "the run did not succeed (${subtype:-no subtype})" "$result"
+    fi
+    jq -e '(.permission_denials // []) | type == "array"' >/dev/null 2>&1 <<<"$out" ||
+        go_fail init "permission_denials in claude's output is not a list" "$result"
+    denied=$(jq -r '[(.permission_denials // [])[] | if type == "object" and (.tool_name | type) == "string" then .tool_name else "unknown" end] | join(", ")' <<<"$out") ||
+        go_fail init "could not read permission_denials from claude's output"
+    [[ -z "$denied" ]] || go_fail init "the run was denied permission (${denied})" "$result"
+
+    out=$(go_branches "$n" verify) || exit 1
+    [[ -n "$out" ]] || go_fail verify "the run pushed no branch holding .codeo/$n/init.md; nothing started" "$result"
+    mapfile -t found <<<"$out"
+    [[ ${#found[@]} -eq 1 ]] ||
+        go_fail verify "several branches hold .codeo/$n/init.md (${found[*]}); pass one: codeo issue $n <branch>" "$result"
+    branch=${found[0]}
+
+    issue_args=(issue "$n" "$branch")
+    [[ -z "$kind_flag" ]] || issue_args+=("--$kind_flag")
+    [[ -z "$yes" ]] || issue_args+=(--yes)
+    "$BASH" "${BASH_SOURCE[0]}" "${issue_args[@]}" >&2 || go_fail container "codeo ${issue_args[*]} failed; the branch is pushed and the card is In progress: retry with codeo ${issue_args[*]}"
+    kind=$kind_flag
+    [[ -n "$kind" ]] || kind=$(saved_default)
+    [[ "$kind" == sandbox ]] || kind=container
+    printf '%s: codeo-%s\nbranch: %s\n' "$kind" "$n" "$branch"
+}
+
+# cmd_done <N> [--container|--sandbox]: remove a finished issue's container from the home clone. Every
+# step stops the command on failure: the proofs (cleanup.sh prove) name the first one that failed and
+# remove nothing; then cmd_rm, which never gets --force here; and only after it returns, the record
+# (cleanup.sh record, intake.sh commit), whose failure is a warning and does not change the exit.
+cmd_done() {
+    local n="" arg clone root out line
+    local -a rm_args=()
+    kind_flag=""
+    for arg in "$@"; do
+        case "$arg" in
+            --container | --sandbox)
+                parse_kind_flag "$arg"
+                rm_args+=("$arg")
+                ;;
+            -*) usage ;;
+            *)
+                [[ -z "$n" ]] || usage
+                n=$arg
+                ;;
+        esac
+    done
+    [[ -n "$n" ]] && valid_number "$n" || usage
+    keychain_check
+    clone=$(home_clone)
+    root=$(plugin_root "$clone")
+    git -C "$clone" fetch -q origin >/dev/null 2>&1 </dev/null || die "done: could not fetch in $clone; nothing removed"
+    out=$(cd "$clone" && bash "$root/scripts/cleanup.sh" prove "$n" 2>&1 </dev/null) ||
+        die "done: could not prove #$n finished: ${out%%$'\n'*}"
+    line=$(grep -m1 -E "^$n"$'\t'"(proven|failed)" <<<"$out") || line=""
+    case "$line" in
+        "$n"$'\t'proven) ;;
+        "$n"$'\t'failed$'\t'*) die "done: #$n is not finished: ${line#"$n"$'\t'failed$'\t'} failed; nothing removed" ;;
+        *) die "done: could not prove #$n finished: ${out%%$'\n'*}" ;;
+    esac
+    # A subshell contains the exit, cd and traps of cmd_rm (its sandbox branch always exits); set -e still applies.
+    ( cmd_rm "$n" ${rm_args[@]+"${rm_args[@]}"} )
+    if ! out=$(cd "$clone" && bash "$root/scripts/cleanup.sh" record "$n" 2>&1 </dev/null &&
+        bash "$root/scripts/intake.sh" commit cleanup "docs(codeo): cleanup removal recorded for #$n" 2>&1 </dev/null); then
+        echo "codeo: warning: #$n was removed but the removal was not recorded: ${out%%$'\n'*}" >&2
+    fi
 }
 
 main() {
     abs_path_env CODEO_HOME always
+    abs_path_env CODEO_HOME_CLONE always
     abs_path_env CODEO_CONTEXT always
     abs_path_env CODEO_SBX_IMAGE always
     abs_path_env CODEO_SBX slash
@@ -800,9 +1047,12 @@ main() {
         open) cmd_open "$@" ;;
         list) cmd_list "$@" ;;
         rm) cmd_rm "$@" ;;
+        go) cmd_go "$@" ;;
+        done) cmd_done "$@" ;;
         default) cmd_default "$@" ;;
         update) cmd_update "$@" ;;
         help | -h | --help) cmd_help "$@" ;;
+        --version | -v) cmd_version "$@" ;;
         *) usage ;;
     esac
 }

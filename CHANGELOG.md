@@ -3,9 +3,10 @@
 ## Unreleased
 
 Config schema: 1 (unchanged)
-Shared state: none (the session counter is a file in the clone's git directory, `codeo/session-seq`, and is not shared)
-Safe to bump mid-workflow: yes
+Shared state: `codeo done` writes the existing `.codeo/intake/cleanup/removed/<N>.md` record through `cleanup.sh record`; `init.md` may gain the `approved in advance … (--approved)` line under `## Notes`; the session counter is a file in the clone's git directory, `codeo/session-seq`, and is not shared
+Safe to bump mid-workflow: yes, run `codeo update`
 
+- The `codeo` host command gains `codeo go <N>` (starts a fresh issue from the home clone: keychain, home, branch, board, headless `/codeo:init #<N> --approved`, verify, container), `codeo done <N>` (runs `cleanup.sh prove`, then the safe `codeo rm`, then records the removal), `codeo --version` (`CODEO_VERSION`, equal to the plugin version) and a verbose `codeo update` (a line per file and `version: <old> -> <new>`), and `go` creates the home directory when it is missing, reads the board's configured Ready name, and prints `sandbox: codeo-<N>` for a sandbox; `/codeo:init` accepts `--approved` and `cleanup.sh` has a `prove <N>` mode (#217).
 - A dev container's session title is `<window title> · <NN>-<id8>`, for example `codeo [home] · 1A-2cb71525`, where `<NN>` is a two-digit hex count per container (per clone, so `codeo-home` and `codeo-<N>` count separately). Each new session id (a fresh start, `/clear`, a fork) takes the next number, a resume keeps its number, and after `FF` it is `00`; the count survives a container restart and starts at `00` in a fresh clone. A `/rename`d title is left alone, an old `<window title> · <id8>` title is moved to the new shape, and when the counter cannot be used the title is the old shape (#181).
 
 ## v1.0.11 — 2026-11-27
