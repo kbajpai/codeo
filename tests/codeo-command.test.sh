@@ -2358,7 +2358,6 @@ t_rm_container_with_git_checkout_home_goes_ahead() {
     [[ "$(ls -A "$cm_dir/h/codeo")" == ".git" ]] || fail "wrote into ~/codeo: $(ls -A "$cm_dir/h/codeo")"
 }
 
-
 # done_setup: a home clone with the real codeo-root.sh and a stub plugin root (CODEO_ROOT) whose
 # lock.sh exists, whose cleanup.sh logs "cleanup.sh <args> pwd=<cwd>" and prints "5<TAB>proven" or the
 # contents of $d/prove_out, and fails on record when record_fail exists; intake.sh logs the same way. docker answers rm.
@@ -2455,6 +2454,17 @@ t_done_passes_the_kind_flag_to_rm() {
     done_run done 5 --sandbox
     expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
     ! grep -q -- '--force' "$cm_dir/calls" || fail "force passed"
+    local got
+    got=$(grep -E '^(cleanup|intake)\.sh (record|commit)' "$cm_dir/calls")
+    [[ "$got" == "cleanup.sh record 5 pwd=$cm_dir/clone"$'\n'"intake.sh commit cleanup docs(codeo): cleanup removal recorded for #5 pwd=$cm_dir/clone" ]] || fail "sandbox record calls: $got"
+}
+
+t_done_sandbox_end_failure_records_nothing() {
+    done_setup "$current"
+    echo 7 >"$cm_dir/status"
+    done_run done 5 --sandbox
+    [[ "$cm_status" -eq 7 ]] || fail "exit $cm_status, want 7"
+    ! grep -qE 'cleanup.sh record|intake.sh' "$cm_dir/calls" || fail "recorded"
 }
 
 t_done_never_passes_force() {
@@ -2641,6 +2651,7 @@ cases=(
     t_done_container_not_found_records_nothing
     t_done_record_failure_warns_and_exits_zero
     t_done_passes_the_kind_flag_to_rm
+    t_done_sandbox_end_failure_records_nothing
     t_done_never_passes_force
     t_done_dies_with_codeo_roots_line
 )

@@ -894,7 +894,8 @@ cmd_done() {
         "$n"$'\t'failed$'\t'*) die "done: #$n is not finished: ${line#"$n"$'\t'failed$'\t'} failed; nothing removed" ;;
         *) die "done: could not prove #$n finished: ${out%%$'\n'*}" ;;
     esac
-    cmd_rm "$n" ${rm_args[@]+"${rm_args[@]}"}
+    # A subshell contains the exit, cd and traps of cmd_rm (its sandbox branch always exits); set -e still applies.
+    ( cmd_rm "$n" ${rm_args[@]+"${rm_args[@]}"} )
     if ! out=$(cd "$clone" && bash "$root/scripts/cleanup.sh" record "$n" 2>&1 </dev/null &&
         bash "$root/scripts/intake.sh" commit cleanup "docs(codeo): cleanup removal recorded for #$n" 2>&1 </dev/null); then
         echo "codeo: warning: #$n was removed but the removal was not recorded: ${out%%$'\n'*}" >&2
