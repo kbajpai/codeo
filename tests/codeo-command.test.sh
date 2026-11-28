@@ -2093,10 +2093,11 @@ t_usage_and_help_list_yes() {
 
 t_version_flags_print_the_constant() {
     cm_setup "$current"
-    local f
+    local f want
+    want=$(jq -r .version "$repo/.claude-plugin/plugin.json")
     for f in --version -v; do
         cm_run "$f"
-        [[ "$cm_status" -eq 0 ]] || fail "$f: exit $cm_status, want 0"
+        [[ "$cm_out" == "codeo $want" ]] || fail "$f: stdout '$cm_out', want 'codeo $want'"
         [[ "$cm_out" == "codeo 1.0.11" ]] || fail "$f: stdout '$cm_out', want 'codeo 1.0.11'"
         [[ -z "$cm_err" ]] || fail "$f: stderr '$cm_err', want empty"
         [[ ! -s "$cm_dir/calls" ]] || fail "$f: made calls: $(cat "$cm_dir/calls")"

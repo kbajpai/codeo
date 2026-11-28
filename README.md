@@ -299,6 +299,8 @@ mkdir -p ~/.local/bin && curl -fsSL -o ~/.local/bin/codeo https://raw.githubuser
 
 The same line is in [.devcontainer/README.md](.devcontainer/README.md#using-this-in-another-project), next to the one-`codeo`-per-machine condition above.
 
+On the host the command also starts and finishes an issue in one step. `codeo go <N>` starts issue N from the home clone and opens its container, and `codeo done <N>` proves the issue finished and removes its container with the safe `codeo rm`, never `--force`. Both need `claude` and `jq` on the host and a home clone (`CODEO_HOME_CLONE`, else the current directory when its role is `home`), and on macOS they stop first on a locked login keychain. `codeo --version` prints the command's version, and `codeo update` prints each file it downloads and installs and the version change. [.devcontainer/README.md](.devcontainer/README.md#starting-and-finishing-an-issue-with-one-command) has the steps.
+
 A new repository has no branch ruleset, so `/codeo:doctor` reports `fail ruleset` until the base branch requires the checks `tests` and `qc-verdict` (or `ci.requiredChecks` lists your own). On a host that has the project's toolchain and the plugins installed, `fail ruleset` is the one failure a fresh adoption is expected to show; a host without them also shows the `deps`, `superpowers` or `suites` check.
 
 ## Your first workflow
