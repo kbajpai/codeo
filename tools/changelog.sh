@@ -46,13 +46,23 @@ assemble)
         exit 1
     fi
 
-    schema= schema_from= safe= safe_from= shared=
+    if awk -v h="## $version —" 'index($0, h) == 1 { found = 1 } END { exit !found }' "$changelog"; then
+        echo "changelog: $changelog already has a section for $version" >&2
+        exit 1
+    fi
+    if grep -q -- "^## Unreleased" "$changelog"; then
+        echo "changelog: $changelog has an ## Unreleased heading; fold it into a fragment first" >&2
+        exit 1
+    fi
+
+    schema= schema_from= safe= shared= safe_no= safe_reasons=
     body=
     for f in "${frags[@]}"; do
         n=$(basename "$f" .md)
         in_header=1
         frag_body=
         while IFS= read -r line || [[ -n $line ]]; do
+            line=${line%$'\r'}
             if ((in_header)); then
                 case $line in
                 "Config schema: "*)
@@ -65,11 +75,14 @@ assemble)
                     continue ;;
                 "Safe to bump mid-workflow: "*)
                     v=${line#"Safe to bump mid-workflow: "}
-                    if [[ -n $safe && $safe != "$v" ]]; then
-                        echo "changelog: fragments disagree on Safe to bump mid-workflow: #$safe_from says $safe, #$n says $v" >&2
-                        exit 1
+                    if [[ $v == no ]]; then
+                        safe_no=1
+                    elif [[ $v == "no — "* ]]; then
+                        safe_no=1
+                        safe_reasons=${safe_reasons:+$safe_reasons; }${v#"no — "}
+                    elif [[ -z $safe ]]; then
+                        safe=$v
                     fi
-                    safe=$v safe_from=$n
                     continue ;;
                 "Shared state: "*)
                     v=${line#"Shared state: "}
@@ -83,17 +96,23 @@ assemble)
             fi
             frag_body+=$line$'\n'
         done < "$f"
+        while [[ $frag_body == *$'\n\n' ]]; do frag_body=${frag_body%$'\n'}; done
         body+=$frag_body
     done
 
     section=$(mktemp)
     out=$(mktemp)
     trap 'rm -f "$section" "$out"' EXIT
+    safe_line=${safe:-yes}
+    if [[ -n $safe_no ]]; then
+        safe_line=no
+        [[ -z $safe_reasons ]] || safe_line="no — $safe_reasons"
+    fi
     {
         printf '## %s — %s\n\n' "$version" "$date"
         printf 'Config schema: %s\n' "${schema:-1 (unchanged)}"
         printf 'Shared state: %s\n' "${shared:-none}"
-        printf 'Safe to bump mid-workflow: %s\n\n' "${safe:-yes}"
+        printf 'Safe to bump mid-workflow: %s\n\n' "$safe_line"
         printf '%s\n' "${body%$'\n'}"
     } > "$section"
 

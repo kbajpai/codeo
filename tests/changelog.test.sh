@@ -96,18 +96,6 @@ assert_eq "late line stays in the body" "Shared state: not a header
 - A (#1)." "$(grep -B1 '^- A (#1)' "$work/CHANGELOG.md")"
 assert_eq "late line not in the header" 'Shared state: adds `a`' "$(grep -m1 '^Shared state: adds' "$work/CHANGELOG.md")"
 
-case_desc=disagreeing_headers_stop
-new_work
-printf 'Safe to bump mid-workflow: no — x\n\n- A (#5).\n' > "$work/changelog.d/5.md"
-printf 'Safe to bump mid-workflow: yes\n\n- B (#6).\n' > "$work/changelog.d/6.md"
-before=$(cat "$work/CHANGELOG.md")
-run_cl assemble v9.9.9 2026-12-01
-assert_eq "exit" 1 "$status"
-assert_contains "message" "changelog: fragments disagree on Safe to bump mid-workflow: #5 says no — x, #6 says yes" "$out"
-assert_eq "CHANGELOG.md unchanged" "$before" "$(cat "$work/CHANGELOG.md")"
-assert_eq "fragments kept" "5.md
-6.md" "$(fragments_left)"
-
 case_desc=no_fragments
 new_work
 run_cl assemble v9.9.9 2026-12-01
@@ -186,6 +174,81 @@ else
     assert_eq "assemble exit" 0 "$status"
     assert_contains "section heading" "## v9.9.9 — 2026-12-01" "$(cat "$work/CHANGELOG.md")"
 fi
+
+case_desc=safe_to_bump_no_wins_and_reasons_join
+new_work
+printf 'Safe to bump mid-workflow: no — a\n\n- A (#1).\n' > "$work/changelog.d/1.md"
+printf 'Safe to bump mid-workflow: no — b\n\n- B (#2).\n' > "$work/changelog.d/2.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "two no: exit" 0 "$status"
+assert_eq "two no: line" "Safe to bump mid-workflow: no — a; b" "$(grep -m1 '^Safe to bump' "$work/CHANGELOG.md")"
+new_work
+printf 'Safe to bump mid-workflow: yes\n\n- A (#1).\n' > "$work/changelog.d/1.md"
+printf 'Safe to bump mid-workflow: no — a\n\n- B (#2).\n' > "$work/changelog.d/2.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "yes then no: exit" 0 "$status"
+assert_eq "yes then no: line" "Safe to bump mid-workflow: no — a" "$(grep -m1 '^Safe to bump' "$work/CHANGELOG.md")"
+new_work
+printf 'Safe to bump mid-workflow: no\n\n- A (#1).\n' > "$work/changelog.d/1.md"
+printf 'Safe to bump mid-workflow: no — b\n\n- B (#2).\n' > "$work/changelog.d/2.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "bare no: exit" 0 "$status"
+assert_eq "bare no: line" "Safe to bump mid-workflow: no — b" "$(grep -m1 '^Safe to bump' "$work/CHANGELOG.md")"
+new_work
+printf 'Safe to bump mid-workflow: yes\n\n- A (#1).\n' > "$work/changelog.d/1.md"
+printf 'Safe to bump mid-workflow: yes\n\n- B (#2).\n' > "$work/changelog.d/2.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "two yes: line" "Safe to bump mid-workflow: yes" "$(grep -m1 '^Safe to bump' "$work/CHANGELOG.md")"
+new_work
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "none: line" "Safe to bump mid-workflow: yes" "$(grep -m1 '^Safe to bump' "$work/CHANGELOG.md")"
+
+case_desc=config_schema_disagreement_still_stops
+new_work
+printf 'Config schema: 1\n\n- A (#5).\n' > "$work/changelog.d/5.md"
+printf 'Config schema: 2\n\n- B (#6).\n' > "$work/changelog.d/6.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 1 "$status"
+assert_contains "message" "changelog: fragments disagree on Config schema: #5 says 1, #6 says 2" "$out"
+
+case_desc=a_stale_heading_is_refused
+new_work
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+printf '\n## v9.9.9 — 2026-11-30\n\n- Old.\n' >> "$work/CHANGELOG.md"
+before=$(cat "$work/CHANGELOG.md")
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 1 "$status"
+assert_contains "message" "changelog: CHANGELOG.md already has a section for v9.9.9" "$out"
+assert_eq "CHANGELOG.md unchanged" "$before" "$(cat "$work/CHANGELOG.md")"
+assert_eq "fragments kept" "1.md" "$(fragments_left)"
+new_work
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+printf '\n## Unreleased\n\n- Pending.\n' >> "$work/CHANGELOG.md"
+before=$(cat "$work/CHANGELOG.md")
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "unreleased exit" 1 "$status"
+assert_contains "unreleased message" "changelog: CHANGELOG.md has an ## Unreleased heading; fold it into a fragment first" "$out"
+assert_eq "unreleased unchanged" "$before" "$(cat "$work/CHANGELOG.md")"
+assert_eq "unreleased fragments kept" "1.md" "$(fragments_left)"
+
+case_desc=a_crlf_fragment_leaves_no_carriage_return
+new_work
+printf 'Shared state: adds `a`\r\nSafe to bump mid-workflow: yes\r\n\r\n- A (#1).\r\n' > "$work/changelog.d/1.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 0 "$status"
+cr=$(grep -c $'\r' "$work/CHANGELOG.md" || true)
+assert_eq "carriage returns" 0 "$cr"
+assert_contains "header parsed" 'Shared state: adds `a`' "$(cat "$work/CHANGELOG.md")"
+
+case_desc=trailing_blank_lines_do_not_separate_bullets
+new_work
+printf -- '- A (#1).\n\n\n' > "$work/changelog.d/1.md"
+printf -- '- B (#2).\n\n' > "$work/changelog.d/2.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 0 "$status"
+assert_eq "bullets adjacent" "- A (#1).
+- B (#2)." "$(grep -A1 '^- A (#1)' "$work/CHANGELOG.md")"
 
 if ((failures)); then
     echo "$failures case(s) failed"

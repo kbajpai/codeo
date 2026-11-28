@@ -103,7 +103,7 @@ export HOOK_LOG="$scratch_root/hook.log" CHANGE_LOG="$scratch_root/change.log"
 
 # Configs. $1 for fresh_repo/origin_with is the config.json content.
 resources='[{"name":"dev"},{"name":"terraform"},{"name":"postman"},{"name":"slnx"},{"name":"k8s-base"},{"name":"migrations","parameterised":true}]'
-resources=$(jq -c --argjson more "$(jq -c '.resources' "$plugin_root/.codeo/config.json")" '. + $more' <<<"$resources")
+resources=$(jq -c '. + [{"name":"skill","paths":["skills/**","tests/*-skill.test.sh"],"parameterised":true}]' <<<"$resources")
 config_with() { # <environment JSON or "null"> [onLeaseChange command]
     jq -n --argjson res "$resources" --argjson env "$1" --arg change "${2:-bash '$change_sh'}" '
         {schema: 1, repo: {owner: "o", name: "n"}, baseBranch: "main", resources: $res,
