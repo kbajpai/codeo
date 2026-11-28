@@ -80,6 +80,15 @@ I recommend `CHANGELOG.md`.
 
 ## Notes
 
+### Footprint
+
+```
+files:      .devcontainer/scripts/session-title.sh, tests/devcontainer.test.sh, .devcontainer/README.md, CHANGELOG.md, docs/plans/2026-11-28-session-title-sequence-181.md
+wiki:       none
+exclusive:  none
+sequenced:  none
+```
+
 - Settled by the issue, not asked: the first number in a fresh clone is `00`; `<NN>` is two uppercase hex digits; a lock change keeps `<NN>`; outside a container the hook prints nothing.
 - An old-shape title takes the next number when the hook first sees it, so a migrated session is numbered by when it was migrated, not by when it began.
 - Concurrency: the number is taken under `flock` on the state file's lock (`/usr/bin/flock` is in the dev container image); the write is a temp file and a rename.
