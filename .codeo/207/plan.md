@@ -128,6 +128,7 @@ I recommend the first: it is the design Q6 chose, made to work through machinery
 **Options:** send back through step 11 with a `— base moved` round (recommended) · reuse `— conflicts with <base>` · drop the close-side check and file it separately.
 
 **Answer:**
+Send back through step 11 with a `— base moved` round, as recommended. Given in the conversation: "go with your picks".
 
 ### Q9 — F2: adjacent inventory rules still conflict. Separate the lines, or only say so?
 
@@ -141,6 +142,7 @@ I recommend separating the lines.
 **Options:** separate the lines in the pin and the page (recommended) · document the limit and pin the recovery.
 
 **Answer:**
+Separate the lines, as recommended. Given in the conversation: "go with your picks".
 
 ### Q10 — F5: what does `/codeo:init` print about leases?
 
@@ -154,6 +156,7 @@ I recommend reading the real leases.
 **Options:** read `intake.sh lease list` (recommended) · say "names", from the footprint.
 
 **Answer:**
+Read the real leases, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
