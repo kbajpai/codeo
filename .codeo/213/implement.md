@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1 is **waiting on you (Task 7)**: Tasks 1-6 of `docs/plans/2026-11-27-release-v1-0-11.md` are done and reviewed, and the release pull request is open: https://github.com/kbajpai/codeo/pull/214 (`release/v1.0.11` into `main`, head `b277022`). Tasks 8-12 follow your merge. `## Outcome` stays pending until the whole plan is built. Nothing is open (no question), and `overlap.sh 213` printed nothing.
+Round 1 is **blocked on CI for the release pull request** (see *CI failure on #214* under `## Notes`) and then waits on you (Task 7): Tasks 1-6 of `docs/plans/2026-11-27-release-v1-0-11.md` are done and reviewed, and the release pull request is open: https://github.com/kbajpai/codeo/pull/214 (`release/v1.0.11` into `main`, head `b277022`). Tasks 8-12 follow your merge. `## Outcome` stays pending until the whole plan is built. Nothing is open (no question), and `overlap.sh 213` printed nothing.
 
 **The release branch** is cut from `origin/main` at `3857710` and changes exactly `.claude-plugin/plugin.json`, `CHANGELOG.md`, `README.md`, `docs/updating.md` and `tests/install.test.sh`:
 
@@ -41,6 +41,8 @@ None.
 
 ## Notes
 
+**CI failure on #214 (open, not caused by a change in the release).** The required check `tests` fails on the pull request's run with one assertion: `FAIL: docs/skills.md close section has no web-session exception` (`tests/close-skill.test.sh`, its last line: `awk '/^## close$/{f=1} /^## triage$/{f=0} f' docs/skills.md | grep -qF 'a hosted web session deletes none'`, under `set -o pipefail`). It failed on the first run and on three reruns (23:49-00:03 UTC); `qc-verdict` passes. The release changes none of that test's inputs (`docs/skills.md`, `skills/`, `tests/close-skill.test.sh` are untouched), and the pull request's merge ref `933bbb9` has the string in the close section. It passes everywhere I can run it: this sandbox (6/6 alone, full suite with `GIT_CONFIG_GLOBAL=/dev/null`), and a clean clone of the merge ref, shallow and full, with `CI=true`, `GITHUB_*` pull-request variables and four workers. A rerun of `main`'s latest push run (`3857710`) after midnight UTC also passes, so only pull-request runs fail. Earlier pull requests (#188, #206) had failed `tests` runs on 2026-11-27 before passing; their logs are no longer readable. A SIGPIPE race in that `awk | grep -q` pipe under `pipefail` was a suspect, but it does not reproduce (0 failures in 3500 runs, mawk and gawk, idle and loaded). The cause is unknown; the runner's git is 2.56.1.
+
 **Deviation from the plan.** The plan's worktree `../codeo-213-release` is not creatable in the sandbox (`/Users/kbajpai/codeo` is root-owned), so Tasks 1-4 ran in `.superpowers/worktrees/release-v1.0.11` inside the checkout (git-ignored). Where the plan says `../codeo-213-release`, any worktree of `release/v1.0.11` serves.
 
 **Rulings made at pre-flight** (the plan's grep expectations that did not match `main`):
@@ -59,3 +61,4 @@ _Pending — written at the hand-off._
 
 - 2026-11-27 — round 1 paused after Tasks 1-4 (release branch `release/v1.0.11` pushed at `b04fffa`); Tasks 5-6 not started · cost: unavailable (the invocation spans a stop; the subagents' cost is not summed)
 - 2026-11-27 — Tasks 5-6 done: changelog `b277022`; release pull request #214 opened; waiting for the merge (Task 7) · cost: unavailable (the invocation spans several stops; the subagents' cost is not summed)
+- 2026-11-28 — release pull request #214: `tests` fails four times on `close-skill.test.sh`'s last assertion and does not reproduce locally; stopped to ask the engineer how to proceed · cost: unavailable
