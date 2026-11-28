@@ -86,14 +86,20 @@ step_contains "step 9 records it under Notes" 9 '## Notes'
 
 step_contains "the resume path records a failed assignee-add" 6 'assignee-add failed'
 
-# #207: init informs — it names each other workflow holding a lease, and decides nothing.
-step_contains "step 3 names the workflows that hold a resource" 3 'whose `exclusive:` is not `none`'
-step_contains "step 3 takes them from inflight.sh" 3 '`inflight.sh`'"'"'s footprint lines'
-step_contains "step 3 prints the holds line" 3 '`#<M> holds <resources>`'
+# #207: init informs — it names each lease another issue holds or waits for, and decides nothing.
+step_contains "step 3 reads the lease list" 3 'lease list --tsv'
+step_contains "step 3 prints the holds line" 3 '`#<M> holds <resource>`'
+step_contains "step 3 prints the waits line" 3 '`#<M> waits for <resource>`'
+step_contains "step 3 maps held to holds" 3 'for `held`'
+step_contains "step 3 maps waiting to waits for" 3 'for `waiting`'
+step_contains "step 3 prints nothing when there is none" 3 'and nothing when there is none'
+step_contains "step 3 excludes this issue's own rows" 3 'whose issue is not this one'
+step_contains "step 3 reports a failed read in one line" 3 'reported in one line and the step carries on'
 step_contains "step 3 asks nothing and blocks nothing" 3 'asks nothing and blocks nothing'
 step_contains "step 3 leaves the overlap to plan" 3 'decided at `/codeo:plan`'
-step_contains "step 3 prints nothing when no lease is held" 3 'prints nothing when no other workflow holds a lease'
-step_contains "step 3 excludes this issue's own workflow" 3 'this issue'"'"'s own workflow is excluded'
+step_contains "step 3 keeps inflight.sh alone as the check" 3 'so `init`'"'"'s check is `inflight.sh` alone'
+step_lacks "step 3 no longer reads the footprint exclusive line" 3 'whose `exclusive:` is not `none`'
+step_lacks "step 3 no longer takes holds from footprints" 3 '`#<M> holds <resources>`'
 
 if ((failures)); then
     echo "$failures case(s) failed"
