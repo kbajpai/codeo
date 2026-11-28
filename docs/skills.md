@@ -68,6 +68,7 @@ The skill turns a filed issue into a place to work: a pushed branch carrying a d
 
 ### Hand-offs and non-goals
 
+- Takes `--approved` after the issue number (`#<N> --approved`), which `codeo go` passes to a headless run: it is the engineer's approval of the review gate given in advance by that command, recorded as one line under `## Notes` of `init.md`. It is never inferred, and it answers no question: a question in the file, a closed issue, another assignee, a workflow already under way, a resume needing the engineer's words or a failed script still stops the skill, which says so in its last message.
 - Hands off to `/codeo:plan`, naming `.codeo/<N>/init.md` as the thing to read first, and only once nothing in that file is still open. It tells `plan` to read the dossier rather than re-fetch the issue or re-ask the engineer what it already answers.
 - After a `lock: TODO` its closing block names the fix first: with no lock, the recovery and not `/codeo:plan`; with the lock taken, `/codeo:plan` after the fix (see `docs/handoff.md` → Closing block).
 - Never touches the issue's text, the project's docs or wiki, any code, or another skill's dossier file.
