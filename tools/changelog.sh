@@ -40,6 +40,11 @@ cat)
 assemble)
     (($# == 3)) || usage
     version=$2 date=$3
+    [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && $date =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || usage
+    if [[ ! -f $changelog ]]; then
+        echo "changelog: no CHANGELOG.md here" >&2
+        exit 1
+    fi
     mapfile -t frags < <(fragment_paths)
     if ((${#frags[@]} == 0)); then
         echo "changelog: no fragments in $dir" >&2
@@ -55,7 +60,7 @@ assemble)
         exit 1
     fi
 
-    schema= schema_from= safe= shared= safe_no= safe_reasons= safe_other= lc=
+    schema= schema_from= safe= yes_notes= shared= safe_no= safe_reasons= safe_other= lc=
     body=
     blank_tail=$'\n''[[:blank:]]*'$'\n''$'
     for f in "${frags[@]}"; do
@@ -80,7 +85,9 @@ assemble)
                     v=${v%"${v##*[![:space:]]}"}
                     lc=${v,,}
                     if [[ -z $v || $lc =~ ^yes($|[^[:alnum:]_]) ]]; then
-                        [[ -n $safe || -z $v ]] || safe=$v
+                        if [[ -n $v && $lc != yes ]]; then
+                            case "; $yes_notes; " in *"; $v; "*) ;; *) yes_notes=${yes_notes:+$yes_notes; }$v ;; esac
+                        fi
                     elif [[ $lc =~ ^no($|[^[:alnum:]_]) ]]; then
                         safe_no=1
                         [[ $v =~ ^[Nn][Oo][[:space:]]*(—|-|:|,)?[[:space:]]*(.*)$ ]]
@@ -99,16 +106,27 @@ assemble)
                 esac
                 in_header=0
             fi
+            [[ -n $frag_body || -n $line ]] || continue
             frag_body+=$line$'\n'
         done < "$f"
         while [[ $frag_body =~ $blank_tail ]]; do frag_body=${frag_body%$'\n'}; frag_body=${frag_body%$'\n'*}$'\n'; done
         body+=$frag_body
     done
 
+    if [[ -z $schema ]]; then
+        newest=$(awk '/^## v/ { if (seen) exit; seen = 1; next } seen && /^Config schema: / { sub(/^Config schema: /, ""); print; exit }' "$changelog")
+        if [[ $newest =~ ^([0-9]+) ]]; then
+            schema="${BASH_REMATCH[1]} (unchanged)"
+        else
+            echo "changelog: cannot read Config schema from CHANGELOG.md; say it in a fragment" >&2
+            exit 1
+        fi
+    fi
+
     section=$(mktemp)
     out=$(mktemp)
     trap 'rm -f "$section" "$out"' EXIT
-    safe_line=${safe:-yes}
+    safe_line=${yes_notes:-yes}
     if [[ -n $safe_no ]]; then
         safe_line=no
         [[ -z $safe_reasons && -z $safe_other ]] || safe_line="no — ${safe_reasons}${safe_reasons:+${safe_other:+; }}$safe_other"
@@ -117,7 +135,7 @@ assemble)
     fi
     {
         printf '## %s — %s\n\n' "$version" "$date"
-        printf 'Config schema: %s\n' "${schema:-1 (unchanged)}"
+        printf 'Config schema: %s\n' "$schema"
         printf 'Shared state: %s\n' "${shared:-none}"
         printf 'Safe to bump mid-workflow: %s\n\n' "$safe_line"
         printf '%s\n' "${body%$'\n'}"

@@ -269,7 +269,74 @@ assert_eq "not safe beats yes verbatim" "Safe to bump mid-workflow: not safe" "$
 assert_eq "maybe with no: no reasons first, then others" "Safe to bump mid-workflow: no — b; maybe" "$(safe_of maybe 'no — b')"
 assert_eq "trailing space no beats yes" "Safe to bump mid-workflow: no" "$(safe_of 'no ' yes)"
 assert_eq "comma no keeps reason" "Safe to bump mid-workflow: no — because x" "$(safe_of 'no, because x' yes)"
-assert_eq "Yes with a note is a yes" "Safe to bump mid-workflow: yes" "$(safe_of 'yes' 'Yes')"
+assert_eq "Yes with a note is a yes" "Safe to bump mid-workflow: Yes, after a restart" "$(safe_of 'yes' 'Yes, after a restart')"
+
+case_desc=yes_notes_are_all_kept
+assert_eq "two notes joined" "Safe to bump mid-workflow: yes, with one step: run codeo update; yes, after you restart sessions" "$(safe_of 'yes, with one step: run codeo update' 'yes, after you restart sessions')"
+assert_eq "bare yes beside a note" "Safe to bump mid-workflow: yes, after you restart sessions" "$(safe_of yes 'yes, after you restart sessions')"
+assert_eq "note beside bare yes" "Safe to bump mid-workflow: yes, a" "$(safe_of 'yes, a' yes)"
+assert_eq "identical notes once" "Safe to bump mid-workflow: yes, a" "$(safe_of 'yes, a' 'yes, a')"
+assert_eq "bare yes only" "Safe to bump mid-workflow: yes" "$(safe_of yes yes)"
+assert_eq "caution beats notes" "Safe to bump mid-workflow: no — a" "$(safe_of 'yes, with a step' 'no — a')"
+
+case_desc=config_schema_follows_the_newest_section
+new_work
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "fixture exit" 0 "$status"
+assert_eq "fixture schema" "Config schema: 1 (unchanged)" "$(grep -m1 '^Config schema' "$work/CHANGELOG.md")"
+new_work
+sed 's/^Config schema: .*/Config schema: 2 (adds x)/' "$fx/base.md" > "$work/CHANGELOG.md"
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "schema 2 exit" 0 "$status"
+assert_eq "schema 2" "Config schema: 2 (unchanged)" "$(grep -m1 '^Config schema' "$work/CHANGELOG.md")"
+new_work
+grep -v '^Config schema' "$fx/base.md" > "$work/CHANGELOG.md"
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+before=$(cat "$work/CHANGELOG.md")
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "unreadable exit" 1 "$status"
+assert_contains "unreadable message" "changelog: cannot read Config schema from CHANGELOG.md; say it in a fragment" "$out"
+assert_eq "unreadable CHANGELOG.md unchanged" "$before" "$(cat "$work/CHANGELOG.md")"
+assert_eq "unreadable fragments kept" "1.md" "$(fragments_left)"
+new_work
+grep -v '^Config schema' "$fx/base.md" > "$work/CHANGELOG.md"
+printf 'Config schema: 3\n\n- A (#1).\n' > "$work/changelog.d/1.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "fragment schema exit" 0 "$status"
+assert_eq "fragment schema" "Config schema: 3" "$(grep -m1 '^Config schema' "$work/CHANGELOG.md")"
+
+case_desc=blank_lines_after_the_header_do_not_leak
+new_work
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+printf 'Shared state: adds `a`\n\n\n\n- B (#2).\n' > "$work/changelog.d/2.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 0 "$status"
+assert_eq "bullets adjacent" "- A (#1).
+- B (#2)." "$(grep -A1 '^- A (#1)' "$work/CHANGELOG.md")"
+
+case_desc=bad_version_or_date
+new_work
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+before=$(cat "$work/CHANGELOG.md")
+for args in "1.0.12 2026-12-01" "v1.0 2026-12-01" "v1.0.12 12/01/2026"; do
+    # shellcheck disable=SC2086
+    run_cl assemble $args
+    assert_eq "exit ($args)" 2 "$status"
+    assert_contains "usage ($args)" "usage: changelog.sh assemble vX.Y.Z YYYY-MM-DD | changelog.sh cat" "$out"
+    assert_eq "unchanged ($args)" "$before" "$(cat "$work/CHANGELOG.md")"
+    assert_eq "fragments kept ($args)" "1.md" "$(fragments_left)"
+done
+
+case_desc=no_changelog_file
+new_work
+rm "$work/CHANGELOG.md"
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 1 "$status"
+assert_contains "message" "changelog: no CHANGELOG.md here" "$out"
+assert_eq "fragments kept" "1.md" "$(fragments_left)"
 
 case_desc=unreleased_prefix_is_not_the_heading
 new_work
