@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done, after the send-back from `qc.md` round 1: Q8-Q10 are answered and the plan is approved: `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md`. Next step: `/codeo:implement`.
+Round 3, after the send-back from `qc.md` round 2 (F7-F9 blocking). Q11 is open; the round-3 plan is drafted once it is answered. Rounds 1 and 2 stand as written.
 
 ## Questions
 
@@ -158,6 +158,19 @@ I recommend reading the real leases.
 **Answer:**
 Read the real leases, as recommended. Given in the conversation: "go with your picks".
 
+### Q11 — The fifth criterion says `CHANGELOG.md` describes the new behaviour, and this branch does not edit `CHANGELOG.md`. Is the fragment the entry?
+
+**Why it matters:** both QC reviewers pointed at it and asked for your decision in so many words. The issue's first requirement is that a change no longer edits `CHANGELOG.md` on its own branch, and Q1-Q2 chose fragments, so this issue's entry is `changelog.d/207.md`; it becomes `CHANGELOG.md` text when the next release runs `tools/changelog.sh assemble`. Read literally, the criterion is unmet until that release. `qc.md` round 2 marked it "met — by decision"; I would rather have the decision written down than inferred.
+
+- The fragment is the entry. Round 3 changes nothing here, and `/codeo:qc` records the criterion as met on the fragment, citing this answer.
+- Also write the entry into `CHANGELOG.md` now. That needs an `## Unreleased` section on this branch, which is the shared edit the issue exists to remove, and `assemble` (as built) refuses a leftover `## Unreleased`; round 3 would have to teach it to fold that section in.
+
+I recommend the first.
+
+**Options:** the fragment is the entry (recommended) · also write it into `CHANGELOG.md` now.
+
+**Answer:**
+
 ## Notes
 
 **What exists today (read 2026-11-28, `main` at `00de557`).**
@@ -180,6 +193,15 @@ Read the real leases, as recommended. Given in the conversation: "go with your p
 - F6 and the carried minors ride as small tasks: `Safe to bump mid-workflow:` lets `no` win and joins the reasons; `assemble` refuses a leftover `## Unreleased` heading and a version section that already exists; trailing blank lines and `\r` are stripped from fragments; the lease test hard-codes the `skill` entry; an added-rule case for the pin.
 - Round 2 is a second plan file, `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md`, as earlier re-plans in this repository are.
 
+
+**Round 3, my calls (corrected at the review gate if wrong).**
+
+- F7: QC records `git merge-base HEAD origin/<base>` as `Graded base:` (the base commit the graded tree contains), and `base-moved.sh` compares from `git merge-base <sha> HEAD`, so a sha recorded too new cannot hide changes.
+- F8: `base-moved.sh` reads the line with an optional `- ` and backticks, as `inflight.sh` reads `qc round at review`. No new `dossier-check.sh` check: a new finding would break adopters' golden replays.
+- F9: `Safe to bump mid-workflow:` values that begin with `yes` and carry text are kept verbatim, distinct, joined with `; `; a bare `yes` is written only when none carries text.
+- F10: `Config schema:` defaults to the number of the newest section in `CHANGELOG.md` with `(unchanged)`; `assemble` refuses when it cannot read one.
+- F11 and the carried minors that are one-line fixes ride as one task; the rest are listed as not done.
+- Round 3 is a third plan file, `docs/plans/2026-11-28-parallel-issue-collisions-207-round-3.md`.
 
 ## Outcome
 
@@ -221,3 +243,4 @@ sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/co
 - 2026-11-28 — planned: docs/plans/2026-11-28-parallel-issue-collisions-207.md · cost: 20m · fable-5-2 107k in + 1.8M cached / 18k out · sonnet-5-5 139k in + 738k cached / 33k out
 - 2026-11-28 — round 2: Q8-Q10 raised (send-back from qc.md round 1) · cost: 1m · fable-5-2 417k in + 903k cached / 4k out
 - 2026-11-28 — round 2 planned: docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md · cost: 8m · fable-5-2 422k in + 1.8M cached / 7k out · sonnet-5-5 430k in + 3.1M cached / 18k out
+- 2026-11-28 — round 3: Q11 raised (send-back from qc.md round 2) · cost: nothing recorded since 2026-11-28T04:49:45.550Z
