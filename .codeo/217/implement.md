@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 (send-back from `qc.md` round 1), done. F1-F11 are fixed and reviewed; the tree builds. Next step: `/codeo:qc`.
+Round 3 (send-back from `close.md` round 1), done. `origin/main` is merged and `CHANGELOG.md` resolved; the tree builds. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -96,9 +96,27 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with your
 
 **Rulings made.** The `--approved` note text change (above); a card with the literal status `Ready` is refused when the board renames Ready, as the fix's brief said; no separate whole-branch review of this round, because the round's own reviewer saw the whole delta and `/codeo:qc` follows with an independent review.
 
+### Round 3
+
+2026-11-28
+(send-back from close.md round 1)
+
+**Built.** Nothing new: the round merged `origin/main` (`1d28d45`, #181 as #218) with `sync-main.sh` and resolved the one conflict, in merge commit `7530631`.
+
+**Resolved.** `CHANGELOG.md`: both sides added entries under `## Unreleased`. Kept both bullets, #217's first and #181's after it, and joined the two `Shared state:` lines into one (the `codeo done` record and `--approved` note, and the session counter file, which is not shared). `Safe to bump mid-workflow` keeps `yes, run \`codeo update\``.
+
+**Also changed on main** (merged cleanly, no conflict): `.devcontainer/README.md`, `.devcontainer/scripts/session-title.sh`, `tests/devcontainer.test.sh`, `docs/plans/2026-11-28-session-title-sequence-181.md` and #181's archived dossier. #181 touches `.devcontainer/README.md` in other sections than #217's `codeo go` section; the merge left both. `overlap.sh 217` printed nothing.
+
+**Documentation changed.** `CHANGELOG.md` only (the conflict).
+
+**Build result.** The `shell` suite's `build` is `true`: exit 0. Grading the merged tree is `/codeo:qc`'s.
+
+**Deviations from the plan.** None.
+
 
 ## Log
 
 - 2026-11-28 — implemented: nine tasks, 15 commits (a7fa31c..6658163); build ok; 6 fix rounds (Tasks 5, 6, 7, 8, 9 and the final wave) · cost: 49m · sonnet-5-5 1.2M in + 38.1M cached / 220k out
 - 2026-11-28 — round 2 started: send-back from qc.md round 1 read, findings checked, Q1 raised (#181 overlap) · cost: 0m · sonnet-5-5 13k in + 901k cached / 1k out
 - 2026-11-28 — round 2: fixed F1-F11 of qc.md round 1 in three commits (9f8c487..0a5f631); build ok; reviewed, no open finding · cost: 9m · sonnet-5-5 199k in + 7.9M cached / 38k out
+- 2026-11-28 — round 3: merged origin/main (7530631), resolved the CHANGELOG.md conflict keeping both entries; build ok · cost: 0m · sonnet-5-5 87k in + 466k cached / 1k out
