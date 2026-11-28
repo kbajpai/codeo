@@ -7,7 +7,7 @@
 
 ## Where this stands
 
-Draft, awaiting approval. Branch `feat/181-session-title-prefix-session-id` off `main` at `13ac02c52f10b9b597c77bf8a67968e10319634f`. Next: approval, then the claim push.
+Approved. Branch `feat/181-session-title-prefix-session-id` off `main` at `13ac02c52f10b9b597c77bf8a67968e10319634f`. Claimed with the create-only push. Next: `/codeo:plan`, in the issue's container.
 
 ## Questions
 
