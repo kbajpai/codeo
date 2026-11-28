@@ -2165,7 +2165,7 @@ t_home_clone_refuses_a_non_home_checkout() {
     cm_clone "$cm_dir/clone" stray
     CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
     [[ $cm_status -eq 1 ]] || fail "status $cm_status"
-    [[ "$cm_err" == "codeo: $cm_dir/clone is not a codeo home checkout (its role is stray); run this in your codeo-home clone or set CODEO_HOME_CLONE" ]] ||
+    [[ "$cm_err" == "codeo: go: home: $cm_dir/clone is not a codeo home checkout (its role is stray); run this in your codeo-home clone or set CODEO_HOME_CLONE" ]] ||
         fail "stderr: $cm_err"
 }
 
@@ -2176,7 +2176,7 @@ t_home_clone_env_wins_over_cwd() {
     pushd "$cm_dir/cwd" >/dev/null
     CODEO_HOME_CLONE="$cm_dir/clone" cm_run go 5
     popd >/dev/null
-    [[ "$cm_err" == "codeo: not implemented" ]] || fail "stderr: $cm_err"
+    if grep -q "not a codeo home checkout" <<<"$cm_err"; then fail "env clone refused: $cm_err"; fi
     pushd "$cm_dir/cwd" >/dev/null
     cm_run go 5
     popd >/dev/null
@@ -2483,6 +2483,165 @@ t_done_dies_with_codeo_roots_line() {
     ! grep -q '^docker' "$cm_dir/calls" || fail "docker called"
 }
 
+# go_setup: done_setup's home clone and stub plugin root, plus real jq, a claude stub (prints $d/claude_out,
+# exits $d/claude_rc, and when it runs moves the lookup state to has_after/branches_after, as a pushed branch
+# would) and board.sh/config.sh stubs (board.sh prints $d/board_status, exits $d/board_rc).
+go_setup() {
+    done_setup "$1"
+    rm -f "$cm_dir/bin/jq"
+    cat >"$cm_dir/bin/claude" <<'STUB'
+#!/bin/bash
+d=${0%/bin/*}
+echo "claude $* pwd=$(pwd)" >>"$d/calls"
+if [[ -e "$d/has_after" ]]; then cp "$d/has_after" "$d/has"; cp "$d/branches_after" "$d/branches"; fi
+cat "$d/claude_out"
+exit "$(cat "$d/claude_rc")"
+STUB
+    chmod +x "$cm_dir/bin/claude"
+    printf '{"subtype":"success","is_error":false,"result":"all done","permission_denials":[]}\n' >"$cm_dir/claude_out"
+    echo 0 >"$cm_dir/claude_rc"
+    printf 'feat/5-x\n' >"$cm_dir/has_after"
+    printf 'feat/5-x\n' >"$cm_dir/branches_after"
+    echo Ready >"$cm_dir/board_status"
+    cat >"$cm_dir/plug/scripts/board.sh" <<'STUB'
+#!/bin/bash
+d=${0%/plug/*}
+echo "board.sh $* pwd=$(pwd)" >>"$d/calls"
+[[ "$1" != status ]] || cat "$d/board_status"
+exit "$(cat "$d/board_rc" 2>/dev/null || echo 0)"
+STUB
+    cat >"$cm_dir/plug/scripts/config.sh" <<'STUB'
+#!/bin/bash
+d=${0%/plug/*}
+echo "config.sh $*" >>"$d/calls"
+cat "$d/backlog_name" 2>/dev/null || echo Backlog
+STUB
+}
+
+go_calls() { grep -E '^(security|board\.sh|claude|codeo-container\.sh)' "$cm_dir/calls"; }
+
+t_go_runs_the_steps_in_order() {
+    go_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    echo Backlog >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    local want="security show-keychain-info $cm_dir/h/Library/Keychains/login.keychain-db
+board.sh status 5 pwd=$cm_dir/clone
+board.sh set 5 ready pwd=$cm_dir/clone
+claude -p /codeo:init #5 --approved --output-format json --permission-prompts none --allowedTools Skill Read Glob Grep Write Edit Bash pwd=$cm_dir/clone
+codeo-container.sh issue 5 feat/5-x pwd=$cm_home"
+    [[ "$(go_calls)" == "$want" ]] || fail "calls: $(go_calls)"
+    [[ "$cm_out" == $'container: codeo-5\nbranch: feat/5-x' ]] || fail "stdout: $cm_out"
+}
+
+t_go_ready_card_is_not_moved() {
+    go_setup "$current"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
+    grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
+}
+
+t_go_none_and_unset_cards_are_set_to_ready() {
+    local s
+    for s in none unset; do
+        go_setup "$current-$s"
+        echo "$s" >"$cm_dir/board_status"
+        done_run go 5
+        [[ "$cm_status" -eq 0 ]] || fail "$s: exit $cm_status, err: $cm_err"
+        expect_call "board.sh set 5 ready pwd=$cm_dir/clone"
+    done
+}
+
+t_go_refuses_a_card_past_ready() {
+    local s
+    for s in "In progress" "In review" Done; do
+        go_setup "$current-${s// /-}"
+        echo "$s" >"$cm_dir/board_status"
+        done_run go 5
+        [[ "$cm_status" -eq 1 ]] || fail "$s: exit $cm_status"
+        [[ "$cm_err" == "codeo: go: board: "*"$s"* ]] || fail "$s: stderr: $cm_err"
+        [[ "$(wc -l <"$cm_dir/err")" -eq 1 ]] || fail "$s: not one line: $cm_err"
+        ! grep -qE '^(claude|docker|codeo-container)' "$cm_dir/calls" || fail "$s: later step ran: $(cat "$cm_dir/calls")"
+        ! grep -q '^board.sh set' "$cm_dir/calls" || fail "$s: card moved"
+    done
+}
+
+t_go_without_a_board_skips_the_move() {
+    go_setup "$current"
+    echo 3 >"$cm_dir/board_rc"
+    echo "board: not configured" >"$cm_dir/board_status"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_err" == "codeo: go: board not configured" ]] || fail "stderr: $cm_err"
+    ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
+    grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
+}
+
+t_go_existing_branch_stops_before_the_board() {
+    go_setup "$current"
+    printf 'feat/5-old\n' >"$cm_dir/branches"
+    printf 'feat/5-old\n' >"$cm_dir/has"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: go: branch: "*"feat/5-old"*"codeo issue 5 feat/5-old"*"/codeo:init #5"* ]] || fail "stderr: $cm_err"
+    ! grep -qE '^(board.sh|claude|codeo-container)' "$cm_dir/calls" || fail "later step ran: $(cat "$cm_dir/calls")"
+}
+
+t_go_stops_on_each_init_failure() {
+    local c
+    for c in exit nonjson subtype denied nobranch two; do
+        go_setup "$current-$c"
+        case $c in
+            exit) echo 1 >"$cm_dir/claude_rc" ;;
+            nonjson) echo 'not json at all' >"$cm_dir/claude_out" ;;
+            subtype) echo '{"subtype":"error_max_turns","is_error":false,"result":"ran out"}' >"$cm_dir/claude_out" ;;
+            denied) echo '{"subtype":"success","is_error":false,"result":"blocked","permission_denials":[{"tool_name":"Bash"},{"tool_name":"Write"}]}' >"$cm_dir/claude_out" ;;
+            nobranch) rm -f "$cm_dir/has_after" "$cm_dir/branches_after"
+                echo '{"subtype":"success","is_error":false,"result":"Which scope do you want?"}' >"$cm_dir/claude_out" ;;
+            two) printf 'feat/5-x\nfeat/5-y\n' >"$cm_dir/has_after"; cp "$cm_dir/has_after" "$cm_dir/branches_after" ;;
+        esac
+        done_run go 5
+        [[ "$cm_status" -eq 1 ]] || fail "$c: exit $cm_status"
+        [[ "$(head -n 1 "$cm_dir/err")" == "codeo: go: init: "* || "$(head -n 1 "$cm_dir/err")" == "codeo: go: verify: "* ]] || fail "$c: stderr: $cm_err"
+        [[ "$(grep -c '^codeo: ' "$cm_dir/err")" -eq 1 ]] || fail "$c: not one codeo line: $cm_err"
+        ! grep -q '^codeo-container.sh' "$cm_dir/calls" || fail "$c: container step ran"
+        case $c in
+            exit) [[ "$(head -n 1 "$cm_dir/err")" == "codeo: go: init: claude exited 1" ]] || fail "$c: $cm_err" ;;
+            nonjson) grep -q 'not JSON' <<<"$cm_err" || fail "$c: $cm_err" ;;
+            subtype) grep -q 'error_max_turns' <<<"$cm_err" && grep -q '^    ran out$' "$cm_dir/err" || fail "$c: $cm_err" ;;
+            denied) grep -q 'Bash, Write' <<<"$cm_err" || fail "$c: $cm_err" ;;
+            nobranch) grep -q '^codeo: go: verify: ' "$cm_dir/err" && grep -q '^    Which scope do you want?$' "$cm_dir/err" || fail "$c: $cm_err" ;;
+            two) grep -q '^codeo: go: verify: .*feat/5-x feat/5-y' "$cm_dir/err" || fail "$c: $cm_err" ;;
+        esac
+    done
+}
+
+t_go_passes_kind_and_yes_to_issue() {
+    go_setup "$current"
+    done_run go 5 --sandbox --yes
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "codeo-sandbox.sh issue 5 feat/5-x --yes pwd=$cm_home"
+}
+
+t_go_keychain_locked_makes_no_other_call() {
+    go_setup "$current"
+    echo Darwin >"$cm_dir/uname_out"
+    echo 36 >"$cm_dir/security_status"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "status $cm_status"
+    [[ "$cm_err" == "codeo: the login keychain is locked, "* ]] || fail "stderr: $cm_err"
+    [[ "$(wc -l <"$cm_dir/calls")" -eq 1 ]] || fail "calls: $(cat "$cm_dir/calls")"
+}
+
+t_go_never_passes_bare() {
+    go_setup "$current"
+    done_run go 5
+    ! grep "^claude " "$cm_dir/calls" | grep -qE -- "--bare|--dangerously-skip-permissions" || fail "claude called with a banned flag"
+}
+
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -2654,6 +2813,16 @@ cases=(
     t_done_sandbox_end_failure_records_nothing
     t_done_never_passes_force
     t_done_dies_with_codeo_roots_line
+    t_go_runs_the_steps_in_order
+    t_go_ready_card_is_not_moved
+    t_go_none_and_unset_cards_are_set_to_ready
+    t_go_refuses_a_card_past_ready
+    t_go_without_a_board_skips_the_move
+    t_go_existing_branch_stops_before_the_board
+    t_go_stops_on_each_init_failure
+    t_go_passes_kind_and_yes_to_issue
+    t_go_keychain_locked_makes_no_other_call
+    t_go_never_passes_bare
 )
 
 for current in "${cases[@]}"; do

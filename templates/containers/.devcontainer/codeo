@@ -159,11 +159,11 @@ ensure_tracker() {
     return 0
 }
 
-# find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was
-# found. Uses a blob-less bare clone in the home directory, pointed at the current repository URL and
+# branches_for <N>: print every origin branch holding .codeo/<N>/init.md, one per line, nothing when none.
+# Uses a blob-less bare clone in the home directory, pointed at the current repository URL and
 # fetched on every lookup; rev-parse needs only the trees the fetch brought, never a blob. The whole
 # lookup holds a lock, and the clone is made in a temporary directory and renamed into place.
-find_branch() {
+branches_for() {
     local n=$1 dir repo_url b refs tmp
     local -a found=()
     dir=$(home_dir)
@@ -193,6 +193,15 @@ find_branch() {
             found+=("$b")
         fi
     done <<<"$refs"
+    ((${#found[@]} == 0)) || printf '%s\n' "${found[@]}"
+}
+
+# find_branch <N>: print the one origin branch holding .codeo/<N>/init.md, else die naming what was found.
+find_branch() {
+    local n=$1 out
+    local -a found=()
+    out=$(branches_for "$n")
+    [[ -z "$out" ]] || mapfile -t found <<<"$out"
     case ${#found[@]} in
         1) printf '%s\n' "${found[0]}" ;;
         0) die "no branch holds .codeo/$n/init.md; pass the branch: codeo issue $n <branch>" ;;
@@ -841,23 +850,108 @@ plugin_root() {
     printf '%s\n' "$out"
 }
 
-# cmd_go <N> [--container|--sandbox] [--yes]: start and drive issue N from the home clone (skeleton).
+# go_fail <step> <reason> [<result text>]: print "codeo: go: <step>: <reason>", then the run's result text
+# indented when there is one, and exit 1.
+go_fail() {
+    printf 'codeo: go: %s: %s\n' "$1" "$2" >&2
+    [[ -z "${3:-}" ]] || sed 's/^/    /' <<<"$3" >&2
+    exit 1
+}
+
+# go_branches <N> <step>: print every origin branch holding .codeo/<N>/init.md; a failed lookup is one go line.
+go_branches() {
+    local errf out
+    errf=$(mktemp) || go_fail "$2" "could not create a temporary file"
+    if ! out=$(branches_for "$1" 2>"$errf"); then
+        out=$(tail -n 1 "$errf")
+        rm -f "$errf"
+        go_fail "$2" "${out#codeo: }"
+    fi
+    rm -f "$errf"
+    printf '%s\n' "$out"
+}
+
+# cmd_go <N> [--container|--sandbox] [--yes]: start issue N and open its container from the home clone, in
+# steps (keychain, home, branch, board, init, verify, container); each failure is one "go: <step>: <reason>"
+# line and the later steps do not run. Prints "container: @CODENAME@-<N>" and "branch: <branch>".
 cmd_go() {
-    local n="" arg
+    local n="" arg yes="" clone root out rc status backlog result branch errf
+    local -a found=() issue_args=()
     kind_flag=""
     for arg in "$@"; do
         case "$arg" in
             --container | --sandbox) parse_kind_flag "$arg" ;;
-            --yes) ;;
+            --yes) yes=--yes ;;
             -*) usage ;;
             *) [[ -z "$n" ]] || usage; n=$arg ;;
         esac
     done
     [[ -n "$n" ]] && valid_number "$n" || usage
     keychain_check
-    local clone
-    clone=$(home_clone)
-    die "not implemented"
+    clone=$(home_clone 2>&1) || go_fail home "${clone#codeo: }"
+    root=$(plugin_root "$clone" 2>&1) || go_fail home "${root#codeo: }"
+
+    out=$(go_branches "$n" branch) || exit 1
+    if [[ -n "$out" ]]; then
+        mapfile -t found <<<"$out"
+        go_fail branch "#$n already has ${found[*]}; for a lost container run: codeo issue $n ${found[0]}; for a stashed workflow run /codeo:init #$n in $clone"
+    fi
+
+    rc=0
+    status=$(cd "$clone" && bash "$root/scripts/board.sh" status "$n" 2>&1 </dev/null) || rc=$?
+    status=${status%%$'\n'*}
+    if [[ $rc -eq 3 ]]; then
+        echo "codeo: go: board not configured" >&2
+    elif [[ $rc -ne 0 ]]; then
+        go_fail board "could not read the card of #$n: ${status:-board.sh exited $rc}"
+    else
+        backlog=""
+        case "$status" in
+            Ready) ;;
+            none | unset) backlog=1 ;;
+            *)
+                out=$(cd "$clone" && bash "$root/scripts/config.sh" get '.board.statuses.backlog // "Backlog"' 2>/dev/null </dev/null) || out=Backlog
+                [[ "$status" == "${out:-Backlog}" ]] ||
+                    go_fail board "the card of #$n is $status, not Ready or ${out:-Backlog}; nothing started"
+                backlog=1
+                ;;
+        esac
+        if [[ -n "$backlog" ]]; then
+            out=$(cd "$clone" && bash "$root/scripts/board.sh" set "$n" ready 2>&1 </dev/null) ||
+                go_fail board "could not move #$n to Ready: ${out%%$'\n'*}"
+        fi
+    fi
+
+    command -v jq >/dev/null 2>&1 || go_fail init "jq is not installed"
+    errf=$(mktemp) || go_fail init "could not create a temporary file"
+    rc=0
+    out=$(cd "$clone" && claude -p "/codeo:init #$n --approved" --output-format json --permission-prompts none \
+        --allowedTools Skill Read Glob Grep Write Edit Bash 2>"$errf" </dev/null) || rc=$?
+    rm -f "$errf"
+    result=$(jq -r '.result // empty' <<<"$out" 2>/dev/null) || result=""
+    [[ $rc -eq 0 ]] || go_fail init "claude exited $rc" "$result"
+    jq -e . >/dev/null 2>&1 <<<"$out" || go_fail init "claude's output is not JSON"
+    local subtype is_error denied
+    subtype=$(jq -r '.subtype // ""' <<<"$out")
+    is_error=$(jq -r '.is_error // false' <<<"$out")
+    if [[ "$subtype" != success || "$is_error" == true ]]; then
+        go_fail init "the run did not succeed (${subtype:-no subtype})" "$result"
+    fi
+    denied=$(jq -r '[(.permission_denials // [])[] | (.tool_name // "unknown")] | join(", ")' <<<"$out")
+    [[ -z "$denied" ]] || go_fail init "the run was denied permission (${denied})" "$result"
+
+    out=$(go_branches "$n" verify) || exit 1
+    [[ -n "$out" ]] || go_fail verify "the run pushed no branch holding .codeo/$n/init.md; nothing started" "$result"
+    mapfile -t found <<<"$out"
+    [[ ${#found[@]} -eq 1 ]] ||
+        go_fail verify "several branches hold .codeo/$n/init.md (${found[*]}); pass one: codeo issue $n <branch>" "$result"
+    branch=${found[0]}
+
+    issue_args=(issue "$n" "$branch")
+    [[ -z "$kind_flag" ]] || issue_args+=("--$kind_flag")
+    [[ -z "$yes" ]] || issue_args+=(--yes)
+    "$BASH" "${BASH_SOURCE[0]}" "${issue_args[@]}" >&2 || go_fail container "codeo ${issue_args[*]} failed"
+    printf 'container: @CODENAME@-%s\nbranch: %s\n' "$n" "$branch"
 }
 
 # cmd_done <N> [--container|--sandbox]: remove a finished issue's container from the home clone. Every
