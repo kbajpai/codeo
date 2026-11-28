@@ -385,13 +385,28 @@ is the container the message names.
    rather than waiting here. Until a send-back at step 11, this phase writes nothing to `close.md`
    — a dossier commit now would be a push onto a review in progress — and nothing in this step
    changes anything, except the first checks above and the two cases below.
+   <!-- rule: close-18 -->
    - **`BEHIND`** — the base branch moved since the last push, and where it requires branches to
      be up to date, that blocks the merge. Bringing the branch up to date is mechanical when the
      merge is clean, so it happens here, on the clean, up-to-date tree the first checks left. If
      the pull above already brought in the engineer's *Update branch* merge, it is done. Otherwise
-     run `git merge-tree --write-tree --name-only origin/<base> HEAD` as at step 3; on exit 0,
-     `git merge --no-edit origin/<base>` and `git push`, which runs the checks again. Exit 1 is a
-     conflict, which goes to step 11 like `CONFLICTING` and is never resolved here.
+     run `git merge-tree --write-tree --name-only origin/<base> HEAD` as at step 3; exit 1 is a
+     conflict, which goes to step 11 like `CONFLICTING` and is never resolved here. On exit 0, a
+     clean merge is still not enough: QC graded this branch against the base as it stood then, so
+     before merging run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/base-moved.sh" <N>`, which prints
+     every file this branch changed that the base changed since QC graded it. Its stdout
+     carries only paths, one per line; the exit-1 and exit-4 lines are on stderr. Act on its exit:
+     - Exit 0, nothing moved under a graded file: `git merge --no-edit origin/<base>` and
+       `git push`, which runs the checks again.
+     - Exit 4, the last QC round has no `Graded base:` line: carry on exactly as for exit 0, and
+       tell the engineer in one line that the QC round predates `Graded base:`, so the moved base
+       could not be compared.
+     - Exit 3, paths printed: merge nothing. Name each printed path, and say QC graded those
+       files before the base changed them. Write nothing to `close.md` — this phase writes
+       nothing until a send-back — and stop with the route `/codeo:qc`: it syncs `origin/<base>`
+       itself, so the merged tree is graded and its new round's `Graded base:` replaces the old
+       one; then close again.
+     - Exit 1, anything else: stop, quoting the stderr line.
    - **`CONFLICTING`** — a parallel workflow merged first. It is a send-back exactly like step 3's,
      made at step 11.
 

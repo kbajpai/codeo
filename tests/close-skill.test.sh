@@ -199,6 +199,20 @@ step_contains "an Update-branch merge on GitHub is pulled fast-forward" 9 'git p
 step_contains "conflicting is a send-back" 9 '`CONFLICTING`'
 step_contains "a conflicting pull request goes to step 11" 9 'step 11'
 
+# Step 9's BEHIND bullet: a moved base that touched a graded file goes back to qc (close-18).
+behind=$(step 9 | awk '/^   - \*\*`BEHIND`\*\*/{f=1} /^   - \*\*`CONFLICTING`\*\*/{f=0} f' | tr '\n' ' ' | tr -s ' ')
+[[ -n $behind ]] || fail "step 9 has no BEHIND bullet"
+must_contain 'close-18 rule marker' '<!-- rule: close-18 -->'
+text_order 'BEHIND runs base-moved.sh after the merge-tree check' "$behind" 'git merge-tree --write-tree --name-only origin/<base> HEAD' 'scripts/base-moved.sh" <N>'
+text_order 'BEHIND runs base-moved.sh before the merge' "$behind" 'scripts/base-moved.sh" <N>' 'git merge --no-edit origin/<base>'
+for needle in 'Exit 0' 'Exit 4' 'predates `Graded base:`' 'Exit 3' 'merge nothing' 'Name each' \
+    'graded those files before the base changed them' '`/codeo:qc`' 'then close again' \
+    'Write nothing to `close.md`' 'Exit 1' 'quoting the stderr line' \
+    'stdout carries only paths' 'on stderr'; do
+    [[ $behind == *"$needle"* ]] || fail "BEHIND bullet has no [$needle]"
+done
+text_order 'BEHIND exit 3 routes to qc after naming the paths' "$behind" 'Exit 3' '`/codeo:qc`'
+
 # Step 10: the release at approval.
 step_contains "the release at approval is only for a lease still held" 10 'lease list'
 step_contains "the release at approval" 10 'lease release "$ENV_RESOURCE" <N>'

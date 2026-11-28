@@ -113,6 +113,7 @@ in prose exist (only the script's existence is checked).
 - [close-15] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words, and its line is committed with close's dossier commit.
 - [close-16] A stash or abandon removes the recorded owner (`lock.sh owner`); with no owner it removes the verified caller (`user whoami`) only when `verify` passed without an override, else skips and says so; never a login that was not verified.
 - [close-17] Archive and push the dossier before opening the pull request.
+- [close-18] A `BEHIND` branch is brought up to date only when `base-moved.sh` prints no path; a path both sides changed since the graded base goes back to `/codeo:qc`.
 
 ## triage
 
