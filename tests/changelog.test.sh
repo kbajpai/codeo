@@ -72,7 +72,29 @@ printf 'Shared state: adds `c`\n\n- C (#3).\n' > "$work/changelog.d/3.md"
 run_cl assemble v9.9.9 2026-12-01
 assert_eq "exit" 0 "$status"
 assert_contains "joined" 'Shared state: adds `a`; adds `c`' "$(cat "$work/CHANGELOG.md")"
-assert_eq "numeric order, not lexical" "- A (#1)." "$(grep -m1 '^- ' "$work/CHANGELOG.md")"
+assert_eq "first bullet is fragment 1" "- A (#1)." "$(grep -m1 '^- ' "$work/CHANGELOG.md")"
+
+case_desc=numeric_order_beats_lexical
+new_work
+printf -- '- Ten (#10).\n' > "$work/changelog.d/10.md"
+printf -- '- Nine (#9).\n' > "$work/changelog.d/9.md"
+printf -- '- Two (#2).\n' > "$work/changelog.d/2.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 0 "$status"
+assert_eq "bullets in numeric order" "- Two (#2).
+- Nine (#9).
+- Ten (#10)." "$(grep '^- \(Two\|Nine\|Ten\)' "$work/CHANGELOG.md")"
+
+case_desc=header_ends_at_the_first_blank_line
+new_work
+printf 'Shared state: adds `a`\n\nShared state: not a header\n- A (#1).\n' > "$work/changelog.d/1.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 0 "$status"
+assert_contains "header line kept" 'Shared state: adds `a`
+' "$(cat "$work/CHANGELOG.md")"
+assert_eq "late line stays in the body" "Shared state: not a header
+- A (#1)." "$(grep -B1 '^- A (#1)' "$work/CHANGELOG.md")"
+assert_eq "late line not in the header" 'Shared state: adds `a`' "$(grep -m1 '^Shared state: adds' "$work/CHANGELOG.md")"
 
 case_desc=disagreeing_headers_stop
 new_work

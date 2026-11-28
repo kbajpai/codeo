@@ -77,7 +77,7 @@ assemble)
                         shared=${shared:+$shared; }$v
                     fi
                     continue ;;
-                "") continue ;;
+                "") in_header=0; continue ;;
                 esac
                 in_header=0
             fi
