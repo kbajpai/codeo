@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, done: clear — forward to `/codeo:close`. No question is open. Non-blocking findings F12-F17 and the carried items are for `/codeo:triage`. Rounds 1 and 2 stand as written.
+Round 4, done: clear — forward to `/codeo:close`. No question is open. Round 4 graded the merge of `origin/main` (#217) that answered `close.md` round 2; non-blocking findings F12-F21 and the carried items are for `/codeo:triage`. Rounds 1-3 stand as written.
 
 ## Questions
 
@@ -210,6 +210,49 @@ No `/codeo:issue` was filed.
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+### Round 4 — 2026-11-28
+
+Graded base: f8b644167def6d40802fe408cf87d68e55ff101a
+
+This round answers `close.md` round 2: the pull request conflicted with `main` after #217 merged, and `/codeo:implement` round 4 merged `origin/main` and resolved three conflicts.
+
+**Commands run** (this pass, HEAD `2178bb1`):
+- `role.sh --check qc` → exit 0; lock `issue: 207`, branch `feat/207-stop-parallel-issues-colliding-shared`; clean tree.
+- `sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main`; no `Behind:` line. `git merge-base HEAD origin/main` → `f8b6441`, the tip of `origin/main`.
+- `overlap.sh 207` → nothing; `overlap.sh --outside 207` → nothing.
+- `scope.sh origin/main HEAD` → `suite.shell=true` (unclassified paths: `.codeo/207/*.md`, `.codeo/config.json`, `CONTRIBUTING.md`, `README.md`, `changelog.d/207.md`, `tools/changelog.sh`).
+- `qc/invariants-extra` and `qc/wiki-rules` → exit 3 each (none); no invariants file, environment or `wiki` module; no environment step.
+- Build: the `shell` suite's `build` is `true` → exit 0.
+- Suite: `bash tests/run.sh` → exit 0, last line `all cases passed`.
+- Reviewer (opus, handed the criteria and the diff only), on the merged tree: re-ran the full suite (`all cases passed`); read `tests/inventory.test.sh` (no rule-count table left, the pin fails both a rule added and a rule removed, 91 pin lines against 91 bullets), `tests/init-skill.test.sh` (both sides' pins), `skills/init/SKILL.md` (the lease-list text and `init-12` both present), `docs/skills-inventory.md` (`init-12` blank-separated; the hashes of `plan-11`, `qc-16` and `close-18` unchanged), `README.md`, `docs/skills.md` and `docs/release-checklist.md` (both changes present, nothing duplicated or lost); reproduced finding F18 and F19 below in scratch copies.
+
+**Criteria** (`init.md`):
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| Two branches that each add a changelog entry merge without a conflict in `CHANGELOG.md`, and the release step produces the same entries | met | `tests/changelog.test.sh`; the entry is the fragment `changelog.d/207.md` (plan Q11); the merge left `main`'s `## Unreleased` in place by decision (F18) |
+| Two branches that each change an inventory rule merge, and one script run afterwards produces a correct pin; a test pins it | met | `tests/inventory-pin.test.sh`, and the regenerated pin matches the page after the merge (`bash tests/inventory.test.sh` ends `all cases passed`); F19 narrows the "no conflict" wording |
+| A second issue whose footprint overlaps an in-flight issue's on a skill file names that issue and the files, and the footprint records `sequenced:` or `exclusive:`; a test pins it | met | `tests/overlap.test.sh`, `tests/intake-lease.test.sh`, `tests/plan-skill.test.sh` (plan-11) |
+| `/codeo:qc` on a branch behind `origin/main` does not grade until synced, or reports that it is behind; a test pins it | met | `skills/qc/SKILL.md` step 2 and qc-16, `tests/qc-skill.test.sh`; this pass's sync said the branch already contains `origin/main` |
+| `README.md`, `docs/skills.md` and `CHANGELOG.md` describe the new behaviour; the full suite passes | met — by decision | the suite passes; both pages carry this change's and #217's text; `CHANGELOG.md` stays unedited by design (plan Q11) |
+
+**Documentation check.** `README.md`, `docs/skills.md` and `docs/release-checklist.md` carry both changes with no duplicated, lost or contradicting sentence. One sentence in `docs/release-checklist.md` can lead the releaser wrong (F18).
+
+**Findings**
+
+- **F1-F17 (earlier rounds):** F7-F9 (blocking in round 2) fixed by `fda6c00` and `99fb54e`; F12-F17 and the carried minors stand as non-blocking in round 3 and are unchanged by the merge.
+- **F18 — non-blocking, `/codeo:plan`'s (the sentence was written in round 2).** `docs/release-checklist.md`, step 6, tells the releaser to "fold or remove the heading or the existing section first" when `assemble` refuses a leftover `## Unreleased`. Removing only the heading makes `assemble` succeed and leaves the entries of #181 and #217 under `# Changelog` with no heading, outside any release (reproduced by the reviewer: exit 0, the lines sit above the new section). `main` carries a `## Unreleased` now, so the next release meets this. The tool's own refusal says "fold it into a fragment first", which is right. Needed: say "fold `## Unreleased` into a fragment (`changelog.d/<N>.md` with its header lines)" and drop "or remove the heading"; optionally have `assemble` refuse any non-blank line between `# Changelog` and the first `## ` heading. The engineer may prefer to fix this sentence before the release rather than after the merge.
+- **F19 — non-blocking.** The pin has no skill headings, so one branch adding a skill's last rule and another rewording the next skill's first rule merge in the page but conflict in the fixture alone (reproduced in a scratch repository); `--update` resolves it. `CONTRIBUTING.md` and `changelog.d/207.md` say two changes to different rules "merge without a conflict", and `tests/inventory-pin.test.sh` covers only rewording.
+- **F20 — non-blocking.** `skills/init/SKILL.md` step 3 says a failed `lease list` read is reported and the step carries on, while `init-12` (the `--approved` rule from #217) says a failed script still stops the skill; the two can read against each other in a headless run.
+- **F21 — non-blocking.** `codeo go` prints the headless run's result only on failure, so the `holds` and `waits for` lines init prints are not seen there and are not recorded in `init.md`; the binding overlap check is at `/codeo:plan`.
+- **Declined to judge by the reviewer, and I agree:** the earlier rounds' known findings (the check in close's waiting phase only, the `yes`/`no` mix, `none (…)` values).
+
+No `/codeo:issue` was filed.
+
+**Routing.** No finding is blocking: the merge hid no semantic regression, the suite passes, the pin matches the page, and F18-F21 are non-blocking. They go to `/codeo:triage` after the merge.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-28 — Q1 raised (overlap with #217 found at step 2) · cost: 0m · opus-5-5 329k in + 379k cached / 763 out
@@ -218,3 +261,4 @@ No `/codeo:issue` was filed.
 - 2026-11-28 — round 2: Q2 raised (new overlap with #217 on tests/inventory.test.sh, found at step 2) · cost: 0m · opus-5-5 535k in + 593k cached / 813 out
 - 2026-11-28 — round 2: back to /codeo:plan (F7-F9 blocking) · cost: 15m · opus-5-5 700k in + 5.6M cached / 31k out · sonnet-5-5 31k in + 3.4M cached / 6k out
 - 2026-11-28 — round 3: clear, forward to /codeo:close (no blocking finding; F12-F17 non-blocking) · cost: 6m · opus-5-5 291k in + 4M cached / 26k out · sonnet-5-5 31k in + 717k cached / 1k out
+- 2026-11-28 — round 4: clear, forward to /codeo:close (merge of origin/main graded; no blocking finding; F18-F21 non-blocking) · cost: 9m · opus-5-5 95k in + 1.9M cached / 14k out · sonnet-5-5 7k in + 1.3M cached / 2k out
