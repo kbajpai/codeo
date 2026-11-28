@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q5 are answered and the plan is approved and saved, unstaged, as `docs/plans/2026-11-28-session-title-sequence-181.md`. The footprint is committed; the overlap check printed #217's two shared files, raised as Q6. `## Outcome` stays pending until Q6 is answered.
+Round 1, done. Q1-Q6 are answered and the plan is approved: `docs/plans/2026-11-28-session-title-sequence-181.md`, left unstaged for review. Next step: `/codeo:implement`.
 
 ## Questions
 
@@ -89,6 +89,30 @@ Proceed and coordinate, as recommended. Given in the conversation: "go with ur p
 
 ## Notes
 
+- Settled by the issue, not asked: the first number in a fresh clone is `00`; `<NN>` is two uppercase hex digits; a lock change keeps `<NN>`; outside a container the hook prints nothing.
+- An old-shape title takes the next number when the hook first sees it, so a migrated session is numbered by when it was migrated, not by when it began.
+- Concurrency: the number is taken under `flock` on the state file's lock (`/usr/bin/flock` is in the dev container image); the write is a temp file and a rename.
+- One pull request. No shared environment, no wiki module, no exclusive resources and no invariants document are configured.
+
+## Outcome
+
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-28-session-title-sequence-181.md` (unstaged at the hand-off, for the engineer's review) |
+| Shape | a plan under `docs/plans/`, three tasks; no reference doc, since nothing here is a standing decision beyond the hook's header comment |
+
+**Decisions.**
+- Counter kept in the clone's git directory, `codeo/session-seq` (Q1). Rejected: Claude Code's config directory (a VS Code rebuild would restart the count at `00` with the lost sessions) and `.codeo/` with an `info/exclude` entry (the hook would write `info/exclude` too).
+- A ledger of `<NN> <session id>` lines, the last 256 kept; a session keeps the number in its own title, else the ledger's, else the next (Q2). Rejected: title only, which spends a second number when a run arrives without `session_title`. My call: a `SessionStart` with `source: resume` keeps the inherited title's number even when the id differs; Task 1 step 1 checks that against Claude Code's hook documentation before code depends on it.
+- A counter failure prints the old shape `<window title> · <id8>`, silent when the title already is that (Q3). Rejected: printing nothing.
+- The number is taken under `flock -w 2` on a lock file beside the state file; the write is a temp file and `mv`.
+- Overlap with #217 on `CHANGELOG.md` and `.devcontainer/README.md`: proceed and coordinate (Q4, Q6). Rejected: sequencing after #217, re-scoping.
+- The changelog entry goes in `CHANGELOG.md` under a new `## Unreleased` section (Q5). Rejected: a `changelog.d/181.md` fragment, since #207 is not merged.
+
+**Documentation the plan changes.** `.devcontainer/README.md` (the session-title bullet) and `CHANGELOG.md`. `docs/container-templates.md` lists `session-title.sh` only as a file copied as it is, so it does not move. No wiki module.
+
+**Intake questions resolved here.** None; intake left none open.
+
 ### Footprint
 
 ```
@@ -98,16 +122,8 @@ exclusive:  none
 sequenced:  none
 ```
 
-- Settled by the issue, not asked: the first number in a fresh clone is `00`; `<NN>` is two uppercase hex digits; a lock change keeps `<NN>`; outside a container the hook prints nothing.
-- An old-shape title takes the next number when the hook first sees it, so a migrated session is numbered by when it was migrated, not by when it began.
-- Concurrency: the number is taken under `flock` on the state file's lock (`/usr/bin/flock` is in the dev container image); the write is a temp file and a rename.
-- One pull request. No shared environment, no wiki module, no exclusive resources and no invariants document are configured.
-
-## Outcome
-
-_Pending — written at the hand-off._
-
 ## Log
 
 - 2026-11-28 — Q1-Q5 raised · cost: 1m · fable-5-2 82k in + 566k cached / 7k out
 - 2026-11-28 — Q6 raised (overlap with #217) · cost: 23m · fable-5-2 91k in + 897k cached / 11k out · sonnet-5-5 109k in + 873k cached / 17k out
+- 2026-11-28 — planned: docs/plans/2026-11-28-session-title-sequence-181.md · cost: 0m · sonnet-5-5 1k in + 277k cached / 807 out · the engineering plugin's skills (system-design, architecture) were not used: no new component or technology choice
