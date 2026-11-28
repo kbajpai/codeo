@@ -2642,6 +2642,36 @@ t_go_never_passes_bare() {
 }
 
 
+t_go_odd_claude_output_is_one_init_line() {
+    local c
+    for c in array string number denials_string subtype_number; do
+        go_setup "$current-$c"
+        case $c in
+            array) echo '[{"type":"result","subtype":"success"}]' >"$cm_dir/claude_out" ;;
+            string) echo '"hello"' >"$cm_dir/claude_out" ;;
+            number) echo '42' >"$cm_dir/claude_out" ;;
+            denials_string) echo '{"subtype":"success","is_error":false,"result":"x","permission_denials":"Bash"}' >"$cm_dir/claude_out" ;;
+            subtype_number) echo '{"subtype":7,"is_error":false,"result":"x"}' >"$cm_dir/claude_out" ;;
+        esac
+        done_run go 5
+        [[ "$cm_status" -eq 1 ]] || fail "$c: exit $cm_status"
+        [[ "$(grep -c '^codeo: go: init: ' "$cm_dir/err")" -eq 1 ]] || fail "$c: stderr: $cm_err"
+        ! grep -qi 'jq:' "$cm_dir/err" || fail "$c: raw jq error: $cm_err"
+        ! grep -q '^codeo-container.sh' "$cm_dir/calls" || fail "$c: container step ran"
+    done
+}
+
+t_go_stderr_warning_on_success_is_not_the_path() {
+    go_setup "$current"
+    printf '#!/bin/bash\necho "warning: noise" >&2\necho home\n' >"$cm_dir/clone/.devcontainer/scripts/role.sh"
+    printf '\necho "warning: root noise" >&2\n' >>"$cm_dir/clone/.devcontainer/scripts/codeo-root.sh"
+    done_run go 5
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_out" == $'container: codeo-5\nbranch: feat/5-x' ]] || fail "stdout: $cm_out"
+    expect_call "board.sh status 5 pwd=$cm_dir/clone"
+}
+
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -2823,6 +2853,8 @@ cases=(
     t_go_passes_kind_and_yes_to_issue
     t_go_keychain_locked_makes_no_other_call
     t_go_never_passes_bare
+    t_go_odd_claude_output_is_one_init_line
+    t_go_stderr_warning_on_success_is_not_the_path
 )
 
 for current in "${cases[@]}"; do
