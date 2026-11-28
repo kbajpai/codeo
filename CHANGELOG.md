@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Config schema: 1 (unchanged)
+Shared state: none (the session counter is a file in the clone's git directory, `codeo/session-seq`, and is not shared)
+Safe to bump mid-workflow: yes
+
+- A dev container's session title is `<window title> · <NN>-<id8>`, for example `codeo [home] · 1A-2cb71525`, where `<NN>` is a two-digit hex count per container (per clone, so `codeo-home` and `codeo-<N>` count separately). Each new session id (a fresh start, `/clear`, a fork) takes the next number, a resume keeps its number, and after `FF` it is `00`; the count survives a container restart and starts at `00` in a fresh clone. A `/rename`d title is left alone, an old `<window title> · <id8>` title is moved to the new shape, and when the counter cannot be used the title is the old shape (#181).
+
 ## v1.0.11 — 2026-11-27
 
 Config schema: 1 (unchanged)
