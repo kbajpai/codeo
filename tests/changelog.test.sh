@@ -153,6 +153,20 @@ assert_eq "exit" 0 "$status"
 assert_contains "from CHANGELOG.md" "- The first release (#1)." "$out"
 assert_contains "from a fragment" "- Twelve changes one thing (#12)." "$out"
 
+case_desc=the_documents_name_the_fragment_flow
+contributing=$(cat "$plugin_root/CONTRIBUTING.md")
+checklist=$(cat "$plugin_root/docs/release-checklist.md")
+overlay=$(cat "$plugin_root/.codeo/overlays/plan.md")
+assert_contains "contributing fragment path" 'changelog.d/<issue>.md' "$contributing"
+assert_contains "contributing tool" 'tools/changelog.sh' "$contributing"
+assert_contains "checklist assemble" 'tools/changelog.sh assemble' "$checklist"
+if [[ $checklist == *'retitle `CHANGELOG.md`'* ]]; then
+    echo "FAIL: $case_desc — checklist still retitles ## Unreleased"
+    failures=$((failures + 1))
+fi
+assert_contains "overlay section" '## plan-shape' "$overlay"
+assert_contains "overlay names fragments" 'changelog.d/' "$overlay"
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
