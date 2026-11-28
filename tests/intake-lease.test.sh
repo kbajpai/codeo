@@ -103,6 +103,7 @@ export HOOK_LOG="$scratch_root/hook.log" CHANGE_LOG="$scratch_root/change.log"
 
 # Configs. $1 for fresh_repo/origin_with is the config.json content.
 resources='[{"name":"dev"},{"name":"terraform"},{"name":"postman"},{"name":"slnx"},{"name":"k8s-base"},{"name":"migrations","parameterised":true}]'
+resources=$(jq -c --argjson more "$(jq -c '.resources' "$plugin_root/.codeo/config.json")" '. + $more' <<<"$resources")
 config_with() { # <environment JSON or "null"> [onLeaseChange command]
     jq -n --argjson res "$resources" --argjson env "$1" --arg change "${2:-bash '$change_sh'}" '
         {schema: 1, repo: {owner: "o", name: "n"}, baseBranch: "main", resources: $res,
@@ -640,7 +641,7 @@ for r in postgres terraform:x; do
         # shellcheck disable=SC2086
         run_full "$c" lease $verb
         assert_eq "[$verb] exit" 1 "$status"
-        assert_contains "[$verb] message" "unknown resource $r; configured: dev, terraform, postman, slnx, k8s-base, migrations:<name>" "$err"
+        assert_contains "[$verb] message" "unknown resource $r; configured: dev, terraform, postman, slnx, k8s-base, migrations:<name>, skill:<name>" "$err"
     done
 done
 o_none=$(origin_with "$(jq 'del(.resources)' <<<"$no_env_config")")
@@ -1160,6 +1161,25 @@ run_full "$c" lease take dev 7 deploy
 assert_eq "exit" 1 "$status"
 assert_eq "one line" 1 "$(printf '%s\n' "$err" | wc -l | tr -d ' ')"
 assert_contains "names it" "config.json: invalid JSON" "$err"
+
+case_desc="skill_resource_serialises_one_skill"
+o=$(origin_with)
+c=$(clone_of "$o")
+run_full "$c" lease take skill:close 1 x
+assert_eq "take close exit" 0 "$status"
+run_full "$c" lease take skill:close 2 y
+assert_eq "second close exit" 1 "$status"
+assert_contains "holder" "skill:close is leased to #1" "$err"
+run_full "$c" lease take skill:plan 2 y
+assert_eq "other skill exit" 0 "$status"
+run_full "$c" lease take skill 2 y
+assert_eq "bare skill exit" 1 "$status"
+assert_contains "bare skill refused" "unknown resource skill" "$err"
+
+case_desc="the_repo_declares_the_skill_resource"
+declared=no
+jq -e '.resources[] | select(.name == "skill" and .parameterised == true and (.paths | index("skills/**")) and (.paths | index("tests/*-skill.test.sh")))' "$plugin_root/.codeo/config.json" >/dev/null && declared=yes
+assert_eq "skill resource declared" yes "$declared"
 
 if ((failures)); then
     echo "$failures case(s) failed"
