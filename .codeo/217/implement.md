@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2 (send-back from `qc.md` round 1), not started on code: `sync-main.sh` merged nothing (the branch already contains `origin/main`), and `overlap.sh 217` printed two overlaps with #181 that Q1 asks about. The round is to fix F1, F2 and F4 (blocking) and F3 and F5-F11 (non-blocking); I checked F1, F2, F3, F7, F8 and F10 against the code and each holds. Nothing is built until Q1 is answered.
+Round 2 (send-back from `qc.md` round 1), done. F1-F11 are fixed and reviewed; the tree builds. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -25,6 +25,7 @@ I recommend proceeding and coordinating.
 **Options:** proceed and coordinate (recommended) · sequence after #181 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with your picks".
 
 ## Notes
 
@@ -64,7 +65,40 @@ I recommend proceeding and coordinating.
 
 **Rulings made.** The plan's Produces/Step 3 order for `update` (above); `prove`'s exit status for a failed proof is 0, so a non-zero exit is an error, not a failed proof; the headless flags are not a code defect: `claude --help` lists them, and the live check is the engineer's.
 
+### Round 2
+
+2026-11-28
+(send-back from qc.md round 1)
+
+**Built.** F1-F11 of `qc.md` round 1, in three commits (`9f8c487`, `8abaf2f`, `0a5f631`), each finding checked against the code first (F1, F2, F3, F7, F8 and F10 by reading it, the rest from the reviewer's account), each fix written test-first, then reviewed: every finding came back fixed, with no Critical or Important issue. The base-branch sync merged nothing: the branch already contains `origin/main`. `overlap.sh 217` printed `181` on `.devcontainer/README.md` and `CHANGELOG.md`, answered in Q1 as *proceed and coordinate*.
+
+| Finding | Fix |
+|---|---|
+| F1 blocking | `cmd_go` creates `CODEO_HOME` (`mkdir -p`, no script download) before the branch lookup; one `go: home:` line when it cannot |
+| F2 blocking | the Ready and Backlog names are read from `board.statuses`, and the refusal names them |
+| F4 blocking | the four untrue statements in `.devcontainer/README.md`'s `codeo go` section corrected: result text follows the failure line, `verify` has its own failure node, `--approved` no longer covers "the lock", the engineer's own settings also apply to the headless run |
+| F3 | the last line of `claude`'s stderr is in `go: init: claude exited <rc>: …` |
+| F5 | `board.sh status`'s stderr is kept apart from the status |
+| F6 | `cmd_update` ignores SIGPIPE and its progress prints are best-effort |
+| F7 | a missing login keychain file is not a locked keychain |
+| F8 | `go` prints `sandbox:` for a sandbox |
+| F9 | the docs say `go`/`done` run the current directory's scripts when `CODEO_HOME_CLONE` is unset |
+| F10 | the note init records reads `approved in advance by the engineer (--approved)`, true for a hand-typed flag too |
+| F11 | `t_keychain_skipped_off_macos` and the `prove` overlay test strengthened |
+
+**Documentation changed.** `.devcontainer/README.md` (the `codeo go` section and its diagram), `CHANGELOG.md` (the `sandbox:` label and the new behaviours).
+
+**Build result.** The `shell` suite's `build` is `true`: exit 0. The full suite and the focused test files were run by the implementer; grading them is `/codeo:qc`'s.
+
+**Deviations from the plan, and why.** The recorded `--approved` note differs from the text the plan's Task 6 fixed (it dropped "through codeo go") because that text was untrue for a hand-typed flag; rule `init-12` and the inventory hash are unchanged. `plan.md`'s footprint still lacks `tests/inventory.test.sh` (F12, the plan's).
+
+**Left as minor.** The flow diagram still labels the card statuses `Ready` and `Backlog` literally rather than as configured; the F6 test closes stdout and does not exercise an exited reader's SIGPIPE directly; untested `go` branches (a failing `board.sh set`, a missing `jq`); no timeout on the headless call (documented).
+
+**Rulings made.** The `--approved` note text change (above); a card with the literal status `Ready` is refused when the board renames Ready, as the fix's brief said; no separate whole-branch review of this round, because the round's own reviewer saw the whole delta and `/codeo:qc` follows with an independent review.
+
+
 ## Log
 
 - 2026-11-28 — implemented: nine tasks, 15 commits (a7fa31c..6658163); build ok; 6 fix rounds (Tasks 5, 6, 7, 8, 9 and the final wave) · cost: 49m · sonnet-5-5 1.2M in + 38.1M cached / 220k out
 - 2026-11-28 — round 2 started: send-back from qc.md round 1 read, findings checked, Q1 raised (#181 overlap) · cost: 0m · sonnet-5-5 13k in + 901k cached / 1k out
+- 2026-11-28 — round 2: fixed F1-F11 of qc.md round 1 in three commits (9f8c487..0a5f631); build ok; reviewed, no open finding · cost: 9m · sonnet-5-5 199k in + 7.9M cached / 38k out
