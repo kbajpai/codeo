@@ -244,3 +244,12 @@
 | `triage:2026-11-27-6:parallel-collisions` | #204, #195, #188 and #206 all change `CHANGELOG.md`, the close skill, shared docs and the inventory hash; plans say `exclusive: none` | filed #207 | 2026-11-27 |
 | `issue:207` | Parallel issues collide on shared files; filed 2026-11-27, board Status Backlog → `Ready` on the engineer's say-so | ready | 2026-11-27 |
 | `issue:213` | Release v1.0.11 from main, check the README, and pin codeo to it; filed 2026-11-27, board Status Backlog → `Ready` on the engineer's say-so | ready | 2026-11-27 |
+| `qc:204:F5-G6` | #204 `inflight.sh` labels the archive-to-`pr create` window `(PR open)` | filed #219 | 2026-11-28 |
+| `qc:206:G1-G2-G6` | #206 intake-reason docs, `cleanup.sh` placeholder pattern, removal-record delete, `restore`/`record` gaps | filed #219 | 2026-11-28 |
+| `qc:195:deferred-minors` | #195 stale verify ref message, test and flowchart gaps, "the assignee" wording | filed #219 | 2026-11-28 |
+| `qc:188:N-jq` | #188 without `jq` a web session always reaches `assignee_label`; fallback is by design | dismissed — nothing breaks, `assignee_label` is the designed fallback | 2026-11-28 |
+| `qc:181:F1-F4` | #181 session-title hook: `seq_file`, README/changelog/header wording, test gaps | filed #219 | 2026-11-28 |
+| `qc:213:F1-F3-F5` | #213 shipped v1.0.11 README and changelog inaccuracies | filed #219 | 2026-11-28 |
+| `qc:213:F4-F6` | CI flakes (`pipefail` SIGPIPE, `live.test.sh` race) and `sandbox.test.sh` global gitignore | filed #220 | 2026-11-28 |
+| `issue:219` | Close the #204, #206, #195, #181 and #213 QC leftovers; board Status Backlog | backlog | 2026-11-28 |
+| `issue:220` | Make the shell tests deterministic under CI load; board Status Backlog | backlog | 2026-11-28 |
