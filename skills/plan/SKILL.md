@@ -250,10 +250,15 @@ is the container the message names.
    exclusive resources it changes (`exclusive:`, names from
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get '.resources[]? | .name'` — nothing printed
    means none are configured — whose `paths` the plan's files fall under; a parameterised one is
-   written `<name>:<suffix>`). `exclusive:` never
+   written `<name>:<suffix>`). A plan whose files fall under a configured resource's `paths` has
+   that resource listed under `exclusive:`, never left to judgment. A parameterised resource's
+   suffix is the path segment the first wildcard of the matching glob stands for, up to the next
+   `/`: `skills/close/SKILL.md` under `skills/**` and
+   `tests/close-skill.test.sh` under `tests/*-skill.test.sh` both give `skill:close`, and
+   a file matching several globs gives several entries. `exclusive:` never
    lists `$ENV_RESOURCE`: the later steps lease the environment from its first task, not the plan.
    `sequenced:` is the fourth key and reads `none` when nothing was sequenced; step 10 fills it in
-   when an overlap question is answered *sequence after #M*. A key with nothing under it says
+   when an overlap question is answered. A key with nothing under it says
    `none`, and `dossier-check.sh` fails a footprint that lacks any of the four. Then run
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --except <N>` — one block per other workflow:
    its issue, branch, assignee, last finished step, its plan's footprint lines when it has one,
@@ -295,8 +300,8 @@ is the container the message names.
     (`${CLAUDE_PLUGIN_ROOT}/docs/dossier.md → The gate`).
 
     1. **Write the footprint down.** Put the `### Footprint` block, as step 8 drafted it and the
-       answers since have amended it (its `sequenced:` line names the issue when an overlap
-       question was answered that way, and stays `none` otherwise), under `plan.md`'s `## Notes`,
+       answers since have amended it (its `sequenced:` line records each overlap question answered, and
+       stays `none` otherwise), under `plan.md`'s `## Notes`,
        leaving `## Outcome` pending.
 
        **After a send-back, make the draft cover the branch.**
@@ -311,6 +316,11 @@ is the container the message names.
        `qc-verdict` fails the pull request if one is still missing. A non-zero exit, with or without an
        `overlap: cannot diff …` or `overlap: cannot resolve …` line, is a stop to report, never "no
        overlap".
+
+       <!-- rule: plan-11 -->
+       An overlap question's answer is written to the footprint's `sequenced:` line before the footprint is committed:
+       `after #M — <why> (Q<k>)` for *sequence after*, `beside #M — <what overlaps> (Q<k>)` for
+       *proceed and coordinate*, `none` when no overlap was raised.
 
        Commit it alone, staged by name, with the subject
        `docs(codeo): plan dossier for #<N> — footprint`, and push.
@@ -339,7 +349,8 @@ is the container the message names.
        `## Where this stands`, commit, push, and stop with `## Outcome` still pending — the
        hand-off waits for the lock as `implement` waits for the environment; re-invoked, run this
        step again from sub-step 1. For exclusive resources the lock replaces *sequence after*;
-       `sequenced:` remains for files and pages.
+       `sequenced:` remains for files and pages, and a *proceed and coordinate* answer is recorded
+       there as `beside #M`, not dropped.
     4. **Write the outcome — only when nothing was raised and every lock is held.** Nothing in
        `.codeo/<N>/plan.md` may still be open. The outcome is the plan file's path, the shape
        chosen in step 5, the decisions made and the options rejected, the documentation pages the

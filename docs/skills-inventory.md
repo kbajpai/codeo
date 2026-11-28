@@ -58,6 +58,7 @@ in prose exist (only the script's existence is checked).
 - [plan-08] A missing optional plugin means apply its structure directly; a missing required skill is a stop.
 - [plan-09] A refusal from the role check ends the step; no override.
 - [plan-10] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words.
+- [plan-11] An overlap question's answer is written to the footprint's `sequenced:` line before the footprint is committed: `after #M — <why> (Q<k>)` for *sequence after*, `beside #M — <what overlaps> (Q<k>)` for *proceed and coordinate*, `none` when no overlap was raised.
 
 ## implement
 

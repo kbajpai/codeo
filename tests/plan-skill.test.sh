@@ -98,6 +98,22 @@ must_contain 'plan a refused verify prints its line and stops' 'print its one li
 must_contain 'plan the override is named' '--override "<the engineer'\''s exact words>"'
 must_contain 'plan the override is never inferred' 'never inferred'
 
+# The skill lease suffix and the recorded overlap decision (plan-11).
+must_contain 'plan derives the suffix from the first wildcard' 'the path segment the first wildcard'
+must_contain 'plan gives the skill suffix example' '`skills/close/SKILL.md` under `skills/**`'
+must_contain 'plan gives the test suffix example' '`tests/close-skill.test.sh` under `tests/*-skill.test.sh`'
+must_contain 'plan lists a file matching several globs once per glob' 'a file matching several globs gives several entries'
+must_contain 'plan lists a resource under exclusive, not left to judgment' 'listed under `exclusive:`, never left to judgment'
+must_contain 'plan-11 carries its rule marker' '<!-- rule: plan-11 -->'
+must_contain 'plan writes sequence-after to sequenced' '`after #M — <why> (Q<k>)`'
+must_contain 'plan writes proceed-and-coordinate to sequenced' '`beside #M — <what overlaps> (Q<k>)`'
+must_contain 'plan writes none when nothing was raised' '`none` when no overlap was raised'
+must_contain 'plan records the answer before the commit' 'written to the footprint'\''s `sequenced:` line before the footprint is committed'
+must_order 'the sequenced rule sits before the footprint commit' '<!-- rule: plan-11 -->' 'Commit it alone, staged by name'
+must_contain 'plan step 10 takes the lease' 'lease take <resource> <N>'
+must_contain 'plan a lease refusal names the holder' 'refusal names the holder'
+must_contain 'plan records the wait' 'lease wait <resource> <N>'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
