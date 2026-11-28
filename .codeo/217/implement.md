@@ -8,11 +8,23 @@
 
 ## Where this stands
 
-Round 1, done. All nine tasks of `docs/plans/2026-11-28-codeo-go-done-217.md` are built and each passed its task review; the whole-branch review returned fixes and its one fix wave was re-reviewed clean. The tree builds (`shell` suite build is `true`). Next step: `/codeo:qc`.
+Round 2 (send-back from `qc.md` round 1), not started on code: `sync-main.sh` merged nothing (the branch already contains `origin/main`), and `overlap.sh 217` printed two overlaps with #181 that Q1 asks about. The round is to fix F1, F2 and F4 (blocking) and F3 and F5-F11 (non-blocking); I checked F1, F2, F3, F7, F8 and F10 against the code and each holds. Nothing is built until Q1 is answered.
 
 ## Questions
 
-None.
+### Q1 — #181 overlaps on `.devcontainer/README.md` and `CHANGELOG.md`: proceed, sequence, or re-scope?
+
+**Why it matters:** round 2 edits `.devcontainer/README.md` (F4: four untrue statements in its `codeo go` section, F7/F9 sentences) and `CHANGELOG.md` (the entry for the fixes). `overlap.sh 217` printed `181	glob:.devcontainer/README.md` and `181	glob:CHANGELOG.md`. #181 (branch `feat/181-session-title-prefix-session-id`, assignee kbajpai, step `plan` (working), waiting on `/codeo:implement`) lists both files in its footprint beside `.devcontainer/scripts/session-title.sh` and `tests/devcontainer.test.sh`. Both change different sections of the README and add a changelog entry, so the second to merge resolves the overlap at its sync and its `/codeo:qc` re-runs the suite on the merged tree.
+
+- Proceed and coordinate: both go on; whichever merges second resolves the two files.
+- Sequence after #181: this round waits until #181 merges, then syncs and builds; #181 is only at `plan`, so the wait is open-ended.
+- Re-scope: the F4 documentation fixes cannot move out of `.devcontainer/README.md` without leaving untrue statements in it.
+
+I recommend proceeding and coordinating.
+
+**Options:** proceed and coordinate (recommended) · sequence after #181 · re-scope.
+
+**Answer:**
 
 ## Notes
 
@@ -55,3 +67,4 @@ None.
 ## Log
 
 - 2026-11-28 — implemented: nine tasks, 15 commits (a7fa31c..6658163); build ok; 6 fix rounds (Tasks 5, 6, 7, 8, 9 and the final wave) · cost: 49m · sonnet-5-5 1.2M in + 38.1M cached / 220k out
+- 2026-11-28 — round 2 started: send-back from qc.md round 1 read, findings checked, Q1 raised (#181 overlap) · cost: 0m · sonnet-5-5 13k in + 901k cached / 1k out
