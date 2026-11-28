@@ -16,7 +16,7 @@ None.
 
 ## Notes
 
-- Task 8's live case (`CODEO_LIVE_CLAUDE=1 bash tests/codeo-command.test.sh`) was not run: it starts a real `claude` and is the engineer's step on their own host, as the plan marks it (`Runs on: the engineer's host`). Until it passes there, nothing here proves that `claude -p` runs `/codeo:init` as a slash command or accepts the headless flags `go` passes; they were checked against `claude --help` only.
+- Task 8's live case could not be run by the test file on the engineer's Mac (the suite assumes Linux tools: `flock`, GNU `stat` and `sed`, unresolved `/var` paths), so on 2026-11-28 the engineer ran its two checks by hand there with the plugin at v1.0.8: `claude -p` lists `codeo:init` among its slash commands, and `claude -p … --output-format json --permission-prompts none --allowedTools Skill Read Glob Grep Write Edit Bash --max-turns 1` returned `subtype` success, `is_error` false and no `permission_denials`. That proves the command is listed and the flags are accepted together; it does not yet prove that `/codeo:init #<N> --approved` runs headless, which needs a plugin release that has `--approved` and a real `codeo go`.
 - The macOS keychain check is stubbed in the tests and not verified on a real Mac, as the issue allows.
 
 ## Outcome
