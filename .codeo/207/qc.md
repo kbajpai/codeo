@@ -59,6 +59,7 @@ I recommend proceed and coordinate, #207 merging first: it is the change that ma
 **Options:** proceed and coordinate (recommended) · sequence after #217 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended; #207 merges first. Given in the conversation: "proceed & coordinate".
 
 ## Notes
 
