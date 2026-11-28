@@ -147,6 +147,7 @@ cm_run() {
         ${CODEO_REPO_URL:+CODEO_REPO_URL="$CODEO_REPO_URL"} ${CODEO_SBX:+CODEO_SBX="$CODEO_SBX"} \
         ${CODEO_CONTEXT:+CODEO_CONTEXT="$CODEO_CONTEXT"} ${CODEO_SBX_IMAGE:+CODEO_SBX_IMAGE="$CODEO_SBX_IMAGE"} \
         ${CODEO_HOME_CLONE:+CODEO_HOME_CLONE="$CODEO_HOME_CLONE"} \
+        ${CODEO_ROOT:+CODEO_ROOT="$CODEO_ROOT"} \
         "$bash_abs" "${cm_script:-$script}" "$@" >"$cm_dir/out" 2>"$cm_dir/err" || cm_status=$?
     cm_out=$(cat "$cm_dir/out")
     cm_err=$(cat "$cm_dir/err")
@@ -2357,6 +2358,121 @@ t_rm_container_with_git_checkout_home_goes_ahead() {
     [[ "$(ls -A "$cm_dir/h/codeo")" == ".git" ]] || fail "wrote into ~/codeo: $(ls -A "$cm_dir/h/codeo")"
 }
 
+
+# done_setup: a home clone with the real codeo-root.sh and a stub plugin root (CODEO_ROOT) whose
+# lock.sh exists, whose cleanup.sh logs "cleanup.sh <args> pwd=<cwd>" and prints "5<TAB>proven" or the
+# contents of $d/prove_out, and fails on record when record_fail exists; intake.sh logs the same way. docker answers rm.
+done_setup() {
+    cm_setup "$1"
+    rm_stubs
+    cm_clone "$cm_dir/clone" home
+    cp "$repo/.devcontainer/scripts/codeo-root.sh" "$cm_dir/clone/.devcontainer/scripts/"
+    mkdir -p "$cm_dir/plug/scripts"
+    echo '#!/bin/bash' >"$cm_dir/plug/scripts/lock.sh"
+    cat >"$cm_dir/plug/scripts/cleanup.sh" <<'STUB'
+#!/bin/bash
+d=${0%/plug/*}
+echo "cleanup.sh $* pwd=$(pwd)" >>"$d/calls"
+case "$1" in
+    prove) if [[ -e "$d/prove_out" ]]; then cat "$d/prove_out"; else printf '%s\tproven\n' "$2"; fi ;;
+    record) [[ ! -e "$d/record_fail" ]] || { echo "cleanup: no origin
+second line" >&2; exit 1; } ;;
+esac
+exit 0
+STUB
+    cat >"$cm_dir/plug/scripts/intake.sh" <<'STUB'
+#!/bin/bash
+d=${0%/plug/*}
+echo "intake.sh $* pwd=$(pwd)" >>"$d/calls"
+exit 0
+STUB
+    CODEO_HOME_CLONE="$cm_dir/clone"
+    CODEO_ROOT="$cm_dir/plug"
+}
+
+# done_run <args...>: cm_run with the clone and plugin root, then forget them.
+done_run() {
+    cm_run "$@"
+    unset CODEO_HOME_CLONE CODEO_ROOT
+}
+
+t_done_removes_when_every_proof_passes() {
+    done_setup "$current"
+    done_run done 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
+    expect_call "docker rm -f codeo-5"
+    expect_call "docker volume rm codeo-5"
+    [[ "$cm_out" == "removed codeo-5"* ]] || fail "stdout: $cm_out"
+    expect_call "cleanup.sh prove 5 pwd=$cm_dir/clone"
+    expect_call "git -C $cm_dir/clone fetch -q origin"
+    local got
+    got=$(grep -E '^(cleanup|intake)\.sh (record|commit)' "$cm_dir/calls")
+    [[ "$got" == "cleanup.sh record 5 pwd=$cm_dir/clone"$'\n'"intake.sh commit cleanup docs(codeo): cleanup removal recorded for #5 pwd=$cm_dir/clone" ]] || fail "record calls: $got"
+    ! grep -qE '^(claude|gh) ' "$cm_dir/calls" || fail "claude or gh called"
+}
+
+t_done_names_the_failed_proof_and_removes_nothing() {
+    local p
+    for p in issue pull-request branch dossier lease; do
+        done_setup "$current-$p"
+        printf '5\tfailed\t%s\n' "$p" >"$cm_dir/prove_out"
+        done_run done 5 --container
+        [[ "$cm_status" -eq 1 ]] || fail "$p: exit $cm_status"
+        [[ "$cm_err" == "codeo: done: #5 is not finished: $p failed; nothing removed" ]] || fail "$p: stderr: $cm_err"
+        ! grep -q '^docker' "$cm_dir/calls" || fail "$p: docker called"
+        ! grep -qE 'cleanup.sh record|intake.sh' "$cm_dir/calls" || fail "$p: recorded"
+    done
+}
+
+t_done_unsaved_work_still_refuses() {
+    done_setup "$current"
+    printf 'abc1234\n' >"$cm_dir/g_rev-list"
+    done_run done 5 --container
+    expect_refused abc1234
+    grep -qF 'holds work that exists only there' <<<"$cm_err" || fail "not rm's line: $cm_err"
+    ! grep -qE 'cleanup.sh record|intake.sh' "$cm_dir/calls" || fail "recorded"
+}
+
+t_done_container_not_found_records_nothing() {
+    done_setup "$current"
+    touch "$cm_dir/gone" "$cm_dir/start_fail"
+    done_run done 5 --container
+    [[ "$cm_status" -eq 1 && "$cm_err" == "codeo: no container codeo-5 found; nothing removed" ]] || fail "$cm_status $cm_err"
+    ! grep -qE 'cleanup.sh record|intake.sh' "$cm_dir/calls" || fail "recorded"
+}
+
+t_done_record_failure_warns_and_exits_zero() {
+    done_setup "$current"
+    touch "$cm_dir/record_fail"
+    done_run done 5 --container
+    [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: warning: #5 was removed but the removal was not recorded: cleanup: no origin" ]] || fail "stderr: $cm_err"
+    ! grep -q 'intake.sh' "$cm_dir/calls" || fail "committed after a failed record"
+}
+
+t_done_passes_the_kind_flag_to_rm() {
+    done_setup "$current"
+    done_run done 5 --sandbox
+    expect_call "codeo-sandbox.sh end 5 pwd=$cm_home"
+    ! grep -q -- '--force' "$cm_dir/calls" || fail "force passed"
+}
+
+t_done_never_passes_force() {
+    done_setup "$current"
+    done_run done 5 --force
+    [[ "$cm_status" -eq 2 && "$cm_err" == usage:* ]] || fail "$cm_status $cm_err"
+    [[ ! -s "$cm_dir/calls" ]] || fail "calls: $(cat "$cm_dir/calls")"
+}
+
+t_done_dies_with_codeo_roots_line() {
+    done_setup "$current"
+    rm -f "$cm_dir/plug/scripts/lock.sh"
+    done_run done 5 --container
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status"
+    [[ "$cm_err" == "codeo: codeo-root: CODEO_ROOT=$cm_dir/plug has no scripts/lock.sh" ]] || fail "stderr: $cm_err"
+    ! grep -q '^docker' "$cm_dir/calls" || fail "docker called"
+}
+
 cases=(
     t_no_args_usage
     t_unknown_command_usage
@@ -2519,6 +2635,14 @@ cases=(
     t_rm_container_fetches_missing_tracker
     t_rm_container_tracker_download_fails_but_removes
     t_rm_container_with_git_checkout_home_goes_ahead
+    t_done_removes_when_every_proof_passes
+    t_done_names_the_failed_proof_and_removes_nothing
+    t_done_unsaved_work_still_refuses
+    t_done_container_not_found_records_nothing
+    t_done_record_failure_warns_and_exits_zero
+    t_done_passes_the_kind_flag_to_rm
+    t_done_never_passes_force
+    t_done_dies_with_codeo_roots_line
 )
 
 for current in "${cases[@]}"; do

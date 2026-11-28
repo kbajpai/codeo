@@ -860,22 +860,45 @@ cmd_go() {
     die "not implemented"
 }
 
-# cmd_done <N> [--container|--sandbox]: finish issue N from the home clone (skeleton).
+# cmd_done <N> [--container|--sandbox]: remove a finished issue's container from the home clone. Every
+# step stops the command on failure: the proofs (cleanup.sh prove) name the first one that failed and
+# remove nothing; then cmd_rm, which never gets --force here; and only after it returns, the record
+# (cleanup.sh record, intake.sh commit), whose failure is a warning and does not change the exit.
 cmd_done() {
-    local n="" arg
+    local n="" arg clone root out line
+    local -a rm_args=()
     kind_flag=""
     for arg in "$@"; do
         case "$arg" in
-            --container | --sandbox) parse_kind_flag "$arg" ;;
+            --container | --sandbox)
+                parse_kind_flag "$arg"
+                rm_args+=("$arg")
+                ;;
             -*) usage ;;
-            *) [[ -z "$n" ]] || usage; n=$arg ;;
+            *)
+                [[ -z "$n" ]] || usage
+                n=$arg
+                ;;
         esac
     done
     [[ -n "$n" ]] && valid_number "$n" || usage
     keychain_check
-    local clone
     clone=$(home_clone)
-    die "not implemented"
+    root=$(plugin_root "$clone")
+    git -C "$clone" fetch -q origin >/dev/null 2>&1 </dev/null || die "done: could not fetch in $clone; nothing removed"
+    out=$(cd "$clone" && bash "$root/scripts/cleanup.sh" prove "$n" 2>&1 </dev/null) ||
+        die "done: could not prove #$n finished: ${out%%$'\n'*}"
+    line=$(grep -m1 -E "^$n"$'\t'"(proven|failed)" <<<"$out") || line=""
+    case "$line" in
+        "$n"$'\t'proven) ;;
+        "$n"$'\t'failed$'\t'*) die "done: #$n is not finished: ${line#"$n"$'\t'failed$'\t'} failed; nothing removed" ;;
+        *) die "done: could not prove #$n finished: ${out%%$'\n'*}" ;;
+    esac
+    cmd_rm "$n" ${rm_args[@]+"${rm_args[@]}"}
+    if ! out=$(cd "$clone" && bash "$root/scripts/cleanup.sh" record "$n" 2>&1 </dev/null &&
+        bash "$root/scripts/intake.sh" commit cleanup "docs(codeo): cleanup removal recorded for #$n" 2>&1 </dev/null); then
+        echo "codeo: warning: #$n was removed but the removal was not recorded: ${out%%$'\n'*}" >&2
+    fi
 }
 
 main() {
