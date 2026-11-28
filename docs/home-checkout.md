@@ -19,7 +19,7 @@ Keeping it current:
 - The `codeo` command and its scripts: `codeo update`.
 - The clone: `git pull` on the base branch.
 
-It works on Linux, on macOS and on Windows through WSL2. On macOS, `install.sh` and the `codeo` command need bash 4.3 or later (for example from Homebrew) and `flock` (`brew install flock`), and the stock bash 3.2 is too old for them; the role guard and `codeo-container.sh` run on 3.2. Over SSH, `codeo home` can stop at the Docker build with a keychain error until the login keychain is unlocked, and `codeo go` and `codeo done` stop before any change on a locked keychain and print the unlock command; see [The keychain over SSH on macOS](../.devcontainer/README.md#the-keychain-over-ssh-on-macos). On Windows run everything inside WSL2, `codeo` and `gh` included.
+It works on Linux, on macOS and on Windows through WSL2. On macOS, `install.sh` and the `codeo` command need bash 4.3 or later (for example from Homebrew) and `flock` (`brew install flock`), and the stock bash 3.2 is too old for them; the role guard and `codeo-container.sh` run on 3.2. Over SSH, `codeo home` can stop at the Docker build with a keychain error until the login keychain is unlocked, and `codeo go` and `codeo done` stop before any change on a locked keychain and print the unlock command (the headless run behind `go` has the reach described in [Starting and finishing an issue with one command](../.devcontainer/README.md#starting-and-finishing-an-issue-with-one-command)); see [The keychain over SSH on macOS](../.devcontainer/README.md#the-keychain-over-ssh-on-macos). On Windows run everything inside WSL2, `codeo` and `gh` included.
 
 ## The guard
 

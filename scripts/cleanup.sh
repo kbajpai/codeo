@@ -139,7 +139,6 @@ if [[ $mode == prove ]]; then
     exit 0
 fi
 
-
 # The overlay body, or nothing when there is none.
 overlay=
 rc=0

@@ -915,7 +915,7 @@ cmd_go() {
     status=$(cd "$clone" && bash "$root/scripts/board.sh" status "$n" 2>&1 </dev/null) || rc=$?
     status=${status%%$'\n'*}
     if [[ $rc -eq 3 ]]; then
-        echo "codeo: go: board not configured" >&2
+        echo "codeo: go: board: not configured, skipped" >&2
     elif [[ $rc -ne 0 ]]; then
         go_fail board "could not read the card of #$n: ${status:-board.sh exited $rc}"
     else
@@ -968,7 +968,7 @@ cmd_go() {
     issue_args=(issue "$n" "$branch")
     [[ -z "$kind_flag" ]] || issue_args+=("--$kind_flag")
     [[ -z "$yes" ]] || issue_args+=(--yes)
-    "$BASH" "${BASH_SOURCE[0]}" "${issue_args[@]}" >&2 || go_fail container "codeo ${issue_args[*]} failed"
+    "$BASH" "${BASH_SOURCE[0]}" "${issue_args[@]}" >&2 || go_fail container "codeo ${issue_args[*]} failed; the branch is pushed and the card is In progress: retry with codeo ${issue_args[*]}"
     printf 'container: codeo-%s\nbranch: %s\n' "$n" "$branch"
 }
 

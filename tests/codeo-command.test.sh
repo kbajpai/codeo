@@ -2577,7 +2577,7 @@ t_go_without_a_board_skips_the_move() {
     echo "board: not configured" >"$cm_dir/board_status"
     done_run go 5
     [[ "$cm_status" -eq 0 ]] || fail "exit $cm_status, err: $cm_err"
-    [[ "$cm_err" == "codeo: go: board not configured" ]] || fail "stderr: $cm_err"
+    [[ "$cm_err" == "codeo: go: board: not configured, skipped" ]] || fail "stderr: $cm_err"
     ! grep -q '^board.sh set' "$cm_dir/calls" || fail "card moved"
     grep -q '^claude ' "$cm_dir/calls" || fail "no claude call"
 }
@@ -2619,6 +2619,14 @@ t_go_stops_on_each_init_failure() {
             two) grep -q '^codeo: go: verify: .*feat/5-x feat/5-y' "$cm_dir/err" || fail "$c: $cm_err" ;;
         esac
     done
+}
+
+t_go_container_failure_says_how_to_retry() {
+    go_setup "$current"
+    echo 1 >"$cm_dir/status"
+    done_run go 5
+    [[ "$cm_status" -eq 1 ]] || fail "exit $cm_status, err: $cm_err"
+    [[ "$cm_err" == *"codeo: go: container: codeo issue 5 feat/5-x failed; the branch is pushed and the card is In progress: retry with codeo issue 5 feat/5-x" ]] || fail "stderr: $cm_err"
 }
 
 t_go_passes_kind_and_yes_to_issue() {
@@ -2911,6 +2919,7 @@ cases=(
     t_go_without_a_board_skips_the_move
     t_go_existing_branch_stops_before_the_board
     t_go_stops_on_each_init_failure
+    t_go_container_failure_says_how_to_retry
     t_go_passes_kind_and_yes_to_issue
     t_go_keychain_locked_makes_no_other_call
     t_go_never_passes_bare
