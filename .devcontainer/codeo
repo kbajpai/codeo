@@ -9,6 +9,7 @@
 # a usage on stderr, exits 2 and runs nothing. Add a command by writing a cmd_<name> function and
 # listing its name in the case in main.
 set -euo pipefail
+CODEO_VERSION=1.0.11
 
 # die <message> [code]: print "codeo: <message>" on stderr and exit with code (default 1).
 die() {
@@ -29,6 +30,7 @@ usage: codeo <command> [args]
   default [container|sandbox]                                       show or set the default kind for issue
   update                                                            update codeo and its scripts
   help                                                              show this help
+  --version, -v    print the codeo version
 USAGE
     [[ -z "${1:-}" ]] || echo "codeo: $1" >&2
     exit 2
@@ -68,6 +70,12 @@ abs_path_env() {
     export "$1=$PWD/$v"
 }
 
+# cmd_version: print "codeo <version>" on stdout.
+cmd_version() {
+    [[ $# -eq 0 ]] || usage
+    echo "codeo $CODEO_VERSION"
+}
+
 # cmd_help: print the commands on stdout, and the PATH line when ~/.local/bin is not on PATH.
 cmd_help() {
     [[ $# -eq 0 ]] || usage
@@ -83,6 +91,7 @@ codeo: work a GitHub issue in a dev container or an sbx sandbox.
   codeo default [container|sandbox]                                       show or set the default kind for issue
   codeo update                                                            update codeo and its scripts
   codeo help                                                              show this help
+  --version, -v    print the codeo version
 
 codeo list prints what it can; when docker or sbx fails to list it warns on stderr and exits 1.
 HELP
@@ -803,6 +812,7 @@ main() {
         default) cmd_default "$@" ;;
         update) cmd_update "$@" ;;
         help | -h | --help) cmd_help "$@" ;;
+        --version | -v) cmd_version "$@" ;;
         *) usage ;;
     esac
 }

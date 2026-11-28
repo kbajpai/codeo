@@ -2023,6 +2023,40 @@ t_usage_and_help_list_yes() {
     grep -qF '[--container|--sandbox] [--yes]' <<<"$cm_err" || fail "usage lacks --yes: $cm_err"
 }
 
+t_version_flags_print_the_constant() {
+    cm_setup "$current"
+    local f
+    for f in --version -v; do
+        cm_run "$f"
+        [[ "$cm_status" -eq 0 ]] || fail "$f: exit $cm_status, want 0"
+        [[ "$cm_out" == "codeo 1.0.11" ]] || fail "$f: stdout '$cm_out', want 'codeo 1.0.11'"
+        [[ -z "$cm_err" ]] || fail "$f: stderr '$cm_err', want empty"
+        [[ ! -s "$cm_dir/calls" ]] || fail "$f: made calls: $(cat "$cm_dir/calls")"
+    done
+}
+
+t_version_equals_plugin_json() {
+    local want got f
+    want=$(jq -r .version "$repo/.claude-plugin/plugin.json")
+    for f in .devcontainer/codeo templates/containers/.devcontainer/codeo; do
+        got=$(sed -n 's/^CODEO_VERSION=//p' "$repo/$f")
+        [[ "$got" == "$want" ]] || fail "$f: CODEO_VERSION is '$got', plugin.json says '$want'"
+    done
+}
+
+t_version_extra_args_usage() {
+    expect_usage --version x
+    expect_usage -v x
+}
+
+t_help_and_usage_list_version() {
+    cm_setup "$current"
+    cm_run help
+    grep -qF -- '--version, -v' <<<"$cm_out" || fail "help lacks --version: $cm_out"
+    cm_run
+    grep -qF -- '--version, -v' <<<"$cm_err" || fail "usage lacks --version: $cm_err"
+}
+
 # rm_stubs_152: rm_stubs for issue 152 (the stub names codeo-5).
 rm_stubs_152() {
     rm_stubs
@@ -2315,6 +2349,10 @@ cases=(
     t_issue_yes_passthrough
     t_yes_refused_elsewhere
     t_usage_and_help_list_yes
+    t_version_flags_print_the_constant
+    t_version_equals_plugin_json
+    t_version_extra_args_usage
+    t_help_and_usage_list_version
     t_rm_container_marks
     t_rm_refused_marks_nothing
     t_rm_kept_volume_marks_container_and_image
