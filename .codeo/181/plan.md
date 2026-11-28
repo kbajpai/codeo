@@ -85,6 +85,7 @@ I recommend `CHANGELOG.md`.
 **Options:** proceed and coordinate (recommended) · sequence after #217 · re-scope.
 
 **Answer:**
+Proceed and coordinate, as recommended. Given in the conversation: "go with ur picks".
 
 ## Notes
 
