@@ -6,7 +6,7 @@ Config schema: 1 (unchanged)
 Shared state: `codeo done` writes the existing `.codeo/intake/cleanup/removed/<N>.md` record through `cleanup.sh record`; `init.md` may gain the `approved in advance … (--approved)` line under `## Notes`
 Safe to bump mid-workflow: yes, run `codeo update`
 
-- The `codeo` host command gains `codeo go <N>` (starts a fresh issue from the home clone: keychain, home, branch, board, headless `/codeo:init #<N> --approved`, verify, container), `codeo done <N>` (runs `cleanup.sh prove`, then the safe `codeo rm`, then records the removal), `codeo --version` (`CODEO_VERSION`, equal to the plugin version) and a verbose `codeo update` (a line per file and `version: <old> -> <new>`); `/codeo:init` accepts `--approved` and `cleanup.sh` has a `prove <N>` mode (#217).
+- The `codeo` host command gains `codeo go <N>` (starts a fresh issue from the home clone: keychain, home, branch, board, headless `/codeo:init #<N> --approved`, verify, container), `codeo done <N>` (runs `cleanup.sh prove`, then the safe `codeo rm`, then records the removal), `codeo --version` (`CODEO_VERSION`, equal to the plugin version) and a verbose `codeo update` (a line per file and `version: <old> -> <new>`), and `go` creates the home directory when it is missing, reads the board's configured Ready name, and prints `sandbox: codeo-<N>` for a sandbox; `/codeo:init` accepts `--approved` and `cleanup.sh` has a `prove <N>` mode (#217).
 
 ## v1.0.11 — 2026-11-27
 
