@@ -28,6 +28,14 @@ The verdict this send-back follows is `qc.md` round 2, clear. A merge that keeps
 
 qc round at review: 2
 
+### Round 2 — pull request opened
+
+2026-11-28
+#221 https://github.com/kbajpai/codeo/pull/221
+
+Went out on `qc.md` round 3, `**Verdict: clear — forward to \`/codeo:close\`.**` (newer than the `qc round at review: 2` above). No override.
+
 ## Log
 
 - 2026-11-28 — found the branch conflicts with origin/main in CHANGELOG.md; round 1 (conflicts with main) written, back to implement; board: not touched · cost: 0m · sonnet-5-5 23k in + 1.1M cached / 1k out
+- 2026-11-28 — opened pull request #221 on the clear round 3; dossier archived; board: In progress → In review on #217 · cost: 0m · sonnet-5-5 27k in + 505k cached / 2k out
