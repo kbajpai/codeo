@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q7 are answered (all as recommended). The draft plan is at `.codeo/217/plan-draft.md` (9 tasks, one pull request), waiting at the review gate. Once approved it is written to `docs/plans/2026-11-28-codeo-go-done-217.md`, unstaged, and the footprint and outcome follow.
+Round 1. The plan is approved and written to `docs/plans/2026-11-28-codeo-go-done-217.md` (unstaged, for review). `overlap.sh` printed seven overlaps with #207 that Q7 did not quote token by token; Q8 asks to confirm them. The outcome is written once Q8 is answered.
 
 ## Questions
 
@@ -112,6 +112,14 @@ The inventory hash (`tests/fixtures/skills-inventory.rules.sha256`) is one line 
 
 **Answer:**
 Proceed and coordinate. As recommended. Given in the conversation: "Go with your picks".
+
+### Q8 — Confirm the overlap with #207, token by token
+
+**Why it matters:** Q7 answered the overlap in prose, but `overlap.sh` recognises a pair as raised only when a question quotes `#207` and each printed token, and it printed seven: `glob:README.md`, `glob:docs/release-checklist.md`, `glob:docs/skills-inventory.md`, `glob:docs/skills.md`, `glob:skills/init/SKILL.md`, `glob:tests/fixtures/skills-inventory.rules.sha256` and `glob:tests/init-skill.test.sh`. The other workflow is `#207`, branch `feat/207-stop-parallel-issues-colliding-shared`, assignee kbajpai, at `plan` (working), waiting on `/codeo:implement`. Both branches edit the same init skill text and the same pinned inventory hash, so whichever merges second regenerates the hash (`bash tests/inventory.test.sh --update`) and re-reads the skill after a merge of `main`.
+
+**Options:** proceed and coordinate (recommended, as Q7) · sequence after #207 · re-scope.
+
+**Answer:**
 
 ## Notes
 
