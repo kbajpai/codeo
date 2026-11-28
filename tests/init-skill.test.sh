@@ -86,6 +86,13 @@ step_contains "step 9 records it under Notes" 9 '## Notes'
 
 step_contains "the resume path records a failed assignee-add" 6 'assignee-add failed'
 
+# #207: init informs — it names each other workflow holding a lease, and decides nothing.
+step_contains "step 3 names the workflows that hold a resource" 3 'whose `exclusive:` is not `none`'
+step_contains "step 3 takes them from inflight.sh" 3 '`inflight.sh`'"'"'s footprint lines'
+step_contains "step 3 prints the holds line" 3 '`#<M> holds <resources>`'
+step_contains "step 3 asks nothing and blocks nothing" 3 'asks nothing and blocks nothing'
+step_contains "step 3 leaves the overlap to plan" 3 'decided at `/codeo:plan`'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

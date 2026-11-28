@@ -108,6 +108,11 @@ is the container the message names.
    check applies too. `overlap.sh` has nothing to compare
    yet — no branch, no footprint — so `init`'s check is `inflight.sh` alone, deliberately.
 
+   `inflight.sh`'s footprint lines also give each workflow's `exclusive:` and `sequenced:`. `init`
+   names every other workflow whose `exclusive:` is not `none` — one line each, `#<M> holds
+   <resources>` — before it cuts the branch. That is information only: it asks nothing and blocks
+   nothing. The overlap itself is decided at `/codeo:plan`, where there is a footprint to compare.
+
    **Check the board says it is Ready — when there is a board.** Whether one is configured is
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/config.sh" get .board`: exit 1 with nothing printed means
    the project has none. Then say once, in this turn's output, that no board is configured, so the
