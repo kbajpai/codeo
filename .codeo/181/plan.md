@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. Q1-Q5 are answered (every recommendation taken). The plan is drafted in `.codeo/181/plan-draft.md` and awaits the engineer's approval; nothing is written under `docs/plans/` before that.
+Round 1. Q1-Q5 are answered and the plan is approved and saved, unstaged, as `docs/plans/2026-11-28-session-title-sequence-181.md`. The footprint is committed; the overlap check printed #217's two shared files, raised as Q6. `## Outcome` stays pending until Q6 is answered.
 
 ## Questions
 
@@ -78,6 +78,14 @@ I recommend `CHANGELOG.md`.
 **Answer:**
 `CHANGELOG.md`, as recommended. Given in the conversation: "go with your picks".
 
+### Q6 — Overlap check on the written footprint: #217 shares `glob:CHANGELOG.md` and `glob:.devcontainer/README.md`. Proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh` ran on the footprint as written and printed `217	glob:.devcontainer/README.md` and `217	glob:CHANGELOG.md`; it counts a pair as raised only when a question quotes the issue and the token, and Q4 did not. This is the same overlap Q4 answered with *proceed and coordinate*. #217 is `feat/217-add-codeo-go-codeo-done`, assignee kbajpai, at step `plan` (working). The plan edits the title bullet in `.devcontainer/README.md` and adds a `## Unreleased` section to `CHANGELOG.md`; #217's edits are to its `codeo go` and `codeo done` text. If you want the answer to be the same as Q4, "same as Q4" is enough.
+
+**Options:** proceed and coordinate (recommended) · sequence after #217 · re-scope.
+
+**Answer:**
+
 ## Notes
 
 ### Footprint
@@ -101,3 +109,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-28 — Q1-Q5 raised · cost: 1m · fable-5-2 82k in + 566k cached / 7k out
+- 2026-11-28 — Q6 raised (overlap with #217) · cost: 23m · fable-5-2 91k in + 897k cached / 11k out · sonnet-5-5 109k in + 873k cached / 17k out
