@@ -95,6 +95,14 @@ is the container the message names.
    line it printed — tracked changes in the tree, or a merge that failed without a conflict — and
    stop.
 
+   <!-- rule: qc-16 -->
+   After the sync, whatever its exit, the round records the base commit it graded: a line
+   `Graded base: <sha>`, the sha from `git rev-parse origin/<base>`, on a line of its own in the
+   round. When the sync printed `sync-main: merged origin/<base> (<n> commit(s))`, the round also
+   says `Behind: merged <n> commit(s) from origin/<base> before grading`, with that `<n>`; when the
+   branch already contained `origin/<base>`, no `Behind:` line is written. `/codeo:close` reads the
+   latest `Graded base:` line to see whether `<base>` moved since.
+
    Then `bash "${CLAUDE_PLUGIN_ROOT}/scripts/overlap.sh" <N>`. Each line it prints is an overlap not
    already raised in this issue's dossiers, and becomes a numbered question in `qc.md`: quote `#M`
    and the printed `what` verbatim, with the other issue's branch, assignee and step from

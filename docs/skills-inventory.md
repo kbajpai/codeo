@@ -92,6 +92,7 @@ in prose exist (only the script's existence is checked).
 - [qc-13] A missing lease or deploy identity means "not yet checkable"; an orphan is non-blocking.
 - [qc-14] A refusal from the role check ends the step; no override.
 - [qc-15] Step 0 runs `lock.sh verify`: exit 1 prints its line and stops; `--override` only on the engineer's explicit words.
+- [qc-16] Each round records the `origin/<base>` commit it graded on a `Graded base: <sha>` line, and a round that merged base commits first says how many.
 
 ## close
 

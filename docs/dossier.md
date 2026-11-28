@@ -336,6 +336,11 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
   `Lease not held: <line>`, `Environment released at the clear verdict: <output>` and
   `Environment NOT released: <output>` in a `qc.md` round. None is required; each, when present,
   starts its line in exactly that form.
+- **What a round graded.** Each `qc.md` round has `Graded base: <sha>` as a bare line, the
+  `origin/<base>` commit the round graded; `scripts/base-moved.sh` reads the latest such line in
+  the file. A round that merged base commits before grading also has
+  `Behind: merged <n> commit(s) from origin/<base> before grading`; it is optional and absent when
+  the branch already contained base. The dossier checker does not check either line.
 
 A `qc.md` criteria table, for an imaginary shop's order export:
 
