@@ -183,7 +183,7 @@ in prose exist (only the script's existence is checked).
 
 - [close-17] Archive and push the dossier before opening the pull request.
 
-- [close-18] A `BEHIND` branch is brought up to date only when `base-moved.sh` prints no path; a path both sides changed since the graded base goes back to `/codeo:qc`.
+- [close-18] Before a moved base is merged, or when the branch already holds it, `base-moved.sh` names the graded files the base changed since; any path is a send-back to `/codeo:implement` as a `— base moved` round, never a merge.
 
 ## triage
 

@@ -1,6 +1,6 @@
 ---
 name: close
-description: End a codeo workflow — open the pull request, wait for the engineer to merge it, route review feedback or a conflict with the base branch back through /codeo:implement and /codeo:qc, release the shared environment at approval when it is still held, then prove the merge, delete the remote branch on the engineer's yes, sweep the issue's leftover live-signal branches (a hosted web session deletes none: it cannot delete a branch), release every lease and the lock. Also the way to stash a workflow (park it, Ready to start again), and to abandon one whose pull request was closed unmerged (back to the backlog). Trigger on "close", "close the workflow", "open the PR", "it's merged", "clean up", "stash this", or right after /codeo:qc returns a clear verdict. Never merges the PR and never writes code.
+description: End a codeo workflow — open the pull request, wait for the engineer to merge it, route review feedback, a conflict with the base branch or a moved base that touched graded files back through /codeo:implement and /codeo:qc, release the shared environment at approval when it is still held, then prove the merge, delete the remote branch on the engineer's yes, sweep the issue's leftover live-signal branches (a hosted web session deletes none: it cannot delete a branch), release every lease and the lock. Also the way to stash a workflow (park it, Ready to start again), and to abandon one whose pull request was closed unmerged (back to the backlog). Trigger on "close", "close the workflow", "open the PR", "it's merged", "clean up", "stash this", or right after /codeo:qc returns a clear verdict. Never merges the PR and never writes code.
 argument-hint: "[optional: --stash to park the workflow instead of finishing it]"
 model: sonnet
 ---
@@ -116,8 +116,8 @@ is the container the message names.
    | No pull request, dossier under `.codeo/done/<N>/` at `HEAD` | → **Phase 1, resumed after the archive push** — run steps 2, 3 and 5 onward (step 4 is skipped: the archive is pushed) |
    | `state` is `open`, dossier under `.codeo/done/<N>/`, no round in `close.md` records this pull request | → **Phase 1, resumed after `pr create`** — run steps 2–3, then 6–8 (steps 4–5 are skipped): record it from this lookup (step 6) and commit and push it (step 7), then hand off (step 8) |
    | `state` is `open`, dossier under `.codeo/done/<N>/` | → **Phase 2 — waiting** |
-   | `state` is `open`, dossier at `.codeo/<N>/`, and either a round records this pull request and no `— review feedback` or `— conflicts with <base>` round comes after it, or no round records it, whatever other rounds exist (a `— conflicts with <base>` round with no record predates the pull request) | → **Phase 1, first open resumed** by an older plugin or a pull request opened by hand — step 5 skipped; steps 2 and 3, then 6, 4, 7 and 8, in that order, step 5 skipped (the verdict gate and the tree and conflict checks still run), archive and record in one commit |
-   | `state` is `open`, dossier at `.codeo/<N>/`, a round records this pull request and a `— review feedback` or `— conflicts with <base>` round comes after it (the dossier is back from a send-back) | → **Phase 1 — return from review** |
+   | `state` is `open`, dossier at `.codeo/<N>/`, and either a round records this pull request and no `— review feedback`, `— conflicts with <base>` or `— base moved` round comes after it, or no round records it, whatever other rounds exist (a `— conflicts with <base>` round with no record predates the pull request) | → **Phase 1, first open resumed** by an older plugin or a pull request opened by hand — step 5 skipped; steps 2 and 3, then 6, 4, 7 and 8, in that order, step 5 skipped (the verdict gate and the tree and conflict checks still run), archive and record in one commit |
+   | `state` is `open`, dossier at `.codeo/<N>/`, a round records this pull request and a `— review feedback`, `— conflicts with <base>` or `— base moved` round comes after it (the dossier is back from a send-back) | → **Phase 1 — return from review** |
    | `state` is `closed` and `merged_at` is set | → **Phase 3 — clean up** |
    | `state` is `closed` and `merged_at` is empty, or `HEAD`'s `close.md` ends in a `— abandoned` round while the lock is held | → **Closed unmerged** |
 
@@ -132,7 +132,7 @@ is the container the message names.
    counts as not recorded. That run takes the "resumed after `pr create`" row, step 3 keeps the modified
    `.codeo/done/<N>/close.md` as it stands, step 6 adds no second round, and step 7 commits it.
    The first-open-resumed row is the open pull request with the dossier at `.codeo/<N>/` and no round recording it
-   in `close.md`, or a recording round with no `— review feedback` or `— conflicts with <base>` round after it;
+   in `close.md`, or a recording round with no `— review feedback`, `— conflicts with <base>` or `— base moved` round after it;
    a conflict round from before the pull request existed does not make a return from review. That is the first open resumed, not a return from review: the pull
    request exists, so step 5 is skipped, and the archive rides in step 7's one commit with the record. A conflict found at step 3
    un-archives in its own send-back commit only when no pull request exists yet (the "resumed after the archive push" row), as step 11 does; when a pull request is open, step 3 sends nothing back and step 11 does, from the next run. A merged pull request cannot be
@@ -169,14 +169,14 @@ is the container the message names.
    <!-- rule: close-03 -->
    After a send-back from this skill, the clear round must be newer than the send-back:
    `/codeo:qc` has to have seen the changes the review or the conflict asked for. Every send-back
-   round this skill writes in `close.md` — `— review feedback` and `— conflicts with <base>` alike —
+   round this skill writes in `close.md` — `— review feedback`, `— conflicts with <base>` and `— base moved` alike —
    records the line `qc round at review: <k>`, where `<k>` is the number of the latest `### Round`
    in `qc.md`'s `## Outcome` when it was written. The clear round's number must be greater than the
    highest `<k>` recorded in `close.md`; equal or lower means `/codeo:qc` has not run since the
    send-back, which is a stop routed to `/codeo:qc`.
    Before that stop, `git fetch origin` and `git log --format=%s @{u}..HEAD`: when the send-back's
-   own commit (`docs(codeo): close dossier for #<N> — review feedback`, or
-   `— conflicts with <base>`) is among the commits ahead, its push failed and `/codeo:implement`
+   own commit (`docs(codeo): close dossier for #<N> — review feedback`,
+   `— conflicts with <base>` or `— base moved`) is among the commits ahead, its push failed and `/codeo:implement`
    has never seen the round. `git push`, and on success hand off to `/codeo:implement` as step 11
    (or step 3) does; on failure report it as that step does and stop. Routing this to `/codeo:qc`
    would let a clear round on unchanged code pass the review. With no `qc round at review:` line in
@@ -205,7 +205,9 @@ is the container the message names.
    step 9's base-branch merge — so say so and `git push` them. Any other commit ahead is work
    `/codeo:qc` never judged: name it, stop, and route to `/codeo:qc`. Behind and not ahead — on a return from review, an
    *Update branch* merge GitHub made while the pull request was open — means `git pull --ff-only`
-   first, so nothing is committed on a stale tip. Ahead and behind both is a stop: name both sides
+   first, so nothing is committed on a stale tip. That pull brings the base in, which does
+   not settle whether QC graded the files it changed: step 9's moved-base check runs on the next
+   pass regardless. Ahead and behind both is a stop: name both sides
    and ask. A branch with no upstream at all is a stop.
 
    **It still merges.** Other workflows merge to `<base>` while this one runs. Run
@@ -384,34 +386,39 @@ is the container the message names.
    `null` while GitHub is still working it out: say so, and read it again on the next invocation
    rather than waiting here. Until a send-back at step 11, this phase writes nothing to `close.md`
    — a dossier commit now would be a push onto a review in progress — and nothing in this step
-   changes anything, except the first checks above and the two cases below.
+   changes anything, except the first checks above and the three cases below.
    <!-- rule: close-18 -->
-   - **`BEHIND`** — the base branch moved since the last push, and where it requires branches to
-     be up to date, that blocks the merge. Bringing the branch up to date is mechanical when the
-     merge is clean, so it happens here, on the clean, up-to-date tree the first checks left. If
-     the pull above already brought in the engineer's *Update branch* merge, it is done. Otherwise
-     run `git merge-tree --write-tree --name-only origin/<base> HEAD` as at step 3; exit 1 is a
-     conflict, which goes to step 11 like `CONFLICTING` and is never resolved here. On exit 0, a
-     clean merge is still not enough: QC graded this branch against the base as it stood then, so
-     before merging run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/base-moved.sh" <N>`, which prints
-     every file this branch changed that the base changed since QC graded it. Its stdout
-     carries only paths, one per line; the exit-1 and exit-4 lines are on stderr. Act on its exit:
-     - Exit 0, nothing moved under a graded file: `git merge --no-edit origin/<base>` and
-       `git push`, which runs the checks again.
+   - **A moved base** — QC graded this branch against the base as it stood then, so on every pass
+     of step 9, after the pull above and whether or not the branch is `BEHIND`, run
+     `bash "${CLAUDE_PLUGIN_ROOT}/scripts/base-moved.sh" <N>`, which prints every file this branch
+     changed that the base changed since QC graded it. It holds after an *Update branch* merge
+     too, since it compares the graded commit with `origin/<base>` and the branch's own changes.
+     Its stdout carries only paths, one per line; the exit-1 and exit-4 lines are on stderr. Act
+     on its exit:
+     - Exit 0, nothing moved under a graded file: carry on to the `BEHIND` handling below.
      - Exit 4, the last QC round has no `Graded base:` line: carry on exactly as for exit 0, and
        tell the engineer in one line that the QC round predates `Graded base:`, so the moved base
        could not be compared.
      - Exit 3, paths printed: merge nothing. Name each printed path, and say QC graded those
-       files before the base changed them. Write nothing to `close.md` — this phase writes
-       nothing until a send-back — and stop with the route `/codeo:qc`: it syncs `origin/<base>`
-       itself, so the merged tree is graded and its new round's `Graded base:` replaces the old
-       one; then close again.
+       files before the base changed them. This is a send-back to `/codeo:implement`, made at
+       step 11 as a `— base moved` round — `/codeo:qc` reads `.codeo/<N>/` only, and the dossier
+       is archived under `.codeo/done/<N>/` while the pull request is open. `/codeo:implement`
+       merges the base (its step 2a) and re-checks the named files, then `/codeo:qc` grades the
+       merged tree and its new round's `Graded base:` replaces the old one; then close again.
      - Exit 1, anything else: stop, quoting the stderr line.
+   - **`BEHIND`** — the base branch moved since the last push, and where it requires branches to
+     be up to date, that blocks the merge. Bringing the branch up to date is mechanical when the
+     merge is clean, so it happens here, on the clean, up-to-date tree the first checks left, and
+     only after the moved-base check above came back exit 0 or 4. If the pull above already
+     brought in the engineer's *Update branch* merge, it is done. Otherwise run
+     `git merge-tree --write-tree --name-only origin/<base> HEAD` as at step 3; exit 1 is a
+     conflict, which goes to step 11 like `CONFLICTING` and is never resolved here. On exit 0,
+     `git merge --no-edit origin/<base>` and `git push`, which runs the checks again.
    - **`CONFLICTING`** — a parallel workflow merged first. It is a send-back exactly like step 3's,
      made at step 11.
 
-   Then step 10 runs when the review approved, and step 11 when it asked for changes or the branch
-   conflicts. Otherwise stop here, and offer step 8's watch again — after an approval, the
+   Then step 11 when the review asked for changes, the branch conflicts or the moved-base check
+   printed paths, otherwise step 10 when the review approved. Otherwise stop here, and offer step 8's watch again — after an approval, the
    merge-only one, which ends on `.state != "open"` alone (on a `web` host, only running
    `/codeo:close` again, as step 8 says).
 
@@ -436,9 +443,9 @@ is the container the message names.
     review round that needs the environment again takes it again, behind whoever is waiting
     (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → Parallel workflows`).
 
-11. **Review asked for changes, or the branch conflicts with `<base>`?** When `review_decision` is
-    `CHANGES_REQUESTED`, when the engineer says review feedback needs acting on, or when step 9
-    found a conflict, this is a send-back to `/codeo:implement`, under the same rule as
+11. **Review asked for changes, the branch conflicts with `<base>`, or the base moved?** When
+    `review_decision` is `CHANGES_REQUESTED`, when the engineer says review feedback needs acting
+    on, when step 9 found a conflict, or when step 9's moved-base check printed paths, this is a send-back to `/codeo:implement`, under the same rule as
     `/codeo:qc`'s: name what must change and stop; **never start the fixing** — not a one-line
     fix, not a suggested patch.
     - Collect the feedback verbatim: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr reviews <PR>`
@@ -446,11 +453,12 @@ is the container the message names.
       verdicts and the conversation, and
       `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr review-comments <PR>` for the inline
       comments, each with its `html_url`. For a conflict, collect the files and the changes on
-      `<base>` that touched them instead, as at step 3.
-    - Add `### Round <n> — review feedback` (or `### Round <n> — conflicts with <base>`) to
+      `<base>` that touched them instead, as at step 3. For a moved base, the paths `base-moved.sh` printed.
+      The round has no review points, so the paths stand in for them.
+    - Add `### Round <n> — review feedback` (or `### Round <n> — conflicts with <base>`, or `### Round <n> — base moved`) to
       `close.md`'s `## Outcome` — the next round after the highest `### Round` already there —
       with the date as its first line; then each point verbatim with its link (or each file with
-      its log); then the line `qc round at review: <k>`, where `<k>` is the number of the latest
+      its log, or each path `base-moved.sh` printed, one per line); then the line `qc round at review: <k>`, where `<k>` is the number of the latest
       `### Round` in `qc.md`'s `## Outcome` now, which step 2 compares the next clear round
       against. This round is what `/codeo:implement` reads after the send-back.
     - Un-archive: `git mv .codeo/done/<N> .codeo/<N>`. The dossier's place is what tells every
@@ -465,10 +473,11 @@ is the container the message names.
       `bash "${CLAUDE_PLUGIN_ROOT}/scripts/usage.sh" close` prints. Commit, staged by name — the
       rename `git mv` staged, and `.codeo/<N>/close.md` — with the subject
       `docs(codeo): close dossier for #<N> — review feedback` (or `— conflicts with <base>`), and
-      push. A failed push is reported loudly and the commit kept, and there is no hand-off until
+      push; a moved base's subject is `docs(codeo): close dossier for #<N> — base moved`. A failed push is reported loudly and the commit kept, and there is no hand-off until
       it lands: `/codeo:implement` reads the round from origin. Say what failed, and that the
       round reaches `/codeo:implement` once `git push` from this checkout succeeds.
-    - Hand off to `/codeo:implement` and stop. It works the feedback, `/codeo:qc` runs its whole
+    - Hand off to `/codeo:implement` and stop. It works the feedback (for a moved base, it merges
+      the base at its step 2a and re-checks each named file against the plan), `/codeo:qc` runs its whole
       pass again, and this skill comes back through Phase 1's return path
       (`${CLAUDE_PLUGIN_ROOT}/docs/handoff.md → A send-back`). End with the closing block: the
       goal is the requested changes, then `/codeo:implement`, `/codeo:qc`, `/codeo:close`.
@@ -807,8 +816,8 @@ ran.
   abandon, Done once the merge is verified. Each move is part of its step, never a gate on it.
 - **Never touches** code, tests, documentation pages, the plan's text, the issue's text, another
   skill's dossier file, or the base branch.
-- **Hands off to** `/codeo:implement` when review asks for changes or the branch conflicts with
-  the base branch — a send-back; otherwise nobody. The workflow ends when the merged branch is
+- **Hands off to** `/codeo:implement` when review asks for changes, the branch conflicts with
+  the base branch, or the base changed files QC graded — a send-back; otherwise nobody. The workflow ends when the merged branch is
   cleaned up and the lock released.
 - **Spins out subagents** on the configured subagent model (`$SUBAGENT_MODEL`: `models.subagent`,
   sonnet when unset), passed explicitly on every dispatch, and prefers a direct `grep`/`Read` over

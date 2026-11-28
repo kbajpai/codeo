@@ -175,7 +175,7 @@ if step 1 | grep -qF 'a send-back round with no record is a return from review';
 if step 1 | grep -qF 'round at all'; then fail "step 1 still keys the first open resumed on there being no send-back round at all"; fi
 step_contains "no round records the pull request: a first open resumed, whatever other rounds exist" 1 'or no round records it, whatever other rounds exist'
 step_contains "a conflict round with no record predates the pull request" 1 'a `— conflicts with <base>` round with no record predates the pull request'
-step_contains "only a recorded pull request followed by a send-back round is a return from review" 1 'a round records this pull request and a `— review feedback` or `— conflicts with <base>` round comes after it'
+step_contains "only a recorded pull request followed by a send-back round is a return from review" 1 'a round records this pull request and a `— review feedback`, `— conflicts with <base>` or `— base moved` round comes after it'
 step_contains "the prose reads the first open resumed from the record" 1 'is the open pull request with the dossier at `.codeo/<N>/` and no round recording it'
 step_contains "a conflict round before the pull request does not make a return from review" 1 'a conflict round from before the pull request existed does not make a return from review'
 
@@ -199,19 +199,26 @@ step_contains "an Update-branch merge on GitHub is pulled fast-forward" 9 'git p
 step_contains "conflicting is a send-back" 9 '`CONFLICTING`'
 step_contains "a conflicting pull request goes to step 11" 9 'step 11'
 
-# Step 9's BEHIND bullet: a moved base that touched a graded file goes back to qc (close-18).
+# Step 9: a moved base that touched a graded file is a send-back through step 11 (close-18). The
+# check runs on every pass after the pull, whether or not the branch is BEHIND.
+s9=$(step 9 | tr '\n' ' ' | tr -s ' ')
+check=$(step 9 | awk '/^   <!-- rule: close-18 -->/{f=1} /^   - \*\*`BEHIND`\*\*/{f=0} f' | tr '\n' ' ' | tr -s ' ')
+[[ -n $check ]] || fail "step 9 has no moved-base check before its BEHIND bullet"
+must_contain 'close-18 rule marker' '<!-- rule: close-18 -->'
+text_order 'base-moved.sh runs after the pull' "$s9" 'git pull --ff-only' 'scripts/base-moved.sh" <N>'
+text_order 'base-moved.sh runs before the BEHIND handling' "$s9" 'scripts/base-moved.sh" <N>' '**`BEHIND`**'
+text_order 'base-moved.sh runs before any merge' "$s9" 'scripts/base-moved.sh" <N>' 'git merge --no-edit origin/<base>'
+for needle in 'every pass' 'whether or not' 'Exit 0' 'Exit 4' 'predates `Graded base:`' 'Exit 3' 'merge nothing' \
+    'Name each' 'graded those files before the base changed them' '`— base moved`' 'step 11' \
+    '`/codeo:implement`' 'Exit 1' 'quoting the stderr line' 'stdout carries only paths' 'on stderr'; do
+    [[ $check == *"$needle"* ]] || fail "moved-base check has no [$needle]"
+done
+text_order 'exit 3 goes to step 11 after naming the paths' "$check" 'Exit 3' 'step 11'
+[[ $s9 != *'Write nothing to `close.md`'* ]] || fail "step 9 still says exit 3 writes nothing to close.md"
+[[ $s9 != *'stop with the route `/codeo:qc`'* ]] || fail "step 9 still routes exit 3 to /codeo:qc"
 behind=$(step 9 | awk '/^   - \*\*`BEHIND`\*\*/{f=1} /^   - \*\*`CONFLICTING`\*\*/{f=0} f' | tr '\n' ' ' | tr -s ' ')
 [[ -n $behind ]] || fail "step 9 has no BEHIND bullet"
-must_contain 'close-18 rule marker' '<!-- rule: close-18 -->'
-text_order 'BEHIND runs base-moved.sh after the merge-tree check' "$behind" 'git merge-tree --write-tree --name-only origin/<base> HEAD' 'scripts/base-moved.sh" <N>'
-text_order 'BEHIND runs base-moved.sh before the merge' "$behind" 'scripts/base-moved.sh" <N>' 'git merge --no-edit origin/<base>'
-for needle in 'Exit 0' 'Exit 4' 'predates `Graded base:`' 'Exit 3' 'merge nothing' 'Name each' \
-    'graded those files before the base changed them' '`/codeo:qc`' 'then close again' \
-    'Write nothing to `close.md`' 'Exit 1' 'quoting the stderr line' \
-    'stdout carries only paths' 'on stderr'; do
-    [[ $behind == *"$needle"* ]] || fail "BEHIND bullet has no [$needle]"
-done
-text_order 'BEHIND exit 3 routes to qc after naming the paths' "$behind" 'Exit 3' '`/codeo:qc`'
+text_order 'BEHIND merge-tree check precedes the merge' "$behind" 'git merge-tree --write-tree --name-only origin/<base> HEAD' 'git merge --no-edit origin/<base>'
 
 # Step 10: the release at approval.
 step_contains "the release at approval is only for a lease still held" 10 'lease list'
@@ -223,6 +230,9 @@ step_contains "who is waiting is named" 10 'waiting'
 # Step 11: the send-back.
 step_contains "review feedback is a round" 11 '### Round <n> — review feedback'
 step_contains "a conflict is a round" 11 '— conflicts with <base>'
+step_contains "a moved base is a round" 11 '### Round <n> — base moved'
+step_contains "a base-moved round lists the paths base-moved.sh printed" 11 'base-moved.sh'
+step_contains "a base-moved send-back names its subject" 11 'close dossier for #<N> — base moved'
 step_contains "the send-back round records the qc round line" 11 'qc round at review: <k>'
 step_contains "the feedback is collected verbatim" 11 'verbatim'
 step_contains "the reviews are read" 11 'github.sh" pr reviews <PR>'

@@ -833,6 +833,15 @@ w_dossier 51 close '# close
 ## Log
 
 - 2026-11-10 — closed round 1'
+w_dossier 89 close '# close
+
+## Outcome
+
+### Round 1 — base moved
+
+## Log
+
+- 2026-11-10 — closed round 1'
 w_dossier 60 close '# close
 
 ## Outcome
@@ -951,6 +960,9 @@ assert_contains "line" "  waits:     /codeo:close" "$(w_block 50)"
 
 case_desc="waits_after_conflicts_with_base"
 assert_contains "line" "  waits:     /codeo:implement" "$(w_block 51)"
+
+case_desc="waits_after_base_moved"
+assert_contains "line" "  waits:     /codeo:implement" "$(w_block 89)"
 
 case_desc="waits_close_log_is_not_read_as_a_round"
 assert_contains "no k, qc owed" "  waits:     /codeo:qc" "$(w_block 60)"

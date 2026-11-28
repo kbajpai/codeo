@@ -107,7 +107,10 @@ is the container the message names.
    from `/codeo:close` with review feedback on the pull request, the latest review round in
    `.codeo/<N>/close.md`'s. A send-back for a conflict with the base branch — a parallel workflow
    merged first — is work like any other, and step 2a already did its merge: record what was
-   resolved and how in this round's outcome, under step 2a's rule on rebasing. Either way, invoke
+   resolved and how in this round's outcome, under step 2a's rule on rebasing. A `— base moved` round is
+   the other way a base change comes back: the base changed files QC graded, and step 2a merged it;
+   re-check each named file against the plan, record the check in this round's outcome
+   (no code change may be needed), then `/codeo:qc` grades the merged tree. For every kind of send-back, invoke
    `superpowers:receiving-code-review` via the Skill tool before touching code, and check each
    finding against the code and the plan rather than agreeing with it on sight. A finding that
    holds becomes work in this round. One that does not — wrong about the code, or asking for
@@ -317,7 +320,8 @@ is the container the message names.
 `${CLAUDE_PLUGIN_ROOT}/docs/handoff.md` is the protocol; this is this skill's half of it.
 
 - **Reads** the committed plan file, `.codeo/<N>/init.md` and `plan.md`, `qc.md` or `close.md`
-  when sent back, the codebase, the pages under `$DOCS` (and the wiki pages, with the `wiki`
+  when sent back (the latest review round in `close.md` — which may be `— base moved`: the base
+  changed files QC graded), the codebase, the pages under `$DOCS` (and the wiki pages, with the `wiki`
   module) that the plan's documentation tasks name, the project's overlay sections for this skill,
   and every other in-flight workflow's footprint through `inflight.sh` and `overlap.sh`.
 - **Takes** the lease on `$ENV_RESOURCE`, when one is configured, at the first task that needs it,

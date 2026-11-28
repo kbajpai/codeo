@@ -69,7 +69,7 @@ dossier to degrade to; it has found that no workflow is running, and it stops.
 pull request, then records the pull request in `done/<N>/close.md` in a second commit. The archive
 merges with the change — nothing is committed to the base branch after the merge — and the first
 check run sees no live dossier. A
-send-back (review feedback or a conflict), a stash or an abandon moves it back to `.codeo/<N>/`; where the directory sits is how `close`
+send-back (review feedback, a conflict or a moved base), a stash or an abandon moves it back to `.codeo/<N>/`; where the directory sits is how `close`
 tells an open PR that is waiting from one whose review work is in flight. What sits at the top
 level is work someone is actively changing. Nothing is ever deleted — a closed issue's dossier is
 the best record of why it closed the way it did.
@@ -298,13 +298,14 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
   line. `qc.md` heads every round, from `### Round 1`, as `### Round <n> — <YYYY-MM-DD>`: the
   `qc-verdict` check finds the latest round by its heading. `close.md` heads every round from
   `### Round 1` too, as `### Round <n> — <what happened>` — `pull request opened`,
-  `review feedback`, `conflicts with <base>`, `pull request updated`, `stashed`, `abandoned` —
-  with the date as the round's first line.
+  `review feedback`, `conflicts with <base>`, `base moved`, `pull request updated`, `stashed`, `abandoned` —
+  with the date as the round's first line. A `— base moved` round lists the paths the base changed that QC graded, one per line, where a
+  review round lists its points.
 - **Send-backs.** A later `implement.md` or `plan.md` round, and `close.md`'s
   `— pull request updated` round, name what they answer in one parenthesis on the line after the
   date: `(send-back from <file> round <k>)` for a send-back — `(send-back from qc.md round 2)`,
   `(send-back from close.md round 3)` — and, in `implement.md`, `(after plan.md round <k>)` for a
-  round that follows a re-plan. `<k>` is the other file's round, not this one's. No other round
+  round that follows a re-plan. `<k>` is the other file's round, not this one's. The `close.md` round a send-back from `close.md` names is a `— review feedback`, `— conflicts with <base>` or `— base moved` round. No other round
   carries one: `close.md`'s `— pull request opened` round writes none, even after a
   `— conflicts with <base>` round from before the pull request existed. A send-back to
   `/codeo:plan` adds a round to `plan.md` like any other receiving step (`handoff.md` →
@@ -331,8 +332,8 @@ Each is stated here once; a skill's `SKILL.md` says when it writes one.
   line `#<number> <html_url>`, from `pr create`'s response; exactly one round carries that
   heading, and a return from review is `— pull request updated`. The round is written after the
   pull request exists, in the commit after the archive, or in the archive's own commit when the pull request
-  was opened before the archive. Every `— review feedback` or
-  `— conflicts with <base>` round carries the line `qc round at review: <k>`, `<k>` being the
+  was opened before the archive. Every `— review feedback`,
+  `— conflicts with <base>` or `— base moved` round carries the line `qc round at review: <k>`, `<k>` being the
   latest `qc.md` round when it was written.
 - **Form lines.** `Deployed revision: <x>` in `implement.md`, under `## Where this stands` or in
   an `## Outcome` round, and quoted by `qc.md` in its `#### Environment` block;
