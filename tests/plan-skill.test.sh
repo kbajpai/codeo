@@ -122,6 +122,11 @@ must_contain 'plan records the wait' 'lease wait <resource> <N>'
 must_contain 'locked is written for any exclusive overlap question, lease free or waited for' 'for any exclusive'
 must_contain 'locked is written with the answer, before the commit' 'whether the lease is taken at once or waited for'
 
+# Round 3: several sequenced clauses, and a suffix that names no lease.
+grep -qF -- 'separated by `; `' "$skill" || fail 'plan skill does not separate several sequenced clauses by "; "'
+grep -qF -- 'separated by `; `' "$dossier" || fail 'docs/dossier.md does not separate several sequenced clauses by "; "'
+must_contain 'a path with no wildcard segment names no lease' 'names no lease and is not listed under `exclusive:`'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

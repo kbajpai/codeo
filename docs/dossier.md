@@ -276,6 +276,7 @@ sequenced:  after #7 — both add an Orders migration (Q6)
   `rescoped — <what was dropped> because of #M (Q<k>)` when it dropped part of its scope,
   `locked — <resource> behind #M (Q<k>)` when an exclusive overlap is settled by the lease, taken at once or waited for,
   `Q<k>` being the question that decided it. `none` only when no overlap question was raised.
+  Several clauses on the line are separated by `; `.
   It is never left out: `dossier-check.sh` fails a block without it.
 
 A block written after a send-back covers the branch, not only the round: its `files` carry the

@@ -115,7 +115,7 @@ is the container the message names.
    when there is none, before it cuts the branch. A footprint only names what a plan intends to lease, so
    the footprint lines of `inflight.sh` are not read for this. That is information only: it asks nothing and blocks
    nothing; this issue's own rows are excluded, on a resume too; a failure of that read
-   (origin unreachable, no resources configured, a non-zero exit) is reported in one line and the step carries on.
+   (origin unreachable, a non-zero exit) is reported in one line and the step carries on.
    The overlap itself is decided at `/codeo:plan`, where there is a footprint to compare.
 
    **Check the board says it is Ready — when there is a board.** Whether one is configured is

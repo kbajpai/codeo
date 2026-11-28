@@ -255,7 +255,8 @@ is the container the message names.
    suffix is the path segment the first wildcard of the matching glob stands for, up to the next
    `/`: `skills/close/SKILL.md` under `skills/**` and
    `tests/close-skill.test.sh` under `tests/*-skill.test.sh` both give `skill:close`, and
-   a file matching several globs gives several entries. `exclusive:` never
+   a file matching several globs gives several entries. A path with no directory segment where the
+   wildcard stands (a file directly under `skills/`) names no lease and is not listed under `exclusive:`. `exclusive:` never
    lists `$ENV_RESOURCE`: the later steps lease the environment from its first task, not the plan.
    `sequenced:` is the fourth key and reads `none` when no overlap question was raised; step 10 fills it in
    when an overlap question is answered. A key with nothing under it says
@@ -324,6 +325,8 @@ is the container the message names.
        `rescoped — <what was dropped> because of #M (Q<k>)` for *re-scope*,
        `locked — <resource> behind #M (Q<k>)` for an exclusive overlap the lease settles,
        `none` when no overlap was raised.
+
+       Several clauses on the `sequenced:` line are separated by `; `.
 
        Commit it alone, staged by name, with the subject
        `docs(codeo): plan dossier for #<N> — footprint`, and push.

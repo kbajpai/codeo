@@ -405,7 +405,9 @@ is the container the message names.
        is archived under `.codeo/done/<N>/` while the pull request is open. `/codeo:implement`
        merges the base (its step 2a) and re-checks the named files, then `/codeo:qc` grades the
        merged tree and its new round's `Graded base:` replaces the old one; then close again.
-     - Exit 1, anything else: stop, quoting the stderr line.
+     - Exit 1, anything else: stop, quoting the stderr line, then name the way on. When the line says
+       the sha is not a commit, run `git fetch --unshallow` (a shallow clone) or
+       `git fetch origin` and run the step again; still failing, run `/codeo:qc` again, which records a new `Graded base:`.
    - **`BEHIND`** — the base branch moved since the last push, and where it requires branches to
      be up to date, that blocks the merge. Bringing the branch up to date is mechanical when the
      merge is clean, so it happens here, on the clean, up-to-date tree the first checks left, and
@@ -454,7 +456,8 @@ is the container the message names.
       `bash "${CLAUDE_PLUGIN_ROOT}/scripts/github.sh" pr review-comments <PR>` for the inline
       comments, each with its `html_url`. For a conflict, collect the files and the changes on
       `<base>` that touched them instead, as at step 3. For a moved base, the paths `base-moved.sh` printed.
-      The round has no review points, so the paths stand in for them.
+      The round has no review points, so the paths stand in for them. When review feedback and a moved base arrive in the same pass,
+      the round is headed `— review feedback` and lists the moved paths after the review's points under the words `Base moved under graded files:`; one round, one send-back.
     - Add `### Round <n> — review feedback` (or `### Round <n> — conflicts with <base>`, or `### Round <n> — base moved`) to
       `close.md`'s `## Outcome` — the next round after the highest `### Round` already there —
       with the date as its first line; then each point verbatim with its link (or each file with

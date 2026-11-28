@@ -537,6 +537,13 @@ section_contains "the caller is removed only without an override" "$stash_sectio
 section_contains "an override with no owner is a skip" "$stash_section" 'With an override and no owner'
 section_contains "an unverified login is never removed" "$stash_section" 'Never remove a login that was not verified'
 
+# Round 3: the way on from a base-moved exit 1, and one round for feedback plus a moved base.
+must_contain 'close exit 1 names the unshallow way on' 'git fetch --unshallow'
+must_contain 'close exit 1 names the fetch way on' '`git fetch origin` and run the step again'
+must_contain 'close exit 1 falls back to a new Graded base' 'run `/codeo:qc` again, which records a new `Graded base:`'
+must_contain 'close step 11 heads a combined round review feedback' 'the round is headed `— review feedback` and lists the moved paths after the review'\''s points under the words `Base moved under graded files:`'
+must_contain 'close step 11 sends back once' 'one round, one send-back'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1

@@ -101,6 +101,10 @@ step_contains "step 3 keeps inflight.sh alone as the check" 3 'so `init`'"'"'s c
 step_lacks "step 3 no longer reads the footprint exclusive line" 3 'whose `exclusive:` is not `none`'
 step_lacks "step 3 no longer takes holds from footprints" 3 '`#<M> holds <resources>`'
 
+# Round 3: a lease read with no resources prints nothing and exits 0, so it is not a failure.
+step_lacks 'step 3 lists no resources configured as a failure' 3 'no resources configured'
+step_contains 'step 3 keeps origin unreachable as a failure' 3 '(origin unreachable, a non-zero exit)'
+
 if ((failures)); then
     echo "$failures case(s) failed"
     exit 1
