@@ -94,7 +94,7 @@ step_contains "step 8 names --approved" 8 '--approved'
 step_contains "step 8 gate is unchanged" 8 'Nothing below this line runs before it'
 step_contains "step 8 proceeds only when nothing is open" 8 'only when nothing in the file is still open and no earlier stop applies'
 grep -qF -- '<!-- rule: init-12 -->' "$skill" || fail "no init-12 rule"
-grep -qF -- 'approved in advance by the engineer through codeo go' "$skill" || fail "no approved-in-advance note wording"
+grep -qF -- 'approved in advance by the engineer (--approved)' "$skill" || fail "no approved-in-advance note wording"
 
 if ((failures)); then
     echo "$failures case(s) failed"
