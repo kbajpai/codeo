@@ -92,6 +92,8 @@ step_contains "step 3 takes them from inflight.sh" 3 '`inflight.sh`'"'"'s footpr
 step_contains "step 3 prints the holds line" 3 '`#<M> holds <resources>`'
 step_contains "step 3 asks nothing and blocks nothing" 3 'asks nothing and blocks nothing'
 step_contains "step 3 leaves the overlap to plan" 3 'decided at `/codeo:plan`'
+step_contains "step 3 prints nothing when no lease is held" 3 'prints nothing when no other workflow holds a lease'
+step_contains "step 3 excludes this issue's own workflow" 3 'this issue'"'"'s own workflow is excluded'
 
 if ((failures)); then
     echo "$failures case(s) failed"
