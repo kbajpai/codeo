@@ -123,6 +123,9 @@ sed -z 's/\n\n- \[plan-02\] /\n- [plan-02] /' "$inv" >"$scratch/adjacent.md"
 got=$(unseparated "$scratch/adjacent.md")
 [[ "$got" == "rule plan-02 is not separated from the rule before it by a blank line" ]] || check_fail "adjacent bullets: expected the separation FAIL for plan-02 but got - ${got//$'\n'/ | }"
 while IFS= read -r l; do [[ -z "$l" ]] || check_fail "$l"; done < <(unseparated "$inv")
+sed -z 's/\n\n- \[issue-03\] /\n- [issue-03] /' "$inv" >"$scratch/wrapped.md"
+got=$(unseparated "$scratch/wrapped.md")
+[[ "$got" == "rule issue-03 is not separated from the rule before it by a blank line" ]] || check_fail "after a wrapped bullet: expected the separation FAIL for issue-03 but got - ${got//$'\n'/ | }"
 sed G "$scratch/base.pin" >"$scratch/blanks.pin"
 [[ -z "$(pin_diff "$scratch/base.pin" "$scratch/blanks.pin")" && -z "$(pin_diff "$scratch/blanks.pin" "$scratch/base.pin")" ]] || check_fail "a pin with blank lines does not read the same"
 sed -z 's/\n\n## close/\n\n- [qc-99] x\n\n## close/' "$inv" >"$scratch/added.md"
