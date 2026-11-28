@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done: clear, forward to `/codeo:close`. The build and the full `shell` suite pass on the tree merged with `origin/main`, all seven criteria are met, F1-F11 of round 1 are closed, and the round's independent review found no blocking defect. Seven non-blocking findings (F12-F18) are recorded for `/codeo:triage`.
+Round 3, done: clear, forward to `/codeo:close`. The branch was re-graded after merging `origin/main` (#181); the build and full `shell` suite pass and no blocking finding was raised. Round 2, for the record: clear. The build and the full `shell` suite pass on the tree merged with `origin/main`, all seven criteria are met, F1-F11 of round 1 are closed, and the round's independent review found no blocking defect. Seven non-blocking findings (F12-F18) are recorded for `/codeo:triage`.
 
 ## Questions
 
@@ -21,6 +21,7 @@ None.
 - `overlap.sh 217` printed nothing after Q7 and Q8 of `plan.md`; `overlap.sh --outside 217` printed `tests/inventory.test.sh` (F12).
 - The macOS keychain path and the real `claude -p /codeo:init … --approved` run are not exercised here; the engineer ran the listing and flag checks by hand on a Mac (`implement.md`).
 - Follow-up promised, not filed (the role check refuses `/codeo:issue` in this checkout): `codeo update` says `(already the newest)` when the downloaded `CODEO_VERSION` equals the installed one although the files may be new, because the constant moves only at a release; use a wording that does not claim it, and say the files changed (F13).
+- Follow-up promised, not filed: two more wording nits from round 3 (F19 the "downloads none of the scripts" sentence limited to the `home` step; F20 the `board: not configured, skipped` line sharing the failure-line prefix).
 - Follow-up promised, not filed: five inexact statements in `.devcontainer/README.md` and `README.md` (the `done`-after-manual-removal message, the home directory downloads, `done` not needing `claude`, the diagram's missing board-not-configured branch, the retry message's "card is In progress"), `go` writing the board before it checks `jq` and `claude`, a keychain test that never reaches `security`, and the wording of the recorded `--approved` note (F14-F18).
 
 ## Outcome
@@ -120,7 +121,52 @@ No `/codeo:issue` was filed. The role check refuses `/codeo:issue` in this check
 
 **Verdict: clear — forward to `/codeo:close`.**
 
+### Round 3 — 2026-11-28
+
+(re-grade after `implement.md` round 3, which merged `origin/main` and resolved `CHANGELOG.md`)
+
+**Commands run** (this pass, from step 0 again):
+- `bash ./scripts/../sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main`.
+- `overlap.sh 217` → nothing; `overlap.sh --outside 217` → `tests/inventory.test.sh` (F12).
+- `scope.sh origin/main HEAD` → `suite.shell=true`.
+- Build: the `shell` suite's `build` is `true` → exit 0.
+- Suite: `bash tests/run.sh` → `all cases passed`, exit 0, no FAIL line.
+- `overlay.sh qc invariants-extra` and `wiki-rules` → exit 3; no environment, invariants file or `wiki` module, so no environment step.
+
+**Also changed on main** (the merge): `.devcontainer/README.md`, `.devcontainer/scripts/session-title.sh`, `tests/devcontainer.test.sh`, `CHANGELOG.md`, #181's plan and archived dossier. The merged `CHANGELOG.md` `## Unreleased` carries both bullets and one `Shared state:` line covering both; the `.devcontainer/README.md` merge keeps #181's sections and #217's `codeo go` section.
+
+**Criteria** (`init.md`): unchanged from round 2 by the merge; each re-run in the suite above.
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| `codeo go <N>` on a Ready or Backlog issue ends with the container running and its name and branch printed | met | `t_go_runs_the_steps_in_order`, `t_go_none_and_unset_cards_are_set_to_ready`, `t_go_ready_card_is_not_moved` |
+| A failed step in `go` prints one line naming it and leaves later steps unrun | met | `t_go_stops_on_each_init_failure`, `t_go_existing_branch_stops_before_the_board`, `t_go_home_that_cannot_be_created_is_one_home_line` |
+| `codeo done <N>` removes the container only when every proof passes, and otherwise prints the failed proof and removes nothing | met | `t_done_removes_when_every_proof_passes`, `t_done_names_the_failed_proof_and_removes_nothing`, `t_done_never_passes_force`; `tests/cleanup.test.sh` `prove_*` |
+| `codeo --version` and `-v` print the version; the test fails when it differs from `plugin.json` | met | `t_version_flags_print_the_constant`, `t_version_equals_plugin_json` (both copies) |
+| `codeo update` prints old and new version and a line per file; the failure paths still change nothing installed | met | `t_update_prints_versions_and_each_file`, `t_update_same_version_says_so`, `t_update_finishes_with_stdout_closed`, the existing `t_update_*` |
+| With a stubbed `security` reporting a locked keychain, `go` and `done` stop before any board, git or Docker call and print the unlock command; unlocked or non-macOS, they go on | met | `t_keychain_locked_stops_before_any_call`, `t_go_keychain_locked_makes_no_other_call`, `t_keychain_skipped_off_macos` |
+| README, the keychain section and the release checklist are updated | met | `README.md`, `.devcontainer/README.md` (*The keychain over SSH on macOS*), `docs/release-checklist.md` step 6, `tests/readme.test.sh` |
+
+**Documentation check.** The merge touched only `CHANGELOG.md` (coherent, one `(#217)` and one `(#181)`) and brought #181's README sections; no page describes the old behaviour. The template and the command match modulo placeholders.
+
+**Independent review** (opus, handed the criteria and the diff only): ready to merge with fixes. It confirmed the keychain stop-before-any-call ordering, the `prove` read-only behaviour, the `update` failure paths and the merged `CHANGELOG.md`. Its one Important item is F14 again; its minors are F15 and two new wording nits (F19, F20).
+
+**Findings**
+
+- Round 2's F12-F18 are unchanged by the merge and stay as recorded there (F12 and F13 `/codeo:plan`'s, F14-F18 `/codeo:implement`'s, all non-blocking).
+- **F14 — non-blocking, `/codeo:implement`'s (re-raised by the reviewer as Important).** `.devcontainer/README.md:175` says `done` after a manual removal stops with `no container codeo-<N> found; nothing removed`; the default `codeo done <N>` dies in `detect_kind` (`.devcontainer/codeo:320`) with `no container or sandbox codeo-<N> found; start one with: codeo issue <N>`, which is true only with `--container`. Checked: confirmed. Classified as in round 2: the proofs passed, nothing is wrongly removed and the message is wrong rather than harmful, and the change under review did not touch it since round 2's clear grade.
+- **F19 — non-blocking, `/codeo:implement`'s.** `.devcontainer/README.md:171`: "`go` downloads none of the scripts into it" is limited to the `home` step; the `container` step runs `codeo issue`, which downloads missing scripts into `CODEO_HOME`.
+- **F20 — non-blocking, `/codeo:implement`'s.** `.devcontainer/codeo` `cmd_go`: the informational `codeo: go: board: not configured, skipped` shares the `codeo: go: <step>:` prefix the docs give for failure lines.
+- F15 (re-raised): unchanged.
+
+No `/codeo:issue` was filed (the role check refuses it in this checkout); F14-F20 are promised under `## Notes` for `/codeo:triage`.
+
+**Routing.** No finding blocks the merge. The merge changed only `CHANGELOG.md`, which is coherent; the remaining items are wording, and a non-blocking finding never sends the change back on its own.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-28 — round 1: build and suite pass, 6 criteria met, 1 not met; 3 blocking and 9 non-blocking findings; back to implement · cost: 7m · opus-5-5 528k in + 5.4M cached / 22k out · sonnet-5-5 403k in + 459k cached / 3k out
 - 2026-11-28 — round 2: build and suite pass, 7 of 7 criteria met, no blocking finding; clear, forward to close · cost: 9m · opus-5-5 590k in + 4.6M cached / 28k out
+- 2026-11-28 — round 3: build and suite pass, 7 of 7 criteria met, no blocking finding; clear, forward to close · cost: 4m · opus-5-5 189k in + 2.1M cached / 14k out · sonnet-5-5 118k in + 739k cached / 1k out
