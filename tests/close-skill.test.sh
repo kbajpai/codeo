@@ -495,7 +495,19 @@ must_precede 'the overlap skipping sentence comes after the stop sentence' 'The 
 
 # The web-session exception is in the description and in docs/skills.md, not only in step 16.
 sed -n 3p "$skill" | grep -qF 'a hosted web session deletes none' || fail "the description has no web-session exception"
-awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md" | grep -qF 'a hosted web session deletes none' || fail "docs/skills.md close section has no web-session exception"
+if ! awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md" | grep -qF 'a hosted web session deletes none'; then
+    echo "DEBUG awk: $(awk --version 2>&1 | head -1) | $(command -v awk) | bash $BASH_VERSION | LC_ALL=${LC_ALL:-} LANG=${LANG:-}"
+    echo "DEBUG plugin_root=$plugin_root size=$(wc -c <"$plugin_root/docs/skills.md") sha=$(sha1sum <"$plugin_root/docs/skills.md" | cut -c1-12)"
+    echo "DEBUG headings: $(grep -n '^## ' "$plugin_root/docs/skills.md" | tr '\n' ' ')"
+    dbg=$(awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md" || echo "awk-exit-$?")
+    echo "DEBUG section bytes=${#dbg} matches=$(grep -cF 'a hosted web session deletes none' <<<"$dbg")"
+    echo "DEBUG whole-file matches=$(grep -cF 'a hosted web session deletes none' "$plugin_root/docs/skills.md")"
+    for i in 1 2 3 4 5; do
+        awk '/^## close$/{f=1} /^## triage$/{f=0} f' "$plugin_root/docs/skills.md" | grep -qF 'a hosted web session deletes none'
+        echo "DEBUG retry $i pipeline statuses: ${PIPESTATUS[*]}"
+    done
+    fail "docs/skills.md close section has no web-session exception"
+fi
 
 # Step 0 verifies ownership (close-15).
 must_contain 'close step 0 runs verify' 'lock.sh" verify'
