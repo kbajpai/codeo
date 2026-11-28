@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done. All 13 tasks of `docs/plans/2026-11-28-parallel-issue-collisions-207.md` are built and reviewed, the build passes and the whole suite ends `all cases passed`. Next step: `/codeo:qc`.
+Round 2, done, after the send-back from `qc.md` round 1 (F1-F6): all 7 tasks of `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md` are built and reviewed, the build passes and the whole suite ends `all cases passed`. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -40,6 +40,32 @@ None.
 - Task 12: one pin in `tests/plan-skill.test.sh` and two sentences in `skills/plan/SKILL.md` were aligned with rule `plan-11` (`sequenced:` reads `none` only when no overlap was raised); `tests/init-skill.test.sh` and `skills/init/SKILL.md` gained two clarifications; the `Graded base:` line is written only after a sync that exits 0 (final review).
 - Review: every task had a task review; tasks 1, 2, 9 and 12 went through a fix round, and a final whole-branch review found two Importants, fixed in one wave and re-reviewed. Tasks 12's last fix round and 13 had no separate re-review (their diffs are a few lines; the final review covered 13).
 
+
+### Round 2
+
+2026-11-28
+(send-back from qc.md round 1)
+
+**Built.**
+- F2: `docs/skills-inventory.md` and the pin file separate rules by one blank line (rule texts and hashes unchanged); `tests/inventory.test.sh` fails a rule bullet that directly follows another and ignores blank lines in a pin; `tests/inventory-pin.test.sh` merges two branches that reword adjacent rules (`plan-01`, `plan-02`) with no conflict, and shows two rules appended after the same rule still conflict in the page.
+- F4: rule `plan-11` gains `rescoped — <what was dropped> because of #M (Q<k>)` and `locked — <resource> behind #M (Q<k>)` (written for any exclusive overlap the lock answers, whether the lease is free or waited for).
+- F5: `/codeo:init` reads `intake.sh lease list --tsv` and prints `#<M> holds <resource>` and `#<M> waits for <resource>`; it no longer reads footprints for this.
+- F1 and F3: `/codeo:close` step 9 runs `base-moved.sh` on every pass after the pull, also when the branch already holds the base; exit 3 is a send-back through step 11 as a `### Round <n> — base moved` round (paths, `qc round at review: <k>`, un-archive, card back) to `/codeo:implement`, which re-checks the named files before `/codeo:qc`; `scripts/inflight.sh` and `scripts/dossier-check.sh` know the round; two dossier fixtures; rule `close-18` reworded.
+- F6: `tools/changelog.sh` — any `Safe to bump mid-workflow:` value that does not begin with the whole word `yes` is a caution that wins, joined with `; `; `assemble` refuses an existing version section and a leftover `## Unreleased`; CRLF and trailing blank lines are tidied. `tests/intake-lease.test.sh` hard-codes the `skill` entry.
+
+**Documentation pages changed:** `README.md`, `docs/skills.md`, `docs/dossier.md`, `docs/handoff.md`, `docs/release-checklist.md`, `CONTRIBUTING.md`, `docs/skills-inventory.md` (`plan-11`, `close-18`), `changelog.d/207.md` (rewritten).
+
+**Build result:** the `shell` suite's `build` is `true` and passed; `bash tests/run.sh` ends `all cases passed`; `bash scripts/overlap.sh --outside 207` prints nothing. The adjacent-rules merge was reproduced by hand in a scratch repository: exit 0, no conflict.
+
+**Deviations from the plan.**
+- Task 4 also added `— base moved` to the step 1 phase-table rows, close-03's text, step 3's pull note, the skill description and the Non-goals hand-off bullet, so the round reads the same everywhere.
+- Task 5: a safe-to-bump value that is neither `yes` nor `no` is treated as a caution (the plan said `no` wins); the first `yes` value is kept verbatim when no caution exists, so `Yes — fine` is written as written.
+- Task 6 and 7: the fragment's wording was corrected once (`no longer`).
+- Review: every task had a task review; tasks 1, 2, 4 (none), 5 went through fix rounds; the final whole-round review found no Critical or Important issue.
+
+**Deferred, non-blocking (for `/codeo:qc` to weigh):** long unwrapped lines in `skills/close/SKILL.md` step 11; `skills/init/SKILL.md` lists "no resources configured" as a failure of the lease read though it prints nothing and exits 0; the inflight test asserts only the `/codeo:implement` leg; a stripped caution reason can keep stray punctuation (`No.` → `no — .`); two non-`no` cautions joined are not pinned; the README does not repeat close's one-line note for exit 4.
+
 ## Log
 
 - 2026-11-28 — implemented: all 13 tasks, build and suite pass · cost: 55m · sonnet-5-5 1.2M in + 39.7M cached / 191k out
+- 2026-11-28 — round 2 implemented: all 7 tasks, build and suite pass · cost: 36m · sonnet-5-5 698k in + 35.5M cached / 127k out
