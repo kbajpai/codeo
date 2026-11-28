@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done: back to `/codeo:plan`. Q2 is answered. Next step: `/codeo:plan` (three blocking findings, F7-F9 below). Round 1 stands as written.
+Round 3, done: clear — forward to `/codeo:close`. No question is open. Non-blocking findings F12-F17 and the carried items are for `/codeo:triage`. Rounds 1 and 2 stand as written.
 
 ## Questions
 
@@ -165,6 +165,51 @@ No `/codeo:issue` was filed.
 
 **Verdict: back to `/codeo:plan`.**
 
+### Round 3 — 2026-11-28
+
+Graded base: 1d28d45aa98ce40ce31599d128fadddcff4a84b3
+
+**Commands run** (this pass, HEAD `bb12eaf`):
+- `role.sh --check qc` → exit 0; lock `issue: 207`, branch `feat/207-stop-parallel-issues-colliding-shared`; clean tree.
+- `sync-main.sh --abort-on-conflict` → `sync-main: the branch already contains origin/main`; no `Behind:` line. `git merge-base HEAD origin/main` → `1d28d45`, the tip of `origin/main`.
+- `overlap.sh 207` → nothing (the #217 pairs were answered at Q1 and Q2); `overlap.sh --outside 207` → nothing, so every changed path is in the plan's round-3 footprint.
+- `scope.sh origin/main HEAD` → `suite.shell=true` (unclassified paths: `.codeo/207/*.md`, `.codeo/config.json`, `CONTRIBUTING.md`, `README.md`, `changelog.d/207.md`, `tools/changelog.sh`).
+- `qc/invariants-extra` and `qc/wiki-rules` → exit 3 each (none); no invariants file, environment or `wiki` module; no environment step.
+- Build: the `shell` suite's `build` is `true` → exit 0.
+- Suite: `bash tests/run.sh` → exit 0, last line `all cases passed`.
+- Reproduced by the reviewer (opus, handed the criteria and the diff only): the full suite, the assemble of a `yes, with one step` fragment beside a `no — …` fragment, an inventory-pin merge of an appended rule against a reworded `qc-16` (clean, merged tree passes). The controller read `skills/close/SKILL.md` step 9 and `tools/changelog.sh` for I1 and I2 below.
+- Round 2's F7-F11 re-checked in this pass: `bash tests/run.sh` with `base-moved`, `qc-skill`, `changelog`, `close-skill`, `plan-skill`, `init-skill` are part of the full run above; the implementer's hand run of F9 in a scratch copy is not relied on here.
+
+**Criteria** (`init.md`):
+
+| Criterion | Verdict | Settled by |
+|---|---|---|
+| Two branches that each add a changelog entry merge without a conflict in `CHANGELOG.md`, and the release step produces the same entries | met | `tests/changelog.test.sh` (`two_branches_merge_without_a_conflict`, `assemble_matches_the_hand_written_section`, `yes_notes_are_all_kept`); the entry is the fragment `changelog.d/207.md` (plan Q11); F9, F10 and F11 of round 2 fixed |
+| Two branches that each change an inventory rule merge, and one script run afterwards produces a correct pin; a test pins it | met | `tests/inventory-pin.test.sh`; the reviewer's appended-rule against reworded-`qc-16` merge was clean |
+| A second issue whose footprint overlaps an in-flight issue's on a skill file names that issue and the files, and the footprint records `sequenced:` or `exclusive:`; a test pins it | met | `tests/overlap.test.sh`, `tests/intake-lease.test.sh` `skill_resource_serialises_one_skill`, `tests/plan-skill.test.sh` (plan-11) |
+| `/codeo:qc` on a branch behind `origin/main` does not grade until synced, or reports that it is behind; a test pins it | met | `skills/qc/SKILL.md` step 2 and qc-16 and `tests/qc-skill.test.sh`; this pass's sync said the branch already contains `origin/main`; `Graded base:` is now `git merge-base HEAD origin/<base>` (F7, F8 fixed, `tests/base-moved.test.sh`) |
+| `README.md`, `docs/skills.md` and `CHANGELOG.md` describe the new behaviour; the full suite passes | met — by decision | the suite passes; `README.md` and `docs/skills.md` describe it; `CHANGELOG.md` stays unedited by design and the entry is `changelog.d/207.md` (plan Q11), which becomes `CHANGELOG.md` text at the release's `assemble` |
+
+**Documentation check.** `README.md`, `docs/skills.md`, `docs/dossier.md`, `CONTRIBUTING.md` and `docs/release-checklist.md` agree with `skills/qc/SKILL.md` qc-16, `scripts/base-moved.sh` and `tools/changelog.sh` on the merge-base `Graded base:`, the exit-4 note, the `yes` join, the `Config schema:` default and the `assemble` exit codes; the added lines are present tense with no issue numbers or history words. One sentence overstates a behaviour (I1 below).
+
+**Findings**
+
+- **F7-F9 (blocking in round 2) — fixed:** F7 and F8 by `fda6c00` (the merge-base record, the tolerant reader, the *Update branch* cases), F9 by `99fb54e`. F10 and F11 (non-blocking in round 2) by `99fb54e` and `80cea44`.
+- **F12 — non-blocking, `/codeo:plan`'s.** The moved-base check runs only at step 9 of `skills/close/SKILL.md`, which is the waiting phase. Phase 1 (steps 2-8) opens the pull request without it, and step 8 tells the engineer to merge and run `/codeo:close` again, so a merge that skips the waiting phase reaches `main` without `base-moved.sh` having run; nothing runs between pull request and merge in any case. The code does what the plan says (plan Q6); `README.md` and `docs/skills.md` say "on every pass", which reads wider than "every pass of the waiting phase". The acceptance criterion about QC is met, so this does not block. Needed, if wanted: run the check in step 3 too, or say "every pass of the waiting phase".
+- **F13 — non-blocking, `/codeo:plan`'s.** A `yes, with one step: …` note is dropped when another fragment says `no — …` (`tools/changelog.sh` safe-to-bump handling, `CONTRIBUTING.md`: any caution beats every yes). Reproduced by the reviewer. The plan chose "a caution wins"; an adopter step can disappear from the release text when the two are mixed. Needed, if wanted: append the yes notes to the caution, or refuse the mix.
+- **F14 — non-blocking.** `none (…)` shared-state values are kept and joined (only an exact `none` is dropped), so an assembled line can lead with `none (…)` while listing real changes (`tools/changelog.sh`).
+- **F15 — non-blocking, a decision already taken (plan Q11).** main's `## Unreleased` section (#181) stays in `CHANGELOG.md`, so the first `assemble` after this merge refuses until it is folded into `changelog.d/181.md`, and `CONTRIBUTING.md`'s "edited only by `assemble`" is not true of `main` until then.
+- **F16 — non-blocking.** A `Graded base:` line in a form the reader does not match (`- **Graded base:** <sha>`) gives exit 4 and close carries on with a one-line note; `dossier-check.sh` does not check it by design.
+- **F17 — non-blocking, design.** Any shared path counts as moved, so a pull request that merges first can send a later one back through a round; the docs do not warn of it.
+- **Carried from `implement.md`, non-blocking:** `scripts/base-moved.sh` header and close step 9 say close "compares the graded commit with `origin/<base>`" though the script starts from the merge base; an empty `Graded base:` value reads as exit 4; a schema value like `1 → 2` defaults to `1 (unchanged)`; long lines in qc-16 and `docs/dossier.md`; the diff error in `base-moved.sh` names `$sha`; the `yes` dedupe is case-sensitive; whole-file pins in the close and plan skill tests; the first fragment bullet does not mention the `yes` join.
+- **Declined to judge by the reviewer, and I agree:** ordering bullets by issue number, the livelock risk of repeated base-moved rounds on a busy base, `lease list` from a stale fetch at init (code that predates this change), several engineers' shared state (#194, #198).
+
+No `/codeo:issue` was filed.
+
+**Routing.** No finding is blocking: round 2's F7-F9 are fixed and tested, the suite passes, and F12-F17 and the carried items are non-blocking. They go to `/codeo:triage` after the merge.
+
+**Verdict: clear — forward to `/codeo:close`.**
+
 ## Log
 
 - 2026-11-28 — Q1 raised (overlap with #217 found at step 2) · cost: 0m · opus-5-5 329k in + 379k cached / 763 out
@@ -172,3 +217,4 @@ No `/codeo:issue` was filed.
 - 2026-11-28 — re-invoked with nothing new to judge (no plan or implement round since round 1; HEAD 0c0ead8, contains origin/main); round 1 stands: back to /codeo:plan · cost: 0m · opus-5-5 372k in + 29k cached / 447 out
 - 2026-11-28 — round 2: Q2 raised (new overlap with #217 on tests/inventory.test.sh, found at step 2) · cost: 0m · opus-5-5 535k in + 593k cached / 813 out
 - 2026-11-28 — round 2: back to /codeo:plan (F7-F9 blocking) · cost: 15m · opus-5-5 700k in + 5.6M cached / 31k out · sonnet-5-5 31k in + 3.4M cached / 6k out
+- 2026-11-28 — round 3: clear, forward to /codeo:close (no blocking finding; F12-F17 non-blocking) · cost: 6m · opus-5-5 291k in + 4M cached / 26k out · sonnet-5-5 31k in + 717k cached / 1k out
