@@ -257,7 +257,7 @@ is the container the message names.
    `tests/close-skill.test.sh` under `tests/*-skill.test.sh` both give `skill:close`, and
    a file matching several globs gives several entries. `exclusive:` never
    lists `$ENV_RESOURCE`: the later steps lease the environment from its first task, not the plan.
-   `sequenced:` is the fourth key and reads `none` when nothing was sequenced; step 10 fills it in
+   `sequenced:` is the fourth key and reads `none` when no overlap question was raised; step 10 fills it in
    when an overlap question is answered. A key with nothing under it says
    `none`, and `dossier-check.sh` fails a footprint that lacks any of the four. Then run
    `bash "${CLAUDE_PLUGIN_ROOT}/scripts/inflight.sh" --except <N>` — one block per other workflow:
@@ -301,7 +301,7 @@ is the container the message names.
 
     1. **Write the footprint down.** Put the `### Footprint` block, as step 8 drafted it and the
        answers since have amended it (its `sequenced:` line records each overlap question answered, and
-       stays `none` otherwise), under `plan.md`'s `## Notes`,
+       stays `none` only when no overlap question was raised), under `plan.md`'s `## Notes`,
        leaving `## Outcome` pending.
 
        **After a send-back, make the draft cover the branch.**
