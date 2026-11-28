@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 2, done, after the send-back from `qc.md` round 1 (F1-F6): all 7 tasks of `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md` are built and reviewed, the build passes and the whole suite ends `all cases passed`. Next step: `/codeo:qc`.
+Round 4, done: after the send-back from `close.md` round 2 (a conflict with `main` after #217 merged), `origin/main` is merged into the branch, the three conflicts are resolved and the suite passes. Rounds 1-3 stand as written. Next step: `/codeo:qc`.
 
 ## Questions
 
@@ -86,8 +86,29 @@ None.
 
 **Deferred, non-blocking (for `/codeo:qc` to weigh):** `scripts/base-moved.sh:7` and close step 9 say close "compares the graded commit with origin/<base>" though the script starts from the merge base (the header says so); an empty `Graded base:` value reads as exit 4 ("no Graded base line"); the schema default of a value like `1 → 2` is `1 (unchanged)`; long lines in qc-16 and `docs/dossier.md`; the diff error in `base-moved.sh` names `$sha`; the `yes` dedupe is case-sensitive; the close and plan skill pins are whole-file; the first fragment bullet does not mention the `yes` join.
 
+### Round 4
+
+2026-11-28
+(send-back from close.md round 2)
+
+**Built.** Nothing new: the round is the merge of `origin/main` (#217, `f8b6441`) into the branch, which `sync-main.sh` could not do cleanly (exit 2). Three files conflicted and were resolved against both changes' intent:
+- `tests/inventory.test.sh` — `main` changed the per-skill rule counts (`declare -A want`, `init` 11 → 12) that this branch had removed, because the per-rule pin replaces the counts; kept this branch's version, so the count table is gone and the pin catches the new rule.
+- `tests/init-skill.test.sh` — both sides added pins at the same place (this branch's lease-list pins, `main`'s `--approved` / `init-12` pins); both kept, separated by a blank line.
+- `tests/fixtures/skills-inventory.rules.sha256` — regenerated with `bash tests/inventory.test.sh --update` from the merged `docs/skills-inventory.md`; the only difference from the branch's pin is the new `init-12` line.
+
+One more fix the merge needed without a conflict marker: `docs/skills-inventory.md` took `init-12` directly under `init-11`, and this branch's rule keeps one blank line between rule bullets, so the line was added.
+
+**Also changed on main (re-checked against this branch's work):** `.codeo/done/217/*`, `.devcontainer/README.md`, `.devcontainer/codeo`, `CHANGELOG.md`, `README.md`, `docs/home-checkout.md`, `docs/plans/2026-11-28-codeo-go-done-217.md`, `docs/release-checklist.md`, `docs/skills-inventory.md`, `docs/skills.md`, `scripts/cleanup.sh`, `skills/init/SKILL.md`, `templates/containers/.devcontainer/codeo`, `tests/cleanup.test.sh`, `tests/codeo-command.test.sh`, `tests/readme.test.sh`. Git merged `README.md`, `docs/release-checklist.md`, `docs/skills.md`, `skills/init/SKILL.md` and `docs/skills-inventory.md` without a conflict; `skills/init/SKILL.md` now carries both this branch's lease-list text and `init-12`, and `bash tests/run.sh init-skill` passes on it. `CHANGELOG.md` keeps `main`'s `## Unreleased` section, now with the #181 and #217 entries, which are folded into fragments before the next release (plan Q11).
+
+**Documentation pages changed:** none by this round beyond the merge.
+
+**Build result:** the `shell` suite's `build` is `true` and passed; `bash tests/run.sh` ends `all cases passed`; `bash scripts/overlap.sh --outside 207` prints nothing; `bash scripts/base-moved.sh 207` named the eight files above before the merge.
+
+**Deviations from the plan.** None; no task of the plan was open. The round answers `close.md` round 2 only.
+
 ## Log
 
 - 2026-11-28 — implemented: all 13 tasks, build and suite pass · cost: 55m · sonnet-5-5 1.2M in + 39.7M cached / 191k out
 - 2026-11-28 — round 2 implemented: all 7 tasks, build and suite pass · cost: 36m · sonnet-5-5 698k in + 35.5M cached / 127k out
 - 2026-11-28 — round 3 implemented: all 5 tasks, build and suite pass · cost: 12m · sonnet-5-5 473k in + 7.9M cached / 53k out
+- 2026-11-28 — round 4: merged origin/main (#217) into the branch, three conflicts resolved, build and suite pass · cost: 2m · sonnet-5-5 13k in + 2.9M cached / 7k out
