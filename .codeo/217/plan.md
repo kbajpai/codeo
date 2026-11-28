@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1. The code is read (`.devcontainer/codeo` and its template, `codeo-container.sh`, `scripts/cleanup.sh`, `scripts/board.sh`, `codeo-root.sh`, the init skill and its overlay) and both intake questions are looked into (see `## Notes`). Q1-Q7 are open; nothing is drafted until they are answered. The answers I would not ask about are listed under `## Notes` as my calls, to correct if wrong.
+Round 1. Q1-Q7 are answered (all as recommended). The draft plan is at `.codeo/217/plan-draft.md` (9 tasks, one pull request), waiting at the review gate. Once approved it is written to `docs/plans/2026-11-28-codeo-go-done-217.md`, unstaged, and the footprint and outcome follow.
 
 ## Questions
 
@@ -25,6 +25,7 @@ I recommend the first.
 **Options:** `--approved` form in the skill (recommended) · two phases with a terminal prompt · prompt wording only · no preference, you pick.
 
 **Answer:**
+`codeo go` is the approval: the init skill gains `/codeo:init #<N> --approved`. As recommended. Given in the conversation: "Go with your picks".
 
 ### Q2 — Where does `codeo go` find the home clone on the host?
 
@@ -39,6 +40,7 @@ I recommend the first, with the variable documented beside `CODEO_HOME`.
 **Options:** `CODEO_HOME_CLONE`, else the current directory (recommended) · codeo's own clone under `CODEO_HOME` · the home container · no preference, you pick.
 
 **Answer:**
+`CODEO_HOME_CLONE`, else the current directory when it is a home checkout. As recommended. Given in the conversation: "Go with your picks".
 
 ### Q3 — Which permissions does the headless init run with?
 
@@ -53,6 +55,7 @@ I recommend the allow-list.
 **Options:** allow-list plus `--permission-prompts none` (recommended) · your settings only · skip permissions · no preference, you pick.
 
 **Answer:**
+An allow-list plus `--permission-prompts none`. As recommended. Given in the conversation: "Go with your picks".
 
 ### Q4 — What does `codeo go <N>` do when the issue already has a branch on origin?
 
@@ -66,6 +69,7 @@ I recommend fresh starts only.
 **Options:** fresh starts only (recommended) · resume too · no preference, you pick.
 
 **Answer:**
+Fresh starts only. As recommended. Given in the conversation: "Go with your picks".
 
 ### Q5 — After `codeo done <N>` removes the container, does it also record the removal?
 
@@ -79,6 +83,7 @@ I recommend recording it.
 **Options:** record it (recommended) · leave it to `/codeo:cleanup` · no preference, you pick.
 
 **Answer:**
+Record it. As recommended. Given in the conversation: "Go with your picks".
 
 ### Q6 — One pull request, or split?
 
@@ -92,6 +97,7 @@ I recommend one.
 **Options:** one pull request (recommended) · split in two · no preference, you pick.
 
 **Answer:**
+One pull request. As recommended. Given in the conversation: "Go with your picks".
 
 ### Q7 — #207 and #213 change files this plan must change. Proceed, sequence, or re-scope?
 
@@ -105,6 +111,7 @@ The inventory hash (`tests/fixtures/skills-inventory.rules.sha256`) is one line 
 **Options:** proceed and coordinate (recommended) · sequence after #207 · sequence after #213 only · re-scope (drop the skill change, Q1) · no preference, you pick.
 
 **Answer:**
+Proceed and coordinate. As recommended. Given in the conversation: "Go with your picks".
 
 ## Notes
 
@@ -133,3 +140,4 @@ _Pending — written at the hand-off._
 ## Log
 
 - 2026-11-28 — Q1-Q7 raised · cost: 2m · fable-5-2 142k in + 1.5M cached / 10k out · sonnet-5-5 86k in + 179k cached / 3k out
+- 2026-11-28 — Q1-Q7 answered, plan drafted and presented for review · cost: 6m · fable-5-2 + sonnet-5-5 (see usage.sh)
