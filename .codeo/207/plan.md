@@ -180,6 +180,15 @@ Read the real leases, as recommended. Given in the conversation: "go with your p
 - F6 and the carried minors ride as small tasks: `Safe to bump mid-workflow:` lets `no` win and joins the reasons; `assemble` refuses a leftover `## Unreleased` heading and a version section that already exists; trailing blank lines and `\r` are stripped from fragments; the lease test hard-codes the `skill` entry; an added-rule case for the pin.
 - Round 2 is a second plan file, `docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md`, as earlier re-plans in this repository are.
 
+### Footprint
+
+```
+files:      tools/changelog.sh, tests/changelog.test.sh, tests/fixtures/changelog/**, changelog.d/**, .codeo/overlays/plan.md, .codeo/config.json, tests/inventory.test.sh, tests/inventory-pin.test.sh, tests/fixtures/skills-inventory.rules.sha256, tests/intake-lease.test.sh, tests/overlap.test.sh, scripts/base-moved.sh, scripts/overlap.sh, tests/base-moved.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, tests/plan-skill.test.sh, tests/init-skill.test.sh, tests/qc-skill.test.sh, tests/close-skill.test.sh, docs/skills-inventory.md, docs/skills.md, docs/dossier.md, docs/handoff.md, docs/release-checklist.md, README.md, CONTRIBUTING.md, docs/plans/2026-11-28-parallel-issue-collisions-207.md, scripts/inflight.sh, scripts/dossier-check.sh, skills/implement/SKILL.md, tests/inflight.test.sh, tests/dossier-check.test.sh, tests/fixtures/dossiers/**, tests/implement-skill.test.sh, docs/plans/2026-11-28-parallel-issue-collisions-207-round-2.md
+wiki:       none
+exclusive:  none
+sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/config.json (Q7); beside #217 — both change skills/init/SKILL.md and the skills inventory (qc.md Q1)
+```
+
 ## Outcome
 
 
@@ -191,14 +200,6 @@ Read the real leases, as recommended. Given in the conversation: "go with your p
 
 **Overlap:** `overlap.sh 207` printed nothing for the committed footprint; no exclusive resource is configured yet, so no lock is taken.
 
-### Footprint
-
-```
-files:      tools/changelog.sh, tests/changelog.test.sh, tests/fixtures/changelog/**, changelog.d/**, .codeo/overlays/plan.md, .codeo/config.json, tests/inventory.test.sh, tests/inventory-pin.test.sh, tests/fixtures/skills-inventory.rules.sha256, tests/intake-lease.test.sh, tests/overlap.test.sh, scripts/base-moved.sh, scripts/overlap.sh, tests/base-moved.test.sh, skills/plan/SKILL.md, skills/init/SKILL.md, skills/qc/SKILL.md, skills/close/SKILL.md, tests/plan-skill.test.sh, tests/init-skill.test.sh, tests/qc-skill.test.sh, tests/close-skill.test.sh, docs/skills-inventory.md, docs/skills.md, docs/dossier.md, docs/handoff.md, docs/release-checklist.md, README.md, CONTRIBUTING.md, docs/plans/2026-11-28-parallel-issue-collisions-207.md
-wiki:       none
-exclusive:  none
-sequenced:  beside #213 — it pins the plugin and edits README.md and .codeo/config.json (Q7)
-```
 
 ## Log
 
