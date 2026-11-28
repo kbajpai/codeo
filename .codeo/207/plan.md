@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 3, after the send-back from `qc.md` round 2 (F7-F9 blocking). Q11 is open; the round-3 plan is drafted once it is answered. Rounds 1 and 2 stand as written.
+Round 3, after the send-back from `qc.md` round 2 (F7-F9 blocking). Q11 is answered; the draft is at `.codeo/207/plan-draft.md`, waiting for the engineer's review. Rounds 1 and 2 stand as written.
 
 ## Questions
 
@@ -170,6 +170,7 @@ I recommend the first.
 **Options:** the fragment is the entry (recommended) · also write it into `CHANGELOG.md` now.
 
 **Answer:**
+The fragment is the entry, as recommended. Given in the conversation, through the question dialog: "Fragment is the entry (Recommended)".
 
 ## Notes
 
