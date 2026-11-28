@@ -50,13 +50,14 @@ assemble)
         echo "changelog: $changelog already has a section for $version" >&2
         exit 1
     fi
-    if grep -q -- "^## Unreleased" "$changelog"; then
+    if grep -qE -- "^## Unreleased([[:space:]]|\$)" "$changelog"; then
         echo "changelog: $changelog has an ## Unreleased heading; fold it into a fragment first" >&2
         exit 1
     fi
 
-    schema= schema_from= safe= shared= safe_no= safe_reasons=
+    schema= schema_from= safe= shared= safe_no= safe_reasons= safe_other= lc=
     body=
+    blank_tail=$'\n''[[:blank:]]*'$'\n''$'
     for f in "${frags[@]}"; do
         n=$(basename "$f" .md)
         in_header=1
@@ -75,13 +76,17 @@ assemble)
                     continue ;;
                 "Safe to bump mid-workflow: "*)
                     v=${line#"Safe to bump mid-workflow: "}
-                    if [[ $v == no ]]; then
+                    v=${v#"${v%%[![:space:]]*}"}
+                    v=${v%"${v##*[![:space:]]}"}
+                    lc=${v,,}
+                    if [[ -z $v || $lc =~ ^yes($|[^[:alnum:]_]) ]]; then
+                        [[ -n $safe || -z $v ]] || safe=$v
+                    elif [[ $lc =~ ^no($|[^[:alnum:]_]) ]]; then
                         safe_no=1
-                    elif [[ $v == "no — "* ]]; then
-                        safe_no=1
-                        safe_reasons=${safe_reasons:+$safe_reasons; }${v#"no — "}
-                    elif [[ -z $safe ]]; then
-                        safe=$v
+                        [[ $v =~ ^[Nn][Oo][[:space:]]*(—|-|:|,)?[[:space:]]*(.*)$ ]]
+                        [[ -z ${BASH_REMATCH[2]} ]] || safe_reasons=${safe_reasons:+$safe_reasons; }${BASH_REMATCH[2]}
+                    else
+                        safe_other=${safe_other:+$safe_other; }$v
                     fi
                     continue ;;
                 "Shared state: "*)
@@ -96,7 +101,7 @@ assemble)
             fi
             frag_body+=$line$'\n'
         done < "$f"
-        while [[ $frag_body == *$'\n\n' ]]; do frag_body=${frag_body%$'\n'}; done
+        while [[ $frag_body =~ $blank_tail ]]; do frag_body=${frag_body%$'\n'}; frag_body=${frag_body%$'\n'*}$'\n'; done
         body+=$frag_body
     done
 
@@ -106,7 +111,9 @@ assemble)
     safe_line=${safe:-yes}
     if [[ -n $safe_no ]]; then
         safe_line=no
-        [[ -z $safe_reasons ]] || safe_line="no — $safe_reasons"
+        [[ -z $safe_reasons && -z $safe_other ]] || safe_line="no — ${safe_reasons}${safe_reasons:+${safe_other:+; }}$safe_other"
+    elif [[ -n $safe_other ]]; then
+        safe_line=$safe_other
     fi
     {
         printf '## %s — %s\n\n' "$version" "$date"

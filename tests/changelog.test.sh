@@ -208,9 +208,13 @@ case_desc=config_schema_disagreement_still_stops
 new_work
 printf 'Config schema: 1\n\n- A (#5).\n' > "$work/changelog.d/5.md"
 printf 'Config schema: 2\n\n- B (#6).\n' > "$work/changelog.d/6.md"
+before=$(cat "$work/CHANGELOG.md")
 run_cl assemble v9.9.9 2026-12-01
 assert_eq "exit" 1 "$status"
 assert_contains "message" "changelog: fragments disagree on Config schema: #5 says 1, #6 says 2" "$out"
+assert_eq "CHANGELOG.md unchanged" "$before" "$(cat "$work/CHANGELOG.md")"
+assert_eq "fragments kept" "5.md
+6.md" "$(fragments_left)"
 
 case_desc=a_stale_heading_is_refused
 new_work
@@ -245,6 +249,39 @@ case_desc=trailing_blank_lines_do_not_separate_bullets
 new_work
 printf -- '- A (#1).\n\n\n' > "$work/changelog.d/1.md"
 printf -- '- B (#2).\n\n' > "$work/changelog.d/2.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 0 "$status"
+assert_eq "bullets adjacent" "- A (#1).
+- B (#2)." "$(grep -A1 '^- A (#1)' "$work/CHANGELOG.md")"
+
+case_desc=any_caution_beats_yes
+safe_of() { # <value in fragment 1> <value in fragment 2>: the assembled line
+    new_work
+    printf 'Safe to bump mid-workflow: %s\n\n- A (#1).\n' "$1" > "$work/changelog.d/1.md"
+    printf 'Safe to bump mid-workflow: %s\n\n- B (#2).\n' "$2" > "$work/changelog.d/2.md"
+    run_cl assemble v9.9.9 2026-12-01
+    assert_eq "exit ($1 / $2)" 0 "$status"
+    grep -m1 '^Safe to bump' "$work/CHANGELOG.md"
+}
+assert_eq "hyphen no beats yes" "Safe to bump mid-workflow: no — x" "$(safe_of 'no - x' yes)"
+assert_eq "capital No beats yes" "Safe to bump mid-workflow: no" "$(safe_of No yes)"
+assert_eq "not safe beats yes verbatim" "Safe to bump mid-workflow: not safe" "$(safe_of 'not safe' yes)"
+assert_eq "maybe with no: no reasons first, then others" "Safe to bump mid-workflow: no — b; maybe" "$(safe_of maybe 'no — b')"
+assert_eq "trailing space no beats yes" "Safe to bump mid-workflow: no" "$(safe_of 'no ' yes)"
+assert_eq "comma no keeps reason" "Safe to bump mid-workflow: no — because x" "$(safe_of 'no, because x' yes)"
+assert_eq "Yes with a note is a yes" "Safe to bump mid-workflow: yes" "$(safe_of 'yes' 'Yes')"
+
+case_desc=unreleased_prefix_is_not_the_heading
+new_work
+printf -- '- A (#1).\n' > "$work/changelog.d/1.md"
+printf '\n## UnreleasedFoo\n\n- x.\n' >> "$work/CHANGELOG.md"
+run_cl assemble v9.9.9 2026-12-01
+assert_eq "exit" 0 "$status"
+
+case_desc=whitespace_only_trailing_lines_are_trimmed
+new_work
+printf -- '- A (#1).\n  \n\t\n' > "$work/changelog.d/1.md"
+printf -- '- B (#2).\n' > "$work/changelog.d/2.md"
 run_cl assemble v9.9.9 2026-12-01
 assert_eq "exit" 0 "$status"
 assert_eq "bullets adjacent" "- A (#1).
