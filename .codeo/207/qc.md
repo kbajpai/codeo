@@ -8,7 +8,7 @@
 
 ## Where this stands
 
-Round 1, done: back to `/codeo:plan`. Q1 is answered. Next step: `/codeo:plan` (five blocking findings, F1-F5 below).
+Round 2 stopped at step 2: `overlap.sh 207` found a new overlap with #217 (Q2). Round 1 stands as written; the pass resumes from step 2 once Q2 is answered.
 
 ## Questions
 
@@ -45,6 +45,20 @@ I recommend proceed and coordinate, #207 merging first.
 
 **Answer:**
 Proceed and coordinate, as recommended; #207 merges first. Given in the conversation: "go with your pick".
+
+### Q2 — #217 now changes `tests/inventory.test.sh`: proceed, sequence, or re-scope?
+
+**Why it matters:** `overlap.sh 207` printed `217	tests/inventory.test.sh`. #217 (branch `feat/217-add-codeo-go-codeo-done`, assignee kbajpai, step `qc (working)`, its QC round 1 sent it back to `/codeo:implement`, waiting on its `implement.md` Q1) adds rule `init-12`: it raises `init` to 12 in `tests/inventory.test.sh`'s `want` table, adds the bullet to `docs/skills-inventory.md` and rewrites the single-hash pin. This branch removed that `want` table, separates rule bullets with blank lines and makes the pin one line per rule. Q1 already covers `docs/skills-inventory.md` and the pin; this is the one new path.
+
+- Proceed and coordinate: this branch merges first; #217's next `/codeo:implement` round merges `main` and resolves mechanically: drop its `want` edit (the table is gone), put a blank line before its `init-12` bullet, run `bash tests/inventory.test.sh --update`, which overwrites the pin, and write its changelog entry as `changelog.d/217.md`. This is the recovery `CONTRIBUTING.md` describes.
+- Sequence after #217: this pull request waits until #217 merges, and this branch then resolves the same three files against #217's rule.
+- Re-scope: not possible without undoing Task 3 of round 1.
+
+I recommend proceed and coordinate, #207 merging first: it is the change that makes the next such conflict mechanical.
+
+**Options:** proceed and coordinate (recommended) · sequence after #217 · re-scope.
+
+**Answer:**
 
 ## Notes
 
@@ -107,3 +121,4 @@ No `/codeo:issue` was filed. F1, F3 and F4 touch the same rules and docs as the 
 - 2026-11-28 — Q1 raised (overlap with #217 found at step 2) · cost: 0m · opus-5-5 329k in + 379k cached / 763 out
 - 2026-11-28 — round 1: back to /codeo:plan (F1-F5 blocking) · cost: 8m · opus-5-5 439k in + 2.3M cached / 19k out · sonnet-5-5 35k in + 3.2M cached / 8k out
 - 2026-11-28 — re-invoked with nothing new to judge (no plan or implement round since round 1; HEAD 0c0ead8, contains origin/main); round 1 stands: back to /codeo:plan · cost: 0m · opus-5-5 372k in + 29k cached / 447 out
+- 2026-11-28 — round 2: Q2 raised (new overlap with #217 on tests/inventory.test.sh, found at step 2) · cost: 0m · opus-5-5 535k in + 593k cached / 813 out
