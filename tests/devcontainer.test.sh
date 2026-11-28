@@ -2320,16 +2320,23 @@ st_json() {
          + (if $has == 1 then {session_title: $t} else {} end)'
 }
 
-# st_run <stdin> [remote]: runs session-title.sh with REMOTE_CONTAINERS=<remote> (default true; "unset"
-# leaves it out) from /, and with CODEO_CMD_MODE unset unless ST_CMD_MODE is non-empty (then set to its value).
-# Sets st_rc, st_out, st_err.
-st_run() {
-    local input=$1 remote=${2:-true} errf envs=()
+# st_exec [remote]: runs session-title.sh with the caller's stdin, REMOTE_CONTAINERS=<remote> (default true;
+# "unset" leaves it out) from /, CODEO_CMD_MODE unset unless ST_CMD_MODE is non-empty (then set to its value),
+# and PATH=$ST_PATH when that is set.
+st_exec() {
+    local remote=${1:-true} envs=()
     [[ $remote == unset ]] || envs=("REMOTE_CONTAINERS=$remote")
     [[ -z ${ST_CMD_MODE:-} ]] || envs+=("CODEO_CMD_MODE=$ST_CMD_MODE")
+    [[ -z ${ST_PATH:-} ]] || envs+=("PATH=$ST_PATH")
+    cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "CODEO_SANDBOX_MARK=${ST_MARK:-$pl_root/no-such-sandbox-mark}" "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh"
+}
+
+# st_run <stdin> [remote]: runs st_exec on <stdin>. Sets st_rc, st_out, st_err.
+st_run() {
+    local input=$1 errf
     errf=$(mktemp -p "$pl_root")
     st_rc=0
-    st_out=$(cd / && env -u REMOTE_CONTAINERS -u CODEO_CMD_MODE "CODEO_SANDBOX_MARK=${ST_MARK:-$pl_root/no-such-sandbox-mark}" "${envs[@]}" bash "$st_dir/.devcontainer/scripts/session-title.sh" <<<"$input" 2>"$errf") || st_rc=$?
+    st_out=$(st_exec "${2:-true}" <<<"$input" 2>"$errf") || st_rc=$?
     st_err=$(<"$errf")
 }
 
@@ -2663,6 +2670,98 @@ session_title_hook_command_survives_a_missing_script() {
     [[ -z $err ]] || fail "with the script removed: stderr '$err'"
 }
 
+session_title_concurrent_starts_get_different_numbers() {
+    st_setup concurrent || return 0
+    local i nums=() sorted
+    for i in 0 1 2 3 4 5 6 7; do
+        st_json SessionStart "e${i}000000-0000-4000-8000-000000000000" >"$pl_root/conc-in-$i"
+    done
+    for i in 0 1 2 3 4 5 6 7; do
+        st_exec <"$pl_root/conc-in-$i" >"$pl_root/conc-out-$i" 2>"$pl_root/conc-err-$i" &
+    done
+    wait
+    for i in 0 1 2 3 4 5 6 7; do
+        [[ ! -s $pl_root/conc-err-$i ]] || fail "run $i: stderr '$(<"$pl_root/conc-err-$i")'"
+        nums+=("$(jq -r '.hookSpecificOutput.sessionTitle' "$pl_root/conc-out-$i" | sed -E 's/^.* · ([0-9A-F]{2})-.*$/\1/')")
+    done
+    sorted=$(printf '%s\n' "${nums[@]}" | sort | tr '\n' ' ')
+    [[ ${sorted% } == '00 01 02 03 04 05 06 07' ]] || fail "numbers were: ${nums[*]}"
+}
+
+session_title_falls_back_to_the_old_shape() {
+    st_setup fallback || return 0
+    mkdir -p "$(st_seq_file)"
+    st_run "$(st_json SessionStart $st_sid)"
+    ((st_rc == 0)) || fail "exit $st_rc"
+    [[ -z $st_err ]] || fail "stderr '$st_err'"
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · a21b9973')"
+    st_silent 'old shape already set'
+    st_run "$(st_json UserPromptSubmit $st_sid 'codeo [home] · 00-a21b9973')"
+    st_silent 'own number kept'
+}
+
+session_title_fallback_survives_a_missing_flock() {
+    st_setup no-flock || return 0
+    local bin=$pl_root/no-flock-bin t
+    mkdir -p "$bin"
+    for t in bash jq git dirname basename mktemp mv rm mkdir cat sed awk grep tr cut head tail sort env readlink date hostname uname id; do
+        command -v "$t" >/dev/null 2>&1 || continue
+        ln -s "$(command -v "$t")" "$bin/$t" || { echo "SKIP session_title_fallback_survives_a_missing_flock: could not link $t"; return 0; }
+    done
+    ST_PATH=$bin st_run "$(st_json SessionStart $st_sid)"
+    ((st_rc == 0)) || fail "exit $st_rc"
+    [[ -z $st_err ]] || fail "stderr '$st_err'"
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_ignores_a_garbage_ledger() {
+    st_setup garbage || return 0
+    mkdir -p "$(dirname "$(st_seq_file)")"
+    printf 'hello\n\nZZ x\n' >"$(st_seq_file)"
+    st_run "$(st_json SessionStart $st_sid)"
+    [[ $(st_title) == 'codeo [home] · 00-a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_trims_the_ledger() {
+    st_setup trim || return 0
+    local i
+    mkdir -p "$(dirname "$(st_seq_file)")"
+    for i in $(seq 0 299); do printf '%02X s%07d\n' $((i % 256)) "$i"; done >"$(st_seq_file)"
+    st_run "$(st_json SessionStart $st_sid)"
+    # The last seeded line is number 299 % 256 = 43 = 2B, so the next is 2C.
+    [[ $(st_title) == 'codeo [home] · 2C-a21b9973' ]] || fail "title '$(st_title)'"
+    [[ $(grep -c . "$(st_seq_file)") == 256 ]] || fail "ledger has $(grep -c . "$(st_seq_file)") lines"
+    [[ $(tail -n 1 "$(st_seq_file)") == '2C a21b9973-0000-4000-8000-000000000000' ]] || fail "last line '$(tail -n 1 "$(st_seq_file)")'"
+}
+
+session_title_unreadable_ledger_falls_back_quietly() {
+    st_setup unreadable-ledger || return 0
+    mkdir -p "$(dirname "$(st_seq_file)")"
+    echo '00 aaaaaaaa-0000' >"$(st_seq_file)"
+    chmod 000 "$(st_seq_file)"
+    if [[ -r $(st_seq_file) ]]; then
+        chmod 644 "$(st_seq_file)"
+        echo 'SKIP session_title_unreadable_ledger_falls_back_quietly: the tests run as a user that can read a mode-000 file'
+        return 0
+    fi
+    st_run "$(st_json SessionStart $st_sid)"
+    chmod 644 "$(st_seq_file)"
+    ((st_rc == 0)) || fail "exit $st_rc"
+    [[ -z $st_err ]] || fail "stderr '$st_err'"
+    [[ $(st_title) == 'codeo [home] · a21b9973' ]] || fail "title '$(st_title)'"
+}
+
+session_title_resume_does_not_reuse_a_number() {
+    st_setup resume-reuse || return 0
+    st_run "$(st_json SessionStart $st_sid)"
+    st_run "$(st_json SessionStart $st_sid_b)"
+    st_run "$(st_json SessionStart $st_sid_d 'codeo [home] · 00-a21b9973' resume)"
+    [[ $(st_title) == 'codeo [home] · 00-d5e6f708' ]] || fail "resume: title '$(st_title)'"
+    st_run "$(st_json SessionStart $st_sid_c)"
+    [[ $(st_title) == 'codeo [home] · 02-c4d5e6f7' ]] || fail "fresh: title '$(st_title)'"
+}
+
 # Every dev container script is committed 100755 (a file git does not track yet needs the bit on disk).
 scripts_are_committed_executable() {
     local f rel mode
@@ -2879,6 +2978,13 @@ cases=(
     session_title_refreshes_the_window_title
     session_title_hooks_are_registered
     session_title_hook_command_survives_a_missing_script
+    session_title_concurrent_starts_get_different_numbers
+    session_title_falls_back_to_the_old_shape
+    session_title_fallback_survives_a_missing_flock
+    session_title_ignores_a_garbage_ledger
+    session_title_trims_the_ledger
+    session_title_unreadable_ledger_falls_back_quietly
+    session_title_resume_does_not_reuse_a_number
     scripts_are_committed_executable
     docs_say_two_same_named_containers_cannot_both_exist
     docs_changelog_names_the_replay_sed_and_the_folder_limit

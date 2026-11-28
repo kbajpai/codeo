@@ -17,10 +17,11 @@
 # it prints nothing. Stderr stays empty and the exit status is 0 on every path.
 #
 # The number comes from a ledger of "<NN> <session id>" lines in <git dir>/codeo/session-seq (per clone, so
-# per container; the last 256 lines are kept). Three rules, in order: a session keeps the number in its own
-# title (the title's eight hex digits are its id's, or the event is a SessionStart with source "resume");
-# else a session id already in the ledger gets its recorded number; else it takes the number after the last
-# ledger line's. When the ledger cannot be read or written the title falls back to
+# per container; the last 256 lines are kept). Three rules: a number already recorded for the session id wins;
+# else the number in the session's own title (the title's eight hex digits are its id's, or the event is a
+# SessionStart with source "resume"), recorded just before the last ledger line so the next fresh session
+# still follows the highest number; else the number after the last ledger line's. When the ledger cannot be
+# read or written (or flock is missing or times out after two seconds) the title falls back to
 # "<window title> · <eight characters of the id>" with no number.
 #
 #   bash .devcontainer/scripts/session-title.sh < <hook json>
@@ -39,20 +40,24 @@ seq_file() {
 }
 
 # seq_take <sid> [<nn>]: prints the session's number. A sid already in the ledger gets its recorded number;
-# else <nn> when given, else the number after the last ledger line's (FF wraps to 00); the pair is appended.
+# else <nn> when given (recorded before the last line), else the number after the last ledger line's (FF wraps to 00)
+# (recorded last). The read, the write and the move run under flock -w 2 on <ledger>.lock.
 # 1, with no output, on any failure.
 seq_take() {
     local sid=$1 want=${2:-} file dir tmp line n last='' found='' lines=()
     file=$(seq_file) || return 1
     dir=$(dirname "$file")
     mkdir -p "$dir" 2>/dev/null || return 1
+    command -v flock >/dev/null 2>&1 || return 1
+    { exec 9>"$file.lock"; } 2>/dev/null || return 1
+    flock -w 2 9 2>/dev/null || return 1
     if [[ -e $file ]]; then
-        while IFS= read -r line || [[ -n $line ]]; do
+        { while IFS= read -r line || [[ -n $line ]]; do
             [[ $line =~ ^([0-9A-F]{2})\ (.+)$ ]] || continue
             lines+=("$line")
             last=${BASH_REMATCH[1]}
             [[ -n $found || ${BASH_REMATCH[2]} != "$sid" ]] || found=$last
-        done <"$file" 2>/dev/null || return 1
+        done <"$file"; } 2>/dev/null || return 1
     fi
     if [[ -n $found ]]; then
         printf '%s\n' "$found"
@@ -65,7 +70,12 @@ seq_take() {
     else
         printf -v n '%02X' $(((16#$last + 1) % 256))
     fi
-    lines+=("$n $sid")
+    if [[ -n $want && ${#lines[@]} -gt 0 ]]; then
+        # An inherited number goes before the last line, so the next fresh session still follows the highest.
+        lines=("${lines[@]:0:${#lines[@]}-1}" "$n $sid" "${lines[@]: -1}")
+    else
+        lines+=("$n $sid")
+    fi
     ((${#lines[@]} <= 256)) || lines=("${lines[@]: -256}")
     tmp=$(mktemp "$dir/session-seq.XXXXXX" 2>/dev/null) || return 1
     if ! { printf '%s\n' "${lines[@]}" >"$tmp" && mv -f "$tmp" "$file"; } 2>/dev/null; then
