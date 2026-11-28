@@ -8,32 +8,13 @@
 
 ## Where this stands
 
-Round 1 is **waiting on you (Task 12, the container rebuild)**: pull request #214 merged on 2026-11-28 at 00:46 UTC (a squash; merge commit `00de557a939e7b7b3477c34c23dff81820ff03ae`, `release: v1.0.11 (#214)`), the clean-clone test of that commit passed, you pushed the lightweight tag `v1.0.11` on it (`git ls-remote --tags origin v1.0.11` prints `00de557…\trefs/tags/v1.0.11`, no `^{}` line), the GitHub Release `v1.0.11` exists (Latest, not a draft, notes from the changelog section only, first line `Config schema: 1 (unchanged)`), and `.codeo/config.json`'s `plugin.ref` is `v1.0.11` on this branch (commit `8a19162`; `bash tests/run.sh` ends `all cases passed` with the sandbox's global gitignore off). What is left of the plan is Task 12: rebuild or restart the dev container, start a new Claude Code session, and run `claude plugin list`: `codeo@codeo` must show `Version: 1.0.11` (a project-scope entry that shows another version is a finding, not something to edit away). `## Outcome` is written once that is done, at the hand-off to `/codeo:qc`. The state at the Task 8 check: Tasks 1-6 of `docs/plans/2026-11-27-release-v1-0-11.md` are done and reviewed, and the release pull request is open: https://github.com/kbajpai/codeo/pull/214 (`release/v1.0.11` into `main`, head `b277022`). Tasks 8-12 follow your merge. `## Outcome` stays pending until the whole plan is built. Nothing is open (no question), and `overlap.sh 213` printed nothing.
-
-**The release branch** is cut from `origin/main` at `3857710` and changes exactly `.claude-plugin/plugin.json`, `CHANGELOG.md`, `README.md`, `docs/updating.md` and `tests/install.test.sh`:
-
-| Task | Commit(s) | Review |
-|---|---|---|
-| 1 version moves | `bcc384b` | clean |
-| 2 README M1-M4 | `4d062df` | clean |
-| 3 README M5, M8 | `0ace6f1` | clean |
-| 4 README guard, identity, cleanup, M6, M7 | `2c40f44`, `b04fffa` | one fix round (two Important findings, both addressed and re-reviewed) |
-| 5 changelog | `b277022` | clean |
-| 6 suite and release PR | pull request #214 | checked by the controller (below) |
+Round 1 is **done**; the next step is `/codeo:qc`. All twelve tasks of `docs/plans/2026-11-27-release-v1-0-11.md` are complete and nothing is open (no question; `overlap.sh 213` printed nothing). Task 12 passed: after the container rebuild, `claude plugin list` shows `codeo@codeo` at `Version: 1.0.11` for both the user-scope and the project-scope entry (the engineer reported it after the rebuild, and this sandbox's own listing agrees). `## Outcome` below carries the result.
 
 **Task 8 (clean clone of `00de557a939e7b7b3477c34c23dff81820ff03ae`, 2026-11-28):** `git rev-parse HEAD` printed that SHA, `jq -r .version .claude-plugin/plugin.json` printed `1.0.11`, and `bash tests/run.sh` ended `all cases passed` with this sandbox's global gitignore switched off (`GIT_CONFIG_GLOBAL=/dev/null`). Run exactly as the plan writes it, only `sandbox.test.sh` failed, because this sandbox's global gitignore lists `.sbx` and that test runs `git add .sbx` in a temporary repository; it passes in CI and on any machine without that ignore. The release pull request's own CI was green (see *CI failure on #214* under `## Notes`).
 
 **Task 6 checks, on head `b277022`:** `git diff --name-only origin/main` lists exactly the five files; `bash tests/readme.test.sh` and `bash tests/install.test.sh` end `all cases passed`; `bash tests/run.sh` ends `all cases passed` only with this sandbox's global gitignore switched off (`GIT_CONFIG_GLOBAL=/dev/null bash tests/run.sh`): that ignore lists `.sbx`, and `tests/sandbox.test.sh` runs `git add .sbx` in a temporary repository, which it refuses. Without the override only that one file fails, and it fails the same way on `origin/main`. The sandbox also lacked the `hostname` binary (live.test.sh), which was installed with apt. PR checks: `qc-verdict` passed; `tests` was pending when this was written.
 
-**The changelog date** is `2026-11-27`, the UTC date the pull request opened (`2026-11-27T23:47:14Z`). `docs/release-checklist.md` says the heading carries the date the release pull request *opens*, so a merge after midnight UTC does not change it (the plan's Task 7 sentence about correcting it on a later merge day is superseded by the checklist).
-
-**Next, in order:**
-1. **You (Task 7):** merge #214 when `tests` and `qc-verdict` are green, then tell me.
-2. **Me (Task 8):** read the merge commit SHA, clone, check out that SHA, and run `bash tests/run.sh` (with the same global-ignore caveat if it applies); the result must end `all cases passed`.
-3. **You (Task 9):** `git fetch origin`, `git tag v1.0.11 <SHA>`, `git push origin v1.0.11`, one command at a time; then I run `git ls-remote --tags origin v1.0.11`.
-4. **Me (Task 10):** `gh release create v1.0.11 --verify-tag --title v1.0.11 --notes-file <the changelog section>`.
-5. **Me (Task 11):** set `plugin.ref` to `v1.0.11` in `.codeo/config.json` on this branch (`/codeo:close` opens that pull request).
-6. **You (Task 12):** rebuild or restart the dev container, start a new session, and run `claude plugin list`: `codeo@codeo` must show `1.0.11`.
+**The changelog date (a deviation, see `## Outcome`)** is `2026-11-27`, the UTC date the pull request opened (`2026-11-27T23:47:14Z`). `docs/release-checklist.md` says the heading carries the date the release pull request *opens*, so a merge after midnight UTC does not change it (the plan's Task 7 sentence about correcting it on a later merge day is superseded by the checklist).
 
 **Deferred Minor review findings, for `/codeo:qc`'s and the final review's triage.** Task 4: (a) the "Writes under `.codeo/` are exempt" sentence is exact for Edit and Write, but for git only when every path is under `.codeo/`; (b) the cleanup placeholder sentence sits at the end of the role-guard *Fix* bullet, though it is not a role-guard refusal; (c) the edit-guard paragraph sits between the entry's bold lead and its Symptom/Cause/Fix bullets, which breaks the entry's shape; (d) the `mismatch` example line holds only for skills that run in an issue's checkout. Task 2: the long step 1 paragraph does not say which `ruleset` message appears when, and its `--containers` sentence omits that a fresh run also writes `codename` and the pin. Task 3: "owns one dossier file" is slightly loose for init. Task 5: the #211 bullet is not in issue order (cosmetic). Task 1's review had none.
 
@@ -59,7 +40,28 @@ Later work, for `/codeo:triage` (no issue number: `/codeo:issue` is refused in t
 
 ## Outcome
 
-_Pending — written at the hand-off._
+| | |
+|---|---|
+| Plan | `docs/plans/2026-11-27-release-v1-0-11.md` (all 12 tasks done) |
+| Build | no application build: the suites' `build` is `true`; the checks are `bash tests/run.sh`, `tests/readme.test.sh` and `tests/install.test.sh`, all `all cases passed` |
+
+**What was built.** The release v1.0.11 of codeo, cut from `main` at `3857710` and merged as pull request #214 (squash, `00de557a939e7b7b3477c34c23dff81820ff03ae`, 2026-11-28 00:46 UTC), and this project pinned to it. The release pull request changed exactly five files (`.claude-plugin/plugin.json` to `1.0.11`; `CHANGELOG.md`: `## v1.0.11 — 2026-11-27`, a #211 bullet, and the #192 and #204 bullets reworded to the released state; `README.md`; `docs/updating.md` and `tests/install.test.sh`: the version examples moved, the skipped ordering and refused stubs left alone, the one ordering stub taken to `v1.0.12`). The tag `v1.0.11` is lightweight on the merge commit; the GitHub Release `v1.0.11` is Latest, with notes from the changelog section only (first line `Config schema: 1 (unchanged)`); `.codeo/config.json`'s `plugin.ref` is `v1.0.11` on this branch (`8a19162`).
+
+**Documentation pages changed:** `README.md` (the eight mismatches M1-M8 corrected: doctor's `deps` and `ruleset` wording, setup's overwrite refusal and what `--codename`/`--containers` write, init's failed-assignment record, the role guard of a `--containers` project, the `mismatch` refusal line, where `issue` keeps its dossier; and the unreleased work added: the edit guard and `CODEO_HOME_EDITS=allow`, the bot and identity refusals, a stash or abandon removing you from the assignees, cleanup's placeholder stop) and `docs/updating.md` (version numbers only).
+
+**Checks.** Every task passed its review: Tasks 1, 2, 3 and 5 clean; Task 4 after one fix round (two Important findings: an unsupported `gh auth login` remedy and the edit guard's scope sentence; both addressed and re-reviewed). Clean-clone test of the merge commit: `bash tests/run.sh` ended `all cases passed` with this sandbox's global gitignore switched off (that ignore lists `.sbx`, and `tests/sandbox.test.sh` runs `git add .sbx` in a temporary repository; without the override only that file fails, here and on `origin/main`). `git ls-remote --tags origin v1.0.11` prints the merge commit and no `^{}` line.
+
+**Deviations from the plan.**
+1. The release worktree is `.superpowers/worktrees/release-v1.0.11` inside the checkout, not `../codeo-213-release` (`/Users/kbajpai/codeo` is root-owned in the sandbox).
+2. Four pre-flight rulings on grep expectations that did not match `main` (R1-R5 under `## Notes`; the `ruleset` mismatch was in two places, so Task 2 rewrote both).
+3. The changelog heading's date is `2026-11-27`, the UTC date the pull request opened (`2026-11-27T23:47:14Z`), though it merged after midnight UTC: `docs/release-checklist.md` says the date the release pull request opens, which supersedes the plan's sentence about correcting it on a later merge day.
+4. The required check `tests` failed four times on #214 with a flake that is not the release's: `producer | grep -q` assertions under `set -o pipefail` die of SIGPIPE under CI load (`tests/close-skill.test.sh`'s last assertion; `check_guarded` in `tests/role-guard.test.sh`). Diagnosed with a throwaway draft pull request (#215, closed, branch deleted); a rerun passed. Details and the later work are under `## Notes`.
+5. The sandbox lacked the `hostname` binary and `gawk`; both were installed with apt for the checks (nothing in the repository changed).
+
+**Task 12 (criterion 7).** After the engineer rebuilt the dev container and started a new session, `claude plugin list` shows `codeo@codeo` at `1.0.11` at user scope and at project scope; no entry shows another version. No `Deployed revision:` (no shared environment).
+
+**Risk for `/codeo:qc`.** Criterion 6 (the pin merged through its own pull request) is met only when `/codeo:close`'s pull request merges. The README edits were each reviewed against the cited code, but the Minor findings listed under `## Where this stands` are still open for triage: the `.codeo/` exemption wording (exact for Edit and Write, for git only when every path is under `.codeo/`), the cleanup sentence's placement in the role-guard *Fix* bullet, the edit-guard paragraph's position in that entry, and the `mismatch` example holding only for issue-checkout skills. The v1.0.11 README is the one that shipped; a correction would be a later release.
+
 
 ## Log
 
@@ -69,3 +71,4 @@ _Pending — written at the hand-off._
 - 2026-11-28 — release pull request #214 green after a rerun (the failures were a SIGPIPE flake in two tests, diagnosed with a throwaway pull request, closed); waiting for the merge (Task 7) · cost: unavailable
 - 2026-11-28 — Tasks 7-8 done: #214 merged as `00de557`; clean-clone test passed; waiting for the tag (Task 9) · cost: unavailable
 - 2026-11-28 — Tasks 9-11 done: tag `v1.0.11` on `00de557`, GitHub Release published, pin moved to `v1.0.11` (`8a19162`); waiting for the container rebuild check (Task 12) · cost: unavailable
+- 2026-11-28 — Task 12 passed (codeo 1.0.11 at user and project scope); round 1 complete: all 12 tasks of the plan done, release v1.0.11 shipped and pinned · cost: 93m · sonnet-5-5 727k in + 35.5M cached / 122k out
